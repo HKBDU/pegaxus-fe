@@ -1,7 +1,8 @@
 {
-  "name": "frontend",
+  "name": "pegaxus-fe",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Frontend for Pegaxus - Racehorse Cross-Border Transport & Quarantine Logistics Management System (SWP391)",
   "type": "module",
   "scripts": {
     "dev": "vite",
