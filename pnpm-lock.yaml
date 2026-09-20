@@ -14,6 +14,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      headroom-ai:
+        specifier: ^0.37.0
+        version: 0.37.0
       react:
         specifier: ^19.2.8
         version: 19.3.0
@@ -540,6 +543,24 @@ packages:
   hasown@2.0.4:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
+
+  headroom-ai@0.37.0:
+    resolution: {integrity: sha512-LhhcQyEmcOtH6MNgcaoU2OnI/7QlMyF1CZPYdZwIWyumXjnTM6JXZZpbIufT2LFWD6cYWdUsrk3iXa9LOY3hvw==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      '@ai-sdk/provider': '>=1.0.0'
+      '@anthropic-ai/sdk': '>=0.30.0'
+      ai: '>=6.0.0'
+      openai: '>=4.0.0'
+    peerDependenciesMeta:
+      '@ai-sdk/provider':
+        optional: true
+      '@anthropic-ai/sdk':
+        optional: true
+      ai:
+        optional: true
+      openai:
+        optional: true
 
   https-proxy-agent@5.0.1:
     resolution: {integrity: sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==}
@@ -1166,6 +1187,8 @@ snapshots:
   hasown@2.0.4:
     dependencies:
       function-bind: 1.1.2
+
+  headroom-ai@0.37.0: {}
 
   https-proxy-agent@5.0.1:
     dependencies:
