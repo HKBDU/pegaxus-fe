@@ -86,7 +86,7 @@ pegaxus-fe/
 
 ### 4.1. Prerequisites
 - **Node.js**: `20.x LTS` or `22.x LTS` recommended.
-- **npm**: Version `10.x` or higher (shipped with Node.js).
+- **pnpm**: Version `11.x` or higher.
 - **Docker Desktop** *(Optional)*: If running via containers.
 
 ### 4.2. Local Development Setup
@@ -99,7 +99,7 @@ pegaxus-fe/
 
 2. **Install project dependencies**:
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. **Configure environment variables**:
@@ -114,20 +114,20 @@ pegaxus-fe/
 
 4. **Start the local development server**:
    ```bash
-   npm run dev
+   pnpm run dev
    ```
    Open your browser and navigate to: `http://localhost:5173` (or the port specified in terminal output).
 
 ---
 
-## 📜 5. Available NPM Scripts
+## 📜 5. Available pnpm Scripts
 
 | Command | Description |
 | :--- | :--- |
-| `npm run dev` | Starts Vite local development server with instant Hot Module Replacement (HMR). |
-| `npm run lint` | Runs Oxlint across the codebase to check for syntax issues, dead code, and style errors. |
-| `npm run build` | Runs TypeScript type checking (`tsc -b`) and produces an optimized production bundle in `dist/`. |
-| `npm run preview` | Locally serves the production build in `dist/` for pre-deployment inspection. |
+| `pnpm run dev` | Starts Vite local development server with instant Hot Module Replacement (HMR). |
+| `pnpm run lint` | Runs Oxlint across the codebase to check for syntax issues, dead code, and style errors. |
+| `pnpm run build` | Runs TypeScript type checking (`tsc -b`) and produces an optimized production bundle in `dist/`. |
+| `pnpm run preview` | Locally serves the production build in `dist/` for pre-deployment inspection. |
 
 ---
 
