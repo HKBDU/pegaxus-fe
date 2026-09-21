@@ -3,10 +3,10 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
+  --text: #171717;
+  --text-h: #181818;
+  --bg: #f4f4f4;
+  --border: #d8d4cc;
   --code-bg: #f4f3ec;
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
@@ -17,8 +17,10 @@
 
   --background: 0 0% 100%;
   --foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
+  --primary: #f39200;
+  --primary-foreground: #181818;
+  --destructive: #fff;
+  --destructive-foreground: #181818;
   --muted: 210 40% 96.1%;
   --muted-foreground: 215.4 16.3% 46.9%;
   --border: 214.3 31.8% 91.4%;
