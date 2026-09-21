@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils"
 import { PanelLeftIcon } from "lucide-react"
 import { Slot } from "radix-ui"
 
-import { useIsMobile } from "@/hooks/use-mobile"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { Separator } from "@/shared/components/ui/separator"
@@ -64,7 +63,7 @@ function SidebarProvider({
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }) {
-  const isMobile = useIsMobile()
+  const isMobile = false
   const [openMobile, setOpenMobile] = React.useState(false)
 
   // This is the internal state of the sidebar.
