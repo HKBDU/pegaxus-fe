@@ -1,4 +1,5 @@
 import { type HeaderNavItem, type HeaderUser } from "./type"
+import { type FooterLink } from "./type"
 import type { ReactNode } from "react"
 
 export type ActionDialogProps = {
@@ -20,4 +21,11 @@ export type HeaderProps = {
   onUserClick?: () => void
   rightContent?: ReactNode
   className?: string
+}
+
+export type FooterColumnProps = {
+  title: string
+  links: FooterLink[]
+  className?: string
+  children?: ReactNode
 }

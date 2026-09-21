@@ -30,12 +30,12 @@ export function Header({
   className,
 }: HeaderProps) {
   return (
-    <header className={cn("h-[72px] w-full border-b border-white/5 bg-[#17191c] text-white", className)}>
+    <header className={cn("sticky top-0 z-50 h-[72px] w-full border-b border-white/5 bg-[#17191c] text-white", className)}>
       <div className="mx-auto flex h-full w-full items-center px-8">
         <NavLink to="/" aria-label={logoAlt} className="shrink-0">
           <img src={logoSrc} alt={logoAlt} className="h-auto w-[150px]" />
         </NavLink>
-        // active state got from url
+        { /* active state got from url */}
         <nav aria-label="Main navigation" className="ml-auto flex h-full items-center gap-10">
           {navItems.map((item) => (
             <NavLink

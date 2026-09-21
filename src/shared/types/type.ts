@@ -9,3 +9,8 @@ export type HeaderUser = {
   initials: string
   avatarSrc?: string
 }
+
+export type FooterLink = {
+  label: string
+  href: string
+}

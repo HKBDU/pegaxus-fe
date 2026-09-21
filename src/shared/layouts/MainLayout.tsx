@@ -8,7 +8,7 @@ export function MainLayout() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <Outlet /> // Outlet - React Router render route childs
+        <Outlet /> {/* Outlet - React Router render route childs*/}
       </main>
       <Footer />
     </div>
