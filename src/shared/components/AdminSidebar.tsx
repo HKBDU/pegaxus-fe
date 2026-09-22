@@ -63,7 +63,7 @@ function AdminSidebarMenu({ items }: { items: AdminSidebarItem[] }) {
               isActive={isActive}
               className={cn(
                 "h-11 rounded-none px-6 text-sm font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
-                isActive && "border-l-4 border-[#f39200] bg-[#211d1a] pl-5 font-semibold text-[#f39200]",
+                isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-5 font-semibold !text-[#f39200]",
               )}
             >
               <NavLink to={item.href}>
