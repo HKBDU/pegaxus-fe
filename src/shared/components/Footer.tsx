@@ -61,7 +61,7 @@ export function Footer() {
       <img src={orangeLine} alt="" aria-hidden="true" className="pl-15 mt-10 hidden h-4 w-[100%] object-cover object-left lg:block" />
       <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-x-10 gap-y-12 px-8 pb-16 pt-12 sm:grid-cols-2 lg:grid-cols-[1.7fr_1fr_1fr_1fr_1.3fr] lg:px-16">
         <section>
-          <img src={logo} alt="Pegaxus" className="w-[270px] max-w-full" />
+          <img src={logo} alt="Pegaxus" className="mx-auto w-[270px] max-w-full lg:mx-0" />
           <h2 className="mt-5 max-w-[250px] text-base font-bold leading-[1.3] tracking-[0.16em] text-white">
             GLOBAL RACEHORSE TRANSPORT WITHOUT BORDERS.
           </h2>
