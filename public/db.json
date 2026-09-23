@@ -1,0 +1,30 @@
+{
+  "users": [
+    {
+      "id": "user-1",
+      "name": "James Davidson",
+      "role": "Owner",
+      "initials": "JD",
+      "avatarSrc": ""
+    }
+  ],
+  "horses": [
+    {
+      "id": "horse-1",
+      "name": "Pegasus",
+      "breed": "Thoroughbred",
+      "status": "Active",
+      "ownerId": "user-1"
+    }
+  ],
+  "transportRequests": [
+    {
+      "id": "request-1",
+      "horseId": "horse-1",
+      "origin": "Melbourne",
+      "destination": "Singapore",
+      "status": "Pending",
+      "requestedAt": "2026-09-21T08:00:00.000Z"
+    }
+  ]
+}
