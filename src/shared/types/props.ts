@@ -39,3 +39,10 @@ export type SidebarContextProps = {
   isMobile: boolean
   toggleSidebar: () => void
 }
+
+export type PageHeaderProps = {
+  title: string
+  backHref: string
+  backLabel?: string
+  className?: string
+}

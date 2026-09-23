@@ -36,11 +36,11 @@ function HeaderSidebarNav({ navItems }: { navItems: HeaderNavItem[] }) {
   const icons = [House, Truck, MapPin, Settings]
 
   return (
-    <Sidebar side="left" collapsible="offcanvas" className="h-full min-h-svh lg:hidden">
+    <Sidebar side="left" collapsible="offcanvas" className="h-svh min-h-svh lg:hidden">
       <div className="flex h-32 shrink-0 items-center justify-center bg-[#17191c] px-6">
         <img src={logo} alt="Pegaxus" className="w-full max-w-[190px]" />
       </div>
-      <SidebarContent className="min-h-0 bg-[#17191c] text-white">
+      <SidebarContent className="min-h-0 overflow-hidden bg-[#17191c] text-white">
         <SidebarGroup className="px-0">
           <SidebarGroupContent>
             <SidebarMenu>
@@ -54,12 +54,12 @@ function HeaderSidebarNav({ navItems }: { navItems: HeaderNavItem[] }) {
                       asChild
                       isActive={isActive}
                       className={cn(
-                        "h-11 rounded-none px-6 text-sm font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
-                        isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-5 font-semibold !text-[#f39200]",
+                        "h-9 rounded-none px-4 text-xs font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
+                        isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-3 font-semibold !text-[#f39200]",
                       )}
                     >
                       <NavLink to={item.href} end={item.href === "/"} onClick={() => setOpenMobile(false)}>
-                        <Icon className="size-[18px]" />
+                        <Icon className="size-4" />
                         <span>{item.label}</span>
                       </NavLink>
                     </SidebarMenuButton>
@@ -86,8 +86,8 @@ export function Header({
   className,
 }: HeaderProps) {
   const userControl = (
-    <button
-      type="button"
+    <NavLink
+      to="/profile-settings"
       className="flex min-w-0 items-center gap-3 rounded-none p-1 text-left hover:bg-white/5"
       onClick={onUserClick}
       aria-label={`Open ${user.name} menu`}
@@ -101,7 +101,7 @@ export function Header({
         <span className="block truncate text-xs text-[#9ca1a8]">{user.role}</span>
       </span>
       <ChevronDown className="size-4 shrink-0 text-[#9ca1a8]" />
-    </button>
+    </NavLink>
   )
 
   const notificationButton = (
