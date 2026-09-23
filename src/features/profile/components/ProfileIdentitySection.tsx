@@ -18,7 +18,7 @@ function getInitials(name: string | null) {
 
 export function ProfileIdentitySection({ profile, emailVerificationStatus, accountTypeLabel = ACCOUNT_TYPE_LABELS, className }: ProfileIdentitySectionProps) {
   return (
-    <section className={cn("grid gap-x-8 gap-y-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)]", className)}>
+    <section className={cn("grid gap-x-8 border-b border-[#d1d5db] py-4 gap-y-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)]", className)}>
       <h2 className="font-bold text-[24px] leading-8 tracking-[0.6px] uppercase">IDENTITY</h2>
       <div className="grid min-w-0 gap-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">

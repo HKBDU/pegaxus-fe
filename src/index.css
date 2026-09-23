@@ -125,6 +125,24 @@ body {
   margin: 0;
 }
 
+.profile-edit-field {
+  height: 42px;
+  min-width: 0;
+  border-radius: 0;
+  border-color: #f39200;
+  background: #f4f4f4;
+  padding: 7.5px 15px;
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.profile-edit-field:focus-visible {
+  border-color: #f39200;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(243, 146, 0, 0.2);
+  outline: none;
+}
+
 h1,
 h2 {
   font-family: var(--heading);

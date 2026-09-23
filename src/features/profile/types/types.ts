@@ -19,6 +19,7 @@ export type CustomerProfile = {
 export type EmployeeProfile = {
   employeeId: EntityId
   employeeCode: string
+  workStatus?: string | null
 }
 
 export type Profile = {
@@ -34,6 +35,8 @@ export type Profile = {
   avatarUrl: string | null
   customer: CustomerProfile | null
   employee: EmployeeProfile | null
+  memberSince?: string | null
+  lastLoginAt?: string | null
   updatedAt: string
 }
 

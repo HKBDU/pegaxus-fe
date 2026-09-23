@@ -6,11 +6,11 @@ import type {
   ProfileSectionName,
   UpdateProfileRequest,
 } from "./types"
+import type { ReactNode } from "react"
 
 export type ProfileFormProps = {
   profile: Profile
   onSubmit: (input: UpdateProfileRequest) => Promise<void> | void
-  isSubmitting?: boolean
 }
 
 export type ProfileSectionHeadingProps = {
@@ -51,6 +51,8 @@ export type ProfileIdentitySectionProps = {
 export type ProfileActionButtonsProps = {
   onCancel?: () => void
   onEdit?: () => void
+  submitFormId?: string
+  disabled?: boolean
   cancelLabel?: string
   editLabel?: string
   className?: string
@@ -59,4 +61,11 @@ export type ProfileActionButtonsProps = {
 export type ProfilePageStateProps = {
   message: string
   onRetry?: () => void
+}
+
+export type ProfileAccordionSectionProps = {
+  title: Exclude<ProfileSectionName, "IDENTITY">
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
 }
