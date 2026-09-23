@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom"
 
 import { MainLayout } from "@/shared/layouts/MainLayout"
 import { AdminLayout } from "@/shared/layouts/AdminLayout"
+import { ProfileSettingsPage } from "@/features/profile/pages/ProfileSettingsPage"
 
 function HomePage() {
   return (
@@ -38,7 +39,7 @@ export default function App() {
           <Route index element={<HomePage />} />
           <Route path="transport-requests" element={<PlaceholderPage title="Transport Requests" />} />
           <Route path="my-horses" element={<PlaceholderPage title="My Horses" />} />
-          <Route path="profile-settings" element={<PlaceholderPage title="Profile Settings" />} />
+          <Route path="profile-settings" element={<ProfileSettingsPage />} />
         </Route>
         <Route path="admin" element={<AdminLayout />}>
           <Route index element={<AdminPlaceholderPage title="Dashboard" />} />
@@ -49,7 +50,7 @@ export default function App() {
           <Route path="staff" element={<AdminPlaceholderPage title="Staff" />} />
           <Route path="transport-partners" element={<AdminPlaceholderPage title="Transport Partners" />} />
           <Route path="reports" element={<AdminPlaceholderPage title="Reports" />} />
-          <Route path="profile" element={<AdminPlaceholderPage title="Profile" />} />
+          <Route path="profile" element={<ProfileSettingsPage />} />
           <Route path="settings" element={<AdminPlaceholderPage title="Settings" />} />
         </Route>
       </Routes>
