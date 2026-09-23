@@ -180,9 +180,7 @@ Vite requires public client environment variables to be prefixed with `VITE_`:
 
 | Variable Name | Default Value | Purpose |
 | :--- | :--- | :--- |
-| `VITE_API_BASE_URL` | `http://localhost:8080/api/v1` | Root URL of the Pegaxus Backend REST API |
-| `VITE_APP_TITLE` | `Pegaxus - Racehorse Cross-Border Transport System` | Document `<title>` displayed in browser tab |
-| `VITE_APP_ENV` | `development` | Active environment descriptor (`development`, `staging`, `production`) |
+| `VITE_API_URL` | `http://localhost:8080/api/v1/` | Root URL of the Pegaxus Backend REST API |
 
 ---
 
