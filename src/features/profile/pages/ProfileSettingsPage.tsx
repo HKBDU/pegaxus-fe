@@ -1,6 +1,3 @@
-import { useCallback, useEffect, useState } from "react"
-
-import { profileApi } from "../api/profile-api"
 import {
   ProfileActionButtons,
   ProfileForm,
@@ -8,9 +5,8 @@ import {
   ProfileSectionDivider,
   ProfileSectionHeading,
 } from "../components"
-import { MOCK_EMPLOYEE_PROFILE } from "../constants/profile.mock"
-import type { ProfilePageStateProps } from "../types/props"
-import type { EmailVerificationStatus, Profile, UpdateProfileRequest } from "../types/types"
+import { useProfile } from "../hooks/useProfile"
+import type { EmailVerificationStatus, Profile, ProfilePageStateProps } from "../types"
 import { PageHeader } from "@/shared/components/PageHeader"
 
 function getEmailVerificationStatus(profile: Profile): EmailVerificationStatus {
@@ -19,47 +15,17 @@ function getEmailVerificationStatus(profile: Profile): EmailVerificationStatus {
 }
 
 export function ProfileSettingsPage() {
-  const [profile, setProfile] = useState<Profile>()
-  const [error, setError] = useState<string>()
-  const [isLoading, setIsLoading] = useState(true)
-  const [isEditing, setIsEditing] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [actionError, setActionError] = useState<string>()
-
-  const loadProfile = useCallback(async () => {
-    try {
-      const nextProfile = await profileApi.getMe()
-      if (!nextProfile) throw new Error("Profile response is empty")
-      setProfile(nextProfile)
-      setError(undefined)
-    } catch {
-      if (import.meta.env.DEV) {
-        setProfile(MOCK_EMPLOYEE_PROFILE)
-        setError(undefined)
-      } else {
-        setError("Unable to load profile. Please try again.")
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  async function handleProfileUpdate(input: UpdateProfileRequest) {
-    setIsSubmitting(true)
-    setActionError(undefined)
-    try {
-      setProfile(await profileApi.updateMe(input))
-      setIsEditing(false)
-    } catch {
-      setActionError("Unable to update profile. Please try again.")
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  useEffect(() => {
-    void loadProfile()
-  }, [loadProfile])
+  const {
+    profile,
+    error,
+    isLoading,
+    isEditing,
+    isSubmitting,
+    actionError,
+    setIsEditing,
+    retryProfile,
+    updateProfile,
+  } = useProfile()
 
   if (isLoading) {
     return <ProfilePageState message="Loading profile..." />
@@ -69,10 +35,7 @@ export function ProfileSettingsPage() {
     return (
       <ProfilePageState
         message={error ?? "Profile not found."}
-        onRetry={() => {
-          setIsLoading(true)
-          void loadProfile()
-        }}
+        onRetry={retryProfile}
       />
     )
   }
@@ -86,7 +49,7 @@ export function ProfileSettingsPage() {
           {isEditing ? (
             <>
               <ProfileSectionHeading title="IDENTITY" />
-              <ProfileForm profile={profile} onSubmit={handleProfileUpdate} isSubmitting={isSubmitting} />
+              <ProfileForm profile={profile} onSubmit={updateProfile} isSubmitting={isSubmitting} />
               {actionError && <p className="text-sm text-red-600">{actionError}</p>}
             </>
           ) : (
@@ -124,3 +87,5 @@ function ProfilePageState({ message, onRetry }: ProfilePageStateProps) {
     </section>
   )
 }
+
+export default ProfileSettingsPage

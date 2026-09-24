@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react"
 import { Outlet } from "react-router-dom"
 
-import { profileApi } from "@/features/profile/api/profile-api"
-import type { Profile } from "@/features/profile/types/types"
+import { useAuthStore } from "@/features/auth/store"
+import { profileApi } from "@/features/profile/services"
+import type { Profile } from "@/features/profile/types"
 import { Footer } from "@/shared/components/Footer"
 import { Header } from "@/shared/components/Header"
 import type { HeaderUser } from "@/shared/types/type"
@@ -19,11 +20,12 @@ function toHeaderUser(profile: Profile): HeaderUser {
 
 export function MainLayout() {
   const [user, setUser] = useState<HeaderUser>()
+  const accessToken = useAuthStore((state) => state.accessToken)
 
   useEffect(() => {
-    if (!localStorage.getItem("accessToken")) return
+    if (!accessToken) return
     profileApi.getMe().then((profile) => setUser(toHeaderUser(profile))).catch(() => undefined)
-  }, [])
+  }, [accessToken])
 
   return (
     <div className="flex min-h-screen flex-col">

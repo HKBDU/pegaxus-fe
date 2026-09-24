@@ -1,4 +1,4 @@
-import type { Profile } from "../types/types"
+import type { Profile } from "../types"
 
 export const MOCK_EMPLOYEE_PROFILE: Profile = {
   accountId: "account-501",

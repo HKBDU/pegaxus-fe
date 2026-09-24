@@ -2,7 +2,7 @@ import { Button } from "@/shared/components/ui/button"
 import { cn } from "@/lib/utils"
 
 import { PROFILE_DEFAULT_LABELS } from "../constants/profile.constants"
-import type { ProfileActionButtonsProps } from "../types/props"
+import type { ProfileActionButtonsProps } from "../types"
 
 export function ProfileActionButtons({
   onCancel,

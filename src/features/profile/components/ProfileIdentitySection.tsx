@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 
 import { ACCOUNT_TYPE_LABELS } from "../constants/profile.constants"
-import type { ProfileIdentitySectionProps } from "../types/props"
+import type { ProfileIdentitySectionProps } from "../types"
 import { ProfileAvatarPreview } from "./ProfileAvatarPreview"
 import { ProfileField } from "./ProfileField"
 import { ProfileVerificationField } from "./ProfileVerificationField"

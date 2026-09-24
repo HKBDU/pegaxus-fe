@@ -1,10 +1,10 @@
-import { apiClient, type ApiResponse } from "@/lib/api-client"
-import type { Profile, UpdateProfileRequest } from "../types/types"
+import apiClient from "@/lib/axios"
+import type { ApiResponse, Profile, UpdateProfileRequest } from "@/features/profile/types"
 
 export const profileApi = {
   async getMe() {
-    const { data } = await apiClient.get<ApiResponse<Profile>>("/accounts/me")
-    return data.value
+    const response = await apiClient.get("/accounts/me") as unknown as ApiResponse<Profile>
+    return response.value
   },
 
   async updateMe(input: UpdateProfileRequest) {
@@ -15,8 +15,7 @@ export const profileApi = {
     if (input.address !== undefined) formData.append("address", input.address)
     if (input.avatar !== undefined) formData.append("avatar", input.avatar)
 
-    const { data } = await apiClient.patch<ApiResponse<Profile>>("/accounts/me", formData)
-    return data.value
+    const response = await apiClient.patch("/accounts/me", formData) as unknown as ApiResponse<Profile>
+    return response.value
   },
-
 }

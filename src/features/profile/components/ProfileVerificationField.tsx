@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 
 import { EMAIL_VERIFICATION_LABELS } from "../constants/profile.constants"
-import type { ProfileVerificationFieldProps } from "../types/props"
+import type { ProfileVerificationFieldProps } from "../types"
 
 export function ProfileVerificationField({ status, className }: ProfileVerificationFieldProps) {
   return (

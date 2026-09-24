@@ -16,7 +16,6 @@ export function AdminLayout() {
         </div>
         <AdminHeader />
         <Outlet />
-     
       </SidebarInset>
     </AdminSidebarProvider>
   )
