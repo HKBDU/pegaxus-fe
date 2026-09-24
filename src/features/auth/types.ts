@@ -37,6 +37,22 @@ export interface LoginRequest {
   password: string
 }
 
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface ResendOtpRequest {
+  email: string
+  purpose: 'PASSWORD_RESET'
+}
+
+export interface ResetPasswordRequest {
+  email: string
+  otp: string
+  newPassword: string
+  confirmPassword: string
+}
+
 export interface RegisterRequest {
   fullName: string
   email: string

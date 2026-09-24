@@ -8,6 +8,9 @@ import { MainLayout } from "@/shared/layouts/MainLayout";
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
+const ForgotPasswordPage = lazy(() => import("@/features/auth/pages/ForgotPasswordPage"));
+const ForgotPasswordOtpPage = lazy(() => import("@/features/auth/pages/ForgotPasswordOtpPage"));
+const ResetPasswordPage = lazy(() => import("@/features/auth/pages/ResetPasswordPage"));
 
 export const router = createBrowserRouter([
   {
@@ -45,6 +48,30 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<LoadingState />}>
         <RegisterPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/forgot-password",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <ForgotPasswordPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/forgot-password/verify-otp",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <ForgotPasswordOtpPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/reset-password",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <ResetPasswordPage />
       </Suspense>
     ),
   },

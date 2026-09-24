@@ -2,9 +2,12 @@ import apiClient from '@/lib/axios'
 import type {
   AuthPrincipal,
   AuthResponse,
+  ForgotPasswordRequest,
   LoginRequest,
   RegisterRequest,
   RegisterResponse,
+  ResendOtpRequest,
+  ResetPasswordRequest,
 } from '@/features/auth/types'
 
 export const authApi = {
@@ -20,6 +23,18 @@ export const authApi = {
       value: RegisterResponse
     }
     return response.value
+  },
+
+  async forgotPassword(data: ForgotPasswordRequest): Promise<void> {
+    await apiClient.post('/auth/forgot-password', data)
+  },
+
+  async resendOtp(data: ResendOtpRequest): Promise<void> {
+    await apiClient.post('/auth/resend-otp', data)
+  },
+
+  async resetPassword(data: ResetPasswordRequest): Promise<void> {
+    await apiClient.post('/auth/reset-password', data)
   },
 
   async logout(): Promise<void> {

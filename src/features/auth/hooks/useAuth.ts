@@ -7,8 +7,11 @@ import { useAuthStore } from '@/features/auth/store'
 import type {
   AuthApiError,
   AuthResponse,
+  ForgotPasswordRequest,
   LoginRequest,
   RegisterRequest,
+  ResendOtpRequest,
+  ResetPasswordRequest,
 } from '@/features/auth/types'
 import { queryClient } from '@/lib/queryClient'
 
@@ -57,6 +60,51 @@ export function useLoginMutation() {
         apiError?.message ||
         'Failed to sign in. Please try again.',
       )
+    },
+  })
+}
+
+export function useForgotPasswordMutation() {
+  const navigate = useNavigate()
+
+  return useMutation({
+    mutationFn: (data: ForgotPasswordRequest) => authApi.forgotPassword(data),
+    retry: false,
+    onSuccess: (_, { email }) => {
+      toast.success('If the email exists, a verification code has been sent.')
+      navigate('/forgot-password/verify-otp', { state: { email } })
+    },
+    onError: () => {
+      // Keep failures generic as well to avoid exposing account existence.
+      toast.error('Unable to send a verification code. Please try again later.')
+    },
+  })
+}
+
+export function useResendOtpMutation() {
+  return useMutation({
+    mutationFn: (data: ResendOtpRequest) => authApi.resendOtp(data),
+    retry: false,
+    onSuccess: () => toast.success('A new verification code has been sent.'),
+    onError: (error) => {
+      const apiError = isAxiosError<AuthApiError>(error) ? error.response?.data : undefined
+      toast.error(apiError?.errorCode === 'OTP_RESEND_TOO_SOON'
+        ? 'Please wait before requesting another code.'
+        : 'Unable to resend a verification code. Please try again later.')
+    },
+  })
+}
+
+export function useResetPasswordMutation() {
+  const navigate = useNavigate()
+
+  return useMutation({
+    mutationFn: (data: ResetPasswordRequest) => authApi.resetPassword(data),
+    retry: false,
+    gcTime: 0,
+    onSuccess: () => {
+      toast.success('Password reset successfully. Please sign in again.')
+      navigate('/login', { replace: true })
     },
   })
 }

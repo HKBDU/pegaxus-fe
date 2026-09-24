@@ -30,8 +30,13 @@ const loginSchema = z.object({
 });
 
 const inputClass =
-  "h-14 rounded-none border-neutral-300 bg-white px-4 text-base text-neutral-900 shadow-none placeholder:text-neutral-400 focus-visible:border-[#F39200] focus-visible:ring-[#F39200]/20";
-const labelClass =
+  "h-14 rounded-none border-neutral-300 bg-white px-4 text-base text-neutral-900 shadow-none " +
+  "placeholder:text-neutral-400 " +
+  "focus-visible:border-[#F39200] focus-visible:ring-[#F39200]/20 " +
+  "aria-invalid:border-red-600 " +
+  "aria-invalid:focus-visible:!border-[#F39200] " +
+  "aria-invalid:focus-visible:!ring-[#F39200]/20";
+  const labelClass =
   "font-['Arial_Narrow',Impact,sans-serif] text-xl font-bold uppercase !text-[#202020]";
 
 export default function LoginPage() {
