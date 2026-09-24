@@ -1,10 +1,12 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 import { jwtDecode } from 'jwt-decode'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { authApi } from '@/features/auth/services'
 import { useAuthStore } from '@/features/auth/store'
 import type {
+  AuthApiError,
   AuthPrincipal,
   AuthResponse,
   JwtPayload,
@@ -33,11 +35,16 @@ export function useRegisterMutation() {
 
   return useMutation({
     mutationFn: (data: RegisterRequest) => authApi.register(data),
-    onSuccess: () => {
-      toast.success('Đăng ký thành công')
-      navigate('/login', { replace: true })
+    onSuccess: (_, variables) => {
+      toast.success('Sign up successful. Please check your email for the verification code.')
+      navigate('/verify-email', { replace: true, state: { email: variables.email } })
     },
-    onError: () => toast.error('Đăng ký thất bại, vui lòng thử lại'),
+    onError: (error) => {
+      const message = isAxiosError<AuthApiError>(error)
+        ? error.response?.data?.message
+        : undefined
+      toast.error(message ?? 'Failed to sign up. Please try again.')
+    },
   })
 }
 
@@ -55,10 +62,10 @@ export function useLoginMutation() {
         accessToken: response.accessToken,
         principal: getPrincipal(response),
       })
-      toast.success('Đăng nhập thành công')
+      toast.success('Login successful')
       navigate(from, { replace: true })
     },
-    onError: () => toast.error('Đăng nhập thất bại, vui lòng thử lại'),
+    onError: () => toast.error('Login failed. Please try again.'),
   })
 }
 

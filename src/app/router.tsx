@@ -6,6 +6,7 @@ import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 
 export const router = createBrowserRouter([
   {
@@ -29,5 +30,13 @@ export const router = createBrowserRouter([
   {
     path: "/admin",
     element: <AdminLayout />,
+  },
+  {
+    path: "/register",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <RegisterPage />
+      </Suspense>
+    ),
   },
 ]);

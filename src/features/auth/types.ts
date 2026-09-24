@@ -23,6 +23,18 @@ export interface RegisterRequest {
   fullName: string
   email: string
   password: string
+  confirmPassword: string
+}
+
+export interface RegisterResponse {
+  accountId: string
+  customerId: string
+}
+
+export interface AuthApiError {
+  errorCode: string
+  message: string
+  errors: { field: string; message: string }[] | null
 }
 
 export interface JwtPayload {
