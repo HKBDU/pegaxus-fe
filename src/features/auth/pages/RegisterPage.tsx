@@ -5,6 +5,13 @@ import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import heroPanel from "@/assets/hero-panel.png";
+import {
+  AuthFormField,
+  authInputClass,
+  authLabelClass,
+  authMessageClass,
+  authPrimaryButtonClass,
+} from "@/features/auth/components/AuthFormField";
 import { PasswordField } from "@/features/auth/components/PasswordField";
 import { useRegisterMutation } from "@/features/auth/hooks/useAuth";
 import type { AuthApiError, RegisterRequest } from "@/features/auth/types";
@@ -17,7 +24,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/shared/components/ui/form";
-import { Input } from "@/shared/components/ui/input";
 
 const registerSchema = z
   .object({
@@ -56,16 +62,6 @@ const fields = new Set<keyof RegisterRequest>([
   "password",
   "confirmPassword",
 ]);
-const inputClass =
-  "h-14 rounded-none border-neutral-300 bg-white px-4 text-base text-neutral-900 shadow-none " +
-  "placeholder:text-neutral-400 " +
-  "focus-visible:border-[#F39200] focus-visible:ring-[#F39200]/20 " +
-  "aria-invalid:border-red-600 " +
-  "aria-invalid:focus-visible:!border-[#F39200] " +
-  "aria-invalid:focus-visible:!ring-[#F39200]/20";
-const labelClass =
-  "font-['Arial_Narrow',Impact,sans-serif] text-xl font-bold uppercase !text-[#202020]";
-
 export default function RegisterPage() {
   const mutation = useRegisterMutation();
   const form = useForm<RegisterRequest>({
@@ -147,59 +143,37 @@ export default function RegisterPage() {
               onSubmit={form.handleSubmit(submit)}
               className="mt-9 space-y-5"
             >
-              <FormField
+              <AuthFormField
                 control={form.control}
                 name="fullName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={labelClass}>Full name</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        autoComplete="name"
-                        placeholder="Enter your full name"
-                        className={inputClass}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-sm text-red-700" />
-                  </FormItem>
-                )}
+                label="Full name"
+                autoComplete="name"
+                placeholder="Enter your full name"
               />
-              <FormField
+              <AuthFormField
                 control={form.control}
                 name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={labelClass}>Email address</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="email"
-                        autoComplete="email"
-                        placeholder="Enter your email address"
-                        className={inputClass}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-sm text-red-700" />
-                  </FormItem>
-                )}
+                label="Email address"
+                type="email"
+                autoComplete="email"
+                placeholder="Enter your email address"
               />
               <FormField
                 control={form.control}
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>Password</FormLabel>
+                    <FormLabel className={authLabelClass}>Password</FormLabel>
                     <FormControl>
                       <PasswordField
                         {...field}
                         autoComplete="new-password"
                         visibilityLabel="password"
                         placeholder="Create a password"
-                        className={inputClass}
+                        className={authInputClass}
                       />
                     </FormControl>
-                    <FormMessage className="text-sm text-red-700" />
+                    <FormMessage className={authMessageClass} />
                   </FormItem>
                 )}
               />
@@ -208,7 +182,7 @@ export default function RegisterPage() {
                 name="confirmPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>
+                    <FormLabel className={authLabelClass}>
                       Confirm password
                     </FormLabel>
                     <FormControl>
@@ -217,10 +191,10 @@ export default function RegisterPage() {
                         autoComplete="new-password"
                         visibilityLabel="confirm password"
                         placeholder="Confirm your password"
-                        className={inputClass}
+                        className={authInputClass}
                       />
                     </FormControl>
-                    <FormMessage className="text-sm text-red-700" />
+                    <FormMessage className={authMessageClass} />
                   </FormItem>
                 )}
               />
@@ -234,7 +208,7 @@ export default function RegisterPage() {
               <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="mt-3 h-15 w-full rounded-none bg-[#F39200] font-['Arial_Narrow',Impact,sans-serif] text-2xl font-bold text-[#202020] uppercase shadow-none hover:bg-[#df8500]"
+                className={`${authPrimaryButtonClass} mt-3`}
               >
                 {mutation.isPending && (
                   <LoaderCircle

@@ -5,6 +5,13 @@ import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import heroPanel from "@/assets/hero-panel.png";
+import {
+  AuthFormField,
+  authInputClass,
+  authLabelClass,
+  authMessageClass,
+  authPrimaryButtonClass,
+} from "@/features/auth/components/AuthFormField";
 import { PasswordField } from "@/features/auth/components/PasswordField";
 import { useLoginMutation } from "@/features/auth/hooks/useAuth";
 import type { AuthApiError, LoginRequest } from "@/features/auth/types";
@@ -17,7 +24,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/shared/components/ui/form";
-import { Input } from "@/shared/components/ui/input";
 
 const loginSchema = z.object({
   email: z
@@ -28,16 +34,6 @@ const loginSchema = z.object({
     .max(255, "Email must not exceed 255 characters."),
   password: z.string().min(1, "Password is required."),
 });
-
-const inputClass =
-  "h-14 rounded-none border-neutral-300 bg-white px-4 text-base text-neutral-900 shadow-none " +
-  "placeholder:text-neutral-400 " +
-  "focus-visible:border-[#F39200] focus-visible:ring-[#F39200]/20 " +
-  "aria-invalid:border-red-600 " +
-  "aria-invalid:focus-visible:!border-[#F39200] " +
-  "aria-invalid:focus-visible:!ring-[#F39200]/20";
-  const labelClass =
-  "font-['Arial_Narrow',Impact,sans-serif] text-xl font-bold uppercase !text-[#202020]";
 
 export default function LoginPage() {
   const mutation = useLoginMutation();
@@ -90,24 +86,13 @@ export default function LoginPage() {
               onSubmit={form.handleSubmit(submit)}
               className="mt-10 space-y-5"
             >
-              <FormField
+              <AuthFormField
                 control={form.control}
                 name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={labelClass}>Email address</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="email"
-                        autoComplete="email"
-                        placeholder="Enter your email address"
-                        className={inputClass}
-                      />
-                    </FormControl>
-                    <FormMessage className="text-sm text-red-700" />
-                  </FormItem>
-                )}
+                label="Email address"
+                type="email"
+                autoComplete="email"
+                placeholder="Enter your email address"
               />
 
               <FormField
@@ -115,17 +100,17 @@ export default function LoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className={labelClass}>Password</FormLabel>
+                    <FormLabel className={authLabelClass}>Password</FormLabel>
                     <FormControl>
                       <PasswordField
                         {...field}
                         autoComplete="current-password"
                         visibilityLabel="password"
                         placeholder="Enter your password"
-                        className={inputClass}
+                        className={authInputClass}
                       />
                     </FormControl>
-                    <FormMessage className="text-sm text-red-700" />
+                    <FormMessage className={authMessageClass} />
                   </FormItem>
                 )}
               />
@@ -133,10 +118,13 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 disabled={mutation.isPending}
-                className="mt-4 h-15 w-full rounded-none bg-[#F39200] font-['Arial_Narrow',Impact,sans-serif] text-2xl font-bold text-[#202020] uppercase shadow-none hover:bg-[#df8500]"
+                className={`${authPrimaryButtonClass} mt-4`}
               >
                 {mutation.isPending && (
-                  <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
+                  <LoaderCircle
+                    aria-hidden="true"
+                    className="size-5 animate-spin"
+                  />
                 )}
                 {mutation.isPending ? "Signing in" : "Sign in"}
               </Button>

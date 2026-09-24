@@ -6,7 +6,13 @@ import { useForm } from "react-hook-form";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { PasswordField } from "@/features/auth/components/PasswordField";
-import { PasswordResetLayout } from "@/features/auth/components/PasswordResetLayout";
+import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
+import {
+  authInputClass,
+  authLabelClass,
+  authMessageClass,
+  authPrimaryButtonClass,
+} from "@/features/auth/components/AuthFormField";
 import { useResetPasswordMutation } from "@/features/auth/hooks/useAuth";
 import type { AuthApiError } from "@/features/auth/types";
 import { Button } from "@/shared/components/ui/button";
@@ -40,15 +46,6 @@ const passwordSchema = z
     message: "Passwords do not match.",
   });
 
-const inputClass =
-  "h-14 rounded-none border-neutral-300 bg-white px-4 text-base text-neutral-900 shadow-none " +
-  "placeholder:text-neutral-400 " +
-  "focus-visible:border-[#F39200] focus-visible:ring-[#F39200]/20 " +
-  "aria-invalid:border-red-600 " +
-  "aria-invalid:focus-visible:!border-[#F39200] " +
-  "aria-invalid:focus-visible:!ring-[#F39200]/20";
-const labelClass =
-  "font-['Arial_Narrow',Impact,sans-serif] text-xl font-bold uppercase !text-[#202020]";
 const otpErrors: Record<string, string> = {
   OTP_INVALID: "The verification code is invalid.",
   OTP_EXPIRED: "The verification code has expired.",
@@ -140,7 +137,7 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
   }
 
   return (
-    <PasswordResetLayout
+    <AuthFlowLayout
       title="Create new password"
       backTo="/forgot-password"
       footerText="Already registered with PEGAXUS?"
@@ -157,7 +154,7 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
             name="newPassword"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelClass}>New password</FormLabel>
+                <FormLabel className={authLabelClass}>New password</FormLabel>
                 <FormControl>
                   <PasswordField
                     {...field}
@@ -165,10 +162,10 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
                     visibilityLabel="new password"
                     placeholder="Enter your new password"
                     disabled={isPending}
-                    className={inputClass}
+                    className={authInputClass}
                   />
                 </FormControl>
-                <FormMessage className="text-sm !text-red-700" />
+                <FormMessage className={authMessageClass} />
               </FormItem>
             )}
           />
@@ -177,7 +174,9 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className={labelClass}>Confirm password</FormLabel>
+                <FormLabel className={authLabelClass}>
+                  Confirm password
+                </FormLabel>
                 <FormControl>
                   <PasswordField
                     {...field}
@@ -185,10 +184,10 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
                     visibilityLabel="confirm password"
                     placeholder="Re-enter your new password"
                     disabled={isPending}
-                    className={inputClass}
+                    className={authInputClass}
                   />
                 </FormControl>
-                <FormMessage className="text-sm !text-red-700" />
+                <FormMessage className={authMessageClass} />
               </FormItem>
             )}
           />
@@ -206,7 +205,7 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
           <Button
             type="submit"
             disabled={isPending}
-            className="mt-3 h-15 w-full rounded-none bg-[#F39200] font-['Arial_Narrow',Impact,sans-serif] text-2xl font-bold text-[#202020] uppercase shadow-none hover:bg-[#df8500]"
+            className={`${authPrimaryButtonClass} mt-3`}
           >
             {isPending && (
               <LoaderCircle
@@ -218,6 +217,6 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
           </Button>
         </form>
       </Form>
-    </PasswordResetLayout>
+    </AuthFlowLayout>
   );
 }

@@ -11,6 +11,7 @@ const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const ForgotPasswordPage = lazy(() => import("@/features/auth/pages/ForgotPasswordPage"));
 const ForgotPasswordOtpPage = lazy(() => import("@/features/auth/pages/ForgotPasswordOtpPage"));
 const ResetPasswordPage = lazy(() => import("@/features/auth/pages/ResetPasswordPage"));
+const VerifyEmailPage = lazy(() => import("@/features/auth/pages/VerifyEmailPage"));
 
 export const router = createBrowserRouter([
   {
@@ -56,6 +57,14 @@ export const router = createBrowserRouter([
     element: (
       <Suspense fallback={<LoadingState />}>
         <ForgotPasswordPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/verify-email",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <VerifyEmailPage />
       </Suspense>
     ),
   },
