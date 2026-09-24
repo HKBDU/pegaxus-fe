@@ -5,25 +5,15 @@ import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { z } from "zod";
-import { PasswordField } from "@/features/auth/components/PasswordField";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
-  authInputClass,
-  authLabelClass,
-  authMessageClass,
+  AuthPasswordFormField,
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
 import { useResetPasswordMutation } from "@/features/auth/hooks/useAuth";
 import type { AuthApiError } from "@/features/auth/types";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/shared/components/ui/form";
+import { Form } from "@/shared/components/ui/form";
 
 const routeStateSchema = z.object({
   email: z.string().email().max(255),
@@ -140,56 +130,42 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
     <AuthFlowLayout
       title="Create new password"
       backTo="/forgot-password"
-      footerText="Already registered with PEGAXUS?"
+      footer={
+        <p>
+          Already registered with PEGAXUS?{" "}
+          <Link
+            to="/login"
+            className="font-semibold text-[#d47d00] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F39200]"
+          >
+            Sign in
+          </Link>
+        </p>
+      }
     >
       <Form {...form}>
         <form
           noValidate
           onSubmit={(event) => void form.handleSubmit(submit)(event)}
-          className="mt-10 space-y-5"
+          className="mt-6 space-y-4"
           aria-busy={isPending}
         >
-          <FormField
+          <AuthPasswordFormField
             control={form.control}
             name="newPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className={authLabelClass}>New password</FormLabel>
-                <FormControl>
-                  <PasswordField
-                    {...field}
-                    autoComplete="new-password"
-                    visibilityLabel="new password"
-                    placeholder="Enter your new password"
-                    disabled={isPending}
-                    className={authInputClass}
-                  />
-                </FormControl>
-                <FormMessage className={authMessageClass} />
-              </FormItem>
-            )}
+            label="New password"
+            autoComplete="new-password"
+            visibilityLabel="new password"
+            placeholder="Enter your new password"
+            disabled={isPending}
           />
-          <FormField
+          <AuthPasswordFormField
             control={form.control}
             name="confirmPassword"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className={authLabelClass}>
-                  Confirm password
-                </FormLabel>
-                <FormControl>
-                  <PasswordField
-                    {...field}
-                    autoComplete="new-password"
-                    visibilityLabel="confirm password"
-                    placeholder="Re-enter your new password"
-                    disabled={isPending}
-                    className={authInputClass}
-                  />
-                </FormControl>
-                <FormMessage className={authMessageClass} />
-              </FormItem>
-            )}
+            label="Confirm password"
+            autoComplete="new-password"
+            visibilityLabel="confirm password"
+            placeholder="Re-enter your new password"
+            disabled={isPending}
           />
           {form.formState.errors.root?.server && (
             <div role="alert" className="space-y-2 text-sm text-red-700">
@@ -205,7 +181,7 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
           <Button
             type="submit"
             disabled={isPending}
-            className={`${authPrimaryButtonClass} mt-3`}
+            className={authPrimaryButtonClass}
           >
             {isPending && (
               <LoaderCircle

@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { isAxiosError } from "axios";
 import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
@@ -88,16 +88,30 @@ function PasswordResetOtpForm({ email }: { email: string }) {
   }
 
   return (
-    <AuthFlowLayout title="OTP verification" backTo="/forgot-password">
-      <p className="!mt-9 break-words font-['Arial_Narrow',Impact,sans-serif] text-base font-bold text-[#202020]">
-        <span className="uppercase">We have sent a code to your email:</span>{" "}
+    <AuthFlowLayout
+      title="OTP verification"
+      backTo="/forgot-password"
+      footer={
+        <p>
+          Remember your password?{" "}
+          <Link
+            to="/login"
+            className="font-semibold text-[#d47d00] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F39200]"
+          >
+            Sign in
+          </Link>
+        </p>
+      }
+    >
+      <p className="mt-5 break-words font-['Arial_Narrow',Impact,sans-serif] text-base font-bold text-[#202020] uppercase">
+        <span>We have sent a code to your email:</span>{" "}
         <span className="text-[#F39200]">{email}</span>
       </p>
       <Form {...form}>
         <form
           noValidate
           onSubmit={form.handleSubmit(submit)}
-          className="mt-8 space-y-6"
+          className="mt-5 space-y-4"
         >
           <AuthFormField
             control={form.control}
@@ -112,13 +126,13 @@ function PasswordResetOtpForm({ email }: { email: string }) {
           <Button
             type="submit"
             disabled={resend.isPending}
-            className={`${authPrimaryButtonClass} mt-3`}
+            className={authPrimaryButtonClass}
           >
             Continue
           </Button>
         </form>
       </Form>
-      <div className="mt-6 flex justify-center">
+      <div className="mt-4 flex justify-center">
         <Button
           type="button"
           variant="link"

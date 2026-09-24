@@ -1,29 +1,19 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { isAxiosError } from "axios";
-import { ArrowLeft, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { z } from "zod";
-import heroPanel from "@/assets/hero-panel.png";
+import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
   AuthFormField,
-  authInputClass,
-  authLabelClass,
-  authMessageClass,
+  AuthPasswordFormField,
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
-import { PasswordField } from "@/features/auth/components/PasswordField";
 import { useRegisterMutation } from "@/features/auth/hooks/useAuth";
 import type { AuthApiError, RegisterRequest } from "@/features/auth/types";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/shared/components/ui/form";
+import { Form } from "@/shared/components/ui/form";
 
 const registerSchema = z
   .object({
@@ -110,128 +100,80 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="grid min-h-svh bg-[#f4f2ed] lg:grid-cols-[45%_55%]">
-      <aside
-        className="relative hidden min-h-svh overflow-hidden bg-[#171819] lg:block"
-        aria-label="PEGAXUS Logistics"
-      >
-        <img
-          src={heroPanel}
-          alt=""
-          className="size-full object-cover object-center"
-        />
-      </aside>
-
-      <section className="flex min-h-svh flex-col px-6 py-8 sm:px-10 lg:px-[clamp(3rem,6vw,8rem)]">
-        <div className="mx-auto flex w-full max-w-[700px] flex-1 flex-col justify-center py-8">
-          <p className="mb-8 font-['Arial_Narrow',Impact,sans-serif] text-3xl font-bold text-[#202020] lg:hidden">
-            PEGAXUS
-          </p>
+    <AuthFlowLayout
+      title="Sign up"
+      backTo="/login"
+      footer={
+        <p>
+          Already registered with PEGAXUS?{" "}
           <Link
             to="/login"
-            className="mb-8 inline-flex w-fit items-center gap-3 font-['Arial_Narrow',Impact,sans-serif] text-2xl font-bold text-[#202020] hover:text-[#F39200] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F39200]"
+            className="font-semibold text-[#d47d00] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F39200]"
           >
-            <ArrowLeft aria-hidden="true" className="size-7" /> Back
+            Sign in
           </Link>
-          <h1 className="m-0 font-['Oswald',sans-serif] text-5xl leading-none font-black !text-[#202020] uppercase sm:text-6xl">
-            SIGN UP
-          </h1>
+        </p>
+      }
+    >
+      <Form {...form}>
+        <form
+          noValidate
+          onSubmit={form.handleSubmit(submit)}
+          className="mt-5 space-y-2"
+        >
+          <AuthFormField
+            control={form.control}
+            name="fullName"
+            label="Full name"
+            autoComplete="name"
+            placeholder="Quock Brown"
+          />
+          <AuthFormField
+            control={form.control}
+            name="email"
+            label="Email address"
+            type="email"
+            autoComplete="email"
+            placeholder="Enter your email address"
+          />
+          <AuthPasswordFormField
+            control={form.control}
+            name="password"
+            label="Password"
+            autoComplete="new-password"
+            visibilityLabel="password"
+            placeholder="Create a password"
+          />
+          <AuthPasswordFormField
+            control={form.control}
+            name="confirmPassword"
+            label="Confirm password"
+            autoComplete="new-password"
+            visibilityLabel="confirm password"
+            placeholder="Confirm your password"
+          />
 
-          <Form {...form}>
-            <form
-              noValidate
-              onSubmit={form.handleSubmit(submit)}
-              className="mt-9 space-y-5"
-            >
-              <AuthFormField
-                control={form.control}
-                name="fullName"
-                label="Full name"
-                autoComplete="name"
-                placeholder="Enter your full name"
-              />
-              <AuthFormField
-                control={form.control}
-                name="email"
-                label="Email address"
-                type="email"
-                autoComplete="email"
-                placeholder="Enter your email address"
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={authLabelClass}>Password</FormLabel>
-                    <FormControl>
-                      <PasswordField
-                        {...field}
-                        autoComplete="new-password"
-                        visibilityLabel="password"
-                        placeholder="Create a password"
-                        className={authInputClass}
-                      />
-                    </FormControl>
-                    <FormMessage className={authMessageClass} />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className={authLabelClass}>
-                      Confirm password
-                    </FormLabel>
-                    <FormControl>
-                      <PasswordField
-                        {...field}
-                        autoComplete="new-password"
-                        visibilityLabel="confirm password"
-                        placeholder="Confirm your password"
-                        className={authInputClass}
-                      />
-                    </FormControl>
-                    <FormMessage className={authMessageClass} />
-                  </FormItem>
-                )}
-              />
+          {form.formState.errors.root?.server && (
+            <p role="alert" className="text-sm text-red-700">
+              {form.formState.errors.root.server.message}
+            </p>
+          )}
 
-              {form.formState.errors.root?.server && (
-                <p role="alert" className="text-sm text-red-700">
-                  {form.formState.errors.root.server.message}
-                </p>
-              )}
-
-              <Button
-                type="submit"
-                disabled={mutation.isPending}
-                className={`${authPrimaryButtonClass} mt-3`}
-              >
-                {mutation.isPending && (
-                  <LoaderCircle
-                    aria-hidden="true"
-                    className="size-5 animate-spin"
-                  />
-                )}
-                {mutation.isPending ? "Creating account" : "Sign up"}
-              </Button>
-            </form>
-          </Form>
-
-          <p className="mt-8 text-base text-neutral-600">
-            Already registered with PEGAXUS?{" "}
-            <Link
-              to="/login"
-              className="font-semibold text-[#d47d00] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F39200]"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
-      </section>
-    </main>
+          <Button
+            type="submit"
+            disabled={mutation.isPending}
+            className={authPrimaryButtonClass}
+          >
+            {mutation.isPending && (
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-5 animate-spin"
+              />
+            )}
+            {mutation.isPending ? "Creating account" : "Sign up"}
+          </Button>
+        </form>
+      </Form>
+    </AuthFlowLayout>
   );
 }

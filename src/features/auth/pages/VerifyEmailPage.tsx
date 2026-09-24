@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { isAxiosError } from "axios";
 import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { Navigate, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { z } from "zod";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
@@ -131,9 +131,19 @@ function VerifyEmailForm({ email }: { email: string }) {
     <AuthFlowLayout
       title="OTP verification"
       backTo="/register"
-      footerText="Already verified?"
+      footer={
+        <p>
+          Already verified?{" "}
+          <Link
+            to="/login"
+            className="font-semibold text-[#d47d00] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F39200]"
+          >
+            Sign in
+          </Link>
+        </p>
+      }
     >
-      <p className="!mt-9 break-words font-['Arial_Narrow',Impact,sans-serif] text-base font-bold text-[#202020]">
+      <p className="mt-5 break-words font-['Arial_Narrow',Impact,sans-serif] text-base font-bold text-[#202020]">
         <span className="uppercase">We have sent a code to your email:</span>{" "}
         <span className="text-[#F39200]">{email}</span>
       </p>
@@ -141,7 +151,7 @@ function VerifyEmailForm({ email }: { email: string }) {
         <form
           noValidate
           onSubmit={form.handleSubmit(submit)}
-          className="mt-8 space-y-6"
+          className="mt-5 space-y-4"
           aria-busy={isPending}
         >
           <AuthFormField
@@ -162,7 +172,7 @@ function VerifyEmailForm({ email }: { email: string }) {
           <Button
             type="submit"
             disabled={isPending}
-            className={`${authPrimaryButtonClass} mt-3`}
+            className={authPrimaryButtonClass}
           >
             {verifyEmail.isPending && (
               <LoaderCircle
@@ -174,7 +184,7 @@ function VerifyEmailForm({ email }: { email: string }) {
           </Button>
         </form>
       </Form>
-      <div className="mt-6 flex justify-center">
+      <div className="mt-4 flex justify-center">
         <Button
           type="button"
           variant="link"

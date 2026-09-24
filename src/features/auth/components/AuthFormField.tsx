@@ -9,9 +9,10 @@ import {
   FormMessage,
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
+import { PasswordField } from "./PasswordField";
 
 export const authInputClass =
-  "h-14 rounded-none border-neutral-300 bg-white px-4 text-base text-neutral-900 shadow-none " +
+  "h-12 rounded-none border-neutral-300 bg-white px-4 text-base text-neutral-900 shadow-none " +
   "placeholder:text-neutral-400 " +
   "focus-visible:border-[#F39200] focus-visible:ring-[#F39200]/20 " +
   "aria-invalid:border-red-600 " +
@@ -19,13 +20,13 @@ export const authInputClass =
   "aria-invalid:focus-visible:!ring-[#F39200]/20";
 
 export const authLabelClass =
-  "font-['Arial_Narrow',Impact,sans-serif] text-xl font-bold uppercase !text-[#202020]";
+  "font-['Arial_Narrow',Impact,sans-serif] text-lg font-bold uppercase !text-[#202020]";
 
 export const authMessageClass = "text-sm !text-red-700";
 
 export const authPrimaryButtonClass =
-  "h-15 w-full rounded-none bg-[#F39200] font-['Arial_Narrow',Impact,sans-serif] " +
-  "text-2xl font-bold text-[#202020] uppercase shadow-none hover:bg-[#df8500]";
+  "h-13 w-full rounded-none bg-[#F39200] font-['Arial_Narrow',Impact,sans-serif] " +
+  "text-xl font-bold text-[#202020] uppercase shadow-none hover:bg-[#df8500]";
 
 type InputProps = Omit<
   ComponentProps<typeof Input>,
@@ -56,12 +57,55 @@ export function AuthFormField<
       control={control}
       name={name}
       render={({ field }) => (
-        <FormItem>
+        <FormItem className="gap-1.5">
           <FormLabel className={authLabelClass}>{label}</FormLabel>
           <FormControl>
             <Input
               {...field}
               {...inputProps}
+              className={cn(authInputClass, className)}
+            />
+          </FormControl>
+          <FormMessage className={authMessageClass} />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+interface AuthPasswordFormFieldProps<
+  TFieldValues extends FieldValues,
+  TName extends FieldPath<TFieldValues>,
+> extends Omit<InputProps, "type"> {
+  control: Control<TFieldValues>;
+  name: TName;
+  label: string;
+  visibilityLabel: string;
+}
+
+export function AuthPasswordFormField<
+  TFieldValues extends FieldValues,
+  TName extends FieldPath<TFieldValues>,
+>({
+  control,
+  name,
+  label,
+  visibilityLabel,
+  className,
+  ...inputProps
+}: AuthPasswordFormFieldProps<TFieldValues, TName>) {
+  return (
+    <FormField
+      control={control}
+      name={name}
+      render={({ field }) => (
+        <FormItem className="gap-1.5">
+          <FormLabel className={authLabelClass}>{label}</FormLabel>
+          <FormControl>
+            <PasswordField
+              {...field}
+              {...inputProps}
+              visibilityLabel={visibilityLabel}
               className={cn(authInputClass, className)}
             />
           </FormControl>

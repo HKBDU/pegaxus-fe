@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router-dom";
 import { z } from "zod";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
@@ -34,12 +35,26 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <AuthFlowLayout title="Forgot password" backTo="/login">
+    <AuthFlowLayout
+      title="Forgot password"
+      backTo="/login"
+      footer={
+        <p>
+          Remember your password?{" "}
+          <Link
+            to="/login"
+            className="font-semibold text-[#d47d00] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F39200]"
+          >
+            Sign in
+          </Link>
+        </p>
+      }
+    >
       <Form {...form}>
         <form
           noValidate
           onSubmit={form.handleSubmit(submit)}
-          className="mt-10 space-y-6"
+          className="mt-6 space-y-4"
           aria-busy={mutation.isPending}
         >
           <AuthFormField
@@ -54,7 +69,7 @@ export default function ForgotPasswordPage() {
           <Button
             type="submit"
             disabled={mutation.isPending}
-            className={`${authPrimaryButtonClass} mt-3`}
+            className={authPrimaryButtonClass}
           >
             {mutation.isPending && (
               <LoaderCircle
