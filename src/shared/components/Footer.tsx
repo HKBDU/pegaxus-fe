@@ -1,4 +1,5 @@
 import { Mail, MapPin, Phone } from "lucide-react"
+import { Link } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
 import orangeLine from "@/assets/orange-line.svg"
@@ -13,9 +14,9 @@ export function FooterColumn({ title, links, className, children }: FooterColumn
       {children ?? (
         <nav className="space-y-4" aria-label={title}>
           {links.map((link) => (
-            <a key={link.href} href={link.href} className="block text-sm leading-5 text-[#9297a1] hover:text-white">
+            <Link key={link.href} to={link.href} className="block text-sm leading-5 text-[#9297a1] hover:text-white">
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
       )}

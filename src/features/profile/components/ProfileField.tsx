@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils"
 
-import type { ProfileFieldProps } from "../types/props"
+import type { ProfileFieldProps } from "../types"
 
 export function ProfileField({ label, value, className }: ProfileFieldProps) {
   return (

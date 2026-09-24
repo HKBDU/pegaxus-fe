@@ -1,4 +1,4 @@
-import type { AccountType, EmailVerificationStatus, ProfileSectionName } from "../types/types"
+import type { AccountType, EmailVerificationStatus, ProfileSectionName } from "../types"
 
 export const PROFILE_SECTION_TITLES: Record<ProfileSectionName, ProfileSectionName> = {
   IDENTITY: "IDENTITY",

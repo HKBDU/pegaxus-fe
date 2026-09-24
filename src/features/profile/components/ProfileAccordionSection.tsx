@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 
 import { PROFILE_SECTION_TITLES } from "../constants/profile.constants"
-import type { ProfileAccordionSectionProps } from "../types/props"
+import type { ProfileAccordionSectionProps } from "../types"
 
 export function ProfileAccordionSection({ title, open, onToggle, children }: ProfileAccordionSectionProps) {
   const contentId = `profile-section-${title.toLowerCase().replaceAll(" ", "-")}`

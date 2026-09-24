@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avat
 import { cn } from "@/lib/utils"
 
 import { PROFILE_DEFAULT_LABELS } from "../constants/profile.constants"
-import type { ProfileAvatarPreviewProps } from "../types/props"
+import type { ProfileAvatarPreviewProps } from "../types"
 
 export function ProfileAvatarPreview({
   initials,

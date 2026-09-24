@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react"
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
 
-import type { ProfileFormProps } from "../types/props"
+import type { ProfileFormProps } from "../types"
 
 export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
   const [fullName, setFullName] = useState(profile.fullName ?? "")
