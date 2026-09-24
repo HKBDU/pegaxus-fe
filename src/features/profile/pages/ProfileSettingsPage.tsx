@@ -10,6 +10,7 @@ import { useState } from "react"
 import { useProfile } from "../hooks/useProfile"
 import type { EmailVerificationStatus, Profile, ProfileOpenSections, ProfilePageStateProps } from "../types"
 import { PageHeader } from "@/shared/components/PageHeader"
+import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
 
@@ -156,9 +157,9 @@ function ProfilePageState({ message, onRetry }: ProfilePageStateProps) {
       <div className="text-center">
         <p className="text-sm text-[#6c6963]">{message}</p>
         {onRetry && (
-          <button type="button" onClick={onRetry} className="mt-4 text-xs font-bold tracking-[0.6px] text-[#f39200] uppercase">
+          <Button type="button" variant="link" onClick={onRetry} className="mt-4 h-auto p-0 text-xs font-bold tracking-[0.6px] text-[#f39200] uppercase">
             Try again
-          </button>
+          </Button>
         )}
       </div>
     </section>
