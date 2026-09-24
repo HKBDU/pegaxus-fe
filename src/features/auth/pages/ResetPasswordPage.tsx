@@ -11,6 +11,7 @@ import {
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
 import { useResetPasswordMutation } from "@/features/auth/hooks/useAuth";
+import { newPasswordSchema } from "@/features/auth/password-schema";
 import type { AuthApiError } from "@/features/auth/types";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
@@ -21,14 +22,7 @@ const routeStateSchema = z.object({
 });
 const passwordSchema = z
   .object({
-    newPassword: z
-      .string()
-      .min(1, "New password is required.")
-      .min(8, "Password must be at least 8 characters.")
-      .max(128, "Password must not exceed 128 characters.")
-      .regex(/[A-Z]/, "Password must contain at least 1 uppercase letter.")
-      .regex(/[a-z]/, "Password must contain at least 1 lowercase letter.")
-      .regex(/[0-9]/, "Password must contain at least 1 numeric character."),
+    newPassword: newPasswordSchema,
     confirmPassword: z.string().min(1, "Confirm password is required."),
   })
   .refine((values) => values.newPassword === values.confirmPassword, {

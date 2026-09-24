@@ -12,7 +12,7 @@ import { Input } from "@/shared/components/ui/input";
 import { PasswordField } from "./PasswordField";
 
 export const authInputClass =
-  "h-12 rounded-none border-neutral-300 bg-white px-4 text-base text-neutral-900 shadow-none " +
+  "h-8 rounded-none border-neutral-300 bg-white px-2 text-base text-neutral-900 shadow-none " +
   "placeholder:text-neutral-400 " +
   "focus-visible:border-[#F39200] focus-visible:ring-[#F39200]/20 " +
   "aria-invalid:border-red-600 " +
@@ -20,13 +20,13 @@ export const authInputClass =
   "aria-invalid:focus-visible:!ring-[#F39200]/20";
 
 export const authLabelClass =
-  "font-['Arial_Narrow',Impact,sans-serif] text-lg font-bold uppercase !text-[#202020]";
+  "font-['Arial_Narrow',Impact,sans-serif] text-base font-bold uppercase !text-[#202020]";
 
 export const authMessageClass = "text-sm !text-red-700";
 
 export const authPrimaryButtonClass =
-  "h-13 w-full rounded-none bg-[#F39200] font-['Arial_Narrow',Impact,sans-serif] " +
-  "text-xl font-bold text-[#202020] uppercase shadow-none hover:bg-[#df8500]";
+  "h-8 w-full rounded-none bg-[#F39200] font-['Arial_Narrow',Impact,sans-serif] " +
+  "text-lg font-bold text-[#202020] uppercase shadow-none hover:bg-[#df8500]";
 
 type InputProps = Omit<
   ComponentProps<typeof Input>,

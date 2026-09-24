@@ -161,7 +161,7 @@ function VerifyEmailForm({ email }: { email: string }) {
             inputMode="numeric"
             autoComplete="one-time-code"
             maxLength={6}
-            placeholder="XXXXXX"
+            placeholder="Enter your 6-digit code"
             disabled={isPending}
           />
           {form.formState.errors.root?.server && (

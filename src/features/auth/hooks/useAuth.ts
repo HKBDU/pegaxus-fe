@@ -7,6 +7,7 @@ import { useAuthStore } from "@/features/auth/store";
 import type {
   AuthApiError,
   AuthResponse,
+  ChangePasswordRequest,
   ForgotPasswordRequest,
   LoginRequest,
   RegisterRequest,
@@ -133,6 +134,18 @@ export function useResetPasswordMutation() {
     onSuccess: () => {
       toast.success("Password reset successfully. Please sign in again.");
       navigate("/login", { replace: true });
+    },
+  });
+}
+
+export function useChangePasswordMutation(onSuccess: () => void) {
+  return useMutation({
+    mutationFn: (data: ChangePasswordRequest) => authApi.changePassword(data),
+    retry: false,
+    gcTime: 0,
+    onSuccess: () => {
+      toast.success("Password changed successfully.");
+      onSuccess();
     },
   });
 }

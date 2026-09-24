@@ -2,6 +2,7 @@ import apiClient from "@/lib/axios";
 import type {
   AuthPrincipal,
   AuthResponse,
+  ChangePasswordRequest,
   ForgotPasswordRequest,
   LoginRequest,
   RegisterRequest,
@@ -46,6 +47,10 @@ export const authApi = {
 
   async resetPassword(data: ResetPasswordRequest): Promise<void> {
     await apiClient.post("/auth/reset-password", data);
+  },
+
+  async changePassword(data: ChangePasswordRequest): Promise<void> {
+    await apiClient.put("/accounts/me/password", data);
   },
 
   async logout(): Promise<void> {

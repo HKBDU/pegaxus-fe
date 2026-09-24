@@ -120,7 +120,7 @@ function PasswordResetOtpForm({ email }: { email: string }) {
             inputMode="numeric"
             autoComplete="one-time-code"
             maxLength={6}
-            placeholder="XXXXXX"
+            placeholder="Enter your 6-digit code"
             disabled={resend.isPending}
           />
           <Button

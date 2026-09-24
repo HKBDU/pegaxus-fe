@@ -2,6 +2,7 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import { LoadingState, NotFoundPage } from "@/shared/components/common";
+import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 
@@ -12,6 +13,9 @@ const ForgotPasswordPage = lazy(() => import("@/features/auth/pages/ForgotPasswo
 const ForgotPasswordOtpPage = lazy(() => import("@/features/auth/pages/ForgotPasswordOtpPage"));
 const ResetPasswordPage = lazy(() => import("@/features/auth/pages/ResetPasswordPage"));
 const VerifyEmailPage = lazy(() => import("@/features/auth/pages/VerifyEmailPage"));
+const ChangePasswordPage = lazy(
+  () => import("@/features/auth/pages/ChangePasswordPage"),
+);
 
 export const router = createBrowserRouter([
   {
@@ -82,6 +86,16 @@ export const router = createBrowserRouter([
       <Suspense fallback={<LoadingState />}>
         <ResetPasswordPage />
       </Suspense>
+    ),
+  },
+  {
+    path: "/change-password",
+    element: (
+      <ProtectedRoute>
+        <Suspense fallback={<LoadingState />}>
+          <ChangePasswordPage />
+        </Suspense>
+      </ProtectedRoute>
     ),
   },
 ]);
