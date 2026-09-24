@@ -18,7 +18,7 @@ import {
 } from "@/shared/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import type { HeaderProps } from "@/shared/types/props"
-import type { HeaderNavItem, HeaderUser } from "@/shared/types/type"
+import type { HeaderNavItem, HeaderSidebarNavProps, HeaderUser } from "@/shared/types/type"
 
 const defaultNavItems: HeaderNavItem[] = [
   { label: "Home", href: "/" },
@@ -30,7 +30,7 @@ const defaultNavItems: HeaderNavItem[] = [
 // wait for AuthContext to get user data from API/JWT to pass to header
 const defaultUser: HeaderUser = { name: "James Davidson", role: "Owner", initials: "JD" }
 
-function HeaderSidebarNav({ navItems }: { navItems: HeaderNavItem[] }) {
+function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
   const { setOpenMobile } = useSidebar()
   const location = useLocation()
   const icons = [House, Truck, MapPin, Settings]

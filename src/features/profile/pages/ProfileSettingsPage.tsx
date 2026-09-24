@@ -8,7 +8,7 @@ import {
 } from "../components"
 import { useState } from "react"
 import { useProfile } from "../hooks/useProfile"
-import type { EmailVerificationStatus, Profile, ProfilePageStateProps } from "../types"
+import type { EmailVerificationStatus, Profile, ProfileOpenSections, ProfilePageStateProps } from "../types"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
@@ -44,7 +44,7 @@ function formatProfileLabel(value: string) {
 }
 
 export function ProfileSettingsPage() {
-  const [openSections, setOpenSections] = useState<Record<"CONTACT" | "WORK INFORMATION" | "ACCOUNT", boolean>>({
+  const [openSections, setOpenSections] = useState<ProfileOpenSections>({
     CONTACT: true,
     "WORK INFORMATION": true,
     ACCOUNT: true,

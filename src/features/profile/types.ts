@@ -43,6 +43,7 @@ export type Profile = {
 }
 
 export type ProfileSectionName = "IDENTITY" | "CONTACT" | "WORK INFORMATION" | "ACCOUNT"
+export type ProfileOpenSections = Record<Exclude<ProfileSectionName, "IDENTITY">, boolean>
 export type ProfileFieldValue = string | null
 
 export type UpdateProfileRequest = {

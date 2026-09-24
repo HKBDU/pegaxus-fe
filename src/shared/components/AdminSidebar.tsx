@@ -9,11 +9,12 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react"
-import type { ComponentType, CSSProperties, ReactNode } from "react"
+import type { CSSProperties } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
 import { cn } from "@/lib/utils"
+import type { AdminSidebarMenuProps, AdminSidebarProviderProps } from "@/shared/types/type"
 import {
   Sidebar,
   SidebarContent,
@@ -41,13 +42,7 @@ const secondaryItems = [
   { label: "Sign out", href: "/logout", icon: LogOut },
 ]
 
-type AdminSidebarItem = {
-  label: string
-  href: string
-  icon: ComponentType<{ className?: string }>
-}
-
-function AdminSidebarMenu({ items, compact = false }: { items: AdminSidebarItem[]; compact?: boolean }) {
+function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
   const { pathname } = useLocation()
 
   return (
@@ -100,7 +95,7 @@ export function AdminSidebar() {
   )
 }
 
-export function AdminSidebarProvider({ children }: { children: ReactNode }) {
+export function AdminSidebarProvider({ children }: AdminSidebarProviderProps) {
   return (
     <SidebarProvider
       defaultOpen
