@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 import { MOCK_EMPLOYEE_PROFILE } from "@/features/profile/constants/profile.mock"
 import { profileApi } from "@/features/profile/services"
 import type { Profile, UpdateProfileRequest } from "@/features/profile/types"
@@ -9,7 +10,6 @@ export function useProfile() {
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [actionError, setActionError] = useState<string>()
 
   const loadProfile = useCallback(async () => {
     try {
@@ -31,12 +31,11 @@ export function useProfile() {
 
   async function updateProfile(input: UpdateProfileRequest) {
     setIsSubmitting(true)
-    setActionError(undefined)
     try {
       setProfile(await profileApi.updateMe(input))
       setIsEditing(false)
     } catch {
-      setActionError("Unable to update profile. Please try again.")
+      toast.error("Can not update profile. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -58,7 +57,6 @@ export function useProfile() {
     isLoading,
     isEditing,
     isSubmitting,
-    actionError,
     setIsEditing,
     retryProfile,
     updateProfile,

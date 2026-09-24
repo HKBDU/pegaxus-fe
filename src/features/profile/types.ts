@@ -53,6 +53,8 @@ export type UpdateProfileRequest = {
   avatar?: File
 }
 
+export type ProfileFormErrors = Partial<Record<"email" | "fullName" | "phone" | "address", string>>
+
 export type ApiResponse<T> = {
   isSuccess: boolean
   code: number
@@ -66,6 +68,7 @@ export type ProfileFormProps = {
   profile: Profile
   onSubmit: (input: UpdateProfileRequest) => Promise<void> | void
   isSubmitting?: boolean
+  onValidationChange?: (errors: ProfileFormErrors) => void
 }
 
 export type ProfileSectionHeadingProps = {
@@ -80,6 +83,7 @@ export type ProfileFieldProps = {
   value: ProfileFieldValue
   className?: string
   readOnly?: boolean
+  error?: string
 }
 
 export type ProfileAvatarPreviewProps = {

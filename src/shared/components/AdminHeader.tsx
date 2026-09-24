@@ -18,7 +18,7 @@ export function AdminHeader() {
   )
 
   return (
-    <header className="border-b border-[#202329] bg-[#17191c] text-white">
+    <header className="site-header-enter border-b border-[#202329] bg-[#17191c] text-white transition-[background-color,box-shadow] duration-300">
       <nav aria-label="Admin booking path" className="overflow-x-auto px-6">
         <ol className="flex min-h-14 items-center whitespace-nowrap text-xs font-semibold tracking-[0.08em]">
           {adminHeaderLinks.map((link, index) => (

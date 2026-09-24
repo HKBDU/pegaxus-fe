@@ -8,13 +8,13 @@ import type { FooterColumnProps } from "@/shared/types/props"
 
 export function FooterColumn({ title, links, className, children }: FooterColumnProps) {
   return (
-    <section className={cn("min-w-0 break-words", className)}>
+    <section className={cn("min-w-0 break-words transition-transform duration-300 hover:-translate-y-0.5", className)}>
       <h2 className="mb-4 text-xs font-bold tracking-[0.22em] !text-white">{title}</h2>
       <div className="mb-3 h-0.5 w-6 bg-[#f39200]" />
       {children ?? (
         <nav className="space-y-3" aria-label={title}>
           {links.map((link) => (
-            <Link key={link.href} to={link.href} className="block text-sm leading-5 text-[#9297a1] hover:text-white">
+            <Link key={link.href} to={link.href} className="block text-sm leading-5 text-[#9297a1] transition-colors duration-200 hover:text-white">
               {link.label}
             </Link>
           ))}
@@ -58,11 +58,11 @@ const columns: FooterColumnProps[] = [
 
 export function Footer() {
   return (
-    <footer className="relative overflow-hidden bg-[#0d0f12] text-white">
+    <footer className="site-footer-enter relative overflow-hidden bg-[#0d0f12] text-white">
       <img src={orangeLine} alt="" aria-hidden="true" className="mt-10 hidden h-auto w-full max-w-none lg:block" />
       <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-x-10 gap-y-12 px-8 pb-16 pt-12 sm:grid-cols-2 lg:grid-cols-[1.7fr_1fr_1fr_1fr_1.3fr] lg:px-16">
         <section>
-          <img src={logo} alt="Pegaxus" className="mx-auto w-[270px] max-w-full lg:mx-0" />
+          <img src={logo} alt="Pegaxus" className="mx-auto w-[270px] max-w-full transition-transform duration-300 hover:scale-[1.02] lg:mx-0" />
           <h2 className="mt-5 max-w-[250px] text-base font-bold leading-[1.3] tracking-[0.16em] !text-white pt-5">
             GLOBAL RACEHORSE TRANSPORT WITHOUT BORDERS.
           </h2>

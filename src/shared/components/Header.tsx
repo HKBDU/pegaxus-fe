@@ -123,10 +123,10 @@ export function Header({
   return (
     <SidebarProvider defaultOpen={false} className="sticky top-0 z-50 !min-h-0 w-full">
       <HeaderSidebarNav navItems={navItems} />
-      <header className={cn("sticky top-0 z-50 w-full border-b border-white/5 bg-[#17191c] text-white", className)}>
+      <header className={cn("site-header-enter sticky top-0 z-50 w-full border-b border-white/5 bg-[#17191c] text-white transition-[background-color,box-shadow] duration-300", className)}>
       <div className="mx-auto hidden h-[72px] w-full items-center px-8 lg:flex">
         <NavLink to="/" aria-label={logoAlt} className="shrink-0">
-          <img src={logoSrc} alt={logoAlt} className="h-auto w-[150px]" />
+          <img src={logoSrc} alt={logoAlt} className="h-auto w-[150px] transition-transform duration-300 hover:scale-[1.02]" />
         </NavLink>
         { /* active state got from url */}
         <nav aria-label="Main navigation" className="ml-auto flex h-full items-center gap-10">
@@ -165,7 +165,7 @@ export function Header({
             <Menu className="size-5" />
           </SidebarTrigger>
           <NavLink to="/" aria-label={logoAlt} className="absolute left-1/2 shrink-0 -translate-x-1/2">
-            <img src={logoSrc} alt={logoAlt} className="h-auto w-[104px]" />
+            <img src={logoSrc} alt={logoAlt} className="h-auto w-[104px] transition-transform duration-300 hover:scale-[1.02]" />
           </NavLink>
           {rightContent ?? notificationButton}
         </div>

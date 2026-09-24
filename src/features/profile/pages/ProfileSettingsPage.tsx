@@ -8,7 +8,7 @@ import {
 } from "../components"
 import { useState } from "react"
 import { useProfile } from "../hooks/useProfile"
-import type { EmailVerificationStatus, Profile, ProfileOpenSections, ProfilePageStateProps } from "../types"
+import type { EmailVerificationStatus, Profile, ProfileFormErrors, ProfileOpenSections, ProfilePageStateProps } from "../types"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
@@ -50,6 +50,7 @@ export function ProfileSettingsPage() {
     "WORK INFORMATION": true,
     ACCOUNT: true,
   })
+  const [formErrors, setFormErrors] = useState<ProfileFormErrors>({})
 
   function toggleSection(section: keyof typeof openSections) {
     setOpenSections((current) => ({ ...current, [section]: !current[section] }))
@@ -61,7 +62,6 @@ export function ProfileSettingsPage() {
     isLoading,
     isEditing,
     isSubmitting,
-    actionError,
     setIsEditing,
     retryProfile,
     updateProfile,
@@ -90,8 +90,7 @@ export function ProfileSettingsPage() {
             <section className="grid gap-x-6 gap-y-3 border-b border-[#d1d5db] py-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)]">
               <ProfileSectionHeading title="IDENTITY" className="text-[20px] leading-7 tracking-[0.5px]" />
               <div className="min-w-0">
-                <ProfileForm profile={profile} onSubmit={updateProfile} isSubmitting={isSubmitting} />
-                {actionError && <p className="mt-3 text-sm text-red-600">{actionError}</p>}
+                <ProfileForm profile={profile} onSubmit={updateProfile} isSubmitting={isSubmitting} onValidationChange={setFormErrors} />
               </div>
             </section>
           ) : (
@@ -101,11 +100,12 @@ export function ProfileSettingsPage() {
           <div className="flex flex-col gap-0">
             <ProfileAccordionSection title="CONTACT" open={openSections.CONTACT} onToggle={() => toggleSection("CONTACT")}>
               <div className="grid gap-3 md:grid-cols-2">
-                <ProfileField label="EMAIL ADDRESS" value={profile.email} readOnly={isEditing} />
+                <ProfileField label="EMAIL ADDRESS" value={profile.email} readOnly={isEditing} error={isEditing ? formErrors.email : undefined} />
                 {isEditing ? (
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-phone">PHONE NUMBER</Label>
-                    <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-phone" name="phone" form="profile-form" defaultValue={profile.phone ?? ""} maxLength={30} />
+                    <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-phone" name="phone" form="profile-form" defaultValue={profile.phone ?? ""} maxLength={30} aria-invalid={Boolean(formErrors.phone)} />
+                    <p className="min-h-[15px] pt-0.5 text-[10px] leading-[15px] text-red-600" role={formErrors.phone ? "alert" : undefined}>{formErrors.phone ?? "\u00a0"}</p>
                   </div>
                 ) : (
                   <ProfileField label="PHONE NUMBER" value={profile.phone} />
@@ -139,8 +139,15 @@ export function ProfileSettingsPage() {
           </div>
 
           <ProfileActionButtons
-            onCancel={() => (isEditing ? setIsEditing(false) : window.history.back())}
-            onEdit={isEditing ? undefined : () => setIsEditing(true)}
+            onCancel={() => {
+              setFormErrors({})
+              if (isEditing) setIsEditing(false)
+              else window.history.back()
+            }}
+            onEdit={isEditing ? undefined : () => {
+              setFormErrors({})
+              setIsEditing(true)
+            }}
             editLabel={isEditing ? "SAVE CHANGES" : undefined}
             submitFormId={isEditing ? "profile-form" : undefined}
             disabled={isSubmitting}
