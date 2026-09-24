@@ -9,7 +9,10 @@ import type {
 
 export const authApi = {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    return apiClient.post('/auth/login', credentials) as unknown as Promise<AuthResponse>
+    const response = await apiClient.post('/auth/login', credentials) as unknown as {
+      value: AuthResponse
+    }
+    return response.value
   },
 
   async register(credentials: RegisterRequest): Promise<RegisterResponse> {

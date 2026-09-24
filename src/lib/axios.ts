@@ -28,14 +28,17 @@ apiClient.interceptors.request.use((config) => {
 let refreshRequest: Promise<string> | null = null
 
 async function refreshAccessToken() {
+  const refreshToken = useAuthStore.getState().refreshToken
+  if (!refreshToken) throw new Error('No refresh token is available')
+
   const response = await axios.post(
-    `${env.API_URL}auth/refresh`,
-    {},
+    `${env.API_URL}auth/refresh-token`,
+    { refreshToken },
     { withCredentials: true },
   )
 
   const accessToken: string | undefined =
-    response.data?.data?.accessToken ?? response.data?.accessToken
+    response.data?.value?.accessToken ?? response.data?.data?.accessToken ?? response.data?.accessToken
 
   if (!accessToken) throw new Error('Refresh response does not contain an access token')
 

@@ -11,7 +11,25 @@ export interface AuthPrincipal {
 
 export interface AuthResponse {
   accessToken: string
-  principal?: AuthPrincipal
+  refreshToken: string
+  expiresIn: number
+  user: AuthUser
+}
+
+export interface AuthUser {
+  accountId: string
+  accountType: 'CUSTOMER' | 'EMPLOYEE'
+  role:
+    | 'CUSTOMER'
+    | 'LOGISTICS_MANAGER'
+    | 'TRANSPORT_SPECIALIST'
+    | 'FLEET_ROUTE_COORDINATOR'
+    | 'DRIVER'
+    | 'ESCORT'
+  customerId: string | null
+  employeeId: string | null
+  fullName: string
+  avatarUrl: string | null
 }
 
 export interface LoginRequest {

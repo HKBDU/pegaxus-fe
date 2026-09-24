@@ -1,34 +1,16 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
-import { jwtDecode } from 'jwt-decode'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { authApi } from '@/features/auth/services'
 import { useAuthStore } from '@/features/auth/store'
 import type {
   AuthApiError,
-  AuthPrincipal,
   AuthResponse,
-  JwtPayload,
   LoginRequest,
   RegisterRequest,
 } from '@/features/auth/types'
 import { queryClient } from '@/lib/queryClient'
-
-function getPrincipal(response: AuthResponse): AuthPrincipal {
-  if (response.principal) return response.principal
-
-  const payload = jwtDecode<JwtPayload>(response.accessToken)
-  const roles = payload.roles ?? (payload.role ? [payload.role] : [])
-
-  return {
-    id: payload.sub,
-    email: payload.email,
-    displayName: payload.name,
-    roles,
-    permissions: payload.permissions ?? [],
-  }
-}
 
 export function useRegisterMutation() {
   const navigate = useNavigate()
@@ -58,14 +40,24 @@ export function useLoginMutation() {
   return useMutation<AuthResponse, Error, LoginRequest>({
     mutationFn: (data) => authApi.login(data),
     onSuccess: (response) => {
-      setAuth({
-        accessToken: response.accessToken,
-        principal: getPrincipal(response),
-      })
-      toast.success('Login successful')
+      setAuth(response)
+      toast.success('Signed in successfully.')
       navigate(from, { replace: true })
     },
-    onError: () => toast.error('Login failed. Please try again.'),
+    onError: (error) => {
+      const apiError = isAxiosError<AuthApiError>(error) ? error.response?.data : undefined
+      const messages: Record<string, string> = {
+        INVALID_CREDENTIALS: 'Email or password is incorrect.',
+        ACCOUNT_NOT_VERIFIED: 'Your email has not been verified.',
+        ACCOUNT_SUSPENDED: 'Your account has been suspended.',
+        ACCOUNT_INACTIVE: 'Your account is inactive.',
+      }
+      toast.error(
+        (apiError?.errorCode && messages[apiError.errorCode]) ||
+        apiError?.message ||
+        'Failed to sign in. Please try again.',
+      )
+    },
   })
 }
 
