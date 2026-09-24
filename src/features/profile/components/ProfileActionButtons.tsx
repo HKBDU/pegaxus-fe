@@ -14,8 +14,8 @@ export function ProfileActionButtons({
   className,
 }: ProfileActionButtonsProps) {
   return (
-    <div className={cn("flex items-center justify-end gap-3  border-[#d1d5db] pb-12 pt-4", className)}>
-      <Button disabled={disabled} type="button" variant="outline" onClick={onCancel} className="h-[42px] rounded-none border-[#181818] bg-white px-[33px] py-[11px] text-[14px] font-bold tracking-[0.7px] text-[#181818] shadow-[0_1px_1px_rgba(0,0,0,0.05)] ">
+    <div className={cn("flex items-center justify-end gap-2 border-[#d1d5db] pb-8 pt-3", className)}>
+      <Button disabled={disabled} type="button" variant="outline" onClick={onCancel} className="h-9 rounded-none border-[#181818] bg-white px-6 py-2 text-xs font-bold tracking-[0.6px] text-[#181818] shadow-[0_1px_1px_rgba(0,0,0,0.05)]">
         {cancelLabel}
       </Button>
       <Button
@@ -23,7 +23,7 @@ export function ProfileActionButtons({
         form={submitFormId}
         disabled={disabled}
         onClick={submitFormId ? undefined : onEdit}
-        className="h-10 rounded-none py-[10px] font-bold tracking-[0.7px] shadow-[0_1px_1px_rgba(0,0,0,0.05)] hover:bg-[#f39200]"
+        className="h-9 rounded-none py-2 text-xs font-bold tracking-[0.6px] shadow-[0_1px_1px_rgba(0,0,0,0.05)] hover:bg-[#f39200]"
       >
         {editLabel}
       </Button>

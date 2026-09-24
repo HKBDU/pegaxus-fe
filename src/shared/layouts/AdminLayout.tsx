@@ -9,12 +9,14 @@ export function AdminLayout() {
   return (
     <AdminSidebarProvider>
       <SidebarInset>
-        <div className="flex h-14 items-center border-b border-[#202329] bg-[#17191c] px-4 lg:hidden">
-          <SidebarTrigger aria-label="Open admin navigation" className="text-[#d7d9dc] hover:bg-white/10 hover:text-white">
-            <Menu className="size-5" />
-          </SidebarTrigger>
+        <div className="sticky top-0 z-50">
+          <div className="flex h-14 items-center border-b border-[#202329] bg-[#17191c] px-4 lg:hidden">
+            <SidebarTrigger aria-label="Open admin navigation" className="text-[#d7d9dc] hover:bg-white/10 hover:text-white">
+              <Menu className="size-5" />
+            </SidebarTrigger>
+          </div>
+          <AdminHeader />
         </div>
-        <AdminHeader />
         <Outlet />
       </SidebarInset>
     </AdminSidebarProvider>

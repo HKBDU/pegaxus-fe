@@ -10,6 +10,8 @@ import { useState } from "react"
 import { useProfile } from "../hooks/useProfile"
 import type { EmailVerificationStatus, Profile, ProfilePageStateProps } from "../types"
 import { PageHeader } from "@/shared/components/PageHeader"
+import { Input } from "@/shared/components/ui/input"
+import { Label } from "@/shared/components/ui/label"
 
 function getEmailVerificationStatus(profile: Profile): EmailVerificationStatus {
   // A9 does not expose email verification. Authenticated active accounts are verified.
@@ -78,50 +80,59 @@ export function ProfileSettingsPage() {
   }
 
   return (
-    <section className="w-full bg-[#f4f4f4] px-6 py-8 sm:px-8 lg:px-12">
-      <div className="mx-auto flex w-full max-w-[1344px] flex-col gap-0">
+    <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
+      <div className="mx-auto flex w-full max-w-[1152px] flex-col gap-0">
         <PageHeader backHref="/" title={isEditing ? "EDIT PROFILE" : `VIEW ${profile.accountType} PROFILE`} />
 
-        <div className="flex flex-col gap-[0px] pt-6">
+        <div className="flex flex-col gap-[0px] pt-4">
           {isEditing ? (
-            <>
-              <ProfileSectionHeading title="IDENTITY" />
-              <ProfileForm profile={profile} onSubmit={updateProfile} isSubmitting={isSubmitting} />
-              {actionError && <p className="text-sm text-red-600">{actionError}</p>}
-            </>
+            <section className="grid gap-x-6 gap-y-3 border-b border-[#d1d5db] py-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)]">
+              <ProfileSectionHeading title="IDENTITY" className="text-[20px] leading-7 tracking-[0.5px]" />
+              <div className="min-w-0">
+                <ProfileForm profile={profile} onSubmit={updateProfile} isSubmitting={isSubmitting} />
+                {actionError && <p className="mt-3 text-sm text-red-600">{actionError}</p>}
+              </div>
+            </section>
           ) : (
             <ProfileIdentitySection profile={profile} emailVerificationStatus={getEmailVerificationStatus(profile)} />
           )}
 
           <div className="flex flex-col gap-0">
             <ProfileAccordionSection title="CONTACT" open={openSections.CONTACT} onToggle={() => toggleSection("CONTACT")}>
-              <div className="grid gap-4 md:grid-cols-2">
-                <ProfileField label="EMAIL ADDRESS" value={profile.email} />
-                <ProfileField label="PHONE NUMBER" value={profile.phone} />
+              <div className="grid gap-3 md:grid-cols-2">
+                <ProfileField label="EMAIL ADDRESS" value={profile.email} readOnly={isEditing} />
+                {isEditing ? (
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-phone">PHONE NUMBER</Label>
+                    <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-phone" name="phone" form="profile-form" defaultValue={profile.phone ?? ""} maxLength={30} />
+                  </div>
+                ) : (
+                  <ProfileField label="PHONE NUMBER" value={profile.phone} />
+                )}
               </div>
             </ProfileAccordionSection>
             <ProfileAccordionSection title="WORK INFORMATION" open={openSections["WORK INFORMATION"]} onToggle={() => toggleSection("WORK INFORMATION")}>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 {profile.employee ? (
                   <>
-                    <ProfileField label="EMPLOYEE CODE" value={profile.employee.employeeCode} />
-                    <ProfileField label="ROLE" value={formatProfileLabel(profile.role)} />
-                    <ProfileField className="md:col-span-2" label="WORK STATUS" value={profile.employee.workStatus ?? null} />
+                    <ProfileField label="EMPLOYEE CODE" value={profile.employee.employeeCode} readOnly={isEditing} />
+                    <ProfileField label="ROLE" value={formatProfileLabel(profile.role)} readOnly={isEditing} />
+                    <ProfileField className="md:col-span-2" label="WORK STATUS" value={profile.employee.workStatus ?? null} readOnly={isEditing} />
                   </>
                 ) : (
                   <>
-                    <ProfileField label="CUSTOMER ID" value={profile.customer?.customerId ?? null} />
-                    <ProfileField label="DATE OF BIRTH" value={profile.customer?.dateOfBirth ?? null} />
+                    <ProfileField label="CUSTOMER ID" value={profile.customer?.customerId ?? null} readOnly={isEditing} />
+                    <ProfileField label="DATE OF BIRTH" value={profile.customer?.dateOfBirth ?? null} readOnly={isEditing} />
                   </>
                 )}
               </div>
             </ProfileAccordionSection>
             <ProfileAccordionSection title="ACCOUNT" open={openSections.ACCOUNT} onToggle={() => toggleSection("ACCOUNT")}>
-              <div className="grid gap-4 md:grid-cols-2">
-                <ProfileField label="STATUS" value={formatProfileLabel(profile.status)} />
-                <ProfileField label="MEMBER SINCE" value={formatProfileDate(profile.memberSince)} />
-                <ProfileField label="LAST LOGIN AT" value={formatProfileDate(profile.lastLoginAt)} />
-                <ProfileField label="UPDATED AT" value={formatProfileDate(profile.updatedAt)} />
+              <div className="grid gap-3 md:grid-cols-2">
+                <ProfileField label="STATUS" value={formatProfileLabel(profile.status)} readOnly={isEditing} />
+                <ProfileField label="MEMBER SINCE" value={formatProfileDate(profile.memberSince)} readOnly={isEditing} />
+                <ProfileField label="LAST LOGIN AT" value={formatProfileDate(profile.lastLoginAt)} readOnly={isEditing} />
+                <ProfileField label="UPDATED AT" value={formatProfileDate(profile.updatedAt)} readOnly={isEditing} />
               </div>
             </ProfileAccordionSection>
           </div>

@@ -78,6 +78,7 @@ export type ProfileFieldProps = {
   label: string
   value: ProfileFieldValue
   className?: string
+  readOnly?: boolean
 }
 
 export type ProfileAvatarPreviewProps = {

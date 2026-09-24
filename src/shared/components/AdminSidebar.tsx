@@ -47,7 +47,7 @@ type AdminSidebarItem = {
   icon: ComponentType<{ className?: string }>
 }
 
-function AdminSidebarMenu({ items }: { items: AdminSidebarItem[] }) {
+function AdminSidebarMenu({ items, compact = false }: { items: AdminSidebarItem[]; compact?: boolean }) {
   const { pathname } = useLocation()
 
   return (
@@ -62,7 +62,9 @@ function AdminSidebarMenu({ items }: { items: AdminSidebarItem[] }) {
               asChild
               isActive={isActive}
               className={cn(
-                "h-9 rounded-none px-4 text-xs font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
+                compact
+                  ? "h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white"
+                  : "h-9 rounded-none px-4 text-xs font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
                 isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-3 font-semibold !text-[#f39200]",
               )}
             >
@@ -80,19 +82,19 @@ function AdminSidebarMenu({ items }: { items: AdminSidebarItem[] }) {
 
 export function AdminSidebar() {
   return (
-    <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh w-56 shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
-      <div className="flex h-24 shrink-0 items-center justify-center bg-[#17191c] px-5">
-        <img src={logo} alt="Pegaxus" className="w-full max-w-[190px]" />
+    <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh w-52 shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
+      <div className="flex h-20 shrink-0 items-center justify-center bg-[#17191c] px-4">
+        <img src={logo} alt="Pegaxus" className="w-full max-w-[170px]" />
       </div>
       <SidebarContent className="overflow-hidden bg-[#17191c]">
         <SidebarGroup className="px-0">
           <SidebarGroupContent>
-            <AdminSidebarMenu items={primaryItems} />
+            <AdminSidebarMenu items={primaryItems} compact />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="shrink-0 border-white/10 bg-[#17191c] px-0 py-4">
-        <AdminSidebarMenu items={secondaryItems} />
+        <AdminSidebarMenu items={secondaryItems} compact />
       </SidebarFooter>
     </Sidebar>
   )
@@ -102,7 +104,7 @@ export function AdminSidebarProvider({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider
       defaultOpen
-      style={{ "--sidebar-width": "14rem" } as CSSProperties}
+      style={{ "--sidebar-width": "13rem" } as CSSProperties}
       className="min-h-svh bg-[#f4f4f4]"
     >
       <AdminSidebar />

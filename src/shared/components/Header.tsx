@@ -36,9 +36,9 @@ function HeaderSidebarNav({ navItems }: { navItems: HeaderNavItem[] }) {
   const icons = [House, Truck, MapPin, Settings]
 
   return (
-    <Sidebar side="left" collapsible="offcanvas" className="h-svh min-h-svh lg:hidden">
-      <div className="flex h-32 shrink-0 items-center justify-center bg-[#17191c] px-6">
-        <img src={logo} alt="Pegaxus" className="w-full max-w-[190px]" />
+    <Sidebar side="left" collapsible="offcanvas" className="h-svh min-h-svh w-[15rem] lg:hidden">
+      <div className="flex h-24 shrink-0 items-center justify-center bg-[#17191c] px-5">
+        <img src={logo} alt="Pegaxus" className="w-full max-w-[170px]" />
       </div>
       <SidebarContent className="min-h-0 overflow-hidden bg-[#17191c] text-white">
         <SidebarGroup className="px-0">
@@ -54,7 +54,7 @@ function HeaderSidebarNav({ navItems }: { navItems: HeaderNavItem[] }) {
                       asChild
                       isActive={isActive}
                       className={cn(
-                        "h-9 rounded-none px-4 text-xs font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
+                        "h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
                         isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-3 font-semibold !text-[#f39200]",
                       )}
                     >
@@ -121,7 +121,7 @@ export function Header({
   )
 
   return (
-    <SidebarProvider defaultOpen={false} className="!min-h-0 w-full">
+    <SidebarProvider defaultOpen={false} className="sticky top-0 z-50 !min-h-0 w-full">
       <HeaderSidebarNav navItems={navItems} />
       <header className={cn("sticky top-0 z-50 w-full border-b border-white/5 bg-[#17191c] text-white", className)}>
       <div className="mx-auto hidden h-[72px] w-full items-center px-8 lg:flex">
