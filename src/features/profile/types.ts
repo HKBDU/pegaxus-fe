@@ -42,7 +42,7 @@ export type Profile = {
   updatedAt: string
 }
 
-export type ProfileSectionName = "IDENTITY" | "CONTACT" | "WORK INFORMATION" | "ACCOUNT"
+export type ProfileSectionName = "IDENTITY" | "CONTACT" | "PERSONAL INFORMATION" | "WORK INFORMATION" | "ACCOUNT"
 export type ProfileOpenSections = Record<Exclude<ProfileSectionName, "IDENTITY">, boolean>
 export type UpdateProfileRequest = {
   fullName?: string

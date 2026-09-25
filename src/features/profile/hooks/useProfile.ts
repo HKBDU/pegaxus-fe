@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react"
+import { useLocation } from "react-router-dom"
 import { toast } from "sonner"
-import { MOCK_EMPLOYEE_PROFILE } from "@/features/profile/constants/profile.mock"
+import { MOCK_CUSTOMER_PROFILE, MOCK_EMPLOYEE_PROFILE } from "@/features/profile/constants/profile.mock"
 import { profileApi } from "@/features/profile/services"
 import type { Profile, UpdateProfileRequest } from "@/features/profile/types"
 
-export function useProfile() {
+export function useProfile(customerId?: string) {
+  const location = useLocation()
   const [profile, setProfile] = useState<Profile>()
   const [error, setError] = useState<string>()
   const [isLoading, setIsLoading] = useState(true)
@@ -13,13 +15,13 @@ export function useProfile() {
 
   const loadProfile = useCallback(async () => {
     try {
-      const nextProfile = await profileApi.getMe()
+      const nextProfile = customerId ? await profileApi.getCustomerProfile(customerId) : await profileApi.getMe()
       if (!nextProfile) throw new Error("Profile response is empty")
       setProfile(nextProfile)
       setError(undefined)
     } catch {
       if (import.meta.env.DEV) {
-        setProfile(MOCK_EMPLOYEE_PROFILE)
+        setProfile(customerId || !location.pathname.startsWith("/admin") ? MOCK_CUSTOMER_PROFILE : MOCK_EMPLOYEE_PROFILE)
         setError(undefined)
       } else {
         setError("Unable to load profile. Please try again.")
@@ -27,7 +29,7 @@ export function useProfile() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [customerId, location.pathname])
 
   async function updateProfile(input: UpdateProfileRequest) {
     setIsSubmitting(true)

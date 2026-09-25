@@ -7,6 +7,11 @@ export const profileApi = {
     return response.value
   },
 
+  async getCustomerProfile(customerId: string) {
+    const response = await apiClient.get(`/customers/${customerId}/profile`) as unknown as ApiResponse<Profile>
+    return response.value
+  },
+
   async updateMe(input: UpdateProfileRequest) {
     const formData = new FormData()
 

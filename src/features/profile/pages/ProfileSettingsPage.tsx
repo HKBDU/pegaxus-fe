@@ -7,6 +7,7 @@ import {
   ProfileSectionHeading,
 } from "../components"
 import { useState } from "react"
+import { useParams } from "react-router-dom"
 import { useProfile } from "../hooks/useProfile"
 import type { EmailVerificationStatus, Profile, ProfileFormErrors, ProfileOpenSections, ProfilePageStateProps } from "../types"
 import { PageHeader } from "@/shared/components/PageHeader"
@@ -47,10 +48,12 @@ function formatProfileLabel(value: string) {
 export function ProfileSettingsPage() {
   const [openSections, setOpenSections] = useState<ProfileOpenSections>({
     CONTACT: true,
+    "PERSONAL INFORMATION": true,
     "WORK INFORMATION": true,
     ACCOUNT: true,
   })
   const [formErrors, setFormErrors] = useState<ProfileFormErrors>({})
+  const { customerId } = useParams()
 
   function toggleSection(section: keyof typeof openSections) {
     setOpenSections((current) => ({ ...current, [section]: !current[section] }))
@@ -65,7 +68,7 @@ export function ProfileSettingsPage() {
     setIsEditing,
     retryProfile,
     updateProfile,
-  } = useProfile()
+  } = useProfile(customerId)
 
   if (isLoading) {
     return <ProfilePageState message="Loading profile..." />
@@ -112,22 +115,20 @@ export function ProfileSettingsPage() {
                 )}
               </div>
             </ProfileAccordionSection>
-            <ProfileAccordionSection title="WORK INFORMATION" open={openSections["WORK INFORMATION"]} onToggle={() => toggleSection("WORK INFORMATION")}>
+            {profile.customer && <ProfileAccordionSection title="PERSONAL INFORMATION" open={openSections["PERSONAL INFORMATION"]} onToggle={() => toggleSection("PERSONAL INFORMATION")}>
               <div className="grid gap-3 md:grid-cols-2">
-                {profile.employee ? (
-                  <>
-                    <Field label="EMPLOYEE CODE" value={profile.employee.employeeCode} readOnly={isEditing} />
-                    <Field label="ROLE" value={formatProfileLabel(profile.role)} readOnly={isEditing} />
-                    <Field className="md:col-span-2" label="WORK STATUS" value={profile.employee.workStatus ?? null} readOnly={isEditing} />
-                  </>
-                ) : (
-                  <>
-                    <Field label="CUSTOMER ID" value={profile.customer?.customerId ?? null} readOnly={isEditing} />
-                    <Field label="DATE OF BIRTH" value={profile.customer?.dateOfBirth ?? null} readOnly={isEditing} />
-                  </>
-                )}
+                <Field label="IDENTITY NUMBER" value={profile.customer.customerId} />
+                <Field label="ROLE" value={formatProfileLabel(profile.role)} />
+                <Field label="DATE OF BIRTH" value={profile.customer.dateOfBirth} />
               </div>
-            </ProfileAccordionSection>
+            </ProfileAccordionSection>}
+            {profile.employee && <ProfileAccordionSection title="WORK INFORMATION" open={openSections["WORK INFORMATION"]} onToggle={() => toggleSection("WORK INFORMATION")}>
+              <div className="grid gap-3 md:grid-cols-2">
+                <Field label="EMPLOYEE CODE" value={profile.employee.employeeCode} readOnly={isEditing} />
+                <Field label="ROLE" value={formatProfileLabel(profile.role)} readOnly={isEditing} />
+                <Field className="md:col-span-2" label="WORK STATUS" value={profile.employee.workStatus ?? null} readOnly={isEditing} />
+              </div>
+            </ProfileAccordionSection>}
             <ProfileAccordionSection title="ACCOUNT" open={openSections.ACCOUNT} onToggle={() => toggleSection("ACCOUNT")}>
               <div className="grid gap-3 md:grid-cols-2">
                 <Field label="STATUS" value={formatProfileLabel(profile.status)} readOnly={isEditing} />

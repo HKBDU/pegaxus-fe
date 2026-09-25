@@ -4,6 +4,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { LoadingState, NotFoundPage } from "@/shared/components/common";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
+import { ROLE_ROUTES } from "./route-config";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const ProfileSettingsPage = lazy(
@@ -21,51 +22,35 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <HomePage />
-          </Suspense>
-        ),
+        element: <Suspense fallback={<LoadingState />}><HomePage /></Suspense>,
       },
       {
-        path: "my-horses/:horseId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <HorseDetailPage />
-          </Suspense>
-        ),
+        path: ROLE_ROUTES.customerHorses + "/:horseId",
+        element: <Suspense fallback={<LoadingState />}><HorseDetailPage /></Suspense>,
       },
       {
-        path: "my-horses/:horseId/edit",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <EditHorsePage />
-          </Suspense>
-        ),
+        path: ROLE_ROUTES.customerHorses + "/:horseId/edit",
+        element: <Suspense fallback={<LoadingState />}><EditHorsePage /></Suspense>,
       },
       {
-        path: "my-horses/new",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <AddHorsePage />
-          </Suspense>
-        ),
+        path: ROLE_ROUTES.customerHorses + "/new",
+        element: <Suspense fallback={<LoadingState />}><AddHorsePage /></Suspense>,
       },
       {
-        path: "my-horses",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <HorsesPage />
-          </Suspense>
-        ),
+        path: ROLE_ROUTES.customerHorses,
+        element: <Suspense fallback={<LoadingState />}><HorsesPage /></Suspense>,
       },
       {
-        path: "profile-settings",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <ProfileSettingsPage />
-          </Suspense>
-        ),
+        path: ROLE_ROUTES.customerProfile,
+        element: <Suspense fallback={<LoadingState />}><ProfileSettingsPage /></Suspense>,
+      },
+      {
+        path: ROLE_ROUTES.managerCustomerProfile,
+        element: <Suspense fallback={<LoadingState />}><ProfileSettingsPage /></Suspense>,
+      },
+      {
+        path: ROLE_ROUTES.managerHorseDetail,
+        element: <Suspense fallback={<LoadingState />}><HorseDetailPage /></Suspense>,
       },
       {
         path: "*",
