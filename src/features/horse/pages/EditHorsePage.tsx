@@ -5,6 +5,7 @@ import { HorseFormPage } from "./AddHorsePage"
 import { MOCK_HORSES } from "../constants/horse.mock"
 import { horseApi } from "../services"
 import type { Horse } from "../types"
+import { getHorseApiErrorMessage } from "../utils/horse-api-error"
 
 export function EditHorsePage() {
   const { horseId } = useParams()
@@ -16,10 +17,10 @@ export function EditHorsePage() {
       setError("Horse was not found.")
       return
     }
-    horseApi.getHorse(horseId).then(setHorse).catch(() => {
+    horseApi.getHorse(horseId).then(setHorse).catch((error) => {
       const mockHorse = MOCK_HORSES.find((item) => item.horseId === horseId)
       if (mockHorse) setHorse(mockHorse)
-      else setError("Horse was not found.")
+      else setError(getHorseApiErrorMessage(error, "Horse was not found."))
     })
   }, [horseId])
 

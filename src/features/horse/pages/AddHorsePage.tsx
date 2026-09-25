@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/shared/components/ui/textarea"
 import { HORSE_BREED_OPTIONS, HORSE_SEX_OPTIONS } from "../constants/horse.constants"
 import { horseApi } from "../services"
+import { getHorseApiErrorMessage } from "../utils/horse-api-error"
 import type { CreateHorseRequest, Horse, HorseFormValues, HorseSex } from "../types"
 
 const inputClass = "profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1"
@@ -66,8 +67,8 @@ export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
       else await horseApi.createHorse(input)
       toast.success(isEdit ? "Horse updated successfully." : "Horse created successfully.")
       navigate("/my-horses")
-    } catch {
-      toast.error(isEdit ? "Unable to update horse. Please try again." : "Unable to create horse. Please try again.")
+    } catch (error) {
+      toast.error(getHorseApiErrorMessage(error, isEdit ? "Unable to update horse. Please try again." : "Unable to create horse. Please try again."))
     }
   }
 

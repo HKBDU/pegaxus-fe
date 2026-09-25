@@ -8,7 +8,7 @@ import type { Horse, HorseTableProps } from "../types"
 
 export function HorseTable({ horses, onAction, toolbar }: HorseTableProps) {
   const columns: ColumnDef<Horse>[] = [
-    { accessorKey: "horseName", meta: { width: "30%" }, header: () => <span className="block text-left pl-5">Horse Name</span>, filterFn: (row, _columnId, value) => [row.original.horseName, row.original.microchipNumber].some((field) => field?.toLowerCase().includes(String(value).toLowerCase())), cell: ({ row }) => <span className="block pl-5 text-left font-semibold text-foreground">{row.original.horseName}</span> },
+    { accessorKey: "horseName", meta: { width: "20%" }, header: () => <span className="block text-left pl-5">Horse Name</span>, filterFn: (row, _columnId, value) => [row.original.horseName, row.original.microchipNumber].some((field) => field?.toLowerCase().includes(String(value).toLowerCase())), cell: ({ row }) => <span className="block pl-5 text-left font-semibold text-foreground">{row.original.horseName}</span> },
     { accessorKey: "sex", meta: { width: "20%" }, header: () => <span className="block text-left">Sex</span>, cell: ({ row }) => row.original.sex ? HORSE_SEX_LABELS[row.original.sex] : "—" },
     { accessorKey: "breed", meta: { width: "30%" }, header: () => <span className="block text-left">Breed</span>, cell: ({ row }) => row.original.breed ?? "—" },
     { accessorKey: "microchipNumber", meta: { width: "20%" }, header: () => <span className="block text-left">Microchip Number</span>, cell: ({ row }) => <code>{row.original.microchipNumber ?? "—"}</code> },

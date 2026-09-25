@@ -11,6 +11,7 @@ import { HORSE_SEX_LABELS } from "../constants/horse.constants"
 import { MOCK_HORSES } from "../constants/horse.mock"
 import { horseApi } from "../services"
 import type { Horse } from "../types"
+import { getHorseApiErrorMessage } from "../utils/horse-api-error"
 
 export function HorseDetailPage() {
   const { horseId } = useParams()
@@ -25,10 +26,10 @@ export function HorseDetailPage() {
       setError("Horse was not found.")
       return
     }
-    horseApi.getHorse(horseId).then(setHorse).catch(() => {
+    horseApi.getHorse(horseId).then(setHorse).catch((error) => {
       const mockHorse = MOCK_HORSES.find((item) => item.horseId === horseId)
       if (mockHorse) setHorse(mockHorse)
-      else setError("Horse was not found.")
+      else setError(getHorseApiErrorMessage(error, "Horse was not found."))
     })
   }, [horseId])
 
@@ -43,9 +44,9 @@ export function HorseDetailPage() {
       await horseApi.removeHorse(horseId)
       toast.success(`${currentHorse.horseName} removed successfully.`)
       navigate("/my-horses")
-    } catch {
+    } catch (error) {
       setIsDeleteOpen(false)
-      setError("Unable to delete horse. Please try again.")
+      setError(getHorseApiErrorMessage(error, "Unable to delete horse. Please try again."))
     }
   }
 

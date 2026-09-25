@@ -3,6 +3,7 @@ import { toast } from "sonner"
 import { MOCK_HORSES } from "../constants/horse.mock"
 import { horseApi } from "../services"
 import type { Horse } from "../types"
+import { getHorseApiErrorMessage } from "../utils/horse-api-error"
 
 export function useHorses() {
   const [horses, setHorses] = useState<Horse[]>([])
@@ -15,11 +16,11 @@ export function useHorses() {
       const result = await horseApi.getHorses({ pageIndex: 1, pageSize: 32 })
       setHorses(result.items)
       setError(undefined)
-    } catch {
+    } catch (error) {
       if (import.meta.env.DEV) {
         setHorses(MOCK_HORSES)
         setError(undefined)
-      } else setError("Unable to load your horses. Please try again.")
+      } else setError(getHorseApiErrorMessage(error, "Unable to load your horses. Please try again."))
     } finally {
       setIsLoading(false)
     }
@@ -35,8 +36,8 @@ export function useHorses() {
       await horseApi.removeHorse(horse.horseId)
       setHorses((current) => current.filter((item) => item.horseId !== horse.horseId))
       toast.success(`${horse.horseName} removed successfully.`)
-    } catch {
-      toast.error(`Unable to remove ${horse.horseName}. Please try again.`)
+    } catch (error) {
+      toast.error(getHorseApiErrorMessage(error, `Unable to remove ${horse.horseName}. Please try again.`))
     }
   }, [])
 
