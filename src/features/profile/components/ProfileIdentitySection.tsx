@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 import { ACCOUNT_TYPE_LABELS } from "../constants/profile.constants"
 import type { ProfileIdentitySectionProps } from "../types"
 import { ProfileAvatarPreview } from "./ProfileAvatarPreview"
-import { ProfileField } from "./ProfileField"
+import { Field } from "@/shared/components/Field"
 import { ProfileVerificationField } from "./ProfileVerificationField"
 
 function getInitials(name: string | null) {
@@ -24,15 +24,15 @@ export function ProfileIdentitySection({ profile, emailVerificationStatus, accou
         <div className="grid gap-3 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
           <ProfileAvatarPreview initials={getInitials(profile.fullName)} avatarUrl={profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
           <div className="grid min-w-0 gap-0">
-            <ProfileField label="FULL NAME" value={profile.fullName} />
+            <Field label="FULL NAME" value={profile.fullName} />
             <ProfileVerificationField status={emailVerificationStatus} />
           </div>
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
-          <ProfileField label="ADDRESS" value={profile.address} />
-          <ProfileField label="ACCOUNT TYPE" value={accountTypeLabel[profile.accountType]} />
+            <Field label="ADDRESS" value={profile.address} />
+            <Field label="ACCOUNT TYPE" value={accountTypeLabel[profile.accountType]} />
         </div>
-        <ProfileField label="country" value={profile.country} />
+        <Field label="country" value={profile.country} />
       </div>
     </section>
   )

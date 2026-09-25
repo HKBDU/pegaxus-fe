@@ -1,6 +1,6 @@
 export { ProfileActionButtons } from "./ProfileActionButtons"
 export { ProfileAvatarPreview } from "./ProfileAvatarPreview"
-export { ProfileField } from "./ProfileField"
+export { Field } from "@/shared/components/Field"
 export { ProfileForm } from "./ProfileForm"
 export { ProfileIdentitySection } from "./ProfileIdentitySection"
 export { ProfileSectionDivider } from "./ProfileSectionDivider"

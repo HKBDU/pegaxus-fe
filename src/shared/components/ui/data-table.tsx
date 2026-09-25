@@ -31,6 +31,7 @@ export type DataTableProps<TData, TValue> = {
   filterColumn?: string
   filterPlaceholder?: string
   pageSize?: number
+  toolbar?: React.ReactNode
   className?: string
 }
 
@@ -40,6 +41,7 @@ export function DataTable<TData, TValue>({
   filterColumn,
   filterPlaceholder = "Filter...",
   pageSize = 10,
+  toolbar,
   className,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -64,14 +66,10 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className={cn("w-full space-y-4", className)}>
-      {filter && (
-        <Input
-          className="max-w-sm"
-          placeholder={filterPlaceholder}
-          value={(filter.getFilterValue() as string) ?? ""}
-          onChange={(event) => filter.setFilterValue(event.target.value)}
-        />
-      )}
+      {(filter || toolbar) && <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+        {filter && <Input className="flex-1 rounded-[2px]" placeholder={filterPlaceholder} value={(filter.getFilterValue() as string) ?? ""} onChange={(event) => filter.setFilterValue(event.target.value)} />}
+        {toolbar}
+      </div>}
 
       <div className="rounded-md border">
         <Table>
@@ -131,18 +129,33 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-1">
         <Button
           variant="outline"
           size="sm"
+          className="rounded-[2px] border-[hsl(var(--border))] bg-white text-foreground hover:bg-white hover:text-foreground"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
           Previous
         </Button>
+        {Array.from({ length: table.getPageCount() }, (_, pageIndex) => (
+          <Button
+            key={pageIndex}
+            variant="outline"
+            size="sm"
+            aria-current={table.getState().pagination.pageIndex === pageIndex ? "page" : undefined}
+            data-current={table.getState().pagination.pageIndex === pageIndex}
+            className="rounded-[2px] border-[hsl(var(--border))] bg-white text-foreground hover:bg-white hover:text-foreground data-[current=true]:border-primary data-[current=true]:bg-primary data-[current=true]:text-primary-foreground data-[current=true]:hover:bg-primary"
+            onClick={() => table.setPageIndex(pageIndex)}
+          >
+            {pageIndex + 1}
+          </Button>
+        ))}
         <Button
           variant="outline"
           size="sm"
+          className="rounded-[2px] border-[hsl(var(--border))] bg-white text-foreground hover:bg-white hover:text-foreground"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >

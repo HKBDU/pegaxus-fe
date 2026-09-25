@@ -44,8 +44,6 @@ export type Profile = {
 
 export type ProfileSectionName = "IDENTITY" | "CONTACT" | "WORK INFORMATION" | "ACCOUNT"
 export type ProfileOpenSections = Record<Exclude<ProfileSectionName, "IDENTITY">, boolean>
-export type ProfileFieldValue = string | null
-
 export type UpdateProfileRequest = {
   fullName?: string
   phone?: string
@@ -77,14 +75,6 @@ export type ProfileSectionHeadingProps = {
 }
 
 export type ProfileSectionDividerProps = { className?: string }
-
-export type ProfileFieldProps = {
-  label: string
-  value: ProfileFieldValue
-  className?: string
-  readOnly?: boolean
-  error?: string
-}
 
 export type ProfileAvatarPreviewProps = {
   initials: string

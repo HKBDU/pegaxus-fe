@@ -1,7 +1,7 @@
 import {
   ProfileActionButtons,
   ProfileAccordionSection,
-  ProfileField,
+  Field,
   ProfileForm,
   ProfileIdentitySection,
   ProfileSectionHeading,
@@ -100,7 +100,7 @@ export function ProfileSettingsPage() {
           <div className="flex flex-col gap-0">
             <ProfileAccordionSection title="CONTACT" open={openSections.CONTACT} onToggle={() => toggleSection("CONTACT")}>
               <div className="grid gap-3 md:grid-cols-2">
-                <ProfileField label="EMAIL ADDRESS" value={profile.email} readOnly={isEditing} error={isEditing ? formErrors.email : undefined} />
+                <Field label="EMAIL ADDRESS" value={profile.email} readOnly={isEditing} error={isEditing ? formErrors.email : undefined} />
                 {isEditing ? (
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-phone">PHONE NUMBER</Label>
@@ -108,7 +108,7 @@ export function ProfileSettingsPage() {
                     <p className="min-h-[15px] pt-0.5 text-[10px] leading-[15px] text-red-600" role={formErrors.phone ? "alert" : undefined}>{formErrors.phone ?? "\u00a0"}</p>
                   </div>
                 ) : (
-                  <ProfileField label="PHONE NUMBER" value={profile.phone} />
+                  <Field label="PHONE NUMBER" value={profile.phone} />
                 )}
               </div>
             </ProfileAccordionSection>
@@ -116,24 +116,24 @@ export function ProfileSettingsPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 {profile.employee ? (
                   <>
-                    <ProfileField label="EMPLOYEE CODE" value={profile.employee.employeeCode} readOnly={isEditing} />
-                    <ProfileField label="ROLE" value={formatProfileLabel(profile.role)} readOnly={isEditing} />
-                    <ProfileField className="md:col-span-2" label="WORK STATUS" value={profile.employee.workStatus ?? null} readOnly={isEditing} />
+                    <Field label="EMPLOYEE CODE" value={profile.employee.employeeCode} readOnly={isEditing} />
+                    <Field label="ROLE" value={formatProfileLabel(profile.role)} readOnly={isEditing} />
+                    <Field className="md:col-span-2" label="WORK STATUS" value={profile.employee.workStatus ?? null} readOnly={isEditing} />
                   </>
                 ) : (
                   <>
-                    <ProfileField label="CUSTOMER ID" value={profile.customer?.customerId ?? null} readOnly={isEditing} />
-                    <ProfileField label="DATE OF BIRTH" value={profile.customer?.dateOfBirth ?? null} readOnly={isEditing} />
+                    <Field label="CUSTOMER ID" value={profile.customer?.customerId ?? null} readOnly={isEditing} />
+                    <Field label="DATE OF BIRTH" value={profile.customer?.dateOfBirth ?? null} readOnly={isEditing} />
                   </>
                 )}
               </div>
             </ProfileAccordionSection>
             <ProfileAccordionSection title="ACCOUNT" open={openSections.ACCOUNT} onToggle={() => toggleSection("ACCOUNT")}>
               <div className="grid gap-3 md:grid-cols-2">
-                <ProfileField label="STATUS" value={formatProfileLabel(profile.status)} readOnly={isEditing} />
-                <ProfileField label="MEMBER SINCE" value={formatProfileDate(profile.memberSince)} readOnly={isEditing} />
-                <ProfileField label="LAST LOGIN AT" value={formatProfileDate(profile.lastLoginAt)} readOnly={isEditing} />
-                <ProfileField label="UPDATED AT" value={formatProfileDate(profile.updatedAt)} readOnly={isEditing} />
+                <Field label="STATUS" value={formatProfileLabel(profile.status)} readOnly={isEditing} />
+                <Field label="MEMBER SINCE" value={formatProfileDate(profile.memberSince)} readOnly={isEditing} />
+                <Field label="LAST LOGIN AT" value={formatProfileDate(profile.lastLoginAt)} readOnly={isEditing} />
+                <Field label="UPDATED AT" value={formatProfileDate(profile.updatedAt)} readOnly={isEditing} />
               </div>
             </ProfileAccordionSection>
           </div>
