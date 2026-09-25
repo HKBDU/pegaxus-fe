@@ -3,6 +3,7 @@ import type { AccountType, EmailVerificationStatus, ProfileSectionName } from ".
 export const PROFILE_SECTION_TITLES: Record<ProfileSectionName, ProfileSectionName> = {
   IDENTITY: "IDENTITY",
   CONTACT: "CONTACT",
+  "PERSONAL INFORMATION": "PERSONAL INFORMATION",
   "WORK INFORMATION": "WORK INFORMATION",
   ACCOUNT: "ACCOUNT",
 }

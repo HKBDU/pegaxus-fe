@@ -8,11 +8,11 @@ export function AdminHeader() {
   const isDetails = /^\/admin\/transport-requests\/\d+\/?$/.test(pathname)
 
   return (
-    <header className="site-header-enter flex min-h-14 items-center gap-2 border-b border-[#202329] bg-[#17191c] px-2 text-white transition-[background-color,box-shadow] duration-300 sm:px-4 lg:px-6">
+    <header className="site-header-enter flex min-h-12 items-center gap-2 border-b border-[#202329] bg-[#17191c] px-2 text-white transition-[background-color,box-shadow] duration-300 sm:px-4 lg:px-6">
       <SidebarTrigger aria-label="Open admin navigation" className="shrink-0 text-[#d7d9dc] hover:bg-white/10 hover:text-white lg:hidden">
         <Menu className="size-5" />
       </SidebarTrigger>
-      <nav aria-label="Admin booking path" className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-xs font-medium tracking-[0.06em]">
+      <nav aria-label="Admin booking path" className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-[10px] font-semibold tracking-[0.08em]">
         <Link to="/admin/transport-requests" className="text-[#f39200] transition-colors hover:text-[#ffad33]">TRANSPORT REQUESTS</Link>
         {isDetails ? (
           <>

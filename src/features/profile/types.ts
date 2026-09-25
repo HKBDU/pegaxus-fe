@@ -15,7 +15,7 @@ export type ProfileRole =
 
 export type CustomerProfile = {
   customerId: EntityId
-  dateOfBirth: string | null
+  dateOfBirth?: string | null
 }
 
 export type EmployeeProfile = {
@@ -31,6 +31,7 @@ export type Profile = {
   status: AccountStatus
   role: ProfileRole
   fullName: string | null
+  dob: string | null
   phone: string | null
   country: string | null
   address: string | null
@@ -42,14 +43,20 @@ export type Profile = {
   updatedAt: string
 }
 
-export type ProfileSectionName = "IDENTITY" | "CONTACT" | "WORK INFORMATION" | "ACCOUNT"
+export type ProfileSectionName = "IDENTITY" | "CONTACT" | "PERSONAL INFORMATION" | "WORK INFORMATION" | "ACCOUNT"
 export type ProfileOpenSections = Record<Exclude<ProfileSectionName, "IDENTITY">, boolean>
-export type ProfileFieldValue = string | null
-
 export type UpdateProfileRequest = {
   fullName?: string
+  email?: string
   phone?: string
   address?: string
+  country?: string
+  dob?: string
+  identityNumber?: string
+  role?: ProfileRole
+  status?: AccountStatus
+  employeeCode?: string
+  workStatus?: string
   avatar?: File
 }
 
@@ -67,6 +74,10 @@ export type ApiResponse<T> = {
 export type ProfileFormProps = {
   profile: Profile
   onSubmit: (input: UpdateProfileRequest) => Promise<void> | void
+  emailVerificationStatus: EmailVerificationStatus
+  canEditEmail?: boolean
+  canEditPersonalInformation?: boolean
+  canEditDateOfBirth?: boolean
   isSubmitting?: boolean
   onValidationChange?: (errors: ProfileFormErrors) => void
 }
@@ -77,14 +88,6 @@ export type ProfileSectionHeadingProps = {
 }
 
 export type ProfileSectionDividerProps = { className?: string }
-
-export type ProfileFieldProps = {
-  label: string
-  value: ProfileFieldValue
-  className?: string
-  readOnly?: boolean
-  error?: string
-}
 
 export type ProfileAvatarPreviewProps = {
   initials: string

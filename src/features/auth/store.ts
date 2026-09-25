@@ -4,8 +4,9 @@ import type { AuthPrincipal } from '@/features/auth/types'
 
 interface AuthState {
   accessToken: string | null
+  refreshToken: string | null
   principal: AuthPrincipal | null
-  setAuth: (payload: { accessToken: string; principal: AuthPrincipal }) => void
+  setAuth: (payload: { accessToken: string; refreshToken?: string; principal: AuthPrincipal }) => void
   setAccessToken: (accessToken: string) => void
   clearAuth: () => void
 }
@@ -15,10 +16,11 @@ export const useAuthStore = create<AuthState>()(
     persist(
       (set) => ({
         accessToken: null,
+        refreshToken: null,
         principal: null,
-        setAuth: ({ accessToken, principal }) => set({ accessToken, principal }),
+        setAuth: ({ accessToken, refreshToken, principal }) => set({ accessToken, refreshToken: refreshToken ?? null, principal }),
         setAccessToken: (accessToken) => set({ accessToken }),
-        clearAuth: () => set({ accessToken: null, principal: null }),
+        clearAuth: () => set({ accessToken: null, refreshToken: null, principal: null }),
       }),
       {
         name: 'pegaxus-auth',
