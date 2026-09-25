@@ -7,12 +7,17 @@ export interface AccessPolicy {
   allPermissions?: Permission[]
 }
 
+function normalizeRole(role: Role) {
+  return role.trim().toUpperCase().replace(/^ROLE_/, "")
+}
+
 export function canAccess(principal: AuthPrincipal | null, policy?: AccessPolicy) {
   if (!principal) return false
   if (!policy) return true
 
-  if (policy.anyRole && !policy.anyRole.some((role) => principal.roles.includes(role))) return false
-  if (policy.allRoles && !policy.allRoles.every((role) => principal.roles.includes(role))) return false
+  const roles = principal.roles.map(normalizeRole)
+  if (policy.anyRole && !policy.anyRole.some((role) => roles.includes(normalizeRole(role)))) return false
+  if (policy.allRoles && !policy.allRoles.every((role) => roles.includes(normalizeRole(role)))) return false
   if (
     policy.anyPermission &&
     !policy.anyPermission.some((permission) => principal.permissions.includes(permission))

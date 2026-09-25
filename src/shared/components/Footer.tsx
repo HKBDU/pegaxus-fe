@@ -9,7 +9,7 @@ import type { FooterColumnProps } from "@/shared/types/props"
 export function FooterColumn({ title, links, className, children }: FooterColumnProps) {
   return (
     <section className={cn("min-w-0 break-words", className)}>
-      <h2 className="mb-6 text-xs font-bold tracking-[0.22em] text-white">{title}</h2>
+      <h2 className="mb-6 text-xs font-bold tracking-[0.22em] text-white!">{title}</h2>
       <div className="mb-5 h-0.5 w-6 bg-[#f39200]" />
       {children ?? (
         <nav className="space-y-4" aria-label={title}>
@@ -63,7 +63,7 @@ export function Footer() {
       <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-x-10 gap-y-12 px-8 pb-16 pt-12 sm:grid-cols-2 lg:grid-cols-[1.7fr_1fr_1fr_1fr_1.3fr] lg:px-16">
         <section>
           <img src={logo} alt="Pegaxus" className="mx-auto w-[270px] max-w-full lg:mx-0" />
-          <h2 className="mt-5 max-w-[250px] text-base font-bold leading-[1.3] tracking-[0.16em] text-white">
+          <h2 className="mt-5 max-w-[250px] text-base font-bold leading-[1.3] tracking-[0.16em] text-white!">
             GLOBAL RACEHORSE TRANSPORT WITHOUT BORDERS.
           </h2>
           <div className="my-4 h-0.5 w-10 bg-[#f39200]" />
