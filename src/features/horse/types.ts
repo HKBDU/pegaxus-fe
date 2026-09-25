@@ -61,6 +61,15 @@ export type HorsePageStateProps = {
 
 export type HorseTableAction = "view" | "edit" | "remove"
 
+export type HorseSectionName = "BASIC INFORMATION" | "IMMUTABLE INFORMATION"
+
+export type HorseAccordionSectionProps = {
+  title: HorseSectionName
+  open: boolean
+  onToggle: () => void
+  children: ReactNode
+}
+
 export type HorseTableProps = {
   horses: Horse[]
   onAction: (horse: Horse, action: HorseTableAction) => void

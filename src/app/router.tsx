@@ -12,6 +12,7 @@ const ProfileSettingsPage = lazy(
 const HorsesPage = lazy(() => import("@/features/horse/pages/HorsesPage"));
 const AddHorsePage = lazy(() => import("@/features/horse/pages/AddHorsePage"));
 const EditHorsePage = lazy(() => import("@/features/horse/pages/EditHorsePage"));
+const HorseDetailPage = lazy(() => import("@/features/horse/pages/HorseDetailPage"));
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +24,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<LoadingState />}>
             <HomePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "my-horses/:horseId",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <HorseDetailPage />
           </Suspense>
         ),
       },

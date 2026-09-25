@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react"
 import { Plus } from "lucide-react"
-import { toast } from "sonner"
 import { Button } from "@/shared/components/ui/button"
 import { Link } from "react-router-dom"
 import { useNavigate } from "react-router-dom"
@@ -29,7 +28,7 @@ export function HorsesPage() {
   function handleAction(horse: Horse, action: HorseTableAction) {
     if (action === "remove") return setPendingRemoval(horse)
     if (action === "edit") return navigate(`/my-horses/${horse.horseId}/edit`)
-    toast.info(`Viewing ${horse.horseName}.`)
+    if (action === "view") return navigate(`/my-horses/${horse.horseId}`)
   }
 
   if (isLoading) return <div className="flex min-h-[420px] items-center justify-center text-muted-foreground">Loading horses...</div>
