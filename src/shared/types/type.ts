@@ -1,3 +1,5 @@
+import type { ComponentType, ReactNode } from "react"
+
 export type HeaderNavItem = {
   label: string
   href: string
@@ -13,4 +15,23 @@ export type HeaderUser = {
 export type FooterLink = {
   label: string
   href: string
+}
+
+export type HeaderSidebarNavProps = {
+  navItems: HeaderNavItem[]
+}
+
+export type AdminSidebarItem = {
+  label: string
+  href: string
+  icon: ComponentType<{ className?: string }>
+}
+
+export type AdminSidebarMenuProps = {
+  items: AdminSidebarItem[]
+  compact?: boolean
+}
+
+export type AdminSidebarProviderProps = {
+  children: ReactNode
 }

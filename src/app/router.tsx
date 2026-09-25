@@ -10,6 +10,9 @@ import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const ProfileSettingsPage = lazy(
+  () => import("@/features/profile/pages/ProfileSettingsPage"),
+);
 
 // Dev preview: /admin skips the login requirement so the admin UI can be viewed without signing in.
 // Production builds always enforce the guard; set VITE_ENFORCE_AUTH=true to test the guard locally.
@@ -25,6 +28,14 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<LoadingState />}>
             <HomePage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "profile-settings",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <ProfileSettingsPage />
           </Suspense>
         ),
       },
@@ -63,6 +74,14 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="transport-requests" replace /> },
       { path: "booking", element: <Navigate to="/admin/transport-requests" replace /> },
       { path: "bookings", element: <Navigate to="/admin/transport-requests" replace /> },
+      {
+        path: "profile",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <ProfileSettingsPage />
+          </Suspense>
+        ),
+      },
       {
         path: "transport-requests",
         element: <BookingListPage audience="manager" />,

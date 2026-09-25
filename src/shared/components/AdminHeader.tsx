@@ -8,7 +8,7 @@ export function AdminHeader() {
   const isDetails = /^\/admin\/transport-requests\/\d+\/?$/.test(pathname)
 
   return (
-    <header className="flex min-h-14 items-center gap-2 border-b border-[#202329] bg-[#17191c] px-2 text-white sm:px-4 lg:px-6">
+    <header className="site-header-enter flex min-h-14 items-center gap-2 border-b border-[#202329] bg-[#17191c] px-2 text-white transition-[background-color,box-shadow] duration-300 sm:px-4 lg:px-6">
       <SidebarTrigger aria-label="Open admin navigation" className="shrink-0 text-[#d7d9dc] hover:bg-white/10 hover:text-white lg:hidden">
         <Menu className="size-5" />
       </SidebarTrigger>

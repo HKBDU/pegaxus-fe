@@ -8,7 +8,9 @@ export function AdminLayout() {
   return (
     <AdminSidebarProvider>
       <SidebarInset className="min-w-0 bg-[#f4f2ed]">
-        <AdminHeader />
+        <div className="sticky top-0 z-50">
+          <AdminHeader />
+        </div>
         <Outlet />
       </SidebarInset>
     </AdminSidebarProvider>
