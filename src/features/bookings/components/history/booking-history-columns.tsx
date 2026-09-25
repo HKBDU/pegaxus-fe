@@ -17,7 +17,7 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
     header: "Action",
     enableSorting: false,
     cell: ({ row }) => (
-      <span className="font-semibold uppercase">
+      <span className="text-[11px] font-semibold uppercase">
         {formatHistoryLabel(row.original.action)}
       </span>
     ),
@@ -30,7 +30,7 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
       row.original.previousStatus === null ? (
         "—"
       ) : (
-        <span className="text-neutral-600">
+        <span className="text-xs text-neutral-600">
           {formatHistoryLabel(row.original.previousStatus)}
         </span>
       ),
@@ -52,7 +52,7 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
           <TooltipTrigger asChild>
             <div
               tabIndex={0}
-              className="min-w-[200px] max-w-[360px] cursor-help whitespace-normal break-words focus-visible:outline-2 focus-visible:outline-ring"
+              className="w-full cursor-help whitespace-normal break-words focus-visible:outline-2 focus-visible:outline-ring"
             >
               <span className="line-clamp-2">{reason}</span>
             </div>
@@ -71,11 +71,11 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
     header: "Changed by",
     enableSorting: false,
     cell: ({ row }) => (
-      <div className="min-w-[150px] max-w-[210px] whitespace-normal break-words">
+      <div className="min-w-0 whitespace-normal break-words">
         <p className="text-xs font-semibold uppercase">
           {row.original.changedBy.fullName}
         </p>
-        <p className="text-xs text-neutral-600 uppercase">
+        <p className="text-[10px] text-neutral-600 uppercase">
           {formatHistoryLabel(row.original.changedBy.role)}
         </p>
       </div>
@@ -88,7 +88,7 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
     cell: ({ row }) => (
       <time
         dateTime={row.original.changedAt}
-        className="font-mono text-sm tabular-nums"
+        className="font-mono text-[11px] whitespace-nowrap tabular-nums"
       >
         {formatHistoryTimestamp(row.original.changedAt)}
       </time>

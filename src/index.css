@@ -125,6 +125,34 @@ body {
   margin: 0;
 }
 
+.pegaxus-scrollbar,
+.pegaxus-scrollbar [data-slot="table-container"] {
+  scrollbar-color: #d9890a #f5f1eb;
+  scrollbar-width: thin;
+}
+
+.pegaxus-scrollbar::-webkit-scrollbar,
+.pegaxus-scrollbar [data-slot="table-container"]::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.pegaxus-scrollbar::-webkit-scrollbar-track,
+.pegaxus-scrollbar [data-slot="table-container"]::-webkit-scrollbar-track {
+  background: #f5f1eb;
+}
+
+.pegaxus-scrollbar::-webkit-scrollbar-thumb,
+.pegaxus-scrollbar [data-slot="table-container"]::-webkit-scrollbar-thumb {
+  border-radius: 2px;
+  background: #d9890a;
+}
+
+.pegaxus-scrollbar::-webkit-scrollbar-thumb:hover,
+.pegaxus-scrollbar [data-slot="table-container"]::-webkit-scrollbar-thumb:hover {
+  background: #b86800;
+}
+
 h1,
 h2 {
   font-family: var(--heading);

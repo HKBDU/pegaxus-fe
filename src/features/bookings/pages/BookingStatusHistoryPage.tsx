@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { ErrorState } from "@/shared/components/common";
@@ -22,57 +22,29 @@ const emptyHistory: BookingHistoryItem[] = [];
 
 export default function BookingStatusHistoryPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
-  const [searchParams] = useSearchParams();
-  const useMock = import.meta.env.DEV && searchParams.get("mock") === "1";
+  const location = useLocation();
   if (!bookingId?.trim())
     return (
       <ErrorState message="A booking ID is required to view its history." />
     );
   return (
     <BookingHistoryContent
-      key={`${bookingId}:${useMock}`}
+      key={`${bookingId}:${location.search}`}
       bookingId={bookingId}
-      useMock={useMock}
     />
   );
 }
 
 function BookingHistoryContent({
   bookingId,
-  useMock,
 }: {
   bookingId: string;
-  useMock: boolean;
 }) {
-  const query = useBookingHistoryQuery(bookingId, !useMock);
-  const [mockHistory, setMockHistory] = useState<BookingHistoryItem[] | null>(
-    null,
-  );
-  const [mockError, setMockError] = useState(false);
+  const query = useBookingHistoryQuery(bookingId);
   const [filters, setFilters] = useState(initialHistoryFilters);
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    if (!import.meta.env.DEV || !useMock) return;
-    let active = true;
-    import("../mocks/booking-history.mock")
-      .then(({ bookingHistoryMock }) => {
-        if (active) setMockHistory(bookingHistoryMock);
-      })
-      .catch(() => {
-        if (active) setMockError(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, [useMock]);
-
-  const history = (useMock ? mockHistory : query.data) ?? emptyHistory;
-  const isLoading = useMock
-    ? mockHistory === null && !mockError
-    : query.isPending;
-  const isError = useMock ? mockError : query.isError;
-  const isFetching = useMock ? false : query.isFetching;
+  const history = query.data ?? emptyHistory;
   const rows = useMemo(
     () => filterAndSortHistory(history, filters),
     [history, filters],
@@ -111,7 +83,7 @@ function BookingHistoryContent({
   }
 
   return (
-    <main className="min-h-svh min-w-0 bg-[#f4f4f4] text-neutral-900">
+    <div className="w-full min-w-0 bg-[#f4f4f4] text-neutral-900">
       <div className="mx-auto w-full max-w-[1000px] space-y-4 px-5 py-5 lg:px-6">
         <header>
           <Link
@@ -131,21 +103,19 @@ function BookingHistoryContent({
           actions={actions}
           statuses={statuses}
           onChange={changeFilters}
-          isFetching={isFetching}
-          canRefresh={!useMock}
-          onRefresh={() => {
-            if (!useMock) void query.refetch();
-          }}
-          canDownload={!isLoading && !isError && rows.length > 0}
+          isFetching={query.isFetching}
+          canRefresh={true}
+          onRefresh={() => void query.refetch()}
+          canDownload={!query.isPending && !query.isError && rows.length > 0}
           onDownload={download}
         />
 
         <section
           aria-label="Booking history"
-          aria-busy={isLoading || isFetching}
+          aria-busy={query.isPending || query.isFetching}
           className="min-w-0"
         >
-          {isLoading ? (
+          {query.isPending ? (
             <div
               role="status"
               className="space-y-2 border border-[#dfc9b6] bg-white p-3"
@@ -158,21 +128,21 @@ function BookingHistoryContent({
                 />
               ))}
             </div>
-          ) : isError ? (
+          ) : query.isError ? (
             <div className="space-y-3">
               <ErrorState
                 message={
-                  !useMock && isBookingNotFound(query.error)
+                  isBookingNotFound(query.error)
                     ? "Booking not found. It may no longer exist or be available to you."
                     : "Unable to load booking history. Please try again."
                 }
               />
-              {!useMock && !isBookingNotFound(query.error) && (
+              {!isBookingNotFound(query.error) && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={isFetching}
+                  disabled={query.isFetching}
                   onClick={() => void query.refetch()}
                 >
                   Retry
@@ -189,6 +159,6 @@ function BookingHistoryContent({
           )}
         </section>
       </div>
-    </main>
+    </div>
   );
 }

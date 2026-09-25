@@ -38,7 +38,7 @@ function HistorySelect({
   const id = useId();
   return (
     <div className="min-w-0 space-y-1">
-      <label htmlFor={id} className="block text-xs font-semibold uppercase">
+      <label htmlFor={id} className="block text-[11px] font-semibold uppercase">
         {label}
       </label>
       <Select
@@ -47,11 +47,19 @@ function HistorySelect({
       >
         <SelectTrigger
           id={id}
-          className="h-9 w-full min-w-0 rounded-none border-[#f39200] bg-white text-sm"
+          size="sm"
+          className="h-8 w-full min-w-0 rounded-none border-[#f39200] bg-white text-xs"
         >
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="z-50 border-neutral-200 bg-white text-neutral-900">
+        <SelectContent
+          position="popper"
+          side="bottom"
+          align="start"
+          sideOffset={2}
+          avoidCollisions={false}
+          className="z-50 max-h-64 min-w-[var(--radix-select-trigger-width)] rounded-none border-neutral-200 bg-white text-neutral-900"
+        >
           <SelectItem value="all">{allLabel}</SelectItem>
           {options.map((option) => (
             <SelectItem key={option} value={`value:${option}`}>
@@ -76,7 +84,9 @@ export function BookingHistoryFilters({
   canDownload,
 }: BookingHistoryFiltersProps) {
   return (
-      <div className="grid grid-cols-1 gap-2 border border-[#dfc9b6] bg-white p-2 sm:grid-cols-[1fr_1fr_1fr_auto] sm:gap-2">      <HistorySelect
+    <div className="grid grid-cols-2 gap-3 border border-[#dfc9b6] bg-white p-3 items-end md:grid-cols-[1fr_1fr_1fr_auto]">
+      {" "}
+      <HistorySelect
         label="Action filter"
         allLabel="All actions"
         value={filters.action}
@@ -98,10 +108,13 @@ export function BookingHistoryFilters({
         onChange={(toStatus) => onChange({ ...filters, toStatus })}
       />
       <div className="min-w-0 space-y-1">
-        <p id="history-order-label" className="text-xs font-semibold uppercase">
+        <p
+          id="history-order-label"
+          className="h-7 block text-[11px] font-semibold uppercase"
+        >
           Order
         </p>
-        <div className="flex flex-wrap gap-2 xl:flex-nowrap">
+        <div className="flex flex-nowrap gap-1">
           <div
             role="group"
             aria-labelledby="history-order-label"
@@ -114,7 +127,7 @@ export function BookingHistoryFilters({
                 variant="outline"
                 aria-pressed={filters.order === order}
                 onClick={() => onChange({ ...filters, order })}
-                className={`h-9 whitespace-nowrap rounded-none border-[#f39200] px-2 text-xs uppercase ${filters.order === order ? "bg-[#f39200] text-black hover:bg-[#df8500] hover:text-black" : "bg-white"}`}
+                className={`h-8 whitespace-nowrap rounded-none border-[#f39200] px-1.5 text-[11px] uppercase ${filters.order === order ? "bg-[#f39200] text-black hover:bg-[#df8500] hover:text-black" : "bg-white"}`}
               >
                 {order === "newest" ? "Newest first" : "Oldest first"}
               </Button>
@@ -124,7 +137,7 @@ export function BookingHistoryFilters({
             type="button"
             variant="outline"
             size="icon"
-            className="rounded-none border-[#f39200]"
+            className="size-8 shrink-0 rounded-none border-[#f39200]"
             aria-label="Refresh history"
             title="Refresh history"
             disabled={!canRefresh || isFetching}
@@ -132,20 +145,20 @@ export function BookingHistoryFilters({
           >
             <RefreshCw
               aria-hidden="true"
-              className={`size-4 ${isFetching ? "animate-spin" : ""}`}
+              className={`size-3.5 ${isFetching ? "animate-spin" : ""}`}
             />
           </Button>
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="rounded-none border-[#f39200]"
+            className="size-8 shrink-0 rounded-none border-[#f39200]"
             aria-label="Download history"
             title="Download filtered history as CSV"
             disabled={!canDownload}
             onClick={onDownload}
           >
-            <Download aria-hidden="true" className="size-4" />
+            <Download aria-hidden="true" className="size-3.5" />
           </Button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { bookingHistoryListSchema } from "../schemas/booking-history.schema";
+import type { BookingHistoryMockScenario } from "../booking-history-source";
 export const bookingHistoryMock = bookingHistoryListSchema.parse([
   {
     historyId: 5001, action: "CREATED", previousStatus: null, newStatus: "DRAFT", reason: null,
@@ -62,3 +63,29 @@ export const bookingHistoryMock = bookingHistoryListSchema.parse([
     changedAt: "2026-09-17T07:00:00Z",
   },
 ]);
+
+const longHistoryMock = bookingHistoryListSchema.parse(
+  bookingHistoryMock.map((item) => ({
+    ...item,
+    reason:
+      item.reason ??
+      "The transport documentation requires a detailed review of veterinary certificates, customs clearance, quarantine requirements, and the revised arrival schedule before this booking can proceed.",
+    changedBy: {
+      ...item.changedBy,
+      fullName: `${item.changedBy.fullName} — International Logistics Coordination Team`,
+    },
+  })),
+);
+
+export function loadMockBookingHistory(scenario: BookingHistoryMockScenario) {
+  switch (scenario) {
+    case "empty":
+      return bookingHistoryListSchema.parse([]);
+    case "long":
+      return longHistoryMock;
+    case "error":
+      throw new Error("Simulated booking history request failure");
+    default:
+      return bookingHistoryMock;
+  }
+}

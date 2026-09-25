@@ -19,7 +19,7 @@ export function BookingStatusBadge({ status }: { status: string }) {
   return (
     <Badge
       variant="outline"
-      className={`rounded-[2px] px-2 py-1 text-xs font-medium ${style.badge}`}
+      className={`rounded-[2px] px-1.5 py-0.5 text-[11px] font-medium ${style.badge}`}
     >
       <span aria-hidden="true" className={`size-1.5 rounded-full ${style.dot}`} />
       {formatHistoryLabel(status)}
