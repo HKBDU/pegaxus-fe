@@ -60,35 +60,35 @@ export function Footer() {
   return (
     <footer className="site-footer-enter w-full min-w-[90vw] max-w-[100vw] overflow-hidden bg-[#0d0f12] text-white">
       <div className="site-footer-scale">
-      <img src={orangeLine} alt="" aria-hidden="true" className="mt-10 hidden h-auto w-full max-w-none lg:block" />
+        <img src={orangeLine} alt="" aria-hidden="true" className="mt-10 hidden h-auto w-full max-w-none lg:block" />
         <div className="site-footer-grid mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-x-10 gap-y-12 px-8 !pb-10 pt-12 sm:grid-cols-2 lg:grid-cols-[1.7fr_1fr_1fr_1fr_1.3fr] lg:px-16">
           <section className="site-footer-brand">
             <img src={logo} alt="Pegaxus" className="site-footer-logo mx-auto w-[270px] max-w-full transition-transform duration-300 hover:scale-[1.02] lg:mx-0" />
-            <h2 className="site-footer-brand-title mt-5 max-w-[250px] text-base font-bold leading-[1.3] tracking-[0.16em] !text-white pt-5">
-            GLOBAL RACEHORSE TRANSPORT WITHOUT BORDERS.
-          </h2>
+            <h2 className="site-footer-brand-title mt-5 max-w-[250px] pt-5 text-base font-bold leading-[1.3] tracking-[0.16em] !text-white">
+              GLOBAL RACEHORSE TRANSPORT WITHOUT BORDERS.
+            </h2>
             <div className="site-footer-brand-divider my-4 h-0.5 w-10 bg-[#f39200]" />
             <p className="site-footer-brand-description max-w-[270px] text-sm leading-6 text-[#9297a1]">
-            Specialist international transport for thoroughbreds, by people who understand.
-          </p>
-        </section>
+              Specialist international transport for thoroughbreds, by people who understand.
+            </p>
+          </section>
 
-        {columns.map((column) => (
-          <FooterColumn key={column.title} {...column} />
-        ))}
+          {columns.map((column) => (
+            <FooterColumn key={column.title} {...column} />
+          ))}
 
-        <FooterColumn title="CONTACT US" links={[]}>
-          <div className="site-footer-contact space-y-5 text-sm text-[#d4d6da]">
-            <p className="site-footer-contact-item py-3 flex min-w-0 items-start gap-4 break-words"><Mail className="site-footer-contact-icon mt-0.5 size-5 shrink-0 text-[#f39200]" />info@pegaxus.com</p>
-            <p className="site-footer-contact-item py-3 flex min-w-0 items-start gap-4 break-words"><Phone className="site-footer-contact-icon mt-0.5 size-5 shrink-0 text-[#f39200]" />+84 9461 123 321</p>
-            <p className="site-footer-contact-item py-3 flex min-w-0 items-start gap-4 break-words"><MapPin className="site-footer-contact-icon mt-0.5 size-5 shrink-0 text-[#f39200]" /><span>London, United Kingdom<small className="mt-1 block text-[10px] tracking-[0.18em] text-[#9297a1]">GLOBAL OPERATIONS</small></span></p>
-          </div>
-        </FooterColumn>
-      </div>
+          <FooterColumn title="CONTACT US" links={[]}>
+            <div className="site-footer-contact space-y-5 text-sm text-[#d4d6da]">
+              <p className="site-footer-contact-item flex min-w-0 items-start gap-4 break-words py-3"><Mail className="site-footer-contact-icon mt-0.5 size-5 shrink-0 text-[#f39200]" />info@pegaxus.com</p>
+              <p className="site-footer-contact-item flex min-w-0 items-start gap-4 break-words py-3"><Phone className="site-footer-contact-icon mt-0.5 size-5 shrink-0 text-[#f39200]" />+84 9461 123 321</p>
+              <p className="site-footer-contact-item flex min-w-0 items-start gap-4 break-words py-3"><MapPin className="site-footer-contact-icon mt-0.5 size-5 shrink-0 text-[#f39200]" /><span>London, United Kingdom<small className="mt-1 block text-[10px] tracking-[0.18em] text-[#9297a1]">GLOBAL OPERATIONS</small></span></p>
+            </div>
+          </FooterColumn>
+        </div>
 
-      <div className="site-footer-bottom border-t border-[#202329] px-8 !py-4 text-md text-[#9297a1]">
-        © {new Date().getFullYear()} PEGAXUS. All rights reserved.
-      </div>
+        <div className="site-footer-bottom border-t border-[#202329] px-8 !py-4 text-md text-[#9297a1]">
+          © {new Date().getFullYear()} PEGAXUS. All rights reserved.
+        </div>
       </div>
     </footer>
   )

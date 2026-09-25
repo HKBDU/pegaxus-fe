@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import { MoreVertical, Pencil, Trash2, Eye } from "lucide-react"
-import { DataTable } from "@/shared/components/ui/data-table"
+import { HorseDataTable } from "./HorseDataTable"
 import { Button } from "@/shared/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
 import { HORSE_SEX_LABELS } from "../constants/horse.constants"
@@ -27,5 +27,5 @@ export function HorseTable({ horses, onAction, toolbar }: HorseTableProps) {
     },
   ]
 
-  return <DataTable columns={columns.map((column) => ({ ...column, enableSorting: false }))} data={horses} filterColumn="horseName" filterPlaceholder="Search by horse name or microchip..." pageSize={6} toolbar={toolbar} className="horse-data-table [&_table]:table-fixed" />
+  return <HorseDataTable columns={columns.map((column) => ({ ...column, enableSorting: false }))} data={horses} filterColumn="horseName" filterPlaceholder="Search by horse name or microchip..." pageSize={6} toolbar={toolbar} className="horse-data-table [&_table]:table-fixed" />
 }
