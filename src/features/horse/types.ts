@@ -33,6 +33,20 @@ export type CreateHorseRequest = {
   identificationNotes?: string
 }
 
+export type HorseFormValues = {
+  horseName: string
+  sex: string
+  breed: string
+  dateOfBirth: string
+  color: string
+  countryOfOrigin: string
+  weightKg: string
+  heightCm: string
+  passportNumber: string
+  microchipNumber: string
+  identificationNotes: string
+}
+
 export type HorseListValue = {
   items: Horse[]
   pageIndex: number
