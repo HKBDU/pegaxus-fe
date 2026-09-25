@@ -15,7 +15,6 @@ export type ProfileRole =
 
 export type CustomerProfile = {
   customerId: EntityId
-  dateOfBirth: string | null
 }
 
 export type EmployeeProfile = {
@@ -31,6 +30,7 @@ export type Profile = {
   status: AccountStatus
   role: ProfileRole
   fullName: string | null
+  dob: string | null
   phone: string | null
   country: string | null
   address: string | null

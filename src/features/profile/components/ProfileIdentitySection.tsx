@@ -29,10 +29,13 @@ export function ProfileIdentitySection({ profile, emailVerificationStatus, accou
           </div>
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
-            <Field label="ADDRESS" value={profile.address} />
-            <Field label="ACCOUNT TYPE" value={accountTypeLabel[profile.accountType]} />
+          <Field label="ADDRESS" value={profile.address} />
+          <Field label="ACCOUNT TYPE" value={accountTypeLabel[profile.accountType]} />
         </div>
-        <Field label="country" value={profile.country} />
+        <div className="grid gap-3 lg:grid-cols-2">
+          <Field label="COUNTRY" value={profile.country} />
+          <Field label="DATE OF BIRTH" value={profile.dob} />
+        </div>
       </div>
     </section>
   )

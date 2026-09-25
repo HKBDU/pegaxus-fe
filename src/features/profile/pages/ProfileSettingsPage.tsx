@@ -119,7 +119,6 @@ export function ProfileSettingsPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 <Field label="IDENTITY NUMBER" value={profile.customer.customerId} />
                 <Field label="ROLE" value={formatProfileLabel(profile.role)} />
-                <Field label="DATE OF BIRTH" value={profile.customer.dateOfBirth} />
               </div>
             </ProfileAccordionSection>}
             {profile.employee && <ProfileAccordionSection title="WORK INFORMATION" open={openSections["WORK INFORMATION"]} onToggle={() => toggleSection("WORK INFORMATION")}>
