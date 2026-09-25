@@ -6,6 +6,9 @@ import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const BookingStatusHistoryPage = lazy(
+  () => import("@/features/bookings/pages/BookingStatusHistoryPage"),
+);
 
 export const router = createBrowserRouter([
   {
@@ -29,5 +32,13 @@ export const router = createBrowserRouter([
   {
     path: "/admin",
     element: <AdminLayout />,
+  },
+  {
+    path: "/bookings/:bookingId/history",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <BookingStatusHistoryPage />
+      </Suspense>
+    ),
   },
 ]);
