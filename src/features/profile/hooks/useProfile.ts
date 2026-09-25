@@ -7,6 +7,7 @@ import type { Profile, UpdateProfileRequest } from "@/features/profile/types"
 
 export function useProfile(customerId?: string) {
   const location = useLocation()
+  const useMockProfile = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_PROFILE === "true"
   const [profile, setProfile] = useState<Profile>()
   const [error, setError] = useState<string>()
   const [isLoading, setIsLoading] = useState(true)
@@ -14,8 +15,16 @@ export function useProfile(customerId?: string) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const loadProfile = useCallback(async () => {
+    if (useMockProfile) {
+      setProfile(customerId || !location.pathname.startsWith("/admin") ? MOCK_CUSTOMER_PROFILE : MOCK_EMPLOYEE_PROFILE)
+      setError(undefined)
+      setIsLoading(false)
+      return
+    }
+
     try {
-      const nextProfile = customerId ? await profileApi.getCustomerProfile(customerId) : await profileApi.getMe()
+      if (customerId) throw new Error("Backend does not expose a customer profile endpoint")
+      const nextProfile = await profileApi.getMe()
       if (!nextProfile) throw new Error("Profile response is empty")
       setProfile(nextProfile)
       setError(undefined)
@@ -29,15 +38,52 @@ export function useProfile(customerId?: string) {
     } finally {
       setIsLoading(false)
     }
-  }, [customerId, location.pathname])
+  }, [customerId, location.pathname, useMockProfile])
 
   async function updateProfile(input: UpdateProfileRequest) {
     setIsSubmitting(true)
     try {
-      setProfile(await profileApi.updateMe(input))
+      if (useMockProfile) {
+        setProfile((currentProfile) => {
+          if (!currentProfile) return currentProfile
+
+          const { avatar, ...profileFields } = input
+          return {
+            ...currentProfile,
+            ...profileFields,
+            avatarUrl: avatar ? URL.createObjectURL(avatar) : currentProfile.avatarUrl,
+            updatedAt: new Date().toISOString(),
+          }
+        })
+        setIsEditing(false)
+        return
+      }
+
+      if (customerId) {
+        throw new Error("Backend does not expose a customer profile update endpoint")
+      }
+
+      await profileApi.updateMe(input)
+
+      // PATCH responses may not contain the complete profile. Reload the
+      // canonical representation so every field shown by the page is fresh.
+      await loadProfile()
       setIsEditing(false)
     } catch {
       toast.error("Can not update profile. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function disableProfile() {
+    if (!profile) return
+
+    setIsSubmitting(true)
+    try {
+      setProfile(await profileApi.disableAccount(profile.accountId))
+    } catch {
+      toast.error("Can not disable this account. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -62,5 +108,6 @@ export function useProfile(customerId?: string) {
     setIsEditing,
     retryProfile,
     updateProfile,
+    disableProfile,
   }
 }

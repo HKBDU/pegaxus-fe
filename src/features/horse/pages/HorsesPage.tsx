@@ -38,7 +38,7 @@ export function HorsesPage() {
       )
       .sort((a, b) => {
         if (sort === "name") return a.horseName.localeCompare(b.horseName)
-        return sort === "oldest" ? a.horseId - b.horseId : 0
+        return sort === "oldest" ? a.horseId.localeCompare(b.horseId) : 0
       })
   }, [horses, sex, breed, sort])
 

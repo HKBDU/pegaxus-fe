@@ -81,7 +81,7 @@ export function DataTable<TData, TValue>({
                   const sorted = header.column.getIsSorted()
 
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} style={{ width: (header.column.columnDef.meta as { width?: string } | undefined)?.width ?? header.column.getSize() }} className={header.column.id === "horseName" ? "min-w-[280px]" : undefined}>
                       {header.isPlaceholder ? null : canSort ? (
                         <Button
                           variant="ghost"
@@ -112,7 +112,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} style={{ width: (cell.column.columnDef.meta as { width?: string } | undefined)?.width ?? cell.column.getSize() }} className={cell.column.id === "horseName" ? "min-w-[280px]" : undefined}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}

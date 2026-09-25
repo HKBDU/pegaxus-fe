@@ -15,8 +15,8 @@ export const authApi = {
     return apiClient.post('/auth/register', credentials) as unknown as Promise<AuthResponse>
   },
 
-  async logout(): Promise<void> {
-    await apiClient.post('/auth/logout')
+  async logout(refreshToken?: string): Promise<void> {
+    await apiClient.post('/auth/logout', { refreshToken })
   },
 
   async getMe(): Promise<AuthPrincipal> {

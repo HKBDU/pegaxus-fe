@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import { toast } from "sonner"
 import { ErrorState } from "@/shared/components/common"
 import { Field } from "@/shared/components/Field"
 import { PageHeader } from "@/shared/components/PageHeader"
@@ -20,13 +21,12 @@ export function HorseDetailPage() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
   useEffect(() => {
-    const id = Number(horseId)
-    if (!Number.isFinite(id)) {
+    if (!horseId) {
       setError("Horse was not found.")
       return
     }
-    horseApi.getHorse(id).then(setHorse).catch(() => {
-      const mockHorse = MOCK_HORSES.find((item) => item.horseId === id)
+    horseApi.getHorse(horseId).then(setHorse).catch(() => {
+      const mockHorse = MOCK_HORSES.find((item) => item.horseId === horseId)
       if (mockHorse) setHorse(mockHorse)
       else setError("Horse was not found.")
     })
@@ -37,10 +37,14 @@ export function HorseDetailPage() {
   const currentHorse = horse
 
   async function handleDelete() {
+    if (!horseId) return
+
     try {
-      await horseApi.removeHorse(currentHorse.horseId)
+      await horseApi.removeHorse(horseId)
+      toast.success(`${currentHorse.horseName} removed successfully.`)
       navigate("/my-horses")
     } catch {
+      setIsDeleteOpen(false)
       setError("Unable to delete horse. Please try again.")
     }
   }
@@ -60,6 +64,7 @@ export function HorseDetailPage() {
               <Field label="COUNTRY OF ORIGIN" value={horse.countryOfOrigin} />
               <Field label="WEIGHT (KG)" value={horse.weightKg} />
               <Field label="HEIGHT (CM)" value={horse.heightCm} />
+              <Field label="MICROCHIP NUMBER" value={horse.microchipNumber} />
               <Field className="md:col-span-2" label="IDENTIFICATION NOTES" value={horse.identificationNotes} />
             </div>
           </HorseAccordionSection>
@@ -67,7 +72,6 @@ export function HorseDetailPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <Field label="HORSE ID" value={horse.horseId} readOnly />
               <Field label="PASSPORT NUMBER" value={horse.passportNumber} readOnly />
-              <Field label="MICROCHIP NUMBER" value={horse.microchipNumber} readOnly />
               <Field label="CREATED AT" value={horse.createdAt} readOnly />
               <Field label="UPDATED AT" value={horse.updatedAt} readOnly />
             </div>

@@ -12,13 +12,12 @@ export function EditHorsePage() {
   const [error, setError] = useState<string>()
 
   useEffect(() => {
-    const id = Number(horseId)
-    if (!Number.isFinite(id)) {
+    if (!horseId) {
       setError("Horse was not found.")
       return
     }
-    horseApi.getHorse(id).then(setHorse).catch(() => {
-      const mockHorse = MOCK_HORSES.find((item) => item.horseId === id)
+    horseApi.getHorse(horseId).then(setHorse).catch(() => {
+      const mockHorse = MOCK_HORSES.find((item) => item.horseId === horseId)
       if (mockHorse) setHorse(mockHorse)
       else setError("Horse was not found.")
     })

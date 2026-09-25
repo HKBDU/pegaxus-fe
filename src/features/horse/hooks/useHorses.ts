@@ -36,12 +36,7 @@ export function useHorses() {
       setHorses((current) => current.filter((item) => item.horseId !== horse.horseId))
       toast.success(`${horse.horseName} removed successfully.`)
     } catch {
-      if (import.meta.env.DEV) {
-        setHorses((current) => current.filter((item) => item.horseId !== horse.horseId))
-        toast.success(`${horse.horseName} removed successfully.`)
-        return
-      }
-      toast.error("Unable to remove horse. Please try again.")
+      toast.error(`Unable to remove ${horse.horseName}. Please try again.`)
     }
   }, [])
 

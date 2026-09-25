@@ -53,6 +53,7 @@ export function useLoginMutation() {
     onSuccess: (response) => {
       setAuth({
         accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
         principal: getPrincipal(response),
       })
       toast.success('Đăng nhập thành công')
@@ -65,9 +66,10 @@ export function useLoginMutation() {
 export function useLogoutMutation() {
   const navigate = useNavigate()
   const clearAuth = useAuthStore((state) => state.clearAuth)
+  const refreshToken = useAuthStore((state) => state.refreshToken)
 
   return useMutation({
-    mutationFn: () => authApi.logout(),
+    mutationFn: () => authApi.logout(refreshToken ?? undefined),
     onSettled: () => {
       clearAuth()
       queryClient.clear()

@@ -7,7 +7,8 @@ import {
   ProfileSectionHeading,
 } from "../components"
 import { useState } from "react"
-import { useParams } from "react-router-dom"
+import { useLocation, useParams } from "react-router-dom"
+import { useAuthStore } from "@/features/auth/store"
 import { useProfile } from "../hooks/useProfile"
 import type { EmailVerificationStatus, Profile, ProfileFormErrors, ProfileOpenSections, ProfilePageStateProps } from "../types"
 import { PageHeader } from "@/shared/components/PageHeader"
@@ -54,6 +55,10 @@ export function ProfileSettingsPage() {
   })
   const [formErrors, setFormErrors] = useState<ProfileFormErrors>({})
   const { customerId } = useParams()
+  const location = useLocation()
+  const principal = useAuthStore((state) => state.principal)
+  const isLogisticsManager = location.pathname.startsWith("/admin") || Boolean(principal?.roles.includes("LOGISTICS_MANAGER"))
+    const canManageOtherProfile = isLogisticsManager && Boolean(customerId)
 
   function toggleSection(section: keyof typeof openSections) {
     setOpenSections((current) => ({ ...current, [section]: !current[section] }))
@@ -68,7 +73,9 @@ export function ProfileSettingsPage() {
     setIsEditing,
     retryProfile,
     updateProfile,
+    disableProfile,
   } = useProfile(customerId)
+  const canEditCustomerIdentity = Boolean(profile?.customer && !customerId && !isLogisticsManager)
 
   if (isLoading) {
     return <ProfilePageState message="Loading profile..." />
@@ -93,7 +100,7 @@ export function ProfileSettingsPage() {
             <section className="grid gap-x-6 gap-y-3 border-b border-[#d1d5db] py-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)]">
               <ProfileSectionHeading title="IDENTITY" className="text-[20px] leading-7 tracking-[0.5px]" />
               <div className="min-w-0">
-                <ProfileForm profile={profile} onSubmit={updateProfile} isSubmitting={isSubmitting} onValidationChange={setFormErrors} />
+                  <ProfileForm profile={profile} onSubmit={updateProfile} emailVerificationStatus={getEmailVerificationStatus(profile)} canEditEmail canEditDateOfBirth={Boolean(profile.customer)} onValidationChange={setFormErrors} isSubmitting={isSubmitting} />
               </div>
             </section>
           ) : (
@@ -103,7 +110,13 @@ export function ProfileSettingsPage() {
           <div className="flex flex-col gap-0">
             <ProfileAccordionSection title="CONTACT" open={openSections.CONTACT} onToggle={() => toggleSection("CONTACT")}>
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label="EMAIL ADDRESS" value={profile.email} readOnly={isEditing} error={isEditing ? formErrors.email : undefined} />
+                {isEditing ? (
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-email">EMAIL ADDRESS</Label>
+                    <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-email" name="email" form="profile-form" defaultValue={profile.email} maxLength={254} type="email" aria-invalid={Boolean(formErrors.email)} />
+                    <p className="min-h-[15px] pt-0.5 text-[10px] leading-[15px] text-red-600" role={formErrors.email ? "alert" : undefined}>{formErrors.email ?? "\u00a0"}</p>
+                  </div>
+                ) : <Field label="EMAIL ADDRESS" value={profile.email} error={formErrors.email} />}
                 {isEditing ? (
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-phone">PHONE NUMBER</Label>
@@ -117,23 +130,61 @@ export function ProfileSettingsPage() {
             </ProfileAccordionSection>
             {profile.customer && <ProfileAccordionSection title="PERSONAL INFORMATION" open={openSections["PERSONAL INFORMATION"]} onToggle={() => toggleSection("PERSONAL INFORMATION")}>
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label="IDENTITY NUMBER" value={profile.customer.customerId} />
-                <Field label="ROLE" value={formatProfileLabel(profile.role)} />
+                {isEditing && canEditCustomerIdentity ? (
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-identity-number">IDENTITY NUMBER</Label>
+                    <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-identity-number" name="identityNumber" form="profile-form" defaultValue={profile.customer.customerId} maxLength={100} />
+                  </div>
+                ) : <Field label="IDENTITY NUMBER" value={profile.customer.customerId} />}
+                {isEditing && canManageOtherProfile ? (
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-customer-role">ROLE</Label>
+                    <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-customer-role" name="role" form="profile-form" defaultValue={profile.role} maxLength={80} />
+                  </div>
+                ) : <Field label="ROLE" value={formatProfileLabel(profile.role)} />}
               </div>
             </ProfileAccordionSection>}
             {profile.employee && <ProfileAccordionSection title="WORK INFORMATION" open={openSections["WORK INFORMATION"]} onToggle={() => toggleSection("WORK INFORMATION")}>
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label="EMPLOYEE CODE" value={profile.employee.employeeCode} readOnly={isEditing} />
-                <Field label="ROLE" value={formatProfileLabel(profile.role)} readOnly={isEditing} />
-                <Field className="md:col-span-2" label="WORK STATUS" value={profile.employee.workStatus ?? null} readOnly={isEditing} />
+                <Field label="EMPLOYEE CODE" value={profile.employee.employeeCode} readOnly />
+                {isEditing && canManageOtherProfile ? (
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-employee-role">ROLE</Label>
+                    <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-employee-role" name="role" form="profile-form" defaultValue={profile.role} maxLength={80} />
+                  </div>
+                ) : <Field label="ROLE" value={formatProfileLabel(profile.role)} readOnly={isEditing} />}
+                {isEditing && canManageOtherProfile ? (
+                  <div className="flex min-w-0 flex-col gap-1 md:col-span-2">
+                    <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-work-status">WORK STATUS</Label>
+                    <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-work-status" name="workStatus" form="profile-form" defaultValue={profile.employee.workStatus ?? ""} maxLength={50} />
+                  </div>
+                ) : <Field className="md:col-span-2" label="WORK STATUS" value={profile.employee.workStatus ?? null} readOnly />}
               </div>
             </ProfileAccordionSection>}
             <ProfileAccordionSection title="ACCOUNT" open={openSections.ACCOUNT} onToggle={() => toggleSection("ACCOUNT")}>
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label="STATUS" value={formatProfileLabel(profile.status)} readOnly={isEditing} />
+                {isEditing && canManageOtherProfile ? (
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-status">ACCOUNT STATUS</Label>
+                    <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-status" name="status" form="profile-form" defaultValue={profile.status} maxLength={30} />
+                  </div>
+                ) : <Field label="STATUS" value={formatProfileLabel(profile.status)} readOnly={isEditing} />}
                 <Field label="MEMBER SINCE" value={formatProfileDate(profile.memberSince)} readOnly={isEditing} />
                 <Field label="LAST LOGIN AT" value={formatProfileDate(profile.lastLoginAt)} readOnly={isEditing} />
                 <Field label="UPDATED AT" value={formatProfileDate(profile.updatedAt)} readOnly={isEditing} />
+                {isLogisticsManager && customerId && profile.status === "ACTIVE" && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="w-fit rounded-[2px] uppercase md:col-span-2"
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      if (window.confirm(`Disable ${profile.fullName ?? profile.email}'s account?`)) void disableProfile()
+                    }}
+                  >
+                    DISABLE ACCOUNT
+                  </Button>
+                )}
               </div>
             </ProfileAccordionSection>
           </div>

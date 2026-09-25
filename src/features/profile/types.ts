@@ -15,6 +15,7 @@ export type ProfileRole =
 
 export type CustomerProfile = {
   customerId: EntityId
+  dateOfBirth?: string | null
 }
 
 export type EmployeeProfile = {
@@ -46,8 +47,16 @@ export type ProfileSectionName = "IDENTITY" | "CONTACT" | "PERSONAL INFORMATION"
 export type ProfileOpenSections = Record<Exclude<ProfileSectionName, "IDENTITY">, boolean>
 export type UpdateProfileRequest = {
   fullName?: string
+  email?: string
   phone?: string
   address?: string
+  country?: string
+  dob?: string
+  identityNumber?: string
+  role?: ProfileRole
+  status?: AccountStatus
+  employeeCode?: string
+  workStatus?: string
   avatar?: File
 }
 
@@ -65,6 +74,10 @@ export type ApiResponse<T> = {
 export type ProfileFormProps = {
   profile: Profile
   onSubmit: (input: UpdateProfileRequest) => Promise<void> | void
+  emailVerificationStatus: EmailVerificationStatus
+  canEditEmail?: boolean
+  canEditPersonalInformation?: boolean
+  canEditDateOfBirth?: boolean
   isSubmitting?: boolean
   onValidationChange?: (errors: ProfileFormErrors) => void
 }

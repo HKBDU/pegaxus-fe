@@ -22,7 +22,10 @@ export function ProfileActionButtons({
         type={submitFormId ? "submit" : "button"}
         form={submitFormId}
         disabled={disabled}
-        onClick={submitFormId ? undefined : onEdit}
+        onClick={submitFormId ? undefined : (event) => {
+          event.preventDefault()
+          onEdit?.()
+        }}
         className="h-9 rounded-none py-2 text-xs font-bold tracking-[0.6px] shadow-[0_1px_1px_rgba(0,0,0,0.05)] hover:bg-[#f39200]"
       >
         {editLabel}

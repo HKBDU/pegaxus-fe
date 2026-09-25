@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 export type HorseSex = "MALE" | "FEMALE" | "GELDING"
 
 export type Horse = {
-  horseId: number
+  horseId: string
   horseName: string
   sex: HorseSex | null
   breed: string | null
@@ -21,16 +21,16 @@ export type Horse = {
 
 export type CreateHorseRequest = {
   horseName: string
-  sex?: HorseSex
-  breed?: string
-  dateOfBirth?: string
-  color?: string
-  countryOfOrigin?: string
-  weightKg?: number
-  heightCm?: number
-  passportNumber?: string
-  microchipNumber?: string
-  identificationNotes?: string
+  sex: HorseSex
+  breed: string
+  dateOfBirth: string
+  color: string
+  countryOfOrigin: string
+  weightKg: number
+  heightCm: number
+  passportNumber: string
+  microchipNumber: string
+  identificationNotes: string
 }
 
 export type HorseFormValues = {
