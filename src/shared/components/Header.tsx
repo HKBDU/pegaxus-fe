@@ -22,7 +22,7 @@ import type { HeaderNavItem, HeaderSidebarNavProps, HeaderUser } from "@/shared/
 
 const defaultNavItems: HeaderNavItem[] = [
   { label: "Home", href: "/" },
-  { label: "Transport Requests", href: "/transport-requests" },
+  { label: "Booking List", href: "/bookings" },
   { label: "My Horses", href: "/my-horses" },
   { label: "Profile Settings", href: "/profile-settings" },
 ]
