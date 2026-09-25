@@ -9,10 +9,10 @@ import type { FooterColumnProps } from "@/shared/types/props"
 export function FooterColumn({ title, links, className, children }: FooterColumnProps) {
   return (
     <section className={cn("min-w-0 break-words transition-transform duration-300 hover:-translate-y-0.5", className)}>
-      <h2 className="mb-4 text-xs font-bold tracking-[0.22em] !text-white">{title}</h2>
-      <div className="mb-3 h-0.5 w-6 bg-[#f39200]" />
+      <h2 className="site-footer-column-title mb-4 text-xs font-bold tracking-[0.22em] !text-white">{title}</h2>
+      <div className="site-footer-column-divider mb-3 h-0.5 w-6 bg-[#f39200]" />
       {children ?? (
-        <nav className="space-y-3" aria-label={title}>
+        <nav className="site-footer-column-links space-y-3" aria-label={title}>
           {links.map((link) => (
             <Link key={link.href} to={link.href} className="block text-sm leading-5 text-[#9297a1] transition-colors duration-200 hover:text-white">
               {link.label}
@@ -58,16 +58,17 @@ const columns: FooterColumnProps[] = [
 
 export function Footer() {
   return (
-    <footer className="site-footer-enter relative overflow-hidden bg-[#0d0f12] text-white">
+    <footer className="site-footer-enter w-full min-w-[90vw] max-w-[100vw] overflow-hidden bg-[#0d0f12] text-white">
+      <div className="site-footer-scale">
       <img src={orangeLine} alt="" aria-hidden="true" className="mt-10 hidden h-auto w-full max-w-none lg:block" />
-      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-x-10 gap-y-12 px-8 pb-16 pt-12 sm:grid-cols-2 lg:grid-cols-[1.7fr_1fr_1fr_1fr_1.3fr] lg:px-16">
-        <section>
-          <img src={logo} alt="Pegaxus" className="mx-auto w-[270px] max-w-full transition-transform duration-300 hover:scale-[1.02] lg:mx-0" />
-          <h2 className="mt-5 max-w-[250px] text-base font-bold leading-[1.3] tracking-[0.16em] !text-white pt-5">
+        <div className="site-footer-grid mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-x-10 gap-y-12 px-8 !pb-10 pt-12 sm:grid-cols-2 lg:grid-cols-[1.7fr_1fr_1fr_1fr_1.3fr] lg:px-16">
+          <section className="site-footer-brand">
+            <img src={logo} alt="Pegaxus" className="site-footer-logo mx-auto w-[270px] max-w-full transition-transform duration-300 hover:scale-[1.02] lg:mx-0" />
+            <h2 className="site-footer-brand-title mt-5 max-w-[250px] text-base font-bold leading-[1.3] tracking-[0.16em] !text-white pt-5">
             GLOBAL RACEHORSE TRANSPORT WITHOUT BORDERS.
           </h2>
-          <div className="my-4 h-0.5 w-10 bg-[#f39200]" />
-          <p className="max-w-[270px] text-sm leading-6 text-[#9297a1]">
+            <div className="site-footer-brand-divider my-4 h-0.5 w-10 bg-[#f39200]" />
+            <p className="site-footer-brand-description max-w-[270px] text-sm leading-6 text-[#9297a1]">
             Specialist international transport for thoroughbreds, by people who understand.
           </p>
         </section>
@@ -77,16 +78,17 @@ export function Footer() {
         ))}
 
         <FooterColumn title="CONTACT US" links={[]}>
-          <div className="space-y-5 text-sm text-[#d4d6da]">
-            <p className="py-3 flex min-w-0 items-start gap-4 break-words"><Mail className="mt-0.5 size-5 shrink-0 text-[#f39200]" />info@pegaxus.com</p>
-            <p className="py-3 flex min-w-0 items-start gap-4 break-words"><Phone className="mt-0.5 size-5 shrink-0 text-[#f39200]" />+84 9461 123 321</p>
-            <p className="py-3 flex min-w-0 items-start gap-4 break-words"><MapPin className="mt-0.5 size-5 shrink-0 text-[#f39200]" /><span>London, United Kingdom<small className="mt-1 block text-[10px] tracking-[0.18em] text-[#9297a1]">GLOBAL OPERATIONS</small></span></p>
+          <div className="site-footer-contact space-y-5 text-sm text-[#d4d6da]">
+            <p className="site-footer-contact-item py-3 flex min-w-0 items-start gap-4 break-words"><Mail className="site-footer-contact-icon mt-0.5 size-5 shrink-0 text-[#f39200]" />info@pegaxus.com</p>
+            <p className="site-footer-contact-item py-3 flex min-w-0 items-start gap-4 break-words"><Phone className="site-footer-contact-icon mt-0.5 size-5 shrink-0 text-[#f39200]" />+84 9461 123 321</p>
+            <p className="site-footer-contact-item py-3 flex min-w-0 items-start gap-4 break-words"><MapPin className="site-footer-contact-icon mt-0.5 size-5 shrink-0 text-[#f39200]" /><span>London, United Kingdom<small className="mt-1 block text-[10px] tracking-[0.18em] text-[#9297a1]">GLOBAL OPERATIONS</small></span></p>
           </div>
         </FooterColumn>
       </div>
 
-      <div className="border-t border-[#202329] px-8 py-7 text-xs text-[#9297a1]">
+      <div className="site-footer-bottom border-t border-[#202329] px-8 !py-4 text-md text-[#9297a1]">
         © {new Date().getFullYear()} PEGAXUS. All rights reserved.
+      </div>
       </div>
     </footer>
   )

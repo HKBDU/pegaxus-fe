@@ -13,7 +13,7 @@ export function PageHeader({ title, backHref, backLabel = "RETURN", className }:
         <span aria-hidden="true" className="text-[14px]">←</span>
         {backLabel}
       </NavLink>
-      <h1 className="!my-[10px] w-full text-[40px] font-bold leading-[48px] tracking-[-1.2px] !text-[hsl(var(--primary))] uppercase sm:text-[48px]">
+      <h1 className="!my-[10px] w-full font-[var(--heading)] text-[40px] font-bold leading-[48px] tracking-[-1.2px] !text-[hsl(var(--primary))] uppercase sm:text-[48px]">
         {title}
       </h1>
     </section>
