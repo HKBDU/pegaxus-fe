@@ -31,7 +31,7 @@ export function AuthFlowLayout({
         />
         <div className="absolute inset-0 bg-black/40" />{" "}
         <div className="relative z-10 flex h-full flex-col items-center justify-center">
-          <h1 className="text-6xl font-bold text-white">PEGAXUS</h1>
+          <h1 className="text-6xl font-bold !text-white">PEGAXUS</h1>
           <div className="mt-4 h-0.5 w-24 bg-[#F29100]" />
         </div>
         <p className="absolute bottom-6 left-0 right-0 z-10 text-center text-xs text-white/50">
