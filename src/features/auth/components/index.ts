@@ -1,4 +1,5 @@
 export { AccessBoundary } from './AccessBoundary'
 export { AuthFlowLayout } from './AuthFlowLayout'
-export { AuthFormField, AuthPasswordFormField } from './AuthFormField'
+export { AuthFormField, AuthPasswordFormField, AuthOtpFormField } from './AuthFormField'
 export { PasswordField } from './PasswordField'
+export { OtpInput } from './OtpInput'

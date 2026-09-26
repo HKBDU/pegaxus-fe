@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getAuthApiError } from "../services";
-import { LoaderCircle } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { OtpResend } from "../components/OtpResend";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { emailRouteStateSchema, forgotPasswordOtpSchema, type ForgotPasswordOtpFormValues } from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
-  AuthFormField,
+  AuthOtpFormField,
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
 import { useResendOtpMutation } from "@/features/auth/hooks/useAuth";
@@ -93,7 +94,7 @@ function PasswordResetOtpForm({ email }: { email: string }) {
         </p>
       }
     >
-      <p className="mt-5 break-words font-['Arial_Narrow',Impact,sans-serif] text-base font-bold text-[#202020] uppercase">
+      <p className="mt-5 break-words font-['Arial_Narrow',Impact,sans-serif] text-base font-bold text-[#202020]">
         <span>We have sent a code to your email:</span>{" "}
         <span className="text-[#F39200]">{email}</span>
       </p>
@@ -101,45 +102,24 @@ function PasswordResetOtpForm({ email }: { email: string }) {
         <form
           noValidate
           onSubmit={form.handleSubmit(submit)}
-          className="mt-5 space-y-4"
+          className="mt-7 space-y-7"
         >
-          <AuthFormField
+          <AuthOtpFormField
             control={form.control}
             name="otp"
-            label="OTP verification"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            placeholder="Enter your 6-digit code"
             disabled={resend.isPending}
           />
           <Button
             type="submit"
             disabled={resend.isPending}
-            className={authPrimaryButtonClass}
+            className={`${authPrimaryButtonClass} auth-otp-submit`}
           >
             Continue
+            <ChevronRight aria-hidden="true" className="auth-otp-arrow" />
           </Button>
         </form>
       </Form>
-      <div className="mt-4 flex justify-center">
-        <Button
-          type="button"
-          variant="link"
-          onClick={resendCode}
-          disabled={secondsLeft > 0 || resend.isPending}
-          className="font-['Arial_Narrow',Impact,sans-serif] text-lg font-bold text-[#202020] uppercase underline"
-        >
-          {resend.isPending && (
-            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-          )}
-          {resend.isPending
-            ? "Sending..."
-            : secondsLeft > 0
-              ? `Resend OTP in ${secondsLeft}s`
-              : "Resend OTP"}
-        </Button>
-      </div>
+      <OtpResend secondsLeft={secondsLeft} isPending={resend.isPending} disabled={resend.isPending} onResend={resendCode} />
     </AuthFlowLayout>
   );
 }

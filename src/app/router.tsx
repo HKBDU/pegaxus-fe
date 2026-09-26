@@ -9,6 +9,7 @@ import { ROLE_ROUTES } from "./route-config";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
+import { AuthShell } from "@/features/auth/components/AuthShell";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
@@ -128,14 +129,6 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    path: "/login",
-    element: (
-      <Suspense fallback={<LoadingState />}>
-        <LoginPage />
-      </Suspense>
-    ),
-  },
-  {
     path: "/logout",
     element: (
       <ProtectedRoute>
@@ -146,53 +139,18 @@ export const router = createBrowserRouter([
     ),
   },
   {
-    path: "/register",
-    element: (
-      <Suspense fallback={<LoadingState />}>
-        <RegisterPage />
-      </Suspense>
-    ),
-  },
-  {
-    path: "/forgot-password",
-    element: (
-      <Suspense fallback={<LoadingState />}>
-        <ForgotPasswordPage />
-      </Suspense>
-    ),
-  },
-  {
-    path: "/verify-email",
-    element: (
-      <Suspense fallback={<LoadingState />}>
-        <VerifyEmailPage />
-      </Suspense>
-    ),
-  },
-  {
-    path: "/forgot-password/verify-otp",
-    element: (
-      <Suspense fallback={<LoadingState />}>
-        <ForgotPasswordOtpPage />
-      </Suspense>
-    ),
-  },
-  {
-    path: "/reset-password",
-    element: (
-      <Suspense fallback={<LoadingState />}>
-        <ResetPasswordPage />
-      </Suspense>
-    ),
-  },
-  {
-    path: "/change-password",
-    element: (
-      <ProtectedRoute>
-        <Suspense fallback={<LoadingState />}>
-          <ChangePasswordPage />
-        </Suspense>
-      </ProtectedRoute>
-    ),
+    element: <AuthShell />,
+    children: [
+      { path: "/login", element: <LoginPage /> },
+      { path: "/register", element: <RegisterPage /> },
+      { path: "/forgot-password", element: <ForgotPasswordPage /> },
+      { path: "/verify-email", element: <VerifyEmailPage /> },
+      { path: "/forgot-password/verify-otp", element: <ForgotPasswordOtpPage /> },
+      { path: "/reset-password", element: <ResetPasswordPage /> },
+      {
+        path: "/change-password",
+        element: <ProtectedRoute><ChangePasswordPage /></ProtectedRoute>,
+      },
+    ],
   },
 ]);
