@@ -2,13 +2,13 @@ export function LoadingState() {
   return (
     <div className="flex flex-col items-center justify-center gap-4 p-20" role="status">
       <div className="size-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-      <p className="animate-pulse text-gray-500">Đang tải dữ liệu...</p>
+      <p className="animate-pulse text-gray-500">Loading data...</p>
     </div>
   )
 }
 
 export function ErrorState({
-  message = 'Đã có lỗi xảy ra',
+  message = 'An error occurred',
   onRetry,
 }: {
   message?: string
@@ -20,14 +20,14 @@ export function ErrorState({
       <p>{message}</p>
       {onRetry ? (
         <button type="button" className="mt-4 underline" onClick={onRetry}>
-          Thử lại
+          Try again
         </button>
       ) : null}
     </div>
   )
 }
 
-export function EmptyState({ message = 'Không có dữ liệu nào' }: { message?: string }) {
+export function EmptyState({ message = 'No data available' }: { message?: string }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-gray-50 p-10 text-center text-gray-500">
       <p>{message}</p>

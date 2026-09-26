@@ -83,6 +83,7 @@ export function Header({
   onNotificationClick,
   onUserClick,
   rightContent,
+  userActions,
   className,
 }: HeaderProps) {
   const userControl = (
@@ -154,6 +155,7 @@ export function Header({
               {notificationButton}
               <span className="h-8 w-px bg-white/10" aria-hidden="true" />
               {userControl}
+              {userActions}
             </>
           )}
         </div>
@@ -173,6 +175,7 @@ export function Header({
         <div className="px-3 pb-3">
           <div className="flex items-center justify-between rounded-none bg-[#252a31] px-3 py-2">
             {userControl}
+            {userActions}
           </div>
         </div>
 
