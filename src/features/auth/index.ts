@@ -3,6 +3,7 @@ export { authApi } from './services'
 export { useAuthStore } from './store'
 export { canAccess } from './access-control'
 export {
+  useChangePasswordMutation,
   useLoginMutation,
   useLogoutMutation,
   useRegisterMutation,
@@ -11,6 +12,7 @@ export {
 export type {
   AuthPrincipal,
   AuthResponse,
+  ChangePasswordRequest,
   JwtPayload,
   LoginRequest,
   Permission,

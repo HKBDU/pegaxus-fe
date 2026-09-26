@@ -1,9 +1,11 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/features/auth/store'
 import { env } from '@/lib/env'
+import { requestRefreshToken } from '@/features/auth/services/refresh-token'
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean
+  _authSessionVersion?: number
 }
 
 const apiClient = axios.create({
@@ -15,8 +17,14 @@ const apiClient = axios.create({
   withCredentials: true,
 })
 
-apiClient.interceptors.request.use((config) => {
-  const accessToken = useAuthStore.getState().accessToken
+apiClient.interceptors.request.use((request) => {
+  const config = request as RetryableRequestConfig
+  const { accessToken, sessionVersion } = useAuthStore.getState()
+
+  if (config._retry && config._authSessionVersion !== sessionVersion) {
+    throw new Error('Authentication session changed before retry')
+  }
+  config._authSessionVersion = sessionVersion
 
   if (accessToken) {
     config.headers.set('Authorization', `Bearer ${accessToken}`)
@@ -30,54 +38,63 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
-let refreshRequest: Promise<string> | null = null
+let refreshRequest: { sessionVersion: number; promise: Promise<string> } | null = null
 
-async function refreshAccessToken() {
-  const refreshToken = useAuthStore.getState().refreshToken
-
-  if (!refreshToken) throw new Error('Refresh token is missing')
-
-  const response = await axios.post(
-    `${env.API_URL}auth/refresh-token`,
-    { refreshToken },
-    { withCredentials: true },
-  )
-
-  const accessToken: string | undefined =
-    response.data?.data?.accessToken ?? response.data?.accessToken
-
-  if (!accessToken) throw new Error('Refresh response does not contain an access token')
-
-  useAuthStore.getState().setAccessToken(accessToken)
-  const nextRefreshToken = response.data?.data?.refreshToken ?? response.data?.refreshToken
-  if (nextRefreshToken) {
-    useAuthStore.setState({ refreshToken: nextRefreshToken })
+async function refreshAccessToken(refreshToken: string, sessionVersion: number) {
+  const tokens = await requestRefreshToken(apiClient, refreshToken)
+  const state = useAuthStore.getState()
+  if (state.sessionVersion !== sessionVersion || state.refreshToken !== refreshToken) {
+    throw new Error('Authentication session changed during refresh')
   }
-  return accessToken
+  state.setTokens(tokens)
+  return tokens.accessToken
 }
 
 apiClient.interceptors.response.use(
   (response) => response.data?.data ?? response.data,
   async (error: AxiosError) => {
     const originalRequest = error.config as RetryableRequestConfig | undefined
-    const isAuthRequest = originalRequest?.url?.includes('/auth/') ?? false
+    const isAuthRequest = /(?:^|\/)auth\//.test(originalRequest?.url ?? '')
 
-    if (error.response?.status !== 401 || !originalRequest || isAuthRequest || originalRequest._retry) {
+    if (error.response?.status !== 401 || !originalRequest || isAuthRequest) {
+      return Promise.reject(error)
+    }
+
+    const { accessToken, refreshToken, sessionVersion } = useAuthStore.getState()
+    if (originalRequest._authSessionVersion !== sessionVersion) return Promise.reject(error)
+
+    if (originalRequest._retry || !accessToken || !refreshToken) {
+      if (accessToken) useAuthStore.getState().clearAuth()
       return Promise.reject(error)
     }
 
     originalRequest._retry = true
 
-    try {
-      refreshRequest ??= refreshAccessToken().finally(() => {
-        refreshRequest = null
-      })
-
-      const accessToken = await refreshRequest
+    // A delayed 401 may belong to the token already replaced by another request.
+    if (originalRequest.headers.get('Authorization') !== `Bearer ${accessToken}`) {
       originalRequest.headers.set('Authorization', `Bearer ${accessToken}`)
       return apiClient(originalRequest)
+    }
+
+    try {
+      if (!refreshRequest || refreshRequest.sessionVersion !== sessionVersion) {
+        const flight = {
+          sessionVersion,
+          promise: refreshAccessToken(refreshToken, sessionVersion),
+        }
+        refreshRequest = flight
+        void flight.promise.finally(() => {
+          if (refreshRequest === flight) refreshRequest = null
+        }).catch(() => undefined)
+      }
+
+      const nextAccessToken = await refreshRequest.promise
+      originalRequest.headers.set('Authorization', `Bearer ${nextAccessToken}`)
+      return apiClient(originalRequest)
     } catch (refreshError) {
-      useAuthStore.getState().clearAuth()
+      if (useAuthStore.getState().sessionVersion === sessionVersion) {
+        useAuthStore.getState().clearAuth()
+      }
       return Promise.reject(refreshError)
     }
   },
