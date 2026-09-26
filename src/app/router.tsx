@@ -4,7 +4,6 @@ import { ErrorState, LoadingState, NotFoundPage } from "@/shared/components/comm
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
-import { ProtectedRoute } from "@/shared/components/guards";
 import { BookingHistoryRoleLayout } from "@/features/bookings/components/BookingHistoryRoleLayout";
 import { ROLE_ROUTES } from "./route-config";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
