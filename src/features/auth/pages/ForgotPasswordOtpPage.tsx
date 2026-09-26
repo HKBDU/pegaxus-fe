@@ -1,31 +1,22 @@
 import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { isAxiosError } from "axios";
+import { getAuthApiError } from "../services";
 import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { z } from "zod";
+import { emailRouteStateSchema, forgotPasswordOtpSchema, type ForgotPasswordOtpFormValues } from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
   AuthFormField,
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
 import { useResendOtpMutation } from "@/features/auth/hooks/useAuth";
-import type { AuthApiError } from "@/features/auth/types";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
 
-const routeStateSchema = z.object({ email: z.string().email().max(255) });
-const otpSchema = z.object({
-  otp: z
-    .string()
-    .min(1, "Verification code is required.")
-    .regex(/^[0-9]{6}$/, "Verification code must contain exactly 6 digits."),
-});
-
 export default function ForgotPasswordOtpPage() {
   const location = useLocation();
-  const result = routeStateSchema.safeParse(location.state);
+  const result = emailRouteStateSchema.safeParse(location.state);
 
   if (!result.success) return <Navigate to="/forgot-password" replace />;
 
@@ -39,8 +30,8 @@ function PasswordResetOtpForm({ email }: { email: string }) {
   const resend = useResendOtpMutation();
   const [cooldownUntil, setCooldownUntil] = useState(() => Date.now() + 60_000);
   const [secondsLeft, setSecondsLeft] = useState(60);
-  const form = useForm<z.infer<typeof otpSchema>>({
-    resolver: zodResolver(otpSchema),
+  const form = useForm<ForgotPasswordOtpFormValues>({
+    resolver: zodResolver(forgotPasswordOtpSchema),
     defaultValues: { otp: "" },
   });
 
@@ -72,8 +63,7 @@ function PasswordResetOtpForm({ email }: { email: string }) {
         },
         onError: (error) => {
           if (
-            isAxiosError<AuthApiError>(error) &&
-            error.response?.data.errorCode === "OTP_RESEND_TOO_SOON"
+            getAuthApiError(error)?.errorCode === "OTP_RESEND_TOO_SOON"
           ) {
             restartCooldown();
           }
@@ -82,7 +72,7 @@ function PasswordResetOtpForm({ email }: { email: string }) {
     );
   }
 
-  function submit({ otp }: z.infer<typeof otpSchema>) {
+  function submit({ otp }: ForgotPasswordOtpFormValues) {
     if (resend.isPending) return;
     navigate("/reset-password", { state: { email, otp } });
   }

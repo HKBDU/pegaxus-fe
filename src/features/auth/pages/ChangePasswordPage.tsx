@@ -1,19 +1,17 @@
 import { useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { isAxiosError } from "axios";
+import { getAuthApiError } from "../services";
 import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { z } from "zod";
+import { changePasswordSchema, type ChangePasswordFormValues } from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
   AuthPasswordFormField,
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
 import { useChangePasswordMutation } from "@/features/auth/hooks/useAuth";
-import { changePasswordSchema } from "@/features/auth/password-schema";
 import type {
-  AuthApiError,
   ChangePasswordRequest,
 } from "@/features/auth/types";
 import { Button } from "@/shared/components/ui/button";
@@ -39,7 +37,7 @@ export default function ChangePasswordPage() {
 
   const mutation = useChangePasswordMutation(returnToPreviousPage);
   const submitting = useRef(false);
-  const form = useForm<z.infer<typeof changePasswordSchema>>({
+  const form = useForm<ChangePasswordFormValues>({
     resolver: zodResolver(changePasswordSchema),
     defaultValues: {
       currentPassword: "",
@@ -58,9 +56,7 @@ export default function ChangePasswordPage() {
       await mutation.mutateAsync(values);
       form.reset();
     } catch (error) {
-      const apiError = isAxiosError<AuthApiError>(error)
-        ? error.response?.data
-        : undefined;
+      const apiError = getAuthApiError(error);
       let hasFieldError = false;
 
       for (const item of apiError?.errors ?? []) {
@@ -85,7 +81,7 @@ export default function ChangePasswordPage() {
 
       if (!hasFieldError) {
         form.setError("root.server", {
-          message: "Unable to change your password. Please try again.",
+          message: apiError?.message ?? "Unable to change your password. Please try again.",
         });
       }
     } finally {

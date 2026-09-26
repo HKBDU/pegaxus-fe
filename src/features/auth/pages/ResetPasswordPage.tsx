@@ -1,34 +1,18 @@
 import { useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { isAxiosError } from "axios";
+import { getAuthApiError } from "../services";
 import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { z } from "zod";
+import { resetPasswordSchema, resetPasswordRouteStateSchema, type ResetPasswordFormValues, type ResetPasswordRouteState } from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
   AuthPasswordFormField,
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
 import { useResetPasswordMutation } from "@/features/auth/hooks/useAuth";
-import { newPasswordSchema } from "@/features/auth/password-schema";
-import type { AuthApiError } from "@/features/auth/types";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
-
-const routeStateSchema = z.object({
-  email: z.string().email().max(255),
-  otp: z.string().regex(/^[0-9]{6}$/),
-});
-const passwordSchema = z
-  .object({
-    newPassword: newPasswordSchema,
-    confirmPassword: z.string().min(1, "Confirm password is required."),
-  })
-  .refine((values) => values.newPassword === values.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Passwords do not match.",
-  });
 
 const otpErrors: Record<string, string> = {
   OTP_INVALID: "The verification code is invalid.",
@@ -39,7 +23,7 @@ const otpErrors: Record<string, string> = {
 
 export default function ResetPasswordPage() {
   const location = useLocation();
-  const result = routeStateSchema.safeParse(location.state);
+  const result = resetPasswordRouteStateSchema.safeParse(location.state);
 
   if (!result.success) return <Navigate to="/forgot-password" replace />;
 
@@ -51,16 +35,16 @@ export default function ResetPasswordPage() {
   );
 }
 
-function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
+function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
   const mutation = useResetPasswordMutation();
   const submitting = useRef(false);
-  const form = useForm<z.infer<typeof passwordSchema>>({
-    resolver: zodResolver(passwordSchema),
+  const form = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
     defaultValues: { newPassword: "", confirmPassword: "" },
   });
   const isPending = mutation.isPending || form.formState.isSubmitting;
 
-  async function submit(values: z.infer<typeof passwordSchema>) {
+  async function submit(values: ResetPasswordFormValues) {
     if (submitting.current) return;
     submitting.current = true;
     form.clearErrors("root");
@@ -69,9 +53,7 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
       await mutation.mutateAsync({ email, otp, ...values });
       form.reset();
     } catch (error) {
-      const apiError = isAxiosError<AuthApiError>(error)
-        ? error.response?.data
-        : undefined;
+      const apiError = getAuthApiError(error);
       let hasFieldError = false;
       let hasFlowError = false;
 
@@ -110,7 +92,7 @@ function ResetPasswordForm({ email, otp }: z.infer<typeof routeStateSchema>) {
         });
       } else if (!hasFieldError) {
         form.setError("root.server", {
-          message: "Unable to reset your password. Please try again.",
+          message: apiError?.message ?? "Unable to reset your password. Please try again.",
         });
       }
     } finally {

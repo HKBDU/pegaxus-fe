@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const schemaPath = new URL(
-  "../src/features/auth/password-schema.ts",
+  "../src/features/auth/schema.ts",
   import.meta.url,
 );
 
@@ -14,7 +14,7 @@ test("shared password schema enforces the Auth password policy", async () => {
     "the shared Auth password schema must exist",
   );
 
-  const { changePasswordSchema, newPasswordSchema } = await import(
+  const { changePasswordSchema, strongPasswordSchema: newPasswordSchema } = await import(
     `${schemaPath.href}?test=${Date.now()}`
   );
 

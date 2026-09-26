@@ -1,9 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { isAxiosError } from "axios";
+import { getAuthApiError } from "../services";
 import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
-import { z } from "zod";
+import { registerSchema, type RegisterFormValues } from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
   AuthFormField,
@@ -11,36 +11,10 @@ import {
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
 import { useRegisterMutation } from "@/features/auth/hooks/useAuth";
-import { createPasswordSchema } from "@/features/auth/password-schema";
-import type { AuthApiError, RegisterRequest } from "@/features/auth/types";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
 
-const registerSchema = z
-  .object({
-    fullName: z
-      .string()
-      .trim()
-      .min(1, "Full name is required.")
-      .max(150, "Full name must not exceed 150 characters."),
-
-    email: z
-      .string()
-      .trim()
-      .min(1, "Email is required.")
-      .email("Email format is invalid.")
-      .max(255, "Email must not exceed 255 characters."),
-
-    password: createPasswordSchema("Password is required."),
-
-    confirmPassword: z.string().min(1, "Confirm password is required."),
-  })
-  .refine((values) => values.password === values.confirmPassword, {
-    path: ["confirmPassword"],
-    message: "Passwords do not match.",
-  });
-
-const fields = new Set<keyof RegisterRequest>([
+const fields = new Set<keyof RegisterFormValues>([
   "fullName",
   "email",
   "password",
@@ -48,7 +22,7 @@ const fields = new Set<keyof RegisterRequest>([
 ]);
 export default function RegisterPage() {
   const mutation = useRegisterMutation();
-  const form = useForm<RegisterRequest>({
+  const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       fullName: "",
@@ -58,18 +32,17 @@ export default function RegisterPage() {
     },
   });
 
-  function submit(values: RegisterRequest) {
+  function submit(values: RegisterFormValues) {
+    if (mutation.isPending) return;
     form.clearErrors("root");
     mutation.mutate(values, {
       onError: (error) => {
-        const apiError = isAxiosError<AuthApiError>(error)
-          ? error.response?.data
-          : undefined;
+        const apiError = getAuthApiError(error);
         let hasFieldError = false;
 
         for (const item of apiError?.errors ?? []) {
-          if (fields.has(item.field as keyof RegisterRequest)) {
-            form.setError(item.field as keyof RegisterRequest, {
+          if (fields.has(item.field as keyof RegisterFormValues)) {
+            form.setError(item.field as keyof RegisterFormValues, {
               message: item.message,
             });
             hasFieldError = true;
@@ -90,6 +63,7 @@ export default function RegisterPage() {
           });
         }
       },
+      onSettled: () => mutation.reset(),
     });
   }
 

@@ -1,9 +1,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { isAxiosError } from "axios";
+import { getAuthApiError } from "../services";
 import { LoaderCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
-import { z } from "zod";
+import { loginSchema, type LoginFormValues } from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
   AuthFormField,
@@ -11,33 +11,21 @@ import {
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
 import { useLoginMutation } from "@/features/auth/hooks/useAuth";
-import type { AuthApiError, LoginRequest } from "@/features/auth/types";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
 
-const loginSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email is required.")
-    .email("Email format is invalid.")
-    .max(255, "Email must not exceed 255 characters."),
-  password: z.string().min(1, "Password is required."),
-});
-
 export default function LoginPage() {
   const mutation = useLoginMutation();
-  const form = useForm<LoginRequest>({
+  const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
 
-  function submit(values: LoginRequest) {
+  function submit(values: LoginFormValues) {
+    if (mutation.isPending) return;
     mutation.mutate(values, {
       onError: (error) => {
-        const apiError = isAxiosError<AuthApiError>(error)
-          ? error.response?.data
-          : undefined;
+        const apiError = getAuthApiError(error);
 
         for (const item of apiError?.errors ?? []) {
           if (item.field === "email" || item.field === "password") {
@@ -45,6 +33,7 @@ export default function LoginPage() {
           }
         }
       },
+      onSettled: () => mutation.reset(),
     });
   }
 
