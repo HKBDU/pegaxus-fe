@@ -11,6 +11,7 @@ export interface AuthPrincipal {
 
 export interface AuthResponse {
   accessToken: string
+  refreshToken?: string
   principal?: AuthPrincipal
 }
 

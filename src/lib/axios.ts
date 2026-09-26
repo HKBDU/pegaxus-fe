@@ -22,15 +22,24 @@ apiClient.interceptors.request.use((config) => {
     config.headers.set('Authorization', `Bearer ${accessToken}`)
   }
 
+  // Let the browser/Axios add the multipart boundary for profile uploads.
+  if (config.data instanceof FormData) {
+    config.headers.delete('Content-Type')
+  }
+
   return config
 })
 
 let refreshRequest: Promise<string> | null = null
 
 async function refreshAccessToken() {
+  const refreshToken = useAuthStore.getState().refreshToken
+
+  if (!refreshToken) throw new Error('Refresh token is missing')
+
   const response = await axios.post(
-    `${env.API_URL}auth/refresh`,
-    {},
+    `${env.API_URL}auth/refresh-token`,
+    { refreshToken },
     { withCredentials: true },
   )
 
@@ -40,6 +49,10 @@ async function refreshAccessToken() {
   if (!accessToken) throw new Error('Refresh response does not contain an access token')
 
   useAuthStore.getState().setAccessToken(accessToken)
+  const nextRefreshToken = response.data?.data?.refreshToken ?? response.data?.refreshToken
+  if (nextRefreshToken) {
+    useAuthStore.setState({ refreshToken: nextRefreshToken })
+  }
   return accessToken
 }
 

@@ -4,6 +4,11 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { ErrorState } from "@/shared/components/common";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { useAuthStore } from "@/features/auth/store";
+import {
+  bookingHistoryDetailsPath,
+  resolveBookingHistoryShell,
+} from "../booking-history-access";
 import { BookingHistoryFilters } from "../components/history/BookingHistoryFilters";
 import { BookingHistoryTable } from "../components/history/BookingHistoryTable";
 import {
@@ -23,6 +28,7 @@ const emptyHistory: BookingHistoryItem[] = [];
 export default function BookingStatusHistoryPage() {
   const { bookingId } = useParams<{ bookingId: string }>();
   const location = useLocation();
+  const roles = useAuthStore((state) => state.principal?.roles);
   if (!bookingId?.trim())
     return (
       <ErrorState message="A booking ID is required to view its history." />
@@ -31,14 +37,24 @@ export default function BookingStatusHistoryPage() {
     <BookingHistoryContent
       key={`${bookingId}:${location.search}`}
       bookingId={bookingId}
+      detailsPath={bookingHistoryDetailsPath(
+        bookingId,
+        location.pathname.startsWith("/__dev/admin/")
+          ? "admin"
+          : location.pathname.startsWith("/__dev/customer/")
+            ? "customer"
+            : resolveBookingHistoryShell(roles) ?? "customer",
+      )}
     />
   );
 }
 
 function BookingHistoryContent({
   bookingId,
+  detailsPath,
 }: {
   bookingId: string;
+  detailsPath: string;
 }) {
   const query = useBookingHistoryQuery(bookingId);
   const [filters, setFilters] = useState(initialHistoryFilters);
@@ -87,7 +103,7 @@ function BookingHistoryContent({
       <div className="mx-auto w-full max-w-[1000px] space-y-4 px-5 py-5 lg:px-6">
         <header>
           <Link
-            to={`/bookings/${encodeURIComponent(bookingId)}`}
+            to={detailsPath}
             className="inline-flex items-center gap-1 text-xs font-semibold text-[#b86800] uppercase hover:underline focus-visible:outline-2 focus-visible:outline-ring"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />

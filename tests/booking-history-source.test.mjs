@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   bookingHistoryQueryKey,
+  resolveBookingHistoryDevToken,
   resolveBookingHistorySource,
 } from "../src/features/bookings/booking-history-source.ts";
 
@@ -50,4 +51,11 @@ test("query keys separate API data from every mock scenario", () => {
   assert.notDeepEqual(api, mock);
   assert.notDeepEqual(mock, empty);
   assert.notDeepEqual(api, bookingHistoryQueryKey("456", { kind: "api" }));
+});
+
+test("development token applies only without an authenticated token", () => {
+  assert.equal(resolveBookingHistoryDevToken(true, null, "  dev-token  "), "dev-token");
+  assert.equal(resolveBookingHistoryDevToken(true, "session-token", "dev-token"), undefined);
+  assert.equal(resolveBookingHistoryDevToken(false, null, "dev-token"), undefined);
+  assert.equal(resolveBookingHistoryDevToken(true, null, "  "), undefined);
 });

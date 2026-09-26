@@ -9,11 +9,12 @@ import {
   UserRound,
   UsersRound,
 } from "lucide-react"
-import type { ComponentType, ReactNode } from "react"
+import type { CSSProperties } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
 import { cn } from "@/lib/utils"
+import type { AdminSidebarMenuProps, AdminSidebarProviderProps } from "@/shared/types/type"
 import {
   Sidebar,
   SidebarContent,
@@ -41,13 +42,7 @@ const secondaryItems = [
   { label: "Sign out", href: "/logout", icon: LogOut },
 ]
 
-type AdminSidebarItem = {
-  label: string
-  href: string
-  icon: ComponentType<{ className?: string }>
-}
-
-function AdminSidebarMenu({ items }: { items: AdminSidebarItem[] }) {
+function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
   const { pathname } = useLocation()
 
   return (
@@ -62,12 +57,14 @@ function AdminSidebarMenu({ items }: { items: AdminSidebarItem[] }) {
               asChild
               isActive={isActive}
               className={cn(
-                "h-11 rounded-none px-6 text-sm font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
-                isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-5 font-semibold !text-[#f39200]",
+                compact
+                  ? "h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white"
+                  : "h-9 rounded-none px-4 text-xs font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
+                isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-3 font-semibold !text-[#f39200]",
               )}
             >
               <NavLink to={item.href}>
-                <Icon className="size-[18px]" />
+                <Icon className="size-4" />
                 <span>{item.label}</span>
               </NavLink>
             </SidebarMenuButton>
@@ -80,27 +77,31 @@ function AdminSidebarMenu({ items }: { items: AdminSidebarItem[] }) {
 
 export function AdminSidebar() {
   return (
-    <Sidebar fixed={false} collapsible="offcanvas" className="w-64 shrink-0 border-r-0 bg-[#17191c] text-white">
-      <div className="flex h-32 items-center justify-center px-6 bg-[#17191c]">
-        <img src={logo} alt="Pegaxus" className="w-full max-w-[190px]" />
+    <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh w-52 shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
+      <div className="flex h-20 shrink-0 items-center justify-center bg-[#17191c] px-4">
+        <img src={logo} alt="Pegaxus" className="w-full max-w-[170px]" />
       </div>
-      <SidebarContent className="bg-[#17191c]">
+      <SidebarContent className="overflow-hidden bg-[#17191c]">
         <SidebarGroup className="px-0">
           <SidebarGroupContent>
-            <AdminSidebarMenu items={primaryItems} />
+            <AdminSidebarMenu items={primaryItems} compact />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="bg-[#17191c] border-white/10 px-0 py-6">
-        <AdminSidebarMenu items={secondaryItems} />
+      <SidebarFooter className="shrink-0 border-white/10 bg-[#17191c] px-0 py-4">
+        <AdminSidebarMenu items={secondaryItems} compact />
       </SidebarFooter>
     </Sidebar>
   )
 }
 
-export function AdminSidebarProvider({ children }: { children: ReactNode }) {
+export function AdminSidebarProvider({ children }: AdminSidebarProviderProps) {
   return (
-    <SidebarProvider defaultOpen className="min-h-svh bg-[#f4f4f4]">
+    <SidebarProvider
+      defaultOpen
+      style={{ "--sidebar-width": "13rem" } as CSSProperties}
+      className="min-h-svh bg-[#f4f4f4]"
+    >
       <AdminSidebar />
       {children}
     </SidebarProvider>

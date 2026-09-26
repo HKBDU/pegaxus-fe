@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth/store'
 import type { Permission, Role } from '@/features/auth/types'
+import { canAccess } from '@/features/auth/access-control'
 
 interface ProtectedRouteProps {
   children?: ReactNode
@@ -21,13 +22,7 @@ export function ProtectedRoute({
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  const hasAllowedRole =
-    !allowedRoles?.length || allowedRoles.some((role) => principal?.roles.includes(role))
-  const hasAllowedPermission =
-    !allowedPermissions?.length ||
-    allowedPermissions.every((permission) => principal?.permissions.includes(permission))
-
-  if (!hasAllowedRole || !hasAllowedPermission) {
+  if (!canAccess(principal, { anyRole: allowedRoles, allPermissions: allowedPermissions })) {
     return <Navigate to="/unauthorized" replace />
   }
 

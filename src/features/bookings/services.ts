@@ -1,4 +1,6 @@
 import apiClient from "@/lib/axios";
+import { useAuthStore } from "@/features/auth/store";
+import { resolveBookingHistoryDevToken } from "./booking-history-source";
 import { bookingHistoryResponseSchema } from "./schemas/booking-history.schema";
 import {
   bookingStatusUpdateSchema,
@@ -7,9 +9,17 @@ import {
 
 export const bookingApi = {
   async getHistory(bookingId: string, signal?: AbortSignal) {
+    const devToken = resolveBookingHistoryDevToken(
+      import.meta.env.DEV,
+      useAuthStore.getState().accessToken,
+      import.meta.env.DEV ? import.meta.env.VITE_DEV_ACCESS_TOKEN : undefined,
+    );
     const response = await apiClient.get<unknown, unknown>(
       `/bookings/${encodeURIComponent(bookingId)}/histories`,
-      { signal },
+      {
+        signal,
+        ...(devToken ? { headers: { Authorization: `Bearer ${devToken}` } } : {}),
+      },
     );
     return bookingHistoryResponseSchema.parse(response).value;
   },
