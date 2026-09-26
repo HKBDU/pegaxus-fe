@@ -16,21 +16,26 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken?: string;
+  expiresIn?: number;
+}
+
 export interface AuthUser {
   accountId: string;
   accountType: "CUSTOMER" | "EMPLOYEE";
-  role:
-    | "CUSTOMER"
-    | "LOGISTICS_MANAGER"
-    | "TRANSPORT_SPECIALIST"
-    | "FLEET_ROUTE_COORDINATOR"
-    | "DRIVER"
-    | "ESCORT";
+  role: Role;
   customerId: string | null;
   employeeId: string | null;
   fullName: string;
   avatarUrl: string | null;
 }
+
+export type AuthAccount = Pick<AuthUser, "accountId" | "accountType" | "role" | "avatarUrl"> & {
+  email: string;
+  fullName: string | null;
+};
 
 export interface LoginRequest {
   email: string;

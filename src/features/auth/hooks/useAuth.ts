@@ -1,11 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { isAxiosError } from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { authApi } from "@/features/auth/services";
+import { authApi, getAuthApiError } from "@/features/auth/services";
 import { useAuthStore } from "@/features/auth/store";
 import type {
-  AuthApiError,
   AuthResponse,
   ChangePasswordRequest,
   ForgotPasswordRequest,
@@ -22,6 +20,7 @@ export function useRegisterMutation() {
 
   return useMutation({
     mutationFn: (data: RegisterRequest) => authApi.register(data),
+    gcTime: 0,
     onSuccess: (_, variables) => {
       toast.success(
         "Sign up successful. Please check your email for the verification code.",
@@ -32,9 +31,7 @@ export function useRegisterMutation() {
       });
     },
     onError: (error) => {
-      const message = isAxiosError<AuthApiError>(error)
-        ? error.response?.data?.message
-        : undefined;
+      const message = getAuthApiError(error)?.message;
       toast.error(message ?? "Failed to sign up. Please try again.");
     },
   });
@@ -50,15 +47,15 @@ export function useLoginMutation() {
 
   return useMutation<AuthResponse, Error, LoginRequest>({
     mutationFn: (data) => authApi.login(data),
+    gcTime: 0,
     onSuccess: (response) => {
+      queryClient.clear();
       setAuth(response);
       toast.success("Signed in successfully.");
       navigate(from, { replace: true });
     },
     onError: (error) => {
-      const apiError = isAxiosError<AuthApiError>(error)
-        ? error.response?.data
-        : undefined;
+      const apiError = getAuthApiError(error);
       const messages: Record<string, string> = {
         INVALID_CREDENTIALS: "Email or password is incorrect.",
         ACCOUNT_NOT_VERIFIED: "Your email has not been verified.",
@@ -99,9 +96,7 @@ export function useResendOtpMutation() {
     retry: false,
     onSuccess: () => toast.success("A new verification code has been sent."),
     onError: (error) => {
-      const apiError = isAxiosError<AuthApiError>(error)
-        ? error.response?.data
-        : undefined;
+      const apiError = getAuthApiError(error);
       toast.error(
         apiError?.errorCode === "OTP_RESEND_TOO_SOON"
           ? "Please wait before requesting another code."
@@ -154,9 +149,16 @@ export function useLogoutMutation() {
   const navigate = useNavigate();
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
-  return useMutation({
-    mutationFn: () => authApi.logout(),
-    onSettled: () => {
+  return useMutation<void, Error, void, number>({
+    mutationFn: () => {
+      const refreshToken = useAuthStore.getState().refreshToken;
+      if (!refreshToken) throw new Error("Refresh token is missing");
+      return authApi.logout(refreshToken);
+    },
+    gcTime: 0,
+    onMutate: () => useAuthStore.getState().sessionVersion,
+    onSettled: (_, __, ___, sessionVersion) => {
+      if (useAuthStore.getState().sessionVersion !== sessionVersion) return;
       clearAuth();
       queryClient.clear();
       navigate("/login", { replace: true });
@@ -166,9 +168,10 @@ export function useLogoutMutation() {
 
 export function useUser() {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const accountId = useAuthStore((state) => state.principal?.id);
 
   return useQuery({
-    queryKey: ["me"],
+    queryKey: ["me", accountId],
     queryFn: authApi.getMe,
     enabled: Boolean(accessToken),
   });

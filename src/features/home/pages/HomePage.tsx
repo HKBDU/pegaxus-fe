@@ -2,6 +2,7 @@ import { useState } from 'react'
 import heroImg from '@/assets/hero.png'
 import reactLogo from '@/assets/react.svg'
 import viteLogo from '@/assets/vite.svg'
+import { Button } from '@/shared/components/ui/button'
 import '@/App.css'
 
 export default function HomePage() {
@@ -22,13 +23,13 @@ export default function HomePage() {
             <code>HMR</code>
           </p>
         </div>
-        <button
+        <Button
           type="button"
           className="counter"
           onClick={() => setCount((value) => value + 1)}
         >
           Count is {count}
-        </button>
+        </Button>
       </section>
 
       <div className="ticks" />

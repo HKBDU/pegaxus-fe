@@ -1,5 +1,4 @@
 import type { PaginationMeta } from '@/shared/types'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface PaginationProps {
   meta: PaginationMeta
@@ -34,15 +33,15 @@ export function Pagination({ meta, onPageChange, className }: PaginationProps) {
   }
 
   return (
-    <nav aria-label="Pagination" className={`flex items-center justify-center gap-1 ${className ?? ''}`}>
+    <nav aria-label="Pagination" className={`flex items-center justify-center gap-1 text-slate-900 ${className ?? ''}`}>
       <button
         type="button"
         disabled={!hasPreviousPage}
         onClick={() => onPageChange(currentPage - 1)}
         aria-label="Go to previous page"
-        className="rounded-md border p-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-7 items-center justify-center rounded-[2px] border border-slate-300 bg-white px-2 text-[11px] transition-[transform,border-color,background-color] hover:-translate-y-px hover:border-amber-500 hover:bg-amber-50 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
       >
-        <ChevronLeft className="size-4" />
+        Previous
       </button>
 
       {getPageNumbers().map((page, index) =>
@@ -56,8 +55,8 @@ export function Pagination({ meta, onPageChange, className }: PaginationProps) {
             key={page}
             onClick={() => onPageChange(page)}
             aria-current={currentPage === page ? 'page' : undefined}
-            className={`min-w-9 rounded-md border px-3 py-2 ${
-              currentPage === page ? 'bg-primary text-primary-foreground' : ''
+            className={`inline-flex h-7 min-w-7 items-center justify-center rounded-[2px] border px-1.5 text-[11px] transition-[transform,border-color,background-color,box-shadow] hover:-translate-y-px hover:border-amber-500 active:translate-y-0 ${
+              currentPage === page ? 'border-amber-500 bg-primary text-slate-900 shadow-[0_6px_16px_rgba(239,143,0,0.2)]' : 'border-slate-300 bg-white text-slate-900'
             }`}
           >
             {page}
@@ -70,9 +69,9 @@ export function Pagination({ meta, onPageChange, className }: PaginationProps) {
         disabled={!hasNextPage}
         onClick={() => onPageChange(currentPage + 1)}
         aria-label="Go to next page"
-        className="rounded-md border p-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex h-7 items-center justify-center rounded-[2px] border border-slate-300 bg-white px-2 text-[11px] transition-[transform,border-color,background-color] hover:-translate-y-px hover:border-amber-500 hover:bg-amber-50 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
       >
-        <ChevronRight className="size-4" />
+        Next
       </button>
     </nav>
   )
