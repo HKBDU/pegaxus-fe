@@ -63,6 +63,19 @@ export const authApi = {
 
   refreshToken: (refreshToken: string) => requestRefreshToken(apiClient, refreshToken),
 
+  async exchangeGoogleCode(code: string): Promise<AuthResponse> {
+    const response = (await apiClient.post(
+      "/auth/google/exchange",
+      { code },
+    )) as unknown as { value: AuthResponse };
+    const value = response.value;
+    if (!value?.accessToken || !value.refreshToken || !Number.isFinite(value.expiresIn) ||
+        !value.user?.accountId || !value.user.role) {
+      throw new Error("Google exchange response does not contain a complete authenticated session");
+    }
+    return value;
+  },
+
   async logout(refreshToken: string): Promise<void> {
     await apiClient.post('/auth/logout', { refreshToken })
   },
