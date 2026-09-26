@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, House, MapPin, Menu, Settings, Truck } from "lucide-react"
+import { Bell, ChevronDown, House, MapPin, Menu, Truck } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
@@ -21,10 +21,9 @@ import type { HeaderProps } from "@/shared/types/props"
 import type { HeaderNavItem, HeaderSidebarNavProps, HeaderUser } from "@/shared/types/type"
 
 const defaultNavItems: HeaderNavItem[] = [
-  { label: "Home", href: "/" },
-  { label: "Booking List", href: "/bookings" },
-  { label: "My Horses", href: "/my-horses" },
-  { label: "Profile Settings", href: "/profile-settings" },
+  { label: "HOME", href: "/" },
+  { label: "HORSE", href: "/my-horses" },
+  { label: "BOOKING", href: "/bookings" },
 ]
 
 // wait for AuthContext to get user data from API/JWT to pass to header
@@ -33,7 +32,7 @@ const defaultUser: HeaderUser = { name: "James Davidson", role: "Owner", initial
 function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
   const { setOpenMobile } = useSidebar()
   const location = useLocation()
-  const icons = [House, Truck, MapPin, Settings]
+  const icons = [House, MapPin, Truck]
 
   return (
     <Sidebar side="left" collapsible="offcanvas" className="h-svh min-h-svh w-[15rem] lg:hidden">
@@ -45,7 +44,7 @@ function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item, index) => {
-                const isActive = location.pathname === item.href
+                const isActive = item.href === "/" ? location.pathname === "/" : location.pathname.startsWith(item.href)
                 const Icon = icons[index] ?? House
 
                 return (
@@ -116,7 +115,7 @@ export function Header({
     >
       <Bell className="size-[18px]" />
       {notificationCount > 0 && (
-        <span className="absolute right-1.5 top-1.5 flex size-2 items-center justify-center rounded-none bg-[#f5ad22]" />
+        <span className="absolute right-1.5 top-1.5 flex size-2 items-center justify-center rounded-full bg-[#f5ad22]" />
       )}
     </Button>
   )
@@ -130,7 +129,7 @@ export function Header({
           <img src={logoSrc} alt={logoAlt} className="h-auto w-[150px] transition-transform duration-300 hover:scale-[1.02]" />
         </NavLink>
         { /* active state got from url */}
-        <nav aria-label="Main navigation" className="ml-auto flex h-full items-center gap-10">
+        <nav aria-label="Main navigation" className="ml-auto flex h-full w-[21rem] items-center">
           {navItems.map((item) => (
             <NavLink
               key={item.href}
@@ -138,9 +137,9 @@ export function Header({
               end={item.href === "/"}
               className={({ isActive }) =>
                 cn(
-                  "relative flex h-full items-center whitespace-nowrap text-sm text-[#c7c9cc] transition-colors hover:text-white",
+                  "relative flex h-full flex-1 items-center justify-center whitespace-nowrap text-sm text-[#c7c9cc] transition-colors duration-300 hover:text-white after:absolute after:bottom-2 after:left-1/2 after:h-0.5 after:w-0 after:-translate-x-1/2 after:rounded-full after:bg-[#f39200] after:opacity-0 after:transition-all after:duration-300 after:ease-out after:content-['']",
                   isActive &&
-                    "font-semibold text-white after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[#f39200]",
+                    "font-semibold text-white after:w-12 after:opacity-100",
                 )
               }
             >
