@@ -20,6 +20,7 @@ export type HeaderProps = {
   onNotificationClick?: () => void
   onUserClick?: () => void
   rightContent?: ReactNode
+  userActions?: ReactNode
   className?: string
 }
 

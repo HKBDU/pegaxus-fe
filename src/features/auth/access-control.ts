@@ -7,7 +7,7 @@ export interface AccessPolicy {
   allPermissions?: Permission[]
 }
 
-function normalizeRole(role: Role) {
+export function normalizeRole(role: Role) {
   return role.trim().toUpperCase().replace(/^ROLE_/, "")
 }
 

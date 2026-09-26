@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { LoadingState, NotFoundPage } from "@/shared/components/common";
+import { ErrorState, LoadingState, NotFoundPage } from "@/shared/components/common";
+import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { ProtectedRoute } from "@/shared/components/guards";
@@ -11,6 +12,16 @@ import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
+const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
+const LogoutPage = lazy(() => import("@/features/auth/pages/LogoutPage"));
+const ForgotPasswordPage = lazy(() => import("@/features/auth/pages/ForgotPasswordPage"));
+const ForgotPasswordOtpPage = lazy(() => import("@/features/auth/pages/ForgotPasswordOtpPage"));
+const ResetPasswordPage = lazy(() => import("@/features/auth/pages/ResetPasswordPage"));
+const VerifyEmailPage = lazy(() => import("@/features/auth/pages/VerifyEmailPage"));
+const ChangePasswordPage = lazy(
+  () => import("@/features/auth/pages/ChangePasswordPage"),
+);
 const ProfileSettingsPage = lazy(
   () => import("@/features/profile/pages/ProfileSettingsPage"),
 );
@@ -40,6 +51,9 @@ export const router = createBrowserRouter([
         index: true,
         element: <Suspense fallback={<LoadingState />}><HomePage /></Suspense>,
       },
+      {
+        element: <ProtectedRoute />,
+        children: [
       {
         path: ROLE_ROUTES.customerHorses + "/:horseId",
         element: <Suspense fallback={<LoadingState />}><HorseDetailPage /></Suspense>,
@@ -84,6 +98,12 @@ export const router = createBrowserRouter([
         path: "bookings/:bookingId/edit",
         element: <BookingFormPage mode="edit" />,
       },
+        ],
+      },
+      {
+        path: "unauthorized",
+        element: <ErrorState message="You do not have permission to view this page." />,
+      },
       {
         path: "*",
         element: <NotFoundPage />,
@@ -92,9 +112,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/admin",
-    element: skipAdminAuth ? (
-      <AdminLayout />
-    ) : (
+    element: (
       <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
         <AdminLayout />
       </ProtectedRoute>
@@ -121,6 +139,74 @@ export const router = createBrowserRouter([
       },
       { path: "*", element: <NotFoundPage /> },
     ],
+  },
+  {
+    path: "/login",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <LoginPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/logout",
+    element: (
+      <ProtectedRoute>
+        <Suspense fallback={<LoadingState />}>
+          <LogoutPage />
+        </Suspense>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/register",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <RegisterPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/forgot-password",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <ForgotPasswordPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/verify-email",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <VerifyEmailPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/forgot-password/verify-otp",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <ForgotPasswordOtpPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/reset-password",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <ResetPasswordPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/change-password",
+    element: (
+      <ProtectedRoute>
+        <Suspense fallback={<LoadingState />}>
+          <ChangePasswordPage />
+        </Suspense>
+      </ProtectedRoute>
+    ),
   },
   {
     element: <ProtectedRoute />,
