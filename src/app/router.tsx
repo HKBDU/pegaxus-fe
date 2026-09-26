@@ -14,6 +14,7 @@ import { AuthShell } from "@/features/auth/components/AuthShell";
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
+const GoogleCallbackPage = lazy(() => import("@/features/auth/pages/GoogleCallbackPage"));
 const LogoutPage = lazy(() => import("@/features/auth/pages/LogoutPage"));
 const ForgotPasswordPage = lazy(() => import("@/features/auth/pages/ForgotPasswordPage"));
 const ForgotPasswordOtpPage = lazy(() => import("@/features/auth/pages/ForgotPasswordOtpPage"));
@@ -127,6 +128,22 @@ export const router = createBrowserRouter([
       },
       { path: "*", element: <NotFoundPage /> },
     ],
+  },
+  {
+    path: "/login",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <LoginPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/auth/google/callback",
+    element: (
+      <Suspense fallback={<LoadingState />}>
+        <GoogleCallbackPage />
+      </Suspense>
+    ),
   },
   {
     path: "/logout",

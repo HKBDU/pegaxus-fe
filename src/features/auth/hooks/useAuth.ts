@@ -71,6 +71,26 @@ export function useLoginMutation() {
   });
 }
 
+export function useGoogleExchangeMutation() {
+  const navigate = useNavigate();
+  const setAuth = useAuthStore((state) => state.setAuth);
+
+  return useMutation<AuthResponse, Error, string>({
+    mutationFn: (code) => authApi.exchangeGoogleCode(code),
+    gcTime: 0,
+    onSuccess: (response) => {
+      queryClient.clear();
+      setAuth(response);
+      toast.success("Signed in with Google successfully.");
+      navigate("/", { replace: true });
+    },
+    onError: () => {
+      toast.error("Google sign-in could not be completed. Please try again.");
+      navigate("/login", { replace: true });
+    },
+  });
+}
+
 export function useForgotPasswordMutation() {
   const navigate = useNavigate();
 
