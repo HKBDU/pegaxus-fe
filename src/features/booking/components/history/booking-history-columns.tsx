@@ -4,12 +4,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
-import type { BookingHistoryItem } from "../../schemas/booking-history.schema";
+import type { BookingHistoryItem } from "../../history/schema";
 import {
   formatHistoryLabel,
   formatHistoryTimestamp,
-} from "../../history-utils";
-import { BookingStatusBadge } from "../BookingStatusBadge";
+} from "../../history/utils";
+import { BookingStatusBadge } from "./BookingStatusBadge";
 
 export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
   {

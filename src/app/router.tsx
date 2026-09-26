@@ -4,7 +4,7 @@ import { ErrorState, LoadingState, NotFoundPage } from "@/shared/components/comm
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
-import { BookingHistoryRoleLayout } from "@/features/bookings/components/BookingHistoryRoleLayout";
+import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { ROLE_ROUTES } from "./route-config";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
@@ -29,17 +29,13 @@ const AddHorsePage = lazy(() => import("@/features/horse/pages/AddHorsePage"));
 const EditHorsePage = lazy(() => import("@/features/horse/pages/EditHorsePage"));
 const HorseDetailPage = lazy(() => import("@/features/horse/pages/HorseDetailPage"));
 const BookingStatusHistoryPage = lazy(
-  () => import("@/features/bookings/pages/BookingStatusHistoryPage"),
+  () => import("@/features/booking/pages/BookingStatusHistoryPage"),
 );
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />
   </Suspense>
 );
-
-// Dev preview: /admin skips the login requirement so the admin UI can be viewed without signing in.
-// Production builds always enforce the guard; set VITE_ENFORCE_AUTH=true to test the guard locally.
-const skipAdminAuth = import.meta.env.DEV && import.meta.env.VITE_ENFORCE_AUTH !== "true";
 
 export const router = createBrowserRouter([
   {

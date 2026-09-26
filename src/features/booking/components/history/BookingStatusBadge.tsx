@@ -1,5 +1,5 @@
 import { Badge } from "@/shared/components/ui/badge";
-import { formatHistoryLabel } from "../history-utils";
+import { formatHistoryLabel } from "../../history/utils";
 
 const bookingStatusStyles = {
   DRAFT: { badge: "border-neutral-300 bg-neutral-50 text-neutral-700", dot: "bg-neutral-500" },

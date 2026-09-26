@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { formatHistoryLabel, type HistoryFilters } from "../../history-utils";
+import { formatHistoryLabel, type HistoryFilters } from "../../history/utils";
 
 interface BookingHistoryFiltersProps {
   filters: HistoryFilters;

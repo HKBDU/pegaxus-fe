@@ -1,4 +1,4 @@
-import type { BookingHistoryItem } from "./schemas/booking-history.schema";
+import type { BookingHistoryItem } from "./schema";
 
 export type HistoryOrder = "newest" | "oldest";
 export interface HistoryFilters {
@@ -55,7 +55,7 @@ export function filterAndSortHistory(
       const difference = Date.parse(a.changedAt) - Date.parse(b.changedAt);
       return (
         (filters.order === "oldest" ? 1 : -1) *
-        (difference || a.historyId - b.historyId)
+        (difference || a.historyId.localeCompare(b.historyId))
       );
     });
 }

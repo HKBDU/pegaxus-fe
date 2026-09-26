@@ -8,11 +8,12 @@ import { useAuthStore } from "@/features/auth/store";
 import {
   bookingHistoryDetailsPath,
   resolveBookingHistoryShell,
-} from "../booking-history-access";
+} from "../history/access";
 import { BookingHistoryFilters } from "../components/history/BookingHistoryFilters";
 import { BookingHistoryTable } from "../components/history/BookingHistoryTable";
 import {
   isBookingNotFound,
+  bookingHistoryErrorMessage,
   useBookingHistoryQuery,
 } from "../hooks/useBookingHistory";
 import {
@@ -20,8 +21,9 @@ import {
   historyToCsv,
   initialHistoryFilters,
   type HistoryFilters,
-} from "../history-utils";
-import type { BookingHistoryItem } from "../schemas/booking-history.schema";
+} from "../history/utils";
+import type { BookingHistoryItem } from "../history/schema";
+import { InvalidBookingHistoryIdError } from "../history/errors";
 
 const emptyHistory: BookingHistoryItem[] = [];
 
@@ -81,6 +83,10 @@ function BookingHistoryContent({
     ],
     [history],
   );
+
+  if (query.invalidBookingId) {
+    return <ErrorState message={bookingHistoryErrorMessage(new InvalidBookingHistoryIdError())} />;
+  }
 
   function changeFilters(next: HistoryFilters) {
     setFilters(next);
@@ -148,9 +154,7 @@ function BookingHistoryContent({
             <div className="space-y-3">
               <ErrorState
                 message={
-                  isBookingNotFound(query.error)
-                    ? "Booking not found. It may no longer exist or be available to you."
-                    : "Unable to load booking history. Please try again."
+                  bookingHistoryErrorMessage(query.error)
                 }
               />
               {!isBookingNotFound(query.error) && (

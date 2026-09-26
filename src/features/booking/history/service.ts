@@ -1,24 +1,20 @@
 import apiClient from "@/lib/axios";
-import { useAuthStore } from "@/features/auth/store";
-import { resolveBookingHistoryDevToken } from "./booking-history-source";
-import { bookingHistoryResponseSchema } from "./schemas/booking-history.schema";
+import { InvalidBookingHistoryIdError } from "./errors";
+import { bookingHistoryBookingIdSchema, bookingHistoryResponseSchema } from "./schema";
 import {
   bookingStatusUpdateSchema,
   type BookingStatusUpdateRequest,
-} from "./schemas/booking-status.schema";
+} from "./status-schema";
 
 export const bookingApi = {
   async getHistory(bookingId: string, signal?: AbortSignal) {
-    const devToken = resolveBookingHistoryDevToken(
-      import.meta.env.DEV,
-      useAuthStore.getState().accessToken,
-      import.meta.env.DEV ? import.meta.env.VITE_DEV_ACCESS_TOKEN : undefined,
-    );
+    if (!bookingHistoryBookingIdSchema.safeParse(bookingId).success) {
+      throw new InvalidBookingHistoryIdError();
+    }
     const response = await apiClient.get<unknown, unknown>(
       `/bookings/${encodeURIComponent(bookingId)}/histories`,
       {
         signal,
-        ...(devToken ? { headers: { Authorization: `Bearer ${devToken}` } } : {}),
       },
     );
     return bookingHistoryResponseSchema.parse(response).value;

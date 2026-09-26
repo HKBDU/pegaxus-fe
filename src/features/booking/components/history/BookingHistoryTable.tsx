@@ -2,7 +2,7 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { DataTable } from "@/shared/components/ui/data-table";
 import { EmptyState, Pagination } from "@/shared/components/common";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
-import type { BookingHistoryItem } from "../../schemas/booking-history.schema";
+import type { BookingHistoryItem } from "../../history/schema";
 import { bookingHistoryColumns } from "./booking-history-columns";
 
 const pageSize = 6;

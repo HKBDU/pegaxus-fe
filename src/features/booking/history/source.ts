@@ -4,15 +4,6 @@ export type BookingHistorySource =
   | { kind: "api" }
   | { kind: "mock"; scenario: BookingHistoryMockScenario };
 
-export function resolveBookingHistoryDevToken(
-  isDev: boolean,
-  accessToken: string | null,
-  devToken: string | undefined,
-) {
-  if (!isDev || accessToken) return undefined;
-  return devToken?.trim() || undefined;
-}
-
 export function resolveBookingHistorySource(
   isDev: boolean,
   mockParam: string | null,
