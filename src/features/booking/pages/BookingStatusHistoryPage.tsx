@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
@@ -104,10 +104,27 @@ function BookingHistoryContent({
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
+  function renderFilters(viewOptions?: ReactNode) {
+    return (
+      <BookingHistoryFilters
+        filters={filters}
+        actions={actions}
+        statuses={statuses}
+        onChange={changeFilters}
+        isFetching={query.isFetching}
+        canRefresh={true}
+        onRefresh={() => void query.refetch()}
+        canDownload={!query.isPending && !query.isError && rows.length > 0}
+        onDownload={download}
+        viewOptions={viewOptions}
+      />
+    );
+  }
+
   return (
-    <div className="w-full min-w-0 bg-[#f4f4f4] text-neutral-900">
-      <div className="mx-auto w-full max-w-[1000px] space-y-4 px-5 py-5 lg:px-6">
-        <header>
+    <div className="booking-page-shell min-h-[70dvh] min-w-0 px-4 py-8 font-sans text-slate-900 sm:px-6 lg:px-8 lg:py-10">
+      <div className="booking-page-enter mx-auto w-full max-w-7xl space-y-6">
+        <header className="space-y-3">
           <Link
             to={detailsPath}
             className="inline-flex items-center gap-1 text-xs font-semibold text-[#b86800] uppercase hover:underline focus-visible:outline-2 focus-visible:outline-ring"
@@ -115,22 +132,12 @@ function BookingHistoryContent({
             <ArrowLeft aria-hidden="true" className="size-4" />
             Return to booking details
           </Link>
-          <h1 className="!mt-2 !mb-0 !text-3xl !font-bold !tracking-normal !text-[#ed8c00] uppercase">
+          <h1 className="m-0! min-w-0 font-heading text-[28px]! leading-[1.1]! font-bold! tracking-normal! text-primary! uppercase min-[360px]:text-[32px]! sm:text-[40px]!">
             Booking status history
           </h1>
         </header>
 
-        <BookingHistoryFilters
-          filters={filters}
-          actions={actions}
-          statuses={statuses}
-          onChange={changeFilters}
-          isFetching={query.isFetching}
-          canRefresh={true}
-          onRefresh={() => void query.refetch()}
-          canDownload={!query.isPending && !query.isError && rows.length > 0}
-          onDownload={download}
-        />
+        {(query.isPending || query.isError) && renderFilters()}
 
         <section
           aria-label="Booking history"
@@ -175,6 +182,7 @@ function BookingHistoryContent({
               hasHistory={history.length > 0}
               page={page}
               onPageChange={setPage}
+              toolbar={renderFilters}
             />
           )}
         </section>

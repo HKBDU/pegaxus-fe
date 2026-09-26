@@ -17,7 +17,7 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
     header: "Action",
     enableSorting: false,
     cell: ({ row }) => (
-      <span className="text-[11px] font-semibold uppercase">
+      <span className="font-semibold text-slate-900 uppercase">
         {formatHistoryLabel(row.original.action)}
       </span>
     ),
@@ -30,9 +30,7 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
       row.original.previousStatus === null ? (
         "—"
       ) : (
-        <span className="text-xs text-neutral-600">
-          {formatHistoryLabel(row.original.previousStatus)}
-        </span>
+        <BookingStatusBadge status={row.original.previousStatus} />
       ),
   },
   {
@@ -52,7 +50,7 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
           <TooltipTrigger asChild>
             <div
               tabIndex={0}
-              className="w-full cursor-help whitespace-normal break-words focus-visible:outline-2 focus-visible:outline-ring"
+              className="w-full min-w-48 max-w-80 cursor-help whitespace-normal break-words text-slate-700 focus-visible:outline-2 focus-visible:outline-ring"
             >
               <span className="line-clamp-2">{reason}</span>
             </div>
@@ -72,10 +70,10 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
     enableSorting: false,
     cell: ({ row }) => (
       <div className="min-w-0 whitespace-normal break-words">
-        <p className="text-xs font-semibold uppercase">
+        <p className="text-xs font-semibold text-slate-900 uppercase">
           {row.original.changedBy.fullName}
         </p>
-        <p className="text-[10px] text-neutral-600 uppercase">
+        <p className="mt-1 text-[0.68rem] text-slate-400 uppercase">
           {formatHistoryLabel(row.original.changedBy.role)}
         </p>
       </div>
@@ -88,7 +86,7 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
     cell: ({ row }) => (
       <time
         dateTime={row.original.changedAt}
-        className="font-mono text-[11px] whitespace-nowrap tabular-nums"
+        className="text-xs whitespace-nowrap text-slate-700 tabular-nums"
       >
         {formatHistoryTimestamp(row.original.changedAt)}
       </time>

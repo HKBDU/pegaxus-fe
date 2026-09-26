@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { Download, RefreshCw } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -20,6 +20,7 @@ interface BookingHistoryFiltersProps {
   isFetching: boolean;
   canRefresh: boolean;
   canDownload: boolean;
+  viewOptions?: ReactNode;
 }
 
 function HistorySelect({
@@ -38,7 +39,7 @@ function HistorySelect({
   const id = useId();
   return (
     <div className="min-w-0 space-y-1">
-      <label htmlFor={id} className="block text-[11px] font-semibold uppercase">
+      <label htmlFor={id} className="sr-only">
         {label}
       </label>
       <Select
@@ -48,7 +49,7 @@ function HistorySelect({
         <SelectTrigger
           id={id}
           size="sm"
-          className="h-8 w-full min-w-0 rounded-none border-[#f39200] bg-white text-xs"
+          className="h-8 w-full min-w-0 rounded-[2px] border-slate-300 bg-white text-xs shadow-none focus:border-amber-500 focus:ring-amber-500/20"
         >
           <SelectValue />
         </SelectTrigger>
@@ -58,11 +59,11 @@ function HistorySelect({
           align="start"
           sideOffset={2}
           avoidCollisions={false}
-          className="z-50 max-h-64 min-w-[var(--radix-select-trigger-width)] rounded-none border-neutral-200 bg-white text-neutral-900"
+          className="z-50 max-h-64 min-w-[var(--radix-select-trigger-width)] rounded-[2px] border-slate-200 bg-white p-0.5 text-slate-900 shadow-md"
         >
           <SelectItem value="all">{allLabel}</SelectItem>
           {options.map((option) => (
-            <SelectItem key={option} value={`value:${option}`}>
+            <SelectItem key={option} value={`value:${option}`} className="h-7 rounded-[2px] text-xs">
               {formatHistoryLabel(option)}
             </SelectItem>
           ))}
@@ -82,10 +83,10 @@ export function BookingHistoryFilters({
   isFetching,
   canRefresh,
   canDownload,
+  viewOptions,
 }: BookingHistoryFiltersProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 border border-[#dfc9b6] bg-white p-3 items-end md:grid-cols-[1fr_1fr_1fr_auto]">
-      {" "}
+    <div role="toolbar" aria-label="History filters" className="grid grid-cols-1 items-center gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_8rem_auto]">
       <HistorySelect
         label="Action filter"
         allLabel="All actions"
@@ -95,49 +96,36 @@ export function BookingHistoryFilters({
       />
       <HistorySelect
         label="From status"
-        allLabel="All statuses"
+        allLabel="From: All statuses"
         value={filters.fromStatus}
         options={statuses}
         onChange={(fromStatus) => onChange({ ...filters, fromStatus })}
       />
       <HistorySelect
         label="To status"
-        allLabel="All statuses"
+        allLabel="To: All statuses"
         value={filters.toStatus}
         options={statuses}
         onChange={(toStatus) => onChange({ ...filters, toStatus })}
       />
-      <div className="min-w-0 space-y-1">
-        <p
-          id="history-order-label"
-          className="h-7 block text-[11px] font-semibold uppercase"
-        >
-          Order
-        </p>
-        <div className="flex flex-nowrap gap-1">
-          <div
-            role="group"
-            aria-labelledby="history-order-label"
-            className="flex"
-          >
-            {(["newest", "oldest"] as const).map((order) => (
-              <Button
-                key={order}
-                type="button"
-                variant="outline"
-                aria-pressed={filters.order === order}
-                onClick={() => onChange({ ...filters, order })}
-                className={`h-8 whitespace-nowrap rounded-none border-[#f39200] px-1.5 text-[11px] uppercase ${filters.order === order ? "bg-[#f39200] text-black hover:bg-[#df8500] hover:text-black" : "bg-white"}`}
-              >
-                {order === "newest" ? "Newest first" : "Oldest first"}
-              </Button>
-            ))}
-          </div>
+      <Select value={filters.order} onValueChange={(order) => {
+        if (order === "newest" || order === "oldest") onChange({ ...filters, order });
+      }}>
+        <SelectTrigger aria-label="History sort order" size="sm" className="h-8 w-full rounded-[2px] border-slate-300 bg-white text-xs shadow-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent position="popper" align="start" className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
+          <SelectItem value="newest" className="h-7 rounded-[2px] text-xs">Newest</SelectItem>
+          <SelectItem value="oldest" className="h-7 rounded-[2px] text-xs">Oldest</SelectItem>
+        </SelectContent>
+      </Select>
+        <div className="flex items-center justify-end gap-1.5 sm:col-span-2 lg:col-span-1">
+          {viewOptions}
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="size-8 shrink-0 rounded-none border-[#f39200]"
+            className="size-8 shrink-0 rounded-[2px] border-slate-300 bg-white shadow-none"
             aria-label="Refresh history"
             title="Refresh history"
             disabled={!canRefresh || isFetching}
@@ -152,7 +140,7 @@ export function BookingHistoryFilters({
             type="button"
             variant="outline"
             size="icon"
-            className="size-8 shrink-0 rounded-none border-[#f39200]"
+            className="size-8 shrink-0 rounded-[2px] border-slate-300 bg-white shadow-none"
             aria-label="Download history"
             title="Download filtered history as CSV"
             disabled={!canDownload}
@@ -161,7 +149,6 @@ export function BookingHistoryFilters({
             <Download aria-hidden="true" className="size-3.5" />
           </Button>
         </div>
-      </div>
     </div>
   );
 }
