@@ -8,13 +8,13 @@ import type { FooterColumnProps } from "@/shared/types/props"
 
 export function FooterColumn({ title, links, className, children }: FooterColumnProps) {
   return (
-    <section className={cn("min-w-0 break-words transition-transform duration-300 hover:-translate-y-0.5", className)}>
+    <section className={cn("min-w-0 break-words transition-transform duration-300 ", className)}>
       <h2 className="site-footer-column-title mb-4 !text-sm font-bold tracking-[0.22em] !text-white">{title}</h2>
       <div className="site-footer-column-divider mb-3 h-0.5 w-6 bg-[#f39200]" />
       {children ?? (
-        <nav className="site-footer-column-links space-y-3" aria-label={title}>
+        <nav className="site-footer-column-links space-y-3 " aria-label={title}>
           {links.map((link) => (
-            <Link key={link.href} to={link.href} className="block text-sm leading-5 text-[#9297a1] transition-colors duration-200 hover:text-white">
+            <Link key={link.href} to={link.href} className="block text-sm leading-5 text-[#9297a1] transition-colors duration-200 hover:text-white hover:-translate-y-0.2">
               {link.label}
             </Link>
           ))}

@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
 import { Button } from "@/shared/components/ui/button"
+import { DataTableRadioFilter } from "@/shared/components/ui/data-table-radio-filter"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { HORSE_BREED_OPTIONS, HORSE_SEX_OPTIONS, HORSE_SORT_OPTIONS } from "../constants/horse.constants"
 import { HorseTable } from "../components"
@@ -59,69 +60,39 @@ export function HorsesPage() {
   if (error) return <ErrorState message={error} onRetry={retryHorses} />
 
   const toolbar = (
-    <div className="flex flex-1 flex-col gap-3 sm:flex-row">
-      <Select value={sex} onValueChange={setSex}>
-        <SelectTrigger className="w-full rounded-[2px] border-[hsl(var(--input))] bg-transparent sm:w-[185px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="horse-select-content">
-          {HORSE_SEX_OPTIONS.map((option) => (
-            <SelectItem className="horse-select-item" key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={breed} onValueChange={setBreed}>
-        <SelectTrigger className="w-full rounded-[2px] border-[hsl(var(--input))] bg-transparent sm:w-[185px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="horse-select-content">
-          {HORSE_BREED_OPTIONS.map((option) => (
-            <SelectItem className="horse-select-item" key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
+    <>
+      <DataTableRadioFilter title="Sex" value={sex} options={HORSE_SEX_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSex} />
+      <DataTableRadioFilter title="Breed" value={breed} options={HORSE_BREED_OPTIONS.map((option) => ({ ...option }))} onValueChange={setBreed} />
       <Select value={sort} onValueChange={setSort}>
-        <SelectTrigger className="w-full rounded-[2px] border-[hsl(var(--input))] bg-transparent sm:w-[185px]">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="horse-select-content">
-          {HORSE_SORT_OPTIONS.map((option) => (
-            <SelectItem className="horse-select-item" key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
+        <SelectTrigger className="h-8 w-full rounded-[2px] border-slate-300 bg-white text-xs shadow-none data-[size=default]:h-8 focus:border-amber-500 focus:ring-amber-500/20"><SelectValue aria-label="Horse sort order" /></SelectTrigger>
+        <SelectContent position="popper" align="start" sideOffset={2} className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
+          {HORSE_SORT_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value} className="h-7 rounded-[2px] text-xs">{option.label}</SelectItem>)}
         </SelectContent>
       </Select>
-    </div>
+    </>
   )
 
   return (
     <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
       <div className="mx-auto flex w-full max-w-[1152px] flex-col gap-0">
-        <div className="relative">
+        <div>
           <PageHeader title="MY HORSES" backHref="/" />
-          <Button
-            asChild
-            className="absolute right-0 top-[36px] h-11 rounded-[2px] px-6 font-bold uppercase tracking-wide"
-          >
-            <Link to="/my-horses/new">
-              <Plus />
-              Add Horse
-            </Link>
-          </Button>
         </div>
 
         <div className="flex flex-col gap-[0px] pt-4">
-          <HorseTable horses={visibleHorses} onAction={handleAction} toolbar={toolbar} />
-          <p className="mt-7 text-sm text-muted-foreground">
-            Showing 1 to {Math.min(6, visibleHorses.length)} of {visibleHorses.length} entries
-          </p>
+          <HorseTable
+            horses={visibleHorses}
+            onAction={handleAction}
+            toolbar={toolbar}
+            addAction={
+              <Button asChild size="sm" className="h-8 rounded-[2px] bg-[#ef8f00] px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-950 hover:bg-[#db8300]">
+                <Link to="/my-horses/new">
+                  <Plus className="size-3.5" />
+                  Add Horse
+                </Link>
+              </Button>
+            }
+          />
         </div>
 
         <AlertDialog

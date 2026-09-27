@@ -105,7 +105,7 @@ export default function ChangePasswordPage() {
             label="Current password"
             autoComplete="current-password"
             visibilityLabel="current password"
-            placeholder="Enter your current password"
+            placeholder="•••••••••"
             disabled={isPending}
           />
           <AuthPasswordFormField
@@ -114,7 +114,7 @@ export default function ChangePasswordPage() {
             label="New password"
             autoComplete="new-password"
             visibilityLabel="new password"
-            placeholder="Enter your new password"
+            placeholder="•••••••••"
             disabled={isPending}
           />
           <AuthPasswordFormField
@@ -123,7 +123,7 @@ export default function ChangePasswordPage() {
             label="Confirm new password"
             autoComplete="new-password"
             visibilityLabel="confirm new password"
-            placeholder="Confirm your new password"
+            placeholder="•••••••••"
             disabled={isPending}
           />
 

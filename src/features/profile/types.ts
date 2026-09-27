@@ -38,6 +38,7 @@ export type Profile = {
   avatarUrl: string | null
   customer: CustomerProfile | null
   employee: EmployeeProfile | null
+  createdAt?: string | null
   memberSince?: string | null
   lastLoginAt?: string | null
   updatedAt: string
