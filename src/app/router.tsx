@@ -9,6 +9,7 @@ import {
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
+import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { ROLE_ROUTES } from "./route-config";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
@@ -47,6 +48,14 @@ const EditHorsePage = lazy(
 );
 const HorseDetailPage = lazy(
   () => import("@/features/horse/pages/HorseDetailPage"),
+);
+const BookingStatusHistoryPage = lazy(
+  () => import("@/features/booking/pages/BookingStatusHistoryPage"),
+);
+const bookingHistoryPage = (
+  <Suspense fallback={<LoadingState />}>
+    <BookingStatusHistoryPage />
+  </Suspense>
 );
 
 export const router = createBrowserRouter([
@@ -220,4 +229,32 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  {
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <BookingHistoryRoleLayout />,
+        children: [
+          {
+            path: "/bookings/:bookingId/history",
+            element: bookingHistoryPage,
+          },
+        ],
+      },
+    ],
+  },
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: "/__dev/customer/bookings/:bookingId/history",
+          element: <MainLayout />,
+          children: [{ index: true, element: bookingHistoryPage }],
+        },
+        {
+          path: "/__dev/admin/bookings/:bookingId/history",
+          element: <AdminLayout />,
+          children: [{ index: true, element: bookingHistoryPage }],
+        },
+      ]
+    : []),
 ]);

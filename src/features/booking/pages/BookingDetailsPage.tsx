@@ -5,7 +5,6 @@ import { Link, useParams } from "react-router-dom"
 import { ApproveBookingDialog, RejectBookingDialog } from "@/features/booking/components/BookingDecisionDialogs"
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
 import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
-import { BookingHistoryDialog } from "@/features/booking/components/BookingHistoryDialog"
 import { CancelBookingDialog } from "@/features/booking/components/CancelBookingDialog"
 import { useBooking } from "@/features/booking/hooks"
 import type { BookingAudience } from "@/features/booking/types"
@@ -89,7 +88,6 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
   const [cancelOpen, setCancelOpen] = useState(false)
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
   const isPending = booking?.status === "PENDING"
   const canEdit = booking?.status === "PENDING" || booking?.status === "DRAFT"
   const listPath = audience === "manager" ? "/admin/transport-requests" : "/bookings"
@@ -123,13 +121,12 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                   </button>
                 </>
               ) : null}
-              <button
-                type="button"
+              <Link
+                to={`/bookings/${encodeURIComponent(String(booking.bookingId))}/history`}
                 className={cn(actionButtonClass, "border-primary bg-primary text-gray-900 hover:border-primary-hover hover:bg-primary-hover")}
-                onClick={() => setHistoryOpen(true)}
               >
                 View status history
-              </button>
+              </Link>
             </div>
           ) : null}
         </div>
@@ -281,7 +278,6 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
       {booking ? <CancelBookingDialog bookingId={booking.bookingId} open={cancelOpen} onOpenChange={setCancelOpen} /> : null}
       {booking ? <ApproveBookingDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} open={approveOpen} onOpenChange={setApproveOpen} /> : null}
       {booking ? <RejectBookingDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} open={rejectOpen} onOpenChange={setRejectOpen} /> : null}
-      {booking ? <BookingHistoryDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} audience={audience} open={historyOpen} onOpenChange={setHistoryOpen} /> : null}
     </div>
   )
 }
