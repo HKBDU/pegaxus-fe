@@ -18,6 +18,8 @@ import { AuthShell } from "@/features/auth/components/AuthShell";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
+const ViewUserAccountPage = lazy(() => import("@/features/accounts/pages/ViewUserAccountPage"));
+const EditUserAccountPage = lazy(() => import("@/features/accounts/pages/EditUserAccountPage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const GoogleCallbackPage = lazy(
@@ -191,12 +193,20 @@ export const router = createBrowserRouter([
         element: <BookingListPage audience="manager" />,
       },
       {
-        path: "users",
+        path: ROLE_ROUTES.managerUsers,
         element: (
           <Suspense fallback={<LoadingState />}>
             <ManageUserAccountsPage />
           </Suspense>
         ),
+      },
+      {
+        path: "users/:employeeId",
+        element: <Suspense fallback={<LoadingState />}><ViewUserAccountPage /></Suspense>,
+      },
+      {
+        path: "users/:employeeId/edit",
+        element: <Suspense fallback={<LoadingState />}><EditUserAccountPage /></Suspense>,
       },
       {
         path: "transport-requests/:bookingId",

@@ -14,6 +14,7 @@ import type {
   VerifyEmailRequest,
 } from "@/features/auth/types";
 import { queryClient } from "@/lib/queryClient";
+import { getPostLoginPath } from "@/app/route-config";
 
 export function useRegisterMutation() {
   const navigate = useNavigate();
@@ -53,7 +54,7 @@ export function useLoginMutation() {
       queryClient.clear();
       setAuth(response);
       toast.success("Signed in successfully.");
-      navigate(from, { replace: true });
+      navigate(getPostLoginPath(response.user.role, from), { replace: true });
     },
     onError: (error) => {
       const apiError = getAuthApiError(error);
@@ -83,7 +84,7 @@ export function useGoogleExchangeMutation() {
       queryClient.clear();
       setAuth(response);
       toast.success("Signed in with Google successfully.");
-      navigate("/", { replace: true });
+      navigate(getPostLoginPath(response.user.role), { replace: true });
     },
     onError: () => {
       toast.error("Google sign-in could not be completed. Please try again.");
