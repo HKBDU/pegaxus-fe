@@ -7,6 +7,7 @@ import { BookingTable } from "@/features/booking/components/BookingTable"
 import { useBookings } from "@/features/booking/hooks"
 import type { BookingAudience, BookingListParams, BookingSort, BookingStatus } from "@/features/booking/types"
 import { ErrorState } from "@/shared/components/common"
+import { PageHeader } from "@/shared/components/PageHeader"
 import { Button } from "@/shared/components/ui/button"
 
 const initialParams: BookingListParams = {
@@ -35,12 +36,13 @@ export default function BookingListPage({ audience = "customer" }: { audience?: 
   }, [])
 
   return (
-    <div className="booking-page-shell min-h-[70dvh] px-4 py-8 font-sans sm:px-6 lg:px-8 lg:py-10">
-      <div className="booking-page-enter mx-auto w-full max-w-7xl">
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <h1 className="m-0! min-w-0 font-heading text-[28px]! leading-[1.1]! min-[360px]:text-[32px]! font-bold! tracking-normal! text-primary! uppercase sm:text-[40px]!">
-            {audience === "manager" ? "TRANSPORT REQUESTS" : "MY BOOKING LIST"}
-          </h1>
+    <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
+      <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
+        <div className="mb-6 flex items-end justify-between gap-3">
+          <PageHeader
+            title={audience === "manager" ? "TRANSPORT REQUESTS" : "MY BOOKING LIST"}
+            backHref={audience === "manager" ? "/admin/transport-requests" : "/"}
+          />
           {audience === "customer" ? (
             <Button
               type="button"

@@ -20,6 +20,7 @@ export const profileApi = {
 function normalizeProfile(profile: Profile): Profile {
   return {
     ...profile,
+    memberSince: profile.memberSince ?? profile.createdAt ?? null,
     dob: profile.dob ?? profile.customer?.dateOfBirth ?? null,
   }
 }

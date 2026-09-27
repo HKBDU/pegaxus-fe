@@ -1,4 +1,4 @@
-import { Bell, ChevronDown, House, MapPin, Menu, Settings, Truck } from "lucide-react"
+import { Bell, ChevronDown, House, MapPin, Menu, Truck } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
@@ -21,10 +21,9 @@ import type { HeaderProps } from "@/shared/types/props"
 import type { HeaderNavItem, HeaderSidebarNavProps, HeaderUser } from "@/shared/types/type"
 
 const defaultNavItems: HeaderNavItem[] = [
-  { label: "Home", href: "/" },
-  { label: "Booking List", href: "/bookings" },
-  { label: "My Horses", href: "/my-horses" },
-  { label: "Profile Settings", href: "/profile-settings" },
+  { label: "HOME", href: "/" },
+  { label: "HORSE", href: "/my-horses" },
+  { label: "BOOKING", href: "/bookings" },
 ]
 
 // wait for AuthContext to get user data from API/JWT to pass to header
@@ -33,7 +32,7 @@ const defaultUser: HeaderUser = { name: "James Davidson", role: "Owner", initial
 function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
   const { setOpenMobile } = useSidebar()
   const location = useLocation()
-  const icons = [House, Truck, MapPin, Settings]
+  const icons = [House, MapPin, Truck]
 
   return (
     <Sidebar side="left" collapsible="offcanvas" className="h-svh min-h-svh w-[15rem] lg:hidden">
@@ -45,7 +44,7 @@ function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item, index) => {
-                const isActive = location.pathname === item.href
+                const isActive = item.href === "/" ? location.pathname === "/" : location.pathname.startsWith(item.href)
                 const Icon = icons[index] ?? House
 
                 return (
@@ -54,7 +53,7 @@ function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
                       asChild
                       isActive={isActive}
                       className={cn(
-                        "h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
+                        "h-8 rounded-none px-3 font-heading text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
                         isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-3 font-semibold !text-[#f39200]",
                       )}
                     >
@@ -86,6 +85,14 @@ export function Header({
   userActions,
   className,
 }: HeaderProps) {
+  const location = useLocation()
+  const activeNavIndex =   Math.max(
+    navItems.findIndex((item) => item.href === "/" ? location.pathname === "/" : location.pathname.startsWith(item.href)),
+    0,
+  )
+  const navItemCount = Math.max(navItems.length, 1)
+  const activeBarWidth = 65
+
   const userControl = (
     <NavLink
       to="/profile-settings"
@@ -116,7 +123,7 @@ export function Header({
     >
       <Bell className="size-[18px]" />
       {notificationCount > 0 && (
-        <span className="absolute right-1.5 top-1.5 flex size-2 items-center justify-center rounded-none bg-[#f5ad22]" />
+        <span className="absolute right-1.5 top-1.5 flex size-2 items-center justify-center rounded-full bg-[#f5ad22]" />
       )}
     </Button>
   )
@@ -125,12 +132,12 @@ export function Header({
     <SidebarProvider defaultOpen={false} className="sticky top-0 z-50 !min-h-0 w-full">
       <HeaderSidebarNav navItems={navItems} />
       <header className={cn("site-header-enter sticky top-0 z-50 w-full border-b border-white/5 bg-[#17191c] text-white transition-[background-color,box-shadow] duration-300", className)}>
-      <div className="mx-auto hidden h-[72px] w-full items-center px-8 lg:flex">
+      <div className="mx-auto hidden h-12 w-full items-center px-8 lg:flex">
         <NavLink to="/" aria-label={logoAlt} className="shrink-0">
-          <img src={logoSrc} alt={logoAlt} className="h-auto w-[150px] transition-transform duration-300 hover:scale-[1.02]" />
+          <img src={logoSrc} alt={logoAlt} className="h-auto w-[138px] transition-transform duration-300 hover:scale-[1.02]" />
         </NavLink>
         { /* active state got from url */}
-        <nav aria-label="Main navigation" className="ml-auto flex h-full items-center gap-10">
+        <nav aria-label="Main navigation" className="relative ml-auto flex h-full w-[22rem] items-center">
           {navItems.map((item) => (
             <NavLink
               key={item.href}
@@ -138,15 +145,23 @@ export function Header({
               end={item.href === "/"}
               className={({ isActive }) =>
                 cn(
-                  "relative flex h-full items-center whitespace-nowrap text-sm text-[#c7c9cc] transition-colors hover:text-white",
-                  isActive &&
-                    "font-semibold text-white after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[#f39200]",
+                  "relative flex h-full flex-1 items-center justify-center whitespace-nowrap font-heading text-sm text-[#c7c9cc] transition-colors duration-300 hover:text-white",
+                  isActive && "font-semibold text-white",
                 )
               }
             >
               {item.label}
             </NavLink>
           ))}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-2 h-0.5 rounded-full bg-[#f39200] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            style={{
+              left: `${(100 - activeBarWidth) / (2 * navItemCount)}%`,
+              width: `${activeBarWidth / navItemCount}%`,
+              transform: `translateX(${activeNavIndex * (100 / activeBarWidth) * 100}%)`,
+            }}
+          />
         </nav>
 
         <div className="ml-10 flex items-center gap-5">
@@ -162,12 +177,12 @@ export function Header({
       </div>
 
       <div className="lg:hidden">
-        <div className="relative flex h-14 items-center justify-between px-4">
+        <div className="relative flex h-12 items-center justify-between px-4">
           <SidebarTrigger aria-label="Open navigation menu" className="text-[#d7d9dc] hover:bg-white/10 hover:text-white">
             <Menu className="size-5" />
           </SidebarTrigger>
           <NavLink to="/" aria-label={logoAlt} className="absolute left-1/2 shrink-0 -translate-x-1/2">
-            <img src={logoSrc} alt={logoAlt} className="h-auto w-[104px] transition-transform duration-300 hover:scale-[1.02]" />
+            <img src={logoSrc} alt={logoAlt} className="h-auto w-[100px] transition-transform duration-300 hover:scale-[1.02]" />
           </NavLink>
           {rightContent ?? notificationButton}
         </div>
