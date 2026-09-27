@@ -102,7 +102,7 @@ export default function RegisterPage() {
             label="Email address"
             type="email"
             autoComplete="email"
-            placeholder="Enter your email address"
+            placeholder="yourname@example.com"
           />
           <AuthPasswordFormField
             control={form.control}
@@ -110,7 +110,7 @@ export default function RegisterPage() {
             label="Password"
             autoComplete="new-password"
             visibilityLabel="password"
-            placeholder="Create a password"
+            placeholder="•••••••••"
           />
           <AuthPasswordFormField
             control={form.control}
@@ -118,7 +118,7 @@ export default function RegisterPage() {
             label="Confirm password"
             autoComplete="new-password"
             visibilityLabel="confirm password"
-            placeholder="Confirm your password"
+            placeholder="•••••••••"
           />
 
           {form.formState.errors.root?.server && (

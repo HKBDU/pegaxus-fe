@@ -81,7 +81,7 @@ export default function LoginPage() {
             label="Password"
             autoComplete="current-password"
             visibilityLabel="password"
-            placeholder="Enter your password"
+            placeholder="•••••••••"
           />
           <Button
             type="submit"
