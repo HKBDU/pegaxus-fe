@@ -53,7 +53,7 @@ function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
                       asChild
                       isActive={isActive}
                       className={cn(
-                        "h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
+                        "h-8 rounded-none px-3 font-heading text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
                         isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-3 font-semibold !text-[#f39200]",
                       )}
                     >
@@ -86,10 +86,12 @@ export function Header({
   className,
 }: HeaderProps) {
   const location = useLocation()
-  const activeNavIndex = Math.max(
+  const activeNavIndex =   Math.max(
     navItems.findIndex((item) => item.href === "/" ? location.pathname === "/" : location.pathname.startsWith(item.href)),
     0,
   )
+  const navItemCount = Math.max(navItems.length, 1)
+  const activeBarWidth = 65
 
   const userControl = (
     <NavLink
@@ -130,12 +132,12 @@ export function Header({
     <SidebarProvider defaultOpen={false} className="sticky top-0 z-50 !min-h-0 w-full">
       <HeaderSidebarNav navItems={navItems} />
       <header className={cn("site-header-enter sticky top-0 z-50 w-full border-b border-white/5 bg-[#17191c] text-white transition-[background-color,box-shadow] duration-300", className)}>
-      <div className="mx-auto hidden h-16 w-full items-center px-8 lg:flex">
+      <div className="mx-auto hidden h-12 w-full items-center px-8 lg:flex">
         <NavLink to="/" aria-label={logoAlt} className="shrink-0">
           <img src={logoSrc} alt={logoAlt} className="h-auto w-[138px] transition-transform duration-300 hover:scale-[1.02]" />
         </NavLink>
         { /* active state got from url */}
-        <nav aria-label="Main navigation" className="relative ml-auto flex h-full w-[21rem] items-center">
+        <nav aria-label="Main navigation" className="relative ml-auto flex h-full w-[22rem] items-center">
           {navItems.map((item) => (
             <NavLink
               key={item.href}
@@ -143,7 +145,7 @@ export function Header({
               end={item.href === "/"}
               className={({ isActive }) =>
                 cn(
-                  "relative flex h-full flex-1 items-center justify-center whitespace-nowrap text-sm text-[#c7c9cc] transition-colors duration-300 hover:text-white",
+                  "relative flex h-full flex-1 items-center justify-center whitespace-nowrap font-heading text-sm text-[#c7c9cc] transition-colors duration-300 hover:text-white",
                   isActive && "font-semibold text-white",
                 )
               }
@@ -153,10 +155,11 @@ export function Header({
           ))}
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute bottom-2 left-0 h-0.5 rounded-full bg-[#f39200] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            className="pointer-events-none absolute bottom-2 h-0.5 rounded-full bg-[#f39200] transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
             style={{
-              width: `${100 / Math.max(navItems.length, 1)}%`,
-              transform: `translateX(${activeNavIndex * 100}%)`,
+              left: `${(100 - activeBarWidth) / (2 * navItemCount)}%`,
+              width: `${activeBarWidth / navItemCount}%`,
+              transform: `translateX(${activeNavIndex * (100 / activeBarWidth) * 100}%)`,
             }}
           />
         </nav>
