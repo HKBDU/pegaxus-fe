@@ -17,6 +17,7 @@ import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const GoogleCallbackPage = lazy(
@@ -188,6 +189,14 @@ export const router = createBrowserRouter([
       {
         path: "transport-requests",
         element: <BookingListPage audience="manager" />,
+      },
+      {
+        path: "users",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <ManageUserAccountsPage />
+          </Suspense>
+        ),
       },
       {
         path: "transport-requests/:bookingId",

@@ -32,6 +32,7 @@ const primaryItems = [
   { label: "Transport Requests", href: "/admin/transport-requests", icon: Truck },
   { label: "Transport Plans", href: "/admin/transport-plans", icon: MapPin },
   { label: "Staff", href: "/admin/staff", icon: UsersRound },
+  { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Transport Partners", href: "/admin/transport-partners", icon: ThumbsUp },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
 ]
