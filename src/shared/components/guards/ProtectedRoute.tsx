@@ -19,7 +19,8 @@ export function ProtectedRoute({
   const { accessToken, principal } = useAuthStore()
 
   if (!accessToken) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    const state = /^\/logout\/?$/i.test(location.pathname) ? null : { from: location }
+    return <Navigate to="/login" state={state} replace />
   }
 
   if (!canAccess(principal, { anyRole: allowedRoles, allPermissions: allowedPermissions })) {
