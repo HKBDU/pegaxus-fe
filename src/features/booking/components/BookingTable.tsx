@@ -10,11 +10,11 @@ import type { BookingAudience, BookingListParams, BookingSort, BookingStatus, Bo
 import { formatBookingDate, formatBookingTime } from "@/features/booking/utils"
 import type { EntityId, PaginationMeta } from "@/shared/types"
 import { Pagination } from "@/shared/components/common/Pagination"
+import { PageSizeSelect } from "@/shared/components/common/PageSizeSelect"
 import { Button } from "@/shared/components/ui/button"
 import { Checkbox } from "@/shared/components/ui/checkbox"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -237,17 +237,7 @@ export function BookingTable({
             <div className="flex flex-col gap-2 px-0.5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
               <p>Showing {firstItem} to {lastItem} of {meta.totalItems} entries</p>
               <div className="flex flex-wrap items-center justify-end gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="whitespace-nowrap font-sans text-[11px] font-normal normal-case tracking-normal text-gray-500">Rows per page</span>
-                  <Select value={String(filters.pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
-                    <SelectTrigger className="h-7 w-12 gap-1 rounded-[2px] bg-white px-2 text-xs data-[size=default]:h-7">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent position="popper" side="bottom" align="end" sideOffset={2} avoidCollisions={false} className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
-                      {[5, 10, 20].map((pageSize) => <SelectItem key={pageSize} value={String(pageSize)} className="h-7 rounded-[2px] text-xs">{pageSize}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <PageSizeSelect value={filters.pageSize} onValueChange={onPageSizeChange} />
                 <Pagination meta={meta} onPageChange={onPageChange} />
               </div>
             </div>

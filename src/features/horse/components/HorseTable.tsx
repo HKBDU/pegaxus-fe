@@ -3,12 +3,12 @@ import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, useReactTa
 import { MoreVertical, Pencil, Trash2, Eye, Search, X } from "lucide-react"
 
 import { Pagination } from "@/shared/components/common/Pagination"
+import { PageSizeSelect } from "@/shared/components/common/PageSizeSelect"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { Button } from "@/shared/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
 import { Input } from "@/shared/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { HORSE_SEX_LABELS } from "../constants/horse.constants"
 import type { Horse, HorseTableProps } from "../types"
 
@@ -91,15 +91,7 @@ export function HorseTable({ horses, onAction, toolbar, addAction }: HorseTableP
         <div className="flex flex-col gap-2 px-0.5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <p>Showing {firstItem} to {lastItem} of {filteredRows.length} entries</p>
           <div className="flex flex-wrap items-center justify-end gap-3">
-            <div className="flex items-center gap-2">
-              <span className="whitespace-nowrap font-sans text-[11px] font-normal normal-case tracking-normal text-gray-500">Rows per page</span>
-              <Select value={String(pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
-                <SelectTrigger className="h-7 w-12 gap-1 rounded-[2px] bg-white px-2 text-xs data-[size=default]:h-7"><SelectValue /></SelectTrigger>
-                <SelectContent position="popper" side="bottom" align="end" sideOffset={2} avoidCollisions={false} className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
-                  {[5, 10, 20].map((size) => <SelectItem key={size} value={String(size)} className="h-7 rounded-[2px] text-xs">{size}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            <PageSizeSelect value={pageSize} onValueChange={(value) => table.setPageSize(value)} />
             <Pagination meta={paginationMeta} onPageChange={(page) => table.setPageIndex(page - 1)} />
           </div>
         </div>
