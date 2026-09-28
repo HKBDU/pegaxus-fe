@@ -12,6 +12,7 @@ import { MOCK_HORSES } from "../constants/horse.mock"
 import { horseApi } from "../services"
 import type { Horse } from "../types"
 import { getHorseApiErrorMessage } from "../utils/horse-api-error"
+import { formatHorseDate } from "../utils/format-horse-date"
 
 export function HorseDetailPage() {
   const { horseId } = useParams()
@@ -60,21 +61,18 @@ export function HorseDetailPage() {
               <Field label="HORSE NAME" value={horse.horseName} />
               <Field label="SEX" value={horse.sex ? HORSE_SEX_LABELS[horse.sex] : null} />
               <Field label="BREED" value={horse.breed} />
-              <Field label="DATE OF BIRTH" value={horse.dateOfBirth} />
+              <Field label="DATE OF BIRTH" value={formatHorseDate(horse.dateOfBirth)} />
               <Field label="COLOR" value={horse.color} />
               <Field label="COUNTRY OF ORIGIN" value={horse.countryOfOrigin} />
               <Field label="WEIGHT (KG)" value={horse.weightKg} />
               <Field label="HEIGHT (CM)" value={horse.heightCm} />
-              <Field label="MICROCHIP NUMBER" value={horse.microchipNumber} />
               <Field className="md:col-span-2" label="IDENTIFICATION NOTES" value={horse.identificationNotes} />
             </div>
           </HorseAccordionSection>
           <HorseAccordionSection title="IMMUTABLE INFORMATION" open={openSections.immutable} onToggle={() => setOpenSections((current) => ({ ...current, immutable: !current.immutable }))}>
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label="HORSE ID" value={horse.horseId} readOnly />
+              <Field label="MICROCHIP NUMBER" value={horse.microchipNumber} readOnly />
               <Field label="PASSPORT NUMBER" value={horse.passportNumber} readOnly />
-              <Field label="CREATED AT" value={horse.createdAt} readOnly />
-              <Field label="UPDATED AT" value={horse.updatedAt} readOnly />
             </div>
           </HorseAccordionSection>
           <div className="flex items-center justify-end gap-2 border-[#d1d5db] pb-8 pt-3">

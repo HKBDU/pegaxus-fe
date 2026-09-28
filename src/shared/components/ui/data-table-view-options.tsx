@@ -19,7 +19,7 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="sm" className="h-8 rounded-[2px] border-slate-300 bg-white px-2.5 font-sans text-xs font-normal normal-case tracking-normal shadow-none">
-          Columns
+          View
           <ChevronDown className="ml-1 size-3.5 text-slate-500" />
         </Button>
       </PopoverTrigger>

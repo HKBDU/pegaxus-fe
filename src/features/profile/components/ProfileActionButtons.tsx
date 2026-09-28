@@ -15,9 +15,9 @@ export function ProfileActionButtons({
 }: ProfileActionButtonsProps) {
   return (
     <div className={cn("flex items-center justify-end gap-2 border-[#d1d5db] pb-8 pt-3", className)}>
-      <Button disabled={disabled} type="button" variant="outline" onClick={onCancel} className="h-9 rounded-none border-[#181818] bg-white px-6 py-2 text-xs font-bold tracking-[0.6px] text-[#181818] shadow-[0_1px_1px_rgba(0,0,0,0.05)]">
+      {onCancel ? <Button disabled={disabled} type="button" variant="outline" onClick={onCancel} className="h-9 rounded-none border-[#181818] bg-white px-6 py-2 text-xs font-bold tracking-[0.6px] text-[#181818] shadow-[0_1px_1px_rgba(0,0,0,0.05)]">
         {cancelLabel}
-      </Button>
+      </Button> : null}
       <Button
         type={submitFormId ? "submit" : "button"}
         form={submitFormId}

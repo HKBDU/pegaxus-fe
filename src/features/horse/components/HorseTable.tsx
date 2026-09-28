@@ -17,6 +17,7 @@ export function HorseTable({ horses, onAction, toolbar, addAction }: HorseTableP
 
   const columns = useMemo<ColumnDef<Horse>[]>(
     () => [
+      { accessorKey: "microchipNumber", header: "MICROCHIP NUMBER", enableSorting: false, cell: ({ row }) => <span className="font-mono text-xs text-slate-700">{row.original.microchipNumber ?? "—"}</span> },
       {
         accessorKey: "horseName",
         header: "HORSE NAME",
@@ -26,7 +27,6 @@ export function HorseTable({ horses, onAction, toolbar, addAction }: HorseTableP
       },
       { accessorKey: "sex", header: "SEX", enableSorting: false, cell: ({ row }) => row.original.sex ? HORSE_SEX_LABELS[row.original.sex] : "—" },
       { accessorKey: "breed", header: "BREED", enableSorting: false, cell: ({ row }) => row.original.breed ?? "—" },
-      { accessorKey: "microchipNumber", header: "MICROCHIP NUMBER", enableSorting: false, cell: ({ row }) => <span className="font-mono text-xs text-slate-700">{row.original.microchipNumber ?? "—"}</span> },
       {
         id: "actions",
         header: () => <span className="block w-full text-center">ACTIONS</span>,
