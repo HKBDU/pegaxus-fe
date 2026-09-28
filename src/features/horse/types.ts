@@ -88,4 +88,5 @@ export type HorseTableProps = {
   horses: Horse[]
   onAction: (horse: Horse, action: HorseTableAction) => void
   toolbar?: ReactNode
+  addAction?: ReactNode
 }

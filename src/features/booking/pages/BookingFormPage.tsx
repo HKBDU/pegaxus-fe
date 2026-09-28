@@ -3,7 +3,7 @@ import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type
 import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Plus, Search, X } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
@@ -14,8 +14,11 @@ import type { AvailableHorse, Booking, BookingFormValues } from "@/features/book
 import { formatSex, getBookingErrorMessage } from "@/features/booking/utils"
 import { cn } from "@/lib/utils"
 import { ErrorState } from "@/shared/components/common"
+import { PageSizeSelect } from "@/shared/components/common/PageSizeSelect"
+import { PageHeader } from "@/shared/components/PageHeader"
 import { Pagination } from "@/shared/components/common/Pagination"
 import { Checkbox } from "@/shared/components/ui/checkbox"
+import { CountrySelect } from "@/shared/components/ui/country-select"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { DatePicker } from "@/shared/components/ui/date-picker"
@@ -41,9 +44,6 @@ type TransportField = (typeof transportFields)[number]
 const NOTE_LIMIT = 500
 
 const panelClass = "border border-[#e5e2d9] bg-white"
-const backLinkClass =
-  "group mb-1 inline-flex items-center gap-1.5 font-heading text-sm font-medium normal-case tracking-normal text-primary transition-colors hover:text-primary-hover"
-const headingClass = "m-0! font-heading font-bold! tracking-normal! text-primary! uppercase"
 const cardTitleClass = "m-0! font-heading font-bold! tracking-normal! text-primary! uppercase"
 const fieldLabelClass = "font-heading text-[11px] font-medium uppercase leading-4 tracking-[0.04em] text-[#181818]"
 const fieldControlClass =
@@ -130,6 +130,7 @@ function BookingField({
   placeholder,
   type = "text",
   min,
+  country = false,
 }: {
   control: ReturnType<typeof useForm<BookingFormSchemaValues>>["control"]
   name: TransportField
@@ -137,6 +138,7 @@ function BookingField({
   placeholder?: string
   type?: "text" | "date"
   min?: string
+  country?: boolean
 }) {
   return (
     <FormField
@@ -146,7 +148,14 @@ function BookingField({
         <FormItem className="gap-1">
           <FormLabel className={fieldLabelClass}>{label}</FormLabel>
           <FormControl>
-            {type === "date" ? (
+            {country ? (
+              <CountrySelect
+                value={field.value}
+                onValueChange={field.onChange}
+                placeholder={placeholder ?? "Select country"}
+                className={fieldControlClass}
+              />
+            ) : type === "date" ? (
               <DatePicker
                 ref={field.ref}
                 value={field.value}
@@ -401,24 +410,22 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
 
   return (
     <Form {...form}>
-      <form onSubmit={submit} className="min-h-[70dvh] bg-[#f4f2ed] px-4 pt-5 pb-8 sm:px-10 lg:px-16">
+      <form onSubmit={submit} className="min-h-[70dvh] bg-[#f4f2ed] px-5 pt-5 pb-8 sm:px-6 lg:px-10">
         <div className="booking-page-enter mx-auto w-full max-w-[1200px]">
           {step === 2 ? (
-            <button type="button" onClick={() => setStep(1)} className={cn(backLinkClass, "mb-2")}>
+            <button type="button" onClick={() => setStep(1)} className="group mb-2 inline-flex items-center gap-1.5 font-heading text-sm font-medium normal-case tracking-normal text-primary transition-colors hover:text-primary-hover">
               <ArrowLeft className="size-3 transition-transform group-hover:-translate-x-0.5" strokeWidth={2.5} />
               Return to transport details
             </button>
-          ) : (
-            <Link to={exitPath} className={cn(backLinkClass, "mb-2")}>
-              <ArrowLeft className="size-3 transition-transform group-hover:-translate-x-0.5" strokeWidth={2.5} />
-              {booking ? "Return to booking details" : "Return to booking list"}
-            </Link>
-          )}
+          ) : null}
 
           <div className="mb-3">
-            <h1 className={cn(headingClass, "text-[28px]! leading-[1.1]! sm:text-[32px]!")}>
-              {step === 2 ? "Select racehorses" : mode === "create" ? "Create booking" : "Update booking"}
-            </h1>
+            <PageHeader
+              title={step === 2 ? "SELECT RACEHORSES" : mode === "create" ? "CREATE BOOKING" : "UPDATE BOOKING"}
+              backHref={exitPath}
+              backLabel={booking ? "RETURN TO BOOKING DETAILS" : "RETURN TO BOOKING LIST"}
+              showBack={step !== 2}
+            />
             {step === 2 ? (
               <p className="mt-0.5! text-xs leading-4 text-gray-600">
                 Choose racehorses for this booking request and enter individual notes for each selected horse.
@@ -432,8 +439,8 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
             <div className="mt-2 lg:px-8">
               <FormSection title="Route information">
                 <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                  <BookingField control={form.control} name="originCountry" label="Pickup country *" placeholder="Enter pickup country..." />
-                  <BookingField control={form.control} name="destinationCountry" label="Destination country *" placeholder="Enter destination country..." />
+                  <BookingField control={form.control} name="originCountry" label="Pickup country *" placeholder="Select pickup country..." country />
+                  <BookingField control={form.control} name="destinationCountry" label="Destination country *" placeholder="Select destination country..." country />
                   <BookingField control={form.control} name="originAddress" label="Pickup address *" placeholder="Enter pickup stable or racecourse address..." />
                   <BookingField control={form.control} name="destinationAddress" label="Destination address *" placeholder="Enter destination stable or racecourse address..." />
                 </div>
@@ -544,15 +551,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
                               {" "}to {Math.min(horsesQuery.data.meta.currentPage * horsesQuery.data.meta.itemsPerPage, horsesQuery.data.meta.totalItems)} of {horsesQuery.data.meta.totalItems} entries
                             </p>
                             <div className="flex flex-wrap items-center justify-end gap-3">
-                              <div className="flex items-center gap-2">
-                                <span className="whitespace-nowrap font-sans text-[11px] font-normal text-gray-500">Rows per page</span>
-                                <Select value={String(horsePageSize)} onValueChange={(value) => { setHorsePageSize(Number(value)); setHorsePage(1) }}>
-                                  <SelectTrigger className="h-8 w-12 gap-1 rounded-[2px] bg-white px-2 text-xs data-[size=default]:h-8"><SelectValue /></SelectTrigger>
-                                  <SelectContent position="popper" side="bottom" align="end" sideOffset={2} avoidCollisions={false} className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
-                                    {[5, 10, 20].map((size) => <SelectItem key={size} value={String(size)} className="h-7 rounded-[2px] text-xs">{size}</SelectItem>)}
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                              <PageSizeSelect value={horsePageSize} onValueChange={(value) => { setHorsePageSize(value); setHorsePage(1) }} />
                               <Pagination meta={horsesQuery.data.meta} onPageChange={setHorsePage} />
                             </div>
                           </div>
@@ -662,7 +661,7 @@ export default function BookingFormPage({ mode }: { mode: "create" | "edit" }) {
   const { bookingId } = useParams()
   // Edit: opening the page locks the booking (PENDING -> DRAFT); the form works on that locked snapshot.
   const lock = useBookingEditLock(mode === "edit" ? (bookingId ?? "") : undefined)
-  const shell = "min-h-[70dvh] bg-[#f4f2ed] px-4 py-8 sm:px-10 lg:px-16"
+  const shell = "min-h-[70dvh] bg-[#f4f2ed] px-5 py-8 sm:px-6 lg:px-10"
 
   if (mode === "create") return <BookingForm mode="create" />
   if (lock.isLocking) return <div className={shell}><Skeleton className="mx-auto h-96 max-w-[1200px] rounded-[2px] bg-[#e9e6de]" /></div>

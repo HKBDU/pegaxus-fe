@@ -1,17 +1,17 @@
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import { useState } from "react"
 import { Link, useParams } from "react-router-dom"
 
 import { ApproveBookingDialog, RejectBookingDialog } from "@/features/booking/components/BookingDecisionDialogs"
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
 import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
-import { BookingHistoryDialog } from "@/features/booking/components/BookingHistoryDialog"
 import { CancelBookingDialog } from "@/features/booking/components/CancelBookingDialog"
 import { useBooking } from "@/features/booking/hooks"
 import type { BookingAudience } from "@/features/booking/types"
 import { formatBookingDate, formatSex } from "@/features/booking/utils"
 import { cn } from "@/lib/utils"
 import { ErrorState } from "@/shared/components/common"
+import { PageHeader } from "@/shared/components/PageHeader"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
 
 const EMPTY_VALUE = "—"
@@ -88,7 +88,6 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
   const [cancelOpen, setCancelOpen] = useState(false)
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
-  const [historyOpen, setHistoryOpen] = useState(false)
   const isPending = booking?.status === "PENDING"
   const canEdit = booking?.status === "PENDING" || booking?.status === "DRAFT"
   const listPath = audience === "manager" ? "/admin/transport-requests" : "/bookings"
@@ -97,20 +96,10 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
   )
 
   return (
-    <div className="min-h-[70dvh] bg-[#f4f2ed] px-4 pt-5 pb-8 sm:px-8">
+    <div className="min-h-[70dvh] bg-[#f4f2ed] px-5 pt-5 pb-8 sm:px-6 lg:px-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1440px]">
-        <Link
-          to={listPath}
-          className="group mb-1 inline-flex items-center gap-1.5 font-heading text-sm font-medium normal-case tracking-normal text-primary transition-colors hover:text-primary-hover"
-        >
-          <ArrowLeft className="size-3 transition-transform group-hover:-translate-x-0.5" strokeWidth={2} />
-          Back to requests list
-        </Link>
-
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <h1 className="m-0! font-heading text-[28px]! leading-[1.1]! font-bold! tracking-normal! text-primary! uppercase sm:text-[32px]!">
-            Booking details
-          </h1>
+          <PageHeader title="BOOKING DETAILS" backHref={listPath} backLabel="BACK TO REQUESTS LIST" />
           {booking ? (
             <div className="flex flex-wrap gap-2 sm:pb-0.5">
               {audience === "customer" && canEdit ? (
@@ -132,13 +121,12 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                   </button>
                 </>
               ) : null}
-              <button
-                type="button"
+              <Link
+                to={`/bookings/${encodeURIComponent(String(booking.bookingId))}/history`}
                 className={cn(actionButtonClass, "border-primary bg-primary text-gray-900 hover:border-primary-hover hover:bg-primary-hover")}
-                onClick={() => setHistoryOpen(true)}
               >
                 View status history
-              </button>
+              </Link>
             </div>
           ) : null}
         </div>
@@ -290,7 +278,6 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
       {booking ? <CancelBookingDialog bookingId={booking.bookingId} open={cancelOpen} onOpenChange={setCancelOpen} /> : null}
       {booking ? <ApproveBookingDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} open={approveOpen} onOpenChange={setApproveOpen} /> : null}
       {booking ? <RejectBookingDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} open={rejectOpen} onOpenChange={setRejectOpen} /> : null}
-      {booking ? <BookingHistoryDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} audience={audience} open={historyOpen} onOpenChange={setHistoryOpen} /> : null}
     </div>
   )
 }

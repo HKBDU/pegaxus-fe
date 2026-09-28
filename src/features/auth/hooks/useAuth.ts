@@ -41,9 +41,10 @@ export function useLoginMutation() {
   const location = useLocation();
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const from =
+  const requestedPath =
     (location.state as { from?: { pathname?: string } } | null)?.from
       ?.pathname ?? "/";
+  const from = /^\/logout\/?$/i.test(requestedPath) ? "/" : requestedPath;
 
   return useMutation<AuthResponse, Error, LoginRequest>({
     mutationFn: (data) => authApi.login(data),

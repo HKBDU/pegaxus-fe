@@ -3,13 +3,16 @@ import {
   ProfileAccordionSection,
   Field,
   ProfileForm,
-  ProfileIdentitySection,
+  ProfileHeroCard,
+  ProfileInfoCard,
   ProfileSectionHeading,
 } from "../components"
 import { useState } from "react"
 import { useLocation, useParams } from "react-router-dom"
+import { Activity, Ban, Briefcase, CalendarClock, Clock, Globe, IdCard, Mail, MapPin, Pencil, Phone, ShieldCheck, UserRound } from "lucide-react"
 import { useAuthStore } from "@/features/auth/store"
 import { useProfile } from "../hooks/useProfile"
+import { ACCOUNT_TYPE_LABELS } from "../constants/profile.constants"
 import type { EmailVerificationStatus, Profile, ProfileFormErrors, ProfileOpenSections, ProfilePageStateProps } from "../types"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Button } from "@/shared/components/ui/button"
@@ -95,17 +98,15 @@ export function ProfileSettingsPage() {
       <div className="mx-auto flex w-full max-w-[1152px] flex-col gap-0">
         <PageHeader backHref="/" title={isEditing ? "EDIT PROFILE" : `VIEW ${profile.accountType} PROFILE`} />
 
-        <div className="flex flex-col gap-[0px] pt-4">
+        <div className="flex flex-col gap-6 pt-4">
           {isEditing ? (
+            <>
             <section className="grid gap-x-6 gap-y-3 border-b border-[#d1d5db] py-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)]">
               <ProfileSectionHeading title="IDENTITY" className="text-[20px] leading-7 tracking-[0.5px]" />
               <div className="min-w-0">
                   <ProfileForm profile={profile} onSubmit={updateProfile} emailVerificationStatus={getEmailVerificationStatus(profile)} canEditEmail canEditDateOfBirth={Boolean(profile.customer)} onValidationChange={setFormErrors} isSubmitting={isSubmitting} />
               </div>
             </section>
-          ) : (
-            <ProfileIdentitySection profile={profile} emailVerificationStatus={getEmailVerificationStatus(profile)} />
-          )}
 
           <div className="flex flex-col gap-0">
             <ProfileAccordionSection title="CONTACT" open={openSections.CONTACT} onToggle={() => toggleSection("CONTACT")}>
@@ -192,17 +193,64 @@ export function ProfileSettingsPage() {
           <ProfileActionButtons
             onCancel={() => {
               setFormErrors({})
-              if (isEditing) setIsEditing(false)
-              else window.history.back()
+              setIsEditing(false)
             }}
-            onEdit={isEditing ? undefined : () => {
-              setFormErrors({})
-              setIsEditing(true)
-            }}
-            editLabel={isEditing ? "SAVE CHANGES" : undefined}
-            submitFormId={isEditing ? "profile-form" : undefined}
+            editLabel="SAVE CHANGES"
+            submitFormId="profile-form"
             disabled={isSubmitting}
           />
+            </>
+          ) : (
+            <ProfileHeroCard
+              profile={profile}
+              emailVerificationStatus={getEmailVerificationStatus(profile)}
+              roleLabel={formatProfileLabel(profile.role)}
+              actions={
+                <>
+                  {isLogisticsManager && customerId && profile.status === "ACTIVE" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        if (window.confirm(`Disable ${profile.fullName ?? profile.email}'s account?`)) void disableProfile()
+                      }}
+                    >
+                      <Ban aria-hidden="true" />
+                      DISABLE ACCOUNT
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      setFormErrors({})
+                      setIsEditing(true)
+                    }}
+                  >
+                    <Pencil aria-hidden="true" />
+                    EDIT PROFILE
+                  </Button>
+                </>
+              }
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ProfileInfoCard icon={Mail} label="EMAIL ADDRESS" value={profile.email} />
+                <ProfileInfoCard icon={Phone} label="PHONE NUMBER" value={profile.phone} />
+                <ProfileInfoCard icon={MapPin} label="ADDRESS" value={profile.address} />
+                <ProfileInfoCard icon={Globe} label="COUNTRY" value={profile.country} />
+                <ProfileInfoCard icon={UserRound} label="ACCOUNT TYPE" value={ACCOUNT_TYPE_LABELS[profile.accountType]} />
+                {profile.customer && <ProfileInfoCard icon={CalendarClock} label="DATE OF BIRTH" value={profile.dob} />}
+                {profile.customer && <ProfileInfoCard icon={IdCard} label="IDENTITY NUMBER" value={profile.customer.customerId} />}
+                {profile.employee && <ProfileInfoCard icon={Briefcase} label="EMPLOYEE CODE" value={profile.employee.employeeCode} />}
+                {profile.employee && <ProfileInfoCard icon={Activity} label="WORK STATUS" value={profile.employee.workStatus} />}
+                <ProfileInfoCard icon={ShieldCheck} label="ACCOUNT STATUS" value={formatProfileLabel(profile.status)} />
+                <ProfileInfoCard icon={Clock} label="MEMBER SINCE" value={formatProfileDate(profile.memberSince)} />
+                <ProfileInfoCard icon={Clock} label="LAST LOGIN" value={formatProfileDate(profile.lastLoginAt)} />
+              </div>
+            </ProfileHeroCard>
+          )}
         </div>
       </div>
     </section>

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import type { LucideIcon } from "lucide-react"
 
 export type EntityId = string
 
@@ -38,6 +39,7 @@ export type Profile = {
   avatarUrl: string | null
   customer: CustomerProfile | null
   employee: EmployeeProfile | null
+  createdAt?: string | null
   memberSince?: string | null
   lastLoginAt?: string | null
   updatedAt: string
@@ -102,13 +104,6 @@ export type ProfileVerificationFieldProps = {
   className?: string
 }
 
-export type ProfileIdentitySectionProps = {
-  profile: Profile
-  emailVerificationStatus: EmailVerificationStatus
-  accountTypeLabel?: Record<AccountType, string>
-  className?: string
-}
-
 export type ProfileActionButtonsProps = {
   onCancel?: () => void
   onEdit?: () => void
@@ -129,4 +124,20 @@ export type ProfileAccordionSectionProps = {
   open: boolean
   onToggle: () => void
   children: ReactNode
+}
+
+export type ProfileInfoCardProps = {
+  icon: LucideIcon
+  label: string
+  value: string | null | undefined
+  className?: string
+}
+
+export type ProfileHeroCardProps = {
+  profile: Profile
+  emailVerificationStatus: EmailVerificationStatus
+  roleLabel: string
+  actions?: ReactNode
+  children?: ReactNode
+  className?: string
 }

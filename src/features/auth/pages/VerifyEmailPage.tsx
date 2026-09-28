@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getAuthApiError } from "../services";
-import { LoaderCircle } from "lucide-react";
+import { ChevronRight, LoaderCircle } from "lucide-react";
+import { OtpResend } from "../components/OtpResend";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { emailRouteStateSchema, verifyEmailSchema, type VerifyEmailFormValues } from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
-  AuthFormField,
+  AuthOtpFormField,
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
 import {
@@ -132,24 +133,19 @@ function VerifyEmailForm({ email }: { email: string }) {
       }
     >
       <p className="mt-5 break-words font-['Arial_Narrow',Impact,sans-serif] text-base font-bold text-[#202020]">
-        <span className="uppercase">We have sent a code to your email:</span>{" "}
+        <span>We have sent a code to your email:</span>{" "}
         <span className="text-[#F39200]">{email}</span>
       </p>
       <Form {...form}>
         <form
           noValidate
           onSubmit={form.handleSubmit(submit)}
-          className="mt-5 space-y-4"
+          className="mt-7 space-y-7"
           aria-busy={isPending}
         >
-          <AuthFormField
+          <AuthOtpFormField
             control={form.control}
             name="otp"
-            label="OTP verification"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            maxLength={6}
-            placeholder="Enter your 6-digit code"
             disabled={isPending}
           />
           {form.formState.errors.root?.server && (
@@ -160,7 +156,7 @@ function VerifyEmailForm({ email }: { email: string }) {
           <Button
             type="submit"
             disabled={isPending}
-            className={authPrimaryButtonClass}
+            className={`${authPrimaryButtonClass} auth-otp-submit`}
           >
             {verifyEmail.isPending && (
               <LoaderCircle
@@ -168,28 +164,12 @@ function VerifyEmailForm({ email }: { email: string }) {
                 className="size-5 animate-spin"
               />
             )}
-            {verifyEmail.isPending ? "Verifying..." : "Verify account"}
+            {verifyEmail.isPending ? "Verifying..." : "Verify code"}
+            <ChevronRight aria-hidden="true" className="auth-otp-arrow" />
           </Button>
         </form>
       </Form>
-      <div className="mt-4 flex justify-center">
-        <Button
-          type="button"
-          variant="link"
-          onClick={resendCode}
-          disabled={secondsLeft > 0 || isPending}
-          className="font-['Arial_Narrow',Impact,sans-serif] text-lg font-bold text-[#202020] uppercase underline"
-        >
-          {resend.isPending && (
-            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
-          )}
-          {resend.isPending
-            ? "Sending..."
-            : secondsLeft > 0
-              ? `Resend OTP in ${secondsLeft}s`
-              : "Resend OTP"}
-        </Button>
-      </div>
+      <OtpResend secondsLeft={secondsLeft} isPending={resend.isPending} disabled={isPending} onResend={resendCode} />
     </AuthFlowLayout>
   );
 }
