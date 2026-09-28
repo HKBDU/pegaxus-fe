@@ -1,6 +1,7 @@
-import { type HeaderNavItem, type HeaderUser } from "./type"
+import { type HeaderNavItem } from "./type"
 import { type FooterLink } from "./type"
 import type { ReactNode } from "react"
+import type { ProfileDropdownUser } from "@/shared/components/ProfileDropdown"
 
 export type ActionDialogProps = {
   open: boolean,
@@ -15,12 +16,11 @@ export type HeaderProps = {
   navItems?: HeaderNavItem[]
   logoSrc?: string
   logoAlt?: string
-  user?: HeaderUser
+  isLoggedIn?: boolean
+  user?: ProfileDropdownUser | null
   notificationCount?: number
   onNotificationClick?: () => void
-  onUserClick?: () => void
   rightContent?: ReactNode
-  userActions?: ReactNode
   className?: string
 }
 

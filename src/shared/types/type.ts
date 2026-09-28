@@ -5,13 +5,6 @@ export type HeaderNavItem = {
   href: string
 }
 
-export type HeaderUser = {
-  name: string
-  role: string
-  initials: string
-  avatarSrc?: string
-}
-
 export type FooterLink = {
   label: string
   href: string
