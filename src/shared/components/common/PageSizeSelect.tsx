@@ -36,7 +36,6 @@ export function PageSizeSelect({
           side="bottom"
           align="end"
           sideOffset={2}
-          avoidCollisions={false}
           className="min-w-16 rounded-[2px] border-slate-200 bg-white p-0.5 font-sans shadow-md"
         >
           {options.map((pageSize) => (
