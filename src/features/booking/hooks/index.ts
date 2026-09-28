@@ -11,3 +11,4 @@ export {
   useUpdateBooking,
 } from "./useBookings"
 export { useBookingFilters } from "./useBookingFilters"
+export { useBookingRequestGuard } from "./useBookingRequestGuard"

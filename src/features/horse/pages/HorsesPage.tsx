@@ -16,7 +16,6 @@ import {
 } from "@/shared/components/ui/alert-dialog"
 import { Button } from "@/shared/components/ui/button"
 import { DataTableRadioFilter } from "@/shared/components/ui/data-table-radio-filter"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { HORSE_BREED_OPTIONS, HORSE_SEX_OPTIONS, HORSE_SORT_OPTIONS } from "../constants/horse.constants"
 import { HorseTable } from "../components"
 import { useHorses } from "../hooks/useHorses"
@@ -63,12 +62,14 @@ export function HorsesPage() {
     <>
       <DataTableRadioFilter title="Sex" value={sex} options={HORSE_SEX_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSex} hideTitleWhenFiltered />
       <DataTableRadioFilter title="Breed" value={breed} options={HORSE_BREED_OPTIONS.map((option) => ({ ...option }))} onValueChange={setBreed} hideTitleWhenFiltered />
-      <Select value={sort} onValueChange={setSort}>
-        <SelectTrigger className="h-8 w-full rounded-[2px] border-slate-300 bg-white text-xs shadow-none data-[size=default]:h-8 focus:border-amber-500 focus:ring-amber-500/20"><SelectValue aria-label="Horse sort order" /></SelectTrigger>
-        <SelectContent position="popper" align="start" sideOffset={2} className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
-          {HORSE_SORT_OPTIONS.map((option) => <SelectItem key={option.value} value={option.value} className="h-7 rounded-[2px] text-xs">{option.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
+      <DataTableRadioFilter
+        title="Sort"
+        value={sort}
+        defaultValue=""
+        options={HORSE_SORT_OPTIONS.map((option) => ({ ...option }))}
+        onValueChange={setSort}
+        hideTitleWhenFiltered
+      />
     </>
   )
 

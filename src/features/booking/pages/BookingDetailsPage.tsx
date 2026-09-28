@@ -101,7 +101,7 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <PageHeader title="BOOKING DETAILS" backHref={listPath} backLabel="BACK TO REQUESTS LIST" />
           {booking ? (
-            <div className="flex flex-wrap gap-2 sm:pb-0.5">
+            <div className="flex flex-nowrap shrink-0 gap-2 overflow-x-auto sm:pb-0.5">
               {audience === "customer" && canEdit ? (
                 <Link to={`/bookings/${booking.bookingId}/edit`} className={cn(actionButtonClass, outlineButtonClass)}>
                   Edit booking
@@ -152,26 +152,23 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                 <CardTitle>Customer information</CardTitle>
                 <dl className="mt-3 space-y-1.5">
                   <InfoRow label="Full name" value={booking.customer.fullName} />
-                  <InfoRow label="Organization / Club" value={booking.customer.organization} />
-                  <InfoRow label="Email" value={booking.customer.email} />
                   <InfoRow label="Phone" value={booking.customer.phone} />
                 </dl>
               </section>
 
               <section className={cn(panelClass, "p-4")}>
                 <CardTitle>Route &amp; schedule</CardTitle>
-                <dl className="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_20px_minmax(0,1fr)_1px_minmax(0,1.1fr)] lg:gap-x-4 xl:grid-cols-[190fr_13px_20px_30px_148fr_24px_1px_36px_235fr] xl:gap-x-0">
+                <dl className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_20px_minmax(0,1fr)_1px_minmax(0,1.1fr)] lg:gap-x-4 xl:grid-cols-[190fr_13px_20px_30px_148fr_24px_1px_36px_235fr] xl:gap-x-0">
                   <div className="xl:col-start-1">
                     <AddressBlock label="Pickup address" address={booking.originAddress} country={booking.originCountry} />
                   </div>
-                  <ArrowRight className="hidden size-5 text-gray-700 xl:col-start-3 lg:mt-[25px] lg:block" strokeWidth={1.5} aria-hidden="true" />
+                  <ArrowRight className="hidden size-5 text-gray-700 xl:col-start-3 lg:mt-1 lg:block" strokeWidth={1.5} aria-hidden="true" />
                   <div className="xl:col-start-5">
                     <AddressBlock label="Destination address" address={booking.destinationAddress} country={booking.destinationCountry} />
                   </div>
-                  <div className="hidden bg-gray-200 xl:col-start-7 lg:mt-[18px] lg:block lg:min-h-28 lg:self-stretch" aria-hidden="true" />
+                  <div className="hidden bg-gray-200 xl:col-start-7 lg:block lg:self-stretch" aria-hidden="true" />
                   <div className="space-y-1.5 xl:col-start-9">
                     <ScheduleBlock label="Expected departure date" value={formatBookingDate(booking.requestedDepartureDate)} />
-                    <ScheduleBlock label="Expected departure time" value={booking.requestedDepartureTime || EMPTY_VALUE} />
                     {booking.requestedArrivalDate ? (
                       <ScheduleBlock label="Expected arrival date" value={formatBookingDate(booking.requestedArrivalDate)} />
                     ) : null}
@@ -186,12 +183,10 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                 <Table className="min-w-[860px] table-fixed">
                   <colgroup>
                     <col className="w-12" />
-                    <col className="w-[15%]" />
+                    <col className="w-[22%]" />
+                    <col className="w-[20%]" />
                     <col className="w-[16%]" />
-                    <col className="w-[13%]" />
-                    <col className="w-[8%]" />
-                    <col className="w-[12%]" />
-                    <col className="w-[9%]" />
+                    <col className="w-[10%]" />
                     <col />
                   </colgroup>
                   <TableHeader className="bg-[#f2efe8] [&_tr]:border-b-0">
@@ -201,8 +196,6 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                       <TableHead className={columnHeadClass}>Passport ID</TableHead>
                       <TableHead className={columnHeadClass}>Breed</TableHead>
                       <TableHead className={columnHeadClass}>Gender</TableHead>
-                      <TableHead className={cn(columnHeadClass, "text-center")}>Birth of date</TableHead>
-                      <TableHead className={cn(columnHeadClass, "text-center")}>Weight (kg)</TableHead>
                       <TableHead className={columnHeadClass}>Special note (per horse)</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -215,16 +208,12 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                           <TableCell className="truncate px-2.5 py-1.5 font-mono text-xs text-gray-600">{horse.passportNumber}</TableCell>
                           <TableCell className="truncate px-2.5 py-1.5 text-xs text-gray-600">{horse.breed}</TableCell>
                           <TableCell className="px-2.5 py-1.5 text-xs text-gray-600">{formatSex(horse.sex)}</TableCell>
-                          <TableCell className="px-2.5 py-1.5 text-center text-xs text-gray-600">
-                            {horse.dateOfBirth ? formatBookingDate(horse.dateOfBirth) : EMPTY_VALUE}
-                          </TableCell>
-                          <TableCell className="px-2.5 py-1.5 text-center text-xs text-gray-600">{horse.weightKg ?? EMPTY_VALUE}</TableCell>
                           <TableCell className="truncate px-2.5 py-1.5 text-xs text-gray-600">{horse.specialHandlingNotes || EMPTY_VALUE}</TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow className="h-10 hover:bg-transparent">
-                        <TableCell colSpan={8} className="px-4 py-0 text-center text-[13px] text-gray-500">
+                        <TableCell colSpan={6} className="px-4 py-0 text-center text-[13px] text-gray-500">
                           No racehorses have been added to this booking.
                         </TableCell>
                       </TableRow>

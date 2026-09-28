@@ -44,9 +44,15 @@ export function DataTable<TData>({
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort()
                   const sorted = header.column.getIsSorted()
+                  const isActionsColumn = header.column.id === "actions"
                   return (
-                    <TableHead key={header.id} colSpan={header.colSpan} className={headerCellClassName}>
-                      {header.isPlaceholder ? null : canSort ? (
+                    <TableHead
+                      key={header.id}
+                      colSpan={header.colSpan}
+                      data-column-id={header.column.id}
+                      className={cn(headerCellClassName, isActionsColumn && "w-9 px-1!")}
+                    >
+                      {header.isPlaceholder || isActionsColumn ? null : canSort ? (
                         <button type="button" className="-ml-1.5 inline-flex h-7 items-center gap-1 rounded-[2px] px-1.5 text-left hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30" onClick={header.column.getToggleSortingHandler()}>
                           {flexRender(header.column.columnDef.header, header.getContext())}
                           <span className="text-[0.6rem] text-slate-400" aria-hidden="true">{sorted === "asc" ? "▲" : sorted === "desc" ? "▼" : "↕"}</span>
@@ -70,9 +76,22 @@ export function DataTable<TData>({
             ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} className={cn(row.index % 2 === 0 ? "bg-white" : "bg-[#f7f6f3]", rowClassName)}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className={cellClassName}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const isActionsColumn = cell.column.id === "actions"
+
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        data-column-id={cell.column.id}
+                        className={cn(
+                          cellClassName,
+                          isActionsColumn && "w-9 px-1! text-right [&>div]:justify-end [&_button>svg]:rotate-90",
+                        )}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    )
+                  })}
                 </TableRow>
               ))
             ) : (

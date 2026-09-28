@@ -1,6 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { ErrorState } from "@/shared/components/common";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -124,9 +123,9 @@ function BookingHistoryContent({
         <header className="space-y-3">
           <Link
             to={detailsPath}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-[#b86800] uppercase hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+            className="inline-flex items-center gap-[6px] text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase hover:underline focus-visible:outline-2 focus-visible:outline-ring"
           >
-            <ArrowLeft aria-hidden="true" className="size-4" />
+            <span aria-hidden="true" className="text-[14px]">←</span>
             Return to booking details
           </Link>
           <h1 className="m-0! min-w-0 font-heading text-[28px]! leading-[1.1]! font-bold! tracking-normal! text-primary! uppercase min-[360px]:text-[32px]! sm:text-[40px]!">

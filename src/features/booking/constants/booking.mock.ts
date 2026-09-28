@@ -1,7 +1,7 @@
 import type { BookedHorse, Booking } from "@/features/booking/types"
 
 // Mock horses carry more detail than GET /horses returns; only the list/booking pages read what the BE really sends.
-type MockHorse = Omit<BookedHorse, "specialHandlingNotes"> & { country?: string }
+type MockHorse = Omit<BookedHorse, "specialHandlingNotes"> & { country?: string; dateOfBirth?: string; weightKg?: number }
 
 export const MOCK_AVAILABLE_HORSES: MockHorse[] = [
   { horseId: 71, horseName: "Golden Thunder", sex: "MALE", breed: "Thoroughbred", microchipNumber: "985112003456781", passportNumber: "AUS-TB-2021-0457", dateOfBirth: "2021-06-10", weightKg: 512, country: "Australia" },
@@ -20,13 +20,12 @@ export const MOCK_AVAILABLE_HORSES: MockHorse[] = [
 ]
 
 const baseBooking: Omit<Booking, "bookingId" | "bookingCode" | "status" | "statusName" | "createdAt" | "updatedAt"> = {
-  customer: { customerId: 301, fullName: "Nguyễn Minh Khang", phone: "0901234567", organization: "Emerald Downs Racing", email: "stables@emeralddowns.ie" },
+  customer: { customerId: 301, fullName: "Nguyễn Minh Khang", phone: "0901234567" },
   originAddress: "Emerald Downs Training Centre, Kildare",
   originCountry: "Ireland",
   destinationAddress: "Newmarket Racecourse, Suffolk",
   destinationCountry: "United Kingdom",
   requestedDepartureDate: "2026-10-20",
-  requestedDepartureTime: "08:00",
   requestedArrivalDate: "2026-10-22",
   totalHorses: 2,
   horses: [

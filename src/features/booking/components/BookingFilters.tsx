@@ -8,9 +8,14 @@ import { useDebounce } from "@/shared/hooks"
 import { Button } from "@/shared/components/ui/button"
 import { DataTableRadioFilter, type DataTableRadioOption } from "@/shared/components/ui/data-table-radio-filter"
 import { Input } from "@/shared/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 
 type StatusFilter = BookingStatus | "ALL"
+
+const SORT_OPTIONS: DataTableRadioOption[] = [
+  { value: "createdAt:desc", label: "Newest" },
+  { value: "createdAt:asc", label: "Oldest" },
+  { value: "requestedDepartureDate:asc", label: "Departure date" },
+]
 
 function getStatusOptions(audience: BookingAudience): DataTableRadioOption[] {
   return [
@@ -81,16 +86,13 @@ export function BookingFilters({
           : <BookingStatusBadge status={option.value as BookingStatus} audience={audience} />}
       />
 
-      <Select value={sortBy} onValueChange={(value) => onSortChange(value as BookingSort)}>
-        <SelectTrigger className="h-8 w-full data-[size=default]:h-8 rounded-[2px] border-slate-300 bg-white text-xs shadow-none focus:border-amber-500 focus:ring-amber-500/20">
-          <SelectValue aria-label="Booking sort order" />
-        </SelectTrigger>
-        <SelectContent position="popper" align="start" sideOffset={2} className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
-          <SelectItem value="createdAt:desc" className="h-7 rounded-[2px] text-xs">Newest</SelectItem>
-          <SelectItem value="createdAt:asc" className="h-7 rounded-[2px] text-xs">Oldest</SelectItem>
-          <SelectItem value="requestedDepartureDate:asc" className="h-7 rounded-[2px] text-xs">Departure date</SelectItem>
-        </SelectContent>
-      </Select>
+      <DataTableRadioFilter
+        title="Sort"
+        value={sortBy}
+        defaultValue=""
+        options={SORT_OPTIONS}
+        onValueChange={(value) => onSortChange(value as BookingSort)}
+      />
 
       <div className="flex items-center justify-end gap-1.5 max-lg:[&_button]:w-full">
         {viewOptions}

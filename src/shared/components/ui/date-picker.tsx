@@ -23,6 +23,8 @@ type DatePickerProps = Omit<React.ComponentProps<"button">, "value" | "onChange"
   displayFormat?: string
   /** Earliest selectable date (`yyyy-MM-dd`). */
   minDate?: string
+  /** Latest selectable date (`yyyy-MM-dd`). */
+  maxDate?: string
 }
 
 function DatePicker({
@@ -32,12 +34,18 @@ function DatePicker({
   placeholder = "Pick a date",
   displayFormat = "dd / MM / yyyy",
   minDate,
+  maxDate,
   className,
   ...props
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false)
   const selected = toDate(value)
   const min = toDate(minDate)
+  const max = toDate(maxDate)
+  const disabledDates = [
+    ...(min ? [{ before: min }] : []),
+    ...(max ? [{ after: max }] : []),
+  ]
 
   return (
     <Popover
@@ -70,7 +78,7 @@ function DatePicker({
             setOpen(false)
           }}
           defaultMonth={selected ?? min}
-          disabled={min ? { before: min } : undefined}
+          disabled={disabledDates.length ? disabledDates : undefined}
           autoFocus
         />
       </PopoverContent>

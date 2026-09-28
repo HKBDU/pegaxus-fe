@@ -1,15 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type SortingState } from "@tanstack/react-table"
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Plus, Search, X } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { ArrowRight, ChevronLeft, ChevronRight, Plus, Search, X } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useForm } from "react-hook-form"
-import { useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
 import { releaseEditLock } from "@/features/booking/editLock"
-import { useAvailableHorses, useBookingEditLock, useCreateBooking, useUpdateBooking } from "@/features/booking/hooks"
-import { bookingFormSchema, type BookingFormSchemaValues } from "@/features/booking/schemas"
+import { useAvailableHorses, useBookingEditLock, useBookingRequestGuard, useCreateBooking, useUpdateBooking } from "@/features/booking/hooks"
+import { bookingFormSchema, getBookingDepartureDateRange, type BookingFormSchemaValues } from "@/features/booking/schemas"
 import type { AvailableHorse, Booking, BookingFormValues } from "@/features/booking/types"
 import { formatSex, getBookingErrorMessage } from "@/features/booking/utils"
 import { cn } from "@/lib/utils"
@@ -20,11 +20,11 @@ import { Pagination } from "@/shared/components/common/Pagination"
 import { Checkbox } from "@/shared/components/ui/checkbox"
 import { CountrySelect } from "@/shared/components/ui/country-select"
 import { DataTable } from "@/shared/components/ui/data-table"
+import { DataTableRadioFilter } from "@/shared/components/ui/data-table-radio-filter"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form"
 import { Input } from "@/shared/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 import { Textarea } from "@/shared/components/ui/textarea"
 import { useDebounce } from "@/shared/hooks/useDebounce"
@@ -48,9 +48,6 @@ const cardTitleClass = "m-0! font-heading font-bold! tracking-normal! text-prima
 const fieldLabelClass = "font-heading text-[11px] font-medium uppercase leading-4 tracking-[0.04em] text-[#181818]"
 const fieldControlClass =
   "h-8 rounded-[2px] border-[#f3aa3b] bg-transparent px-3 text-xs text-[#181818] shadow-none md:text-xs placeholder:text-[#6c6963] focus-visible:border-primary focus-visible:ring-primary/20"
-const filterControlClass = "h-8 rounded-[2px] border-slate-300 bg-white text-xs text-gray-700 shadow-none data-[size=default]:h-8 focus:border-amber-500 focus:ring-amber-500/20"
-const filterContentClass = "rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md"
-const filterItemClass = "h-7 rounded-[2px] text-xs"
 
 function toDefaultValues(booking?: Booking): BookingFormValues {
   return {
@@ -70,11 +67,11 @@ function toDefaultValues(booking?: Booking): BookingFormValues {
 }
 
 
-function BookingSteps({ step }: { step: 1 | 2 }) {
+function BookingSteps({ step, onStepChange }: { step: 1 | 2; onStepChange: (step: 1 | 2) => void }) {
   const items = [
     { number: 1, title: "Transport details" },
     { number: 2, title: "Racehorses & trip requirements" },
-  ]
+  ] as const
 
   return (
     <ol
@@ -95,27 +92,36 @@ function BookingSteps({ step }: { step: 1 | 2 }) {
             key={item.number}
             aria-current={active ? "step" : undefined}
             className={cn(
-              "relative px-3 py-2 sm:px-4",
+              "relative",
               item.number === 1 && "border-r border-[#e9e6de]",
-              active && "bg-[#f9f8f6]",
             )}
           >
-            <span
+            <button
+              type="button"
+              aria-pressed={active}
+              onClick={() => onStepChange(item.number)}
               className={cn(
-                "block font-heading text-[10px] font-medium uppercase leading-[14px] tracking-[0.08em]",
-                active ? "text-primary" : "text-gray-400",
+                "block w-full px-3 py-2 text-left outline-none transition-[background-color,transform] duration-300 ease-out hover:bg-amber-50 focus-visible:bg-amber-50 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset active:scale-[0.995] motion-reduce:transition-none sm:px-4",
+                active && "bg-[#f9f8f6]",
               )}
             >
-              Step {String(item.number).padStart(2, "0")}
-            </span>
-            <span
-              className={cn(
-                "mt-px block font-heading text-sm font-semibold uppercase leading-5",
-                active ? "text-[#181818]" : "text-gray-600",
-              )}
-            >
-              {item.title}
-            </span>
+              <span
+                className={cn(
+                  "block font-heading text-[10px] font-medium uppercase leading-[14px] tracking-[0.08em] transition-colors duration-300 motion-reduce:transition-none",
+                  active ? "text-primary" : "text-gray-400",
+                )}
+              >
+                Step {String(item.number).padStart(2, "0")}
+              </span>
+              <span
+                className={cn(
+                  "mt-px block font-heading text-sm font-semibold uppercase leading-5 transition-colors duration-300 motion-reduce:transition-none",
+                  active ? "text-[#181818]" : "text-gray-600",
+                )}
+              >
+                {item.title}
+              </span>
+            </button>
           </li>
         )
       })}
@@ -130,6 +136,7 @@ function BookingField({
   placeholder,
   type = "text",
   min,
+  max,
   country = false,
 }: {
   control: ReturnType<typeof useForm<BookingFormSchemaValues>>["control"]
@@ -138,6 +145,7 @@ function BookingField({
   placeholder?: string
   type?: "text" | "date"
   min?: string
+  max?: string
   country?: boolean
 }) {
   return (
@@ -162,6 +170,7 @@ function BookingField({
                 onChange={field.onChange}
                 onBlur={field.onBlur}
                 minDate={min}
+                maxDate={max}
                 placeholder="DD / MM / YYYY"
                 className={cn(fieldControlClass, "data-[empty=true]:text-[#6c6963]")}
               />
@@ -215,17 +224,12 @@ function FilterSelect({
   options: { value: string; label: string }[]
 }) {
   return (
-    <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger className={cn(filterControlClass, "w-full")}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent position="popper" align="start" sideOffset={2} className={filterContentClass}>
-        <SelectItem value="ALL" className={filterItemClass}>{allLabel}</SelectItem>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value} className={filterItemClass}>{option.label}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <DataTableRadioFilter
+      title={allLabel}
+      value={value}
+      options={[{ value: "ALL", label: allLabel }, ...options]}
+      onValueChange={onValueChange}
+    />
   )
 }
 
@@ -237,19 +241,27 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
   const [sexFilter, setSexFilter] = useState("ALL")
   const [horsePage, setHorsePage] = useState(1)
   const [horsePageSize, setHorsePageSize] = useState(5)
+  const [selectedHorsePage, setSelectedHorsePage] = useState(1)
   const [horseSorting, setHorseSorting] = useState<SortingState>([])
+  const departureDateRange = getBookingDepartureDateRange()
   const debouncedHorseSearch = useDebounce(horseSearch, 300)
   const [activeHorseId, setActiveHorseId] = useState<EntityId | null>(booking?.horses[0]?.horseId ?? null)
   const [selectedHorseDetails, setSelectedHorseDetails] = useState<AvailableHorse[]>(booking?.horses ?? [])
   const horsesQuery = useAvailableHorses({ pageIndex: horsePage, pageSize: horsePageSize, search: debouncedHorseSearch })
   const createBooking = useCreateBooking()
   const updateBooking = useUpdateBooking()
+  const saveRequest = useBookingRequestGuard()
+  const exitRequest = useBookingRequestGuard()
   const form = useForm<BookingFormSchemaValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: toDefaultValues(booking),
   })
 
   const selectedHorses = form.watch("horses")
+  const selectedHorsePageCount = Math.max(1, Math.ceil(selectedHorses.length / horsePageSize))
+  const currentSelectedHorsePage = Math.min(selectedHorsePage, selectedHorsePageCount)
+  const selectedHorsePageStart = (currentSelectedHorsePage - 1) * horsePageSize
+  const visibleSelectedHorses = selectedHorses.slice(selectedHorsePageStart, selectedHorsePageStart + horsePageSize)
   const selectedIds = useMemo(() => new Set(selectedHorses.map((horse) => horse.horseId)), [selectedHorses])
   const horseResults = useMemo(() => horsesQuery.data?.data ?? [], [horsesQuery.data?.data])
   const breeds = useMemo(() => [...new Set(horseResults.map((horse) => horse.breed).filter((breed): breed is string => Boolean(breed)))].sort(), [horseResults])
@@ -268,11 +280,27 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
   const activeHorseIndex = selectedHorses.findIndex((horse) => horse.horseId === activeHorseId)
   const activeNoteLength = activeHorseIndex >= 0 ? (selectedHorses[activeHorseIndex]?.specialHandlingNotes ?? "").length : 0
   const isPending = createBooking.isPending || updateBooking.isPending
+  const isSavingDisabled = isPending || saveRequest.isBlocked
   const exitPath = booking ? `/bookings/${booking.bookingId}` : "/bookings"
+
+  useEffect(() => {
+    const subscription = form.watch(() => {
+      saveRequest.reset()
+      exitRequest.reset()
+    })
+    return () => subscription.unsubscribe()
+  }, [exitRequest, form, saveRequest])
+
   // Leaving without saving: an edited booking goes back to PENDING before we return to it.
   const cancel = async () => {
-    if (mode === "edit" && booking) await releaseEditLock(booking.bookingId)
-    navigate(exitPath)
+    try {
+      const guarded = await exitRequest.run(async () => {
+        if (mode === "edit" && booking) await releaseEditLock(booking.bookingId)
+      })
+      if (guarded.started) navigate(exitPath)
+    } catch (error) {
+      toast.error(getBookingErrorMessage(error, "Unable to leave this booking"))
+    }
   }
 
   const toggleHorse = useCallback((horse: AvailableHorse, selected: boolean) => {
@@ -281,6 +309,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
       if (!current.some((item) => item.horseId === horse.horseId)) {
         form.setValue("horses", [...current, { horseId: horse.horseId, specialHandlingNotes: "" }], { shouldDirty: true, shouldValidate: true })
         setSelectedHorseDetails((items) => items.some((item) => item.horseId === horse.horseId) ? items : [...items, horse])
+        setSelectedHorsePage(Math.ceil((current.length + 1) / horsePageSize))
       }
       setActiveHorseId(horse.horseId)
       return
@@ -288,8 +317,13 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
     const next = current.filter((item) => item.horseId !== horse.horseId)
     form.setValue("horses", next, { shouldDirty: true, shouldValidate: true })
     setSelectedHorseDetails((items) => items.filter((item) => item.horseId !== horse.horseId))
-    if (activeHorseId === horse.horseId) setActiveHorseId(next[0]?.horseId ?? null)
-  }, [activeHorseId, form])
+    if (activeHorseId === horse.horseId) {
+      const removedIndex = current.findIndex((item) => item.horseId === horse.horseId)
+      const nextIndex = Math.min(removedIndex, next.length - 1)
+      setActiveHorseId(next[nextIndex]?.horseId ?? null)
+      setSelectedHorsePage(nextIndex >= 0 ? Math.floor(nextIndex / horsePageSize) + 1 : 1)
+    }
+  }, [activeHorseId, form, horsePageSize])
 
   const allVisibleHorsesSelected = availableHorses.length > 0 && availableHorses.every((horse) => selectedIds.has(horse.horseId))
   const someVisibleHorsesSelected = availableHorses.some((horse) => selectedIds.has(horse.horseId)) && !allVisibleHorsesSelected
@@ -308,15 +342,21 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
         const itemIds = new Set(items.map((horse) => horse.horseId))
         return [...items, ...availableHorses.filter((horse) => !itemIds.has(horse.horseId))]
       })
-      if (!activeHorseId && availableHorses[0]) setActiveHorseId(availableHorses[0].horseId)
+      if (!activeHorseId && availableHorses[0]) {
+        setActiveHorseId(availableHorses[0].horseId)
+        setSelectedHorsePage(Math.floor(current.length / horsePageSize) + 1)
+      }
       return
     }
 
     const next = current.filter((horse) => !visibleIds.has(horse.horseId))
     form.setValue("horses", next, { shouldDirty: true, shouldValidate: true })
     setSelectedHorseDetails((items) => items.filter((horse) => !visibleIds.has(horse.horseId)))
-    if (activeHorseId && visibleIds.has(activeHorseId)) setActiveHorseId(next[0]?.horseId ?? null)
-  }, [activeHorseId, availableHorses, form])
+    if (activeHorseId && visibleIds.has(activeHorseId)) {
+      setActiveHorseId(next[0]?.horseId ?? null)
+      setSelectedHorsePage(1)
+    }
+  }, [activeHorseId, availableHorses, form, horsePageSize])
 
   const horseColumns = useMemo<ColumnDef<AvailableHorse>[]>(() => [
     {
@@ -371,6 +411,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
     if (selectedHorses.length < 2 || activeHorseIndex < 0) return
     const next = (activeHorseIndex + offset + selectedHorses.length) % selectedHorses.length
     setActiveHorseId(selectedHorses[next].horseId)
+    setSelectedHorsePage(Math.floor(next / horsePageSize) + 1)
   }
 
   const continueToHorses = async () => {
@@ -380,25 +421,27 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
 
   const submit = form.handleSubmit(async (values) => {
     try {
-      if (mode === "create") {
-        const result = await createBooking.mutateAsync({
-          originAddress: values.originAddress,
-          originCountry: values.originCountry,
-          destinationAddress: values.destinationAddress,
-          destinationCountry: values.destinationCountry,
-          requestedDepartureDate: values.requestedDepartureDate,
-          requestedArrivalDate: values.requestedArrivalDate || undefined,
-          horses: values.horses,
-          specialRequirements: values.specialRequirements || undefined,
-          customerNote: values.customerNote || undefined,
-        })
-        toast.success(`Booking ${result.bookingCode} created`)
-        navigate(`/bookings/${result.bookingId}`, { replace: true })
-      } else if (booking) {
-        await updateBooking.mutateAsync({ booking, values })
-        toast.success("Booking updated")
-        navigate(`/bookings/${booking.bookingId}`, { replace: true })
-      }
+      await saveRequest.run(async () => {
+        if (mode === "create") {
+          const result = await createBooking.mutateAsync({
+            originAddress: values.originAddress,
+            originCountry: values.originCountry,
+            destinationAddress: values.destinationAddress,
+            destinationCountry: values.destinationCountry,
+            requestedDepartureDate: values.requestedDepartureDate,
+            requestedArrivalDate: values.requestedArrivalDate || undefined,
+            horses: values.horses,
+            specialRequirements: values.specialRequirements || undefined,
+            customerNote: values.customerNote || undefined,
+          })
+          toast.success(`Booking ${result.bookingCode} created`)
+          navigate(`/bookings/${result.bookingId}`, { replace: true })
+        } else if (booking) {
+          await updateBooking.mutateAsync({ booking, values })
+          toast.success("Booking updated")
+          navigate(`/bookings/${booking.bookingId}`, { replace: true })
+        }
+      })
     } catch (error) {
       toast.error(getBookingErrorMessage(error, `Unable to ${mode === "create" ? "create" : "update"} this booking`))
       onSaveFailed?.(error)
@@ -413,8 +456,8 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
       <form onSubmit={submit} className="min-h-[70dvh] bg-[#f4f2ed] px-5 pt-5 pb-8 sm:px-6 lg:px-10">
         <div className="booking-page-enter mx-auto w-full max-w-[1200px]">
           {step === 2 ? (
-            <button type="button" onClick={() => setStep(1)} className="group mb-2 inline-flex items-center gap-1.5 font-heading text-sm font-medium normal-case tracking-normal text-primary transition-colors hover:text-primary-hover">
-              <ArrowLeft className="size-3 transition-transform group-hover:-translate-x-0.5" strokeWidth={2.5} />
+            <button type="button" onClick={() => setStep(1)} className="group mb-2 flex w-fit items-center gap-[6px] text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase transition-colors hover:text-primary-hover">
+              <span aria-hidden="true" className="text-[14px] transition-transform group-hover:-translate-x-0.5">←</span>
               Return to transport details
             </button>
           ) : null}
@@ -433,10 +476,17 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
             ) : null}
           </div>
 
-          <BookingSteps step={step} />
+          <BookingSteps
+            step={step}
+            onStepChange={(nextStep) => {
+              if (nextStep === step) return
+              if (nextStep === 1) setStep(1)
+              else void continueToHorses()
+            }}
+          />
 
           {step === 1 ? (
-            <div className="mt-2 lg:px-8">
+            <div className="booking-page-enter mt-2 lg:px-8">
               <FormSection title="Route information">
                 <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                   <BookingField control={form.control} name="originCountry" label="Pickup country *" placeholder="Select pickup country..." country />
@@ -448,7 +498,14 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
 
               <FormSection title="Schedule" offsetTitle>
                 <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                  <BookingField control={form.control} name="requestedDepartureDate" label="Expected departure date *" type="date" />
+                  <BookingField
+                    control={form.control}
+                    name="requestedDepartureDate"
+                    label="Expected departure date *"
+                    type="date"
+                    min={departureDateRange.minDate}
+                    max={departureDateRange.maxDate}
+                  />
                   <BookingField control={form.control} name="requestedArrivalDate" label="Expected arrival date" type="date" min={form.watch("requestedDepartureDate")} />
                 </div>
               </FormSection>
@@ -471,8 +528,8 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
               </FormSection>
 
               <div className="mt-3 flex justify-end gap-2">
-                <button type="button" className={cn(largeButton, "border-[#4f4e4d] bg-transparent text-[#181818] hover:bg-black/5")} onClick={() => void cancel()}>
-                  Cancel
+                <button type="button" disabled={isPending || exitRequest.isBlocked} className={cn(largeButton, "border-[#4f4e4d] bg-transparent text-[#181818] hover:bg-black/5")} onClick={() => void cancel()}>
+                  {exitRequest.isBlocked ? "Edit values to retry" : "Cancel"}
                 </button>
                 <button type="button" className={cn(largeButton, "border-primary bg-primary text-[#181818] hover:border-primary-hover hover:bg-primary-hover")} onClick={() => void continueToHorses()}>
                   Save &amp; continue
@@ -480,7 +537,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
               </div>
             </div>
           ) : (
-            <div className="mt-3 space-y-3">
+            <div className="booking-page-enter mt-3 space-y-3">
               <dl className={cn(panelClass, "grid grid-cols-2 gap-x-4 px-5 sm:px-7 lg:grid-cols-4 lg:gap-x-0 lg:pr-0")}>
                 <SummaryCell first label="Booking code">{booking?.bookingCode ?? "Generated after submit"}</SummaryCell>
                 <SummaryCell label="Route">
@@ -494,17 +551,16 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
                 <SummaryCell label="Selected racehorses">{selectedHorses.length}</SummaryCell>
               </dl>
 
-              <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
-                <section className={cn(panelClass, "p-3")}>
+              <div className="grid grid-cols-[minmax(0,1fr)] items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+                <section className={cn(panelClass, "h-full p-3")}>
                   <div className="flex items-center justify-between gap-3">
                     <h2 className={cn(cardTitleClass, "text-lg! leading-6!")}>Available racehorses</h2>
-                    <button
-                      type="button"
+                    <Link
+                      to="/my-horses/new"
                       className="inline-flex h-8 items-center gap-1 whitespace-nowrap rounded-[2px] bg-primary px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-950 transition-colors hover:bg-primary-hover"
-                      onClick={() => toast.info("Adding a new racehorse is not available yet")}
                     >
                       <Plus className="size-3" strokeWidth={3} aria-hidden="true" /> Add new racehorse
-                    </button>
+                    </Link>
                   </div>
 
                   <div className="mt-2.5 grid grid-cols-3 gap-2 lg:grid-cols-[minmax(0,1fr)_112px_112px_124px_auto]">
@@ -551,7 +607,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
                               {" "}to {Math.min(horsesQuery.data.meta.currentPage * horsesQuery.data.meta.itemsPerPage, horsesQuery.data.meta.totalItems)} of {horsesQuery.data.meta.totalItems} entries
                             </p>
                             <div className="flex flex-wrap items-center justify-end gap-3">
-                              <PageSizeSelect value={horsePageSize} onValueChange={(value) => { setHorsePageSize(value); setHorsePage(1) }} />
+                              <PageSizeSelect value={horsePageSize} onValueChange={(value) => { setHorsePageSize(value); setHorsePage(1); setSelectedHorsePage(1) }} />
                               <Pagination meta={horsesQuery.data.meta} onPageChange={setHorsePage} />
                             </div>
                           </div>
@@ -561,23 +617,23 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
                   </div>
                 </section>
 
-                <div className="space-y-3">
-                  <section className={cn(panelClass, "p-3")}>
+                <div className="grid h-full grid-rows-[minmax(0,1fr)_auto] gap-3">
+                  <section className={cn(panelClass, "flex min-h-0 flex-col p-3")}>
                     <div className="flex items-center justify-between gap-3">
                       <h2 className={cn(cardTitleClass, "text-[17px]! leading-6!")}>Selected racehorses ({selectedHorses.length})</h2>
                       {selectedHorses.length ? (
                         <button
                           type="button"
                           className="text-xs text-gray-500 underline underline-offset-2 transition-colors hover:text-primary"
-                          onClick={() => { form.setValue("horses", [], { shouldDirty: true, shouldValidate: true }); setSelectedHorseDetails([]); setActiveHorseId(null) }}
+                          onClick={() => { form.setValue("horses", [], { shouldDirty: true, shouldValidate: true }); setSelectedHorseDetails([]); setActiveHorseId(null); setSelectedHorsePage(1) }}
                         >
                           Clear all
                         </button>
                       ) : null}
                     </div>
-                    <div className="mt-2 space-y-1.5">
+                    <div className="mt-2 flex-1 space-y-1.5">
                       {selectedHorses.length === 0 ? <p className="py-3 text-center text-xs text-gray-500">No horses selected yet.</p> : null}
-                      {selectedHorses.map((selected) => {
+                      {visibleSelectedHorses.map((selected) => {
                         const horse = horseCatalog.get(selected.horseId)
                         if (!horse) return null
                         const active = activeHorseId === horse.horseId
@@ -599,6 +655,29 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
                         )
                       })}
                     </div>
+                    {selectedHorses.length > 0 ? (
+                      <div className="mt-2 flex items-center justify-end gap-1.5 border-t border-[#eeece6] pt-2 font-heading text-[11px] font-semibold text-gray-700">
+                        <button
+                          type="button"
+                          className="grid size-6 place-items-center rounded-[2px] transition-colors hover:bg-amber-50 hover:text-primary disabled:pointer-events-none disabled:opacity-35"
+                          onClick={() => setSelectedHorsePage(Math.max(1, currentSelectedHorsePage - 1))}
+                          disabled={currentSelectedHorsePage === 1}
+                          aria-label="Previous selected horses page"
+                        >
+                          <ChevronLeft className="size-3.5" />
+                        </button>
+                        Page {currentSelectedHorsePage} of {selectedHorsePageCount}
+                        <button
+                          type="button"
+                          className="grid size-6 place-items-center rounded-[2px] transition-colors hover:bg-amber-50 hover:text-primary disabled:pointer-events-none disabled:opacity-35"
+                          onClick={() => setSelectedHorsePage(Math.min(selectedHorsePageCount, currentSelectedHorsePage + 1))}
+                          disabled={currentSelectedHorsePage === selectedHorsePageCount}
+                          aria-label="Next selected horses page"
+                        >
+                          <ChevronRight className="size-3.5" />
+                        </button>
+                      </div>
+                    ) : null}
                     <p className="mt-2.5! flex items-center gap-2 text-[11px] leading-4 text-gray-500">
                       <span className="grid size-3.5 shrink-0 place-items-center rounded-full bg-gray-400 text-[9px] font-bold text-white" aria-hidden="true">i</span>
                       Select a horse to edit its individual transport note.
@@ -642,11 +721,11 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
               </div>
 
               <div className="flex flex-col-reverse justify-end gap-3 pt-1 sm:flex-row">
-                <button type="button" className={cn(compactButton, "border-gray-300 bg-white text-gray-900 hover:bg-gray-50")} onClick={() => void cancel()}>
-                  Cancel
+                <button type="button" disabled={isPending || exitRequest.isBlocked} className={cn(compactButton, "border-gray-300 bg-white text-gray-900 hover:bg-gray-50")} onClick={() => void cancel()}>
+                  {exitRequest.isBlocked ? "Edit values to retry" : "Cancel"}
                 </button>
-                <button type="submit" disabled={isPending} className={cn(compactButton, "border-primary bg-primary text-white hover:border-primary-hover hover:bg-primary-hover")}>
-                  {isPending ? "Saving..." : "Save & continue"}
+                <button type="submit" disabled={isSavingDisabled} className={cn(compactButton, "border-primary bg-primary text-white hover:border-primary-hover hover:bg-primary-hover")}>
+                  {isPending ? "Saving..." : saveRequest.isBlocked ? "Edit values to retry" : "Save & continue"}
                 </button>
               </div>
             </div>
