@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { toast } from "sonner"
 
 import { Input } from "@/shared/components/ui/input"
@@ -31,7 +31,19 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
   const [country, setCountry] = useState(profile.country ?? "")
   const [dob, setDob] = useState(profile.dob ?? "")
   const [avatar, setAvatar] = useState<File>()
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string>()
   const [errors, setErrors] = useState<ProfileFormErrors>({})
+
+  useEffect(() => {
+    if (!avatar) {
+      setAvatarPreviewUrl(undefined)
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(avatar)
+    setAvatarPreviewUrl(previewUrl)
+    return () => URL.revokeObjectURL(previewUrl)
+  }, [avatar])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -56,7 +68,7 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
   return (
     <form id="profile-form" onSubmit={handleSubmit} className="grid min-w-0 gap-3 lg:grid-cols-[minmax(160px,4fr)_minmax(0,8fr)]">
       <div className="relative min-w-0">
-        <ProfileAvatarPreview className="h-full min-h-0" initials={getInitials(profile.fullName)} avatarUrl={profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
+        <ProfileAvatarPreview className="h-full min-h-0" initials={getInitials(profile.fullName)} avatarUrl={avatarPreviewUrl ?? profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
         <Input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" id="profile-avatar" type="file" accept="image/jpeg,image/png" aria-label="Upload profile avatar" onChange={(event) => setAvatar(event.target.files?.[0])} />
         <ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-1rem)] shadow-sm" />
       </div>
