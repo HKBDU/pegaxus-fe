@@ -3,6 +3,7 @@ import { Circle, Info, Settings2, UserRound } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
@@ -53,11 +54,13 @@ export default function CreateEmployeeAccountPage() {
     mode: "onTouched",
     defaultValues: { fullName: "", email: "", phone: "", role: undefined },
   });
+  const attempt = useFormRequestAttemptGuard(form);
+  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
 
   const submit = form.handleSubmit(async (values) => {
-    if (mutation.isPending) return;
     try {
-      await mutation.mutateAsync(values);
+      const result = await attempt.run(() => mutation.mutateAsync(values));
+      if (!result.started) return;
       toast.success("Employee account created successfully.");
       navigate(ROLE_ROUTES.managerUsers, { replace: true });
     } catch (error) {
@@ -269,10 +272,10 @@ export default function CreateEmployeeAccountPage() {
               <Button
                 type="submit"
                 size="sm"
-                disabled={mutation.isPending}
+                disabled={isPending || attempt.isBlocked}
                 className="rounded-[2px]"
               >
-                {mutation.isPending ? "Creating..." : "Create Account"}
+                {isPending ? "Creating..." : attempt.isBlocked ? "Edit details to retry" : "Create Account"}
               </Button>
             </div>
           </form>

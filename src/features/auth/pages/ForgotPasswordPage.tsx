@@ -11,6 +11,7 @@ import {
 import { useForgotPasswordMutation } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
+import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 
 export default function ForgotPasswordPage() {
   const mutation = useForgotPasswordMutation();
@@ -18,10 +19,16 @@ export default function ForgotPasswordPage() {
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: "" },
   });
+  const attempt = useFormRequestAttemptGuard(form);
+  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
 
-  function submit(values: ForgotPasswordFormValues) {
-    if (mutation.isPending) return;
-    mutation.mutate(values);
+  async function submit(values: ForgotPasswordFormValues) {
+    if (attempt.isBlocked) return;
+    try {
+      await attempt.run(() => mutation.mutateAsync(values));
+    } catch {
+      // The mutation presents a generic error without revealing account existence.
+    }
   }
 
   return (
@@ -43,9 +50,9 @@ export default function ForgotPasswordPage() {
       <Form {...form}>
         <form
           noValidate
-          onSubmit={form.handleSubmit(submit)}
+          onSubmit={(event) => void form.handleSubmit(submit)(event)}
           className="mt-6 space-y-4"
-          aria-busy={mutation.isPending}
+          aria-busy={isPending}
         >
           <AuthFormField
             control={form.control}
@@ -54,20 +61,20 @@ export default function ForgotPasswordPage() {
             type="email"
             autoComplete="email"
             placeholder="Enter your email address"
-            disabled={mutation.isPending}
+            disabled={isPending}
           />
           <Button
             type="submit"
-            disabled={mutation.isPending}
+            disabled={isPending || attempt.isBlocked}
             className={authPrimaryButtonClass}
           >
-            {mutation.isPending && (
+            {isPending && (
               <LoaderCircle
                 aria-hidden="true"
                 className="size-5 animate-spin"
               />
             )}
-            {mutation.isPending ? "Sending..." : "Send email"}
+            {isPending ? "Sending..." : attempt.isBlocked ? "Edit email to retry" : "Send email"}
           </Button>
         </form>
       </Form>

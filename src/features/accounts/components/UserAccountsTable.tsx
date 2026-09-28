@@ -23,6 +23,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { DataTable } from "@/shared/components/ui/data-table";
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -203,16 +204,23 @@ export function UserAccountsTable({
         enableHiding: false,
         cell: ({ row }) => (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="size-7 rounded-[2px] p-0"
-                aria-label={`Actions for ${row.original.fullName}`}
-              >
-                <MoreVertical className="size-3.5 text-slate-500" />
-              </Button>
-            </DropdownMenuTrigger>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="size-7 rounded-[2px] p-0"
+                      aria-label={`Actions for ${row.original.fullName}`}
+                    >
+                      <MoreVertical className="size-3.5 text-slate-500" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent className="rounded-[2px] px-2 py-1 shadow-md">Account actions</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             <DropdownMenuContent
               align="end"
               sideOffset={2}

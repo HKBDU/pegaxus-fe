@@ -1,8 +1,7 @@
-import { useRef } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getAuthApiError } from "../services";
 import { LoaderCircle } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { resetPasswordSchema, resetPasswordRouteStateSchema, type ResetPasswordFormValues, type ResetPasswordRouteState } from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
@@ -13,6 +12,8 @@ import {
 import { useResetPasswordMutation } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
+import { PasswordMatchHint, PasswordRequirements } from "../components/PasswordRequirements";
+import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 
 const otpErrors: Record<string, string> = {
   OTP_INVALID: "The verification code is invalid.",
@@ -37,21 +38,22 @@ export default function ResetPasswordPage() {
 
 function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
   const mutation = useResetPasswordMutation();
-  const submitting = useRef(false);
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { newPassword: "", confirmPassword: "" },
   });
-  const isPending = mutation.isPending || form.formState.isSubmitting;
+  const attempt = useFormRequestAttemptGuard(form);
+  const password = useWatch({ control: form.control, name: "newPassword" });
+  const confirmation = useWatch({ control: form.control, name: "confirmPassword" });
+  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
 
   async function submit(values: ResetPasswordFormValues) {
-    if (submitting.current) return;
-    submitting.current = true;
+    if (attempt.isBlocked) return;
     form.clearErrors("root");
 
     try {
-      await mutation.mutateAsync({ email, otp, ...values });
-      form.reset();
+      const result = await attempt.run(() => mutation.mutateAsync({ email, otp, ...values }));
+      if (result.started) form.reset();
     } catch (error) {
       const apiError = getAuthApiError(error);
       let hasFieldError = false;
@@ -98,7 +100,6 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
     } finally {
       // Release the mutation payload containing passwords after each attempt.
       mutation.reset();
-      submitting.current = false;
     }
   }
 
@@ -134,6 +135,7 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
             placeholder="Enter your new password"
             disabled={isPending}
           />
+          <PasswordRequirements value={password ?? ""} />
           <AuthPasswordFormField
             control={form.control}
             name="confirmPassword"
@@ -143,6 +145,7 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
             placeholder="Re-enter your new password"
             disabled={isPending}
           />
+          <PasswordMatchHint password={password ?? ""} confirmation={confirmation ?? ""} />
           {form.formState.errors.root?.server && (
             <div role="alert" className="space-y-2 text-sm text-red-700">
               <p>{form.formState.errors.root.server.message}</p>
@@ -156,7 +159,7 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
           )}
           <Button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || attempt.isBlocked}
             className={authPrimaryButtonClass}
           >
             {isPending && (
@@ -165,7 +168,7 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
                 className="size-5 animate-spin"
               />
             )}
-            {isPending ? "Resetting..." : "Reset password"}
+            {isPending ? "Resetting..." : attempt.isBlocked ? "Edit password to retry" : "Reset password"}
           </Button>
         </form>
       </Form>

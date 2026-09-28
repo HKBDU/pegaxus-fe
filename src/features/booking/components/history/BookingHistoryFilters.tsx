@@ -3,6 +3,7 @@ import { Download } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { DataTableRadioFilter } from "@/shared/components/ui/data-table-radio-filter";
 import { formatHistoryLabel, type HistoryFilters } from "../../history/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip";
 
 interface BookingHistoryFiltersProps {
   filters: HistoryFilters;
@@ -87,18 +88,24 @@ export function BookingHistoryFilters({
       />
         <div className="flex items-center justify-end gap-1.5 sm:col-span-2 lg:col-span-1">
           {viewOptions}
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-8 shrink-0 rounded-[2px] border-slate-300 bg-white shadow-none"
-            aria-label="Download history"
-            title="Download filtered history as CSV"
-            disabled={!canDownload}
-            onClick={onDownload}
-          >
-            <Download aria-hidden="true" className="size-3.5" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-8 shrink-0 rounded-[2px] border-slate-300 bg-white shadow-none"
+                  aria-label="Download history"
+                  disabled={!canDownload}
+                  onClick={onDownload}
+                >
+                  <Download aria-hidden="true" className="size-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="rounded-[2px] px-2 py-1 shadow-md">Download filtered history as CSV</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { getAuthApiError } from "../services";
 import { LoaderCircle } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Link } from "react-router-dom";
 import { registerSchema, type RegisterFormValues } from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
@@ -13,6 +13,8 @@ import {
 import { useRegisterMutation } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
+import { PasswordMatchHint, PasswordRequirements } from "../components/PasswordRequirements";
+import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 
 const fields = new Set<keyof RegisterFormValues>([
   "fullName",
@@ -31,40 +33,45 @@ export default function RegisterPage() {
       confirmPassword: "",
     },
   });
+  const attempt = useFormRequestAttemptGuard(form);
+  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
+  const password = useWatch({ control: form.control, name: "password" });
+  const confirmation = useWatch({ control: form.control, name: "confirmPassword" });
 
-  function submit(values: RegisterFormValues) {
-    if (mutation.isPending) return;
+  async function submit(values: RegisterFormValues) {
+    if (attempt.isBlocked) return;
     form.clearErrors("root");
-    mutation.mutate(values, {
-      onError: (error) => {
-        const apiError = getAuthApiError(error);
-        let hasFieldError = false;
+    try {
+      await attempt.run(() => mutation.mutateAsync(values));
+    } catch (error) {
+      const apiError = getAuthApiError(error);
+      let hasFieldError = false;
 
-        for (const item of apiError?.errors ?? []) {
-          if (fields.has(item.field as keyof RegisterFormValues)) {
-            form.setError(item.field as keyof RegisterFormValues, {
-              message: item.message,
-            });
-            hasFieldError = true;
-          }
-        }
-
-        if (apiError?.errorCode === "EMAIL_ALREADY_EXISTS") {
-          form.setError("email", { message: apiError.message });
-          hasFieldError = true;
-        } else if (apiError?.errorCode === "PASSWORD_MISMATCH") {
-          form.setError("confirmPassword", { message: apiError.message });
-          hasFieldError = true;
-        }
-
-        if (!hasFieldError) {
-          form.setError("root.server", {
-            message: apiError?.message ?? "Can't sign up. Please try again.",
+      for (const item of apiError?.errors ?? []) {
+        if (fields.has(item.field as keyof RegisterFormValues)) {
+          form.setError(item.field as keyof RegisterFormValues, {
+            message: item.message,
           });
+          hasFieldError = true;
         }
-      },
-      onSettled: () => mutation.reset(),
-    });
+      }
+
+      if (apiError?.errorCode === "EMAIL_ALREADY_EXISTS") {
+        form.setError("email", { message: apiError.message });
+        hasFieldError = true;
+      } else if (apiError?.errorCode === "PASSWORD_MISMATCH") {
+        form.setError("confirmPassword", { message: apiError.message });
+        hasFieldError = true;
+      }
+
+      if (!hasFieldError) {
+        form.setError("root.server", {
+          message: apiError?.message ?? "Can't sign up. Please try again.",
+        });
+      }
+    } finally {
+      mutation.reset();
+    }
   }
 
   return (
@@ -86,8 +93,9 @@ export default function RegisterPage() {
       <Form {...form}>
         <form
           noValidate
-          onSubmit={form.handleSubmit(submit)}
+          onSubmit={(event) => void form.handleSubmit(submit)(event)}
           className="mt-5 space-y-2"
+          aria-busy={isPending}
         >
           <AuthFormField
             control={form.control}
@@ -112,6 +120,7 @@ export default function RegisterPage() {
             visibilityLabel="password"
             placeholder="•••••••••"
           />
+          <PasswordRequirements value={password ?? ""} />
           <AuthPasswordFormField
             control={form.control}
             name="confirmPassword"
@@ -120,6 +129,7 @@ export default function RegisterPage() {
             visibilityLabel="confirm password"
             placeholder="•••••••••"
           />
+          <PasswordMatchHint password={password ?? ""} confirmation={confirmation ?? ""} />
 
           {form.formState.errors.root?.server && (
             <p role="alert" className="text-sm text-red-700">
@@ -129,16 +139,16 @@ export default function RegisterPage() {
 
           <Button
             type="submit"
-            disabled={mutation.isPending}
+            disabled={isPending || attempt.isBlocked}
             className={authPrimaryButtonClass}
           >
-            {mutation.isPending && (
+            {isPending && (
               <LoaderCircle
                 aria-hidden="true"
                 className="size-5 animate-spin"
               />
             )}
-            {mutation.isPending ? "Creating account" : "Sign up"}
+            {isPending ? "Creating account" : attempt.isBlocked ? "Edit details to retry" : "Sign up"}
           </Button>
         </form>
       </Form>

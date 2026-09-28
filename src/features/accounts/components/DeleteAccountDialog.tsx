@@ -1,5 +1,7 @@
 import { TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { useEffect } from "react";
+import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,10 +25,15 @@ export function DeleteAccountDialog({
   onDeleted?: () => void;
 }) {
   const mutation = useSuspendEmployee();
+  const attempt = useRequestAttemptGuard();
+  const { reset } = attempt;
+  useEffect(() => reset(), [account?.employeeId, reset]);
+  const isPending = mutation.isPending || attempt.isRunning;
   const confirm = async () => {
-    if (!account || mutation.isPending) return;
+    if (!account) return;
     try {
-      await mutation.mutateAsync(account.employeeId);
+      const result = await attempt.run(() => mutation.mutateAsync(account.employeeId));
+      if (!result.started) return;
       toast.success("Employee account deleted successfully.");
       onClose();
       onDeleted?.();
@@ -37,7 +44,7 @@ export function DeleteAccountDialog({
   return (
     <AlertDialog
       open={Boolean(account)}
-      onOpenChange={(open) => !open && !mutation.isPending && onClose()}
+      onOpenChange={(open) => !open && !isPending && onClose()}
     >
       <AlertDialogContent className="gap-3 rounded-[2px] border-slate-200 bg-white p-4 text-slate-900 shadow-[0_14px_35px_rgba(15,23,42,0.16)] data-[size=default]:sm:max-w-[420px]">
         <div className="flex items-start gap-2.5 text-left">
@@ -72,14 +79,14 @@ export function DeleteAccountDialog({
         ) : null}
         <AlertDialogFooter className="gap-1.5">
           <AlertDialogCancel
-            disabled={mutation.isPending}
+            disabled={isPending}
             size="sm"
             className="h-8 rounded-[2px] border-slate-300 bg-white px-3 text-xs font-normal text-slate-700 shadow-none"
           >
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
-            disabled={mutation.isPending}
+            disabled={isPending || attempt.isBlocked}
             variant="destructive"
             size="sm"
             onClick={(event) => {
@@ -88,7 +95,7 @@ export function DeleteAccountDialog({
             }}
             className="h-8 rounded-[2px] bg-red-600 px-3 text-xs font-normal text-white shadow-none hover:bg-red-700"
           >
-            {mutation.isPending ? "Deleting..." : "Delete Account"}
+            {isPending ? "Deleting..." : attempt.isBlocked ? "Close to retry" : "Delete Account"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
