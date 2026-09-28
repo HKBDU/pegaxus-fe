@@ -1,10 +1,9 @@
 import { useState, type ReactNode } from "react";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { DataTable } from "@/shared/components/ui/data-table";
-import { EmptyState, Pagination } from "@/shared/components/common";
+import { EmptyState, PageSizeSelect, Pagination } from "@/shared/components/common";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import type { BookingHistoryItem } from "../../history/schema";
 import { bookingHistoryColumns } from "./booking-history-columns";
 
@@ -72,25 +71,14 @@ export function BookingHistoryTable({
                 Showing {firstIndex + 1} to {Math.min(firstIndex + pageSize, rows.length)} of {rows.length} entries
               </p>
               <div className="flex flex-wrap items-center justify-end gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="whitespace-nowrap text-[11px] text-gray-500">Rows per page</span>
-                  <Select
-                    value={String(pageSize)}
-                    onValueChange={(value) => {
-                      setPageSize(Number(value));
-                      onPageChange(1);
-                    }}
-                  >
-                    <SelectTrigger aria-label="History rows per page" className="h-7 w-12 gap-1 rounded-[2px] bg-white px-2 text-xs data-[size=default]:h-7">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent position="popper" align="end" sideOffset={2} className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
-                      {[5, 10, 20].map((size) => (
-                        <SelectItem key={size} value={String(size)} className="h-7 rounded-[2px] text-xs">{size}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <PageSizeSelect
+                  value={pageSize}
+                  ariaLabel="History rows per page"
+                  onValueChange={(value) => {
+                    setPageSize(value);
+                    onPageChange(1);
+                  }}
+                />
                 <Pagination
                   meta={{
                     totalItems: rows.length,

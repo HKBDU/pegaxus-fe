@@ -14,6 +14,7 @@ import type { AvailableHorse, Booking, BookingFormValues } from "@/features/book
 import { formatSex, getBookingErrorMessage } from "@/features/booking/utils"
 import { cn } from "@/lib/utils"
 import { ErrorState } from "@/shared/components/common"
+import { PageSizeSelect } from "@/shared/components/common/PageSizeSelect"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Pagination } from "@/shared/components/common/Pagination"
 import { Checkbox } from "@/shared/components/ui/checkbox"
@@ -550,15 +551,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
                               {" "}to {Math.min(horsesQuery.data.meta.currentPage * horsesQuery.data.meta.itemsPerPage, horsesQuery.data.meta.totalItems)} of {horsesQuery.data.meta.totalItems} entries
                             </p>
                             <div className="flex flex-wrap items-center justify-end gap-3">
-                              <div className="flex items-center gap-2">
-                                <span className="whitespace-nowrap font-sans text-[11px] font-normal text-gray-500">Rows per page</span>
-                                <Select value={String(horsePageSize)} onValueChange={(value) => { setHorsePageSize(Number(value)); setHorsePage(1) }}>
-                                  <SelectTrigger className="h-8 w-12 gap-1 rounded-[2px] bg-white px-2 text-xs data-[size=default]:h-8"><SelectValue /></SelectTrigger>
-                                  <SelectContent position="popper" side="bottom" align="end" sideOffset={2} avoidCollisions={false} className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
-                                    {[5, 10, 20].map((size) => <SelectItem key={size} value={String(size)} className="h-7 rounded-[2px] text-xs">{size}</SelectItem>)}
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                              <PageSizeSelect value={horsePageSize} onValueChange={(value) => { setHorsePageSize(value); setHorsePage(1) }} />
                               <Pagination meta={horsesQuery.data.meta} onPageChange={setHorsePage} />
                             </div>
                           </div>

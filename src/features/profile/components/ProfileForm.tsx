@@ -7,13 +7,13 @@ import { Label } from "@/shared/components/ui/label"
 import type { ProfileFormErrors, ProfileFormProps } from "../types"
 import { ACCOUNT_TYPE_LABELS } from "../constants/profile.constants"
 import { ProfileAvatarPreview } from "./ProfileAvatarPreview"
+import { ProfileVerificationField } from "./ProfileVerificationField"
 
 function getInitials(name: string | null) {
   return (name ?? "").split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 3).toUpperCase()
 }
 
 const readonlyFieldClass = "flex min-h-[30px] min-w-0 items-center border border-[#c8c8c8] bg-[#dedede] px-3 py-2 lg:py-1 text-[13px] font-medium leading-[21px] text-[#6c6963]"
-const readonlyVerificationFieldClass = "flex h-[42px] min-w-0 items-center border border-[#c8c8c8] bg-[#dedede] px-3 py-0 text-[13px] font-medium leading-[21px] text-[#6c6963]"
 const labelClass = "text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase"
 const errorTextClass = "min-h-[15px] pt-0.5 text-[10px] leading-[15px] text-red-600"
 
@@ -55,33 +55,27 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
   }
 
   return (
-    <form id="profile-form" onSubmit={handleSubmit} className="grid gap-3">
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
-        <div className="relative min-w-0">
-          <ProfileAvatarPreview initials={getInitials(profile.fullName)} avatarUrl={profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
-          <Input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" id="profile-avatar" type="file" accept="image/jpeg,image/png" aria-label="Upload profile avatar" onChange={(event) => setAvatar(event.target.files?.[0])} />
-        </div>
-        <div className="grid min-w-0 gap-0">
-          <div className="flex min-w-0 flex-col gap-1">
-            <Label className={labelClass} htmlFor="profile-full-name">FULL NAME</Label>
-            <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-full-name" value={fullName} onChange={(event) => setFullName(event.target.value)} maxLength={150} required />
-            <p className={errorTextClass} role={errors.fullName ? "alert" : undefined}>{errors.fullName ?? "\u00a0"}</p>
-          </div>
-          <div className="flex min-w-0 flex-col gap-[6px] py-[10px]">
-            <span className={labelClass}>EMAIL VERIFICATION STATUS</span>
-            <div className={`${readonlyVerificationFieldClass} gap-1 font-semibold`}><span aria-hidden="true">✓</span><span>{emailVerificationStatus}</span></div>
-          </div>
-        </div>
+    <form id="profile-form" onSubmit={handleSubmit} className="grid min-w-0 gap-3 lg:grid-cols-[minmax(160px,4fr)_minmax(0,8fr)]">
+      <div className="relative min-w-0">
+        <ProfileAvatarPreview className="h-full min-h-0" initials={getInitials(profile.fullName)} avatarUrl={profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
+        <Input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" id="profile-avatar" type="file" accept="image/jpeg,image/png" aria-label="Upload profile avatar" onChange={(event) => setAvatar(event.target.files?.[0])} />
+        <ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-1rem)] shadow-sm" />
       </div>
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid min-w-0 content-start gap-3">
+        <div className="flex min-w-0 flex-col gap-1">
+          <Label className={labelClass} htmlFor="profile-full-name">FULL NAME</Label>
+          <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-full-name" value={fullName} onChange={(event) => setFullName(event.target.value)} maxLength={150} required />
+          <p className={errorTextClass} role={errors.fullName ? "alert" : undefined}>{errors.fullName ?? "\u00a0"}</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-1">
           <Label className={labelClass} htmlFor="profile-address">ADDRESS</Label>
           <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-address" value={address} onChange={(event) => setAddress(event.target.value)} maxLength={500} />
           <p className={errorTextClass} role={errors.address ? "alert" : undefined}>{errors.address ?? "\u00a0"}</p>
         </div>
         <div className="flex min-w-0 flex-col gap-1"><span className={labelClass}>ACCOUNT TYPE</span><div className={readonlyFieldClass}>{ACCOUNT_TYPE_LABELS[profile.accountType]}</div></div>
-      </div>
-      <div className="grid gap-3 lg:grid-cols-2">
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-1">
           <Label className={labelClass} htmlFor="profile-country">COUNTRY</Label>
           <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-country" value={country} onChange={(event) => setCountry(event.target.value)} maxLength={100} />
@@ -90,6 +84,7 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
           <Label className={labelClass} htmlFor="profile-dob">DATE OF BIRTH</Label>
           {canEditDateOfBirth ? <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-dob" type="date" value={dob} onChange={(event) => setDob(event.target.value)} /> : <div className={readonlyFieldClass}>{profile.dob || "—"}</div>}
         </div>
+      </div>
       </div>
     </form>
   )
