@@ -85,7 +85,7 @@ export function DataTable<TData>({
                         data-column-id={cell.column.id}
                         className={cn(
                           cellClassName,
-                          isActionsColumn && "w-9 px-1! text-right [&>div]:justify-end [&_button>svg]:rotate-90",
+                          isActionsColumn && "w-11 min-w-11 max-w-11 overflow-visible px-1! text-right [&>div]:justify-end",
                         )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
