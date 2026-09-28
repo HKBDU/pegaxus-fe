@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { BriefcaseBusiness, Circle, Info, ShieldCheck } from "lucide-react";
@@ -8,6 +9,14 @@ import { LoadingState, ErrorState } from "@/shared/components/common";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/shared/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -25,32 +34,32 @@ import {
 import { getAccountError } from "../services";
 import type { EmployeeDetail } from "../types";
 import { EmployeeSummaryCard } from "../components/EmployeeSummaryCard";
+import { updateEmploymentSchema, type UpdateEmploymentValues } from "../schemas";
 
 function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
-  const [role, setRole] = useState(employee.role);
-  const [workingStatus, setWorkingStatus] = useState(employee.workingStatus);
+  const form = useForm<UpdateEmploymentValues>({
+    resolver: zodResolver(updateEmploymentSchema),
+    mode: "onTouched",
+    defaultValues: {
+      role: employeeRoles.find((role) => role === employee.role),
+      workingStatus: employee.workingStatus,
+    },
+  });
   const mutation = useUpdateEmployment();
   const navigate = useNavigate();
+  const submit = form.handleSubmit(async (changes) => {
+    if (mutation.isPending) return;
+    try {
+      await mutation.mutateAsync({ id: employee.employeeId, changes });
+      toast.success("Employee employment information updated successfully.");
+      navigate(accountDetail(employee.employeeId));
+    } catch (error) {
+      toast.error(getAccountError(error));
+    }
+  });
   return (
-    <form
-      className="booking-stagger space-y-3"
-      onSubmit={async (event) => {
-        event.preventDefault();
-        if (mutation.isPending) return;
-        try {
-          await mutation.mutateAsync({
-            id: employee.employeeId,
-            changes: { role, workingStatus },
-          });
-          toast.success(
-            "Employee employment information updated successfully.",
-          );
-          navigate(accountDetail(employee.employeeId));
-        } catch (error) {
-          toast.error(getAccountError(error));
-        }
-      }}
-    >
+    <Form {...form}>
+    <form className="booking-stagger space-y-3" onSubmit={submit} noValidate>
       <EmployeeSummaryCard employee={employee} />
       <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
         <CardContent className="px-5 py-5">
@@ -59,61 +68,50 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
             Employment Settings
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-1">
-              <label
-                htmlFor="employee-role"
-                className="font-heading text-[11px] uppercase text-gray-800"
-              >
-                Role *
-              </label>
-              <Select
-                value={role}
-                onValueChange={setRole}
-                disabled={mutation.isPending}
-              >
-                <SelectTrigger id="employee-role" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {employeeRoles.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {formatAccountLabel(value)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1">
-              <label
-                htmlFor="employee-working-status"
-                className="font-heading text-[11px] uppercase text-gray-800"
-              >
-                Working Status *
-              </label>
-              <Select
-                value={workingStatus}
-                onValueChange={(value) =>
-                  setWorkingStatus(value as "ACTIVE" | "INACTIVE")
-                }
-                disabled={mutation.isPending}
-              >
-                <SelectTrigger id="employee-working-status" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(["ACTIVE", "INACTIVE"] as const).map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {formatAccountLabel(value)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem className="gap-1">
+                  <FormLabel className="font-heading text-[11px] uppercase text-gray-800">Role *</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={mutation.isPending}>
+                    <FormControl>
+                      <SelectTrigger className="w-full" onBlur={field.onBlur}><SelectValue placeholder="Select a role" /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {employeeRoles.map((value) => (
+                        <SelectItem key={value} value={value}>{formatAccountLabel(value)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="workingStatus"
+              render={({ field }) => (
+                <FormItem className="gap-1">
+                  <FormLabel className="font-heading text-[11px] uppercase text-gray-800">Working Status *</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={mutation.isPending}>
+                    <FormControl>
+                      <SelectTrigger className="w-full" onBlur={field.onBlur}><SelectValue placeholder="Select a working status" /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {(["ACTIVE", "INACTIVE"] as const).map((value) => (
+                        <SelectItem key={value} value={value}>{formatAccountLabel(value)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
           </div>
-          <p className="mt-4 flex items-start gap-2 border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
-            <Info aria-hidden="true" className="size-4 shrink-0" /> Only role
-            and working status can be updated here. Personal information is
-            managed through the employee profile flow.
+          <p className="mt-4 flex items-start gap-3 border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-800">
+            <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            <span>Only role and working status can be updated here. Personal information is managed through the employee profile flow.</span>
           </p>
         </CardContent>
       </Card>
@@ -125,8 +123,6 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
           </h2>
           <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              ["Employee ID", String(employee.employeeId)],
-              ["Account ID", String(employee.accountId)],
               ["Employee Code", employee.employeeCode],
             ].map(([label, value]) => (
               <div key={label}>
@@ -173,6 +169,7 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
         </Button>
       </div>
     </form>
+    </Form>
   );
 }
 

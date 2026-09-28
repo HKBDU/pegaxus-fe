@@ -35,7 +35,7 @@ export default function ManageUserAccountsPage() {
   };
 
   return (
-    <div className="booking-page-shell min-h-[calc(100svh-3rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
+    <div className="booking-page-shell min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         <div className="mb-6 flex items-end justify-between gap-3">
           <div>
