@@ -15,10 +15,8 @@ interface BookingHistoryFiltersProps {
   actions: string[];
   statuses: string[];
   onChange: (filters: HistoryFilters) => void;
-  onRefresh: () => void;
   onDownload: () => void;
   isFetching: boolean;
-  canRefresh: boolean;
   canDownload: boolean;
   viewOptions?: ReactNode;
 }
@@ -78,10 +76,8 @@ export function BookingHistoryFilters({
   actions,
   statuses,
   onChange,
-  onRefresh,
   onDownload,
   isFetching,
-  canRefresh,
   canDownload,
   viewOptions,
 }: BookingHistoryFiltersProps) {
@@ -121,21 +117,6 @@ export function BookingHistoryFilters({
       </Select>
         <div className="flex items-center justify-end gap-1.5 sm:col-span-2 lg:col-span-1">
           {viewOptions}
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="size-8 shrink-0 rounded-[2px] border-slate-300 bg-white shadow-none"
-            aria-label="Refresh history"
-            title="Refresh history"
-            disabled={!canRefresh || isFetching}
-            onClick={onRefresh}
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-3.5 ${isFetching ? "animate-spin" : ""}`}
-            />
-          </Button>
           <Button
             type="button"
             variant="outline"
