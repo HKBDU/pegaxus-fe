@@ -78,7 +78,6 @@ export function ProfileSettingsPage() {
     updateProfile,
     disableProfile,
   } = useProfile(customerId)
-  const canEditCustomerIdentity = Boolean(profile?.customer && !customerId && !isLogisticsManager)
 
   if (isLoading) {
     return <ProfilePageState message="Loading profile..." />
@@ -104,7 +103,7 @@ export function ProfileSettingsPage() {
             <section className="grid gap-x-6 gap-y-3 border-b border-[#d1d5db] py-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)]">
               <ProfileSectionHeading title="IDENTITY" className="text-[20px] leading-7 tracking-[0.5px]" />
               <div className="min-w-0">
-                  <ProfileForm profile={profile} onSubmit={updateProfile} emailVerificationStatus={getEmailVerificationStatus(profile)} canEditEmail canEditDateOfBirth={Boolean(profile.customer)} onValidationChange={setFormErrors} isSubmitting={isSubmitting} />
+                  <ProfileForm profile={profile} onSubmit={updateProfile} emailVerificationStatus={getEmailVerificationStatus(profile)} canEditEmail onValidationChange={setFormErrors} isSubmitting={isSubmitting} />
               </div>
             </section>
 
@@ -131,12 +130,7 @@ export function ProfileSettingsPage() {
             </ProfileAccordionSection>
             {profile.customer && <ProfileAccordionSection title="PERSONAL INFORMATION" open={openSections["PERSONAL INFORMATION"]} onToggle={() => toggleSection("PERSONAL INFORMATION")}>
               <div className="grid gap-3 md:grid-cols-2">
-                {isEditing && canEditCustomerIdentity ? (
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-identity-number">IDENTITY NUMBER</Label>
-                    <Input className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1" id="profile-identity-number" name="identityNumber" form="profile-form" defaultValue={profile.customer.customerId} maxLength={100} />
-                  </div>
-                ) : <Field label="IDENTITY NUMBER" value={profile.customer.customerId} />}
+                <Field label="CUSTOMER CODE" value={profile.customer.customerCode ?? String(profile.customer.customerId)} readOnly />
                 {isEditing && canManageOtherProfile ? (
                   <div className="flex min-w-0 flex-col gap-1">
                     <Label className="text-[11px] font-bold leading-[16.5px] tracking-[0.55px] uppercase" htmlFor="profile-customer-role">ROLE</Label>
@@ -242,7 +236,7 @@ export function ProfileSettingsPage() {
                 <ProfileInfoCard icon={Globe} label="COUNTRY" value={profile.country} />
                 <ProfileInfoCard icon={UserRound} label="ACCOUNT TYPE" value={ACCOUNT_TYPE_LABELS[profile.accountType]} />
                 {profile.customer && <ProfileInfoCard icon={CalendarClock} label="DATE OF BIRTH" value={profile.dob} />}
-                {profile.customer && <ProfileInfoCard icon={IdCard} label="IDENTITY NUMBER" value={profile.customer.customerId} />}
+                {profile.customer && <ProfileInfoCard icon={IdCard} label="CUSTOMER CODE" value={profile.customer.customerCode ?? String(profile.customer.customerId)} />}
                 {profile.employee && <ProfileInfoCard icon={Briefcase} label="EMPLOYEE CODE" value={profile.employee.employeeCode} />}
                 {profile.employee && <ProfileInfoCard icon={Activity} label="WORK STATUS" value={profile.employee.workStatus} />}
                 <ProfileInfoCard icon={ShieldCheck} label="ACCOUNT STATUS" value={formatProfileLabel(profile.status)} />

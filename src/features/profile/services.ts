@@ -34,7 +34,7 @@ async function updateProfileRequest(url: string, input: UpdateProfileRequest) {
     if (input.phone !== undefined) formData.append("Phone", input.phone)
     if (input.address !== undefined) formData.append("Address", input.address)
     if (input.country !== undefined) formData.append("Country", input.country)
-    if (input.identityNumber !== undefined) formData.append("IdentityNumber", input.identityNumber)
+    if (input.customerCode !== undefined) formData.append("CustomerCode", input.customerCode)
     if (input.role !== undefined) formData.append("Role", input.role)
     if (input.status !== undefined) formData.append("Status", input.status)
     if (input.workStatus !== undefined) formData.append("WorkStatus", input.workStatus)
