@@ -111,7 +111,6 @@ function BookingHistoryContent({
       actions={actions}
       statuses={statuses}
       onChange={changeFilters}
-      isFetching={query.isFetching}
       canDownload={!query.isPending && !query.isError && rows.length > 0}
       onDownload={download}
       viewOptions={viewOptions}

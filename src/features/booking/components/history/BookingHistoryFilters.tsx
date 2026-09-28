@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from "react";
-import { Download, RefreshCw } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import {
   Select,
@@ -16,7 +16,6 @@ interface BookingHistoryFiltersProps {
   statuses: string[];
   onChange: (filters: HistoryFilters) => void;
   onDownload: () => void;
-  isFetching: boolean;
   canDownload: boolean;
   viewOptions?: ReactNode;
 }
@@ -77,7 +76,6 @@ export function BookingHistoryFilters({
   statuses,
   onChange,
   onDownload,
-  isFetching,
   canDownload,
   viewOptions,
 }: BookingHistoryFiltersProps) {
