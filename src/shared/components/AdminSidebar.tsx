@@ -82,7 +82,7 @@ export function AdminSidebar() {
   const { setOpen } = useSidebar()
 
   return (
-    <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh w-52 shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
+    <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
       <div className="flex h-20 shrink-0 items-center justify-center bg-[#17191c] px-4">
         <img src={logo} alt="Pegaxus" className="w-full max-w-[170px]" />
       </div>
