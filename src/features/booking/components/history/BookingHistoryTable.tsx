@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { DataTable } from "@/shared/components/ui/data-table";
 import { EmptyState, PageSizeSelect, Pagination } from "@/shared/components/common";
@@ -26,8 +26,12 @@ export function BookingHistoryTable({
   const pageCount = Math.ceil(rows.length / pageSize);
   const currentPage = Math.min(page, Math.max(pageCount, 1));
   const firstIndex = (currentPage - 1) * pageSize;
+  const pageRows = useMemo(
+    () => rows.slice(firstIndex, firstIndex + pageSize),
+    [rows, firstIndex, pageSize],
+  );
   const table = useReactTable({
-    data: rows.slice(firstIndex, firstIndex + pageSize),
+    data: pageRows,
     columns: bookingHistoryColumns,
     getRowId: (row) => row.historyId,
     getCoreRowModel: getCoreRowModel(),

@@ -114,6 +114,15 @@ body {
   margin: 0;
 }
 
+.field-container:has([aria-invalid="true"]) .field-label {
+  color: #dc2626;
+}
+
+.field-container [aria-invalid="true"] {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px #dc2626;
+}
+
 * {
   scrollbar-color: #f39200 #f5f1eb;
   scrollbar-width: thin;

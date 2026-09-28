@@ -55,5 +55,6 @@ export type FieldProps = {
   className?: string
   readOnly?: boolean
   error?: string
+  characterCount?: { value: number; max: number }
   children?: ReactNode
 }

@@ -61,8 +61,8 @@ export function HorsesPage() {
 
   const toolbar = (
     <>
-      <DataTableRadioFilter title="Sex" value={sex} options={HORSE_SEX_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSex} />
-      <DataTableRadioFilter title="Breed" value={breed} options={HORSE_BREED_OPTIONS.map((option) => ({ ...option }))} onValueChange={setBreed} />
+      <DataTableRadioFilter title="Sex" value={sex} options={HORSE_SEX_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSex} hideTitleWhenFiltered />
+      <DataTableRadioFilter title="Breed" value={breed} options={HORSE_BREED_OPTIONS.map((option) => ({ ...option }))} onValueChange={setBreed} hideTitleWhenFiltered />
       <Select value={sort} onValueChange={setSort}>
         <SelectTrigger className="h-8 w-full rounded-[2px] border-slate-300 bg-white text-xs shadow-none data-[size=default]:h-8 focus:border-amber-500 focus:ring-amber-500/20"><SelectValue aria-label="Horse sort order" /></SelectTrigger>
         <SelectContent position="popper" align="start" sideOffset={2} className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">

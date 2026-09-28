@@ -9,8 +9,6 @@ export const ROLE_ROUTES = {
   managerCreateUser: "/admin/users/new",
   customerHorses: "/my-horses",
   customerProfile: "/profile-settings",
-  managerCustomerProfile: "/customers/:customerId/profile",
-  managerHorseDetail: "/horses/:horseId",
 } as const
 
 export const accountDetail = (id: string | number) => `${ROLE_ROUTES.managerUsers}/${encodeURIComponent(id)}`

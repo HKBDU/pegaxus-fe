@@ -104,22 +104,19 @@ function BookingHistoryContent({
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function renderFilters(viewOptions?: ReactNode) {
-    return (
-      <BookingHistoryFilters
-        filters={filters}
-        actions={actions}
-        statuses={statuses}
-        onChange={changeFilters}
-        isFetching={query.isFetching}
-        canRefresh={true}
-        onRefresh={() => void query.refetch()}
-        canDownload={!query.isPending && !query.isError && rows.length > 0}
-        onDownload={download}
-        viewOptions={viewOptions}
-      />
-    );
-  }
+ function renderFilters(viewOptions?: ReactNode) {
+  return (
+    <BookingHistoryFilters
+      filters={filters}
+      actions={actions}
+      statuses={statuses}
+      onChange={changeFilters}
+      canDownload={!query.isPending && !query.isError && rows.length > 0}
+      onDownload={download}
+      viewOptions={viewOptions}
+    />
+  );
+}
 
   return (
     <div className="booking-page-shell min-h-[70dvh] min-w-0 px-4 py-8 font-sans text-slate-900 sm:px-6 lg:px-8 lg:py-10">

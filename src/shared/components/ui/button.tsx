@@ -42,12 +42,23 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  onClick,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"
+  const lastClickAt = React.useRef(0)
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const now = Date.now()
+    if (now - lastClickAt.current < 400) {
+      event.preventDefault()
+      return
+    }
+    lastClickAt.current = now
+    onClick?.(event)
+  }
 
   return (
     <Comp
@@ -55,6 +66,7 @@ function Button({
       data-variant={variant}
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
+      onClick={handleClick}
       {...props}
     />
   )
