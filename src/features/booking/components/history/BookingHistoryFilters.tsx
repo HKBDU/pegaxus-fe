@@ -1,5 +1,5 @@
-import { useId, type ReactNode } from "react";
-import { Download, RefreshCw } from "lucide-react";
+import type { ReactNode } from "react";
+import { Download } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { DataTableRadioFilter } from "@/shared/components/ui/data-table-radio-filter";
 import { formatHistoryLabel, type HistoryFilters } from "../../history/utils";
