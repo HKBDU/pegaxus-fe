@@ -55,6 +55,7 @@ export function useProfile(customerId?: string) {
             updatedAt: new Date().toISOString(),
           }
         })
+        toast.success("Profile updated successfully.")
         setIsEditing(false)
         return
       }
@@ -68,6 +69,7 @@ export function useProfile(customerId?: string) {
       // PATCH responses may not contain the complete profile. Reload the
       // canonical representation so every field shown by the page is fresh.
       await loadProfile()
+      toast.success("Profile updated successfully.")
       setIsEditing(false)
     } catch {
       toast.error("Can not update profile. Please try again.")

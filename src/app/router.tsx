@@ -77,74 +77,68 @@ export const router = createBrowserRouter([
           {
             path: ROLE_ROUTES.customerHorses + "/:horseId",
             element: (
-              <Suspense fallback={<LoadingState />}>
-                <HorseDetailPage />
-              </Suspense>
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}>
+                  <HorseDetailPage />
+                </Suspense>
+              </ProtectedRoute>
             ),
           },
           {
             path: ROLE_ROUTES.customerHorses + "/:horseId/edit",
             element: (
-              <Suspense fallback={<LoadingState />}>
-                <EditHorsePage />
-              </Suspense>
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}>
+                  <EditHorsePage />
+                </Suspense>
+              </ProtectedRoute>
             ),
           },
           {
             path: ROLE_ROUTES.customerHorses + "/new",
             element: (
-              <Suspense fallback={<LoadingState />}>
-                <AddHorsePage />
-              </Suspense>
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}>
+                  <AddHorsePage />
+                </Suspense>
+              </ProtectedRoute>
             ),
           },
           {
             path: ROLE_ROUTES.customerHorses,
             element: (
-              <Suspense fallback={<LoadingState />}>
-                <HorsesPage />
-              </Suspense>
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}>
+                  <HorsesPage />
+                </Suspense>
+              </ProtectedRoute>
             ),
           },
           {
             path: ROLE_ROUTES.customerProfile,
             element: (
-              <Suspense fallback={<LoadingState />}>
-                <ProfileSettingsPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: ROLE_ROUTES.managerCustomerProfile,
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <ProfileSettingsPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: ROLE_ROUTES.managerHorseDetail,
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <HorseDetailPage />
-              </Suspense>
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingState />}>
+                  <ProfileSettingsPage />
+                </Suspense>
+              </ProtectedRoute>
             ),
           },
           {
             path: "bookings",
-            element: <BookingListPage />,
+            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingListPage /></ProtectedRoute>,
           },
           {
             path: "bookings/new",
-            element: <BookingFormPage mode="create" />,
+            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingFormPage mode="create" /></ProtectedRoute>,
           },
           {
             path: "bookings/:bookingId",
-            element: <BookingDetailsPage />,
+            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingDetailsPage /></ProtectedRoute>,
           },
           {
             path: "bookings/:bookingId/edit",
-            element: <BookingFormPage mode="edit" />,
+            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingFormPage mode="edit" /></ProtectedRoute>,
           },
         ],
       },

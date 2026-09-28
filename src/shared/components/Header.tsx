@@ -114,7 +114,7 @@ export function Header({
           <img src={logoSrc} alt={logoAlt} className="h-auto w-[138px] transition-transform duration-300 hover:scale-[1.02]" />
         </NavLink>
         { /* active state got from url */}
-        <nav aria-label="Main navigation" className="relative ml-auto flex h-full w-[22rem] items-center">
+        {navItems.length > 0 ? <nav aria-label="Main navigation" className="relative ml-auto flex h-full w-[22rem] items-center">
           {navItems.map((item) => (
             <NavLink
               key={item.href}
@@ -139,7 +139,7 @@ export function Header({
               transform: `translateX(${activeNavIndex * (100 / activeBarWidth) * 100}%)`,
             }}
           />
-        </nav>
+        </nav> : null}
 
         <div className="ml-10 flex items-center gap-5">
           {rightContent ?? (

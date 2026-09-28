@@ -3,6 +3,7 @@ import {
   House,
   LogOut,
   MapPin,
+  PanelLeftClose,
   Settings,
   ThumbsUp,
   Truck,
@@ -31,7 +32,7 @@ const primaryItems = [
   { label: "Dashboard", href: "/admin", icon: House },
   { label: "Transport Requests", href: "/admin/transport-requests", icon: Truck },
   { label: "Transport Plans", href: "/admin/transport-plans", icon: MapPin },
-  { label: "Staff", href: "/admin/staff", icon: UsersRound },
+  { label: "Accounts", href: "/admin/staff", icon: UsersRound },
   { label: "Transport Partners", href: "/admin/transport-partners", icon: ThumbsUp },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
 ]
@@ -39,8 +40,9 @@ const primaryItems = [
 const secondaryItems = [
   { label: "Profile", href: "/admin/profile", icon: UserRound },
   { label: "Settings", href: "/admin/settings", icon: Settings },
-  { label: "Sign out", href: "/logout", icon: LogOut },
 ]
+
+const logoutItem = { label: "Sign out", href: "/logout", icon: LogOut }
 
 function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
   const { pathname } = useLocation()
@@ -76,6 +78,8 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
 }
 
 export function AdminSidebar() {
+  const { setOpen } = useSidebar()
+
   return (
     <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh w-52 shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
       <div className="flex h-20 shrink-0 items-center justify-center bg-[#17191c] px-4">
@@ -90,6 +94,21 @@ export function AdminSidebar() {
       </SidebarContent>
       <SidebarFooter className="shrink-0 border-white/10 bg-[#17191c] px-0 py-4">
         <AdminSidebarMenu items={secondaryItems} compact />
+        <div className="lg:hidden">
+          <AdminSidebarMenu items={[logoutItem]} compact />
+        </div>
+        <SidebarMenu>
+          <SidebarMenuItem className="hidden lg:block">
+            <SidebarMenuButton
+              type="button"
+              onClick={() => setOpen(false)}
+              className="h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white"
+            >
+              <PanelLeftClose className="size-4" />
+              <span>Hide sidebar</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   )

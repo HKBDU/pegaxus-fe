@@ -4,8 +4,6 @@ export const ROLE_ROUTES = {
   home: "/",
   customerHorses: "/my-horses",
   customerProfile: "/profile-settings",
-  managerCustomerProfile: "/customers/:customerId/profile",
-  managerHorseDetail: "/horses/:horseId",
 } as const
 
 export const CUSTOMER_ONLY: AccessPolicy = { anyRole: ["CUSTOMER"] }
