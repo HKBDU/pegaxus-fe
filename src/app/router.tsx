@@ -18,6 +18,7 @@ import { AuthShell } from "@/features/auth/components/AuthShell";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
+const CreateEmployeeAccountPage = lazy(() => import("@/features/accounts/pages/CreateEmployeeAccountPage"));
 const ViewUserAccountPage = lazy(() => import("@/features/accounts/pages/ViewUserAccountPage"));
 const EditUserAccountPage = lazy(() => import("@/features/accounts/pages/EditUserAccountPage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
@@ -199,6 +200,10 @@ export const router = createBrowserRouter([
             <ManageUserAccountsPage />
           </Suspense>
         ),
+      },
+      {
+        path: ROLE_ROUTES.managerCreateUser,
+        element: <Suspense fallback={<LoadingState />}><CreateEmployeeAccountPage /></Suspense>,
       },
       {
         path: "users/:employeeId",

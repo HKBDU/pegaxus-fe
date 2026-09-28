@@ -6,6 +6,7 @@ export const ROLE_ROUTES = {
   home: "/",
   managerHome: "/admin",
   managerUsers: "/admin/users",
+  managerCreateUser: "/admin/users/new",
   customerHorses: "/my-horses",
   customerProfile: "/profile-settings",
   managerCustomerProfile: "/customers/:customerId/profile",
@@ -24,9 +25,10 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
 }
 
 const adminHeaderRoutes = [
-  { path: "/admin/users/:employeeId/edit", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "EDIT USER ACCOUNT" },
-  { path: "/admin/users/:employeeId", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "VIEW USER ACCOUNT" },
-  { path: "/admin/users", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "MANAGE USER ACCOUNTS" },
+  { path: ROLE_ROUTES.managerCreateUser, label: "USERS", href: ROLE_ROUTES.managerUsers, title: "CREATE EMPLOYEE ACCOUNT" },
+  { path: "/admin/users/:employeeId/edit", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "EDIT EMPLOYEE ACCOUNT" },
+  { path: "/admin/users/:employeeId", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "VIEW EMPLOYEE ACCOUNT" },
+  { path: "/admin/users", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "MANAGE EMPLOYEE ACCOUNTS" },
   { path: "/admin/transport-requests/:bookingId", label: "TRANSPORT REQUESTS", href: "/admin/transport-requests", title: "BOOKING DETAILS" },
   { path: "/admin/transport-requests", label: "TRANSPORT REQUESTS", href: "/admin/transport-requests", title: "" },
   ...["profile", "staff", "transport-plans", "transport-partners", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
