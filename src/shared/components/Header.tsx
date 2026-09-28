@@ -2,6 +2,7 @@ import { Bell, House, MapPin, Menu, Truck } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
+import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu"
 import { Button } from "@/shared/components/ui/button"
 import { ProfileDropdown } from "@/shared/components/ProfileDropdown"
 import {
@@ -9,7 +10,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
@@ -39,19 +39,19 @@ function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
       <SidebarContent className="min-h-0 overflow-hidden bg-[#17191c] text-white">
         <SidebarGroup className="px-0">
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SlidingSidebarMenu>
               {navItems.map((item, index) => {
                 const isActive = item.href === "/" ? location.pathname === "/" : location.pathname.startsWith(item.href)
                 const Icon = icons[index] ?? House
 
                 return (
-                  <SidebarMenuItem key={item.href}>
+                  <SidebarMenuItem key={item.href} data-active-item={isActive || undefined}>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive}
                       className={cn(
-                        "h-8 rounded-none px-3 font-heading text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
-                        isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-3 font-semibold !text-[#f39200]",
+                        "h-8 rounded-none px-3 font-heading text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] transition-[color,background-color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-white/5 hover:text-white",
+                        isActive && "!bg-[#f39200]/10 font-semibold !text-[#f39200]",
                       )}
                     >
                       <NavLink to={item.href} end={item.href === "/"} onClick={() => setOpenMobile(false)}>
@@ -62,7 +62,7 @@ function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
                   </SidebarMenuItem>
                 )
               })}
-            </SidebarMenu>
+            </SlidingSidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

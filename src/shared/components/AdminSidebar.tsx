@@ -14,6 +14,7 @@ import type { CSSProperties } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
+import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu"
 import { cn } from "@/lib/utils"
 import type { AdminSidebarMenuProps, AdminSidebarProviderProps } from "@/shared/types/type"
 import {
@@ -22,7 +23,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
@@ -49,21 +49,21 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
   const { pathname } = useLocation()
 
   return (
-    <SidebarMenu>
+    <SlidingSidebarMenu>
       {items.map((item) => {
         const isActive = item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href)
         const Icon = item.icon
 
         return (
-          <SidebarMenuItem key={item.href}>
+          <SidebarMenuItem key={item.href} data-active-item={isActive || undefined}>
             <SidebarMenuButton
               asChild
               isActive={isActive}
               className={cn(
                 compact
-                  ? "h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white"
-                  : "h-9 rounded-none px-4 text-xs font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
-                isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-3 font-semibold !text-[#f39200]",
+                  ? "h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] transition-[color,background-color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-white/5 hover:text-white"
+                  : "h-9 rounded-none px-4 text-xs font-medium uppercase tracking-[0.04em] text-[#9ca1a8] transition-[color,background-color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-white/5 hover:text-white",
+                isActive && "!bg-[#f39200]/10 font-semibold !text-[#f39200]",
               )}
             >
               <NavLink to={item.href}>
@@ -74,7 +74,7 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
           </SidebarMenuItem>
         )
       })}
-    </SidebarMenu>
+    </SlidingSidebarMenu>
   )
 }
 
@@ -98,8 +98,8 @@ export function AdminSidebar() {
         <div className="lg:hidden">
           <AdminSidebarMenu items={[logoutItem]} compact />
         </div>
-        <SidebarMenu>
-          <SidebarMenuItem className="hidden lg:block">
+        <SlidingSidebarMenu>
+          <SidebarMenuItem className="hidden lg:block" data-active-item="false">
             <SidebarMenuButton
               type="button"
               onClick={() => setOpen(false)}
@@ -109,7 +109,7 @@ export function AdminSidebar() {
               <span>Hide sidebar</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
-        </SidebarMenu>
+        </SlidingSidebarMenu>
       </SidebarFooter>
     </Sidebar>
   )
