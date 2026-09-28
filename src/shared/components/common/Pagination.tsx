@@ -4,12 +4,13 @@ interface PaginationProps {
   meta: PaginationMeta
   onPageChange: (page: number) => void
   className?: string
+  showSinglePage?: boolean
 }
 
-export function Pagination({ meta, onPageChange, className }: PaginationProps) {
+export function Pagination({ meta, onPageChange, className, showSinglePage = false }: PaginationProps) {
   const { currentPage, totalPages, hasPreviousPage, hasNextPage } = meta
 
-  if (totalPages <= 1) return null
+  if (totalPages === 0 || (totalPages === 1 && !showSinglePage)) return null
 
   const getPageNumbers = (): (number | '...')[] => {
     if (totalPages <= 5) {

@@ -32,8 +32,6 @@ export function PageSizeSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent
-          position="popper"
-          side="bottom"
           align="end"
           sideOffset={2}
           className="min-w-16 rounded-[2px] border-slate-200 bg-white p-0.5 font-sans shadow-md"
