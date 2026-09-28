@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { getBookingErrorMessage } from "@/features/booking/utils"
 import type { EntityId } from "@/shared/types"
 
-import { useCancelBooking } from "@/features/booking/hooks"
+import { useBookingRequestGuard, useCancelBooking } from "@/features/booking/hooks"
 import { cancelBookingSchema, type CancelBookingFormValues } from "@/features/booking/schemas"
 import {
   AlertDialog,
@@ -30,6 +30,7 @@ interface CancelBookingDialogProps {
 
 export function CancelBookingDialog({ bookingId, open, onOpenChange }: CancelBookingDialogProps) {
   const cancelBooking = useCancelBooking()
+  const requestGuard = useBookingRequestGuard()
   const form = useForm<CancelBookingFormValues>({
     resolver: zodResolver(cancelBookingSchema),
     defaultValues: { reason: "" },
@@ -38,7 +39,8 @@ export function CancelBookingDialog({ bookingId, open, onOpenChange }: CancelBoo
   const onSubmit = form.handleSubmit(async (values) => {
     if (!bookingId) return
     try {
-      await cancelBooking.mutateAsync({ bookingId, reason: values.reason })
+      const guarded = await requestGuard.run(() => cancelBooking.mutateAsync({ bookingId, reason: values.reason }))
+      if (!guarded.started) return
       toast.success("Booking cancelled")
       form.reset()
       onOpenChange(false)
@@ -48,7 +50,10 @@ export function CancelBookingDialog({ bookingId, open, onOpenChange }: CancelBoo
   })
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) form.reset()
+    if (!nextOpen) {
+      form.reset()
+      requestGuard.reset()
+    }
     onOpenChange(nextOpen)
   }
 
@@ -81,6 +86,11 @@ export function CancelBookingDialog({ bookingId, open, onOpenChange }: CancelBoo
                   <FormControl>
                     <Textarea
                       {...field}
+                      disabled={cancelBooking.isPending}
+                      onChange={(event) => {
+                        field.onChange(event)
+                        requestGuard.reset()
+                      }}
                       rows={2}
                       maxLength={500}
                       className="field-sizing-content h-auto min-h-14 max-h-24 resize-none overflow-y-auto rounded-[2px] border-slate-300 bg-white px-3 py-2 text-xs leading-4 text-slate-900 shadow-none placeholder:text-slate-400 focus-visible:border-amber-500 focus-visible:ring-amber-500/20"
@@ -102,13 +112,13 @@ export function CancelBookingDialog({ bookingId, open, onOpenChange }: CancelBoo
             variant="destructive"
             size="sm"
             className="h-8 rounded-[2px] bg-red-600 px-3 text-xs font-normal text-white shadow-none hover:bg-red-700"
-            disabled={cancelBooking.isPending}
+            disabled={cancelBooking.isPending || requestGuard.isBlocked}
             onClick={(event) => {
               event.preventDefault()
               void onSubmit()
             }}
           >
-            {cancelBooking.isPending ? "Cancelling..." : "Cancel booking"}
+            {cancelBooking.isPending ? "Cancelling..." : requestGuard.isBlocked ? "Edit reason to retry" : "Cancel booking"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

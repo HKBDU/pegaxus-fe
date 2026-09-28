@@ -1,10 +1,8 @@
 import type { ReactNode } from "react"
-import { Filter, X } from "lucide-react"
+import { Check, ChevronDown } from "lucide-react"
 
-import { Badge } from "@/shared/components/ui/badge"
 import { Button } from "@/shared/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover"
-import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group"
 
 export interface DataTableRadioOption {
   value: string
@@ -13,6 +11,7 @@ export interface DataTableRadioOption {
 
 interface DataTableRadioFilterProps {
   title: string
+  ariaLabel?: string
   value: string
   defaultValue?: string
   options: DataTableRadioOption[]
@@ -22,6 +21,7 @@ interface DataTableRadioFilterProps {
 
 export function DataTableRadioFilter({
   title,
+  ariaLabel,
   value,
   defaultValue = "ALL",
   options,
@@ -34,28 +34,36 @@ export function DataTableRadioFilter({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 min-w-0 justify-start overflow-hidden rounded-[2px] border-slate-300 bg-white px-2.5 font-sans text-xs font-normal normal-case tracking-normal shadow-none">
-          {isFiltered ? <X className="size-3.5 text-slate-500" /> : <Filter className="size-3.5 text-slate-500" />}
-          {title}
-          {isFiltered && selectedOption ? (
-            <Badge variant="secondary" className="ml-auto truncate rounded-[2px] px-1.5 py-0 text-[0.62rem]">
-              {selectedOption.label}
-            </Badge>
-          ) : null}
+        <Button aria-label={ariaLabel ?? title} variant="outline" size="sm" className="h-8 min-w-0 justify-start overflow-hidden rounded-[2px] border-slate-300 bg-white px-2.5 font-sans text-xs font-normal normal-case tracking-normal shadow-none">
+          <span className="truncate">{isFiltered && selectedOption ? selectedOption.label : title}</span>
+          <ChevronDown className="ml-auto size-3.5 shrink-0 text-slate-500" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" sideOffset={2} className="w-44 rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
-        <RadioGroup value={value} onValueChange={onValueChange} className="gap-1">
+      <PopoverContent
+        align="start"
+        sideOffset={2}
+        className="w-[var(--radix-popover-trigger-width)] rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md"
+      >
+        <div role="radiogroup" aria-label={ariaLabel ?? title} className="grid gap-1">
           {options.map((option) => (
-            <label key={option.value} className="flex cursor-pointer items-center gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem] hover:bg-amber-50">
-              <RadioGroupItem
-                value={option.value}
-                className="size-2.5 border-slate-300 shadow-none data-[state=checked]:border-[#ef8f00] data-[state=checked]:bg-[#ef8f00] [&_[data-slot=radio-group-indicator]]:hidden"
+            <button
+              type="button"
+              role="radio"
+              aria-checked={option.value === value}
+              key={option.value}
+              onClick={() => onValueChange(option.value)}
+              className="flex w-full cursor-pointer items-center gap-1.5 rounded-[2px] border-0 px-1.5 py-1 text-left text-[0.7rem] outline-none transition-colors duration-150 hover:bg-amber-50 focus-visible:bg-amber-50 active:bg-amber-50"
+            >
+              <span className="min-w-0 flex-1 truncate">
+                {renderOption ? renderOption(option) : option.label}
+              </span>
+              <Check
+                aria-hidden="true"
+                className={`size-3.5 shrink-0 text-amber-600! ${option.value === value ? "opacity-100" : "opacity-0"}`}
               />
-              {renderOption ? renderOption(option) : <span>{option.label}</span>}
-            </label>
+            </button>
           ))}
-        </RadioGroup>
+        </div>
       </PopoverContent>
     </Popover>
   )

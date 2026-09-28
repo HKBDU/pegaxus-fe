@@ -19,8 +19,6 @@ export interface BookingCustomer {
   customerId: EntityId
   fullName: string
   phone: string
-  organization?: string | null
-  email?: string | null
 }
 
 export interface BookedHorse {
@@ -30,8 +28,6 @@ export interface BookedHorse {
   breed: string
   microchipNumber: string
   passportNumber: string
-  dateOfBirth?: string
-  weightKg?: number
   specialHandlingNotes: string | null
 }
 
@@ -83,7 +79,6 @@ export interface Booking extends Omit<BookingSummary, "customerName"> {
   customer: BookingCustomer
   originAddress: string
   destinationAddress: string
-  requestedDepartureTime?: string | null
   requestedArrivalDate: string | null
   horses: BookedHorse[]
   specialRequirements: string | null

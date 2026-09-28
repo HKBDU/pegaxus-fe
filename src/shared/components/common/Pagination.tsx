@@ -7,9 +7,9 @@ interface PaginationProps {
 }
 
 export function Pagination({ meta, onPageChange, className }: PaginationProps) {
-  const { currentPage, totalPages, hasPreviousPage, hasNextPage } = meta
-
-  if (totalPages <= 1) return null
+  const totalPages = Math.max(1, meta.totalPages)
+  const currentPage = Math.min(Math.max(1, meta.currentPage), totalPages)
+  const { hasPreviousPage, hasNextPage } = meta
 
   const getPageNumbers = (): (number | '...')[] => {
     if (totalPages <= 5) {

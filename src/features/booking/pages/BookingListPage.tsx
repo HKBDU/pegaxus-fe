@@ -67,7 +67,6 @@ export default function BookingListPage({ audience = "customer" }: { audience?: 
             audience={audience}
             filters={params}
             meta={bookingsQuery.data.meta}
-            isLoading={bookingsQuery.isFetching}
             onSearchChange={handleSearchChange}
             onStatusChange={handleStatusChange}
             onSortChange={handleSortChange}

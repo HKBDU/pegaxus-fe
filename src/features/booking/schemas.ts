@@ -1,8 +1,20 @@
 import { z } from "zod"
+import { addDays, addMonths, format, parseISO } from "date-fns"
 
 import { BOOKING_STATUSES } from "@/features/booking/types"
 
 const optionalText = (max: number) => z.string().trim().max(max)
+
+const DATE_FORMAT = "yyyy-MM-dd"
+
+export function getBookingDepartureDateRange(now = new Date()) {
+  const utcToday = parseISO(now.toISOString().slice(0, 10))
+
+  return {
+    minDate: format(addDays(utcToday, 21), DATE_FORMAT),
+    maxDate: format(addMonths(utcToday, 2), DATE_FORMAT),
+  }
+}
 
 export const bookingFiltersSchema = z.object({
   search: z.string().trim().max(100, "Search is limited to 100 characters"),
@@ -41,13 +53,30 @@ export const bookingFormSchema = z
         })
       }),
   })
-  .refine(
-    (values) =>
-      !values.requestedArrivalDate ||
-      !values.requestedDepartureDate ||
-      values.requestedArrivalDate >= values.requestedDepartureDate,
-    { message: "Arrival date cannot be before departure", path: ["requestedArrivalDate"] },
-  )
+  .superRefine((values, context) => {
+    if (values.requestedDepartureDate) {
+      const { minDate, maxDate } = getBookingDepartureDateRange()
+      if (values.requestedDepartureDate < minDate || values.requestedDepartureDate > maxDate) {
+        context.addIssue({
+          code: "custom",
+          message: "Departure date must be between 3 weeks and 2 months from today",
+          path: ["requestedDepartureDate"],
+        })
+      }
+    }
+
+    if (
+      values.requestedArrivalDate &&
+      values.requestedDepartureDate &&
+      values.requestedArrivalDate < values.requestedDepartureDate
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Arrival date cannot be before departure",
+        path: ["requestedArrivalDate"],
+      })
+    }
+  })
 
 export const reasonSchema = z.object({
   reason: z.string().trim().min(10, "Please provide at least 10 characters").max(500),
