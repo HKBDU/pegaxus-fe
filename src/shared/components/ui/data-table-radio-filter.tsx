@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { Check, ChevronDown } from "lucide-react"
 
+import { Badge } from "@/shared/components/ui/badge"
 import { Button } from "@/shared/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover"
 
@@ -17,6 +18,7 @@ interface DataTableRadioFilterProps {
   options: DataTableRadioOption[]
   onValueChange: (value: string) => void
   renderOption?: (option: DataTableRadioOption) => ReactNode
+  hideTitleWhenFiltered?: boolean
 }
 
 export function DataTableRadioFilter({
@@ -27,6 +29,7 @@ export function DataTableRadioFilter({
   options,
   onValueChange,
   renderOption,
+  hideTitleWhenFiltered = false,
 }: DataTableRadioFilterProps) {
   const selectedOption = options.find((option) => option.value === value)
   const isFiltered = value !== defaultValue
@@ -35,8 +38,14 @@ export function DataTableRadioFilter({
     <Popover>
       <PopoverTrigger asChild>
         <Button aria-label={ariaLabel ?? title} variant="outline" size="sm" className="h-8 min-w-0 justify-start overflow-hidden rounded-[2px] border-slate-300 bg-white px-2.5 font-sans text-xs font-normal normal-case tracking-normal shadow-none">
-          <span className="truncate">{isFiltered && selectedOption ? selectedOption.label : title}</span>
-          <ChevronDown className="ml-auto size-3.5 shrink-0 text-slate-500" />
+          <span className="truncate">{isFiltered && hideTitleWhenFiltered && selectedOption ? selectedOption.label : title}</span>
+          {isFiltered && !hideTitleWhenFiltered && selectedOption ? (
+            <Badge variant="secondary" className="ml-auto truncate rounded-[2px] px-1.5 py-0 text-[0.62rem]">
+              {selectedOption.label}
+            </Badge>
+          ) : (
+            <ChevronDown className="ml-auto size-3.5 shrink-0 text-slate-500" />
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent

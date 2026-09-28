@@ -3,6 +3,7 @@ import {
   House,
   LogOut,
   MapPin,
+  PanelLeftClose,
   Settings,
   ThumbsUp,
   Truck,
@@ -13,6 +14,7 @@ import type { CSSProperties } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
+import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu"
 import { cn } from "@/lib/utils"
 import type { AdminSidebarMenuProps, AdminSidebarProviderProps } from "@/shared/types/type"
 import {
@@ -21,17 +23,17 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  useSidebar,
 } from "@/shared/components/ui/sidebar"
 
 const primaryItems = [
   { label: "Dashboard", href: "/admin", icon: House },
   { label: "Transport Requests", href: "/admin/transport-requests", icon: Truck },
   { label: "Transport Plans", href: "/admin/transport-plans", icon: MapPin },
-  { label: "Staff", href: "/admin/staff", icon: UsersRound },
+  { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Transport Partners", href: "/admin/transport-partners", icon: ThumbsUp },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
 ]
@@ -39,28 +41,29 @@ const primaryItems = [
 const secondaryItems = [
   { label: "Profile", href: "/admin/profile", icon: UserRound },
   { label: "Settings", href: "/admin/settings", icon: Settings },
-  { label: "Sign out", href: "/logout", icon: LogOut },
 ]
+
+const logoutItem = { label: "Sign out", href: "/logout", icon: LogOut }
 
 function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
   const { pathname } = useLocation()
 
   return (
-    <SidebarMenu>
+    <SlidingSidebarMenu>
       {items.map((item) => {
         const isActive = item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href)
         const Icon = item.icon
 
         return (
-          <SidebarMenuItem key={item.href}>
+          <SidebarMenuItem key={item.href} data-active-item={isActive || undefined}>
             <SidebarMenuButton
               asChild
               isActive={isActive}
               className={cn(
                 compact
-                  ? "h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white"
-                  : "h-9 rounded-none px-4 text-xs font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white",
-                isActive && "border-l-4 border-[#f39200] !bg-[#f39200]/10 pl-3 font-semibold !text-[#f39200]",
+                  ? "h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] transition-[color,background-color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-white/5 hover:text-white"
+                  : "h-9 rounded-none px-4 text-xs font-medium uppercase tracking-[0.04em] text-[#9ca1a8] transition-[color,background-color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-white/5 hover:text-white",
+                isActive && "!bg-[#f39200]/10 font-semibold !text-[#f39200]",
               )}
             >
               <NavLink to={item.href}>
@@ -71,13 +74,15 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
           </SidebarMenuItem>
         )
       })}
-    </SidebarMenu>
+    </SlidingSidebarMenu>
   )
 }
 
 export function AdminSidebar() {
+  const { setOpen } = useSidebar()
+
   return (
-    <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh w-52 shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
+    <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
       <div className="flex h-20 shrink-0 items-center justify-center bg-[#17191c] px-4">
         <img src={logo} alt="Pegaxus" className="w-full max-w-[170px]" />
       </div>
@@ -90,6 +95,21 @@ export function AdminSidebar() {
       </SidebarContent>
       <SidebarFooter className="shrink-0 border-white/10 bg-[#17191c] px-0 py-4">
         <AdminSidebarMenu items={secondaryItems} compact />
+        <div className="lg:hidden">
+          <AdminSidebarMenu items={[logoutItem]} compact />
+        </div>
+        <SlidingSidebarMenu>
+          <SidebarMenuItem className="hidden lg:block" data-active-item="false">
+            <SidebarMenuButton
+              type="button"
+              onClick={() => setOpen(false)}
+              className="h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white"
+            >
+              <PanelLeftClose className="size-4" />
+              <span>Hide sidebar</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SlidingSidebarMenu>
       </SidebarFooter>
     </Sidebar>
   )

@@ -60,14 +60,15 @@ export function HorsesPage() {
 
   const toolbar = (
     <>
-      <DataTableRadioFilter title="Sex" value={sex} options={HORSE_SEX_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSex} />
-      <DataTableRadioFilter title="Breed" value={breed} options={HORSE_BREED_OPTIONS.map((option) => ({ ...option }))} onValueChange={setBreed} />
+      <DataTableRadioFilter title="Sex" value={sex} options={HORSE_SEX_OPTIONS.map((option) => ({ ...option }))} onValueChange={setSex} hideTitleWhenFiltered />
+      <DataTableRadioFilter title="Breed" value={breed} options={HORSE_BREED_OPTIONS.map((option) => ({ ...option }))} onValueChange={setBreed} hideTitleWhenFiltered />
       <DataTableRadioFilter
         title="Sort"
         value={sort}
         defaultValue=""
         options={HORSE_SORT_OPTIONS.map((option) => ({ ...option }))}
         onValueChange={setSort}
+        hideTitleWhenFiltered
       />
     </>
   )

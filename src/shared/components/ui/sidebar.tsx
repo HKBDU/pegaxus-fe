@@ -206,15 +206,15 @@ function Sidebar({
   if (!fixed) {
     return (
       <div
-        className={cn("group peer hidden min-h-svh shrink-0 text-sidebar-foreground md:flex", className)}
+        className={cn("group peer hidden min-h-svh w-(--sidebar-width) shrink-0 overflow-hidden text-sidebar-foreground transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:flex", "data-[collapsible=offcanvas]:w-0", className)}
         data-state={state}
-        data-collapsible=""
+        data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
         data-side={side}
         data-slot="sidebar"
         {...props}
       >
-        <div className="flex min-h-full w-(--sidebar-width) flex-col bg-sidebar">
+        <div className="flex min-h-full w-(--sidebar-width) shrink-0 flex-col bg-sidebar">
           {children}
         </div>
       </div>

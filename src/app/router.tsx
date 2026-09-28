@@ -17,6 +17,10 @@ import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
+const CreateEmployeeAccountPage = lazy(() => import("@/features/accounts/pages/CreateEmployeeAccountPage"));
+const ViewUserAccountPage = lazy(() => import("@/features/accounts/pages/ViewUserAccountPage"));
+const EditUserAccountPage = lazy(() => import("@/features/accounts/pages/EditUserAccountPage"));
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const GoogleCallbackPage = lazy(
@@ -77,74 +81,68 @@ export const router = createBrowserRouter([
           {
             path: ROLE_ROUTES.customerHorses + "/:horseId",
             element: (
-              <Suspense fallback={<LoadingState />}>
-                <HorseDetailPage />
-              </Suspense>
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}>
+                  <HorseDetailPage />
+                </Suspense>
+              </ProtectedRoute>
             ),
           },
           {
             path: ROLE_ROUTES.customerHorses + "/:horseId/edit",
             element: (
-              <Suspense fallback={<LoadingState />}>
-                <EditHorsePage />
-              </Suspense>
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}>
+                  <EditHorsePage />
+                </Suspense>
+              </ProtectedRoute>
             ),
           },
           {
             path: ROLE_ROUTES.customerHorses + "/new",
             element: (
-              <Suspense fallback={<LoadingState />}>
-                <AddHorsePage />
-              </Suspense>
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}>
+                  <AddHorsePage />
+                </Suspense>
+              </ProtectedRoute>
             ),
           },
           {
             path: ROLE_ROUTES.customerHorses,
             element: (
-              <Suspense fallback={<LoadingState />}>
-                <HorsesPage />
-              </Suspense>
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}>
+                  <HorsesPage />
+                </Suspense>
+              </ProtectedRoute>
             ),
           },
           {
             path: ROLE_ROUTES.customerProfile,
             element: (
-              <Suspense fallback={<LoadingState />}>
-                <ProfileSettingsPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: ROLE_ROUTES.managerCustomerProfile,
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <ProfileSettingsPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: ROLE_ROUTES.managerHorseDetail,
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <HorseDetailPage />
-              </Suspense>
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingState />}>
+                  <ProfileSettingsPage />
+                </Suspense>
+              </ProtectedRoute>
             ),
           },
           {
             path: "bookings",
-            element: <BookingListPage />,
+            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingListPage /></ProtectedRoute>,
           },
           {
             path: "bookings/new",
-            element: <BookingFormPage mode="create" />,
+            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingFormPage mode="create" /></ProtectedRoute>,
           },
           {
             path: "bookings/:bookingId",
-            element: <BookingDetailsPage />,
+            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingDetailsPage /></ProtectedRoute>,
           },
           {
             path: "bookings/:bookingId/edit",
-            element: <BookingFormPage mode="edit" />,
+            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingFormPage mode="edit" /></ProtectedRoute>,
           },
         ],
       },
@@ -188,6 +186,26 @@ export const router = createBrowserRouter([
       {
         path: "transport-requests",
         element: <BookingListPage audience="manager" />,
+      },
+      {
+        path: ROLE_ROUTES.managerUsers,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <ManageUserAccountsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: ROLE_ROUTES.managerCreateUser,
+        element: <Suspense fallback={<LoadingState />}><CreateEmployeeAccountPage /></Suspense>,
+      },
+      {
+        path: "users/:employeeId",
+        element: <Suspense fallback={<LoadingState />}><ViewUserAccountPage /></Suspense>,
+      },
+      {
+        path: "users/:employeeId/edit",
+        element: <Suspense fallback={<LoadingState />}><EditUserAccountPage /></Suspense>,
       },
       {
         path: "transport-requests/:bookingId",
