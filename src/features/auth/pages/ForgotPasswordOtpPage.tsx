@@ -14,6 +14,7 @@ import {
 import { useResendOtpMutation } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
+import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard";
 
 export default function ForgotPasswordOtpPage() {
   const location = useLocation();
@@ -35,6 +36,12 @@ function PasswordResetOtpForm({ email }: { email: string }) {
     resolver: zodResolver(forgotPasswordOtpSchema),
     defaultValues: { otp: "" },
   });
+  const resendAttempt = useRequestAttemptGuard();
+  const { reset: resetResendAttempt } = resendAttempt;
+
+  useEffect(() => {
+    if (secondsLeft === 0) resetResendAttempt();
+  }, [secondsLeft, resetResendAttempt]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -48,29 +55,22 @@ function PasswordResetOtpForm({ email }: { email: string }) {
     return () => window.clearInterval(timer);
   }, [cooldownUntil]);
 
-  function restartCooldown() {
-    setSecondsLeft(60);
-    setCooldownUntil(Date.now() + 60_000);
+  function restartCooldown(seconds = 60) {
+    setSecondsLeft(seconds);
+    setCooldownUntil(Date.now() + seconds * 1000);
   }
 
-  function resendCode() {
+  async function resendCode() {
     if (resend.isPending || secondsLeft > 0) return;
-    resend.mutate(
-      { email, purpose: "PASSWORD_RESET" },
-      {
-        onSuccess: () => {
-          restartCooldown();
-          form.reset({ otp: "" });
-        },
-        onError: (error) => {
-          if (
-            getAuthApiError(error)?.errorCode === "OTP_RESEND_TOO_SOON"
-          ) {
-            restartCooldown();
-          }
-        },
-      },
-    );
+    try {
+      const result = await resendAttempt.run(() => resend.mutateAsync({ email, purpose: "PASSWORD_RESET" }));
+      if (result.started) {
+        restartCooldown();
+        form.reset({ otp: "" });
+      }
+    } catch (error) {
+      restartCooldown(getAuthApiError(error)?.errorCode === "OTP_RESEND_TOO_SOON" ? 60 : 10);
+    }
   }
 
   function submit({ otp }: ForgotPasswordOtpFormValues) {
@@ -119,7 +119,7 @@ function PasswordResetOtpForm({ email }: { email: string }) {
           </Button>
         </form>
       </Form>
-      <OtpResend secondsLeft={secondsLeft} isPending={resend.isPending} disabled={resend.isPending} onResend={resendCode} />
+      <OtpResend secondsLeft={secondsLeft} isPending={resend.isPending} disabled={resend.isPending || resendAttempt.isBlocked} onResend={() => void resendCode()} />
     </AuthFlowLayout>
   );
 }

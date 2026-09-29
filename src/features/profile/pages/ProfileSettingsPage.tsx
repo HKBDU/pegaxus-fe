@@ -18,6 +18,8 @@ import { PageHeader } from "@/shared/components/PageHeader"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
+import { ChangePasswordDialog } from "@/features/auth/components/ChangePasswordDialog"
+import { ProfileChangePasswordButton } from "../components/ProfileChangePasswordButton"
 
 function getEmailVerificationStatus(profile: Profile): EmailVerificationStatus {
   // A9 does not expose email verification. Authenticated active accounts are verified.
@@ -57,6 +59,7 @@ export function ProfileSettingsPage() {
     ACCOUNT: true,
   })
   const [formErrors, setFormErrors] = useState<ProfileFormErrors>({})
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const { customerId } = useParams()
   const location = useLocation()
   const principal = useAuthStore((state) => state.principal)
@@ -221,6 +224,12 @@ export function ProfileSettingsPage() {
                       DISABLE ACCOUNT
                     </Button>
                   )}
+                  <ProfileChangePasswordButton
+                    customerId={customerId}
+                    authenticated={Boolean(principal)}
+                    disabled={isSubmitting}
+                    onClick={() => setChangePasswordOpen(true)}
+                  />
                   <Button
                     type="button"
                     disabled={isSubmitting}
@@ -252,6 +261,12 @@ export function ProfileSettingsPage() {
             </ProfileHeroCard>
           )}
         </div>
+        {!customerId && principal && (
+          <ChangePasswordDialog
+            open={changePasswordOpen}
+            onOpenChange={setChangePasswordOpen}
+          />
+        )}
       </div>
     </section>
   )

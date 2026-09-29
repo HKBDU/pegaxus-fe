@@ -17,6 +17,8 @@ import {
 } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
+import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
+import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard";
 
 const verificationErrors: Record<string, string> = {
   OTP_INVALID: "The verification code is invalid.",
@@ -44,6 +46,13 @@ function VerifyEmailForm({ email }: { email: string }) {
     resolver: zodResolver(verifyEmailSchema),
     defaultValues: { otp: "" },
   });
+  const verifyAttempt = useFormRequestAttemptGuard(form);
+  const resendAttempt = useRequestAttemptGuard();
+  const { reset: resetResendAttempt } = resendAttempt;
+
+  useEffect(() => {
+    if (secondsLeft === 0) resetResendAttempt();
+  }, [secondsLeft, resetResendAttempt]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -58,63 +67,51 @@ function VerifyEmailForm({ email }: { email: string }) {
     return () => window.clearInterval(timer);
   }, [cooldownUntil]);
 
-  function restartCooldown() {
-    setSecondsLeft(60);
-    setCooldownUntil(Date.now() + 60_000);
+  function restartCooldown(seconds = 60) {
+    setSecondsLeft(seconds);
+    setCooldownUntil(Date.now() + seconds * 1000);
   }
 
-  function resendCode() {
+  async function resendCode() {
     if (resend.isPending || secondsLeft > 0) return;
-
-    resend.mutate(
-      { email, purpose: "EMAIL_VERIFICATION" },
-      {
-        onSuccess: () => {
-          restartCooldown();
-          form.reset({ otp: "" });
-        },
-        onError: (error) => {
-          if (
-            getAuthApiError(error)?.errorCode === "OTP_RESEND_TOO_SOON"
-          ) {
-            restartCooldown();
-          }
-        },
-      },
-    );
+    try {
+      const result = await resendAttempt.run(() => resend.mutateAsync({ email, purpose: "EMAIL_VERIFICATION" }));
+      if (result.started) {
+        restartCooldown();
+        form.reset({ otp: "" });
+      }
+    } catch (error) {
+      restartCooldown(getAuthApiError(error)?.errorCode === "OTP_RESEND_TOO_SOON" ? 60 : 10);
+    }
   }
 
-  function submit({ otp }: VerifyEmailFormValues) {
-    if (verifyEmail.isPending || resend.isPending) return;
+  async function submit({ otp }: VerifyEmailFormValues) {
+    if (resend.isPending || verifyAttempt.isBlocked) return;
     form.clearErrors("root");
 
-    verifyEmail.mutate(
-      { email, otp },
-      {
-        onError: (error) => {
-          const apiError = getAuthApiError(error);
-          const message = apiError?.errorCode
-            ? verificationErrors[apiError.errorCode]
-            : undefined;
+    try {
+      await verifyAttempt.run(() => verifyEmail.mutateAsync({ email, otp }));
+    } catch (error) {
+      const apiError = getAuthApiError(error);
+      const message = apiError?.errorCode
+        ? verificationErrors[apiError.errorCode]
+        : undefined;
 
-          if (apiError?.errorCode?.startsWith("OTP_")) {
-            form.setError("otp", {
-              message:
-                message ?? "Unable to verify your email. Please try again.",
-            });
-            return;
-          }
+      if (apiError?.errorCode?.startsWith("OTP_")) {
+        form.setError("otp", {
+          message: message ?? "Unable to verify your email. Please try again.",
+        });
+        return;
+      }
 
-          form.setError("root.server", {
-            message:
-              message ?? apiError?.message ?? "Unable to verify your email. Please try again.",
-          });
-        },
-      },
-    );
+      form.setError("root.server", {
+        message:
+          message ?? apiError?.message ?? "Unable to verify your email. Please try again.",
+      });
+    }
   }
 
-  const isPending = verifyEmail.isPending || resend.isPending;
+  const isPending = verifyEmail.isPending || resend.isPending || verifyAttempt.isRunning || form.formState.isSubmitting;
 
   return (
     <AuthFlowLayout
@@ -139,7 +136,7 @@ function VerifyEmailForm({ email }: { email: string }) {
       <Form {...form}>
         <form
           noValidate
-          onSubmit={form.handleSubmit(submit)}
+          onSubmit={(event) => void form.handleSubmit(submit)(event)}
           className="mt-7 space-y-7"
           aria-busy={isPending}
         >
@@ -155,7 +152,7 @@ function VerifyEmailForm({ email }: { email: string }) {
           )}
           <Button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || verifyAttempt.isBlocked}
             className={`${authPrimaryButtonClass} auth-otp-submit`}
           >
             {verifyEmail.isPending && (
@@ -164,12 +161,12 @@ function VerifyEmailForm({ email }: { email: string }) {
                 className="size-5 animate-spin"
               />
             )}
-            {verifyEmail.isPending ? "Verifying..." : "Verify code"}
+            {verifyEmail.isPending ? "Verifying..." : verifyAttempt.isBlocked ? "Edit code to retry" : "Verify code"}
             <ChevronRight aria-hidden="true" className="auth-otp-arrow" />
           </Button>
         </form>
       </Form>
-      <OtpResend secondsLeft={secondsLeft} isPending={resend.isPending} disabled={isPending} onResend={resendCode} />
+      <OtpResend secondsLeft={secondsLeft} isPending={resend.isPending} disabled={isPending || resendAttempt.isBlocked} onResend={() => void resendCode()} />
     </AuthFlowLayout>
   );
 }

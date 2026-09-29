@@ -14,6 +14,7 @@ import {
 import { useLoginMutation } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
+import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 
 export default function LoginPage() {
   const mutation = useLoginMutation();
@@ -21,21 +22,24 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
+  const attempt = useFormRequestAttemptGuard(form);
+  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
 
-  function submit(values: LoginFormValues) {
-    if (mutation.isPending) return;
-    mutation.mutate(values, {
-      onError: (error) => {
-        const apiError = getAuthApiError(error);
+  async function submit(values: LoginFormValues) {
+    if (attempt.isBlocked) return;
+    try {
+      await attempt.run(() => mutation.mutateAsync(values));
+    } catch (error) {
+      const apiError = getAuthApiError(error);
 
-        for (const item of apiError?.errors ?? []) {
-          if (item.field === "email" || item.field === "password") {
-            form.setError(item.field, { message: item.message });
-          }
+      for (const item of apiError?.errors ?? []) {
+        if (item.field === "email" || item.field === "password") {
+          form.setError(item.field, { message: item.message });
         }
-      },
-      onSettled: () => mutation.reset(),
-    });
+      }
+    } finally {
+      mutation.reset();
+    }
   }
 
   return (
@@ -64,8 +68,9 @@ export default function LoginPage() {
       <Form {...form}>
         <form
           noValidate
-          onSubmit={form.handleSubmit(submit)}
+          onSubmit={(event) => void form.handleSubmit(submit)(event)}
           className="mt-6 space-y-4"
+          aria-busy={isPending}
         >
           <AuthFormField
             control={form.control}
@@ -73,6 +78,7 @@ export default function LoginPage() {
             label="Email address"
             type="email"
             autoComplete="email"
+            disabled={isPending}
             placeholder="yourname@example.com"
           />
           <AuthPasswordFormField
@@ -81,17 +87,18 @@ export default function LoginPage() {
             label="Password"
             autoComplete="current-password"
             visibilityLabel="password"
+            disabled={isPending}
             placeholder="•••••••••"
           />
           <Button
             type="submit"
-            disabled={mutation.isPending}
+            disabled={isPending || attempt.isBlocked}
             className={authPrimaryButtonClass}
           >
-            {mutation.isPending && (
+            {isPending && (
               <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
             )}
-            {mutation.isPending ? "Signing in" : "Sign in"}
+            {isPending ? "Signing in" : attempt.isBlocked ? "Edit credentials to retry" : "Sign in"}
           </Button>
         </form>
         <div className="my-5 flex items-center gap-3 text-xs uppercase text-neutral-400">
@@ -102,6 +109,7 @@ export default function LoginPage() {
         <Button
           type="button"
           variant="outline"
+          disabled={isPending}
           className="h-9 w-full rounded-none border-neutral-300 bg-white font-['Arial_Narrow',Impact,sans-serif] text-base font-bold uppercase text-[#202020] shadow-none hover:bg-neutral-50"
           onClick={() => {
             window.location.href = `${env.API_URL}auth/google/login`;
