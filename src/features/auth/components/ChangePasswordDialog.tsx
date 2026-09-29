@@ -27,7 +27,7 @@ export function ChangePasswordDialog({
     >
       <DialogContent
         showCloseButton={!pending}
-        className="max-h-[calc(100svh-2rem)] gap-3 overflow-y-auto rounded-[2px] border-slate-200 bg-[#f5f3ef] p-4 text-[#202020] sm:max-w-md sm:p-5"
+        className="max-h-[calc(100svh-2rem)] gap-3 overflow-y-auto rounded-[2px] border-slate-200 bg-[#ffffff] p-4 text-[#202020] sm:max-w-md sm:p-5"
       >
         <DialogHeader className="text-left">
           <DialogTitle className="flex items-center gap-2 font-heading text-xl font-bold uppercase">
