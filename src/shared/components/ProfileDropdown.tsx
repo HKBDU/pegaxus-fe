@@ -4,15 +4,8 @@ import { useState } from "react"
 import { KeyRound, LogIn, LogOut, User, UserPlus } from "lucide-react"
 import { Link } from "react-router-dom"
 
-import { ChangePasswordForm } from "@/features/auth/components/ChangePasswordForm"
+import { ChangePasswordDialog } from "@/features/auth/components/ChangePasswordDialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/shared/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +40,6 @@ function getInitials(name: string): string {
 
 export function ProfileDropdown({ isLoggedIn, user }: ProfileDropdownProps) {
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
-  const [changePasswordPending, setChangePasswordPending] = useState(false)
   const displayName = user?.name.trim() || "Account"
   const initials = isLoggedIn ? getInitials(displayName) : ""
 
@@ -130,35 +122,10 @@ export function ProfileDropdown({ isLoggedIn, user }: ProfileDropdownProps) {
         </DropdownMenuContent>
       </DropdownMenu>
       {isLoggedIn && (
-        <Dialog
+        <ChangePasswordDialog
           open={changePasswordOpen}
-          onOpenChange={(open) => {
-            if (!changePasswordPending) setChangePasswordOpen(open)
-          }}
-        >
-          <DialogContent
-            showCloseButton={!changePasswordPending}
-            className="max-h-[calc(100svh-2rem)] gap-3 overflow-y-auto rounded-[2px] border-slate-200 bg-[#f5f3ef] p-4 text-[#202020] sm:max-w-md sm:p-5"
-          >
-            <DialogHeader className="text-left">
-              <DialogTitle className="flex items-center gap-2 font-heading text-xl font-bold uppercase">
-                <KeyRound aria-hidden="true" className="size-5 text-[#F39200]" />
-                Change password
-              </DialogTitle>
-              <DialogDescription className="text-sm text-neutral-600">
-                Update your password to keep your account secure.
-              </DialogDescription>
-            </DialogHeader>
-            <ChangePasswordForm
-              onSuccess={() => {
-                setChangePasswordPending(false)
-                setChangePasswordOpen(false)
-              }}
-              onCancel={() => setChangePasswordOpen(false)}
-              onPendingChange={setChangePasswordPending}
-            />
-          </DialogContent>
-        </Dialog>
+          onOpenChange={setChangePasswordOpen}
+        />
       )}
     </>
   )

@@ -9,7 +9,10 @@ import type { ChangePasswordRequest } from "../types";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
 import { AuthPasswordFormField, authPrimaryButtonClass } from "./AuthFormField";
-import { PasswordMatchHint, PasswordRequirements } from "./PasswordRequirements";
+import {
+  PasswordMatchHint,
+  PasswordRequirements,
+} from "./PasswordRequirements";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 
 const fields = new Map<string, keyof ChangePasswordRequest>([
@@ -38,8 +41,12 @@ export function ChangePasswordForm({
   });
   const attempt = useFormRequestAttemptGuard(form);
   const password = useWatch({ control: form.control, name: "newPassword" });
-  const confirmation = useWatch({ control: form.control, name: "confirmPassword" });
-  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
+  const confirmation = useWatch({
+    control: form.control,
+    name: "confirmPassword",
+  });
+  const isPending =
+    mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
 
   useEffect(() => {
     onPendingChange?.(isPending);
@@ -78,7 +85,9 @@ export function ChangePasswordForm({
 
       if (!hasFieldError) {
         form.setError("root.server", {
-          message: apiError?.message ?? "Unable to change your password. Please try again.",
+          message:
+            apiError?.message ??
+            "Unable to change your password. Please try again.",
         });
       }
     } finally {
@@ -112,7 +121,7 @@ export function ChangePasswordForm({
           placeholder="Enter new password"
           disabled={isPending}
         />
-        <PasswordRequirements value={password ?? ""} />
+
         <AuthPasswordFormField
           control={form.control}
           name="confirmPassword"
@@ -122,7 +131,11 @@ export function ChangePasswordForm({
           placeholder="Confirm new password"
           disabled={isPending}
         />
-        <PasswordMatchHint password={password ?? ""} confirmation={confirmation ?? ""} />
+        <PasswordRequirements value={password ?? ""} />
+        <PasswordMatchHint
+          password={password ?? ""}
+          confirmation={confirmation ?? ""}
+        />
 
         {form.formState.errors.root?.server && (
           <p role="alert" className="text-sm text-red-700">
@@ -147,8 +160,17 @@ export function ChangePasswordForm({
             disabled={isPending || attempt.isBlocked}
             className={`${authPrimaryButtonClass} ${onCancel ? "h-8 text-sm sm:w-auto sm:px-3" : ""}`}
           >
-            {isPending && <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />}
-            {isPending ? "Changing..." : attempt.isBlocked ? "Edit password to retry" : "Update password"}
+            {isPending && (
+              <LoaderCircle
+                aria-hidden="true"
+                className="size-5 animate-spin"
+              />
+            )}
+            {isPending
+              ? "Changing..."
+              : attempt.isBlocked
+                ? "Edit password to retry"
+                : "Update password"}
           </Button>
         </div>
       </form>
