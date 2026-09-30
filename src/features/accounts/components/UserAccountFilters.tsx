@@ -84,7 +84,7 @@ export function UserAccountFilters({
       {controls.map(({ key, title, options }) => (
         <div
           key={key}
-          className="min-w-0 flex-1 lg:min-w-28 lg:flex-none [&_button]:w-full"
+          className="min-w-0 flex-1 lg:min-w-40 lg:flex-none [&_button]:w-full"
         >
           <DataTableRadioFilter
             title={title}

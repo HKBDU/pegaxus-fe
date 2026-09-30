@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 import { BriefcaseBusiness, Circle, Info, ShieldCheck } from "lucide-react";
 import { accountDetail } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
@@ -47,18 +48,14 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
     },
   });
   const mutation = useUpdateEmployment();
-  const statusMutation = useUpdateEmployeeStatus();
+  const attempt = useFormRequestAttemptGuard(form);
+  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
   const navigate = useNavigate();
   const submit = form.handleSubmit(async (changes) => {
-    if (mutation.isPending || statusMutation.isPending) return;
     try {
-      await Promise.all([
-        mutation.mutateAsync({ id: employee.employeeId, changes: { role: changes.role, workingStatus: changes.workingStatus } }),
-        employee.accountStatus !== changes.accountStatus
-          ? statusMutation.mutateAsync({ id: employee.employeeId, status: changes.accountStatus })
-          : Promise.resolve(),
-      ]);
-      toast.success("Employee account updated successfully.");
+      const result = await attempt.run(() => mutation.mutateAsync({ id: employee.employeeId, changes }));
+      if (!result.started) return;
+      toast.success("Employee employment information updated successfully.");
       navigate(accountDetail(employee.employeeId));
     } catch (error) {
       toast.error(getAccountError(error));
@@ -188,11 +185,11 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
         </Button>
         <Button
           type="submit"
-          disabled={mutation.isPending}
+          disabled={isPending || attempt.isBlocked}
           size="sm"
           className="rounded-[2px]"
         >
-          {mutation.isPending ? "Saving..." : "Save Changes"}
+          {isPending ? "Saving..." : attempt.isBlocked ? "Edit values to retry" : "Save Changes"}
         </Button>
       </div>
     </form>

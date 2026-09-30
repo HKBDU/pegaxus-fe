@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { passwordPolicy } from "./password-policy";
 
 export const emailSchema = z.string().trim()
   .min(1, "Email is required.")
@@ -11,11 +12,11 @@ export const otpSchema = z.string()
 
 export const strongPasswordSchema = z.string()
   .min(1, "Password is required.")
-  .min(8, "Password must be at least 8 characters.")
-  .max(128, "Password must not exceed 128 characters.")
-  .regex(/[A-Z]/, "Password must contain at least 1 uppercase letter.")
-  .regex(/[a-z]/, "Password must contain at least 1 lowercase letter.")
-  .regex(/[0-9]/, "Password must contain at least 1 numeric character.");
+  .min(passwordPolicy.minLength, "Password must be at least 8 characters.")
+  .max(passwordPolicy.maxLength, "Password must not exceed 128 characters.")
+  .regex(passwordPolicy.uppercase, "Password must contain at least 1 uppercase letter.")
+  .regex(passwordPolicy.lowercase, "Password must contain at least 1 lowercase letter.")
+  .regex(passwordPolicy.number, "Password must contain at least 1 numeric character.");
 
 const confirmPasswordSchema = z.string().min(1, "Confirm password is required.");
 const passwordMismatch = { path: ["confirmPassword"], message: "Passwords do not match." };
