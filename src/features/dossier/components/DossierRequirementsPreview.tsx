@@ -12,7 +12,6 @@ import {
   History,
   MoreVertical,
   Pencil,
-  RotateCcw,
   Upload,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
@@ -58,7 +57,6 @@ function RequirementRowActions({
     item.status,
     Boolean(item.document),
   );
-  if (!labels.length) return null;
 
   return (
     <DropdownMenu>
@@ -77,9 +75,11 @@ function RequirementRowActions({
         sideOffset={2}
         className="w-52 min-w-0 rounded-[2px] border-slate-200 p-0.5 shadow-md"
       >
-        <p className="px-1.5 py-1 text-[10px] text-slate-500">
-          Available in a later phase
-        </p>
+        {!labels.length ? (
+          <DropdownMenuItem disabled className="text-xs">
+            No actions for your role
+          </DropdownMenuItem>
+        ) : null}
         {labels.map((label) => {
           const Icon = label.startsWith("Upload")
             ? Upload
@@ -94,10 +94,12 @@ function RequirementRowActions({
             <DropdownMenuItem
               key={label}
               disabled
-              className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem]"
+              title={`${label} is not available in this phase`}
+              className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem] data-[disabled]:opacity-100"
             >
               <Icon className="size-3.5" />
-              {label}
+              <span className="min-w-0 flex-1">{label}</span>
+              <span className="text-[10px] text-slate-500">Soon</span>
             </DropdownMenuItem>
           );
         })}
@@ -221,7 +223,7 @@ function RequirementGroup({
   const Icon = horse ? ChessKnight : FileText;
   return (
     <div>
-      <div className="flex items-center gap-2 rounded-t-[2px] border border-b-0 bg-white px-4 py-3">
+      <div className="flex items-center gap-2 rounded-t-[2px]x bg-white px-4 py-3">
         <Icon aria-hidden="true" className="size-4 text-primary" />
         <h3 className="m-0! font-heading text-sm! font-semibold! uppercase text-gray-900!">{title}</h3>
         <span className="text-xs text-gray-500">{items.length} on this page</span>
@@ -357,7 +359,7 @@ export function DossierRequirementsPreview({
               className="space-y-3"
               aria-label="Horse-specific requirements"
             >
-              <h3 className="m-0! flex items-center gap-2 font-heading text-base! font-bold! uppercase text-gray-900!">
+              <h3 className="m-0! flex items-center gap-2 font-heading text-base! font-bold! uppercase text-gray-900! pb-2">
                 <ChessKnight aria-hidden="true" className="size-4 text-primary" />
                 Horse-specific requirements
               </h3>

@@ -56,10 +56,6 @@ const HorseDetailPage = lazy(
 const BookingStatusHistoryPage = lazy(
   () => import("@/features/booking/pages/BookingStatusHistoryPage"),
 );
-// DEV-ONLY DOSSIER UI TEST ROUTE: Remove this import with the marked route below after final route integration.
-const DossierDetailsPage = import.meta.env.DEV
-  ? lazy(() => import("@/features/dossier/pages/DossierDetailsPage"))
-  : null;
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />

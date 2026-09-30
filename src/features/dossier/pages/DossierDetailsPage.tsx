@@ -7,7 +7,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useAuthStore } from "@/features/auth/store";
 import { useBooking } from "@/features/booking/hooks";
 import {
   EmptyState,
@@ -18,7 +17,6 @@ import { PageHeader } from "@/shared/components/PageHeader";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { DossierOverview } from "../components/DossierOverview";
 import { DossierRequirementsPreview } from "../components/DossierRequirementsPreview";
-import { canViewDossierAudit } from "../constants";
 import { useDossierOverview } from "../hooks/useDossier";
 import { dossierSourceKind, getDossierLoadErrorKind } from "../source";
 
@@ -34,11 +32,9 @@ const integrationMessages: Record<
   Exclude<SectionId, "requirements">,
   string
 > = {
-  documents:
-    "Document upload, versions, and reviews will be connected here in a later phase.",
-  authority:
-    "Authority and inspection information will be connected through AuthorityInspectionTab.",
-  audit: "Audit history will be connected through AuditHistoryTab.",
+  documents: "Document and review workflow will be available here.",
+  authority: "Authority and inspection module integration pending.",
+  audit: "Audit history integration pending.",
 };
 
 function QueryError({
@@ -83,14 +79,6 @@ export default function DossierDetailsPage() {
     String(bookingQuery.data.bookingId) === String(query.data.bookingId)
       ? bookingQuery.data
       : undefined;
-  const roles = useAuthStore((state) => state.principal?.roles);
-  const canViewAudit = canViewDossierAudit(roles);
-  const visibleSections = sections.filter(
-    ({ id }) => id !== "audit" || canViewAudit,
-  );
-  const currentSection =
-    activeSection === "audit" && !canViewAudit ? "requirements" : activeSection;
-
   return (
     <div className="booking-page-shell min-w-0 px-5 py-6 font-sans sm:px-6 lg:px-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1440px] space-y-5">
@@ -141,16 +129,16 @@ export default function DossierDetailsPage() {
                 aria-label="Dossier sections"
                 className="flex gap-1 overflow-x-auto"
               >
-                {visibleSections.map(({ id, label, icon: Icon }) => (
+                {sections.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     id={`dossier-tab-${id}`}
                     type="button"
                     role="tab"
-                    aria-selected={currentSection === id}
+                    aria-selected={activeSection === id}
                     aria-controls={`dossier-panel-${id}`}
                     onClick={() => setActiveSection(id)}
-                    className={`inline-flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 font-heading text-xs font-semibold uppercase transition-colors focus-visible:outline-2 focus-visible:outline-primary ${currentSection === id ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-900"}`}
+                    className={`inline-flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 font-heading text-xs font-semibold uppercase transition-colors focus-visible:outline-2 focus-visible:outline-primary ${activeSection === id ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-900"}`}
                   >
                     <Icon aria-hidden="true" className="size-4" />
                     {label}
@@ -160,15 +148,15 @@ export default function DossierDetailsPage() {
             </div>
             <div
               role="tabpanel"
-              id={`dossier-panel-${currentSection}`}
-              aria-labelledby={`dossier-tab-${currentSection}`}
+              id={`dossier-panel-${activeSection}`}
+              aria-labelledby={`dossier-tab-${activeSection}`}
             >
-              {currentSection === "requirements" ? (
+              {activeSection === "requirements" ? (
                 <DossierRequirementsPreview dossierId={dossierId} />
               ) : (
                 <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
                   <CardContent className="p-5">
-                    <EmptyState message={integrationMessages[currentSection]} />
+                    <EmptyState message={integrationMessages[activeSection]} />
                   </CardContent>
                 </Card>
               )}
