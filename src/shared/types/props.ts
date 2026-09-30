@@ -58,3 +58,25 @@ export type FieldProps = {
   characterCount?: { value: number; max: number }
   children?: ReactNode
 }
+
+
+export type ImageViewerImage = string | {
+  src: string
+  thumbnail?: string
+  alt?: string
+  title?: string
+  description?: string
+  download?: boolean | string | { url: string; filename: string }
+}
+
+export type ImageViewerProps = {
+  images: ImageViewerImage[]
+  index?: number
+  open?: boolean
+  onClose?: () => void
+  className?: string
+  style?: React.CSSProperties
+  width?: React.CSSProperties['width']
+  height?: React.CSSProperties['height']
+  ariaLabel?: string
+}

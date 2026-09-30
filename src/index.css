@@ -114,6 +114,28 @@ body {
   margin: 0;
 }
 
+/* ImageViewer lightbox skin. Keep third-party selectors scoped to the viewer. */
+.image-viewer-root .yarl__toolbar {
+  top: 8px;
+  right: 8px;
+  bottom: auto;
+  left: auto;
+  width: auto;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: rgb(0 0 0 / 55%);
+  backdrop-filter: blur(4px);
+}
+
+.image-viewer-root .yarl__thumbnails_container {
+  padding: 6px 0;
+  background: rgb(0 0 0 / 60%);
+}
+
+.image-viewer-root .yarl__thumbnails_thumbnail {
+  transition: width 300ms ease-in-out, height 300ms ease-in-out;
+}
+
 .field-container:has([aria-invalid="true"]) .field-label {
   color: #dc2626;
 }
