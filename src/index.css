@@ -116,24 +116,45 @@ body {
 
 /* ImageViewer lightbox skin. Keep third-party selectors scoped to the viewer. */
 .image-viewer-root .yarl__toolbar {
-  top: 8px;
-  right: 8px;
+  top: 0;
+  right: 0;
   bottom: auto;
   left: auto;
   width: auto;
+  height: 32px;
   padding: 0 4px;
-  border-radius: 8px;
-  background: rgb(0 0 0 / 55%);
-  backdrop-filter: blur(4px);
+  background: transparent;
+  backdrop-filter: none;
+  z-index: 30;
+}
+
+.image-viewer-root .yarl__container {
+  overflow: hidden;
+}
+
+.image-viewer-root .yarl__carousel {
+  box-sizing: border-box;
+  padding-top: 32px;
+}
+
+.image-viewer-root .yarl__slide_image {
+  box-sizing: border-box;
+  border: 1px solid rgb(255 255 255 / 22%);
+  box-shadow: 0 2px 14px rgb(0 0 0 / 28%);
 }
 
 .image-viewer-root .yarl__thumbnails_container {
   padding: 6px 0;
-  background: rgb(0 0 0 / 60%);
+  background: #181818;
 }
 
 .image-viewer-root .yarl__thumbnails_thumbnail {
-  transition: width 300ms ease-in-out, height 300ms ease-in-out;
+  background: #181818;
+  border-color: #181818;
+}
+
+.image-viewer-root .yarl__thumbnails_thumbnail_active {
+  border-color: #f39200;
 }
 
 .field-container:has([aria-invalid="true"]) .field-label {

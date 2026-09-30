@@ -6,36 +6,26 @@ import Fullscreen from 'yet-another-react-lightbox/plugins/fullscreen'
 import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
 import {
-  ChevronDown,
-  ChevronUp,
   Download,
   Maximize,
   Minimize,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import { Button } from '@/shared/components/ui/button'
 import 'yet-another-react-lightbox/styles.css'
 import 'yet-another-react-lightbox/plugins/thumbnails.css'
 import type { ImageViewerProps } from '@/shared/types/props'
 
-const makeThumbConfig = (width: number, height: number) => ({
-  thumbnails: {
-    position: 'bottom' as const,
-    width,
-    height,
-    gap: 6,
-    border: 1,
-    borderRadius: 4,
-    padding: 0,
-    vignette: false,
-    showToggle: false,
-  },
-})
-
-const THUMB_CONFIG = {
-  small: makeThumbConfig(44, 32),
-  large: makeThumbConfig(104, 76),
+const THUMBNAILS = {
+  position: 'bottom' as const,
+  width: 30,
+  height: 20,
+  gap: 6,
+  border: 1,
+  borderRadius: 4,
+  padding: 0,
+  vignette: false,
+  showToggle: false,
 }
 
 const PLUGINS_SINGLE = [Inline, Zoom, Fullscreen, DownloadPlugin]
@@ -63,7 +53,7 @@ const ROOT_CLASS =
 /**
  * Inline image viewer. It stays inside the caller-provided `width` and `height`.
  * - Toolbar stays in the top-right corner.
- * - Chevron toggles the thumbnail strip size.
+ * - A compact thumbnail strip stays visible for multi-image slides.
  * - Fullscreen starts only from the fullscreen control.
  * - Arrow keys navigate while the pointer is over the viewer.
  */
@@ -76,8 +66,6 @@ function ImageViewer({
   height = 400,
   ariaLabel = 'Image gallery',
 }: ImageViewerProps) {
-  const [expanded, setExpanded] = useState(false)
-
   const slides = useMemo(
     () => images.map((image) => (typeof image === 'string' ? { src: image } : image)),
     [images],
@@ -85,6 +73,7 @@ function ImageViewer({
 
   const multiple = slides.length > 1
   const safeIndex = Math.max(0, Math.min(index, Math.max(slides.length - 1, 0)))
+  const [activeIndex, setActiveIndex] = useState(safeIndex)
 
   // Refs avoid renders for pointer movement and active-slide changes.
   const lightboxRef = useRef<ControllerRef>(null)
@@ -93,7 +82,12 @@ function ImageViewer({
 
   // Keep plugin props stable between renders.
   const on = useMemo(
-    () => ({ view: ({ index: i }: { index: number }) => { indexRef.current = i } }),
+    () => ({
+      view: ({ index: i }: { index: number }) => {
+        indexRef.current = i
+        setActiveIndex(i)
+      },
+    }),
     [],
   )
   const controller = useMemo(() => ({ ref: lightboxRef, closeOnBackdropClick: false }), [])
@@ -139,8 +133,6 @@ function ImageViewer({
     )
   }
 
-  const { thumbnails } = expanded ? THUMB_CONFIG.large : THUMB_CONFIG.small
-
   return (
     <div
       className={className ? `${ROOT_CLASS} ${className}` : ROOT_CLASS}
@@ -149,8 +141,11 @@ function ImageViewer({
       onMouseEnter={() => { hoveredRef.current = true }}
       onMouseLeave={() => { hoveredRef.current = false }}
     >
+      <div className="absolute inset-x-0 top-0 z-20 flex h-8 items-center bg-neutral-900 px-3 pr-36 text-sm text-white/90">
+        <span className="truncate">{slides[activeIndex]?.title ?? slides[activeIndex]?.alt ?? ''}</span>
+      </div>
       {/* Keep the lightbox inside the caller-sized frame. */}
-      <div className="absolute inset-x-0 top-px bottom-0">
+      <div className="absolute inset-0">
         <Lightbox
           plugins={multiple ? PLUGINS_MULTI : PLUGINS_SINGLE}
           inline={INLINE}
@@ -159,7 +154,7 @@ function ImageViewer({
           on={on}
           carousel={carousel}
           zoom={ZOOM}
-          thumbnails={thumbnails}
+          thumbnails={THUMBNAILS}
           toolbar={TOOLBAR}
           controller={controller}
           render={multiple ? RENDER_MULTI : RENDER_SINGLE}
@@ -167,27 +162,6 @@ function ImageViewer({
         />
       </div>
 
-      {multiple && (
-        <div
-          className="absolute right-0 bottom-0 z-20 flex items-end px-1.5"
-        >
-          <Button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            aria-label={expanded ? 'Shrink thumbnails' : 'Enlarge thumbnails'}
-            aria-expanded={expanded}
-            variant="ghost"
-            size="icon-sm"
-            className="bg-black/60 text-white hover:bg-black/60 hover:text-[#f39200] focus-visible:text-[#f39200]"
-          >
-            {expanded ? (
-              <ChevronDown size={20} aria-hidden="true" />
-            ) : (
-              <ChevronUp size={20} aria-hidden="true" />
-            )}
-          </Button>
-        </div>
-      )}
     </div>
   )
 }
