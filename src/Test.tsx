@@ -1,5 +1,6 @@
 import ImageViewer from '@/shared/components/file-viewer/ImageViewer'
-
+import pdf from './assets/a.pdf'
+import { PdfViewer } from './shared/components/file-viewer/PdfViewer'
 const images = [
   {
     src: 'https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?auto=format&fit=crop&w=1800&q=85',
@@ -33,7 +34,10 @@ export default function Test() {
       <p style={{ margin: '12px 0 24px', color: '#555' }}>
         Click image. Try wheel/pinch zoom, swipe, keyboard, thumbnails, fullscreen, download.
       </p>
-      <ImageViewer images={images} index={1}/>
+      <ImageViewer images={images} index={1} />
+      <div className="mt-8 w-[600px] h-[720px]">
+        <PdfViewer url={pdf} fileName="sample.pdf" />
+      </div>
     </main>
   )
 }
