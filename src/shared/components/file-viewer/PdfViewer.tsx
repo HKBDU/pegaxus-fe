@@ -2,18 +2,20 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { Document, Page, pdfjs } from 'react-pdf'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
-import { Download, ExternalLink, ZoomIn, ZoomOut } from 'lucide-react'
+import { Download, ExternalLink } from 'lucide-react'
 
 import { Button } from '../ui/button'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { Input } from '../ui/input'
 import {
+  MAX_PDF_FILE_SIZE,
   VIEWER_MAX_ZOOM,
   VIEWER_MIN_ZOOM,
   VIEWER_WHEEL_SENSITIVITY,
-  VIEWER_ZOOM_STEP,
 } from '@/shared/constants/viewer'
+import { useFileSizeLimit } from '@/shared/hooks/useFileSizeLimit'
+import { FileViewerErrorBoundary } from './FileViewerErrorBoundary'
 
 // Configure the PDF.js worker once.
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -24,14 +26,24 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 interface PdfViewerProps {
   url: string
   fileName?: string
+  size?: number
+}
+
+export function PdfViewer(props: PdfViewerProps) {
+  return (
+    <FileViewerErrorBoundary message="Unable to display this PDF.">
+      <PdfViewerContent {...props} />
+    </FileViewerErrorBoundary>
+  )
 }
 
 const clampZoom = (value: number) =>
   Math.min(Math.max(value, VIEWER_MIN_ZOOM), VIEWER_MAX_ZOOM)
 
-export function PdfViewer({
+function PdfViewerContent({
   url,
   fileName = 'document.pdf',
+  size,
 }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const pageRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -43,6 +55,8 @@ export function PdfViewer({
   const [scale, setScale] = useState(1)
   const [pageWidth, setPageWidth] = useState<number | null>(null)
   const [isPanning, setIsPanning] = useState(false)
+  const fileStatus = useFileSizeLimit([{ url, size }], MAX_PDF_FILE_SIZE)
+  const canPreview = fileStatus === 'allowed'
 
   useEffect(() => {
     scaleRef.current = scale
@@ -224,14 +238,6 @@ export function PdfViewer({
 
   const fitToWidth = () => setScale(1)
 
-  const changeZoom = (amount: number) => {
-    setScale((value) => {
-      const next = clampZoom(value + amount)
-      scaleRef.current = next
-      return next
-    })
-  }
-
   const handleDownload = () => {
     const link = document.createElement('a')
     link.href = url
@@ -264,6 +270,7 @@ export function PdfViewer({
               className="h-8 max-w-10 w-auto px-2 text-center"
               inputMode="numeric"
               aria-label="Current page"
+              disabled={!canPreview}
             />
             <span className="whitespace-nowrap text-sm text-muted-foreground">
               / {numPages || '—'}
@@ -282,6 +289,7 @@ export function PdfViewer({
             size="sm"
             className="h-8 shrink-0"
             onClick={fitToWidth}
+            disabled={!canPreview}
           >
             Fit
           </Button>
@@ -294,6 +302,7 @@ export function PdfViewer({
             size="icon-sm"
             className="shrink-0"
             onClick={handleDownload}
+            disabled={!canPreview}
             aria-label="Download PDF"
           >
             <Download />
@@ -321,7 +330,19 @@ export function PdfViewer({
           isPanning ? 'cursor-grabbing select-none' : ''
         }`}
       >
-        <Document
+        {fileStatus === 'checking' && (
+          <div className="flex h-full min-h-32 items-center justify-center p-8 text-sm text-muted-foreground">
+            Checking PDF file size...
+          </div>
+        )}
+
+        {fileStatus === 'too-large' && (
+          <div className="flex h-full min-h-32 items-center justify-center p-8 text-center text-sm text-destructive">
+            This PDF is too large to preview. The maximum preview size is 10 MB.
+          </div>
+        )}
+
+        {canPreview && <Document
           file={url}
           onLoadSuccess={handleDocumentLoadSuccess}
           loading={
@@ -359,7 +380,7 @@ export function PdfViewer({
               )
             })}
           </div>
-        </Document>
+        </Document>}
       </div>
     </div>
   )

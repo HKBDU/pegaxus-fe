@@ -62,6 +62,7 @@ export type FieldProps = {
 
 export type ImageViewerImage = string | {
   src: string
+  size?: number
   thumbnail?: string
   alt?: string
   title?: string

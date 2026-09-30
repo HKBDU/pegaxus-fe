@@ -15,6 +15,9 @@ import {
 import 'yet-another-react-lightbox/styles.css'
 import 'yet-another-react-lightbox/plugins/thumbnails.css'
 import type { ImageViewerProps } from '@/shared/types/props'
+import { MAX_IMAGE_FILE_SIZE } from '@/shared/constants/viewer'
+import { useFileSizeLimit } from '@/shared/hooks/useFileSizeLimit'
+import { FileViewerErrorBoundary } from './FileViewerErrorBoundary'
 
 const THUMBNAILS = {
   position: 'bottom' as const,
@@ -57,7 +60,7 @@ const ROOT_CLASS =
  * - Fullscreen starts only from the fullscreen control.
  * - Arrow keys navigate while the pointer is over the viewer.
  */
-function ImageViewer({
+function ImageViewerContent({
   images,
   index = 0,
   className,
@@ -69,6 +72,10 @@ function ImageViewer({
   const slides = useMemo(
     () => images.map((image) => (typeof image === 'string' ? { src: image } : image)),
     [images],
+  )
+  const fileStatus = useFileSizeLimit(
+    slides.map(({ src, size }) => ({ url: src, size })),
+    MAX_IMAGE_FILE_SIZE,
   )
 
   const multiple = slides.length > 1
@@ -119,16 +126,28 @@ function ImageViewer({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [multiple])
 
-  if (!slides.length) {
+  if (!slides.length || fileStatus === 'too-large') {
     return (
       <div
         className={className ? `${ROOT_CLASS} ${className}` : ROOT_CLASS}
         aria-label={ariaLabel}
         style={{ width, height, ...style }}
       >
-        <div className="flex size-full items-center justify-center text-sm text-white/70">
-          No Image Found
+        <div className="flex size-full items-center justify-center p-4 text-center text-sm text-white/70">
+          {!slides.length ? 'No Image Found' : 'Image file is too large to preview. Maximum size is 5 MB.'}
         </div>
+      </div>
+    )
+  }
+
+  if (fileStatus === 'checking') {
+    return (
+      <div
+        className={className ? `${ROOT_CLASS} ${className}` : ROOT_CLASS}
+        aria-label={ariaLabel}
+        style={{ width, height, ...style }}
+      >
+        <div className="flex size-full items-center justify-center text-sm text-white/70">Checking image...</div>
       </div>
     )
   }
@@ -163,6 +182,14 @@ function ImageViewer({
       </div>
 
     </div>
+  )
+}
+
+function ImageViewer(props: ImageViewerProps) {
+  return (
+    <FileViewerErrorBoundary message="Unable to display this image.">
+      <ImageViewerContent {...props} />
+    </FileViewerErrorBoundary>
   )
 }
 
