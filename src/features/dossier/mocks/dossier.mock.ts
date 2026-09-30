@@ -129,6 +129,44 @@ const requirements: DossierRequirement[] = [
   },
 ];
 
+const uploadedRequirements = new Map<number, DossierRequirement>();
+let nextMockDocumentId = 9300;
+
+export function uploadMockDocument(
+  id: string,
+  requirementId: number,
+  files: File[],
+  scenario: DossierMockScenario,
+) {
+  assertMockAvailable(id, scenario);
+  if (scenario === "locked") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
+  if (!files.length) throw new DossierMockHttpError(400, "FILES_REQUIRED");
+  const requirement = uploadedRequirements.get(requirementId) ?? requirements.find((item) => item.dossierRequirementId === requirementId);
+  if (!requirement) throw new DossierMockHttpError(404, "DR_NOT_FOUND");
+  if (requirement.document) throw new DossierMockHttpError(409, "DR_ALREADY_HAS_DOCUMENT");
+  if (requirement.status !== "PENDING" && requirement.status !== "REQUESTED") {
+    throw new DossierMockHttpError(409, "REQUIREMENT_NOT_UPLOADABLE");
+  }
+  const complianceDocumentId = nextMockDocumentId++;
+  const result = {
+    complianceDocumentId,
+    documentCode: `DOC-MOCK-${complianceDocumentId}`,
+    documentVersionId: nextMockDocumentId++,
+    versionNo: 1 as const,
+  };
+  uploadedRequirements.set(requirementId, {
+    ...requirement,
+    status: "PROVIDED",
+    document: {
+      complianceDocumentId,
+      documentCode: result.documentCode,
+      status: "PROVIDED",
+      latestVersionNo: 1,
+    },
+  });
+  return result;
+}
+
 function assertMockAvailable(id: string, scenario: DossierMockScenario) {
   if (id !== "501") throw new DossierMockHttpError(404, "DOSSIER_NOT_FOUND");
   if (scenario === "error") throw new DossierMockHttpError(500, "Simulated dossier load failure");
@@ -136,8 +174,16 @@ function assertMockAvailable(id: string, scenario: DossierMockScenario) {
 
 export function getMockDossier(id: string, scenario: DossierMockScenario): DossierOverview {
   assertMockAvailable(id, scenario);
+  const requirementSummary = { ...dossier.requirementSummary };
+  for (const uploaded of uploadedRequirements.values()) {
+    const original = requirements.find((item) => item.dossierRequirementId === uploaded.dossierRequirementId);
+    if (original?.status === "PENDING") requirementSummary.pending--;
+    if (original?.status === "REQUESTED") requirementSummary.requested--;
+    requirementSummary.provided++;
+  }
+  const overview = { ...dossier, requirementSummary };
   if (scenario === "locked") {
-    return { ...dossier, writeLocked: true, writeLockReason: "BOOKING_CHANGE_IN_PROGRESS" };
+    return { ...overview, writeLocked: true, writeLockReason: "BOOKING_CHANGE_IN_PROGRESS" };
   }
   if (scenario === "empty") {
     return {
@@ -145,7 +191,7 @@ export function getMockDossier(id: string, scenario: DossierMockScenario): Dossi
       requirementSummary: { total: 0, pending: 0, requested: 0, provided: 0, satisfied: 0, rejected: 0, waived: 0 },
     };
   }
-  return dossier;
+  return overview;
 }
 
 export function getMockRequirements(
@@ -155,7 +201,7 @@ export function getMockRequirements(
 ) {
   assertMockAvailable(id, scenario);
   const query = dossierRequirementsParamsSchema.parse(params);
-  const matching = (scenario === "empty" ? [] : requirements)
+  const matching = (scenario === "empty" ? [] : requirements.map((item) => uploadedRequirements.get(item.dossierRequirementId) ?? item))
     .filter((item) => !query.status || item.status === query.status)
     .filter((item) => !query.horseId || item.horseId === query.horseId);
 

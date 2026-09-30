@@ -1,5 +1,22 @@
-import { dossierRequirementStatusSchema } from "./schemas";
-import type { DossierHorseOption, DossierOverview, DossierRequirementStatus, DossierRequirementsParams } from "./types";
+import type { DossierHorseOption, DossierOverview, DossierRequirement, DossierRequirementStatus, DossierRequirementsParams } from "./types";
+
+export const UPLOAD_MAX_FILE_BYTES = 10 * 1024 * 1024;
+export const UPLOAD_ACCEPTED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"] as const;
+export const DOSSIER_REQUIREMENT_STATUSES = [
+  "PENDING", "REQUESTED", "PROVIDED", "SATISFIED", "REJECTED", "WAIVED",
+] as const;
+
+export function canUploadInitialDocument(
+  role: string | undefined,
+  dossier: DossierOverview,
+  requirement: DossierRequirement,
+) {
+  return role === "CUSTOMER" &&
+    dossier.status === "IN_PREPARATION" &&
+    !dossier.writeLocked &&
+    requirement.document === null &&
+    (requirement.status === "PENDING" || requirement.status === "REQUESTED");
+}
 
 export function canViewDossierAudit(roles: readonly string[] | undefined) {
   return roles?.includes("TRANSPORT_SPECIALIST") || roles?.includes("LOGISTICS_MANAGER") || false;
@@ -13,6 +30,7 @@ export function getDossierRequirementActionLabels(
   if (role === "CUSTOMER") {
     if (status === "PENDING") return ["Upload Document"];
     if (status === "PROVIDED") return ["View Document", "Edit Uploaded Document"];
+    if (status === "REQUESTED" && !hasDocument) return ["View Request", "Upload Document"];
     if (status === "REQUESTED" || status === "REJECTED") return ["View Request", "View Document", "Upload New Version"];
     return status === "SATISFIED" ? ["View Document"] : ["View Requirement"];
   }
@@ -93,7 +111,7 @@ export const dossierStatusStyles: Record<keyof typeof dossierStatusLabels, strin
 
 export const dossierRequirementStatusOptions = [
   { value: "ALL", label: "All statuses" },
-  ...dossierRequirementStatusSchema.options.map((status) => ({ value: status, label: dossierStatusLabels[status] })),
+  ...DOSSIER_REQUIREMENT_STATUSES.map((status) => ({ value: status, label: dossierStatusLabels[status] })),
 ];
 
 export const dossierRequirementSortOptions = [

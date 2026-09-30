@@ -133,7 +133,12 @@ export default function DossierDetailsPage() {
               aria-labelledby={`dossier-tab-${activeSection}`}
             >
               {activeSection === "requirements" ? (
-                <DossierRequirementsPreview dossierId={dossierId} horses={query.data.bookingSummary.horses} />
+                <DossierRequirementsPreview
+                  dossierId={dossierId}
+                  horses={query.data.bookingSummary.horses}
+                  dossier={query.data}
+                  plannedDepartureDate={query.data.bookingSummary.requestedDepartureDate}
+                />
               ) : (
                 <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
                   <CardContent className="p-5">

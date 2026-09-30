@@ -1,10 +1,12 @@
 import { z } from "zod";
 import {
   dossierOverviewSchema,
+  createUploadDocumentSchema,
   dossierRequirementsPageSchema,
   dossierRequirementsParamsSchema,
+  validateUploadFiles,
 } from "./schemas";
-import type { DossierLoadErrorKind, DossierMockScenario, DossierRequirementsParams, DossierSourceKind } from "./types";
+import type { DossierLoadErrorKind, DossierMockScenario, DossierRequirementsParams, DossierSourceKind, UploadDocumentInput } from "./types";
 
 export function resolveDossierSource(isDev: boolean, flag: string | undefined): DossierSourceKind {
   return isDev && flag === "true" ? "mock" : "api";
@@ -46,6 +48,18 @@ export async function loadDossierRequirements(
   }
   const { dossierService } = await import("./services");
   return dossierService.getRequirements(dossierId, query, signal);
+}
+
+export async function loadUploadDocument(input: UploadDocumentInput) {
+  if (dossierSourceKind === "mock") {
+    const fileError = validateUploadFiles(input.files);
+    if (fileError) throw new Error(fileError.code);
+    createUploadDocumentSchema(null).parse(input.metadata);
+    const { uploadMockDocument } = await import("./mocks/dossier.mock");
+    return uploadMockDocument(input.dossierId, input.requirementId, input.files, mockScenario());
+  }
+  const { dossierService } = await import("./services");
+  return dossierService.uploadComplianceDocument(input);
 }
 
 export function getDossierLoadErrorKind(error: unknown): DossierLoadErrorKind {

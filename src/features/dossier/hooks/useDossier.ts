@@ -12,6 +12,7 @@ export const dossierKeys = {
   overview: (id: string) => ["dossier", dossierSourceKind, id] as const,
   requirements: (id: string, params: DossierRequirementsParams) =>
     ["dossier", dossierSourceKind, id, "requirements", params] as const,
+  requirementsRoot: (id: string) => ["dossier", dossierSourceKind, id, "requirements"] as const,
 };
 
 const retryLoad = (failures: number, error: unknown) =>

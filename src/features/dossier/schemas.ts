@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { BOOKING_STATUSES } from "@/features/booking/types";
+import { format } from "date-fns";
+import { DOSSIER_REQUIREMENT_STATUSES, UPLOAD_ACCEPTED_MIME_TYPES, UPLOAD_MAX_FILE_BYTES } from "./constants";
+import type { UploadDocumentError } from "./types";
 
 const entityId = z.number().int().positive();
 const timestamp = z.iso.datetime({ offset: true });
@@ -16,14 +19,22 @@ export const dossierStatusSchema = z.enum([
   "CLOSED",
 ]);
 
-export const dossierRequirementStatusSchema = z.enum([
-  "PENDING",
-  "REQUESTED",
-  "PROVIDED",
-  "SATISFIED",
-  "REJECTED",
-  "WAIVED",
-]);
+export const dossierRequirementStatusSchema = z.enum(DOSSIER_REQUIREMENT_STATUSES);
+
+const acceptedUploadTypes = new Set<string>(UPLOAD_ACCEPTED_MIME_TYPES);
+
+export function validateUploadFiles(files: readonly File[]): UploadDocumentError | null {
+  if (!files.length) return { code: "FILES_REQUIRED", message: "Select at least one file." };
+  for (const file of files) {
+    if (!acceptedUploadTypes.has(file.type)) {
+      return { code: "INVALID_FILE_TYPE", message: "Only PDF, JPG, JPEG, and PNG files are accepted." };
+    }
+    if (file.size > UPLOAD_MAX_FILE_BYTES) {
+      return { code: "FILE_TOO_LARGE", message: "Each file must be 10MB or smaller." };
+    }
+  }
+  return null;
+}
 
 const proofStatus = (statuses: readonly [string, ...string[]]) =>
   z.object({
@@ -128,6 +139,45 @@ const envelope = <T extends z.ZodType>(value: T) => z.object({
 
 export const dossierOverviewEnvelopeSchema = envelope(dossierOverviewSchema);
 export const dossierRequirementsEnvelopeSchema = envelope(dossierRequirementsPageSchema);
+
+export const uploadDocumentResultSchema = z.object({
+  complianceDocumentId: entityId,
+  documentCode: z.string(),
+  documentVersionId: entityId,
+  versionNo: z.literal(1),
+});
+export const uploadDocumentEnvelopeSchema = z.object({
+  isSuccess: z.literal(true),
+  code: z.literal(201),
+  message: z.string(),
+  value: uploadDocumentResultSchema,
+});
+
+const optionalDate = z.union([z.literal(""), date]);
+export const createUploadDocumentSchema = (
+  validUntil: string | null,
+  plannedDepartureDate?: string | null,
+) => z.object({
+  documentName: z.string().trim().max(200, "Document name must be 200 characters or fewer."),
+  documentNumber: z.string().trim(),
+  issuingAuthority: z.string().trim(),
+  issuedDate: optionalDate,
+  expiryDate: optionalDate,
+}).superRefine((value, context) => {
+  if (!value.expiryDate) return;
+  if (value.expiryDate < format(new Date(), "yyyy-MM-dd")) {
+    context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date cannot be in the past." });
+  }
+  if (value.issuedDate && value.expiryDate < value.issuedDate) {
+    context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date cannot be before issued date." });
+  }
+  if (validUntil && value.expiryDate < validUntil) {
+    context.addIssue({ code: "custom", path: ["expiryDate"], message: `Document must remain valid through ${validUntil}.` });
+  }
+  if (plannedDepartureDate && value.expiryDate < plannedDepartureDate.slice(0, 10)) {
+    context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date cannot be before transport departure." });
+  }
+});
 
 export const dossierIdSchema = z.string().regex(/^[1-9]\d*$/);
 export const dossierRequirementsParamsSchema = z.object({

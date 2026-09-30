@@ -8,6 +8,7 @@ import type {
   bookingSummarySchema,
   dossierHorseOptionSchema,
   requirementSummarySchema,
+  uploadDocumentResultSchema,
 } from "./schemas";
 
 export type DossierOverview = z.infer<typeof dossierOverviewSchema>;
@@ -18,6 +19,26 @@ export type DossierRequirementsPage = z.infer<typeof dossierRequirementsPageSche
 export type BookingSummary = z.infer<typeof bookingSummarySchema>;
 export type DossierHorseOption = z.infer<typeof dossierHorseOptionSchema>;
 export type RequirementSummary = z.infer<typeof requirementSummarySchema>;
+export type UploadDocumentResult = z.infer<typeof uploadDocumentResultSchema>;
+export type UploadDocumentError = {
+  code: string;
+  message: string;
+  field?: "expiryDate";
+  refresh?: "overview" | "requirements";
+};
+export type UploadDocumentMetadata = {
+  documentName: string;
+  documentNumber: string;
+  issuingAuthority: string;
+  issuedDate: string;
+  expiryDate: string;
+};
+export type UploadDocumentInput = {
+  dossierId: string;
+  requirementId: number;
+  files: File[];
+  metadata: UploadDocumentMetadata;
+};
 
 export type DossierSourceKind = "api" | "mock";
 export type DossierMockScenario = "normal" | "locked" | "empty" | "error";
