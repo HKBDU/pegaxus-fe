@@ -56,6 +56,10 @@ const HorseDetailPage = lazy(
 const BookingStatusHistoryPage = lazy(
   () => import("@/features/booking/pages/BookingStatusHistoryPage"),
 );
+// DEV-ONLY DOSSIER UI TEST ROUTE: Remove this import with the marked route below after final route integration.
+const DossierDetailsPage = import.meta.env.DEV
+  ? lazy(() => import("@/features/dossier/pages/DossierDetailsPage"))
+  : null;
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />
@@ -261,18 +265,4 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  ...(import.meta.env.DEV
-    ? [
-        {
-          path: "/__dev/customer/bookings/:bookingId/history",
-          element: <MainLayout />,
-          children: [{ index: true, element: bookingHistoryPage }],
-        },
-        {
-          path: "/__dev/admin/bookings/:bookingId/history",
-          element: <AdminLayout />,
-          children: [{ index: true, element: bookingHistoryPage }],
-        },
-      ]
-    : []),
 ]);

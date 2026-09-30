@@ -1,0 +1,181 @@
+import { useState } from "react";
+import {
+  ArrowLeft,
+  ClipboardList,
+  FileText,
+  History,
+  ShieldCheck,
+} from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAuthStore } from "@/features/auth/store";
+import { useBooking } from "@/features/booking/hooks";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/shared/components/common";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { Card, CardContent } from "@/shared/components/ui/card";
+import { DossierOverview } from "../components/DossierOverview";
+import { DossierRequirementsPreview } from "../components/DossierRequirementsPreview";
+import { canViewDossierAudit } from "../constants";
+import { useDossierOverview } from "../hooks/useDossier";
+import { dossierSourceKind, getDossierLoadErrorKind } from "../source";
+
+const sections = [
+  { id: "requirements", label: "Dossier Requirements", icon: ClipboardList },
+  { id: "documents", label: "Documents / Reviews", icon: FileText },
+  { id: "authority", label: "Authority & Inspection", icon: ShieldCheck },
+  { id: "audit", label: "Audit History", icon: History },
+] as const;
+type SectionId = (typeof sections)[number]["id"];
+
+const integrationMessages: Record<
+  Exclude<SectionId, "requirements">,
+  string
+> = {
+  documents:
+    "Document upload, versions, and reviews will be connected here in a later phase.",
+  authority:
+    "Authority and inspection information will be connected through AuthorityInspectionTab.",
+  audit: "Audit history will be connected through AuditHistoryTab.",
+};
+
+function QueryError({
+  error,
+  onRetry,
+}: {
+  error: unknown;
+  onRetry: () => void;
+}) {
+  const kind = getDossierLoadErrorKind(error);
+  const messages = {
+    unauthorized: "Your session has expired. Please sign in again.",
+    forbidden: "You do not have permission to view this dossier.",
+    "not-found":
+      "This compliance dossier was not found or has not been initialized.",
+    contract: "The dossier response does not match the expected data contract.",
+    load: "Unable to load dossier information. Please try again.",
+  };
+  return (
+    <ErrorState
+      message={messages[kind]}
+      onRetry={kind === "load" ? onRetry : undefined}
+    />
+  );
+}
+
+export default function DossierDetailsPage() {
+  const { dossierId = "" } = useParams<{ dossierId: string }>();
+  const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState<SectionId>("requirements");
+  const query = useDossierOverview(dossierId);
+  const canUseBookingApi =
+    dossierSourceKind === "api" &&
+    (!import.meta.env.DEV ||
+      import.meta.env.VITE_BOOKING_API_MOCKS === "false");
+  const bookingQuery = useBooking(
+    canUseBookingApi ? (query.data?.bookingId ?? "") : "",
+  );
+  const booking =
+    bookingQuery.data &&
+    query.data &&
+    String(bookingQuery.data.bookingId) === String(query.data.bookingId)
+      ? bookingQuery.data
+      : undefined;
+  const roles = useAuthStore((state) => state.principal?.roles);
+  const canViewAudit = canViewDossierAudit(roles);
+  const visibleSections = sections.filter(
+    ({ id }) => id !== "audit" || canViewAudit,
+  );
+  const currentSection =
+    activeSection === "audit" && !canViewAudit ? "requirements" : activeSection;
+
+  return (
+    <div className="booking-page-shell min-w-0 px-5 py-6 font-sans sm:px-6 lg:px-10">
+      <div className="booking-page-enter mx-auto w-full max-w-[1440px] space-y-5">
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-[6px] pt-2 text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <ArrowLeft aria-hidden="true" className="size-3.5" /> Back to
+              Booking
+            </button>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <PageHeader
+                title="COMPLIANCE DOSSIER"
+                backHref="/"
+                showBack={false}
+                className="w-auto"
+              />
+              
+            </div>
+            <p className="text-xs text-gray-600 sm:text-sm">
+              Manage legal and regulatory documents for this transport booking.
+            </p>
+          </div>
+        </header>
+        {query.invalidId ? (
+          <ErrorState message="A valid dossier ID is required." />
+        ) : query.isPending ? (
+          <LoadingState />
+        ) : query.isError ? (
+          <QueryError
+            error={query.error}
+            onRetry={() => void query.refetch()}
+          />
+        ) : query.data ? (
+          <>
+            <DossierOverview
+              dossier={query.data}
+              booking={booking}
+              bookingLoading={canUseBookingApi && bookingQuery.isPending}
+              bookingError={canUseBookingApi && bookingQuery.isError}
+            />
+            <div className="border-b border-gray-200">
+              <div
+                role="tablist"
+                aria-label="Dossier sections"
+                className="flex gap-1 overflow-x-auto"
+              >
+                {visibleSections.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    id={`dossier-tab-${id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={currentSection === id}
+                    aria-controls={`dossier-panel-${id}`}
+                    onClick={() => setActiveSection(id)}
+                    className={`inline-flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 font-heading text-xs font-semibold uppercase transition-colors focus-visible:outline-2 focus-visible:outline-primary ${currentSection === id ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-900"}`}
+                  >
+                    <Icon aria-hidden="true" className="size-4" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div
+              role="tabpanel"
+              id={`dossier-panel-${currentSection}`}
+              aria-labelledby={`dossier-tab-${currentSection}`}
+            >
+              {currentSection === "requirements" ? (
+                <DossierRequirementsPreview dossierId={dossierId} />
+              ) : (
+                <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
+                  <CardContent className="p-5">
+                    <EmptyState message={integrationMessages[currentSection]} />
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
