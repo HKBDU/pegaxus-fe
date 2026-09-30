@@ -48,14 +48,25 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
     },
   });
   const mutation = useUpdateEmployment();
+  const statusMutation = useUpdateEmployeeStatus();
   const attempt = useFormRequestAttemptGuard(form);
-  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
+  const isPending = mutation.isPending || statusMutation.isPending || attempt.isRunning || form.formState.isSubmitting;
   const navigate = useNavigate();
   const submit = form.handleSubmit(async (changes) => {
     try {
-      const result = await attempt.run(() => mutation.mutateAsync({ id: employee.employeeId, changes }));
+      const result = await attempt.run(() =>
+        Promise.all([
+          mutation.mutateAsync({
+            id: employee.employeeId,
+            changes: { role: changes.role, workingStatus: changes.workingStatus },
+          }),
+          employee.accountStatus !== changes.accountStatus
+            ? statusMutation.mutateAsync({ id: employee.employeeId, status: changes.accountStatus })
+            : Promise.resolve(),
+        ]),
+      );
       if (!result.started) return;
-      toast.success("Employee employment information updated successfully.");
+      toast.success("Employee account updated successfully.");
       navigate(accountDetail(employee.employeeId));
     } catch (error) {
       toast.error(getAccountError(error));
