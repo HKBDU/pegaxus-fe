@@ -82,24 +82,294 @@ export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
       <div className="mx-auto flex w-full max-w-[1152px] flex-col">
         <PageHeader title={isEdit ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" />
         <Form {...form}>
-          <form id={`${mode}-horse-form`} noValidate onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col pt-4">
+          <form
+            id={`${mode}-horse-form`}
+            noValidate
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="flex flex-col pt-4"
+          >
             <div className="grid auto-rows-min gap-x-6 gap-y-3 pb-4 md:grid-cols-2 lg:grid-cols-3">
-              <FormField control={form.control} name="horseName" rules={requiredText("Horse name")} render={({ field }) => <Field label="HORSE NAME"><FormItem><FormControl><Input {...field} className={inputClass} placeholder="e.g. Golden Thunder" maxLength={150} /></FormControl><FormMessage className="text-xs" /></FormItem></Field>} />
-              <FormField control={form.control} name="sex" rules={requiredText("Sex")} render={({ field }) => <Field label="SEX"><FormItem><Select value={field.value} onValueChange={field.onChange}><FormControl><SelectTrigger className={inputClass}><SelectValue placeholder="Select sex" /></SelectTrigger></FormControl><SelectContent position="popper" align="start" sideOffset={2}>{selectOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select><FormMessage className="text-xs" /></FormItem></Field>} />
-              <FormField control={form.control} name="breed" rules={requiredText("Breed")} render={({ field }) => <Field label="BREED"><FormItem><Select value={field.value} onValueChange={field.onChange}><FormControl><SelectTrigger className={inputClass}><SelectValue placeholder="Select breed" /></SelectTrigger></FormControl><SelectContent position="popper" align="start" sideOffset={2}>{breedOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select><FormMessage className="text-xs" /></FormItem></Field>} />
-              <FormField control={form.control} name="dateOfBirth" rules={requiredText("Date of birth")} render={({ field }) => <Field label="DATE OF BIRTH"><FormItem><FormControl><DatePicker ref={field.ref} value={field.value} onChange={field.onChange} onBlur={field.onBlur} placeholder="DD / MM / YYYY" className={`${inputClass} data-[empty=true]:text-[#6c6963]`} /></FormControl><FormMessage className="text-xs" /></FormItem></Field>} />
-              <FormField control={form.control} name="color" rules={requiredText("Color")} render={({ field }) => <Field label="COLOR"><FormItem><FormControl><Input {...field} className={inputClass} placeholder="e.g. Bay" maxLength={100} /></FormControl><FormMessage className="text-xs" /></FormItem></Field>} />
-              <FormField control={form.control} name="countryOfOrigin" rules={requiredText("Country of origin")} render={({ field }) => <Field label="COUNTRY OF ORIGIN"><FormItem><FormControl><CountrySelect value={field.value} onValueChange={field.onChange} placeholder="Select country of origin" className={inputClass} /></FormControl><FormMessage className="text-xs" /></FormItem></Field>} />
-              <FormField control={form.control} name="weightKg" rules={requiredNumber("Weight")} render={({ field }) => <Field label="WEIGHT (KG)"><FormItem><FormControl><Input {...field} className={inputClass} type="number" min="0" step="0.1" placeholder="e.g. 520" /></FormControl><FormMessage className="text-xs" /></FormItem></Field>} />
-              <FormField control={form.control} name="heightCm" rules={requiredNumber("Height")} render={({ field }) => <Field label="HEIGHT (CM)"><FormItem><FormControl><Input {...field} className={inputClass} type="number" min="0" step="0.1" placeholder="e.g. 165" /></FormControl><FormMessage className="text-xs" /></FormItem></Field>} />
-              <FormField control={form.control} name="passportNumber" rules={passportNumberRules} render={({ field }) => <Field label="PASSPORT NUMBER" characterCount={{ value: field.value.length, max: 15 }}><FormItem><FormControl><Input {...field} className={inputClass} placeholder="15 chars: A-Z, 0-9" maxLength={15} /></FormControl><FormMessage className="text-xs" /></FormItem></Field>} />
-              <FormField control={form.control} name="microchipNumber" rules={microchipNumberRules} render={({ field }) => <Field label="MICROCHIP NUMBER" characterCount={{ value: field.value.length, max: 15 }}><FormItem><FormControl><Input {...field} className={inputClass} inputMode="numeric" placeholder="15 digits: 0-9" maxLength={15} /></FormControl><FormMessage className="text-xs" /></FormItem></Field>} />
-              <FormField control={form.control} name="identificationNotes" rules={requiredText("Identification notes")} render={({ field }) => <Field label="IDENTIFICATION NOTES" className="md:col-span-2 lg:col-span-3"><FormItem><FormControl><Textarea {...field} className="profile-edit-field !h-[72px] min-h-[72px] resize-none" placeholder="e.g. White star on forehead; calm during transport." maxLength={1000} /></FormControl><FormMessage className="text-xs" /></FormItem></Field>} />
+              <FormField
+                control={form.control}
+                name="horseName"
+                rules={requiredText("Horse name")}
+                render={({ field }) => (
+                  <Field label="HORSE NAME">
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className={inputClass}
+                          placeholder="e.g. Golden Thunder"
+                          maxLength={150}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="sex"
+                rules={requiredText("Sex")}
+                render={({ field }) => (
+                  <Field label="SEX">
+                    <FormItem>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className={inputClass}>
+                            <SelectValue placeholder="Select sex" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent position="popper" align="start" sideOffset={2}>
+                          {selectOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="breed"
+                rules={requiredText("Breed")}
+                render={({ field }) => (
+                  <Field label="BREED">
+                    <FormItem>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className={inputClass}>
+                            <SelectValue placeholder="Select breed" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent position="popper" align="start" sideOffset={2}>
+                          {breedOptions.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                rules={requiredText("Date of birth")}
+                render={({ field }) => (
+                  <Field label="DATE OF BIRTH">
+                    <FormItem>
+                      <FormControl>
+                        <DatePicker
+                          ref={field.ref}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          placeholder="DD / MM / YYYY"
+                          className={`${inputClass} data-[empty=true]:text-[#6c6963]`}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="color"
+                rules={requiredText("Color")}
+                render={({ field }) => (
+                  <Field label="COLOR">
+                    <FormItem>
+                      <FormControl>
+                        <Input {...field} className={inputClass} placeholder="e.g. Bay" maxLength={100} />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="countryOfOrigin"
+                rules={requiredText("Country of origin")}
+                render={({ field }) => (
+                  <Field label="COUNTRY OF ORIGIN">
+                    <FormItem>
+                      <FormControl>
+                        <CountrySelect
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Select country of origin"
+                          className={inputClass}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="weightKg"
+                rules={requiredNumber("Weight")}
+                render={({ field }) => (
+                  <Field label="WEIGHT (KG)">
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className={inputClass}
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          placeholder="e.g. 520"
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="heightCm"
+                rules={requiredNumber("Height")}
+                render={({ field }) => (
+                  <Field label="HEIGHT (CM)">
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className={inputClass}
+                          type="number"
+                          min="0"
+                          step="0.1"
+                          placeholder="e.g. 165"
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="passportNumber"
+                rules={passportNumberRules}
+                render={({ field }) => (
+                  <Field
+                    label="PASSPORT NUMBER"
+                    characterCount={{ value: field.value.length, max: 15 }}
+                  >
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className={inputClass}
+                          placeholder="15 chars: A-Z, 0-9"
+                          maxLength={15}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="microchipNumber"
+                rules={microchipNumberRules}
+                render={({ field }) => (
+                  <Field
+                    label="MICROCHIP NUMBER"
+                    characterCount={{ value: field.value.length, max: 15 }}
+                  >
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className={inputClass}
+                          inputMode="numeric"
+                          placeholder="15 digits: 0-9"
+                          maxLength={15}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="identificationNotes"
+                rules={requiredText("Identification notes")}
+                render={({ field }) => (
+                  <Field
+                    label="IDENTIFICATION NOTES"
+                    className="md:col-span-2 lg:col-span-3"
+                  >
+                    <FormItem>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          className="profile-edit-field !h-[72px] min-h-[72px] resize-none"
+                          placeholder="e.g. White star on forehead; calm during transport."
+                          maxLength={1000}
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  </Field>
+                )}
+              />
             </div>
-            {showValidationSummary && <p className="pb-2 text-right text-xs text-red-600" role="alert">Please complete all required fields before submitting.</p>}
+
+            {showValidationSummary && (
+              <p className="pb-2 text-right text-xs text-red-600" role="alert">
+                Please complete all required fields before submitting.
+              </p>
+            )}
+
             <div className="flex shrink-0 justify-end gap-3 border-t border-[hsl(var(--border))] pt-4">
-              <Button type="button" variant="outline" className="h-9 rounded-none border-[#181818] bg-white px-6 py-2 text-xs font-bold uppercase" onClick={() => navigate("/my-horses")}>Cancel</Button>
-              <Button type="submit" disabled={form.formState.isSubmitting} className="h-9 rounded-none py-2 text-xs font-bold uppercase">{form.formState.isSubmitting ? "Saving..." : isEdit ? "Update" : "Create"}</Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 rounded-none border-[#181818] bg-white px-6 py-2 text-xs font-bold uppercase"
+                onClick={() => navigate("/my-horses")}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={form.formState.isSubmitting}
+                className="h-9 rounded-none py-2 text-xs font-bold uppercase"
+              >
+                {form.formState.isSubmitting
+                  ? "Saving..."
+                  : isEdit
+                    ? "Update"
+                    : "Create"}
+              </Button>
             </div>
           </form>
         </Form>
