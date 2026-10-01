@@ -14,27 +14,31 @@ function getInitials(name: string | null) {
     .toUpperCase()
 }
 
-export function ProfileHeroCard({ profile, emailVerificationStatus, roleLabel, actions, children, className }: ProfileHeroCardProps) {
+export function ProfileHeroCard({ profile, emailVerificationStatus, roleLabel, actions, children, nameEditor, avatarUrl, avatarEditor, className }: ProfileHeroCardProps) {
   return (
-    <div className={cn("border border-[#d1d5db] bg-white shadow-sm", className)}>
-      <div className="h-36 w-full bg-gradient-to-br from-[#f39200] via-[#f5a83d] to-[#181818] sm:h-48" aria-hidden="true" />
-      <div className="px-5 pb-6 sm:px-8">
-        <div className="-mt-20 flex flex-col gap-4 sm:-mt-24 sm:flex-row sm:items-end sm:justify-between">
-          <div className="relative shrink-0">
-            <Avatar className="size-40 border-4 border-white bg-[#f4f4f4] text-[#f39200] shadow-md sm:size-52">
-              {profile.avatarUrl && <AvatarImage src={profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />}
-              <AvatarFallback className="bg-[#f4f4f4] text-4xl font-bold tracking-[0.9px] text-[#f39200]">{getInitials(profile.fullName)}</AvatarFallback>
-            </Avatar>
-            <ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none absolute -right-2 -bottom-2 z-20 shadow-sm" />
+    <>
+      <div className={cn("border border-[#d1d5db] bg-white", className)}>
+        <div className="h-36 w-full bg-gradient-to-br from-[#f39200] via-[#f5a83d] to-[#181818] sm:h-48" aria-hidden="true" />
+        <div className="px-5 pb-6 sm:px-8">
+          <div className="-mt-20 flex flex-col gap-4 sm:-mt-24 sm:flex-row sm:items-end sm:justify-between">
+            <div className="relative shrink-0">
+              <Avatar className="size-40 border-4 border-white bg-[#f4f4f4] text-[#f39200] sm:size-52">
+                {(avatarUrl ?? profile.avatarUrl) && <AvatarImage src={avatarUrl ?? profile.avatarUrl ?? undefined} alt={profile.fullName ?? "Profile avatar"} />}
+                <AvatarFallback className="bg-[#f4f4f4] text-4xl font-bold tracking-[0.9px] text-[#f39200]">{getInitials(profile.fullName)}</AvatarFallback>
+              </Avatar>
+              {avatarEditor}
+            </div>
           </div>
-          {actions && <div className="flex flex-wrap items-center gap-2 sm:pb-1">{actions}</div>}
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {nameEditor ?? <h1 className="text-2xl font-bold leading-tight text-[#181818]">{profile.fullName ?? "Unnamed"}</h1>}
+            <ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none" />
+          </div>
+          <p className="text-sm font-medium text-[#6c6963]">{roleLabel}</p>
         </div>
-
-        <h1 className="mt-4 text-2xl font-bold leading-tight text-[#181818]">{profile.fullName ?? "Unnamed"}</h1>
-        <p className="text-sm font-medium text-[#6c6963]">{roleLabel}</p>
-
-        {children && <div className="mt-6">{children}</div>}
       </div>
-    </div>
+      {children && <div className="mt-5 flex flex-col gap-5">{children}</div>}
+      {actions && <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-[#d1d5db] pt-5">{actions}</div>}
+    </>
   )
 }
