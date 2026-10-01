@@ -7,8 +7,34 @@ import {
   dossierRequirementsPageSchema,
   dossierRequirementsParamsSchema,
   validateUploadFiles,
+  dossierIdSchema,
+  approveDocumentReviewSchema,
+  approveDocumentEnvelopeSchema,
+  readyForSubmissionEnvelopeSchema,
 } from "./schemas";
-import type { DossierLoadErrorKind, DossierMockScenario, DossierRequirementsParams, DossierSourceKind, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
+import type { ApproveDocumentInput, DossierLoadErrorKind, DossierMockScenario, DossierRequirementsParams, DossierSourceKind, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
+
+export async function loadApproveDocument(input: ApproveDocumentInput) {
+  const documentId = dossierIdSchema.parse(input.documentId);
+  dossierIdSchema.parse(String(input.versionId));
+  const review = approveDocumentReviewSchema.parse(input.review);
+  if (dossierSourceKind === "mock") {
+    const { approveMockDocument } = await import("./mocks/dossier.mock");
+    return approveDocumentEnvelopeSchema.parse(approveMockDocument(documentId, input.versionId, review, mockScenario()));
+  }
+  const { dossierService } = await import("./services");
+  return dossierService.approveDocument(input);
+}
+
+export async function loadMarkReadyForSubmission(dossierId: string) {
+  const id = dossierIdSchema.parse(dossierId);
+  if (dossierSourceKind === "mock") {
+    const { markMockDossierReady } = await import("./mocks/dossier.mock");
+    return readyForSubmissionEnvelopeSchema.parse(markMockDossierReady(id, mockScenario()));
+  }
+  const { dossierService } = await import("./services");
+  return dossierService.markReadyForSubmission(id);
+}
 
 export function resolveDossierSource(isDev: boolean, flag: string | undefined): DossierSourceKind {
   return isDev && flag === "true" ? "mock" : "api";

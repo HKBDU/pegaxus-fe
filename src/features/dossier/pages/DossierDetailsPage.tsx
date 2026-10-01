@@ -15,6 +15,7 @@ import {
 import { PageHeader } from "@/shared/components/PageHeader";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { DossierOverview } from "../components/DossierOverview";
+import { DossierReadinessAction } from "../components/DossierReadinessAction";
 import { DossierRequirementsPreview } from "../components/DossierRequirementsPreview";
 import { useDossierOverview } from "../hooks/useDossier";
 import { getDossierLoadErrorKind } from "../source";
@@ -104,6 +105,7 @@ export default function DossierDetailsPage() {
         ) : query.data ? (
           <>
             <DossierOverview dossier={query.data} />
+            <DossierReadinessAction dossier={query.data} />
             <div className="border-b border-gray-200">
               <div
                 role="tablist"

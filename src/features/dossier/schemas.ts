@@ -180,6 +180,18 @@ export const complianceDocumentDetailSchema = z.object({
   openRequest: documentRequestSummarySchema.nullable(),
 });
 export const complianceDocumentEnvelopeSchema = envelope(complianceDocumentDetailSchema);
+export const approveDocumentReviewSchema = z.object({
+  result: z.literal("APPROVED"),
+  reviewComment: z.string().trim().optional(),
+}).transform(({ result, reviewComment }) => ({
+  result,
+  ...(reviewComment ? { reviewComment } : {}),
+}));
+export const approveDocumentEnvelopeSchema = envelope(z.object({
+  documentReviewId: entityId,
+  dossierRequirementStatus: z.literal("SATISFIED"),
+})).extend({ code: z.literal(201) });
+export const readyForSubmissionEnvelopeSchema = envelope(z.null()).extend({ code: z.literal(200) });
 export const submitDocumentVersionEnvelopeSchema = z.union([
   envelope(z.object({ documentVersionId: entityId, versionNo: z.number().int().positive(), mode: z.literal("EDIT_IN_PLACE") })).extend({ code: z.literal(200) }),
   envelope(z.object({ documentVersionId: entityId, versionNo: z.number().int().positive(), mode: z.literal("NEW_VERSION") })).extend({ code: z.literal(201) }),

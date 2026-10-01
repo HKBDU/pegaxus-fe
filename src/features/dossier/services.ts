@@ -12,8 +12,11 @@ import {
   submitDocumentVersionEnvelopeSchema,
   createUpdateDocumentMetadataSchema,
   updateDocumentMetadataEnvelopeSchema,
+  approveDocumentReviewSchema,
+  approveDocumentEnvelopeSchema,
+  readyForSubmissionEnvelopeSchema,
 } from "./schemas";
-import type { DossierRequirementsParams, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
+import type { ApproveDocumentInput, DossierRequirementsParams, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
 
 function buildUploadDocumentFormData({ files, metadata }: { files: readonly File[]; metadata: object }): FormData {
   const form = new FormData();
@@ -28,6 +31,22 @@ function buildUploadDocumentFormData({ files, metadata }: { files: readonly File
 }
 
 export const dossierService = {
+  async approveDocument(input: ApproveDocumentInput) {
+    const documentId = dossierIdSchema.parse(input.documentId);
+    const versionId = dossierIdSchema.parse(String(input.versionId));
+    const review = approveDocumentReviewSchema.parse(input.review);
+    const payload = await apiClient.post<unknown, unknown>(
+      `compliance-documents/${documentId}/versions/${versionId}/reviews`, review,
+    );
+    return approveDocumentEnvelopeSchema.parse(payload);
+  },
+
+  async markReadyForSubmission(dossierId: string) {
+    const id = dossierIdSchema.parse(dossierId);
+    const payload = await apiClient.patch<unknown, unknown>(`compliance-dossiers/${id}/ready-for-submission`);
+    return readyForSubmissionEnvelopeSchema.parse(payload);
+  },
+
   async getOverview(dossierId: string, signal?: AbortSignal) {
     const id = dossierIdSchema.parse(dossierId);
     const payload = await apiClient.get<unknown, unknown>(

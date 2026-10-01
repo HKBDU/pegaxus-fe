@@ -16,6 +16,7 @@ import {
   Upload,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
+import { normalizeRole } from "@/features/auth/access-control";
 import { formatBookingDate } from "@/features/booking/utils";
 import {
   EmptyState,
@@ -54,6 +55,8 @@ import { DossierStatusBadge } from "./DossierStatusBadge";
 import { DocumentSubmissionDialog } from "./DocumentSubmissionDialog";
 import { DocumentDetailsDialog } from "./DocumentVersionHistory";
 import { UploadComplianceDocumentDialog } from "./UploadComplianceDocumentDialog";
+import { DocumentReviewDialog } from "./DocumentReviewDialog";
+import { canOpenDocumentReview } from "../lib/document-review";
 
 type SubmissionMode = "initial" | "edit" | "update";
 
@@ -70,7 +73,8 @@ function RequirementRowActions({
 }) {
   const labels = role === "CUSTOMER"
     ? getCustomerDocumentActions(dossier, item)
-    : getDossierRequirementActionLabels(role, item.status, Boolean(item.document));
+    : getDossierRequirementActionLabels(role, item.status, Boolean(item.document))
+      .filter((label) => label !== "Review Document" || canOpenDocumentReview(role, dossier, item));
 
   return (
     <DropdownMenu>
@@ -96,7 +100,9 @@ function RequirementRowActions({
         ) : null}
         {labels.map((label) => {
           const actionEnabled = (label === "Upload Document" && canUploadInitialDocument(role, dossier, item)) ||
+            (label === "Review Document" && canOpenDocumentReview(role, dossier, item)) ||
             (Boolean(item.document) && (label === "View Document" || label === "View Version History" ||
+              label === "View Review Result" || label === "View Review History" ||
               (role === "CUSTOMER" && (label === "Edit Document" || label === "Update Document"))));
           const Icon = label.startsWith("Upload")
             ? Upload
@@ -320,8 +326,13 @@ export function DossierRequirementsPreview({
 }) {
   const [submission, setSubmission] = useState<{ requirement: DossierRequirement; mode: SubmissionMode } | null>(null);
   const [viewDocumentId, setViewDocumentId] = useState<string | null>(null);
+  const [reviewRequirement, setReviewRequirement] = useState<DossierRequirement | null>(null);
   const onAction = (item: DossierRequirement, label: string) => {
-    if (label === "View Document" || label === "View Version History") {
+    if (label === "Review Document") {
+      setReviewRequirement(item);
+      return;
+    }
+    if (label === "View Document" || label === "View Version History" || label === "View Review Result" || label === "View Review History") {
       if (item.document) setViewDocumentId(String(item.document.complianceDocumentId));
       return;
     }
@@ -336,7 +347,7 @@ export function DossierRequirementsPreview({
   // Clear removed D7 horses before requesting D8 with a stale selection.
   if (params !== storedParams) setParams(params);
   const roles = useAuthStore((state) => state.principal?.roles);
-  const role = roles?.find(
+  const role = roles?.map(normalizeRole).find(
     (value) =>
       value === "CUSTOMER" ||
       value === "TRANSPORT_SPECIALIST" ||
@@ -487,6 +498,14 @@ export function DossierRequirementsPreview({
         />
       )}
       <DocumentDetailsDialog documentId={viewDocumentId} onClose={() => setViewDocumentId(null)} />
+      {reviewRequirement ? (
+        <DocumentReviewDialog
+          dossier={dossier}
+          requirement={result?.items.find((item) => item.dossierRequirementId === reviewRequirement.dossierRequirementId) ?? reviewRequirement}
+          role={role}
+          onClose={() => setReviewRequirement(null)}
+        />
+      ) : null}
     </section>
   );
 }

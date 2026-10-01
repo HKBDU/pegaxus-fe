@@ -1,7 +1,9 @@
 import {
   dossierRequirementsParamsSchema,
+  approveDocumentReviewSchema,
 } from "../schemas";
-import type { ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentMetadata } from "../types";
+import { canMarkReadyForSubmission, getReviewBlockReason } from "../lib/document-review";
+import type { ApproveDocumentResponse, ApproveDocumentReview, ReadyForSubmissionResponse, ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentMetadata } from "../types";
 
 class DossierMockHttpError extends Error {
   readonly status: number;
@@ -133,6 +135,49 @@ const uploadedRequirements = new Map<number, DossierRequirement>();
 let nextMockDocumentId = 9300;
 let nextMockVersionId = 9400;
 const documentDetails = new Map<number, ComplianceDocumentDetail>();
+let nextMockReviewId = 9500;
+
+export function approveMockDocument(id: string, versionId: number, review: ApproveDocumentReview, scenario: DossierMockScenario): ApproveDocumentResponse {
+  const body = approveDocumentReviewSchema.parse(review);
+  const current = getMockComplianceDocument(id, scenario);
+  const overview = getMockDossier("501", scenario);
+  if (overview.writeLocked) throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
+  const latest = current.versions[0];
+  if (!latest || latest.documentVersionId !== versionId) throw new DossierMockHttpError(409, "VERSION_NOT_LATEST");
+  if (latest.review) throw new DossierMockHttpError(409, "VERSION_ALREADY_REVIEWED");
+  const requirement = uploadedRequirements.get(current.dossierRequirementId) ??
+    requirements.find((item) => item.dossierRequirementId === current.dossierRequirementId)!;
+  const block = getReviewBlockReason({ role: "TRANSPORT_SPECIALIST", dossier: overview, requirement, document: current, today: new Date().toISOString().slice(0, 10) });
+  if (block) throw new DossierMockHttpError(409, block.code);
+  const reviewedAt = new Date().toISOString();
+  const documentReviewId = nextMockReviewId++;
+  documentDetails.set(current.complianceDocumentId, {
+    ...current, status: "APPROVED", updatedAt: reviewedAt,
+    versions: [{ ...latest, review: {
+      documentReviewId, result: "APPROVED", reviewComment: body.reviewComment ?? null,
+      reviewedBy: { accountId: 402, fullName: "Transport Specialist" }, reviewedAt,
+    } }, ...current.versions.slice(1)],
+  });
+  uploadedRequirements.set(requirement.dossierRequirementId, {
+    ...requirement, status: "SATISFIED", satisfiedAt: reviewedAt,
+    document: { ...requirement.document!, status: "APPROVED" },
+  });
+  return {
+    isSuccess: true, code: 201,
+    message: "DocumentReview recorded: APPROVED. DossierRequirement status updated to SATISFIED.",
+    value: { documentReviewId, dossierRequirementStatus: "SATISFIED" },
+  };
+}
+
+export function markMockDossierReady(id: string, scenario: DossierMockScenario): ReadyForSubmissionResponse {
+  const overview = getMockDossier(id, scenario);
+  if (overview.writeLocked) throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
+  if (overview.status !== "IN_PREPARATION") throw new DossierMockHttpError(409, "INVALID_DOSSIER_STATUS");
+  if (!canMarkReadyForSubmission("TRANSPORT_SPECIALIST", overview)) throw new DossierMockHttpError(409, "MANDATORY_DR_NOT_DONE");
+  dossier.status = "READY_FOR_SUBMISSION";
+  dossier.readyForSubmissionAt = new Date().toISOString();
+  return { isSuccess: true, code: 200, message: "ComplianceDossier is now READY_FOR_SUBMISSION", value: null };
+}
 
 function seedDocument(requirement: DossierRequirement): ComplianceDocumentDetail {
   const document = requirement.document!;
@@ -330,16 +375,22 @@ function assertMockAvailable(id: string, scenario: DossierMockScenario) {
 
 export function getMockDossier(id: string, scenario: DossierMockScenario): DossierOverview {
   assertMockAvailable(id, scenario);
-  const requirementSummary = { ...dossier.requirementSummary };
-  for (const uploaded of uploadedRequirements.values()) {
-    const original = requirements.find((item) => item.dossierRequirementId === uploaded.dossierRequirementId);
-    if (!original || original.status === uploaded.status) continue;
-    if (original.status === "PENDING") requirementSummary.pending--;
-    if (original.status === "REQUESTED") requirementSummary.requested--;
-    if (original.status === "REJECTED") requirementSummary.rejected--;
-    requirementSummary.provided++;
+  // Mock backend projection uses the complete dataset, never a paginated D8 page.
+  const currentRequirements = requirements.map((item) => uploadedRequirements.get(item.dossierRequirementId) ?? item);
+  const requirementSummary = {
+    total: currentRequirements.length,
+    pending: 0, requested: 0, provided: 0, satisfied: 0, rejected: 0, waived: 0,
+  };
+  for (const item of currentRequirements) {
+    const key = item.status.toLowerCase() as Exclude<keyof typeof requirementSummary, "total">;
+    requirementSummary[key]++;
   }
-  const overview = { ...dossier, requirementSummary };
+  const mandatory = currentRequirements.filter((item) => item.isMandatory);
+  const mandatorySatisfiedOrWaived = mandatory.filter((item) => item.status === "SATISFIED" || item.status === "WAIVED").length;
+  const overview = {
+    ...dossier, requirementSummary, mandatoryTotal: mandatory.length, mandatorySatisfiedOrWaived,
+    progressPercent: mandatory.length ? mandatorySatisfiedOrWaived / mandatory.length * 100 : 0,
+  };
   if (scenario === "locked") {
     return { ...overview, writeLocked: true, writeLockReason: "BOOKING_CHANGE_IN_PROGRESS" };
   }
