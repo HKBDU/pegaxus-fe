@@ -37,6 +37,7 @@ export const MOCK_CUSTOMER_PROFILE: Profile = {
   avatarUrl: null,
   customer: {
     customerId: "CUS-0001",
+    customerCode: "CUS-0001",
   },
   employee: null,
   memberSince: "2026-01-10T08:30:00Z",

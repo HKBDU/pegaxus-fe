@@ -40,7 +40,7 @@ export function useProfile(customerId?: string) {
     }
   }, [customerId, location.pathname, useMockProfile])
 
-  async function updateProfile(input: UpdateProfileRequest) {
+  async function updateProfile(input: UpdateProfileRequest): Promise<boolean> {
     setIsSubmitting(true)
     try {
       if (useMockProfile) {
@@ -57,7 +57,7 @@ export function useProfile(customerId?: string) {
         })
         toast.success("Profile updated successfully.")
         setIsEditing(false)
-        return
+        return true
       }
 
       if (customerId) {
@@ -71,8 +71,10 @@ export function useProfile(customerId?: string) {
       await loadProfile()
       toast.success("Profile updated successfully.")
       setIsEditing(false)
+      return true
     } catch {
       toast.error("Can not update profile. Please try again.")
+      return false
     } finally {
       setIsSubmitting(false)
     }

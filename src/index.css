@@ -112,6 +112,7 @@
 
 body {
   margin: 0;
+  overflow-x: hidden;
 }
 
 .field-container:has([aria-invalid="true"]) .field-label {
@@ -280,6 +281,18 @@ body {
   background: #fff;
   box-shadow: 0 0 0 3px rgba(243, 146, 0, 0.2);
   outline: none;
+}
+
+@keyframes profile-address-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+.profile-address-marquee {
+  display: inline-flex;
+  width: max-content;
+  will-change: transform;
+  animation: profile-address-marquee 8s linear infinite;
 }
 
 .horse-data-table > div:first-child {
