@@ -65,7 +65,7 @@ export function ApproveBookingDialog({ bookingId, bookingCode, open, onOpenChang
               void approve()
             }}
           >
-            {approveBooking.isPending ? "Approving..." : requestGuard.isBlocked ? "Close to retry" : "Approve booking"}
+            {approveBooking.isPending ? "Approving..." : requestGuard.isBlocked ? "Please wait..." : "Approve booking"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
@@ -123,7 +123,7 @@ export function RejectBookingDialog({ bookingId, bookingCode, open, onOpenChange
               void submit()
             }}
           >
-            {rejectBooking.isPending ? "Rejecting..." : requestGuard.isBlocked ? "Edit reason to retry" : "Reject booking"}
+            {rejectBooking.isPending ? "Rejecting..." : requestGuard.isBlocked ? "Please wait..." : "Reject booking"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -148,7 +148,7 @@ export default function RegisterPage() {
                 className="size-5 animate-spin"
               />
             )}
-            {isPending ? "Creating account" : attempt.isBlocked ? "Edit details to retry" : "Sign up"}
+            {isPending ? "Creating account" : attempt.isBlocked ? "Please wait..." : "Sign up"}
           </Button>
         </form>
       </Form>

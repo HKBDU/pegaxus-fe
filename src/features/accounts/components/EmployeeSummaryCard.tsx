@@ -33,12 +33,12 @@ export function EmployeeSummaryCard({
           <UserRound aria-hidden="true" className="size-4" /> Employee Summary
         </h2>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
-          <Avatar className="size-14 border border-slate-200">
+          <Avatar className="size-20 border border-slate-200">
             <AvatarImage
               src={employee.avatarUrl ?? undefined}
               alt={employee.fullName ?? "Employee avatar"}
             />
-            <AvatarFallback className="bg-slate-100 font-semibold text-slate-700">
+            <AvatarFallback className="bg-slate-100 text-xl font-semibold text-slate-700">
               {initials}
             </AvatarFallback>
           </Avatar>

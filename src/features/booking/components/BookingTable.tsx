@@ -9,8 +9,7 @@ import { BookingFilters } from "@/features/booking/components/BookingFilters"
 import type { BookingAudience, BookingListParams, BookingSort, BookingStatus, BookingSummary } from "@/features/booking/types"
 import { formatBookingDate, formatBookingTime } from "@/features/booking/utils"
 import type { EntityId, PaginationMeta } from "@/shared/types"
-import { Pagination } from "@/shared/components/common/Pagination"
-import { PageSizeSelect } from "@/shared/components/common/PageSizeSelect"
+import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Button } from "@/shared/components/ui/button"
 import { Checkbox } from "@/shared/components/ui/checkbox"
 import { DataTable } from "@/shared/components/ui/data-table"
@@ -218,9 +217,6 @@ export function BookingTable({
     getSortedRowModel: getSortedRowModel(),
   })
 
-  const firstItem = meta.totalItems === 0 ? 0 : (meta.currentPage - 1) * meta.itemsPerPage + 1
-  const lastItem = Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)
-
   return (
     <>
       <div className="booking-page-enter [animation-delay:100ms]">
@@ -234,13 +230,7 @@ export function BookingTable({
           rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60"
           cellClassName="h-11 px-2.5 py-1.5 text-xs"
           footer={
-            <div className="flex flex-col gap-2 px-0.5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-              <p>Showing {firstItem} to {lastItem} of {meta.totalItems} entries</p>
-              <div className="flex flex-wrap items-center justify-end gap-3">
-                <PageSizeSelect value={filters.pageSize} onValueChange={onPageSizeChange} />
-                <Pagination meta={meta} onPageChange={onPageChange} />
-              </div>
-            </div>
+            <TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
           }
         >
           <BookingFilters

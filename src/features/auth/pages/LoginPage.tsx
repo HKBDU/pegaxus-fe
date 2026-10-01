@@ -98,7 +98,7 @@ export default function LoginPage() {
             {isPending && (
               <LoaderCircle aria-hidden="true" className="size-5 animate-spin" />
             )}
-            {isPending ? "Signing in" : attempt.isBlocked ? "Edit credentials to retry" : "Sign in"}
+            {isPending ? "Signing in" : attempt.isBlocked ? "Please wait..." : "Sign in"}
           </Button>
         </form>
         <div className="my-5 flex items-center gap-3 text-xs uppercase text-neutral-400">

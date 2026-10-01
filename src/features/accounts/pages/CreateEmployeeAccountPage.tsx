@@ -81,7 +81,7 @@ export default function CreateEmployeeAccountPage() {
 
   return (
     <div className="booking-page-shell min-h-[calc(100svh-3rem)] px-5 pt-5 pb-8 font-sans sm:px-6 lg:px-10">
-      <div className="booking-page-enter mx-auto w-full max-w-[1200px]">
+      <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         <div className="mb-4">
           <PageHeader
             title="CREATE EMPLOYEE ACCOUNT"
@@ -275,7 +275,7 @@ export default function CreateEmployeeAccountPage() {
                 disabled={isPending || attempt.isBlocked}
                 className="rounded-[2px]"
               >
-                {isPending ? "Creating..." : attempt.isBlocked ? "Edit details to retry" : "Create Account"}
+                {isPending ? "Creating..." : attempt.isBlocked ? "Please wait..." : "Create Account"}
               </Button>
             </div>
           </form>

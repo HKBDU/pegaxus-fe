@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { DataTable } from "@/shared/components/ui/data-table";
-import { EmptyState, PageSizeSelect, Pagination } from "@/shared/components/common";
+import { EmptyState, TablePagination } from "@/shared/components/common";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options";
 import type { BookingHistoryItem } from "../../history/schema";
@@ -70,32 +70,22 @@ export function BookingHistoryTable({
           cellClassName="h-11 px-2.5 py-1.5 text-xs"
           rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60"
           footer={
-            <div className="flex flex-col gap-2 px-0.5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-              <p role="status">
-                Showing {firstIndex + 1} to {Math.min(firstIndex + pageSize, rows.length)} of {rows.length} entries
-              </p>
-              <div className="flex flex-wrap items-center justify-end gap-3">
-                <PageSizeSelect
-                  value={pageSize}
-                  ariaLabel="History rows per page"
-                  onValueChange={(value) => {
-                    setPageSize(value);
-                    onPageChange(1);
-                  }}
-                />
-                <Pagination
-                  meta={{
-                    totalItems: rows.length,
-                    totalPages: pageCount,
-                    itemsPerPage: pageSize,
-                    currentPage,
-                    hasPreviousPage: currentPage > 1,
-                    hasNextPage: currentPage < pageCount,
-                  }}
-                  onPageChange={onPageChange}
-                />
-              </div>
-            </div>
+            <TablePagination
+              meta={{
+                totalItems: rows.length,
+                totalPages: pageCount,
+                itemsPerPage: pageSize,
+                currentPage,
+                hasPreviousPage: currentPage > 1,
+                hasNextPage: currentPage < pageCount,
+              }}
+              pageSizeAriaLabel="History rows per page"
+              onPageChange={onPageChange}
+              onPageSizeChange={(value) => {
+                setPageSize(value);
+                onPageChange(1);
+              }}
+            />
           }
         >
           {toolbarContent}

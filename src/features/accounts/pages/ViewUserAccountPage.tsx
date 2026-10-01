@@ -60,7 +60,7 @@ export default function ViewUserAccountPage() {
     : [];
   return (
     <div className="booking-page-shell min-h-[calc(100svh-5rem)] px-5 pt-5 pb-8 font-sans sm:px-6 lg:px-10">
-      <div className="booking-page-enter mx-auto w-full max-w-[1440px]">
+      <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <PageHeader

@@ -59,8 +59,18 @@ function toCreateRequest(values: HorseFormValues): CreateHorseRequest {
   }
 }
 
-export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
-  const navigate = useNavigate()
+type HorseFormProps = {
+  mode: "create" | "edit"
+  initialHorse?: Horse
+  /** Receives the created horse (undefined after an edit). */
+  onSaved: (horse?: Horse) => void
+  onCancel: () => void
+  /** Two columns instead of three, for narrow containers such as a dialog. */
+  compact?: boolean
+}
+
+/** The horse form on its own, so it can live on a page or inside a dialog. */
+export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = false }: HorseFormProps) {
   const form = useForm<HorseFormValues>({ defaultValues: toFormValues(initialHorse) })
   const isEdit = mode === "edit"
   const showValidationSummary = form.formState.submitCount > 0 && Object.keys(form.formState.errors).length > 0
@@ -68,27 +78,29 @@ export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
   const onSubmit: SubmitHandler<HorseFormValues> = async (values) => {
     try {
       const input = toCreateRequest(values)
+      let saved: Horse | undefined
       if (isEdit && initialHorse) await horseApi.updateHorse(initialHorse.horseId, input)
-      else await horseApi.createHorse(input)
+      else saved = await horseApi.createHorse(input)
       toast.success(isEdit ? "Horse updated successfully." : "Horse created successfully.")
-      navigate("/my-horses")
+      onSaved(saved)
     } catch (error) {
       toast.error(getHorseApiErrorMessage(error, isEdit ? "Unable to update horse. Please try again." : "Unable to create horse. Please try again."))
     }
   }
 
   return (
-    <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
-      <div className="mx-auto flex w-full max-w-[1152px] flex-col">
-        <PageHeader title={isEdit ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" />
         <Form {...form}>
           <form
             id={`${mode}-horse-form`}
             noValidate
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={(event) => {
+              // A dialog is portalled, but React still bubbles its events to any <form> that renders it.
+              event.stopPropagation()
+              void form.handleSubmit(onSubmit)(event)
+            }}
             className="flex flex-col pt-4"
           >
-            <div className="grid auto-rows-min gap-x-6 gap-y-3 pb-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className={`grid auto-rows-min gap-x-6 gap-y-3 pb-4 md:grid-cols-2 ${compact ? "" : "lg:grid-cols-3"}`}>
               <FormField
                 control={form.control}
                 name="horseName"
@@ -326,7 +338,7 @@ export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
                 render={({ field }) => (
                   <Field
                     label="IDENTIFICATION NOTES"
-                    className="md:col-span-2 lg:col-span-3"
+                    className={compact ? "md:col-span-2" : "md:col-span-2 lg:col-span-3"}
                   >
                     <FormItem>
                       <FormControl>
@@ -351,28 +363,21 @@ export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
             )}
 
             <div className="flex shrink-0 justify-end gap-3 border-t border-[hsl(var(--border))] pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 rounded-none border-[#181818] bg-white px-6 py-2 text-xs font-bold uppercase"
-                onClick={() => navigate("/my-horses")}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={form.formState.isSubmitting}
-                className="h-9 rounded-none py-2 text-xs font-bold uppercase"
-              >
-                {form.formState.isSubmitting
-                  ? "Saving..."
-                  : isEdit
-                    ? "Update"
-                    : "Create"}
-              </Button>
+              <Button type="button" variant="outline" className="h-9 rounded-none border-[#181818] bg-white px-6 py-2 text-xs font-bold uppercase" onClick={onCancel}>Cancel</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting} className="h-9 rounded-none py-2 text-xs font-bold uppercase">{form.formState.isSubmitting ? "Saving..." : isEdit ? "Update" : "Create"}</Button>
             </div>
           </form>
         </Form>
+  )
+}
+
+export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
+  const navigate = useNavigate()
+  return (
+    <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
+      <div className="mx-auto flex w-full max-w-[1152px] flex-col">
+        <PageHeader title={mode === "edit" ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" />
+        <HorseForm mode={mode} initialHorse={initialHorse} onSaved={() => navigate("/my-horses")} onCancel={() => navigate("/my-horses")} />
       </div>
     </section>
   )
