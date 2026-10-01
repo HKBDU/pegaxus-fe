@@ -13,6 +13,18 @@ export const DOSSIER_REQUIREMENT_STATUSES = [
   "PENDING", "REQUESTED", "PROVIDED", "SATISFIED", "REJECTED", "WAIVED",
 ] as const;
 
+export function isMissingDossierRequirement(requirement: Pick<DossierRequirement, "status" | "document">) {
+  return requirement.document === null &&
+    (requirement.status === "PENDING" || requirement.status === "REQUESTED");
+}
+
+export function canSendMissingDocumentReminder(
+  role: string | undefined,
+  dossier: Pick<DossierOverview, "status" | "writeLocked">,
+) {
+  return role === "TRANSPORT_SPECIALIST" && dossier.status === "IN_PREPARATION" && !dossier.writeLocked;
+}
+
 export function canUploadInitialDocument(
   role: string | undefined,
   dossier: DossierOverview,
@@ -33,13 +45,14 @@ export function getCustomerDocumentActions(
   if (!document) {
     return dossier.status === "IN_PREPARATION" && !dossier.writeLocked &&
       (requirement.status === "PENDING" || requirement.status === "REQUESTED")
-      ? ["Upload Document"] : [];
+      ? ["Upload Document"] : ["View Requirement"];
   }
   const actions = ["View Document"];
   if (dossier.status === "IN_PREPARATION" && !dossier.writeLocked && requirement.status !== "SATISFIED") {
     if (document.status === "PROVIDED") actions.push("Edit Document");
     if (document.status === "REJECTED") actions.push("Update Document");
   }
+  if (document.status === "REJECTED") actions.push("View Request");
   actions.push("View Version History");
   return actions;
 }
@@ -54,17 +67,20 @@ export function getDossierRequirementActionLabels(
   hasDocument: boolean,
 ): string[] {
   if (role === "CUSTOMER") {
-    if (status === "PENDING") return ["Upload Document"];
-    if (status === "PROVIDED") return ["View Document", "Edit Uploaded Document"];
-    if (status === "REQUESTED" && !hasDocument) return ["View Request", "Upload Document"];
-    if (status === "REQUESTED" || status === "REJECTED") return ["View Request", "View Document", "Upload New Version"];
-    return status === "SATISFIED" ? ["View Document"] : ["View Requirement"];
+    if (!hasDocument) return status === "PENDING" || status === "REQUESTED" ? ["Upload Document"] : ["View Requirement"];
+    if (status === "PROVIDED") return ["View Document", "Edit Document", "View Version History"];
+    if (status === "REJECTED") return ["View Document", "View Request", "Update Document", "View Version History"];
+    return ["View Document", "View Version History"];
   }
   if (role === "TRANSPORT_SPECIALIST") {
-    if (status === "PENDING") return ["View Requirement", "Request Missing Document"];
+    if (!hasDocument) {
+      if (status === "PENDING") return ["View Requirement", "Request Missing Document"];
+      if (status === "REQUESTED") return ["View Requirement", "Send Reminder Again"];
+      return ["View Requirement"];
+    }
     if (status === "PROVIDED") return ["View Document", "Review Document"];
-    if (status === "REQUESTED" || status === "REJECTED") return ["View Request", "View Review History"];
-    return status === "SATISFIED" ? ["View Document", "View Review Result"] : ["View Requirement"];
+    if (status === "REJECTED") return ["View Document", "View Review Result", "View Request"];
+    return ["View Document", "View Review Result"];
   }
   if (role === "LOGISTICS_MANAGER") {
     return [

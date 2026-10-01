@@ -3,9 +3,11 @@ import {
   approveDocumentReviewSchema,
   approveDocumentEnvelopeSchema,
   documentReviewSchema,
+  missingDocumentReminderSchema,
 } from "../schemas";
+import { isMissingDossierRequirement } from "../constants";
 import { canMarkReadyForSubmission, getReviewBlockReason } from "../lib/document-review";
-import type { ApproveDocumentResponse, ApproveDocumentReview, DocumentReviewPayload, DocumentReviewResponse, ReadyForSubmissionResponse, ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentMetadata } from "../types";
+import type { ApproveDocumentResponse, ApproveDocumentReview, DocumentReviewPayload, DocumentReviewResponse, ReadyForSubmissionResponse, ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, MissingDocumentReminderInput, MissingDocumentReminderResponse, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentMetadata } from "../types";
 
 class DossierMockHttpError extends Error {
   readonly status: number;
@@ -82,7 +84,7 @@ const requirements: DossierRequirement[] = [
   {
     dossierRequirementId: 8104, complianceRequirementId: 33,
     requirementName: "ATA Carnet", horseId: null, horseName: null,
-    status: "PROVIDED", isMandatory: true, dueDate: "2026-10-03",
+    status: "WAIVED", isMandatory: true, dueDate: "2026-10-03",
     validUntil: null, satisfiedAt: null,
     waivedReason: "Not required for this route", note: null, document: null,
   },
@@ -112,7 +114,7 @@ const requirements: DossierRequirement[] = [
   {
     dossierRequirementId: 8108, complianceRequirementId: 37,
     requirementName: "Microchip Certificate", horseId: 71, horseName: "Pegaxus Star",
-    status: "PROVIDED", isMandatory: true, dueDate: "2026-10-07",
+    status: "REQUESTED", isMandatory: true, dueDate: "2026-10-07",
     validUntil: null, satisfiedAt: null, waivedReason: null,
     note: "Please provide the certificate before departure", document: null,
   },
@@ -133,6 +135,85 @@ const requirements: DossierRequirement[] = [
   },
 ];
 
+// Independent fixture state for final UC20–25 manual testing; IDs never overlap.
+export const DOSSIER_MOCK_SCENARIOS = [
+  { id: "501", label: "Mixed lifecycle — upload, edit, approve, reject, replace and remind" },
+  { id: "502", label: "No missing requirements — empty reminder state" },
+  { id: "503", label: "Booking change lock — all writes blocked" },
+  { id: "504", label: "Mandatory complete — manual Mark Ready for Submission" },
+  { id: "505", label: "Ready for submission — read-only, no missing reminders" },
+  { id: "506", label: "Pagination — 103 pending and 101 requested requirements" },
+] as const;
+
+const mockDossiers = new Map<number, { dossier: DossierOverview; requirements: DossierRequirement[] }>([
+  [501, { dossier, requirements }],
+]);
+for (const id of [502, 503, 504, 505]) {
+  const offset = (id - 501) * 10000;
+  const rows = requirements.map((item, index): DossierRequirement => {
+    const row = { ...item, dossierRequirementId: item.dossierRequirementId + offset,
+      document: item.document ? { ...item.document, complianceDocumentId: item.document.complianceDocumentId + offset, documentCode: `DOC-${id}-${index + 1}` } : null };
+    if ((id === 502 || id === 505) && isMissingDossierRequirement(row)) {
+      return { ...row, status: "WAIVED", waivedReason: "Not required for this test scenario" };
+    }
+    if ((id === 504 || id === 505) && row.isMandatory && row.status !== "WAIVED") {
+      return { ...row, status: "SATISFIED", satisfiedAt: "2026-10-01T09:00:00Z",
+        document: { complianceDocumentId: row.document?.complianceDocumentId ?? 9201 + index + offset,
+          documentCode: row.document?.documentCode ?? `DOC-${id}-${index + 1}`, status: "APPROVED", latestVersionNo: 1 } };
+    }
+    return row;
+  });
+  mockDossiers.set(id, { dossier: {
+    ...dossier, complianceDossierId: id, dossierCode: `CD-MOCK-${id}`, bookingId: id + 1000, bookingCode: `REQ-MOCK-${id}`,
+    status: id === 505 ? "READY_FOR_SUBMISSION" : "IN_PREPARATION",
+    readyForSubmissionAt: id === 505 ? "2026-10-01T09:30:00Z" : null,
+    writeLocked: id === 503, writeLockReason: id === 503 ? "BOOKING_CHANGE_IN_PROGRESS" : null,
+  }, requirements: rows });
+}
+mockDossiers.set(506, { dossier: {
+  ...dossier, complianceDossierId: 506, dossierCode: "CD-MOCK-506", bookingId: 1506, bookingCode: "REQ-MOCK-506",
+}, requirements: Array.from({ length: 204 }, (_, index): DossierRequirement => ({
+  dossierRequirementId: 60000 + index, complianceRequirementId: 1000 + index,
+  requirementName: `Additional travel document ${index + 1}`,
+  horseId: index % 3 === 0 ? null : index % 3 === 1 ? 71 : 72,
+  horseName: index % 3 === 0 ? null : index % 3 === 1 ? "Pegaxus Star" : "Silver Arrow",
+  status: index < 103 ? "PENDING" : "REQUESTED", isMandatory: false,
+  dueDate: null, validUntil: null, satisfiedAt: null, waivedReason: null, note: null, document: null,
+})) });
+
+function currentRequirements(id: string) {
+  return mockDossiers.get(Number(id))!.requirements.map((item) => uploadedRequirements.get(item.dossierRequirementId) ?? item);
+}
+
+function requirementOwner(requirementId: number) {
+  return [...mockDossiers.values()].find((state) => state.requirements.some((item) => item.dossierRequirementId === requirementId))!;
+}
+
+function currentRequirement(requirementId: number) {
+  return uploadedRequirements.get(requirementId) ?? requirementOwner(requirementId)?.requirements.find((item) => item.dossierRequirementId === requirementId);
+}
+
+function assertWritableRequirement(requirementId: number, scenario: DossierMockScenario) {
+  const owner = requirementOwner(requirementId);
+  const overview = getMockDossier(String(owner.dossier.complianceDossierId), scenario);
+  if (overview.writeLocked || overview.status !== "IN_PREPARATION") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
+}
+
+export function sendMockMissingRequirementReminder(id: string, input: MissingDocumentReminderInput, scenario: DossierMockScenario): MissingDocumentReminderResponse {
+  const body = missingDocumentReminderSchema.parse(input);
+  const overview = getMockDossier(id, scenario);
+  if (overview.writeLocked || overview.status !== "IN_PREPARATION") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
+  const selected = new Set(body.dossierRequirementIds);
+  const eligible = (scenario === "empty" ? [] : currentRequirements(id))
+    .filter((item) => selected.has(item.dossierRequirementId) && isMissingDossierRequirement(item));
+  if (!eligible.length) throw new DossierMockHttpError(400, "NO_MISSING_DR");
+  for (const item of eligible) uploadedRequirements.set(item.dossierRequirementId, {
+    ...item, status: "REQUESTED", ...(body.dueDate ? { dueDate: body.dueDate } : {}),
+  });
+  // note belongs to backend notification/email content, not DossierRequirement state.
+  return { isSuccess: true, code: 200, message: "Missing DossierRequirement reminder sent successfully", value: { remindedCount: eligible.length } };
+}
+
 const uploadedRequirements = new Map<number, DossierRequirement>();
 let nextMockDocumentId = 9300;
 let nextMockVersionId = 9400;
@@ -148,13 +229,13 @@ export function approveMockDocument(id: string, versionId: number, review: Appro
 export function reviewMockDocument(id: string, versionId: number, review: DocumentReviewPayload, scenario: DossierMockScenario): DocumentReviewResponse {
   const body = documentReviewSchema.parse(review);
   const current = getMockComplianceDocument(id, scenario);
-  const overview = getMockDossier("501", scenario);
+  const owner = requirementOwner(current.dossierRequirementId);
+  const overview = getMockDossier(String(owner.dossier.complianceDossierId), scenario);
   if (overview.writeLocked) throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
   const latest = current.versions[0];
   if (!latest || latest.documentVersionId !== versionId) throw new DossierMockHttpError(409, "VERSION_NOT_LATEST");
   if (latest.review) throw new DossierMockHttpError(409, "VERSION_ALREADY_REVIEWED");
-  const requirement = uploadedRequirements.get(current.dossierRequirementId) ??
-    requirements.find((item) => item.dossierRequirementId === current.dossierRequirementId)!;
+  const requirement = currentRequirement(current.dossierRequirementId)!;
   const block = getReviewBlockReason({ role: "TRANSPORT_SPECIALIST", dossier: overview, requirement, document: current, today: new Date().toISOString().slice(0, 10), result: body.result });
   if (block) throw new DossierMockHttpError(409, block.code);
   const reviewedAt = new Date().toISOString();
@@ -179,7 +260,7 @@ export function reviewMockDocument(id: string, versionId: number, review: Docume
     document: { ...requirement.document!, status: approved ? "APPROVED" : "REJECTED" },
   });
   if (!approved && openRequest) {
-    dossier.status = "IN_PREPARATION";
+    owner.dossier.status = "IN_PREPARATION";
     return {
       isSuccess: true, code: 201,
       message: "DocumentReview recorded: REJECTED. DocumentRequest created and customer notified.",
@@ -199,8 +280,9 @@ export function markMockDossierReady(id: string, scenario: DossierMockScenario):
   if (overview.writeLocked) throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
   if (overview.status !== "IN_PREPARATION") throw new DossierMockHttpError(409, "INVALID_DOSSIER_STATUS");
   if (!canMarkReadyForSubmission("TRANSPORT_SPECIALIST", overview)) throw new DossierMockHttpError(409, "MANDATORY_DR_NOT_DONE");
-  dossier.status = "READY_FOR_SUBMISSION";
-  dossier.readyForSubmissionAt = new Date().toISOString();
+  const stored = mockDossiers.get(Number(id))!.dossier;
+  stored.status = "READY_FOR_SUBMISSION";
+  stored.readyForSubmissionAt = new Date().toISOString();
   return { isSuccess: true, code: 200, message: "ComplianceDossier is now READY_FOR_SUBMISSION", value: null };
 }
 
@@ -216,7 +298,7 @@ function seedDocument(requirement: DossierRequirement): ComplianceDocumentDetail
     documentNumber: "HP-2026-001",
     issuingAuthority: "Weatherbys",
     issuedDate: "2025-03-01",
-    expiryDate: "2027-03-01",
+    expiryDate: requirement.validUntil && requirement.validUntil > "2027-03-01" ? requirement.validUntil : "2027-03-01",
     note: null,
     updatedAt: "2026-09-26T04:10:00Z",
     versions: [{
@@ -250,10 +332,11 @@ function seedDocument(requirement: DossierRequirement): ComplianceDocumentDetail
 }
 
 export function getMockComplianceDocument(id: string, scenario: DossierMockScenario): ComplianceDocumentDetail {
-  assertMockAvailable("501", scenario);
   const documentId = Number(id);
-  const requirement = [...requirements, ...uploadedRequirements.values()].find((item) => item.document?.complianceDocumentId === documentId);
+  const requirement = [...mockDossiers.keys()].flatMap((key) => currentRequirements(String(key)))
+    .find((item) => item.document?.complianceDocumentId === documentId);
   if (!requirement) throw new DossierMockHttpError(404, "DOCUMENT_NOT_FOUND");
+  assertMockAvailable(String(requirementOwner(requirement.dossierRequirementId).dossier.complianceDossierId), scenario);
   const current = documentDetails.get(documentId) ?? seedDocument(requirement);
   if (scenario === "locked") return current;
   return current;
@@ -266,7 +349,7 @@ export function submitMockDocumentVersion(
   scenario: DossierMockScenario,
 ) {
   const current = getMockComplianceDocument(id, scenario);
-  if (scenario === "locked") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
+  assertWritableRequirement(current.dossierRequirementId, scenario);
   if (current.status === "APPROVED") throw new DossierMockHttpError(409, "DOCUMENT_ALREADY_VERIFIED");
   const latest = current.versions[0];
   const reviewed = latest.review !== null;
@@ -294,8 +377,7 @@ export function submitMockDocumentVersion(
     versions: reviewed ? [version, ...current.versions] : [version, ...current.versions.slice(1)],
     openRequest: null,
   });
-  const requirement = uploadedRequirements.get(current.dossierRequirementId) ??
-    requirements.find((item) => item.dossierRequirementId === current.dossierRequirementId);
+  const requirement = currentRequirement(current.dossierRequirementId);
   if (requirement) uploadedRequirements.set(requirement.dossierRequirementId, {
     ...requirement, status: "PROVIDED",
     document: { ...requirement.document!, status: "PROVIDED", latestVersionNo: versionNo },
@@ -309,7 +391,7 @@ export function updateMockComplianceDocumentMetadata(
   scenario: DossierMockScenario,
 ) {
   const current = getMockComplianceDocument(id, scenario);
-  if (scenario === "locked") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
+  assertWritableRequirement(current.dossierRequirementId, scenario);
   if (current.versions[0].review) throw new DossierMockHttpError(409, "DOCUMENT_ALREADY_REVIEWED");
   const updatedAt = new Date().toISOString();
   const metadataChanges = {
@@ -336,9 +418,10 @@ export function uploadMockDocument(
   metadata?: UploadDocumentMetadata,
 ) {
   assertMockAvailable(id, scenario);
-  if (scenario === "locked") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
+  const overview = getMockDossier(id, scenario);
+  if (overview.writeLocked || overview.status !== "IN_PREPARATION") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
   if (!files.length) throw new DossierMockHttpError(400, "FILES_REQUIRED");
-  const requirement = uploadedRequirements.get(requirementId) ?? requirements.find((item) => item.dossierRequirementId === requirementId);
+  const requirement = currentRequirements(id).find((item) => item.dossierRequirementId === requirementId);
   if (!requirement) throw new DossierMockHttpError(404, "DR_NOT_FOUND");
   if (requirement.document) throw new DossierMockHttpError(409, "DR_ALREADY_HAS_DOCUMENT");
   if (requirement.status !== "PENDING" && requirement.status !== "REQUESTED") {
@@ -394,26 +477,27 @@ export function uploadMockDocument(
 }
 
 function assertMockAvailable(id: string, scenario: DossierMockScenario) {
-  if (id !== "501") throw new DossierMockHttpError(404, "DOSSIER_NOT_FOUND");
+  if (!mockDossiers.has(Number(id))) throw new DossierMockHttpError(404, "DOSSIER_NOT_FOUND");
   if (scenario === "error") throw new DossierMockHttpError(500, "Simulated dossier load failure");
 }
 
 export function getMockDossier(id: string, scenario: DossierMockScenario): DossierOverview {
   assertMockAvailable(id, scenario);
   // Mock backend projection uses the complete dataset, never a paginated D8 page.
-  const currentRequirements = requirements.map((item) => uploadedRequirements.get(item.dossierRequirementId) ?? item);
+  const stored = mockDossiers.get(Number(id))!.dossier;
+  const rows = currentRequirements(id);
   const requirementSummary = {
-    total: currentRequirements.length,
+    total: rows.length,
     pending: 0, requested: 0, provided: 0, satisfied: 0, rejected: 0, waived: 0,
   };
-  for (const item of currentRequirements) {
+  for (const item of rows) {
     const key = item.status.toLowerCase() as Exclude<keyof typeof requirementSummary, "total">;
     requirementSummary[key]++;
   }
-  const mandatory = currentRequirements.filter((item) => item.isMandatory);
+  const mandatory = rows.filter((item) => item.isMandatory);
   const mandatorySatisfiedOrWaived = mandatory.filter((item) => item.status === "SATISFIED" || item.status === "WAIVED").length;
   const overview = {
-    ...dossier, requirementSummary, mandatoryTotal: mandatory.length, mandatorySatisfiedOrWaived,
+    ...stored, requirementSummary, mandatoryTotal: mandatory.length, mandatorySatisfiedOrWaived,
     progressPercent: mandatory.length ? mandatorySatisfiedOrWaived / mandatory.length * 100 : 0,
   };
   if (scenario === "locked") {
@@ -421,7 +505,7 @@ export function getMockDossier(id: string, scenario: DossierMockScenario): Dossi
   }
   if (scenario === "empty") {
     return {
-      ...dossier, progressPercent: 0, mandatoryTotal: 0, mandatorySatisfiedOrWaived: 0,
+      ...stored, progressPercent: 0, mandatoryTotal: 0, mandatorySatisfiedOrWaived: 0,
       requirementSummary: { total: 0, pending: 0, requested: 0, provided: 0, satisfied: 0, rejected: 0, waived: 0 },
     };
   }
@@ -435,7 +519,7 @@ export function getMockRequirements(
 ) {
   assertMockAvailable(id, scenario);
   const query = dossierRequirementsParamsSchema.parse(params);
-  const matching = (scenario === "empty" ? [] : requirements.map((item) => uploadedRequirements.get(item.dossierRequirementId) ?? item))
+  const matching = (scenario === "empty" ? [] : currentRequirements(id))
     .filter((item) => !query.status || item.status === query.status)
     .filter((item) => !query.horseId || item.horseId === query.horseId);
 

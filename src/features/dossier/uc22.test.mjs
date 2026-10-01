@@ -33,7 +33,7 @@ test("customer actions separate initial upload, edit, update, and read-only stat
   const requirement = { status: "PENDING", document: null };
   assert.deepEqual(getCustomerDocumentActions(base, requirement), ["Upload Document"]);
   assert.deepEqual(getCustomerDocumentActions(base, { status: "PROVIDED", document: { status: "PROVIDED" } }), ["View Document", "Edit Document", "View Version History"]);
-  assert.deepEqual(getCustomerDocumentActions(base, { status: "REJECTED", document: { status: "REJECTED" } }), ["View Document", "Update Document", "View Version History"]);
+  assert.deepEqual(getCustomerDocumentActions(base, { status: "REJECTED", document: { status: "REJECTED" } }), ["View Document", "Update Document", "View Request", "View Version History"]);
   assert.deepEqual(getCustomerDocumentActions(base, { status: "SATISFIED", document: { status: "APPROVED" } }), ["View Document", "View Version History"]);
   assert.deepEqual(getCustomerDocumentActions({ ...base, writeLocked: true }, { status: "PROVIDED", document: { status: "PROVIDED" } }), ["View Document", "View Version History"]);
 });

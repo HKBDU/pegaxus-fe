@@ -13,8 +13,27 @@ import {
   documentReviewSchema,
   documentReviewEnvelopeSchema,
   readyForSubmissionEnvelopeSchema,
+  missingDocumentReminderSchema,
+  missingDocumentReminderEnvelopeSchema,
 } from "./schemas";
-import type { ApproveDocumentInput, DocumentReviewInput, DossierLoadErrorKind, DossierMockScenario, DossierRequirementsParams, DossierSourceKind, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
+import type { ApproveDocumentInput, DocumentReviewInput, DossierLoadErrorKind, DossierMockScenario, DossierRequirementsParams, DossierSourceKind, SendMissingDocumentReminderInput, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
+import { collectMissingDossierRequirements } from "./lib/missing-document-reminder";
+
+export async function loadMissingDossierRequirements(dossierId: string, signal?: AbortSignal) {
+  const id = dossierIdSchema.parse(dossierId);
+  return collectMissingDossierRequirements((params, pageSignal) => loadDossierRequirements(id, params, pageSignal), signal);
+}
+
+export async function loadMissingRequirementReminder(input: SendMissingDocumentReminderInput) {
+  const id = dossierIdSchema.parse(input.dossierId);
+  const reminder = missingDocumentReminderSchema.parse(input.reminder);
+  if (dossierSourceKind === "mock") {
+    const { sendMockMissingRequirementReminder } = await import("./mocks/dossier.mock");
+    return missingDocumentReminderEnvelopeSchema.parse(sendMockMissingRequirementReminder(id, reminder, mockScenario()));
+  }
+  const { dossierService } = await import("./services");
+  return dossierService.sendMissingRequirementReminder({ dossierId: id, reminder });
+}
 
 export async function loadApproveDocument(input: ApproveDocumentInput) {
   approveDocumentReviewSchema.parse(input.review);

@@ -29,10 +29,9 @@ const sections = [
 type SectionId = (typeof sections)[number]["id"];
 
 const integrationMessages: Record<
-  Exclude<SectionId, "requirements">,
+  Exclude<SectionId, "requirements" | "documents">,
   string
 > = {
-  documents: "Document and review workflow will be available here.",
   authority: "Authority and inspection module integration pending.",
   audit: "Audit history integration pending.",
 };
@@ -134,12 +133,13 @@ export default function DossierDetailsPage() {
               id={`dossier-panel-${activeSection}`}
               aria-labelledby={`dossier-tab-${activeSection}`}
             >
-              {activeSection === "requirements" ? (
+              {activeSection === "requirements" || activeSection === "documents" ? (
                 <DossierRequirementsPreview
                   dossierId={dossierId}
                   horses={query.data.bookingSummary.horses}
                   dossier={query.data}
                   plannedDepartureDate={query.data.bookingSummary.requestedDepartureDate}
+                  documentsOnly={activeSection === "documents"}
                 />
               ) : (
                 <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">

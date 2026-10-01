@@ -23,6 +23,8 @@ import type {
   rejectDocumentReviewSchema,
   documentRequestFormSchema,
   readyForSubmissionEnvelopeSchema,
+  missingDocumentReminderSchema,
+  missingDocumentReminderEnvelopeSchema,
 } from "./schemas";
 
 export type DossierOverview = z.infer<typeof dossierOverviewSchema>;
@@ -48,6 +50,11 @@ export type DocumentRequestFormValues = z.input<typeof documentRequestFormSchema
 export type DocumentReviewPayload = z.infer<typeof documentReviewSchema>;
 export type DocumentReviewResponse = z.infer<typeof documentReviewEnvelopeSchema>;
 export type ReadyForSubmissionResponse = z.infer<typeof readyForSubmissionEnvelopeSchema>;
+export type MissingDocumentReminderInput = z.infer<typeof missingDocumentReminderSchema>;
+export type MissingDocumentReminderFormValues = z.input<typeof missingDocumentReminderSchema>;
+export type MissingDocumentReminderResponse = z.infer<typeof missingDocumentReminderEnvelopeSchema>;
+export type MissingDocumentReminderResult = MissingDocumentReminderResponse["value"];
+export type SendMissingDocumentReminderInput = { dossierId: string; reminder: MissingDocumentReminderInput };
 export type ApproveDocumentInput = {
   documentId: string;
   versionId: number;

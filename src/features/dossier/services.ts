@@ -17,8 +17,10 @@ import {
   documentReviewSchema,
   documentReviewEnvelopeSchema,
   readyForSubmissionEnvelopeSchema,
+  missingDocumentReminderSchema,
+  missingDocumentReminderEnvelopeSchema,
 } from "./schemas";
-import type { ApproveDocumentInput, DocumentReviewInput, DossierRequirementsParams, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
+import type { ApproveDocumentInput, DocumentReviewInput, DossierRequirementsParams, SendMissingDocumentReminderInput, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
 
 function buildUploadDocumentFormData({ files, metadata }: { files: readonly File[]; metadata: object }): FormData {
   const form = new FormData();
@@ -33,6 +35,13 @@ function buildUploadDocumentFormData({ files, metadata }: { files: readonly File
 }
 
 export const dossierService = {
+  async sendMissingRequirementReminder(input: SendMissingDocumentReminderInput) {
+    const id = dossierIdSchema.parse(input.dossierId);
+    const reminder = missingDocumentReminderSchema.parse(input.reminder);
+    const payload = await apiClient.post<unknown, unknown>(`compliance-dossiers/${id}/requirements/reminders`, reminder);
+    return missingDocumentReminderEnvelopeSchema.parse(payload);
+  },
+
   async approveDocument(input: ApproveDocumentInput) {
     approveDocumentReviewSchema.parse(input.review);
     return approveDocumentEnvelopeSchema.parse(await dossierService.reviewComplianceDocument(input));

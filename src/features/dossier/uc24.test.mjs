@@ -232,12 +232,12 @@ test("review mutations keep the common invalidation and guard, Customer update r
 
 test("temporary manual route is DEV-only, explicit-mock-only and cannot mutate global authentication", async () => {
   const router = await readFile("src/app/router.tsx", "utf8");
-  assert.match(router, /\/\/ TEMP UC20-24 MANUAL UI TEST ROUTE — REMOVE AFTER TESTING/);
-  assert.match(router, /\/\/ END TEMP UC20-24 MANUAL UI TEST ROUTE/);
+  assert.match(router, /\/\/ TEMP UC20-25 FINAL MANUAL UI TEST ROUTE — REMOVE AFTER TESTING/);
+  assert.match(router, /\/\/ END TEMP UC20-25 FINAL MANUAL UI TEST ROUTE/);
   assert.match(router, /import\.meta\.env\.DEV/);
   assert.match(router, /\/dev\/dossier\/:dossierId/);
   const harness = await readFile("src/features/dossier/pages/DossierManualPreviewPage.tsx", "utf8");
-  assert.match(harness, /TEMP UC20-24 MANUAL UI TEST HARNESS/);
+  assert.match(harness, /TEMP UC20-25 FINAL MANUAL UI TEST HARNESS/);
   assert.match(harness, /dossierSourceKind !== "mock"/);
   assert.match(harness, /previewRole/);
   assert.doesNotMatch(harness, /setAuth|setState|clearAuth/);
@@ -309,15 +309,16 @@ test("manual preview renders the real D7/D8 page for all roles and keeps readine
       assert.ok(html.includes("COMPLIANCE DOSSIER"));
       assert.ok(html.includes("Pegaxus Star"));
       assert.ok(html.includes("Silver Arrow"));
-      assert.equal(html.includes("Mark Ready for Submission"), role === "TRANSPORT_SPECIALIST");
+      assert.equal(/<button[^>]*>Mark Ready for Submission<\/button>/.test(html), role === "TRANSPORT_SPECIALIST");
     } finally { client.clear(); }
   }
 });
 
-test("UC-24 adds no separate fulfill, chat, revoke, reminder, or notification endpoint", async () => {
+test("UC-24 keeps one review endpoint and UC-25 adds only its contract-backed batch reminder", async () => {
   const service = await readFile("src/features/dossier/services.ts", "utf8");
   assert.equal((service.match(/\/reviews`/g) ?? []).length, 1);
-  assert.doesNotMatch(service, /(?:document-requests|reminders|revoke|fulfill|notifications|sendEmail)/i);
+  assert.equal((service.match(/\/requirements\/reminders`/g) ?? []).length, 1);
+  assert.doesNotMatch(service, /(?:document-requests|revoke|fulfill|notifications|sendEmail)/i);
   const source = await readFile("src/features/dossier/source.ts", "utf8");
   assert.doesNotMatch(source, /catch[\s\S]*getMock/);
 });

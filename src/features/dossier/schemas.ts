@@ -141,6 +141,21 @@ const envelope = <T extends z.ZodType>(value: T) => z.object({
 export const dossierOverviewEnvelopeSchema = envelope(dossierOverviewSchema);
 export const dossierRequirementsEnvelopeSchema = envelope(dossierRequirementsPageSchema);
 
+export const missingDocumentReminderSchema = z.object({
+  dossierRequirementIds: z.array(entityId).min(1, "Select at least one missing requirement.")
+    .refine((ids) => new Set(ids).size === ids.length, "Selected requirements must be unique."),
+  dueDate: z.union([z.literal(""), date]).optional(),
+  note: z.string().trim().optional(),
+}).transform(({ dossierRequirementIds, dueDate, note }) => ({
+  dossierRequirementIds,
+  ...(dueDate ? { dueDate } : {}),
+  ...(note ? { note } : {}),
+}));
+
+export const missingDocumentReminderEnvelopeSchema = envelope(z.object({
+  remindedCount: z.number().int().nonnegative(),
+})).extend({ code: z.literal(200) });
+
 export const uploadDocumentResultSchema = z.object({
   complianceDocumentId: entityId,
   documentCode: z.string(),

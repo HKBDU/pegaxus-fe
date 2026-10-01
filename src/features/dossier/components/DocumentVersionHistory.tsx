@@ -43,14 +43,14 @@ export function DocumentVersionHistory({ versions }: { versions: DocumentVersion
   );
 }
 
-export function DocumentDetailsDialog({ documentId, onClose, onUpdate }: { documentId: string | null; onClose: () => void; onUpdate?: () => void }) {
+export function DocumentDetailsDialog({ documentId, onClose, onUpdate, view = "details" }: { documentId: string | null; onClose: () => void; onUpdate?: () => void; view?: "details" | "request" | "history" }) {
   const query = useComplianceDocument(documentId);
   const document = query.data;
   return (
     <Dialog open={Boolean(documentId)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90svh] w-[min(100%-1.5rem,720px)] max-w-none overflow-y-auto rounded-[2px] border-slate-200 bg-[#f8f7f4] sm:max-w-none">
         <DialogHeader>
-          <DialogTitle className="font-heading text-xl uppercase text-primary">Document Details</DialogTitle>
+          <DialogTitle className="font-heading text-xl uppercase text-primary">{view === "request" ? "Document Request" : view === "history" ? "Document Version / Review History" : "Document Details"}</DialogTitle>
           <DialogDescription>Current document information and version history.</DialogDescription>
         </DialogHeader>
         {query.isPending ? <p className="text-sm text-slate-500">Loading document details...</p> :
@@ -58,6 +58,7 @@ export function DocumentDetailsDialog({ documentId, onClose, onUpdate }: { docum
           <div className="space-y-4">
             {document.openRequest ? <DocumentRequestAlert request={document.openRequest}
               action={document.status === "REJECTED" && onUpdate ? <Button type="button" size="sm" className="rounded-[2px]" onClick={onUpdate}>Update Document</Button> : undefined} /> : null}
+            {view === "request" && !document.openRequest ? <p role="status" className="rounded-[2px] border border-border bg-white p-4 text-sm text-muted-foreground">There is no open document request. It may already have been fulfilled by a newer upload.</p> : null}
             <dl className="grid gap-3 rounded-[2px] border border-slate-200 bg-white p-4 text-xs sm:grid-cols-2">
               <div><dt className="text-slate-500">Document</dt><dd className="font-semibold">{document.documentName}</dd></div>
               <div><dt className="text-slate-500">Document Code</dt><dd>{document.documentCode}</dd></div>
