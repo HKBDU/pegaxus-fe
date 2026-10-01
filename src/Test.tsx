@@ -36,7 +36,7 @@ export default function Test() {
       </p>
       <ImageViewer images={images} index={1} />
       <div className="mt-8 w-[600px] h-[720px]">
-        <PdfViewer url={pdf} fileName="sample.pdf" />
+        <PdfViewer url={pdf} fileName="PDF Previewer" />
       </div>
     </main>
   )

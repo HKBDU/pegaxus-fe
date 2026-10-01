@@ -12,7 +12,9 @@ import {
   VIEWER_MAX_ZOOM,
   VIEWER_MIN_ZOOM,
   VIEWER_WHEEL_SENSITIVITY,
+  MAX_PDF_FILE_SIZE,
 } from '@/shared/constants/viewer'
+import { FileViewerErrorBoundary } from './FileViewerErrorBoundary'
 
 // Configure the PDF.js worker once.
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -23,14 +25,35 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 interface PdfViewerProps {
   url: string
   fileName?: string
+  /** Optional byte size from the API. Supplying it avoids a HEAD request. */
+  size?: number
+}
+
+type PdfSizeStatus = 'checking' | 'allowed' | 'too-large'
+
+function getPdfFileName(fileName: string | undefined, url: string) {
+  const explicitName = fileName?.trim()
+  if (explicitName && explicitName !== '{pdf}') return explicitName
+
+  try {
+    const path = new URL(url, window.location.href).pathname
+    const lastSegment = path.split('/').pop() ?? ''
+    const decodedName = decodeURIComponent(lastSegment).trim()
+    if (decodedName) return decodedName
+  } catch {
+    // Fall back to a safe name when the URL is malformed.
+  }
+
+  return 'document.pdf'
 }
 
 const clampZoom = (value: number) =>
   Math.min(Math.max(value, VIEWER_MIN_ZOOM), VIEWER_MAX_ZOOM)
 
-export function PdfViewer({
+function PdfViewerContent({
   url,
   fileName = 'document.pdf',
+  size,
 }: PdfViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const pageRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -42,6 +65,37 @@ export function PdfViewer({
   const [scale, setScale] = useState(1)
   const [pageWidth, setPageWidth] = useState<number | null>(null)
   const [isPanning, setIsPanning] = useState(false)
+  const [sizeStatus, setSizeStatus] = useState<PdfSizeStatus>('checking')
+  const isTooLarge = sizeStatus === 'too-large'
+  const canControlDocument = sizeStatus === 'allowed'
+  const displayFileName = getPdfFileName(fileName, url)
+
+  useEffect(() => {
+    let cancelled = false
+    const controller = new AbortController()
+
+    const applySize = (bytes: number | undefined) => {
+      if (cancelled) return
+      setSizeStatus(bytes !== undefined && bytes > MAX_PDF_FILE_SIZE ? 'too-large' : 'allowed')
+    }
+
+    if (size !== undefined) {
+      applySize(size)
+      return () => { cancelled = true }
+    }
+
+    fetch(url, { method: 'HEAD', signal: controller.signal })
+      .then((response) => {
+        const contentLength = response.headers.get('content-length')
+        applySize(contentLength ? Number(contentLength) : undefined)
+      })
+      .catch(() => applySize(undefined))
+
+    return () => {
+      cancelled = true
+      controller.abort()
+    }
+  }, [size, url])
 
   useEffect(() => {
     scaleRef.current = scale
@@ -132,7 +186,7 @@ export function PdfViewer({
     }
 
     const onWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey && !event.metaKey) return
+      if (isTooLarge || (!event.ctrlKey && !event.metaKey)) return
 
       event.preventDefault()
 
@@ -153,11 +207,11 @@ export function PdfViewer({
       container.removeEventListener('wheel', onWheel)
       if (rafId) cancelAnimationFrame(rafId)
     }
-  }, [])
+  }, [isTooLarge])
 
   /** Pan the PDF with right-click drag. */
   const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (event.button !== 2) return
+    if (isTooLarge || event.button !== 2) return
 
     const container = containerRef.current
     if (!container) return
@@ -221,12 +275,16 @@ export function PdfViewer({
     goToPage(page)
   }
 
-  const fitToWidth = () => setScale(1)
+  const fitToWidth = () => {
+    if (canControlDocument) setScale(1)
+  }
 
   const handleDownload = () => {
     const link = document.createElement('a')
     link.href = url
-    link.download = fileName
+    // Leave the filename empty so the browser/server can preserve the original name.
+    link.download = ''
+    link.rel = 'noopener'
     link.click()
   }
 
@@ -239,15 +297,15 @@ export function PdfViewer({
       {/* Toolbar */}
       <div className="flex min-h-12 min-w-0 shrink-0 items-center justify-between gap-2 border-b bg-background px-3 py-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium" title={fileName}>
-            {fileName}
+          <p className="truncate text-sm font-medium" title={displayFileName}>
+            {displayFileName}
           </p>
         </div>
 
         <div className="flex min-w-0 max-w-full shrink items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex shrink-0 items-center gap-1">
             <Input
-              value={pageInput}
+              value={isTooLarge ? '--' : pageInput}
               onChange={(event) =>
                 handlePageInputChange(event.target.value)
               }
@@ -255,9 +313,10 @@ export function PdfViewer({
               className="h-8 max-w-10 w-auto px-2 text-center"
               inputMode="numeric"
               aria-label="Current page"
+              disabled={!canControlDocument}
             />
             <span className="whitespace-nowrap text-sm text-muted-foreground">
-              / {numPages || '—'}
+              / {isTooLarge ? '--' : numPages || '—'}
             </span>
           </div>
 
@@ -273,6 +332,7 @@ export function PdfViewer({
             size="sm"
             className="h-8 shrink-0"
             onClick={fitToWidth}
+            disabled={!canControlDocument}
           >
             Fit
           </Button>
@@ -312,7 +372,19 @@ export function PdfViewer({
           isPanning ? 'cursor-grabbing select-none' : ''
         }`}
       >
-        <Document
+        {sizeStatus === 'checking' && (
+          <div className="flex min-h-full items-center justify-center p-8 text-sm text-muted-foreground">
+            Checking PDF file size...
+          </div>
+        )}
+
+        {isTooLarge && (
+          <div className="flex min-h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
+            This PDF is larger than 1 MB and cannot be previewed here. Use download or open in a new tab.
+          </div>
+        )}
+
+        {canControlDocument && <Document
           file={url}
           onLoadSuccess={handleDocumentLoadSuccess}
           loading={
@@ -350,8 +422,16 @@ export function PdfViewer({
               )
             })}
           </div>
-        </Document>
+        </Document>}
       </div>
     </div>
+  )
+}
+
+export function PdfViewer(props: PdfViewerProps) {
+  return (
+    <FileViewerErrorBoundary key={props.url} message="Unable to display this PDF.">
+      <PdfViewerContent {...props} />
+    </FileViewerErrorBoundary>
   )
 }
