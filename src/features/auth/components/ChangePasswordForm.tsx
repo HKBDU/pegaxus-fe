@@ -100,7 +100,7 @@ export function ChangePasswordForm({
       <form
         noValidate
         onSubmit={(event) => void form.handleSubmit(submit)(event)}
-        className="space-y-2.5 border-t border-neutral-300 pt-3"
+        className="space-y-2.5"
         aria-busy={isPending}
       >
         <AuthPasswordFormField
@@ -143,7 +143,7 @@ export function ChangePasswordForm({
           </p>
         )}
 
-        <div className="flex flex-col-reverse gap-2 border-t border-neutral-300 pt-3 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           {onCancel && (
             <Button
               type="button"
