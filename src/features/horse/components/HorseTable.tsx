@@ -2,8 +2,7 @@ import { useMemo, useState } from "react"
 import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, useReactTable, type ColumnDef, type ColumnFiltersState } from "@tanstack/react-table"
 import { MoreVertical, Pencil, Trash2, Eye, Search, X } from "lucide-react"
 
-import { Pagination } from "@/shared/components/common/Pagination"
-import { PageSizeSelect } from "@/shared/components/common/PageSizeSelect"
+import { TablePagination } from "@/shared/components/common/TablePagination"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { Button } from "@/shared/components/ui/button"
@@ -64,8 +63,6 @@ export function HorseTable({ horses, onAction, toolbar, addAction }: HorseTableP
   const searchValue = String(searchColumn?.getFilterValue() ?? "")
   const filteredRows = table.getFilteredRowModel().rows
   const pageSize = table.getState().pagination.pageSize
-  const firstItem = filteredRows.length === 0 ? 0 : table.getState().pagination.pageIndex * pageSize + 1
-  const lastItem = Math.min((table.getState().pagination.pageIndex + 1) * pageSize, filteredRows.length)
   const paginationMeta = {
     totalItems: filteredRows.length,
     totalPages: table.getPageCount(),
@@ -88,13 +85,11 @@ export function HorseTable({ horses, onAction, toolbar, addAction }: HorseTableP
         cellClassName="h-11 max-w-0 overflow-hidden text-ellipsis whitespace-nowrap px-2.5 py-1.5 text-xs"
         emptyMessage="No horses match the current filters."
         footer={
-        <div className="flex flex-col gap-2 px-0.5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>Showing {firstItem} to {lastItem} of {filteredRows.length} entries</p>
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <PageSizeSelect value={pageSize} onValueChange={(value) => table.setPageSize(value)} />
-            <Pagination meta={paginationMeta} onPageChange={(page) => table.setPageIndex(page - 1)} />
-          </div>
-        </div>
+        <TablePagination
+          meta={paginationMeta}
+          onPageChange={(page) => table.setPageIndex(page - 1)}
+          onPageSizeChange={(value) => table.setPageSize(value)}
+        />
         }
       >
         <div role="toolbar" className="grid grid-cols-2 gap-2 lg:grid-cols-[minmax(17rem,1fr)_9rem_9rem_9.5rem_auto_auto]">

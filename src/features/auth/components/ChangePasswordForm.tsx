@@ -169,7 +169,7 @@ export function ChangePasswordForm({
             {isPending
               ? "Changing..."
               : attempt.isBlocked
-                ? "Edit password to retry"
+                ? "Please wait..."
                 : "Update password"}
           </Button>
         </div>

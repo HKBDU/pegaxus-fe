@@ -53,13 +53,19 @@ export function useSuspendEmployee() {
 export function useUpdateEmployment() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       id,
       changes,
+      accountStatus,
     }: {
       id: EntityId;
       changes: EmploymentUpdate;
-    }) => accountService.updateEmployment(id, changes),
+      /** Only pass when it changed: it uses a separate endpoint. */
+      accountStatus?: "ACTIVE" | "INACTIVE";
+    }) => {
+      await accountService.updateEmployment(id, changes);
+      if (accountStatus) await accountService.setStatus(id, accountStatus);
+    },
     onSuccess: async (_, { id }) => {
       await Promise.all([
         client.invalidateQueries({ queryKey: accountKeys.lists() }),

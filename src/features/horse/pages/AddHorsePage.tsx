@@ -59,8 +59,18 @@ function toCreateRequest(values: HorseFormValues): CreateHorseRequest {
   }
 }
 
-export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
-  const navigate = useNavigate()
+type HorseFormProps = {
+  mode: "create" | "edit"
+  initialHorse?: Horse
+  /** Receives the created horse (undefined after an edit). */
+  onSaved: (horse?: Horse) => void
+  onCancel: () => void
+  /** Two columns instead of three, for narrow containers such as a dialog. */
+  compact?: boolean
+}
+
+/** The horse form on its own, so it can live on a page or inside a dialog. */
+export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = false }: HorseFormProps) {
   const form = useForm<HorseFormValues>({ defaultValues: toFormValues(initialHorse) })
   const isEdit = mode === "edit"
   const showValidationSummary = form.formState.submitCount > 0 && Object.keys(form.formState.errors).length > 0
@@ -68,22 +78,29 @@ export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
   const onSubmit: SubmitHandler<HorseFormValues> = async (values) => {
     try {
       const input = toCreateRequest(values)
+      let saved: Horse | undefined
       if (isEdit && initialHorse) await horseApi.updateHorse(initialHorse.horseId, input)
-      else await horseApi.createHorse(input)
+      else saved = await horseApi.createHorse(input)
       toast.success(isEdit ? "Horse updated successfully." : "Horse created successfully.")
-      navigate("/my-horses")
+      onSaved(saved)
     } catch (error) {
       toast.error(getHorseApiErrorMessage(error, isEdit ? "Unable to update horse. Please try again." : "Unable to create horse. Please try again."))
     }
   }
 
   return (
-    <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
-      <div className="mx-auto flex w-full max-w-[1152px] flex-col">
-        <PageHeader title={isEdit ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" />
         <Form {...form}>
-          <form id={`${mode}-horse-form`} noValidate onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col pt-4">
-            <div className="grid auto-rows-min gap-x-6 gap-y-3 pb-4 md:grid-cols-2 lg:grid-cols-3">
+          <form
+            id={`${mode}-horse-form`}
+            noValidate
+            onSubmit={(event) => {
+              // A dialog is portalled, but React still bubbles its events to any <form> that renders it.
+              event.stopPropagation()
+              void form.handleSubmit(onSubmit)(event)
+            }}
+            className="flex flex-col pt-4"
+          >
+            <div className={`grid auto-rows-min gap-x-6 gap-y-3 pb-4 md:grid-cols-2 ${compact ? "" : "lg:grid-cols-3"}`}>
               <FormField control={form.control} name="horseName" rules={requiredText("Horse name")} render={({ field }) => <Field label="HORSE NAME"><FormItem><FormControl><Input {...field} className={inputClass} placeholder="e.g. Golden Thunder" maxLength={150} /></FormControl></FormItem></Field>} />
               <FormField control={form.control} name="sex" rules={requiredText("Sex")} render={({ field }) => <Field label="SEX"><FormItem><Select value={field.value} onValueChange={field.onChange}><FormControl><SelectTrigger className={inputClass}><SelectValue placeholder="Select sex" /></SelectTrigger></FormControl><SelectContent position="popper" align="start" sideOffset={2}>{selectOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></FormItem></Field>} />
               <FormField control={form.control} name="breed" rules={requiredText("Breed")} render={({ field }) => <Field label="BREED"><FormItem><Select value={field.value} onValueChange={field.onChange}><FormControl><SelectTrigger className={inputClass}><SelectValue placeholder="Select breed" /></SelectTrigger></FormControl><SelectContent position="popper" align="start" sideOffset={2}>{breedOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></FormItem></Field>} />
@@ -94,15 +111,25 @@ export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
               <FormField control={form.control} name="heightCm" rules={requiredNumber("Height")} render={({ field }) => <Field label="HEIGHT (CM)"><FormItem><FormControl><Input {...field} className={inputClass} type="number" min="0" step="0.1" placeholder="e.g. 165" /></FormControl></FormItem></Field>} />
               <FormField control={form.control} name="passportNumber" rules={passportNumberRules} render={({ field }) => <Field label="PASSPORT NUMBER" characterCount={{ value: field.value.length, max: 15 }}><FormItem><FormControl><Input {...field} className={inputClass} placeholder="15 chars: A-Z, 0-9" maxLength={15} /></FormControl></FormItem></Field>} />
               <FormField control={form.control} name="microchipNumber" rules={microchipNumberRules} render={({ field }) => <Field label="MICROCHIP NUMBER" characterCount={{ value: field.value.length, max: 15 }}><FormItem><FormControl><Input {...field} className={inputClass} inputMode="numeric" placeholder="15 digits: 0-9" maxLength={15} /></FormControl></FormItem></Field>} />
-              <FormField control={form.control} name="identificationNotes" rules={requiredText("Identification notes")} render={({ field }) => <Field label="IDENTIFICATION NOTES" className="md:col-span-2 lg:col-span-3"><FormItem><FormControl><Textarea {...field} className="profile-edit-field !h-[72px] min-h-[72px] resize-none" placeholder="e.g. White star on forehead; calm during transport." maxLength={1000} /></FormControl></FormItem></Field>} />
+              <FormField control={form.control} name="identificationNotes" rules={requiredText("Identification notes")} render={({ field }) => <Field label="IDENTIFICATION NOTES" className={compact ? "md:col-span-2" : "md:col-span-2 lg:col-span-3"}><FormItem><FormControl><Textarea {...field} className="profile-edit-field !h-[72px] min-h-[72px] resize-none" placeholder="e.g. White star on forehead; calm during transport." maxLength={1000} /></FormControl></FormItem></Field>} />
             </div>
             {showValidationSummary && <p className="pb-2 text-right text-xs text-red-600" role="alert">Please complete all required fields before submitting.</p>}
             <div className="flex shrink-0 justify-end gap-3 border-t border-[hsl(var(--border))] pt-4">
-              <Button type="button" variant="outline" className="h-9 rounded-none border-[#181818] bg-white px-6 py-2 text-xs font-bold uppercase" onClick={() => navigate("/my-horses")}>Cancel</Button>
+              <Button type="button" variant="outline" className="h-9 rounded-none border-[#181818] bg-white px-6 py-2 text-xs font-bold uppercase" onClick={onCancel}>Cancel</Button>
               <Button type="submit" disabled={form.formState.isSubmitting} className="h-9 rounded-none py-2 text-xs font-bold uppercase">{form.formState.isSubmitting ? "Saving..." : isEdit ? "Update" : "Create"}</Button>
             </div>
           </form>
         </Form>
+  )
+}
+
+export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
+  const navigate = useNavigate()
+  return (
+    <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
+      <div className="mx-auto flex w-full max-w-[1152px] flex-col">
+        <PageHeader title={mode === "edit" ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" />
+        <HorseForm mode={mode} initialHorse={initialHorse} onSaved={() => navigate("/my-horses")} onCancel={() => navigate("/my-horses")} />
       </div>
     </section>
   )

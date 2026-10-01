@@ -561,3 +561,20 @@ code {
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
+
+/* Orange marker on the active horse row/note: grows from top to bottom when it becomes active. */
+.active-bar {
+  transform-origin: top;
+  animation: active-bar-grow 260ms ease-out;
+}
+
+@keyframes active-bar-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .active-bar {
+    animation: none;
+  }
+}
