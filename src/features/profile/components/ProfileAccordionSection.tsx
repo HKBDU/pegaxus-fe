@@ -6,7 +6,6 @@ import type { ProfileAccordionSectionProps } from "../types"
 
 export function ProfileAccordionSection({ title, open, onToggle, children }: ProfileAccordionSectionProps) {
   const contentId = `profile-section-${title.toLowerCase().replaceAll(" ", "-")}`
-
   return (
     <section className="grid gap-x-6 min-h-[84px] border-b border-[#d1d5db] py-3 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)]">
       <Button

@@ -134,6 +134,7 @@ export type ProfileInfoCardProps = {
   label: string
   value: string | null | undefined
   className?: string
+  variant?: "default" | "status" | "accent" | "code" | "date"
 }
 
 export type ProfileHeroCardProps = {
@@ -142,5 +143,8 @@ export type ProfileHeroCardProps = {
   roleLabel: string
   actions?: ReactNode
   children?: ReactNode
+  nameEditor?: ReactNode
+  avatarUrl?: string | null
+  avatarEditor?: ReactNode
   className?: string
 }
