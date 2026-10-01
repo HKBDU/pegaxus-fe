@@ -2,11 +2,13 @@ import { z } from "zod";
 import {
   dossierOverviewSchema,
   createUploadDocumentSchema,
+  createSubmitDocumentVersionSchema,
+  createUpdateDocumentMetadataSchema,
   dossierRequirementsPageSchema,
   dossierRequirementsParamsSchema,
   validateUploadFiles,
 } from "./schemas";
-import type { DossierLoadErrorKind, DossierMockScenario, DossierRequirementsParams, DossierSourceKind, UploadDocumentInput } from "./types";
+import type { DossierLoadErrorKind, DossierMockScenario, DossierRequirementsParams, DossierSourceKind, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
 
 export function resolveDossierSource(isDev: boolean, flag: string | undefined): DossierSourceKind {
   return isDev && flag === "true" ? "mock" : "api";
@@ -54,12 +56,45 @@ export async function loadUploadDocument(input: UploadDocumentInput) {
   if (dossierSourceKind === "mock") {
     const fileError = validateUploadFiles(input.files);
     if (fileError) throw new Error(fileError.code);
-    createUploadDocumentSchema(null).parse(input.metadata);
+    const metadata = createUploadDocumentSchema(null).parse(input.metadata);
     const { uploadMockDocument } = await import("./mocks/dossier.mock");
-    return uploadMockDocument(input.dossierId, input.requirementId, input.files, mockScenario());
+    return uploadMockDocument(input.dossierId, input.requirementId, input.files, mockScenario(), metadata);
   }
   const { dossierService } = await import("./services");
   return dossierService.uploadComplianceDocument(input);
+}
+
+export async function loadComplianceDocument(documentId: string, signal?: AbortSignal) {
+  signal?.throwIfAborted();
+  if (dossierSourceKind === "mock") {
+    const { getMockComplianceDocument } = await import("./mocks/dossier.mock");
+    const { complianceDocumentDetailSchema } = await import("./schemas");
+    return complianceDocumentDetailSchema.parse(getMockComplianceDocument(documentId, mockScenario()));
+  }
+  const { dossierService } = await import("./services");
+  return dossierService.getComplianceDocument(documentId, signal);
+}
+
+export async function loadSubmitDocumentVersion(input: SubmitDocumentVersionInput) {
+  const fileError = validateUploadFiles(input.files);
+  if (fileError) throw new Error(fileError.code);
+  createSubmitDocumentVersionSchema(null).parse(input.metadata);
+  if (dossierSourceKind === "mock") {
+    const { submitMockDocumentVersion } = await import("./mocks/dossier.mock");
+    return submitMockDocumentVersion(input.documentId, input.files, input.metadata, mockScenario());
+  }
+  const { dossierService } = await import("./services");
+  return dossierService.submitDocumentVersion(input);
+}
+
+export async function loadUpdateDocumentMetadata(input: UpdateDocumentMetadataInput) {
+  const changes = createUpdateDocumentMetadataSchema(null).parse(input.changes);
+  if (dossierSourceKind === "mock") {
+    const { updateMockComplianceDocumentMetadata } = await import("./mocks/dossier.mock");
+    return updateMockComplianceDocumentMetadata(input.documentId, changes, mockScenario());
+  }
+  const { dossierService } = await import("./services");
+  return dossierService.updateComplianceDocumentMetadata(input);
 }
 
 export function getDossierLoadErrorKind(error: unknown): DossierLoadErrorKind {

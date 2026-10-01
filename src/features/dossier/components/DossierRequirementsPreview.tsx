@@ -38,6 +38,7 @@ import {
   dossierRequirementSortOptions,
   dossierRequirementStatusOptions,
   canUploadInitialDocument,
+  getCustomerDocumentActions,
   getDossierRequirementActionLabels,
   getDossierHorseFilterOptions,
   initialDossierRequirementsParams,
@@ -50,24 +51,26 @@ import { dossierRequirementStatusSchema, dossierRequirementsParamsSchema } from 
 import { getDossierLoadErrorKind } from "../source";
 import type { DossierHorseOption, DossierOverview, DossierRequirement, DossierRequirementsParams } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
+import { DocumentSubmissionDialog } from "./DocumentSubmissionDialog";
+import { DocumentDetailsDialog } from "./DocumentVersionHistory";
 import { UploadComplianceDocumentDialog } from "./UploadComplianceDocumentDialog";
+
+type SubmissionMode = "initial" | "edit" | "update";
 
 function RequirementRowActions({
   item,
   role,
   dossier,
-  onUpload,
+  onAction,
 }: {
   item: DossierRequirement;
   role: string | undefined;
   dossier: DossierOverview;
-  onUpload: (item: DossierRequirement) => void;
+  onAction: (item: DossierRequirement, label: string) => void;
 }) {
-  const labels = getDossierRequirementActionLabels(
-    role,
-    item.status,
-    Boolean(item.document),
-  );
+  const labels = role === "CUSTOMER"
+    ? getCustomerDocumentActions(dossier, item)
+    : getDossierRequirementActionLabels(role, item.status, Boolean(item.document));
 
   return (
     <DropdownMenu>
@@ -92,7 +95,9 @@ function RequirementRowActions({
           </DropdownMenuItem>
         ) : null}
         {labels.map((label) => {
-          const uploadEnabled = label === "Upload Document" && canUploadInitialDocument(role, dossier, item);
+          const actionEnabled = (label === "Upload Document" && canUploadInitialDocument(role, dossier, item)) ||
+            (Boolean(item.document) && (label === "View Document" || label === "View Version History" ||
+              (role === "CUSTOMER" && (label === "Edit Document" || label === "Update Document"))));
           const Icon = label.startsWith("Upload")
             ? Upload
             : label.startsWith("Edit")
@@ -105,14 +110,14 @@ function RequirementRowActions({
           return (
             <DropdownMenuItem
               key={label}
-              disabled={!uploadEnabled}
-              onSelect={uploadEnabled ? () => onUpload(item) : undefined}
-              title={uploadEnabled ? undefined : `${label} is not available in this phase`}
+              disabled={!actionEnabled}
+              onSelect={actionEnabled ? () => onAction(item, label) : undefined}
+              title={actionEnabled ? undefined : `${label} is not available in this phase`}
               className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem] data-[disabled]:opacity-100"
             >
               <Icon className="size-3.5" />
               <span className="min-w-0 flex-1">{label}</span>
-              {!uploadEnabled ? <span className="text-[10px] text-slate-500">Soon</span> : null}
+              {!actionEnabled ? <span className="text-[10px] text-slate-500">Soon</span> : null}
             </DropdownMenuItem>
           );
         })}
@@ -125,12 +130,12 @@ export function RequirementTable({
   items,
   role,
   dossier,
-  onUpload,
+  onAction,
 }: {
   items: DossierRequirement[];
   role: string | undefined;
   dossier: DossierOverview;
-  onUpload: (item: DossierRequirement) => void;
+  onAction: (item: DossierRequirement, label: string) => void;
 }) {
   const columns = useMemo<ColumnDef<DossierRequirement>[]>(
     () => [
@@ -200,11 +205,11 @@ export function RequirementTable({
         id: "actions",
         header: "ACTIONS",
         cell: ({ row }) => (
-          <RequirementRowActions item={row.original} role={role} dossier={dossier} onUpload={onUpload} />
+          <RequirementRowActions item={row.original} role={role} dossier={dossier} onAction={onAction} />
         ),
       },
     ],
-    [role, dossier, onUpload],
+    [role, dossier, onAction],
   );
   const table = useReactTable({
     data: items,
@@ -231,14 +236,14 @@ function RequirementGroup({
   items,
   role,
   dossier,
-  onUpload,
+  onAction,
   horse = false,
 }: {
   title: string;
   items: DossierRequirement[];
   role: string | undefined;
   dossier: DossierOverview;
-  onUpload: (item: DossierRequirement) => void;
+  onAction: (item: DossierRequirement, label: string) => void;
   horse?: boolean;
 }) {
   const Icon = horse ? ChessKnight : FileText;
@@ -249,7 +254,7 @@ function RequirementGroup({
         <h3 className="m-0! font-heading text-sm! font-semibold! uppercase text-gray-900!">{title}</h3>
         <span className="text-xs text-gray-500">{items.length} on this page</span>
       </div>
-      <RequirementTable items={items} role={role} dossier={dossier} onUpload={onUpload} />
+      <RequirementTable items={items} role={role} dossier={dossier} onAction={onAction} />
     </div>
   );
 }
@@ -313,7 +318,17 @@ export function DossierRequirementsPreview({
   dossier: DossierOverview;
   plannedDepartureDate?: string;
 }) {
-  const [uploadRequirement, setUploadRequirement] = useState<DossierRequirement | null>(null);
+  const [submission, setSubmission] = useState<{ requirement: DossierRequirement; mode: SubmissionMode } | null>(null);
+  const [viewDocumentId, setViewDocumentId] = useState<string | null>(null);
+  const onAction = (item: DossierRequirement, label: string) => {
+    if (label === "View Document" || label === "View Version History") {
+      if (item.document) setViewDocumentId(String(item.document.complianceDocumentId));
+      return;
+    }
+    const mode: SubmissionMode | null = label === "Upload Document" ? "initial"
+      : label === "Edit Document" ? "edit" : label === "Update Document" ? "update" : null;
+    if (mode) setSubmission({ requirement: item, mode });
+  };
   const [storedParams, setParams] = useState<DossierRequirementsParams>(
     initialDossierRequirementsParams,
   );
@@ -398,7 +413,7 @@ export function DossierRequirementsPreview({
               items={tripItems}
               role={role}
               dossier={dossier}
-              onUpload={setUploadRequirement}
+              onAction={onAction}
             />
           ) : null}
           {horseGroups.size ? (
@@ -417,7 +432,7 @@ export function DossierRequirementsPreview({
                   items={group.items}
                   role={role}
                   dossier={dossier}
-                  onUpload={setUploadRequirement}
+                  onAction={onAction}
                   horse
                 />
               ))}
@@ -451,14 +466,27 @@ export function DossierRequirementsPreview({
           </div>
         </div>
       ) : null}
-      <UploadComplianceDocumentDialog
-        key={uploadRequirement?.dossierRequirementId ?? "closed"}
-        dossier={dossier}
-        requirement={uploadRequirement}
-        plannedDepartureDate={plannedDepartureDate}
-        role={role}
-        onClose={() => setUploadRequirement(null)}
-      />
+      {submission?.mode === "initial" ? (
+        <UploadComplianceDocumentDialog
+          key={submission.requirement.dossierRequirementId}
+          dossier={dossier}
+          requirement={submission.requirement}
+          plannedDepartureDate={dossier.bookingSummary.requestedDepartureDate}
+          role={role}
+          onClose={() => setSubmission(null)}
+        />
+      ) : (
+        <DocumentSubmissionDialog
+          key={submission ? `${submission.mode}-${submission.requirement.dossierRequirementId}` : "closed"}
+          dossier={dossier}
+          requirement={submission?.requirement ?? null}
+          mode={submission?.mode ?? "edit"}
+          plannedDepartureDate={plannedDepartureDate ?? dossier.bookingSummary.requestedDepartureDate}
+          role={role}
+          onClose={() => setSubmission(null)}
+        />
+      )}
+      <DocumentDetailsDialog documentId={viewDocumentId} onClose={() => setViewDocumentId(null)} />
     </section>
   );
 }

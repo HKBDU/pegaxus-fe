@@ -9,6 +9,13 @@ import type {
   dossierHorseOptionSchema,
   requirementSummarySchema,
   uploadDocumentResultSchema,
+  complianceDocumentDetailSchema,
+  documentVersionSchema,
+  documentVersionFileSchema,
+  documentReviewSummarySchema,
+  documentRequestSummarySchema,
+  submitDocumentVersionEnvelopeSchema,
+  updateDocumentMetadataEnvelopeSchema,
 } from "./schemas";
 
 export type DossierOverview = z.infer<typeof dossierOverviewSchema>;
@@ -20,6 +27,13 @@ export type BookingSummary = z.infer<typeof bookingSummarySchema>;
 export type DossierHorseOption = z.infer<typeof dossierHorseOptionSchema>;
 export type RequirementSummary = z.infer<typeof requirementSummarySchema>;
 export type UploadDocumentResult = z.infer<typeof uploadDocumentResultSchema>;
+export type ComplianceDocumentDetail = z.infer<typeof complianceDocumentDetailSchema>;
+export type DocumentVersion = z.infer<typeof documentVersionSchema>;
+export type DocumentVersionFile = z.infer<typeof documentVersionFileSchema>;
+export type DocumentReviewSummary = z.infer<typeof documentReviewSummarySchema>;
+export type DocumentRequestSummary = z.infer<typeof documentRequestSummarySchema>;
+export type SubmitDocumentVersionResult = z.infer<typeof submitDocumentVersionEnvelopeSchema>["value"];
+export type UpdateDocumentMetadataResult = z.infer<typeof updateDocumentMetadataEnvelopeSchema>["value"];
 export type UploadDocumentError = {
   code: string;
   message: string;
@@ -38,6 +52,17 @@ export type UploadDocumentInput = {
   requirementId: number;
   files: File[];
   metadata: UploadDocumentMetadata;
+};
+export type SubmitDocumentVersionInput = {
+  documentId: string;
+  dossierId?: string;
+  files: File[];
+  metadata: Pick<UploadDocumentMetadata, "documentNumber" | "issuingAuthority" | "issuedDate" | "expiryDate"> & { uploadNote?: string };
+};
+export type UpdateDocumentMetadataInput = {
+  documentId: string;
+  dossierId?: string;
+  changes: Partial<UploadDocumentMetadata & { note: string }>;
 };
 
 export type DossierSourceKind = "api" | "mock";

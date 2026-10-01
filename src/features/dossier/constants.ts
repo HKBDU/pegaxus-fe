@@ -18,6 +18,25 @@ export function canUploadInitialDocument(
     (requirement.status === "PENDING" || requirement.status === "REQUESTED");
 }
 
+export function getCustomerDocumentActions(
+  dossier: Pick<DossierOverview, "status" | "writeLocked">,
+  requirement: Pick<DossierRequirement, "status" | "document">,
+): string[] {
+  const document = requirement.document;
+  if (!document) {
+    return dossier.status === "IN_PREPARATION" && !dossier.writeLocked &&
+      (requirement.status === "PENDING" || requirement.status === "REQUESTED")
+      ? ["Upload Document"] : [];
+  }
+  const actions = ["View Document"];
+  if (dossier.status === "IN_PREPARATION" && !dossier.writeLocked && requirement.status !== "SATISFIED") {
+    if (document.status === "PROVIDED") actions.push("Edit Document");
+    if (document.status === "REJECTED") actions.push("Update Document");
+  }
+  actions.push("View Version History");
+  return actions;
+}
+
 export function canViewDossierAudit(roles: readonly string[] | undefined) {
   return roles?.includes("TRANSPORT_SPECIALIST") || roles?.includes("LOGISTICS_MANAGER") || false;
 }
@@ -79,7 +98,7 @@ export function reconcileDossierHorseFilter(current: DossierRequirementsParams, 
   return updateDossierRequirementFilters(current, { horseId: undefined });
 }
 
-export const dossierStatusLabels: Record<DossierOverview["status"] | DossierRequirementStatus, string> = {
+export const dossierStatusLabels: Record<DossierOverview["status"] | DossierRequirementStatus | "EXPIRED", string> = {
   DRAFT: "Draft",
   IN_PREPARATION: "In preparation",
   READY_FOR_SUBMISSION: "Ready for submission",
@@ -92,6 +111,7 @@ export const dossierStatusLabels: Record<DossierOverview["status"] | DossierRequ
   PROVIDED: "In review",
   SATISFIED: "Completed",
   WAIVED: "Waived",
+  EXPIRED: "Expired",
 };
 
 export const dossierStatusStyles: Record<keyof typeof dossierStatusLabels, string> = {
@@ -107,6 +127,7 @@ export const dossierStatusStyles: Record<keyof typeof dossierStatusLabels, strin
   PROVIDED: "border-blue-300 bg-blue-50 text-blue-700",
   SATISFIED: "border-emerald-300 bg-emerald-50 text-emerald-700",
   WAIVED: "border-slate-300 bg-slate-100 text-slate-700",
+  EXPIRED: "border-amber-300 bg-amber-50 text-amber-700",
 };
 
 export const dossierRequirementStatusOptions = [

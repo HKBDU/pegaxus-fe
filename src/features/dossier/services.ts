@@ -7,10 +7,15 @@ import {
   createUploadDocumentSchema,
   uploadDocumentEnvelopeSchema,
   validateUploadFiles,
+  complianceDocumentEnvelopeSchema,
+  createSubmitDocumentVersionSchema,
+  submitDocumentVersionEnvelopeSchema,
+  createUpdateDocumentMetadataSchema,
+  updateDocumentMetadataEnvelopeSchema,
 } from "./schemas";
-import type { DossierRequirementsParams, UploadDocumentInput } from "./types";
+import type { DossierRequirementsParams, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
 
-function buildUploadDocumentFormData({ files, metadata }: Pick<UploadDocumentInput, "files" | "metadata">): FormData {
+function buildUploadDocumentFormData({ files, metadata }: { files: readonly File[]; metadata: object }): FormData {
   const form = new FormData();
   for (const file of files) form.append("files", file);
   for (const [key, value] of Object.entries(metadata ?? {})) {
@@ -58,5 +63,37 @@ export const dossierService = {
       { timeout: 120_000 },
     );
     return uploadDocumentEnvelopeSchema.parse(payload).value;
+  },
+
+  async getComplianceDocument(documentId: string, signal?: AbortSignal) {
+    const id = dossierIdSchema.parse(documentId);
+    const payload = await apiClient.get<unknown, unknown>(
+      `compliance-documents/${encodeURIComponent(id)}`,
+      { signal },
+    );
+    return complianceDocumentEnvelopeSchema.parse(payload).value;
+  },
+
+  async submitDocumentVersion(input: SubmitDocumentVersionInput) {
+    const id = dossierIdSchema.parse(input.documentId);
+    const fileError = validateUploadFiles(input.files);
+    if (fileError) throw new Error(fileError.message);
+    const metadata = createSubmitDocumentVersionSchema(null).parse(input.metadata);
+    const payload = await apiClient.post<unknown, unknown>(
+      `compliance-documents/${encodeURIComponent(id)}/versions`,
+      buildUploadDocumentFormData({ files: input.files, metadata }),
+      { timeout: 120_000 },
+    );
+    return submitDocumentVersionEnvelopeSchema.parse(payload).value;
+  },
+
+  async updateComplianceDocumentMetadata(input: UpdateDocumentMetadataInput) {
+    const id = dossierIdSchema.parse(input.documentId);
+    const changes = createUpdateDocumentMetadataSchema(null).parse(input.changes);
+    const payload = await apiClient.patch<unknown, unknown>(
+      `compliance-documents/${encodeURIComponent(id)}`,
+      changes,
+    );
+    return updateDocumentMetadataEnvelopeSchema.parse(payload).value;
   },
 };

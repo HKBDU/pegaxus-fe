@@ -2,7 +2,8 @@ import { useState } from "react";
 import { ErrorState, LoadingState } from "@/shared/components/common";
 import { DossierStatusBadge } from "../components/DossierStatusBadge";
 import { RequirementTable } from "../components/DossierRequirementsPreview";
-import { UploadComplianceDocumentDialog } from "../components/UploadComplianceDocumentDialog";
+import { DocumentSubmissionDialog } from "../components/DocumentSubmissionDialog";
+import { DocumentDetailsDialog } from "../components/DocumentVersionHistory";
 import { initialDossierRequirementsParams } from "../constants";
 import { useDossierOverview, useDossierRequirements } from "../hooks/useDossier";
 import type { DossierRequirement } from "../types";
@@ -10,7 +11,8 @@ import type { DossierRequirement } from "../types";
 const previewDossierId = "501";
 
 export default function DossierUploadPreviewPage() {
-  const [selectedRequirement, setSelectedRequirement] = useState<DossierRequirement | null>(null);
+  const [submission, setSubmission] = useState<{ requirement: DossierRequirement; mode: "initial" | "edit" | "update" } | null>(null);
+  const [viewDocumentId, setViewDocumentId] = useState<string | null>(null);
   const dossierQuery = useDossierOverview(previewDossierId);
   const requirementsQuery = useDossierRequirements(previewDossierId, initialDossierRequirementsParams);
   const dossier = dossierQuery.data;
@@ -40,15 +42,23 @@ export default function DossierUploadPreviewPage() {
               items={requirements.items}
               role="CUSTOMER"
               dossier={dossier}
-              onUpload={setSelectedRequirement}
+              onAction={(item, label) => {
+                if (label === "View Document" || label === "View Version History") {
+                  if (item.document) setViewDocumentId(String(item.document.complianceDocumentId));
+                } else if (label === "Upload Document") setSubmission({ requirement: item, mode: "initial" });
+                else if (label === "Edit Document") setSubmission({ requirement: item, mode: "edit" });
+                else if (label === "Update Document") setSubmission({ requirement: item, mode: "update" });
+              }}
             />
-            <UploadComplianceDocumentDialog
-              key={selectedRequirement?.dossierRequirementId ?? "closed"}
+            <DocumentSubmissionDialog
+              key={submission ? `${submission.mode}-${submission.requirement.dossierRequirementId}` : "closed"}
               dossier={dossier}
-              requirement={selectedRequirement}
+              requirement={submission?.requirement ?? null}
+              mode={submission?.mode ?? "initial"}
               role="CUSTOMER"
-              onClose={() => setSelectedRequirement(null)}
+              onClose={() => setSubmission(null)}
             />
+            <DocumentDetailsDialog documentId={viewDocumentId} onClose={() => setViewDocumentId(null)} />
           </section>
         ) : null}
       </div>

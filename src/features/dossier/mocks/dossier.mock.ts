@@ -1,7 +1,7 @@
 import {
   dossierRequirementsParamsSchema,
 } from "../schemas";
-import type { DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams } from "../types";
+import type { ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentMetadata } from "../types";
 
 class DossierMockHttpError extends Error {
   readonly status: number;
@@ -131,12 +131,139 @@ const requirements: DossierRequirement[] = [
 
 const uploadedRequirements = new Map<number, DossierRequirement>();
 let nextMockDocumentId = 9300;
+let nextMockVersionId = 9400;
+const documentDetails = new Map<number, ComplianceDocumentDetail>();
+
+function seedDocument(requirement: DossierRequirement): ComplianceDocumentDetail {
+  const document = requirement.document!;
+  const rejected = document.status === "REJECTED";
+  return {
+    complianceDocumentId: document.complianceDocumentId,
+    documentCode: document.documentCode,
+    dossierRequirementId: requirement.dossierRequirementId,
+    documentName: requirement.requirementName,
+    status: document.status,
+    documentNumber: "HP-2026-001",
+    issuingAuthority: "Weatherbys",
+    issuedDate: "2025-03-01",
+    expiryDate: "2027-03-01",
+    note: null,
+    updatedAt: "2026-09-26T04:10:00Z",
+    versions: [{
+      documentVersionId: document.complianceDocumentId + 1000,
+      versionNo: document.latestVersionNo,
+      uploadNote: null,
+      uploadedAt: "2026-09-25T02:30:00Z",
+      files: [{ fileName: "document-page.jpg", fileUrl: "https://example.com/document-page.jpg", mimeType: "image/jpeg", fileSizeBytes: 812345, sortOrder: 1 }],
+      review: rejected ? {
+        documentReviewId: 900,
+        result: "REJECTED",
+        reviewComment: "Stamp is unclear on page 2.",
+        reviewedBy: { accountId: 402, fullName: "Transport Specialist" },
+        reviewedAt: "2026-09-26T04:10:00Z",
+      } : document.status === "APPROVED" ? {
+        documentReviewId: 901,
+        result: "APPROVED",
+        reviewComment: null,
+        reviewedBy: { accountId: 402, fullName: "Transport Specialist" },
+        reviewedAt: "2026-09-26T04:10:00Z",
+      } : null,
+    }],
+    openRequest: rejected ? {
+      documentRequestId: 15,
+      requestCode: "DREQ-20260926-0003",
+      requestType: "REUPLOAD",
+      message: "Upload a clearer scan of page 2 and include the full stamp.",
+      dueDate: "2026-10-05",
+    } : null,
+  };
+}
+
+export function getMockComplianceDocument(id: string, scenario: DossierMockScenario): ComplianceDocumentDetail {
+  assertMockAvailable("501", scenario);
+  const documentId = Number(id);
+  const requirement = [...requirements, ...uploadedRequirements.values()].find((item) => item.document?.complianceDocumentId === documentId);
+  if (!requirement) throw new DossierMockHttpError(404, "DOCUMENT_NOT_FOUND");
+  const current = documentDetails.get(documentId) ?? seedDocument(requirement);
+  if (scenario === "locked") return current;
+  return current;
+}
+
+export function submitMockDocumentVersion(
+  id: string,
+  files: File[],
+  metadata: SubmitDocumentVersionInput["metadata"],
+  scenario: DossierMockScenario,
+) {
+  const current = getMockComplianceDocument(id, scenario);
+  if (scenario === "locked") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
+  if (current.status === "APPROVED") throw new DossierMockHttpError(409, "DOCUMENT_ALREADY_VERIFIED");
+  const latest = current.versions[0];
+  const reviewed = latest.review !== null;
+  const versionNo = reviewed ? latest.versionNo + 1 : latest.versionNo;
+  const documentVersionId = reviewed ? nextMockVersionId++ : latest.documentVersionId;
+  const version = {
+    documentVersionId,
+    versionNo,
+    uploadNote: metadata.uploadNote?.trim() || null,
+    uploadedAt: new Date().toISOString(),
+    files: files.map((file, index) => ({
+      fileName: file.name, fileUrl: `https://example.com/${encodeURIComponent(file.name)}`,
+      mimeType: file.type, fileSizeBytes: file.size, sortOrder: index + 1,
+    })),
+    review: null,
+  };
+  documentDetails.set(current.complianceDocumentId, {
+    ...current,
+    status: "PROVIDED",
+    documentNumber: metadata.documentNumber || null,
+    issuingAuthority: metadata.issuingAuthority || null,
+    issuedDate: metadata.issuedDate || null,
+    expiryDate: metadata.expiryDate || null,
+    updatedAt: version.uploadedAt,
+    versions: reviewed ? [version, ...current.versions] : [version, ...current.versions.slice(1)],
+    openRequest: null,
+  });
+  const requirement = uploadedRequirements.get(current.dossierRequirementId) ??
+    requirements.find((item) => item.dossierRequirementId === current.dossierRequirementId);
+  if (requirement) uploadedRequirements.set(requirement.dossierRequirementId, {
+    ...requirement, status: "PROVIDED",
+    document: { ...requirement.document!, status: "PROVIDED", latestVersionNo: versionNo },
+  });
+  return { documentVersionId, versionNo, mode: reviewed ? "NEW_VERSION" as const : "EDIT_IN_PLACE" as const };
+}
+
+export function updateMockComplianceDocumentMetadata(
+  id: string,
+  changes: UpdateDocumentMetadataInput["changes"],
+  scenario: DossierMockScenario,
+) {
+  const current = getMockComplianceDocument(id, scenario);
+  if (scenario === "locked") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
+  if (current.versions[0].review) throw new DossierMockHttpError(409, "DOCUMENT_ALREADY_REVIEWED");
+  const updatedAt = new Date().toISOString();
+  const metadataChanges = {
+    ...(changes.documentName !== undefined ? { documentName: changes.documentName } : {}),
+    ...(changes.documentNumber !== undefined ? { documentNumber: changes.documentNumber || null } : {}),
+    ...(changes.issuingAuthority !== undefined ? { issuingAuthority: changes.issuingAuthority || null } : {}),
+    ...(changes.issuedDate !== undefined ? { issuedDate: changes.issuedDate || null } : {}),
+    ...(changes.expiryDate !== undefined ? { expiryDate: changes.expiryDate || null } : {}),
+    ...(changes.note !== undefined ? { note: changes.note || null } : {}),
+  };
+  documentDetails.set(current.complianceDocumentId, {
+    ...current,
+    ...metadataChanges,
+    updatedAt,
+  });
+  return { complianceDocumentId: current.complianceDocumentId, updatedAt };
+}
 
 export function uploadMockDocument(
   id: string,
   requirementId: number,
   files: File[],
   scenario: DossierMockScenario,
+  metadata?: UploadDocumentMetadata,
 ) {
   assertMockAvailable(id, scenario);
   if (scenario === "locked") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
@@ -151,9 +278,38 @@ export function uploadMockDocument(
   const result = {
     complianceDocumentId,
     documentCode: `DOC-MOCK-${complianceDocumentId}`,
-    documentVersionId: nextMockDocumentId++,
+    documentVersionId: nextMockVersionId++,
     versionNo: 1 as const,
   };
+  const uploadedAt = new Date().toISOString();
+  documentDetails.set(complianceDocumentId, {
+    complianceDocumentId,
+    documentCode: result.documentCode,
+    dossierRequirementId: requirementId,
+    documentName: metadata?.documentName || requirement.requirementName,
+    status: "PROVIDED",
+    documentNumber: metadata?.documentNumber || null,
+    issuingAuthority: metadata?.issuingAuthority || null,
+    issuedDate: metadata?.issuedDate || null,
+    expiryDate: metadata?.expiryDate || null,
+    note: null,
+    updatedAt: uploadedAt,
+    versions: [{
+      documentVersionId: result.documentVersionId,
+      versionNo: result.versionNo,
+      uploadNote: null,
+      uploadedAt,
+      files: files.map((file, index) => ({
+        fileName: file.name,
+        fileUrl: `https://example.com/${encodeURIComponent(file.name)}`,
+        mimeType: file.type,
+        fileSizeBytes: file.size,
+        sortOrder: index + 1,
+      })),
+      review: null,
+    }],
+    openRequest: null,
+  });
   uploadedRequirements.set(requirementId, {
     ...requirement,
     status: "PROVIDED",
@@ -177,8 +333,10 @@ export function getMockDossier(id: string, scenario: DossierMockScenario): Dossi
   const requirementSummary = { ...dossier.requirementSummary };
   for (const uploaded of uploadedRequirements.values()) {
     const original = requirements.find((item) => item.dossierRequirementId === uploaded.dossierRequirementId);
-    if (original?.status === "PENDING") requirementSummary.pending--;
-    if (original?.status === "REQUESTED") requirementSummary.requested--;
+    if (!original || original.status === uploaded.status) continue;
+    if (original.status === "PENDING") requirementSummary.pending--;
+    if (original.status === "REQUESTED") requirementSummary.requested--;
+    if (original.status === "REJECTED") requirementSummary.rejected--;
     requirementSummary.provided++;
   }
   const overview = { ...dossier, requirementSummary };
