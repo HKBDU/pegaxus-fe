@@ -30,6 +30,22 @@ const dossier: DossierOverview = {
   progressPercent: 62.5,
   mandatoryTotal: 8,
   mandatorySatisfiedOrWaived: 5,
+  bookingSummary: {
+    bookingStatus: "APPROVED",
+    originCountry: "GB",
+    destinationCountry: "FR",
+    requestedDepartureDate: "2026-10-02",
+    customerName: "Nguyễn Minh Khang",
+    horseCount: 2,
+    horses: [
+      { horseId: 71, horseName: "Pegaxus Star" },
+      { horseId: 72, horseName: "Silver Arrow" },
+    ],
+  },
+  requirementSummary: {
+    total: 10, pending: 2, requested: 1, provided: 1,
+    satisfied: 4, rejected: 1, waived: 1,
+  },
   quarantineStatus: null,
   customsClearanceStatus: null,
 };
@@ -124,7 +140,10 @@ export function getMockDossier(id: string, scenario: DossierMockScenario): Dossi
     return { ...dossier, writeLocked: true, writeLockReason: "BOOKING_CHANGE_IN_PROGRESS" };
   }
   if (scenario === "empty") {
-    return { ...dossier, progressPercent: 0, mandatoryTotal: 0, mandatorySatisfiedOrWaived: 0 };
+    return {
+      ...dossier, progressPercent: 0, mandatoryTotal: 0, mandatorySatisfiedOrWaived: 0,
+      requirementSummary: { total: 0, pending: 0, requested: 0, provided: 0, satisfied: 0, rejected: 0, waived: 0 },
+    };
   }
   return dossier;
 }

@@ -12,6 +12,7 @@ import {
   History,
   MoreVertical,
   Pencil,
+  RotateCcw,
   Upload,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
@@ -37,12 +38,16 @@ import {
   dossierRequirementSortOptions,
   dossierRequirementStatusOptions,
   getDossierRequirementActionLabels,
+  getDossierHorseFilterOptions,
   initialDossierRequirementsParams,
+  reconcileDossierHorseFilter,
+  resetDossierRequirementFilters,
+  updateDossierRequirementFilters,
 } from "../constants";
 import { useDossierRequirements } from "../hooks/useDossier";
-import { dossierRequirementStatusSchema } from "../schemas";
+import { dossierRequirementStatusSchema, dossierRequirementsParamsSchema } from "../schemas";
 import { getDossierLoadErrorKind } from "../source";
-import type { DossierRequirement, DossierRequirementsParams } from "../types";
+import type { DossierHorseOption, DossierRequirement, DossierRequirementsParams } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
 
 function RequirementRowActions({
@@ -233,14 +238,64 @@ function RequirementGroup({
   );
 }
 
-export function DossierRequirementsPreview({
-  dossierId,
-}: {
-  dossierId: string;
+export function DossierRequirementFilters({ params, horses, onChange, onReset }: {
+  params: DossierRequirementsParams;
+  horses: readonly DossierHorseOption[];
+  onChange: (filters: Pick<DossierRequirementsParams, "status" | "horseId" | "sortBy">) => void;
+  onReset: () => void;
 }) {
-  const [params, setParams] = useState<DossierRequirementsParams>(
+  return (
+    <div role="toolbar" aria-label="Requirement filters" className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+      <div className="w-full sm:w-44 [&>button]:w-full">
+        <DataTableRadioFilter
+          title="Status"
+          value={params.status ?? "ALL"}
+          options={dossierRequirementStatusOptions}
+          hideTitleWhenFiltered
+          onValueChange={(status) => onChange({
+            status: status === "ALL" ? undefined : dossierRequirementStatusSchema.parse(status),
+          })}
+        />
+      </div>
+      <div className="w-full sm:w-44 [&>button]:w-full">
+        <DataTableRadioFilter
+          title="All Horses"
+          ariaLabel="Horse"
+          value={params.horseId === undefined ? "ALL" : String(params.horseId)}
+          options={getDossierHorseFilterOptions(horses)}
+          hideTitleWhenFiltered
+          onValueChange={(horseId) => onChange({
+            horseId: horseId === "ALL" ? undefined : dossierRequirementsParamsSchema.shape.horseId.parse(Number(horseId)),
+          })}
+        />
+      </div>
+      <div className="w-full sm:w-44 [&>button]:w-full">
+        <DataTableRadioFilter
+          title="Sort"
+          value={params.sortBy ?? "createdAt:asc"}
+          defaultValue="createdAt:asc"
+          options={dossierRequirementSortOptions}
+          hideTitleWhenFiltered
+          onValueChange={(sortBy) => onChange({ sortBy: dossierRequirementsParamsSchema.shape.sortBy.parse(sortBy) })}
+        />
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={onReset} className="h-8 rounded-[2px] px-2.5 font-sans text-xs font-normal normal-case tracking-normal shadow-none">
+        <RotateCcw aria-hidden="true" className="size-3.5" /> Reset Filters
+      </Button>
+    </div>
+  );
+}
+
+export function DossierRequirementsPreview({ dossierId, horses }: {
+  dossierId: string;
+  horses: readonly DossierHorseOption[];
+}) {
+  const [storedParams, setParams] = useState<DossierRequirementsParams>(
     initialDossierRequirementsParams,
   );
+  const params = reconcileDossierHorseFilter(storedParams, horses);
+  // Clear removed D7 horses before requesting D8 with a stale selection.
+  if (params !== storedParams) setParams(params);
   const roles = useAuthStore((state) => state.principal?.roles);
   const role = roles?.find(
     (value) =>
@@ -295,46 +350,12 @@ export function DossierRequirementsPreview({
             Trip-level and horse-specific requirements from the current page.
           </p>
         </div>
-        <div
-          role="toolbar"
-          aria-label="Requirement filters"
-          className="flex w-full flex-wrap items-center gap-2 sm:w-auto"
-        >
-          <div className="w-full sm:w-44 [&>button]:w-full">
-            <DataTableRadioFilter
-              title="Status"
-              value={params.status ?? "ALL"}
-              options={dossierRequirementStatusOptions}
-              hideTitleWhenFiltered
-              onValueChange={(status) =>
-                setParams((current) => ({
-                  ...current,
-                  status:
-                    status === "ALL"
-                      ? undefined
-                      : dossierRequirementStatusSchema.parse(status),
-                  pageIndex: 1,
-                }))
-              }
-            />
-          </div>
-          <div className="w-full sm:w-44 [&>button]:w-full">
-            <DataTableRadioFilter
-              title="Sort"
-              value={params.sortBy ?? "createdAt:asc"}
-              defaultValue="createdAt:asc"
-              options={dossierRequirementSortOptions}
-              hideTitleWhenFiltered
-              onValueChange={(sortBy) =>
-                setParams((current) => ({
-                  ...current,
-                  sortBy: sortBy as DossierRequirementsParams["sortBy"],
-                  pageIndex: 1,
-                }))
-              }
-            />
-          </div>
-        </div>
+        <DossierRequirementFilters
+          params={params}
+          horses={horses}
+          onChange={(filters) => setParams((current) => updateDossierRequirementFilters(current, filters))}
+          onReset={() => setParams((current) => resetDossierRequirementFilters(current))}
+        />
       </div>
       {query.isPending ? (
         <LoadingState />

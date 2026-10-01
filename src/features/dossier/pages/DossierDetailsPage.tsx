@@ -7,7 +7,6 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useBooking } from "@/features/booking/hooks";
 import {
   EmptyState,
   ErrorState,
@@ -18,7 +17,7 @@ import { Card, CardContent } from "@/shared/components/ui/card";
 import { DossierOverview } from "../components/DossierOverview";
 import { DossierRequirementsPreview } from "../components/DossierRequirementsPreview";
 import { useDossierOverview } from "../hooks/useDossier";
-import { dossierSourceKind, getDossierLoadErrorKind } from "../source";
+import { getDossierLoadErrorKind } from "../source";
 
 const sections = [
   { id: "requirements", label: "Dossier Requirements", icon: ClipboardList },
@@ -66,19 +65,6 @@ export default function DossierDetailsPage() {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<SectionId>("requirements");
   const query = useDossierOverview(dossierId);
-  const canUseBookingApi =
-    dossierSourceKind === "api" &&
-    (!import.meta.env.DEV ||
-      import.meta.env.VITE_BOOKING_API_MOCKS === "false");
-  const bookingQuery = useBooking(
-    canUseBookingApi ? (query.data?.bookingId ?? "") : "",
-  );
-  const booking =
-    bookingQuery.data &&
-    query.data &&
-    String(bookingQuery.data.bookingId) === String(query.data.bookingId)
-      ? bookingQuery.data
-      : undefined;
   return (
     <div className="booking-page-shell min-w-0 px-5 py-6 font-sans sm:px-6 lg:px-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1440px] space-y-5">
@@ -117,12 +103,7 @@ export default function DossierDetailsPage() {
           />
         ) : query.data ? (
           <>
-            <DossierOverview
-              dossier={query.data}
-              booking={booking}
-              bookingLoading={canUseBookingApi && bookingQuery.isPending}
-              bookingError={canUseBookingApi && bookingQuery.isError}
-            />
+            <DossierOverview dossier={query.data} />
             <div className="border-b border-gray-200">
               <div
                 role="tablist"
@@ -152,7 +133,7 @@ export default function DossierDetailsPage() {
               aria-labelledby={`dossier-tab-${activeSection}`}
             >
               {activeSection === "requirements" ? (
-                <DossierRequirementsPreview dossierId={dossierId} />
+                <DossierRequirementsPreview dossierId={dossierId} horses={query.data.bookingSummary.horses} />
               ) : (
                 <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
                   <CardContent className="p-5">

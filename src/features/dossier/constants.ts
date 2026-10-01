@@ -1,5 +1,5 @@
 import { dossierRequirementStatusSchema } from "./schemas";
-import type { DossierOverview, DossierRequirementStatus, DossierRequirementsParams } from "./types";
+import type { DossierHorseOption, DossierOverview, DossierRequirementStatus, DossierRequirementsParams } from "./types";
 
 export function canViewDossierAudit(roles: readonly string[] | undefined) {
   return roles?.includes("TRANSPORT_SPECIALIST") || roles?.includes("LOGISTICS_MANAGER") || false;
@@ -37,6 +37,29 @@ export const initialDossierRequirementsParams: DossierRequirementsParams = {
   pageSize: 20,
   sortBy: "createdAt:asc",
 };
+
+export function getDossierHorseFilterOptions(horses: readonly DossierHorseOption[]) {
+  return [
+    { value: "ALL", label: "All Horses" },
+    ...horses.map(({ horseId, horseName }) => ({ value: String(horseId), label: horseName })),
+  ];
+}
+
+export function updateDossierRequirementFilters(
+  current: DossierRequirementsParams,
+  filters: Pick<DossierRequirementsParams, "status" | "horseId" | "sortBy">,
+): DossierRequirementsParams {
+  return { ...current, ...filters, pageIndex: 1 };
+}
+
+export function resetDossierRequirementFilters(current: DossierRequirementsParams): DossierRequirementsParams {
+  return { ...initialDossierRequirementsParams, pageSize: current.pageSize };
+}
+
+export function reconcileDossierHorseFilter(current: DossierRequirementsParams, horses: readonly DossierHorseOption[]) {
+  if (current.horseId === undefined || horses.some(({ horseId }) => horseId === current.horseId)) return current;
+  return updateDossierRequirementFilters(current, { horseId: undefined });
+}
 
 export const dossierStatusLabels: Record<DossierOverview["status"] | DossierRequirementStatus, string> = {
   DRAFT: "Draft",

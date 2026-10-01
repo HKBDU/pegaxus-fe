@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { FolderOpen, LockKeyhole } from "lucide-react";
+import { Circle, FolderOpen, LockKeyhole } from "lucide-react";
 import { formatBookingDate } from "@/features/booking/utils";
-import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge";
-import type { Booking } from "@/features/booking/types";
+import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import { dossierStatusStyles } from "../constants";
 import type { DossierOverview as DossierOverviewData } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
 
@@ -16,14 +16,20 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-type BookingInformation = Pick<Booking, "status" | "originCountry" | "destinationCountry" | "requestedDepartureDate" | "totalHorses" | "customer">;
+const requirementMetrics = [
+  { key: "total", label: "Total", status: null },
+  { key: "satisfied", label: "Satisfied", status: "SATISFIED" },
+  { key: "provided", label: "Provided", status: "PROVIDED" },
+  { key: "pending", label: "Pending", status: "PENDING" },
+  { key: "requested", label: "Requested", status: "REQUESTED" },
+  { key: "rejected", label: "Rejected", status: "REJECTED" },
+  { key: "waived", label: "Waived", status: "WAIVED" },
+] as const;
 
-export function DossierOverview({ dossier, booking, bookingLoading = false, bookingError = false }: {
+export function DossierOverview({ dossier }: {
   dossier: DossierOverviewData;
-  booking?: BookingInformation;
-  bookingLoading?: boolean;
-  bookingError?: boolean;
 }) {
+  const booking = dossier.bookingSummary;
   const milestones = [
     ["Ready for submission", dossier.readyForSubmissionAt],
     ["Approved", dossier.approvedAt],
@@ -74,23 +80,29 @@ export function DossierOverview({ dossier, booking, bookingLoading = false, book
               <strong className="shrink-0 font-heading text-2xl text-primary">{dossier.progressPercent}%</strong>
             </div>
             <p className="mt-4 text-xs text-gray-500">Progress is based on mandatory requirements.</p>
+            <dl aria-label="Requirement status counts" className="mt-3 flex flex-wrap gap-1.5">
+              {requirementMetrics.map(({ key, label, status }) => (
+                <div key={key} className={`inline-flex items-center gap-2 rounded-[2px] border px-2 py-1 text-[11px] ${status ? dossierStatusStyles[status] : "border-slate-300 bg-slate-50 text-slate-700"}`}>
+                  <dt>{label}</dt>
+                  <dd className="font-semibold tabular-nums">{dossier.requirementSummary[key]}</dd>
+                </div>
+              ))}
+            </dl>
           </section>
           <section className="min-w-0 border-t p-4 sm:p-5 lg:border-t-0 lg:border-l">
             <h2 className="m-0! font-heading text-base! font-bold! uppercase text-gray-900!">Booking information</h2>
             <dl className="mt-4 space-y-2">
               <Detail label="Booking">{dossier.bookingCode}</Detail>
-              {booking ? (
-                <>
-                  <Detail label="Status"><BookingStatusBadge status={booking.status} audience="customer" /></Detail>
-                  <Detail label="Route">{booking.originCountry} → {booking.destinationCountry}</Detail>
-                  <Detail label="Departure">{formatBookingDate(booking.requestedDepartureDate)}</Detail>
-                  <Detail label="Horses">{booking.totalHorses}</Detail>
-                  <Detail label="Customer">{booking.customer.fullName}</Detail>
-                </>
-              ) : null}
+              <Detail label="Status">{booking.bookingStatus === "CANCELLED" ? (
+                <Badge variant="outline" className="inline-flex h-5 items-center gap-1 rounded-full border-slate-300 bg-slate-100 px-1.5 py-0 text-[0.65rem] font-medium leading-none text-slate-600">
+                  <Circle aria-hidden="true" className="size-1! fill-current" /> Cancelled
+                </Badge>
+              ) : <DossierStatusBadge status={booking.bookingStatus} />}</Detail>
+              <Detail label="Route">{booking.originCountry} → {booking.destinationCountry}</Detail>
+              <Detail label="Departure">{formatBookingDate(booking.requestedDepartureDate)}</Detail>
+              <Detail label="Customer">{booking.customerName}</Detail>
+              <Detail label="Horses">{booking.horseCount}</Detail>
             </dl>
-            {bookingLoading ? <p className="mt-2 text-xs text-gray-500">Loading booking information…</p> : null}
-            {bookingError ? <p className="mt-2 text-xs text-gray-500">Additional booking information is unavailable.</p> : null}
           </section>
         </CardContent>
       </Card>

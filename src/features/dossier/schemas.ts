@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { BOOKING_STATUSES } from "@/features/booking/types";
 
 const entityId = z.number().int().positive();
 const timestamp = z.iso.datetime({ offset: true });
@@ -31,6 +32,35 @@ const proofStatus = (statuses: readonly [string, ...string[]]) =>
     verifiedAt: timestamp.nullable(),
   });
 
+export const dossierHorseOptionSchema = z.object({
+  horseId: entityId,
+  horseName: z.string(),
+});
+
+export const bookingSummarySchema = z.object({
+  bookingStatus: z.enum(BOOKING_STATUSES),
+  originCountry: z.string(),
+  destinationCountry: z.string(),
+  requestedDepartureDate: date,
+  customerName: z.string(),
+  horseCount: z.number().int().nonnegative(),
+  horses: z.array(dossierHorseOptionSchema),
+});
+
+export const requirementSummarySchema = z.object({
+  total: z.number().int().nonnegative(),
+  pending: z.number().int().nonnegative(),
+  requested: z.number().int().nonnegative(),
+  provided: z.number().int().nonnegative(),
+  satisfied: z.number().int().nonnegative(),
+  rejected: z.number().int().nonnegative(),
+  waived: z.number().int().nonnegative(),
+}).refine(
+  ({ total, pending, requested, provided, satisfied, rejected, waived }) =>
+    total === pending + requested + provided + satisfied + rejected + waived,
+  { message: "Requirement status counts must add up to total.", path: ["total"] },
+);
+
 export const dossierOverviewSchema = z.object({
   complianceDossierId: entityId,
   dossierCode: z.string(),
@@ -49,6 +79,8 @@ export const dossierOverviewSchema = z.object({
   progressPercent: z.number(),
   mandatoryTotal: z.number().int().nonnegative(),
   mandatorySatisfiedOrWaived: z.number().int().nonnegative(),
+  bookingSummary: bookingSummarySchema,
+  requirementSummary: requirementSummarySchema,
   quarantineStatus: proofStatus([
     "PENDING_VERIFICATION", "PASSED", "PASSED_WITH_CONDITIONS",
     "HOLDBACK", "FAILED", "REJECTED",
