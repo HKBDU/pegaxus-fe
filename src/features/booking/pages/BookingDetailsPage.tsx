@@ -97,11 +97,11 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
 
   return (
     <div className="min-h-[70dvh] bg-[#f4f2ed] px-5 pt-5 pb-8 sm:px-6 lg:px-10">
-      <div className="booking-page-enter mx-auto w-full max-w-[1440px]">
+      <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <PageHeader title="BOOKING DETAILS" backHref={listPath} backLabel="BACK TO REQUESTS LIST" />
           {booking ? (
-            <div className="flex flex-nowrap shrink-0 gap-2 overflow-x-auto sm:pb-0.5">
+            <div className="flex w-full flex-row flex-nowrap items-center gap-2 sm:w-auto sm:shrink-0 sm:pb-0.5 [&>*]:min-w-0 [&>*]:flex-1 [&>*]:px-2 sm:[&>*]:flex-none sm:[&>*]:px-4">
               {audience === "customer" && canEdit ? (
                 <Link to={`/bookings/${booking.bookingId}/edit`} className={cn(actionButtonClass, outlineButtonClass)}>
                   Edit booking

@@ -172,8 +172,13 @@ export interface ApproveBookingResult {
 export interface BookingFormValues {
   originAddress: string
   originCountry: string
+  /** UI-only: sent as part of the address. */
+  originState: string
+  originCity: string
   destinationAddress: string
   destinationCountry: string
+  destinationState: string
+  destinationCity: string
   requestedDepartureDate: string
   requestedArrivalDate: string
   specialRequirements: string

@@ -19,11 +19,11 @@ export function ProfileHeroCard({ profile, emailVerificationStatus, roleLabel, a
     <div className={cn("border border-[#d1d5db] bg-white shadow-sm", className)}>
       <div className="h-36 w-full bg-gradient-to-br from-[#f39200] via-[#f5a83d] to-[#181818] sm:h-48" aria-hidden="true" />
       <div className="px-5 pb-6 sm:px-8">
-        <div className="-mt-14 flex flex-col gap-4 sm:-mt-16 sm:flex-row sm:items-end sm:justify-between">
+        <div className="-mt-20 flex flex-col gap-4 sm:-mt-24 sm:flex-row sm:items-end sm:justify-between">
           <div className="relative shrink-0">
-            <Avatar className="size-24 border-4 border-white bg-[#f4f4f4] text-[#f39200] shadow-md sm:size-28">
+            <Avatar className="size-40 border-4 border-white bg-[#f4f4f4] text-[#f39200] shadow-md sm:size-52">
               {profile.avatarUrl && <AvatarImage src={profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />}
-              <AvatarFallback className="bg-[#f4f4f4] text-xl font-bold tracking-[0.9px] text-[#f39200]">{getInitials(profile.fullName)}</AvatarFallback>
+              <AvatarFallback className="bg-[#f4f4f4] text-4xl font-bold tracking-[0.9px] text-[#f39200]">{getInitials(profile.fullName)}</AvatarFallback>
             </Avatar>
             <ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none absolute -right-2 -bottom-2 z-20 shadow-sm" />
           </div>

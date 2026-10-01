@@ -68,9 +68,8 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
   return (
     <form id="profile-form" onSubmit={handleSubmit} className="grid min-w-0 gap-3 lg:grid-cols-[minmax(160px,4fr)_minmax(0,8fr)]">
       <div className="relative min-w-0">
-        <ProfileAvatarPreview className="h-full min-h-0" initials={getInitials(profile.fullName)} avatarUrl={avatarPreviewUrl ?? profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
+        <ProfileAvatarPreview className="h-full min-h-0" badge={<ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none shadow-sm" />} initials={getInitials(profile.fullName)} avatarUrl={avatarPreviewUrl ?? profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
         <Input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" id="profile-avatar" type="file" accept="image/jpeg,image/png" aria-label="Upload profile avatar" onChange={(event) => setAvatar(event.target.files?.[0])} />
-        <ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none absolute left-2 top-2 z-20 max-w-[calc(100%-1rem)] shadow-sm" />
       </div>
       <div className="grid min-w-0 content-start gap-0">
         <div className="flex min-w-0 flex-col gap-1">

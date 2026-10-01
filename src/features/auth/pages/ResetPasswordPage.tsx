@@ -168,7 +168,7 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
                 className="size-5 animate-spin"
               />
             )}
-            {isPending ? "Resetting..." : attempt.isBlocked ? "Edit password to retry" : "Reset password"}
+            {isPending ? "Resetting..." : attempt.isBlocked ? "Please wait..." : "Reset password"}
           </Button>
         </form>
       </Form>

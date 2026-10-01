@@ -26,8 +26,12 @@ export const bookingFormSchema = z
   .object({
     originAddress: z.string().trim().min(3, "Enter the pickup address").max(500),
     originCountry: z.string().trim().min(2, "Enter the pickup country").max(100),
+    originState: z.string(),
+    originCity: z.string(),
     destinationAddress: z.string().trim().min(3, "Enter the destination address").max(500),
     destinationCountry: z.string().trim().min(2, "Enter the destination country").max(100),
+    destinationState: z.string(),
+    destinationCity: z.string(),
     requestedDepartureDate: z.string().min(1, "Choose a departure date"),
     requestedArrivalDate: z.string(),
     specialRequirements: optionalText(1000),

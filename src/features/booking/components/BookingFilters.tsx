@@ -11,6 +11,9 @@ import { Input } from "@/shared/components/ui/input"
 
 type StatusFilter = BookingStatus | "ALL"
 
+/** Newest first is the default order: selectable, but not shown as an active filter badge. */
+const DEFAULT_SORT: BookingSort = "createdAt:desc"
+
 const SORT_OPTIONS: DataTableRadioOption[] = [
   { value: "createdAt:desc", label: "Newest" },
   { value: "createdAt:asc", label: "Oldest" },
@@ -89,7 +92,7 @@ export function BookingFilters({
       <DataTableRadioFilter
         title="Sort"
         value={sortBy}
-        defaultValue=""
+        defaultValue={DEFAULT_SORT}
         options={SORT_OPTIONS}
         onValueChange={(value) => onSortChange(value as BookingSort)}
       />

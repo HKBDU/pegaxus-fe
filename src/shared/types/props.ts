@@ -47,6 +47,8 @@ export type PageHeaderProps = {
   backLabel?: string
   showBack?: boolean
   className?: string
+  /** Rendered on the same row as the title, at the end (e.g. a "New" button on mobile). */
+  action?: ReactNode
 }
 
 export type FieldProps = {

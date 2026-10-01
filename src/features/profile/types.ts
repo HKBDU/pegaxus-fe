@@ -98,6 +98,8 @@ export type ProfileAvatarPreviewProps = {
   avatarUrl?: string | null
   alt?: string
   className?: string
+  /** Pinned to the bottom-right corner of the avatar. */
+  badge?: React.ReactNode
 }
 
 export type ProfileVerificationFieldProps = {

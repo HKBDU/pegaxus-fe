@@ -161,7 +161,7 @@ function VerifyEmailForm({ email }: { email: string }) {
                 className="size-5 animate-spin"
               />
             )}
-            {verifyEmail.isPending ? "Verifying..." : verifyAttempt.isBlocked ? "Edit code to retry" : "Verify code"}
+            {verifyEmail.isPending ? "Verifying..." : verifyAttempt.isBlocked ? "Please wait..." : "Verify code"}
             <ChevronRight aria-hidden="true" className="auth-otp-arrow" />
           </Button>
         </form>

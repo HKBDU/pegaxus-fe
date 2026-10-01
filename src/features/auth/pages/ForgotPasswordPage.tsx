@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
                 className="size-5 animate-spin"
               />
             )}
-            {isPending ? "Sending..." : attempt.isBlocked ? "Edit email to retry" : "Send email"}
+            {isPending ? "Sending..." : attempt.isBlocked ? "Please wait..." : "Send email"}
           </Button>
         </form>
       </Form>

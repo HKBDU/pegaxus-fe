@@ -118,7 +118,7 @@ export function CancelBookingDialog({ bookingId, open, onOpenChange }: CancelBoo
               void onSubmit()
             }}
           >
-            {cancelBooking.isPending ? "Cancelling..." : requestGuard.isBlocked ? "Edit reason to retry" : "Cancel booking"}
+            {cancelBooking.isPending ? "Cancelling..." : requestGuard.isBlocked ? "Please wait..." : "Cancel booking"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
