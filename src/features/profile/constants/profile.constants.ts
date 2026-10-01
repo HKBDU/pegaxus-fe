@@ -20,7 +20,7 @@ export const EMAIL_VERIFICATION_LABELS: Record<EmailVerificationStatus, string> 
 
 export const PROFILE_DEFAULT_LABELS = {
   return: "RETURN",
-  avatarPreview: "AVATAR PREVIEW",
+  avatarPreview: "AVATAR",
   cancel: "CANCEL",
   editProfile: "EDIT PROFILE",
 } as const

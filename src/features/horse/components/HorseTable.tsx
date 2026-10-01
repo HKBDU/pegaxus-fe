@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { getCoreRowModel, getFilteredRowModel, getPaginationRowModel, useReactTable, type ColumnDef, type ColumnFiltersState } from "@tanstack/react-table"
-import { MoreVertical, Pencil, Trash2, Eye, Search, X } from "lucide-react"
+import { MoreHorizontal, Pencil, Trash2, Eye, Search, X } from "lucide-react"
 
 import { Pagination } from "@/shared/components/common/Pagination"
 import { PageSizeSelect } from "@/shared/components/common/PageSizeSelect"
@@ -30,12 +30,15 @@ export function HorseTable({ horses, onAction, toolbar, addAction }: HorseTableP
       {
         id: "actions",
         header: () => <span className="block w-full text-center">ACTIONS</span>,
+        size: 44,
+        minSize: 44,
+        maxSize: 44,
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
           <div className="flex justify-center">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" className="size-7 rounded-[2px] p-0" aria-label={`Actions for ${row.original.horseName}`}><MoreVertical className="size-3.5 text-slate-500" /></Button></DropdownMenuTrigger>
+              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" className="size-7 rounded-[2px] p-0" aria-label={`Actions for ${row.original.horseName}`}><MoreHorizontal className="size-3.5 text-slate-500" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={2} className="w-36 min-w-0 rounded-[2px] border-slate-200 p-0.5 shadow-md">
                 <DropdownMenuItem className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem]" onSelect={() => onAction(row.original, "view")}><Eye className="size-3.5 text-slate-600" /> View details</DropdownMenuItem>
                 <DropdownMenuItem className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem]" onSelect={() => onAction(row.original, "edit")}><Pencil className="size-3.5 text-amber-600" /> Edit</DropdownMenuItem>

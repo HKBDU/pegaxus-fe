@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import { useEmployee, useUpdateEmployment } from "../hooks/useAccounts";
+import { useEmployee, useUpdateEmployment, useUpdateEmployeeStatus } from "../hooks/useAccounts";
 import {
   employeeRoles,
   employeeStatusBadgeClass,
@@ -42,19 +42,31 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
     resolver: zodResolver(updateEmploymentSchema),
     mode: "onTouched",
     defaultValues: {
+      accountStatus: employee.accountStatus,
       role: employeeRoles.find((role) => role === employee.role),
       workingStatus: employee.workingStatus,
     },
   });
   const mutation = useUpdateEmployment();
+  const statusMutation = useUpdateEmployeeStatus();
   const attempt = useFormRequestAttemptGuard(form);
-  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
+  const isPending = mutation.isPending || statusMutation.isPending || attempt.isRunning || form.formState.isSubmitting;
   const navigate = useNavigate();
   const submit = form.handleSubmit(async (changes) => {
     try {
-      const result = await attempt.run(() => mutation.mutateAsync({ id: employee.employeeId, changes }));
+      const result = await attempt.run(() =>
+        Promise.all([
+          mutation.mutateAsync({
+            id: employee.employeeId,
+            changes: { role: changes.role, workingStatus: changes.workingStatus },
+          }),
+          employee.accountStatus !== changes.accountStatus
+            ? statusMutation.mutateAsync({ id: employee.employeeId, status: changes.accountStatus })
+            : Promise.resolve(),
+        ]),
+      );
       if (!result.started) return;
-      toast.success("Employee employment information updated successfully.");
+      toast.success("Employee account updated successfully.");
       navigate(accountDetail(employee.employeeId));
     } catch (error) {
       toast.error(getAccountError(error));
@@ -73,11 +85,31 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField
               control={form.control}
+              name="accountStatus"
+              render={({ field }) => (
+                <FormItem className="gap-1">
+                  <FormLabel className="font-heading text-[11px] uppercase text-gray-800">Account Status *</FormLabel>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={mutation.isPending || statusMutation.isPending}>
+                    <FormControl>
+                      <SelectTrigger className="w-full" onBlur={field.onBlur}><SelectValue placeholder="Select an account status" /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {(["ACTIVE", "INACTIVE", "SUSPENDED"] as const).map((value) => (
+                        <SelectItem key={value} value={value}>{formatAccountLabel(value)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="role"
               render={({ field }) => (
                 <FormItem className="gap-1">
                   <FormLabel className="font-heading text-[11px] uppercase text-gray-800">Role *</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange} disabled={mutation.isPending}>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={mutation.isPending || statusMutation.isPending}>
                     <FormControl>
                       <SelectTrigger className="w-full" onBlur={field.onBlur}><SelectValue placeholder="Select a role" /></SelectTrigger>
                     </FormControl>
@@ -97,7 +129,7 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
               render={({ field }) => (
                 <FormItem className="gap-1">
                   <FormLabel className="font-heading text-[11px] uppercase text-gray-800">Working Status *</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange} disabled={mutation.isPending}>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={mutation.isPending || statusMutation.isPending}>
                     <FormControl>
                       <SelectTrigger className="w-full" onBlur={field.onBlur}><SelectValue placeholder="Select a working status" /></SelectTrigger>
                     </FormControl>
@@ -114,7 +146,7 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
           </div>
           <p className="mt-4 flex items-start gap-3 border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-5 text-sky-800">
             <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-            <span>Only role and working status can be updated here. Personal information is managed through the employee profile flow.</span>
+            <span>Only account status, role, and working status can be updated here. Personal information is managed separately.</span>
           </p>
         </CardContent>
       </Card>
