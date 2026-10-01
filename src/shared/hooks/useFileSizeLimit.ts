@@ -7,8 +7,12 @@ export function useFileSizeLimit(
   sources: FileSizeSource[],
   maxBytes: number,
 ) {
-  const [status, setStatus] = useState<FileSizeStatus>('checking')
   const sourceKey = sources.map(({ url, size }) => `${url}:${size ?? ''}`).join('|')
+  const checkKey = `${maxBytes}:${sourceKey}`
+  const [result, setResult] = useState<{ key: string; status: FileSizeStatus }>({
+    key: checkKey,
+    status: 'checking',
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -26,13 +30,17 @@ export function useFileSizeLimit(
         }
       }))
 
-      if (!cancelled) setStatus(results.some((size) => size !== undefined && size > maxBytes) ? 'too-large' : 'allowed')
+      if (!cancelled) {
+        setResult({
+          key: checkKey,
+          status: results.some((size) => size !== undefined && size > maxBytes) ? 'too-large' : 'allowed',
+        })
+      }
     }
 
-    setStatus('checking')
     void check()
     return () => { cancelled = true }
-  }, [maxBytes, sourceKey])
+  }, [checkKey, maxBytes, sources])
 
-  return status
+  return result.key === checkKey ? result.status : 'checking'
 }

@@ -73,8 +73,12 @@ function ImageViewerContent({
     () => images.map((image) => (typeof image === 'string' ? { src: image } : image)),
     [images],
   )
+  const sizeSources = useMemo(
+    () => slides.map(({ src, size }) => ({ url: src, size })),
+    [slides],
+  )
   const fileStatus = useFileSizeLimit(
-    slides.map(({ src, size }) => ({ url: src, size })),
+    sizeSources,
     MAX_IMAGE_FILE_SIZE,
   )
 
@@ -169,7 +173,7 @@ function ImageViewerContent({
           plugins={multiple ? PLUGINS_MULTI : PLUGINS_SINGLE}
           inline={INLINE}
           slides={slides}
-          index={indexRef.current}
+          index={activeIndex}
           on={on}
           carousel={carousel}
           zoom={ZOOM}
