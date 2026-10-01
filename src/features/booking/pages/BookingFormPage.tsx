@@ -23,6 +23,7 @@ import { PageHeader } from "@/shared/components/PageHeader"
 import { Checkbox } from "@/shared/components/ui/checkbox"
 import { BookingLocationSelector } from "@/features/booking/components/BookingLocationSelector"
 import { findEuCountryByCode, findEuCountryByName } from "@/features/booking/constants/eu-countries"
+import { composeAddress, splitAddress } from "@/features/booking/constants/location-value"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableRadioFilter } from "@/shared/components/ui/data-table-radio-filter"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
@@ -60,15 +61,17 @@ const fieldControlClass =
   "h-8 rounded-[2px] border-[#f3aa3b] bg-transparent px-3 text-xs text-[#181818] shadow-none md:text-xs placeholder:text-[#6c6963] focus-visible:border-primary focus-visible:ring-primary/20"
 
 function toDefaultValues(booking?: Booking): BookingFormValues {
+  const origin = splitAddress(booking?.originAddress ?? "", booking?.originCountry ?? "")
+  const destination = splitAddress(booking?.destinationAddress ?? "", booking?.destinationCountry ?? "")
   return {
-    originAddress: booking?.originAddress ?? "",
+    originAddress: origin.address,
     originCountry: booking?.originCountry ?? "",
-    originState: "",
-    originCity: "",
-    destinationAddress: booking?.destinationAddress ?? "",
+    originState: origin.state,
+    originCity: origin.city,
+    destinationAddress: destination.address,
     destinationCountry: booking?.destinationCountry ?? "",
-    destinationState: "",
-    destinationCity: "",
+    destinationState: destination.state,
+    destinationCity: destination.city,
     requestedDepartureDate: booking?.requestedDepartureDate ?? "",
     requestedArrivalDate: booking?.requestedArrivalDate ?? "",
     specialRequirements: booking?.specialRequirements ?? "",
@@ -498,7 +501,13 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
     if (valid) setStep(2)
   }
 
-  const submit = form.handleSubmit(async (values) => {
+  const submit = form.handleSubmit(async (formValues) => {
+    // State and city have no API fields, so they are appended to the address.
+    const values = {
+      ...formValues,
+      originAddress: composeAddress(formValues.originAddress, { state: formValues.originState, city: formValues.originCity }, formValues.originCountry),
+      destinationAddress: composeAddress(formValues.destinationAddress, { state: formValues.destinationState, city: formValues.destinationCity }, formValues.destinationCountry),
+    }
     try {
       await saveRequest.run(async () => {
         if (mode === "create") {

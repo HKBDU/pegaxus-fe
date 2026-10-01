@@ -172,7 +172,7 @@ export interface ApproveBookingResult {
 export interface BookingFormValues {
   originAddress: string
   originCountry: string
-  /** UI-only: the API stores just the country and address. */
+  /** UI-only: sent as part of the address. */
   originState: string
   originCity: string
   destinationAddress: string
