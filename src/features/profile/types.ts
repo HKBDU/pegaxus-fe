@@ -16,6 +16,7 @@ export type ProfileRole =
 
 export type CustomerProfile = {
   customerId: EntityId
+  customerCode?: string | null
   dateOfBirth?: string | null
 }
 
@@ -54,7 +55,7 @@ export type UpdateProfileRequest = {
   address?: string
   country?: string
   dob?: string
-  identityNumber?: string
+  customerCode?: string
   role?: ProfileRole
   status?: AccountStatus
   employeeCode?: string

@@ -47,17 +47,13 @@ export function EmployeeSummaryCard({
               {employee.fullName || "—"}
             </p>
             <p className="text-xs text-gray-500">{employee.email}</p>
-            <p className="mt-1 text-xs text-gray-600">
-              {employee.employeeCode}
-            </p>
+            <Badge variant="secondary" className="mt-2 w-fit rounded-[2px] text-[10px]">
+              {formatAccountLabel(employee.role)}
+            </Badge>
           </div>
-          <Badge variant="secondary" className="rounded-[2px] text-[10px]">
-            {formatAccountLabel(employee.role)}
-          </Badge>
-          <dl className="grid grid-cols-2 gap-4">
+          <dl className="grid grid-cols-1 gap-4">
             {(
               [
-                ["Account Status", employee.accountStatus],
                 ["Working Status", employee.workingStatus],
               ] as const
             ).map(([label, status]) => (

@@ -66,13 +66,10 @@ export const createEmployeeSchema = z.object({
   role: z.enum(employeeRoles, { error: "Select a role." }),
 });
 export const updateEmploymentSchema = z.object({
+  accountStatus: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"], { error: "Select an account status." }),
   role: z.enum(employeeRoles, { error: "Select a role." }),
   workingStatus: z.enum(["ACTIVE", "INACTIVE"], {
     error: "Select a working status.",
-  }),
-  // SUSPENDED removes the account, so it stays a separate action and is not offered here.
-  accountStatus: z.enum(["ACTIVE", "INACTIVE"], {
-    error: "Select an account status.",
   }),
 });
 export type UpdateEmploymentValues = z.infer<typeof updateEmploymentSchema>;
