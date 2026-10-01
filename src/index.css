@@ -112,6 +112,7 @@
 
 body {
   margin: 0;
+  overflow-x: hidden;
 }
 
 .field-container:has([aria-invalid="true"]) .field-label {
@@ -280,6 +281,18 @@ body {
   background: #fff;
   box-shadow: 0 0 0 3px rgba(243, 146, 0, 0.2);
   outline: none;
+}
+
+@keyframes profile-address-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+.profile-address-marquee {
+  display: inline-flex;
+  width: max-content;
+  will-change: transform;
+  animation: profile-address-marquee 8s linear infinite;
 }
 
 .horse-data-table > div:first-child {
@@ -504,6 +517,26 @@ body {
   }
 }
 
+@keyframes horse-card-front-enter {
+  from { opacity: 0; transform: translateY(-28px) rotate(-1.2deg) scale(0.97); filter: blur(5px); }
+  65% { transform: translateY(5px) rotate(0.2deg) scale(1.005); }
+  to { opacity: 1; transform: translateY(0) rotate(0) scale(1); filter: blur(0); }
+}
+
+@keyframes horse-card-back-enter {
+  from { opacity: 0; transform: translateY(32px) rotate(1deg) scale(0.965); filter: blur(5px); }
+  65% { transform: translateY(-4px) rotate(-0.15deg) scale(1.005); }
+  to { opacity: 1; transform: translateY(0) rotate(0) scale(1); filter: blur(0); }
+}
+
+.horse-card-front-enter { animation: horse-card-front-enter 760ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.horse-card-back-enter { animation: horse-card-back-enter 860ms 140ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .horse-card-front-enter,
+  .horse-card-back-enter { animation: none; }
+}
+
 h1,
 h2 {
   font-family: var(--heading);
@@ -560,4 +593,21 @@ code {
   --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+/* Orange marker on the active horse row/note: grows from top to bottom when it becomes active. */
+.active-bar {
+  transform-origin: top;
+  animation: active-bar-grow 260ms ease-out;
+}
+
+@keyframes active-bar-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .active-bar {
+    animation: none;
+  }
 }

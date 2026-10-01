@@ -119,7 +119,7 @@ function BookingHistoryContent({
 
   return (
     <div className="booking-page-shell min-h-[70dvh] min-w-0 px-4 py-8 font-sans text-slate-900 sm:px-6 lg:px-8 lg:py-10">
-      <div className="booking-page-enter mx-auto w-full max-w-7xl space-y-6">
+      <div className="booking-page-enter mx-auto w-full max-w-[1152px] space-y-6">
         <header className="space-y-3">
           <Link
             to={detailsPath}

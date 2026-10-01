@@ -14,8 +14,7 @@ import { accountDetail, accountEdit } from "@/app/route-config";
 import type { PaginationMeta } from "@/shared/types";
 import {
   EmptyState,
-  PageSizeSelect,
-  Pagination,
+  TablePagination,
 } from "@/shared/components/common";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Badge } from "@/shared/components/ui/badge";
@@ -278,9 +277,6 @@ export function UserAccountsTable({
     getRowId: (row) => String(row.employeeId),
     getCoreRowModel: getCoreRowModel(),
   });
-  const first = meta.totalItems
-    ? (meta.currentPage - 1) * meta.itemsPerPage + 1
-    : 0;
 
   return (
     <DataTable
@@ -295,28 +291,13 @@ export function UserAccountsTable({
         <EmptyState message="No user accounts found. Try adjusting your filters or search criteria." />
       }
       footer={
-        <div className="flex flex-col gap-2 px-0.5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            Showing {first} to{" "}
-            {Math.min(meta.currentPage * meta.itemsPerPage, meta.totalItems)} of{" "}
-            {meta.totalItems} entries
-          </p>
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <PageSizeSelect
-              value={params.pageSize}
-              onValueChange={(pageSize) =>
-                onParamsChange({ ...params, pageIndex: 1, pageSize })
-              }
-            />
-            <Pagination
-              meta={meta}
-              showSinglePage
-              onPageChange={(pageIndex) =>
-                onParamsChange({ ...params, pageIndex })
-              }
-            />
-          </div>
-        </div>
+        <TablePagination
+          meta={meta}
+          onPageChange={(pageIndex) => onParamsChange({ ...params, pageIndex })}
+          onPageSizeChange={(pageSize) =>
+            onParamsChange({ ...params, pageIndex: 1, pageSize })
+          }
+        />
       }
     >
       <UserAccountFilters

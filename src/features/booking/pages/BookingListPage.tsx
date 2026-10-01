@@ -38,23 +38,23 @@ export default function BookingListPage({ audience = "customer" }: { audience?: 
   return (
     <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
-        <div className="mb-6 flex items-end justify-between gap-3">
+        <div className="mb-6">
           <PageHeader
             title={audience === "manager" ? "TRANSPORT REQUESTS" : "MY BOOKING LIST"}
             backHref={audience === "manager" ? "/admin/transport-requests" : "/"}
+            action={audience === "customer" ? (
+              <Button
+                type="button"
+                size="sm"
+                aria-label="New request"
+                className="h-8 shrink-0 rounded-[2px] bg-[#ef8f00] px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-950 hover:bg-[#db8300] lg:hidden"
+                onClick={() => navigate("/bookings/new")}
+              >
+                <Plus className="size-3.5" />
+                New
+              </Button>
+            ) : undefined}
           />
-          {audience === "customer" ? (
-            <Button
-              type="button"
-              size="sm"
-              aria-label="New request"
-              className="h-8 shrink-0 rounded-[2px] bg-[#ef8f00] px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-950 hover:bg-[#db8300] lg:hidden"
-              onClick={() => navigate("/bookings/new")}
-            >
-              <Plus className="size-3.5" />
-              New
-            </Button>
-          ) : null}
         </div>
 
         {bookingsQuery.isLoading && !bookingsQuery.data ? <BookingListSkeleton /> : null}

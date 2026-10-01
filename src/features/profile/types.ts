@@ -16,6 +16,7 @@ export type ProfileRole =
 
 export type CustomerProfile = {
   customerId: EntityId
+  customerCode?: string | null
   dateOfBirth?: string | null
 }
 
@@ -54,7 +55,7 @@ export type UpdateProfileRequest = {
   address?: string
   country?: string
   dob?: string
-  identityNumber?: string
+  customerCode?: string
   role?: ProfileRole
   status?: AccountStatus
   employeeCode?: string
@@ -97,6 +98,8 @@ export type ProfileAvatarPreviewProps = {
   avatarUrl?: string | null
   alt?: string
   className?: string
+  /** Pinned to the bottom-right corner of the avatar. */
+  badge?: React.ReactNode
 }
 
 export type ProfileVerificationFieldProps = {
@@ -131,6 +134,7 @@ export type ProfileInfoCardProps = {
   label: string
   value: string | null | undefined
   className?: string
+  variant?: "default" | "status" | "accent" | "code" | "date"
 }
 
 export type ProfileHeroCardProps = {
@@ -139,5 +143,8 @@ export type ProfileHeroCardProps = {
   roleLabel: string
   actions?: ReactNode
   children?: ReactNode
+  nameEditor?: ReactNode
+  avatarUrl?: string | null
+  avatarEditor?: ReactNode
   className?: string
 }

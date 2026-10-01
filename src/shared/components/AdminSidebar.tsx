@@ -1,9 +1,9 @@
 import {
   BarChart3,
+  CircleArrowLeft,
   House,
   LogOut,
   MapPin,
-  PanelLeftClose,
   Settings,
   ThumbsUp,
   Truck,
@@ -43,7 +43,7 @@ const secondaryItems = [
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ]
 
-const logoutItem = { label: "Sign out", href: "/logout", icon: LogOut }
+const logoutItem = { label: "Sign Out", href: "/logout", icon: LogOut }
 
 function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
   const { pathname } = useLocation()
@@ -98,15 +98,18 @@ export function AdminSidebar() {
         <div className="lg:hidden">
           <AdminSidebarMenu items={[logoutItem]} compact />
         </div>
+        <div className="hidden lg:block">
+          <AdminSidebarMenu items={[logoutItem]} compact />
+        </div>
         <SlidingSidebarMenu>
           <SidebarMenuItem className="hidden lg:block" data-active-item="false">
             <SidebarMenuButton
               type="button"
               onClick={() => setOpen(false)}
-              className="h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white"
+              aria-label="Close sidebar"
+              className="h-8 justify-end rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white"
             >
-              <PanelLeftClose className="size-4" />
-              <span>Hide sidebar</span>
+              <CircleArrowLeft className="!size-8 mr-3  shrink-0" />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SlidingSidebarMenu>
