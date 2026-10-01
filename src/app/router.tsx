@@ -15,7 +15,6 @@ import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
-import Test from "@/Test";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
@@ -64,7 +63,6 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
-  ...(import.meta.env.DEV ? [{ path: "/test", element: <Test /> }] : []),
   {
     path: "/",
     element: <MainLayout />,

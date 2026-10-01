@@ -47,6 +47,7 @@ export async function requestPresignedUpload(input: PresignedUploadRequest, sign
     return assertPresignedUploadResponse(unwrap<PresignedUploadResponse>(payload))
   } catch (error) {
     if (signal?.aborted) throw new PresignedUploadError(PRESIGNED_UPLOAD_ERROR_CODES.UPLOAD_CANCELLED)
+    if (error instanceof PresignedUploadError) throw error
     const { code, status } = getErrorData(error)
     throw new PresignedUploadError(code ?? PRESIGNED_UPLOAD_ERROR_CODES.UNKNOWN, { status, cause: error })
   }
@@ -57,6 +58,7 @@ export async function confirmPresignedUpload(publicId: string, signal?: AbortSig
     await apiClient.post(CONFIRM_ENDPOINT, { publicId }, { signal })
   } catch (error) {
     if (signal?.aborted) throw new PresignedUploadError(PRESIGNED_UPLOAD_ERROR_CODES.UPLOAD_CANCELLED)
+    if (error instanceof PresignedUploadError) throw error
     const { code, status } = getErrorData(error)
     throw new PresignedUploadError(code ?? PRESIGNED_UPLOAD_ERROR_CODES.UNKNOWN, {
       status,
