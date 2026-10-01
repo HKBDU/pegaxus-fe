@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { ExternalLink, FileText, ShieldCheck } from "lucide-react";
+import { ExternalLink, FileText, ShieldCheck, ShieldX } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/shared/components/ui/button";
@@ -8,8 +8,9 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { invalidateComplianceDocument, useComplianceDocument } from "../hooks/useComplianceDocument";
 import { useDocumentReview } from "../hooks/useDocumentReview";
-import { getDocumentFileHref, getLatestDocumentVersion, getReviewBlockReason, mapDocumentReviewError } from "../lib/document-review";
-import type { ComplianceDocumentDetail, DocumentReviewError, DossierOverview, DossierRequirement } from "../types";
+import { canReviewDocument, getDocumentFileHref, getLatestDocumentVersion, getReviewBlockReason, mapDocumentReviewError } from "../lib/document-review";
+import type { ComplianceDocumentDetail, DocumentRequestFormValues, DocumentReviewError, DossierOverview, DossierRequirement } from "../types";
+import { RejectDocumentDialog } from "./RejectDocumentDialog";
 import { ApproveDocumentDialog } from "./ApproveDocumentDialog";
 import { DocumentReviewContext } from "./DocumentReviewContext";
 import { DocumentVersionHistory } from "./DocumentVersionHistory";
@@ -27,11 +28,14 @@ function ReviewContent({ dossier, requirement, document, role, onClose, onPendin
   const [confirmed, setConfirmed] = useState(false);
   const [reviewComment, setReviewComment] = useState("");
   const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [rejectionOpen, setRejectionOpen] = useState(false);
   const confirmationId = useId();
   const commentId = useId();
   const mutation = useDocumentReview(onPendingChange);
   const latest = getLatestDocumentVersion(document);
-  const block = getReviewBlockReason({ role, dossier, requirement, document, today: new Date().toISOString().slice(0, 10) });
+  const context = { role, dossier, requirement, document, today: new Date().toISOString().slice(0, 10) };
+  const block = getReviewBlockReason(context);
+  const canReject = canReviewDocument({ ...context, result: "REJECTED" });
   const canApprove = confirmed && !block && Boolean(latest);
 
   async function approve() {
@@ -55,6 +59,29 @@ function ReviewContent({ dossier, requirement, document, role, onClose, onPendin
       setConfirmationOpen(false);
       setConfirmed(false);
       toast.error(mapped.message);
+    }
+  }
+
+  async function reject(values: DocumentRequestFormValues) {
+    if (!canReviewDocument({ ...context, result: "REJECTED" }) || !latest || mutation.isPending) return false;
+    onErrorChange(null);
+    try {
+      const attempt = await mutation.reject({
+        documentId: String(document.complianceDocumentId),
+        versionId: latest.documentVersionId,
+        dossierId: String(dossier.complianceDossierId),
+        review: { result: "REJECTED", reviewComment, documentRequest: values },
+      });
+      if (!attempt.started) return false;
+      toast.success(attempt.value.message);
+      setRejectionOpen(false);
+      onClose();
+      return true;
+    } catch (failure) {
+      const mapped = mapDocumentReviewError(failure);
+      onErrorChange(mapped);
+      toast.error(mapped.message);
+      throw failure;
     }
   }
 
@@ -139,6 +166,10 @@ function ReviewContent({ dossier, requirement, document, role, onClose, onPendin
               <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
               Approve &amp; Verify Document
             </Button>
+            <Button variant="outline" className="h-auto min-h-9 w-full whitespace-normal rounded-[2px] border-destructive/30 py-2 text-destructive hover:bg-destructive/5 hover:text-destructive"
+              disabled={!canReject || mutation.isPending} onClick={() => setRejectionOpen(true)}>
+              <ShieldX aria-hidden="true" className="size-4 shrink-0" /> Reject &amp; Request Revision
+            </Button>
           </section>
         </div>
       </div>
@@ -151,6 +182,8 @@ function ReviewContent({ dossier, requirement, document, role, onClose, onPendin
         onCancel={() => setConfirmationOpen(false)}
         onConfirm={() => void approve()}
       />
+      {rejectionOpen ? <RejectDocumentDialog requirement={requirement} documentName={document.documentName} versionNo={latest?.versionNo ?? 0}
+        isPending={mutation.isPending} canReject={canReject} onCancel={() => setRejectionOpen(false)} onSubmit={reject} /> : null}
     </>
   );
 }

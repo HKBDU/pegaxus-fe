@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { useAuthStore } from "@/features/auth/store";
-import { normalizeRole } from "@/features/auth/access-control";
+import { useDossierRole } from "../hooks/useDossierRole";
 import { Button } from "@/shared/components/ui/button";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog";
 import { useReadyForSubmission } from "../hooks/useReadyForSubmission";
@@ -9,8 +8,7 @@ import { canMarkReadyForSubmission, mapDocumentReviewError } from "../lib/docume
 import type { DocumentReviewError, DossierOverview } from "../types";
 
 export function DossierReadinessAction({ dossier }: { dossier: DossierOverview }) {
-  const roles = useAuthStore((state) => state.principal?.roles);
-  const role = roles?.find((value) => normalizeRole(value) === "TRANSPORT_SPECIALIST");
+  const role = useDossierRole("TRANSPORT_SPECIALIST");
   const eligible = canMarkReadyForSubmission(role, dossier);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<DocumentReviewError | null>(null);

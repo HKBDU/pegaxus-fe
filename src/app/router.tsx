@@ -62,7 +62,20 @@ const bookingHistoryPage = (
   </Suspense>
 );
 
+// TEMP UC20-24 MANUAL UI TEST ROUTE — REMOVE AFTER TESTING
+const temporaryDossierRoutes = import.meta.env.DEV ? (() => {
+  const DossierManualPreviewPage = lazy(() => import("@/features/dossier/pages/DossierManualPreviewPage"));
+  return [{
+    path: "/dev/dossier/:dossierId",
+    element: <Suspense fallback={<LoadingState />}><DossierManualPreviewPage /></Suspense>,
+  }];
+})() : [];
+// END TEMP UC20-24 MANUAL UI TEST ROUTE
+
 export const router = createBrowserRouter([
+  // TEMP UC20-24 MANUAL UI TEST ROUTE — REMOVE AFTER TESTING
+  ...temporaryDossierRoutes,
+  // END TEMP UC20-24 MANUAL UI TEST ROUTE
   {
     path: "/",
     element: <MainLayout />,

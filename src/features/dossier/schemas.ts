@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { BOOKING_STATUSES } from "@/features/booking/types";
 import { format } from "date-fns";
-import { DOSSIER_REQUIREMENT_STATUSES, UPLOAD_ACCEPTED_MIME_TYPES, UPLOAD_MAX_FILE_BYTES } from "./constants";
+import { DOCUMENT_REQUEST_TYPES, DOSSIER_REQUIREMENT_STATUSES, UPLOAD_ACCEPTED_MIME_TYPES, UPLOAD_MAX_FILE_BYTES } from "./constants";
 import type { UploadDocumentError } from "./types";
 
 const entityId = z.number().int().positive();
@@ -180,17 +180,48 @@ export const complianceDocumentDetailSchema = z.object({
   openRequest: documentRequestSummarySchema.nullable(),
 });
 export const complianceDocumentEnvelopeSchema = envelope(complianceDocumentDetailSchema);
-export const approveDocumentReviewSchema = z.object({
+const approvalReview = z.object({
   result: z.literal("APPROVED"),
   reviewComment: z.string().trim().optional(),
-}).transform(({ result, reviewComment }) => ({
+});
+export const documentRequestFormSchema = z.object({
+  requestType: z.enum(DOCUMENT_REQUEST_TYPES),
+  message: z.string().trim().min(15, "Please provide detailed instructions of at least 15 characters."),
+  dueDate: z.union([z.literal(""), date]).optional(),
+});
+const rejectionReview = z.object({
+  result: z.literal("REJECTED"),
+  reviewComment: z.string().trim().optional(),
+  documentRequest: documentRequestFormSchema.transform(({ dueDate, ...request }) => ({
+    ...request,
+    ...(dueDate ? { dueDate } : {}),
+  })),
+});
+export const approveDocumentReviewSchema = approvalReview.transform(({ result, reviewComment }) => ({
   result,
   ...(reviewComment ? { reviewComment } : {}),
 }));
+export const rejectDocumentReviewSchema = rejectionReview.transform(({ reviewComment, ...review }) => ({
+  ...review,
+  ...(reviewComment ? { reviewComment } : {}),
+}));
+export const documentReviewSchema = z.discriminatedUnion("result", [approvalReview, rejectionReview])
+  .transform(({ reviewComment, ...review }) => ({
+    ...review,
+    ...(reviewComment ? { reviewComment } : {}),
+  }));
 export const approveDocumentEnvelopeSchema = envelope(z.object({
   documentReviewId: entityId,
   dossierRequirementStatus: z.literal("SATISFIED"),
 })).extend({ code: z.literal(201) });
+export const rejectDocumentEnvelopeSchema = envelope(z.object({
+  documentReviewId: entityId,
+  documentRequestId: entityId,
+  requestCode: z.string(),
+  dossierRequirementStatus: z.literal("REJECTED"),
+  dossierStatus: z.literal("IN_PREPARATION"),
+})).extend({ code: z.literal(201) });
+export const documentReviewEnvelopeSchema = z.union([approveDocumentEnvelopeSchema, rejectDocumentEnvelopeSchema]);
 export const readyForSubmissionEnvelopeSchema = envelope(z.null()).extend({ code: z.literal(200) });
 export const submitDocumentVersionEnvelopeSchema = z.union([
   envelope(z.object({ documentVersionId: entityId, versionNo: z.number().int().positive(), mode: z.literal("EDIT_IN_PLACE") })).extend({ code: z.literal(200) }),

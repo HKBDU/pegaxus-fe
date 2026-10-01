@@ -15,8 +15,7 @@ import {
   RotateCcw,
   Upload,
 } from "lucide-react";
-import { useAuthStore } from "@/features/auth/store";
-import { normalizeRole } from "@/features/auth/access-control";
+import { useDossierRole } from "../hooks/useDossierRole";
 import { formatBookingDate } from "@/features/booking/utils";
 import {
   EmptyState,
@@ -326,6 +325,7 @@ export function DossierRequirementsPreview({
 }) {
   const [submission, setSubmission] = useState<{ requirement: DossierRequirement; mode: SubmissionMode } | null>(null);
   const [viewDocumentId, setViewDocumentId] = useState<string | null>(null);
+  const [viewRequirement, setViewRequirement] = useState<DossierRequirement | null>(null);
   const [reviewRequirement, setReviewRequirement] = useState<DossierRequirement | null>(null);
   const onAction = (item: DossierRequirement, label: string) => {
     if (label === "Review Document") {
@@ -333,7 +333,10 @@ export function DossierRequirementsPreview({
       return;
     }
     if (label === "View Document" || label === "View Version History" || label === "View Review Result" || label === "View Review History") {
-      if (item.document) setViewDocumentId(String(item.document.complianceDocumentId));
+      if (item.document) {
+        setViewRequirement(item);
+        setViewDocumentId(String(item.document.complianceDocumentId));
+      }
       return;
     }
     const mode: SubmissionMode | null = label === "Upload Document" ? "initial"
@@ -346,15 +349,12 @@ export function DossierRequirementsPreview({
   const params = reconcileDossierHorseFilter(storedParams, horses);
   // Clear removed D7 horses before requesting D8 with a stale selection.
   if (params !== storedParams) setParams(params);
-  const roles = useAuthStore((state) => state.principal?.roles);
-  const role = roles?.map(normalizeRole).find(
-    (value) =>
-      value === "CUSTOMER" ||
-      value === "TRANSPORT_SPECIALIST" ||
-      value === "LOGISTICS_MANAGER",
-  );
+  const role = useDossierRole();
   const query = useDossierRequirements(dossierId, params);
   const result = query.data;
+  const viewedRequirement = result?.items.find((item) => item.dossierRequirementId === viewRequirement?.dossierRequirementId) ?? viewRequirement;
+  const canUpdateViewedDocument = role === "CUSTOMER" && viewedRequirement &&
+    getCustomerDocumentActions(dossier, viewedRequirement).includes("Update Document");
   const tripItems = result?.items.filter((item) => item.horseId === null) ?? [];
   const horseGroups = new Map<
     number,
@@ -469,7 +469,6 @@ export function DossierRequirementsPreview({
             />
             <Pagination
               meta={meta}
-              showSinglePage
               onPageChange={(pageIndex) =>
                 setParams((current) => ({ ...current, pageIndex }))
               }
@@ -497,7 +496,11 @@ export function DossierRequirementsPreview({
           onClose={() => setSubmission(null)}
         />
       )}
-      <DocumentDetailsDialog documentId={viewDocumentId} onClose={() => setViewDocumentId(null)} />
+      <DocumentDetailsDialog documentId={viewDocumentId} onClose={() => setViewDocumentId(null)}
+        onUpdate={canUpdateViewedDocument && viewedRequirement ? () => {
+          setViewDocumentId(null);
+          setSubmission({ requirement: viewedRequirement, mode: "update" });
+        } : undefined} />
       {reviewRequirement ? (
         <DocumentReviewDialog
           dossier={dossier}

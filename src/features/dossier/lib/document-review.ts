@@ -7,6 +7,7 @@ type ReviewContext = {
   requirement: DossierRequirement;
   document: ComplianceDocumentDetail;
   today: string;
+  result?: "APPROVED" | "REJECTED";
 };
 
 export function getLatestDocumentVersion(document: ComplianceDocumentDetail) {
@@ -20,9 +21,9 @@ export function canOpenDocumentReview(role: string | undefined, dossier: Dossier
     requirement.status === "PROVIDED" && requirement.document?.status === "PROVIDED");
 }
 
-export function getReviewBlockReason({ role, dossier, requirement, document, today }: ReviewContext): DocumentReviewError | null {
+export function getReviewBlockReason({ role, dossier, requirement, document, today, result = "APPROVED" }: ReviewContext): DocumentReviewError | null {
   const blocked = (code: string, message: string): DocumentReviewError => ({ code, message, refresh: false });
-  if (!role || normalizeRole(role) !== "TRANSPORT_SPECIALIST") return blocked("FORBIDDEN", "Only a Transport Specialist can approve this document.");
+  if (!role || normalizeRole(role) !== "TRANSPORT_SPECIALIST") return blocked("FORBIDDEN", "Only a Transport Specialist can review this document.");
   if (dossier.writeLocked || !["IN_PREPARATION", "READY_FOR_SUBMISSION"].includes(dossier.status)) return blocked("DOSSIER_LOCKED", "This dossier can no longer be reviewed in its current state.");
   const latest = getLatestDocumentVersion(document);
   if (!latest) return blocked("NO_DOCUMENT_VERSION", "No submitted version is available for review.");
@@ -34,6 +35,8 @@ export function getReviewBlockReason({ role, dossier, requirement, document, tod
     requirement.document.latestVersionNo !== latest.versionNo) {
     return blocked("DOCUMENT_NOT_REVIEWABLE", "This document is no longer available for review. Refresh dossier requirements.");
   }
+  // V1 alone requires valid expiry. V2 can ask the Customer to correct legacy invalid metadata.
+  if (result === "REJECTED") return null;
   const expiry = document.expiryDate;
   const dates = [today, dossier.bookingSummary.requestedDepartureDate, requirement.validUntil].filter((date): date is string => Boolean(date));
   const expiryTimestamp = expiry ? Date.parse(`${expiry}T00:00:00Z`) : NaN;
@@ -67,6 +70,9 @@ export function mapDocumentReviewError(error: unknown): DocumentReviewError {
     (typeof data?.code === "string" ? data.code : undefined) ??
     (status === 403 ? "FORBIDDEN" : status === 401 ? "UNAUTHORIZED" : status === 404 ? "NOT_FOUND" : response.message ?? "REVIEW_FAILED");
   const messages: Record<string, string> = {
+    REQUEST_MESSAGE_TOO_SHORT: "Please provide detailed instructions of at least 15 characters.",
+    DOCUMENT_REQUEST_REQUIRED: "A document request is required when rejecting a document.",
+    VALIDATION_ERROR: "Check the request type, customer instructions and optional deadline.",
     DOCUMENT_EXPIRY_INVALID: "Document expiry is no longer valid. Customer must update/re-upload before approval.",
     VERSION_NOT_LATEST: "This is no longer the latest version. Refresh document data.",
     VERSION_ALREADY_REVIEWED: "This version has already been reviewed.",

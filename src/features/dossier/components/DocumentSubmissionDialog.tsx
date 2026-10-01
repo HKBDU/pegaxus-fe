@@ -16,6 +16,7 @@ import { createDocumentSubmissionSchema, validateUploadFiles } from "../schemas"
 import type { ComplianceDocumentDetail, DossierOverview, DossierRequirement, UploadDocumentMetadata } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
 import { DocumentVersionHistory } from "./DocumentVersionHistory";
+import { DocumentRequestAlert } from "./DocumentRequestAlert";
 import "./DocumentSubmissionDialog.css";
 
 type Mode = "initial" | "edit" | "update";
@@ -35,11 +36,7 @@ export function DocumentRevisionNotice({ document }: { document: ComplianceDocum
   return (
     <div className="space-y-2">
       {request ? (
-        <section className="dossier-revision-notice rounded-[2px] border border-red-200 bg-red-50 p-4 text-xs" aria-label="Revision Request">
-          <h3 className="font-heading text-sm font-bold uppercase text-red-800">Revision Request</h3>
-          {request.dueDate ? <p className="mt-2 text-slate-600"><strong>Due Date:</strong> {formatBookingDate(request.dueDate)}</p> : null}
-          <p className="mt-2 whitespace-pre-wrap text-slate-800"><strong>Details:</strong> {request.message}</p>
-        </section>
+        <DocumentRequestAlert request={request} />
       ) : null}
       {latestReview?.reviewComment ? (
         <section className="rounded-[2px] border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700" aria-label="Previous Review Comment">

@@ -10,20 +10,27 @@ import {
   dossierIdSchema,
   approveDocumentReviewSchema,
   approveDocumentEnvelopeSchema,
+  documentReviewSchema,
+  documentReviewEnvelopeSchema,
   readyForSubmissionEnvelopeSchema,
 } from "./schemas";
-import type { ApproveDocumentInput, DossierLoadErrorKind, DossierMockScenario, DossierRequirementsParams, DossierSourceKind, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
+import type { ApproveDocumentInput, DocumentReviewInput, DossierLoadErrorKind, DossierMockScenario, DossierRequirementsParams, DossierSourceKind, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
 
 export async function loadApproveDocument(input: ApproveDocumentInput) {
+  approveDocumentReviewSchema.parse(input.review);
+  return approveDocumentEnvelopeSchema.parse(await loadDocumentReview(input));
+}
+
+export async function loadDocumentReview(input: DocumentReviewInput) {
   const documentId = dossierIdSchema.parse(input.documentId);
   dossierIdSchema.parse(String(input.versionId));
-  const review = approveDocumentReviewSchema.parse(input.review);
+  const review = documentReviewSchema.parse(input.review);
   if (dossierSourceKind === "mock") {
-    const { approveMockDocument } = await import("./mocks/dossier.mock");
-    return approveDocumentEnvelopeSchema.parse(approveMockDocument(documentId, input.versionId, review, mockScenario()));
+    const { reviewMockDocument } = await import("./mocks/dossier.mock");
+    return documentReviewEnvelopeSchema.parse(reviewMockDocument(documentId, input.versionId, review, mockScenario()));
   }
   const { dossierService } = await import("./services");
-  return dossierService.approveDocument(input);
+  return dossierService.reviewComplianceDocument({ ...input, review });
 }
 
 export async function loadMarkReadyForSubmission(dossierId: string) {

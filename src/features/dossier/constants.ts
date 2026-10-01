@@ -2,6 +2,13 @@ import type { DossierHorseOption, DossierOverview, DossierRequirement, DossierRe
 
 export const UPLOAD_MAX_FILE_BYTES = 10 * 1024 * 1024;
 export const UPLOAD_ACCEPTED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"] as const;
+export const DOCUMENT_REQUEST_TYPES = ["MISSING_DOCUMENT", "REVISION", "REUPLOAD", "ADDITIONAL_INFORMATION"] as const;
+export const documentRequestTypeLabels: Record<(typeof DOCUMENT_REQUEST_TYPES)[number], string> = {
+  MISSING_DOCUMENT: "Missing Document",
+  REVISION: "Revise Document Information",
+  REUPLOAD: "Re-upload Document",
+  ADDITIONAL_INFORMATION: "Additional Information",
+};
 export const DOSSIER_REQUIREMENT_STATUSES = [
   "PENDING", "REQUESTED", "PROVIDED", "SATISFIED", "REJECTED", "WAIVED",
 ] as const;

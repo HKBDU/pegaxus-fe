@@ -18,6 +18,10 @@ import type {
   updateDocumentMetadataEnvelopeSchema,
   approveDocumentReviewSchema,
   approveDocumentEnvelopeSchema,
+  documentReviewSchema,
+  documentReviewEnvelopeSchema,
+  rejectDocumentReviewSchema,
+  documentRequestFormSchema,
   readyForSubmissionEnvelopeSchema,
 } from "./schemas";
 
@@ -39,6 +43,10 @@ export type SubmitDocumentVersionResult = z.infer<typeof submitDocumentVersionEn
 export type UpdateDocumentMetadataResult = z.infer<typeof updateDocumentMetadataEnvelopeSchema>["value"];
 export type ApproveDocumentReview = z.infer<typeof approveDocumentReviewSchema>;
 export type ApproveDocumentResponse = z.infer<typeof approveDocumentEnvelopeSchema>;
+export type RejectDocumentReview = z.infer<typeof rejectDocumentReviewSchema>;
+export type DocumentRequestFormValues = z.input<typeof documentRequestFormSchema>;
+export type DocumentReviewPayload = z.infer<typeof documentReviewSchema>;
+export type DocumentReviewResponse = z.infer<typeof documentReviewEnvelopeSchema>;
 export type ReadyForSubmissionResponse = z.infer<typeof readyForSubmissionEnvelopeSchema>;
 export type ApproveDocumentInput = {
   documentId: string;
@@ -46,6 +54,7 @@ export type ApproveDocumentInput = {
   dossierId: string;
   review: ApproveDocumentReview;
 };
+export type DocumentReviewInput = Omit<ApproveDocumentInput, "review"> & { review: DocumentReviewPayload };
 export type DocumentReviewError = {
   code: string;
   message: string;

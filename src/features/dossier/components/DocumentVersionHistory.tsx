@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useComplianceDocument } from "../hooks/useComplianceDocument";
 import type { DocumentVersion } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
+import { Button } from "@/shared/components/ui/button";
+import { DocumentRequestAlert } from "./DocumentRequestAlert";
 
 export function DocumentVersionHistory({ versions }: { versions: DocumentVersion[] }) {
   return (
@@ -41,7 +43,7 @@ export function DocumentVersionHistory({ versions }: { versions: DocumentVersion
   );
 }
 
-export function DocumentDetailsDialog({ documentId, onClose }: { documentId: string | null; onClose: () => void }) {
+export function DocumentDetailsDialog({ documentId, onClose, onUpdate }: { documentId: string | null; onClose: () => void; onUpdate?: () => void }) {
   const query = useComplianceDocument(documentId);
   const document = query.data;
   return (
@@ -54,6 +56,8 @@ export function DocumentDetailsDialog({ documentId, onClose }: { documentId: str
         {query.isPending ? <p className="text-sm text-slate-500">Loading document details...</p> :
           query.isError || !document ? <p role="alert" className="text-sm text-red-700">Could not load document details.</p> : (
           <div className="space-y-4">
+            {document.openRequest ? <DocumentRequestAlert request={document.openRequest}
+              action={document.status === "REJECTED" && onUpdate ? <Button type="button" size="sm" className="rounded-[2px]" onClick={onUpdate}>Update Document</Button> : undefined} /> : null}
             <dl className="grid gap-3 rounded-[2px] border border-slate-200 bg-white p-4 text-xs sm:grid-cols-2">
               <div><dt className="text-slate-500">Document</dt><dd className="font-semibold">{document.documentName}</dd></div>
               <div><dt className="text-slate-500">Document Code</dt><dd>{document.documentCode}</dd></div>

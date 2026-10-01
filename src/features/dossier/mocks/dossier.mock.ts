@@ -1,9 +1,11 @@
 import {
   dossierRequirementsParamsSchema,
   approveDocumentReviewSchema,
+  approveDocumentEnvelopeSchema,
+  documentReviewSchema,
 } from "../schemas";
 import { canMarkReadyForSubmission, getReviewBlockReason } from "../lib/document-review";
-import type { ApproveDocumentResponse, ApproveDocumentReview, ReadyForSubmissionResponse, ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentMetadata } from "../types";
+import type { ApproveDocumentResponse, ApproveDocumentReview, DocumentReviewPayload, DocumentReviewResponse, ReadyForSubmissionResponse, ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentMetadata } from "../types";
 
 class DossierMockHttpError extends Error {
   readonly status: number;
@@ -80,7 +82,7 @@ const requirements: DossierRequirement[] = [
   {
     dossierRequirementId: 8104, complianceRequirementId: 33,
     requirementName: "ATA Carnet", horseId: null, horseName: null,
-    status: "WAIVED", isMandatory: true, dueDate: "2026-10-03",
+    status: "PROVIDED", isMandatory: true, dueDate: "2026-10-03",
     validUntil: null, satisfiedAt: null,
     waivedReason: "Not required for this route", note: null, document: null,
   },
@@ -110,7 +112,7 @@ const requirements: DossierRequirement[] = [
   {
     dossierRequirementId: 8108, complianceRequirementId: 37,
     requirementName: "Microchip Certificate", horseId: 71, horseName: "Pegaxus Star",
-    status: "REQUESTED", isMandatory: true, dueDate: "2026-10-07",
+    status: "PROVIDED", isMandatory: true, dueDate: "2026-10-07",
     validUntil: null, satisfiedAt: null, waivedReason: null,
     note: "Please provide the certificate before departure", document: null,
   },
@@ -136,9 +138,15 @@ let nextMockDocumentId = 9300;
 let nextMockVersionId = 9400;
 const documentDetails = new Map<number, ComplianceDocumentDetail>();
 let nextMockReviewId = 9500;
+let nextMockRequestId = 9600;
 
 export function approveMockDocument(id: string, versionId: number, review: ApproveDocumentReview, scenario: DossierMockScenario): ApproveDocumentResponse {
-  const body = approveDocumentReviewSchema.parse(review);
+  approveDocumentReviewSchema.parse(review);
+  return approveDocumentEnvelopeSchema.parse(reviewMockDocument(id, versionId, review, scenario));
+}
+
+export function reviewMockDocument(id: string, versionId: number, review: DocumentReviewPayload, scenario: DossierMockScenario): DocumentReviewResponse {
+  const body = documentReviewSchema.parse(review);
   const current = getMockComplianceDocument(id, scenario);
   const overview = getMockDossier("501", scenario);
   if (overview.writeLocked) throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
@@ -147,21 +155,38 @@ export function approveMockDocument(id: string, versionId: number, review: Appro
   if (latest.review) throw new DossierMockHttpError(409, "VERSION_ALREADY_REVIEWED");
   const requirement = uploadedRequirements.get(current.dossierRequirementId) ??
     requirements.find((item) => item.dossierRequirementId === current.dossierRequirementId)!;
-  const block = getReviewBlockReason({ role: "TRANSPORT_SPECIALIST", dossier: overview, requirement, document: current, today: new Date().toISOString().slice(0, 10) });
+  const block = getReviewBlockReason({ role: "TRANSPORT_SPECIALIST", dossier: overview, requirement, document: current, today: new Date().toISOString().slice(0, 10), result: body.result });
   if (block) throw new DossierMockHttpError(409, block.code);
   const reviewedAt = new Date().toISOString();
   const documentReviewId = nextMockReviewId++;
+  const approved = body.result === "APPROVED";
+  const openRequest = body.result === "REJECTED" ? {
+    documentRequestId: nextMockRequestId++,
+    requestCode: `DREQ-${reviewedAt.slice(0, 10).replaceAll("-", "")}-${nextMockRequestId - 1}`,
+    requestType: body.documentRequest.requestType,
+    message: body.documentRequest.message,
+    dueDate: body.documentRequest.dueDate ?? null,
+  } : null;
   documentDetails.set(current.complianceDocumentId, {
-    ...current, status: "APPROVED", updatedAt: reviewedAt,
+    ...current, status: approved ? "APPROVED" : "REJECTED", updatedAt: reviewedAt, openRequest,
     versions: [{ ...latest, review: {
-      documentReviewId, result: "APPROVED", reviewComment: body.reviewComment ?? null,
+      documentReviewId, result: body.result, reviewComment: body.reviewComment ?? null,
       reviewedBy: { accountId: 402, fullName: "Transport Specialist" }, reviewedAt,
     } }, ...current.versions.slice(1)],
   });
   uploadedRequirements.set(requirement.dossierRequirementId, {
-    ...requirement, status: "SATISFIED", satisfiedAt: reviewedAt,
-    document: { ...requirement.document!, status: "APPROVED" },
+    ...requirement, status: approved ? "SATISFIED" : "REJECTED", satisfiedAt: approved ? reviewedAt : null,
+    document: { ...requirement.document!, status: approved ? "APPROVED" : "REJECTED" },
   });
+  if (!approved && openRequest) {
+    dossier.status = "IN_PREPARATION";
+    return {
+      isSuccess: true, code: 201,
+      message: "DocumentReview recorded: REJECTED. DocumentRequest created and customer notified.",
+      value: { documentReviewId, documentRequestId: openRequest.documentRequestId, requestCode: openRequest.requestCode,
+        dossierRequirementStatus: "REJECTED", dossierStatus: "IN_PREPARATION" },
+    };
+  }
   return {
     isSuccess: true, code: 201,
     message: "DocumentReview recorded: APPROVED. DossierRequirement status updated to SATISFIED.",
