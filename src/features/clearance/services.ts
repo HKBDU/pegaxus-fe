@@ -2,6 +2,9 @@ import apiClient from '@/lib/axios'
 import { getDossierContext } from '@/features/quarantine/services'
 import type {
   ApiEnvelope,
+  CustomsClearanceProofDetail,
+  FinalizeCustomsClearanceProofRequest,
+  FinalizeCustomsClearanceProofResponse,
   SubmitCustomsClearanceProofRequest,
   SubmitCustomsClearanceProofResponse,
 } from './types'
@@ -41,6 +44,28 @@ export async function submitCustomsClearanceProof(
       `/compliance-dossiers/${dossierId}/customs-clearance-proofs`,
       form,
       { headers: { 'Content-Type': 'multipart/form-data' } },
+    ),
+  )
+  return unwrap(res)
+}
+
+export async function getCustomsClearanceProof(proofId: number): Promise<CustomsClearanceProofDetail> {
+  const res = await callApi(
+    apiClient.get<unknown, ApiEnvelope<CustomsClearanceProofDetail>>(
+      `/customs-clearance-proofs/${proofId}`,
+    ),
+  )
+  return unwrap(res)
+}
+
+export async function finalizeCustomsClearanceProof(
+  proofId: number,
+  payload: FinalizeCustomsClearanceProofRequest,
+): Promise<FinalizeCustomsClearanceProofResponse> {
+  const res = await callApi(
+    apiClient.patch<unknown, ApiEnvelope<FinalizeCustomsClearanceProofResponse>>(
+      `/customs-clearance-proofs/${proofId}/finalize`,
+      payload,
     ),
   )
   return unwrap(res)
