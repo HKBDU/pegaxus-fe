@@ -16,6 +16,7 @@ import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import BcpQuarantineProofPage from "@/features/quarantine/pages/BcpQuarantineProofPage";
+import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearanceProofPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const FileViewerTestPage = lazy(() => import("@/Test"));
@@ -263,18 +264,34 @@ export const router = createBrowserRouter([
       },
       {
         element: (
-          <ProtectedRoute allowedRoles={["EMPLOYEE", "DRIVER"]}>
+          <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}>
             <AdminLayout />
           </ProtectedRoute>
         ),
         children: [
           {
             path: "/compliance-dossiers/:dossierId/bcp-quarantine-proof",
-            element: <BcpQuarantineProofPage />,
+            element: (
+              <ProtectedRoute allowedRoles={["ESCORT"]}>
+                <BcpQuarantineProofPage />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "/compliance-dossiers/:dossierId/quarantine-proof",
-            element: <BcpQuarantineProofPage />,
+            element: (
+              <ProtectedRoute allowedRoles={["ESCORT"]}>
+                <BcpQuarantineProofPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/compliance-dossiers/:dossierId/customs-clearance-proof",
+            element: (
+              <ProtectedRoute allowedRoles={["DRIVER"]}>
+                <CustomsClearanceProofPage />
+              </ProtectedRoute>
+            ),
           },
         ],
       },
