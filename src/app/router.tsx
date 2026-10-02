@@ -18,6 +18,7 @@ import { AuthShell } from "@/features/auth/components/AuthShell";
 import BcpQuarantineProofPage from "@/features/quarantine/pages/BcpQuarantineProofPage";
 import QuarantineReviewPage from "@/features/quarantine/pages/QuarantineReviewPage";
 import AuthoritySubmissionPage from "@/features/authority/pages/AuthoritySubmissionPage";
+import AuthorityReviewPage from "@/features/authority/pages/AuthorityReviewPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const FileViewerTestPage = lazy(() => import("@/Test"));
@@ -304,6 +305,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
             <AuthoritySubmissionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/authority-submissions/:submissionId/review",
+        element: (
+          <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
+            <AuthorityReviewPage />
           </ProtectedRoute>
         ),
       },

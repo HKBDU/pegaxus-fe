@@ -22,3 +22,22 @@ export interface RecordAuthoritySubmissionResult {
   status: string
   dossierStatus: string
 }
+
+export type AuthorityDecision = 'APPROVED' | 'REJECTED' | 'RETURNED'
+
+export interface UpdateAuthorityReviewInput {
+  decision: AuthorityDecision
+  permitNumber?: string
+  permitIssuedDate?: string
+  permitExpiryDate?: string
+  decisionFile: File
+  decisionNote?: string
+  rejectionReason?: string
+  revisionDueDate?: string
+}
+
+export interface UpdateAuthorityReviewResult {
+  authoritySubmissionId: number
+  submissionStatus: string
+  dossierStatus: string
+}
