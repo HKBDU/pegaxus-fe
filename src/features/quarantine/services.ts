@@ -37,6 +37,7 @@ export async function submitQuarantineProof(
   if (params.officialVetName) form.append('officialVetName', params.officialVetName)
   if (params.bcpReceiptNumber) form.append('bcpReceiptNumber', params.bcpReceiptNumber)
   if (params.inspectionAt) form.append('inspectionAt', params.inspectionAt)
+  // Holdback is an immediate operational signal; quickNote is intentionally optional.
   if (params.isHoldback != null) form.append('isHoldback', String(params.isHoldback))
   if (params.quickNote) form.append('quickNote', params.quickNote)
   for (const file of params.files) {

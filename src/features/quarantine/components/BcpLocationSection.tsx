@@ -2,7 +2,6 @@ import type { UseFormReturn } from 'react-hook-form'
 import { CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { Textarea } from '@/shared/components/ui/textarea'
 import { Field } from '@/shared/components/Field'
 import {
   FormControl,
@@ -28,10 +27,10 @@ function inputCn(hasError: boolean) {
 interface BcpLocationSectionProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
-  watchIsHeld: boolean
+  isHoldback: boolean
 }
 
-export function BcpLocationSection({ form, watchIsHeld }: BcpLocationSectionProps) {
+export function BcpLocationSection({ form, isHoldback }: BcpLocationSectionProps) {
   return (
     <section className="space-y-4 border border-[#e5e2d9] bg-white p-5">
       <QuarantineSectionHeader title="Location & Inspection" />
@@ -84,7 +83,7 @@ export function BcpLocationSection({ form, watchIsHeld }: BcpLocationSectionProp
         render={({ field, fieldState }) => (
           <FormItem>
             <FormControl>
-              <Field label="Clearance Receipt Number" error={fieldState.error?.message}>
+                <Field label="VET Clearance Receipt Number" error={fieldState.error?.message}>
                 <input
                   {...field}
                   id="bcp-receipt-input"
@@ -97,7 +96,7 @@ export function BcpLocationSection({ form, watchIsHeld }: BcpLocationSectionProp
         )}
       />
 
-      {/* 4. Holdback Toggle */}
+      {/* Fast operational signal: flag the trip now, complete the detailed report later. */}
       <FormField
         control={form.control}
         name="isHoldback"
@@ -108,60 +107,29 @@ export function BcpLocationSection({ form, watchIsHeld }: BcpLocationSectionProp
                 type="button"
                 id="is-holdback-toggle"
                 role="checkbox"
-                aria-checked={field.value}
-                onClick={() => field.onChange(!field.value)}
+                aria-checked={isHoldback}
+                aria-label="Mark trip as holdback"
+                onClick={() => field.onChange(!isHoldback)}
                 className={cn(
                   'flex h-5 w-5 shrink-0 items-center justify-center border transition-colors',
-                  field.value
-                    ? 'border-[#f39200] bg-[#f39200]'
-                    : 'border-[#d1cec7] bg-white',
+                  isHoldback ? 'border-[#f39200] bg-[#f39200]' : 'border-[#d1cec7] bg-white',
                 )}
-                aria-label="Mark as holdback"
               >
-                {field.value && <CheckCircle2 className="size-3.5 text-white" aria-hidden />}
+                {isHoldback && <CheckCircle2 className="size-3.5 text-white" aria-hidden />}
               </button>
-              <span className="text-sm font-medium text-[#181818]">
-                Mark as holdback.{' '}
-                <button
-                  type="button"
-                  className="font-bold text-[#f39200] underline hover:no-underline"
-                  onClick={() => toast.info('Contact TS for escalation instructions.')}
-                >
-                  Report?
-                </button>
-              </span>
+              <span className="text-sm font-medium text-[#181818]">Mark as holdback / report issue.</span>
+              <button
+                type="button"
+                className="font-bold text-[#f39200] underline hover:no-underline"
+                onClick={() => toast.info('UC Report for Incident: UC-55, UC-56, UC-57 have not finished yet')}
+              >
+                Report?
+              </button>
             </div>
           </FormItem>
         )}
       />
 
-      {/* 5. Quick note — required when held */}
-      {watchIsHeld && (
-        <FormField
-          control={form.control}
-          name="quickNote"
-          render={({ field, fieldState }) => (
-            <FormItem>
-              <FormControl>
-                <Field label="Quick Note *" error={fieldState.error?.message}>
-                  <Textarea
-                    {...field}
-                    id="quick-note"
-                    rows={3}
-                    placeholder="Describe the reason for hold, inspection details…"
-                    className={cn(
-                      'w-full resize-none border bg-white px-3 py-2 text-sm text-[#181818] placeholder:text-[#bbb] focus:outline-none focus:ring-1 transition-colors',
-                      fieldState.error
-                        ? 'border-red-500 focus:ring-red-400'
-                        : 'border-[#f39200] focus:ring-[#f39200]',
-                    )}
-                  />
-                </Field>
-              </FormControl>
-            </FormItem>
-          )}
-        />
-      )}
     </section>
   )
 }

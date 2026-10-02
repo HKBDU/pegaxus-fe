@@ -15,7 +15,7 @@ import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
-import BcpQuarantineProofPage from "@/features/clearance/pages/BcpQuarantineProofPage";
+import BcpQuarantineProofPage from "@/features/quarantine/pages/BcpQuarantineProofPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const FileViewerTestPage = lazy(() => import("@/Test"));
@@ -274,10 +274,6 @@ export const router = createBrowserRouter([
           },
           {
             path: "/compliance-dossiers/:dossierId/quarantine-proof",
-            element: <BcpQuarantineProofPage />,
-          },
-          {
-            path: "/compliance-dossiers/:dossierId/customs-clearance-proof",
             element: <BcpQuarantineProofPage />,
           },
         ],

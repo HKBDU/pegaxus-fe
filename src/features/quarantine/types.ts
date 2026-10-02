@@ -33,6 +33,7 @@ export interface SubmitQuarantineProofRequest {
   officialVetName?: string
   bcpReceiptNumber?: string
   inspectionAt?: string
+  // Submitters can flag a held horse/trip immediately; detailed notes may follow later.
   isHoldback?: boolean
   quickNote?: string
   files: File[]

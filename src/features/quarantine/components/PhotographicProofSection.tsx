@@ -1,5 +1,5 @@
 import { useRef, useMemo } from 'react'
-import { Camera, FolderOpen, RotateCcw, Trash2, Clock, ShieldCheck, AlertCircle } from 'lucide-react'
+import { Camera, FolderOpen, RotateCcw, Trash2, Clock, ShieldCheck } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import ImageViewer from '@/shared/components/file-viewer/ImageViewer'
 import { QuarantineSectionHeader } from './QuarantineSectionHeader'
@@ -7,7 +7,8 @@ import { QuarantineSectionHeader } from './QuarantineSectionHeader'
 interface PhotographicProofSectionProps {
   photoFile: File | null
   photoTakenAt: Date | null
-  isHeld: boolean
+  documentLabel?: string
+  statusLabel?: string
   onFilePicked: (file: File | undefined) => void
   onRemovePhoto: () => void
   error?: string | null
@@ -27,7 +28,8 @@ function formatDateTimeStamp(date: Date): string {
 export function PhotographicProofSection({
   photoFile,
   photoTakenAt,
-  isHeld,
+  documentLabel = 'BCP Clearance Sheet / Certificate Image',
+  statusLabel = 'Pending Verification',
   onFilePicked,
   onRemovePhoto,
   error,
@@ -62,7 +64,7 @@ export function PhotographicProofSection({
 
       {/* Sub-label — plain bold uppercase, NOT Field */}
       <p className="font-heading text-[11px] font-bold uppercase tracking-wider text-[#181818]">
-        BCP Clearance Sheet / Certificate Image
+        {documentLabel}
       </p>
       {error && (
         <p className="text-[10px] font-medium leading-[15px] text-red-600" role="alert">{error}</p>
@@ -104,7 +106,7 @@ export function PhotographicProofSection({
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/jpeg,image/jpg,image/png,image/webp"
+        accept="image/jpeg,image/jpg,image/png"
         className="sr-only"
         aria-label="Select from gallery"
         onChange={(e) => onFilePicked(e.target.files?.[0])}
@@ -123,17 +125,10 @@ export function PhotographicProofSection({
             </div>
 
             {/* Status badge */}
-            {isHeld ? (
-              <div className="absolute bottom-2 right-2 z-30 flex items-center gap-1 bg-amber-500 px-2 py-0.5 pointer-events-none">
-                <AlertCircle className="size-3 text-white" aria-hidden />
-                <span className="text-[11px] font-bold uppercase text-white">Held</span>
-              </div>
-            ) : (
-              <div className="absolute bottom-2 right-2 z-30 flex items-center gap-1 bg-[#f39200] px-2 py-0.5 pointer-events-none">
-                <ShieldCheck className="size-3 text-white" aria-hidden />
-                <span className="text-[11px] font-bold uppercase text-white">Stamp Verified</span>
-              </div>
-            )}
+            <div className="absolute bottom-2 right-2 z-30 flex items-center gap-1 bg-slate-700 px-2 py-0.5 pointer-events-none">
+              <ShieldCheck className="size-3 text-white" aria-hidden />
+              <span className="text-[11px] font-bold uppercase text-white">{statusLabel}</span>
+            </div>
 
             <ImageViewer images={imageViewerSlides} height={300} width="100%" />
           </div>

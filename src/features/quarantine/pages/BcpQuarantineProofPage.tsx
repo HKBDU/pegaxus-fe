@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -20,13 +20,14 @@ import {
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB per file
-const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png']
 
 const schema = z
   .object({
     bcpName: z.string().min(1, 'BCP Location is required'),
-    officialVetName: z.string().min(1, 'Official Veterinarian name is required'),
-    bcpReceiptNumber: z.string().min(1, 'Clearance Receipt Number is required'),
+    officialVetName: z.string().optional(),
+    bcpReceiptNumber: z.string().optional(),
+    // Allow a fast holdback report without forcing the driver/escort to write the full report.
     isHoldback: z.boolean(),
     quickNote: z.string().optional(),
   })
@@ -35,7 +36,7 @@ const schema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['quickNote'],
-        message: 'Quick note is required when cargo is held',
+        message: 'Reason is required when the trip is on holdback.',
       })
     }
   })
@@ -98,7 +99,13 @@ export default function BcpQuarantineProofPage() {
     },
   })
 
-  const watchIsHeld = form.watch('isHoldback')
+  useEffect(() => {
+    const originCountry = dossier?.bookingSummary?.originCountry
+    if (!originCountry) return
+    form.setValue('bcpName', `${originCountry} BCP`)
+  }, [dossier, form])
+
+  const isHoldback = form.watch('isHoldback')
 
   // ─── Submit Handler ────────────────────────────────────────────────────────
   const onSubmit = async (values: FormValues) => {
@@ -113,11 +120,12 @@ export default function BcpQuarantineProofPage() {
         bcpName: values.bcpName,
         officialVetName: values.officialVetName || undefined,
         bcpReceiptNumber: values.bcpReceiptNumber || undefined,
+        // Send the holdback flag immediately; the detailed report can be completed later.
         isHoldback: values.isHoldback,
         quickNote: values.quickNote || undefined,
         files: [photoFile],
       })
-      toast.success('Quarantine proof submitted. Awaiting TS verification.')
+      toast.success('Quarantine proof submitted successfully. Awaiting TS Verification.')
       form.reset()
       setPhotoFile(null)
       setPhotoTakenAt(null)
@@ -126,7 +134,6 @@ export default function BcpQuarantineProofPage() {
       const messages: Record<string, string> = {
         NOT_ASSIGNED_TO_TRIP: 'You are not assigned to this transport.',
         DOSSIER_NOT_APPROVED: 'The dossier must be APPROVED before submitting quarantine proof.',
-        QUICK_NOTE_REQUIRED: 'Quick note is required when cargo is held.',
         FILE_TOO_LARGE: 'One or more files exceed the 5 MB limit.',
         INVALID_FILE_TYPE: 'Invalid file type. Only images are accepted.',
         EVIDENCE_UNCLEAR: 'Upload failed or image unclear. Please retake photo.',
@@ -175,21 +182,20 @@ export default function BcpQuarantineProofPage() {
         {/* Form sections */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Section 1: Location & Inspection (BCP Location, Official Vet, Receipt No, Holdback toggle) */}
-            <BcpLocationSection form={form} watchIsHeld={watchIsHeld} />
+            {/* Section 1: Location & Inspection */}
+            <BcpLocationSection form={form} isHoldback={isHoldback} />
 
             {/* Section 2: Photographic Proof (FileUploader & ImageViewer) */}
             <PhotographicProofSection
               photoFile={photoFile}
               photoTakenAt={photoTakenAt}
-              isHeld={watchIsHeld}
               onFilePicked={handleFilePicked}
               onRemovePhoto={handleRemovePhoto}
               error={photoError}
             />
 
             {/* Section 3: Quick Notes */}
-            {!watchIsHeld && <QuickNotesSection form={form} />}
+            <QuickNotesSection form={form} />
           </form>
         </Form>
       </div>

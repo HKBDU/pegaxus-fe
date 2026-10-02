@@ -8,12 +8,20 @@ import { QuarantineSectionHeader } from './QuarantineSectionHeader'
 interface QuickNotesSectionProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   form: UseFormReturn<any>
+  title?: string
+  label?: string
+  placeholder?: string
 }
 
-export function QuickNotesSection({ form }: QuickNotesSectionProps) {
+export function QuickNotesSection({
+  form,
+  title = 'Quick Notes',
+  label = 'Additional Notes',
+  placeholder = 'Note any physical checks, horse temperaments, transit delay, or inspection remarks…',
+}: QuickNotesSectionProps) {
   return (
     <section className="space-y-3 border border-[#e5e2d9] bg-white p-5">
-      <QuarantineSectionHeader title="Quick Notes" />
+      <QuarantineSectionHeader title={title} />
       <FormField
         control={form.control}
         name="quickNote"
@@ -21,12 +29,12 @@ export function QuickNotesSection({ form }: QuickNotesSectionProps) {
           <FormItem>
             <FormControl>
               {/* Field handles label + error — no <FormMessage /> */}
-              <Field label="Additional Notes" error={fieldState.error?.message}>
+              <Field label={label} error={fieldState.error?.message}>
                 <Textarea
                   {...field}
                   id="additional-note"
                   rows={4}
-                  placeholder="Note any physical checks, horse temperaments, transit delay, or inspection remarks…"
+                  placeholder={placeholder}
                   className={cn(
                     'w-full resize-none border bg-white px-3 py-2 text-sm text-[#181818] placeholder:text-[#bbb] focus:outline-none focus:ring-1 transition-colors',
                     fieldState.error
