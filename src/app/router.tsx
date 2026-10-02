@@ -15,6 +15,7 @@ import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
+import BcpQuarantineProofPage from "@/features/clearance/pages/BcpQuarantineProofPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const FileViewerTestPage = lazy(() => import("@/Test"));
@@ -260,20 +261,41 @@ export const router = createBrowserRouter([
           },
         ],
       },
+      {
+        element: (
+          <ProtectedRoute allowedRoles={["EMPLOYEE", "DRIVER"]}>
+            <AdminLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            path: "/compliance-dossiers/:dossierId/bcp-quarantine-proof",
+            element: <BcpQuarantineProofPage />,
+          },
+          {
+            path: "/compliance-dossiers/:dossierId/quarantine-proof",
+            element: <BcpQuarantineProofPage />,
+          },
+          {
+            path: "/compliance-dossiers/:dossierId/customs-clearance-proof",
+            element: <BcpQuarantineProofPage />,
+          },
+        ],
+      },
     ],
   },
   ...(import.meta.env.DEV
     ? [
-        {
-          path: "/__dev/customer/bookings/:bookingId/history",
-          element: <MainLayout />,
-          children: [{ index: true, element: bookingHistoryPage }],
-        },
-        {
-          path: "/__dev/admin/bookings/:bookingId/history",
-          element: <AdminLayout />,
-          children: [{ index: true, element: bookingHistoryPage }],
-        },
+      {
+        path: "/__dev/customer/bookings/:bookingId/history",
+        element: <MainLayout />,
+        children: [{ index: true, element: bookingHistoryPage }],
+      },
+      {
+        path: "/__dev/admin/bookings/:bookingId/history",
+        element: <AdminLayout />,
+        children: [{ index: true, element: bookingHistoryPage }],
+      },
       {
         path: "/__dev/file-viewer",
         element: (
@@ -290,6 +312,6 @@ export const router = createBrowserRouter([
           </Suspense>
         ),
       },
-      ]
+    ]
     : []),
 ]);
