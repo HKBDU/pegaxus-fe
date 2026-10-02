@@ -2,6 +2,8 @@ import apiClient from '@/lib/axios'
 import type {
   ApiEnvelope,
   ComplianceDossierContext,
+  FinalizeQuarantineProofRequest,
+  FinalizeQuarantineProofResponse,
   QuarantineProof,
   SubmitQuarantineProofRequest,
   SubmitQuarantineProofResponse,
@@ -61,6 +63,19 @@ export async function getQuarantineProof(proofId: number): Promise<QuarantinePro
   const res = await callApi(
     apiClient.get<unknown, ApiEnvelope<QuarantineProof>>(
       `/quarantine-proofs/${proofId}`,
+    ),
+  )
+  return unwrap(res)
+}
+
+export async function finalizeQuarantineProof(
+  proofId: number,
+  payload: FinalizeQuarantineProofRequest,
+): Promise<FinalizeQuarantineProofResponse> {
+  const res = await callApi(
+    apiClient.patch<unknown, ApiEnvelope<FinalizeQuarantineProofResponse>>(
+      `/quarantine-proofs/${proofId}/finalize`,
+      payload,
     ),
   )
   return unwrap(res)

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getDossierContext, getQuarantineProof, submitQuarantineProof } from './services'
-import type { SubmitQuarantineProofResponse } from './types'
+import { finalizeQuarantineProof, getDossierContext, getQuarantineProof, submitQuarantineProof } from './services'
+import type { FinalizeQuarantineProofResponse, SubmitQuarantineProofResponse } from './types'
 
 // ─── Query Keys ──────────────────────────────────────────────────────────────
 
@@ -27,6 +27,20 @@ export function useQuarantineProofDetail(proofId: number | null) {
     queryFn: () => getQuarantineProof(proofId!),
     enabled: proofId != null,
     staleTime: 30_000,
+  })
+}
+
+export function useFinalizeQuarantineProof(proofId: number) {
+  const qc = useQueryClient()
+  return useMutation<
+    FinalizeQuarantineProofResponse,
+    Error,
+    Parameters<typeof finalizeQuarantineProof>[1]
+  >({
+    mutationFn: (payload) => finalizeQuarantineProof(proofId, payload),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: quarantineKeys.quarantineProof(proofId) })
+    },
   })
 }
 
