@@ -1,0 +1,1 @@
+export { RecordAuthoritySubmissionDialog } from './RecordAuthoritySubmissionDialog'

@@ -16,7 +16,8 @@ import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import BcpQuarantineProofPage from "@/features/quarantine/pages/BcpQuarantineProofPage";
-import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearanceProofPage";
+import QuarantineReviewPage from "@/features/quarantine/pages/QuarantineReviewPage";
+import AuthoritySubmissionPage from "@/features/authority/pages/AuthoritySubmissionPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const FileViewerTestPage = lazy(() => import("@/Test"));
@@ -285,14 +286,27 @@ export const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
-          {
-            path: "/compliance-dossiers/:dossierId/customs-clearance-proof",
-            element: (
-              <ProtectedRoute allowedRoles={["DRIVER"]}>
-                <CustomsClearanceProofPage />
-              </ProtectedRoute>
-            ),
-          },
+        ],
+      },
+      {
+        element: (
+          <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
+            <AdminLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+      {
+        path: "/quarantine-proofs/:proofId/verify",
+        element: <QuarantineReviewPage />,
+      },
+      {
+        path: "/compliance-dossiers/:dossierId/authority-submission",
+        element: (
+          <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
+            <AuthoritySubmissionPage />
+          </ProtectedRoute>
+        ),
+      },
         ],
       },
     ],
