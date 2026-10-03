@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { FileImage, FileText, FolderUp, History, Info, Plus, Upload, X } from "lucide-react";
+import { FileText, History, Info, Upload } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -9,11 +9,14 @@ import { DatePicker } from "@/shared/components/ui/date-picker";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
-import { canUploadInitialDocument } from "../constants";
+import FileUploader from "@/shared/components/FileUploader";
+import { canUploadInitialDocument, DOSSIER_UPLOAD_ACCEPT, UPLOAD_MAX_FILE_BYTES } from "../constants";
 import { getChangedDocumentMetadata, mapComplianceDocumentError, useComplianceDocument, useSubmitDocumentVersion, useUpdateDocumentMetadata } from "../hooks/useComplianceDocument";
 import { mapUploadDocumentError, useUploadComplianceDocument } from "../hooks/useUploadComplianceDocument";
-import { createDocumentSubmissionSchema, validateUploadFiles } from "../schemas";
-import type { ComplianceDocumentDetail, DossierOverview, DossierRequirement, UploadDocumentMetadata } from "../types";
+import { createDocumentSubmissionSchema, validateUploadedAssets } from "../schemas";
+import { createDossierUploadedAsset, getUploadedAssetReferences } from "../lib/uploaded-assets";
+import { dossierSourceKind } from "../source";
+import type { ComplianceDocumentDetail, DossierOverview, DossierRequirement, DossierUploadedAssetRef, UploadDocumentMetadata } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
 import { DocumentVersionHistory } from "./DocumentVersionHistory";
 import { DocumentRequestAlert } from "./DocumentRequestAlert";
@@ -25,10 +28,6 @@ const emptyValues: FormValues = {
   documentName: "", documentNumber: "", issuingAuthority: "", issuedDate: "", expiryDate: "", uploadNote: "", note: "",
 };
 const inputClass = "h-9 rounded-[2px] border-slate-300 bg-white text-xs transition-[border-color,box-shadow] focus-visible:border-primary focus-visible:ring-primary/20";
-
-function formatSize(bytes: number) {
-  return bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(0)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export function DocumentRevisionNotice({ document }: { document: ComplianceDocumentDetail }) {
   const request = document.openRequest;
@@ -62,13 +61,14 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
   const initialMutation = useUploadComplianceDocument();
   const versionMutation = useSubmitDocumentVersion();
   const metadataMutation = useUpdateDocumentMetadata();
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<DossierUploadedAssetRef[]>([]);
+  const [filesConfirmed, setFilesConfirmed] = useState(false);
   const [fileError, setFileError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [noRetry, setNoRetry] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const pickerRef = useRef<HTMLInputElement>(null);
+  const uploadedAssetsRef = useRef(new Map<string, DossierUploadedAssetRef>());
+  const uploadSelectionLockedRef = useRef(false);
   const submitGuardRef = useRef(false);
   const hydratedDocumentIdRef = useRef<number | null>(null);
   const schema = createDocumentSubmissionSchema(requirement?.validUntil ?? null, plannedDepartureDate);
@@ -90,19 +90,32 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
     });
   }, [detail, reset]);
 
-  const addFiles = (incoming: FileList | File[]) => {
-    const next = Array.from(incoming);
-    const error = validateUploadFiles(next);
-    if (error) { setFileError(error.message); return; }
-    setFiles((current) => [...current, ...next]);
-    setFileError("");
-    if (!noRetry) setSubmitError("");
-    if (pickerRef.current) pickerRef.current.value = "";
+  const rememberUploadedFile = ({ publicId, file }: { publicId: string; file: File }) => {
+    if (uploadSelectionLockedRef.current) return;
+    try {
+      uploadedAssetsRef.current.set(publicId, createDossierUploadedAsset(publicId, file));
+    } catch {
+      setFileError("An uploaded file has an invalid reference, type, or size. Remove it before continuing.");
+    }
+  };
+  const changeUploadedFiles = (publicIds: string[]) => {
+    if (uploadSelectionLockedRef.current) return;
+    setFilesConfirmed(false);
+    try {
+      setFiles(getUploadedAssetReferences(publicIds, uploadedAssetsRef.current));
+      setFileError("");
+    } catch {
+      setFiles([]);
+      setFileError("Could not read all confirmed upload references. Remove the invalid file and try again.");
+    }
   };
 
   const close = () => {
     if (pending || submitGuardRef.current) return;
     setFiles([]);
+    setFilesConfirmed(false);
+    uploadedAssetsRef.current.clear();
+    uploadSelectionLockedRef.current = false;
     setFileError("");
     setSubmitError("");
     setNoRetry(false);
@@ -112,7 +125,7 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
 
   const eligible = Boolean(requirement && role === "CUSTOMER" && dossier.status === "IN_PREPARATION" && !dossier.writeLocked && (
     mode === "initial" ? canUploadInitialDocument(role, dossier, requirement) :
-      requirement.status !== "SATISFIED" && detail && (
+      requirement.status !== "SATISFIED" && requirement.status !== "WAIVED" && detail && (
         mode === "edit" ? detail.status === "PROVIDED" && !detail.versions[0]?.review : detail.status === "REJECTED"
       )
   ));
@@ -120,7 +133,8 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
   const submitValid = async (values: FormValues, metadataOnly = false) => {
     if (!requirement || !eligible || submitGuardRef.current || pending || noRetry) return;
     if (!metadataOnly) {
-      const error = validateUploadFiles(files);
+      if (!filesConfirmed) { setFileError("Confirm your successfully uploaded files before submitting."); return; }
+      const error = validateUploadedAssets(files);
       if (error) { setFileError(error.message); return; }
     }
     if (metadataOnly && (mode !== "edit" || !detail)) return;
@@ -205,24 +219,26 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
                 <section className="rounded-[2px] border border-slate-200 bg-white p-4" aria-label="Document files">
                   <h3 className="mb-3 flex items-center gap-2 font-heading text-sm font-bold uppercase text-slate-900"><Upload className="size-4 text-primary" /> {mode === "initial" ? "Document files" : "Replacement files"}</h3>
                   {detail?.versions[0]?.files.length ? <div className="mb-3 text-xs text-slate-600"><strong>Current files</strong><ul className="mt-1 space-y-1">{detail.versions[0].files.map((file) => <li key={`${file.sortOrder}-${file.fileName}`} className="truncate">{file.fileName}</li>)}</ul></div> : null}
-                  <input ref={pickerRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="sr-only" tabIndex={-1} aria-label="Choose document files" onChange={(event) => event.target.files && addFiles(event.target.files)} />
-                  <button type="button" disabled={pending || !eligible} onClick={() => pickerRef.current?.click()}
-                    onDragOver={(event) => { event.preventDefault(); if (!pending && eligible) setDragActive(true); }}
-                    onDragLeave={() => setDragActive(false)}
-                    onDrop={(event) => { event.preventDefault(); setDragActive(false); if (!pending && eligible) addFiles(event.dataTransfer.files); }}
-                    className={`flex min-h-28 w-full flex-col items-center justify-center gap-1 rounded-[2px] border border-dashed px-3 text-xs transition-[background-color,border-color,transform] duration-150 motion-reduce:transition-none ${dragActive ? "scale-[1.01] border-primary bg-orange-50" : "border-slate-300 bg-slate-50 hover:border-primary hover:bg-orange-50/40"}`}>
-                    <FolderUp className={`size-6 text-slate-500 transition-transform motion-reduce:transition-none ${dragActive ? "-translate-y-0.5 text-primary" : ""}`} />
-                    <span>Drag & drop files here or <span className="text-primary underline">click to browse</span></span>
-                    <span className="text-slate-500">PDF, JPG, JPEG, PNG · Max 10MB per file</span>
-                  </button>
+                  {!filesConfirmed ? <>
+                    <FileUploader entity="attachment" accept={DOSSIER_UPLOAD_ACCEPT} maxSize={UPLOAD_MAX_FILE_BYTES} multiple
+                      disabled={pending || noRetry || !eligible} onUploaded={rememberUploadedFile} onChange={changeUploadedFiles}
+                      title="Upload document files" hint="PDF, JPG, JPEG, PNG · Max 5 MiB per file"
+                      onError={() => setFileError("A file failed to upload. Retry it or remove it before confirming the file list.")}
+                      onReject={() => setFileError("Some files were rejected. Use PDF, JPG, JPEG, or PNG files of 5 MiB or smaller.")} />
+                    <p className="mt-3 text-xs leading-relaxed text-slate-600">Wait until every file you want is marked Uploaded. Confirming locks the successful file list and cancels any remaining uploads. Files still waiting, uploading, or failed are not submitted.</p>
+                    <Button type="button" variant="outline" className="mt-2 rounded-[2px]" disabled={pending || noRetry || !eligible || !files.length}
+                      onClick={() => { uploadSelectionLockedRef.current = true; setFileError(""); setFilesConfirmed(true); }}>Confirm {files.length} uploaded {files.length === 1 ? "file" : "files"}</Button>
+                  </> : <div className="space-y-2 text-xs">
+                    <p role="status" className="font-semibold text-emerald-700">Uploaded file list confirmed</p>
+                    <ol className="space-y-1.5">{files.map((file, index) => <li key={`${file.publicId}-${index}`} className="dossier-upload-file-row break-all rounded-[2px] border border-slate-200 bg-slate-50 px-3 py-2">
+                      {index + 1}. {file.fileName} <span className="text-slate-500">({index === 0 ? "Primary file" : "Attachment"})</span>
+                    </li>)}</ol>
+                    <Button type="button" variant="outline" size="sm" disabled={pending} onClick={() => {
+                      uploadSelectionLockedRef.current = false; setFiles([]); setFilesConfirmed(false); setFileError(""); uploadedAssetsRef.current.clear();
+                    }}>Choose files again</Button>
+                  </div>}
+                  {dossierSourceKind === "mock" ? <p className="mt-2 text-xs text-amber-800">Dossier business data is mocked, but this shared uploader uses the real presigned backend and requires a valid session. Mock previews use local demonstration assets, not the uploaded file contents.</p> : null}
                   {fileError ? <p role="alert" className="mt-2 text-xs text-red-700">{fileError}</p> : null}
-                  {files.length ? <div className="mt-3 space-y-1.5">{files.map((file, index) => (
-                    <div key={`${file.name}-${file.lastModified}-${index}`} className="dossier-upload-file-row flex items-center gap-2 rounded-[2px] border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs">
-                      {file.type === "application/pdf" ? <FileText className="size-4 shrink-0 text-red-600" /> : <FileImage className="size-4 shrink-0 text-sky-600" />}
-                      <span className="min-w-0 flex-1 truncate">{file.name}</span><span className="shrink-0 text-slate-500">{formatSize(file.size)}</span>
-                      <button type="button" disabled={pending} onClick={() => setFiles((current) => current.filter((_, i) => i !== index))} aria-label={`Remove ${file.name}`} className="p-1 hover:bg-slate-200"><X className="size-3.5" /></button>
-                    </div>
-                  ))}<button type="button" disabled={pending} onClick={() => pickerRef.current?.click()} className="inline-flex items-center gap-1 pt-1 text-xs font-medium text-primary hover:underline"><Plus className="size-3.5" /> Add another file</button></div> : null}
                   <p className="mt-3 flex items-start gap-2 rounded-[2px] bg-sky-50 px-3 py-2 text-xs text-slate-600"><Info className="mt-0.5 size-3.5 shrink-0 text-sky-700" />{mode === "initial" ? "All selected files will be grouped into one DocumentVersion v1." : "The backend decides whether this updates the current version or creates a new one."}</p>
                 </section>
                 <section className="rounded-[2px] border border-slate-200 bg-white p-4" aria-label="Document information">
@@ -247,7 +263,7 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
           <Button type="button" variant="outline" disabled={pending} onClick={close} className="rounded-[2px]">Cancel</Button>
           {detail ? <Button type="button" variant="outline" onClick={() => setShowHistory((value) => !value)} className="rounded-[2px]"><History className="size-4" /> Version History</Button> : null}
           {mode === "edit" && detail ? <Button type="button" variant="outline" disabled={pending || noRetry || !eligible} onClick={() => void form.handleSubmit((values) => submitValid(values, true))()} className="rounded-[2px]">Save Metadata Only</Button> : null}
-          <Button type="submit" form="dossier-document-form" disabled={pending || noRetry || !eligible || !files.length} className="min-w-40 rounded-[2px] font-heading uppercase transition-transform active:scale-[0.98] motion-reduce:transform-none">{pending ? "Submitting..." : mode === "initial" ? "Submit ComplianceDocument" : mode === "edit" ? "Save Changes" : "Submit Updated Document"}</Button>
+          <Button type="submit" form="dossier-document-form" disabled={pending || noRetry || !eligible || !files.length || !filesConfirmed} className="min-w-40 rounded-[2px] font-heading uppercase transition-transform active:scale-[0.98] motion-reduce:transform-none">{pending ? "Submitting..." : mode === "initial" ? "Submit ComplianceDocument" : mode === "edit" ? "Save Changes" : "Submit Updated Document"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

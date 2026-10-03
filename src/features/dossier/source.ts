@@ -6,7 +6,7 @@ import {
   createUpdateDocumentMetadataSchema,
   dossierRequirementsPageSchema,
   dossierRequirementsParamsSchema,
-  validateUploadFiles,
+  dossierUploadedAssetsSchema,
   dossierIdSchema,
   approveDocumentReviewSchema,
   approveDocumentEnvelopeSchema,
@@ -106,11 +106,10 @@ export async function loadDossierRequirements(
 
 export async function loadUploadDocument(input: UploadDocumentInput) {
   if (dossierSourceKind === "mock") {
-    const fileError = validateUploadFiles(input.files);
-    if (fileError) throw new Error(fileError.code);
+    const files = dossierUploadedAssetsSchema.parse(input.files);
     const metadata = createUploadDocumentSchema(null).parse(input.metadata);
     const { uploadMockDocument } = await import("./mocks/dossier.mock");
-    return uploadMockDocument(input.dossierId, input.requirementId, input.files, mockScenario(), metadata);
+    return uploadMockDocument(input.dossierId, input.requirementId, files, mockScenario(), metadata);
   }
   const { dossierService } = await import("./services");
   return dossierService.uploadComplianceDocument(input);
@@ -128,12 +127,11 @@ export async function loadComplianceDocument(documentId: string, signal?: AbortS
 }
 
 export async function loadSubmitDocumentVersion(input: SubmitDocumentVersionInput) {
-  const fileError = validateUploadFiles(input.files);
-  if (fileError) throw new Error(fileError.code);
+  const files = dossierUploadedAssetsSchema.parse(input.files);
   createSubmitDocumentVersionSchema(null).parse(input.metadata);
   if (dossierSourceKind === "mock") {
     const { submitMockDocumentVersion } = await import("./mocks/dossier.mock");
-    return submitMockDocumentVersion(input.documentId, input.files, input.metadata, mockScenario());
+    return submitMockDocumentVersion(input.documentId, files, input.metadata, mockScenario());
   }
   const { dossierService } = await import("./services");
   return dossierService.submitDocumentVersion(input);

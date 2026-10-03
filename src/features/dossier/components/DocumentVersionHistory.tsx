@@ -1,4 +1,5 @@
 import { FileText, History } from "lucide-react";
+import { useState } from "react";
 import { formatBookingDate } from "@/features/booking/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { useComplianceDocument } from "../hooks/useComplianceDocument";
@@ -6,6 +7,17 @@ import type { DocumentVersion } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
 import { Button } from "@/shared/components/ui/button";
 import { DocumentRequestAlert } from "./DocumentRequestAlert";
+import { DocumentFilesPreview } from "./DocumentFilesPreview";
+
+function VersionFiles({ files }: { files: DocumentVersion["files"] }) {
+  const [open, setOpen] = useState(false);
+  return <div className="mt-3 space-y-3">
+    <Button type="button" variant="outline" size="sm" aria-expanded={open} onClick={() => setOpen((value) => !value)} className="rounded-[2px]">
+      {open ? "Hide version files" : "Inspect version files"}
+    </Button>
+    {open ? <DocumentFilesPreview files={files} /> : null}
+  </div>;
+}
 
 export function DocumentVersionHistory({ versions }: { versions: DocumentVersion[] }) {
   return (
@@ -28,6 +40,7 @@ export function DocumentVersionHistory({ versions }: { versions: DocumentVersion
               </li>
             ))}
           </ul>
+          {version.files.length ? <VersionFiles files={version.files} /> : null}
           {version.uploadNote ? <p className="mt-2 text-slate-600"><strong>Upload Note:</strong> {version.uploadNote}</p> : null}
           {version.review ? (
             <div className="mt-3 border-t border-slate-200 pt-2 text-slate-600">

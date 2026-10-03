@@ -2,7 +2,7 @@ import { z } from "zod";
 import { BOOKING_STATUSES } from "@/features/booking/types";
 import { format } from "date-fns";
 import { DOCUMENT_REQUEST_TYPES, DOSSIER_REQUIREMENT_STATUSES, UPLOAD_ACCEPTED_MIME_TYPES, UPLOAD_MAX_FILE_BYTES } from "./constants";
-import type { UploadDocumentError } from "./types";
+import type { DossierUploadedAssetRef, UploadDocumentError } from "./types";
 
 const entityId = z.number().int().positive();
 const timestamp = z.iso.datetime({ offset: true });
@@ -22,19 +22,21 @@ export const dossierStatusSchema = z.enum([
 export const dossierRequirementStatusSchema = z.enum(DOSSIER_REQUIREMENT_STATUSES);
 export const complianceDocumentStatusSchema = z.enum(["PROVIDED", "PENDING", "APPROVED", "REJECTED", "EXPIRED"]);
 
-const acceptedUploadTypes = new Set<string>(UPLOAD_ACCEPTED_MIME_TYPES);
+export const dossierUploadedAssetSchema = z.object({
+  publicId: z.string().trim().min(1, "A confirmed upload reference is required."),
+  fileName: z.string().trim().min(1, "File name is required."),
+  mimeType: z.enum(UPLOAD_ACCEPTED_MIME_TYPES, { error: "Only PDF, JPG, JPEG, and PNG files are accepted." }),
+  fileSizeBytes: z.number().int().nonnegative().max(UPLOAD_MAX_FILE_BYTES, "Each file must be 5 MiB or smaller."),
+});
+export const dossierUploadedAssetsSchema = z.array(dossierUploadedAssetSchema).min(1, "Confirm at least one successfully uploaded file.");
 
-export function validateUploadFiles(files: readonly File[]): UploadDocumentError | null {
-  if (!files.length) return { code: "FILES_REQUIRED", message: "Select at least one file." };
-  for (const file of files) {
-    if (!acceptedUploadTypes.has(file.type)) {
-      return { code: "INVALID_FILE_TYPE", message: "Only PDF, JPG, JPEG, and PNG files are accepted." };
-    }
-    if (file.size > UPLOAD_MAX_FILE_BYTES) {
-      return { code: "FILE_TOO_LARGE", message: "Each file must be 10MB or smaller." };
-    }
-  }
-  return null;
+export function validateUploadedAssets(files: readonly DossierUploadedAssetRef[]): UploadDocumentError | null {
+  const result = dossierUploadedAssetsSchema.safeParse(files);
+  if (result.success) return null;
+  const issue = result.error.issues[0];
+  const code = !files.length ? "FILES_REQUIRED" : issue.path.includes("mimeType") ? "INVALID_FILE_TYPE"
+    : issue.path.includes("fileSizeBytes") ? "FILE_TOO_LARGE" : "INVALID_UPLOAD_REFERENCE";
+  return { code, message: issue.message };
 }
 
 const proofStatus = (statuses: readonly [string, ...string[]]) =>

@@ -1,7 +1,9 @@
 import type { DossierHorseOption, DossierOverview, DossierRequirement, DossierRequirementStatus, DossierRequirementsParams } from "./types";
 
-export const UPLOAD_MAX_FILE_BYTES = 10 * 1024 * 1024;
+// The current presigned signature endpoint accepts 5 MiB, unlike the older multipart contract.
+export const UPLOAD_MAX_FILE_BYTES = 5 * 1024 * 1024;
 export const UPLOAD_ACCEPTED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"] as const;
+export const DOSSIER_UPLOAD_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
 export const DOCUMENT_REQUEST_TYPES = ["MISSING_DOCUMENT", "REVISION", "REUPLOAD", "ADDITIONAL_INFORMATION"] as const;
 export const documentRequestTypeLabels: Record<(typeof DOCUMENT_REQUEST_TYPES)[number], string> = {
   MISSING_DOCUMENT: "Missing Document",
@@ -41,6 +43,7 @@ export function getCustomerDocumentActions(
   dossier: Pick<DossierOverview, "status" | "writeLocked">,
   requirement: Pick<DossierRequirement, "status" | "document">,
 ): string[] {
+  if (requirement.status === "WAIVED") return ["View Requirement"];
   const document = requirement.document;
   if (!document) {
     return dossier.status === "IN_PREPARATION" && !dossier.writeLocked &&
@@ -66,6 +69,7 @@ export function getDossierRequirementActionLabels(
   status: DossierRequirementStatus,
   hasDocument: boolean,
 ): string[] {
+  if (status === "WAIVED" && ["CUSTOMER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"].includes(role ?? "")) return ["View Requirement"];
   if (role === "CUSTOMER") {
     if (!hasDocument) return status === "PENDING" || status === "REQUESTED" ? ["Upload Document"] : ["View Requirement"];
     if (status === "PROVIDED") return ["View Document", "Edit Document", "View Version History"];

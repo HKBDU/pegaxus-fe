@@ -7,7 +7,7 @@ export function mapUploadDocumentError(error: unknown): UploadDocumentError {
   const response = (error as { response?: { status?: number; data?: { errorCode?: string; code?: string; data?: { errorCode?: string } } }; status?: number; message?: string }) ?? {};
   const status = response.response?.status ?? response.status;
   const code = response.response?.data?.errorCode ?? response.response?.data?.data?.errorCode ?? response.response?.data?.code ?? response.message ?? "UPLOAD_FAILED";
-  if (code === "FILE_TOO_LARGE" || status === 413) return { code, message: "Each file must be 10MB or smaller." };
+  if (code === "FILE_TOO_LARGE" || status === 413) return { code, message: "Each file must be 5 MiB or smaller." };
   if (code === "INVALID_FILE_TYPE") return { code, message: "Only PDF, JPG, JPEG, and PNG files are accepted." };
   if (code === "DOCUMENT_EXPIRES_BEFORE_DEPARTURE") return { code, message: "Expiry date cannot be before transport departure.", field: "expiryDate" };
   if (code === "DOCUMENT_VALIDITY_INSUFFICIENT") return { code, message: "The document does not satisfy the requirement validity date.", field: "expiryDate" };

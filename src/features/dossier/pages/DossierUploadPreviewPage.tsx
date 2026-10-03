@@ -24,7 +24,7 @@ export default function DossierUploadPreviewPage() {
         <header className="space-y-2">
           <span className="inline-flex rounded-[2px] border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800">Development preview · Mock data only</span>
           <h1 className="m-0! font-heading text-3xl! font-bold! uppercase text-primary!">Compliance document upload</h1>
-          <p className="text-sm text-slate-600">No sign-in or backend request is needed. Open the actions menu on a pending requirement and choose Upload Document.</p>
+          <p className="text-sm text-slate-600">Dossier business data uses mocks. File upload uses the real presigned backend and requires a valid session. Mock file previews show local demonstration assets. Open the actions menu on a pending requirement and choose Upload Document.</p>
         </header>
 
         {dossierQuery.isPending || requirementsQuery.isPending ? <LoadingState /> : null}

@@ -12,7 +12,6 @@ import {
   History,
   MoreVertical,
   Pencil,
-  RotateCcw,
   Upload,
 } from "lucide-react";
 import { useDossierRole } from "../hooks/useDossierRole";
@@ -45,7 +44,6 @@ import {
   getDossierHorseFilterOptions,
   initialDossierRequirementsParams,
   reconcileDossierHorseFilter,
-  resetDossierRequirementFilters,
   updateDossierRequirementFilters,
 } from "../constants";
 import { useDossierRequirements } from "../hooks/useDossier";
@@ -271,11 +269,10 @@ function RequirementGroup({
   );
 }
 
-export function DossierRequirementFilters({ params, horses, onChange, onReset }: {
+export function DossierRequirementFilters({ params, horses, onChange }: {
   params: DossierRequirementsParams;
   horses: readonly DossierHorseOption[];
   onChange: (filters: Pick<DossierRequirementsParams, "status" | "horseId" | "sortBy">) => void;
-  onReset: () => void;
 }) {
   return (
     <div role="toolbar" aria-label="Requirement filters" className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
@@ -312,9 +309,6 @@ export function DossierRequirementFilters({ params, horses, onChange, onReset }:
           onValueChange={(sortBy) => onChange({ sortBy: dossierRequirementsParamsSchema.shape.sortBy.parse(sortBy) })}
         />
       </div>
-      <Button type="button" variant="outline" size="sm" onClick={onReset} className="h-8 rounded-[2px] px-2.5 font-sans text-xs font-normal normal-case tracking-normal shadow-none">
-        <RotateCcw aria-hidden="true" className="size-3.5" /> Reset Filters
-      </Button>
     </div>
   );
 }
@@ -426,7 +420,6 @@ export function DossierRequirementsPreview({
           params={params}
           horses={horses}
           onChange={(filters) => setParams((current) => updateDossierRequirementFilters(current, filters))}
-          onReset={() => setParams((current) => resetDossierRequirementFilters(current))}
         />
         {remindersAllowed && (missingQuery.isPending || missingQuery.isError || Boolean(missingQuery.data?.length)) ? (
           <Button type="button" size="sm" variant="outline" className="h-8 rounded-[2px] text-xs" disabled={missingQuery.isPending}

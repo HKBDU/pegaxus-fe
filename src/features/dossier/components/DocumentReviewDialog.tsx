@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import { ExternalLink, FileText, ShieldCheck, ShieldX } from "lucide-react";
+import { ShieldCheck, ShieldX } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/shared/components/ui/button";
@@ -8,13 +8,14 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import { invalidateComplianceDocument, useComplianceDocument } from "../hooks/useComplianceDocument";
 import { useDocumentReview } from "../hooks/useDocumentReview";
-import { canReviewDocument, getDocumentFileHref, getLatestDocumentVersion, getReviewBlockReason, mapDocumentReviewError } from "../lib/document-review";
+import { canReviewDocument, getLatestDocumentVersion, getReviewBlockReason, mapDocumentReviewError } from "../lib/document-review";
 import type { ComplianceDocumentDetail, DocumentRequestFormValues, DocumentReviewError, DossierOverview, DossierRequirement } from "../types";
 import { RejectDocumentDialog } from "./RejectDocumentDialog";
 import { ApproveDocumentDialog } from "./ApproveDocumentDialog";
 import { DocumentReviewContext } from "./DocumentReviewContext";
 import { DocumentVersionHistory } from "./DocumentVersionHistory";
 import { DossierStatusBadge } from "./DossierStatusBadge";
+import { DocumentFilesPreview } from "./DocumentFilesPreview";
 
 function ReviewContent({ dossier, requirement, document, role, onClose, onPendingChange, onErrorChange }: {
   dossier: DossierOverview;
@@ -99,32 +100,9 @@ function ReviewContent({ dossier, requirement, document, role, onClose, onPendin
               <span className="text-slate-500">{latest?.files.length ?? 0} files attached</span>
             </div>
           </div>
-          <div className="rounded-[2px] border border-slate-200 bg-white p-4 sm:p-6">
-            <p className="mb-4 text-xs text-slate-500">Open the submitted files to inspect their contents before confirming approval.</p>
-            <ul className="space-y-3">
-              {latest?.files.map((file) => {
-                const href = getDocumentFileHref(file.fileUrl);
-                return (
-                  <li key={`${file.sortOrder}-${file.fileName}`} className="flex flex-wrap items-center gap-3 rounded-[2px] border border-slate-200 bg-slate-50 p-4">
-                    <FileText aria-hidden="true" className="size-6 shrink-0 text-primary" />
-                    <div className="min-w-0 flex-1">
-                      <p className="break-all text-sm font-semibold">{file.fileName}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {file.mimeType} · {(file.fileSizeBytes / 1024).toFixed(0)} KB
-                      </p>
-                    </div>
-                    {href ? (
-                      <Button asChild variant="outline" size="sm" className="rounded-[2px]">
-                        <a href={href} target="_blank" rel="noopener noreferrer">
-                          Open File <ExternalLink aria-hidden="true" className="size-3.5" />
-                        </a>
-                      </Button>
-                    ) : <span className="text-xs text-slate-500">File link unavailable</span>}
-                  </li>
-                );
-              })}
-            </ul>
-            {!latest?.files.length ? <p className="text-sm text-slate-500">No files are available in this version.</p> : null}
+          <div className="rounded-[2px] border border-slate-200 bg-white p-3 sm:p-4">
+            <p className="mb-3 text-xs text-slate-500">Inspect each submitted file before confirming approval. Open File remains available if inline preview cannot load.</p>
+            <DocumentFilesPreview key={latest?.documentVersionId} files={latest?.files ?? []} />
           </div>
           <DocumentVersionHistory versions={document.versions} />
         </section>

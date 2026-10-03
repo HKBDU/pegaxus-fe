@@ -81,16 +81,22 @@ export type UploadDocumentMetadata = {
   issuedDate: string;
   expiryDate: string;
 };
+export type DossierUploadedAssetRef = {
+  publicId: string;
+  fileName: string;
+  mimeType: string;
+  fileSizeBytes: number;
+};
 export type UploadDocumentInput = {
   dossierId: string;
   requirementId: number;
-  files: File[];
+  files: DossierUploadedAssetRef[];
   metadata: UploadDocumentMetadata;
 };
 export type SubmitDocumentVersionInput = {
   documentId: string;
   dossierId?: string;
-  files: File[];
+  files: DossierUploadedAssetRef[];
   metadata: Pick<UploadDocumentMetadata, "documentNumber" | "issuingAuthority" | "issuedDate" | "expiryDate"> & { uploadNote?: string };
 };
 export type UpdateDocumentMetadataInput = {

@@ -6,7 +6,7 @@ import {
   dossierRequirementsParamsSchema,
   createUploadDocumentSchema,
   uploadDocumentEnvelopeSchema,
-  validateUploadFiles,
+  dossierUploadedAssetsSchema,
   complianceDocumentEnvelopeSchema,
   createSubmitDocumentVersionSchema,
   submitDocumentVersionEnvelopeSchema,
@@ -22,16 +22,16 @@ import {
 } from "./schemas";
 import type { ApproveDocumentInput, DocumentReviewInput, DossierRequirementsParams, SendMissingDocumentReminderInput, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
 
-function buildUploadDocumentFormData({ files, metadata }: { files: readonly File[]; metadata: object }): FormData {
-  const form = new FormData();
-  for (const file of files) form.append("files", file);
+// FE transport adapter pending the final U1/U3 backend DTO. Keep asset serialization here.
+function buildDossierDocumentRequest({ files, metadata }: Pick<UploadDocumentInput, "files"> & { metadata: object }) {
+  const fields: Record<string, string> = {};
   for (const [key, value] of Object.entries(metadata ?? {})) {
     if (typeof value === "string") {
       const trimmed = value.trim();
-      if (trimmed) form.append(key, trimmed);
+      if (trimmed) fields[key] = trimmed;
     }
   }
-  return form;
+  return { files: dossierUploadedAssetsSchema.parse(files), ...fields };
 }
 
 export const dossierService = {
@@ -89,12 +89,10 @@ export const dossierService = {
   async uploadComplianceDocument(input: UploadDocumentInput) {
     const dossierId = dossierIdSchema.parse(input.dossierId);
     const requirementId = dossierIdSchema.parse(String(input.requirementId));
-    const fileError = validateUploadFiles(input.files);
-    if (fileError) throw new Error(fileError.message);
     const metadata = createUploadDocumentSchema(null).parse(input.metadata);
     const payload = await apiClient.post<unknown, unknown>(
       `compliance-dossiers/${encodeURIComponent(dossierId)}/requirements/${encodeURIComponent(requirementId)}/documents`,
-      buildUploadDocumentFormData({ files: input.files, metadata }),
+      buildDossierDocumentRequest({ files: input.files, metadata }),
       { timeout: 120_000 },
     );
     return uploadDocumentEnvelopeSchema.parse(payload).value;
@@ -111,12 +109,10 @@ export const dossierService = {
 
   async submitDocumentVersion(input: SubmitDocumentVersionInput) {
     const id = dossierIdSchema.parse(input.documentId);
-    const fileError = validateUploadFiles(input.files);
-    if (fileError) throw new Error(fileError.message);
     const metadata = createSubmitDocumentVersionSchema(null).parse(input.metadata);
     const payload = await apiClient.post<unknown, unknown>(
       `compliance-documents/${encodeURIComponent(id)}/versions`,
-      buildUploadDocumentFormData({ files: input.files, metadata }),
+      buildDossierDocumentRequest({ files: input.files, metadata }),
       { timeout: 120_000 },
     );
     return submitDocumentVersionEnvelopeSchema.parse(payload).value;

@@ -4,10 +4,23 @@ import {
   approveDocumentEnvelopeSchema,
   documentReviewSchema,
   missingDocumentReminderSchema,
+  dossierUploadedAssetsSchema,
 } from "../schemas";
+import demoPdfUrl from "@/assets/a.pdf?url";
+import demoImageUrl from "@/assets/horse-card.png?url";
 import { isMissingDossierRequirement } from "../constants";
 import { canMarkReadyForSubmission, getReviewBlockReason } from "../lib/document-review";
-import type { ApproveDocumentResponse, ApproveDocumentReview, DocumentReviewPayload, DocumentReviewResponse, ReadyForSubmissionResponse, ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, MissingDocumentReminderInput, MissingDocumentReminderResponse, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentMetadata } from "../types";
+import type { ApproveDocumentResponse, ApproveDocumentReview, DocumentReviewPayload, DocumentReviewResponse, ReadyForSubmissionResponse, ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, MissingDocumentReminderInput, MissingDocumentReminderResponse, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentMetadata, DossierUploadedAssetRef } from "../types";
+
+// Local demonstration fixtures, not a guessed Cloudinary URL or the customer's uploaded bytes.
+function mockFileProjection(files: DossierUploadedAssetRef[]) {
+  return dossierUploadedAssetsSchema.parse(files).map((file, index) => ({
+    fileName: file.fileName,
+    fileUrl: new URL(file.mimeType === "application/pdf" ? demoPdfUrl : demoImageUrl,
+      typeof window !== "undefined" ? window.location.origin : "http://localhost").href,
+    mimeType: file.mimeType, fileSizeBytes: file.fileSizeBytes, sortOrder: index + 1,
+  }));
+}
 
 class DossierMockHttpError extends Error {
   readonly status: number;
@@ -306,7 +319,7 @@ function seedDocument(requirement: DossierRequirement): ComplianceDocumentDetail
       versionNo: document.latestVersionNo,
       uploadNote: null,
       uploadedAt: "2026-09-25T02:30:00Z",
-      files: [{ fileName: "document-page.jpg", fileUrl: "https://example.com/document-page.jpg", mimeType: "image/jpeg", fileSizeBytes: 812345, sortOrder: 1 }],
+      files: mockFileProjection([{ publicId: "mock/document-page", fileName: "document-page.png", mimeType: "image/png", fileSizeBytes: 196621 }]),
       review: rejected ? {
         documentReviewId: 900,
         result: "REJECTED",
@@ -344,13 +357,14 @@ export function getMockComplianceDocument(id: string, scenario: DossierMockScena
 
 export function submitMockDocumentVersion(
   id: string,
-  files: File[],
+  files: DossierUploadedAssetRef[],
   metadata: SubmitDocumentVersionInput["metadata"],
   scenario: DossierMockScenario,
 ) {
   const current = getMockComplianceDocument(id, scenario);
   assertWritableRequirement(current.dossierRequirementId, scenario);
   if (current.status === "APPROVED") throw new DossierMockHttpError(409, "DOCUMENT_ALREADY_VERIFIED");
+  const projectedFiles = mockFileProjection(files);
   const latest = current.versions[0];
   const reviewed = latest.review !== null;
   const versionNo = reviewed ? latest.versionNo + 1 : latest.versionNo;
@@ -360,10 +374,7 @@ export function submitMockDocumentVersion(
     versionNo,
     uploadNote: metadata.uploadNote?.trim() || null,
     uploadedAt: new Date().toISOString(),
-    files: files.map((file, index) => ({
-      fileName: file.name, fileUrl: `https://example.com/${encodeURIComponent(file.name)}`,
-      mimeType: file.type, fileSizeBytes: file.size, sortOrder: index + 1,
-    })),
+    files: projectedFiles,
     review: null,
   };
   documentDetails.set(current.complianceDocumentId, {
@@ -413,14 +424,14 @@ export function updateMockComplianceDocumentMetadata(
 export function uploadMockDocument(
   id: string,
   requirementId: number,
-  files: File[],
+  files: DossierUploadedAssetRef[],
   scenario: DossierMockScenario,
   metadata?: UploadDocumentMetadata,
 ) {
   assertMockAvailable(id, scenario);
   const overview = getMockDossier(id, scenario);
   if (overview.writeLocked || overview.status !== "IN_PREPARATION") throw new DossierMockHttpError(409, "DOSSIER_LOCKED");
-  if (!files.length) throw new DossierMockHttpError(400, "FILES_REQUIRED");
+  const projectedFiles = mockFileProjection(files);
   const requirement = currentRequirements(id).find((item) => item.dossierRequirementId === requirementId);
   if (!requirement) throw new DossierMockHttpError(404, "DR_NOT_FOUND");
   if (requirement.document) throw new DossierMockHttpError(409, "DR_ALREADY_HAS_DOCUMENT");
@@ -452,13 +463,7 @@ export function uploadMockDocument(
       versionNo: result.versionNo,
       uploadNote: null,
       uploadedAt,
-      files: files.map((file, index) => ({
-        fileName: file.name,
-        fileUrl: `https://example.com/${encodeURIComponent(file.name)}`,
-        mimeType: file.type,
-        fileSizeBytes: file.size,
-        sortOrder: index + 1,
-      })),
+      files: projectedFiles,
       review: null,
     }],
     openRequest: null,

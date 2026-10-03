@@ -13,7 +13,7 @@ const previewRoles = ["CUSTOMER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"] a
 export default function DossierManualPreviewPage() {
   const [search] = useSearchParams();
   if (!import.meta.env.DEV || dossierSourceKind !== "mock") {
-    return <ErrorState message="This temporary preview requires local development and VITE_DOSSIER_API_MOCKS=true. Restart the dev server after setting the flag. No backend requests are made here." />;
+    return <ErrorState message="This temporary preview requires local development and VITE_DOSSIER_API_MOCKS=true. Restart the dev server after setting the flag. Dossier queries use mocks; file uploads use the real presigned backend." />;
   }
   const role = previewRoles.find((value) => value === search.get("previewRole")) ?? "CUSTOMER";
   return (
@@ -30,7 +30,7 @@ export default function DossierManualPreviewPage() {
         <div className="mt-3 flex flex-wrap gap-2" aria-label="Mock scenarios">
           {DOSSIER_MOCK_SCENARIOS.map(({ id, label }) => <Button key={id} asChild variant="outline" size="sm" className="h-auto whitespace-normal rounded-[2px] text-left text-xs"><Link to={`/dev/dossier/${id}?${search}`}>{id} · {label}</Link></Button>)}
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">Mock changes stay in memory across role switches. Reload to reset fixtures. No sign-in is needed.</p>
+        <p className="mt-2 text-xs text-muted-foreground">Mock changes stay in memory across role switches. Reload to reset fixtures. No sign-in is needed for dossier viewing, review or reminders. File upload requires the real presigned backend and a valid session; file previews show local demonstration assets.</p>
       </div>
       <DossierDetailsPage key={role} />
     </DossierPreviewRoleContext.Provider>
