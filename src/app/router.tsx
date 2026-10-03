@@ -17,7 +17,6 @@ import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
-const FileViewerTestPage = lazy(() => import("@/Test"));
 const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
 const CreateEmployeeAccountPage = lazy(() => import("@/features/accounts/pages/CreateEmployeeAccountPage"));
 const ViewUserAccountPage = lazy(() => import("@/features/accounts/pages/ViewUserAccountPage"));
