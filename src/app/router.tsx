@@ -21,7 +21,6 @@ import AuthoritySubmissionPage from "@/features/authority/pages/AuthoritySubmiss
 import AuthorityReviewPage from "@/features/authority/pages/AuthorityReviewPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
-const FileViewerTestPage = lazy(() => import("@/Test"));
 const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
 const CreateEmployeeAccountPage = lazy(() => import("@/features/accounts/pages/CreateEmployeeAccountPage"));
 const ViewUserAccountPage = lazy(() => import("@/features/accounts/pages/ViewUserAccountPage"));
@@ -334,19 +333,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "/__dev/file-viewer",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <FileViewerTestPage />
-          </Suspense>
-        ),
+        element: <></>,
       },
       {
         path: "/test",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <FileViewerTestPage />
-          </Suspense>
-        ),
+        element: <></>,
       },
     ]
     : []),

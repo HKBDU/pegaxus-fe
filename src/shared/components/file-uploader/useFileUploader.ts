@@ -32,6 +32,7 @@ export function useFileUploader({
   const [rejections, setRejections] = useState<string[]>([])
   const started = useRef(new Set<string>())
   const controllers = useRef(new Map<string, AbortController>())
+  const progressTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const callbacks = useRef({ onUploaded, onChange, onError, onReject })
   callbacks.current = { onUploaded, onChange, onError, onReject }
 
@@ -42,6 +43,9 @@ export function useFileUploader({
   const remove = useCallback((id: string) => {
     controllers.current.get(id)?.abort()
     controllers.current.delete(id)
+    const timer = progressTimers.current.get(id)
+    if (timer) clearTimeout(timer)
+    progressTimers.current.delete(id)
     started.current.delete(id)
     setItems((current) => current.filter((item) => item.id !== id))
   }, [])
@@ -58,7 +62,12 @@ export function useFileUploader({
         signal: controller.signal,
         onProgress: (progress) => patchItem(item.id, { progress }),
       })
-      patchItem(item.id, { status: 'success', publicId, progress: { stage: 'completed', percent: 100 } })
+      patchItem(item.id, { status: 'success', publicId, progress: { stage: 'completed', percent: 100 }, progressVisible: true })
+      const timer = setTimeout(() => {
+        patchItem(item.id, { progressVisible: false })
+        progressTimers.current.delete(item.id)
+      }, 5000)
+      progressTimers.current.set(item.id, timer)
       callbacks.current.onUploaded?.({ publicId, file: item.file })
     } catch (error) {
       const code = isPresignedUploadError(error) ? error.code : PRESIGNED_UPLOAD_ERROR_CODES.UNKNOWN
@@ -99,7 +108,10 @@ export function useFileUploader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [successKey])
 
-  useEffect(() => () => controllers.current.forEach((controller) => controller.abort()), [])
+  useEffect(() => () => {
+    controllers.current.forEach((controller) => controller.abort())
+    progressTimers.current.forEach((timer) => clearTimeout(timer))
+  }, [])
 
   const addFiles = useCallback((incoming: File[]) => {
     if (disabled || incoming.length === 0) return
@@ -141,7 +153,10 @@ export function useFileUploader({
 
   const retry = useCallback((id: string) => {
     started.current.delete(id)
-    patchItem(id, { status: 'queued', progress: { stage: 'signing', percent: 0 } })
+    const timer = progressTimers.current.get(id)
+    if (timer) clearTimeout(timer)
+    progressTimers.current.delete(id)
+    patchItem(id, { status: 'queued', progress: { stage: 'signing', percent: 0 }, progressVisible: true })
   }, [patchItem])
 
   return { items, rejections, addFiles, remove, retry }
