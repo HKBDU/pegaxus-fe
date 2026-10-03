@@ -17,6 +17,7 @@ import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const FileViewerTestPage = lazy(() => import("@/Test"));
 const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
 const CreateEmployeeAccountPage = lazy(() => import("@/features/accounts/pages/CreateEmployeeAccountPage"));
 const ViewUserAccountPage = lazy(() => import("@/features/accounts/pages/ViewUserAccountPage"));
@@ -274,4 +275,18 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: "/__dev/customer/bookings/:bookingId/history",
+          element: <MainLayout />,
+          children: [{ index: true, element: bookingHistoryPage }],
+        },
+        {
+          path: "/__dev/admin/bookings/:bookingId/history",
+          element: <AdminLayout />,
+          children: [{ index: true, element: bookingHistoryPage }],
+        },
+      ]
+    : []),
 ]);
