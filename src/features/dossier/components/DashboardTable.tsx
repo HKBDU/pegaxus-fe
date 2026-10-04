@@ -93,6 +93,10 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={2} className="w-44 min-w-0 rounded-[2px] border-slate-200 p-0.5 shadow-md">
+                <DropdownMenuItem className={menuItemClass} onSelect={() => navigate(`/compliance-dossiers/${row.original.complianceDossierId}`)}>
+                  <ArrowRight className="size-3.5 text-slate-700" />
+                  View dossier
+                </DropdownMenuItem>
                 <DropdownMenuItem className={menuItemClass} onSelect={() => navigate(`/compliance-dossiers/${row.original.complianceDossierId}/requirements`)}>
                   <ListChecks className="size-3.5 text-amber-600" />
                   View requirements

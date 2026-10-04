@@ -80,6 +80,9 @@ const ApplyTemplatePage = lazy(
 const DossierDashboardPage = lazy(
   () => import("@/features/dossier/pages/DossierDashboardPage"),
 );
+const DossierDetailsPage = lazy(
+  () => import("@/features/dossier/pages/DossierDetailsPage"),
+);
 const DossierAuditHistoryPage = lazy(
   () => import("@/features/dossier/pages/DossierAuditHistoryPage"),
 );
@@ -359,6 +362,20 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: "/compliance-dossiers/:dossierId",
+    element: (
+      <ProtectedRoute allowedRoles={["CUSTOMER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
+        <MainLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Suspense fallback={<LoadingState />}><DossierDetailsPage /></Suspense>,
+      },
+    ],
+  },
+  {
     element: <AuthShell />,
     children: [
       { path: "/login", element: <LoginPage /> },
@@ -453,19 +470,6 @@ export const router = createBrowserRouter([
               </ProtectedRoute>
             ),
           },
-          {
-            path: "/customs-clearance-proofs/:proofId/verify",
-            element: <CustomsClearanceReviewPage />,
-          },
-        ],
-      },
-      {
-        element: (
-          <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
-            <AdminLayout />
-          </ProtectedRoute>
-        ),
-        children: [
           {
             path: "/customs-clearance-proofs/:proofId/verify",
             element: <CustomsClearanceReviewPage />,
