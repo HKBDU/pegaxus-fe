@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom"
+import { Outlet, useLocation } from "react-router-dom"
 
 import { useAuthStore } from "@/features/auth/store"
 import { canAccess } from "@/features/auth/access-control"
@@ -25,6 +25,8 @@ function toHeaderUser(profile: AuthAccount): ProfileDropdownUser {
 }
 
 export function MainLayout() {
+  const { pathname } = useLocation()
+  const isLanding = pathname === "/"
   const { data: account } = useUser()
   const accessToken = useAuthStore((state) => state.accessToken)
   const principal = useAuthStore((state) => state.principal)
@@ -39,11 +41,11 @@ export function MainLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />
+      {!isLanding && <Header navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />}
       <main className="min-h-[calc(100svh-3rem)] flex-none">
         <Outlet /> {/* Outlet - React Router render route childs*/}
       </main>
-      <Footer />
+      {!isLanding && <Footer />}
     </div>
   )
 }
