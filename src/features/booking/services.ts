@@ -29,7 +29,7 @@ import type {
 
 const BOOKING_ENDPOINT = "bookings"
 const HORSE_ENDPOINT = "horses"
-const useBookingMocks = import.meta.env.DEV && import.meta.env.VITE_BOOKING_API_MOCKS !== "false"
+const useBookingMocks = import.meta.env.DEV && import.meta.env.VITE_BOOKING_API_MOCKS === "true"
 let mockBookings = structuredClone(MOCK_BOOKINGS)
 
 function wait(delay = 180) {

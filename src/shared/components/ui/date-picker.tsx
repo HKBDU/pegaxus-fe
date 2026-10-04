@@ -42,6 +42,7 @@ function DatePicker({
   const selected = toDate(value)
   const min = toDate(minDate)
   const max = toDate(maxDate)
+  const thisYear = new Date().getFullYear()
   const disabledDates = [
     ...(min ? [{ before: min }] : []),
     ...(max ? [{ after: max }] : []),
@@ -77,6 +78,9 @@ function DatePicker({
             onChange(date ? format(date, VALUE_FORMAT) : "")
             setOpen(false)
           }}
+          captionLayout="dropdown"
+          startMonth={min ?? new Date(thisYear - 100, 0)}
+          endMonth={max ?? new Date(thisYear + 10, 11)}
           defaultMonth={selected ?? min}
           disabled={disabledDates.length ? disabledDates : undefined}
           autoFocus
