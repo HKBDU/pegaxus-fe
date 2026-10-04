@@ -15,6 +15,9 @@ import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
+import BcpQuarantineProofPage from "@/features/quarantine/pages/BcpQuarantineProofPage";
+import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearanceProofPage";
+import CustomsClearanceReviewPage from "@/features/clearance/pages/CustomsClearanceReviewPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
@@ -387,19 +390,65 @@ export const router = createBrowserRouter([
           },
         ],
       },
+      {
+        element: (
+          <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}>
+            <AdminLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            path: "/compliance-dossiers/:dossierId/bcp-quarantine-proof",
+            element: (
+              <ProtectedRoute allowedRoles={["ESCORT"]}>
+                <BcpQuarantineProofPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/compliance-dossiers/:dossierId/quarantine-proof",
+            element: (
+              <ProtectedRoute allowedRoles={["ESCORT"]}>
+                <BcpQuarantineProofPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "/compliance-dossiers/:dossierId/customs-clearance-proof",
+            element: (
+              <ProtectedRoute allowedRoles={["DRIVER"]}>
+                <CustomsClearanceProofPage />
+              </ProtectedRoute>
+            ),
+          },
+        ],
+      },
+      {
+        element: (
+          <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
+            <AdminLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            path: "/customs-clearance-proofs/:proofId/verify",
+            element: <CustomsClearanceReviewPage />,
+          },
+        ],
+      },
     ],
   },
   ...(import.meta.env.DEV
     ? [
         {
-          path: "/__dev/customer/bookings/:bookingId/history",
-          element: <MainLayout />,
-          children: [{ index: true, element: bookingHistoryPage }],
+        path: "/__dev/customer/bookings/:bookingId/history",
+        element: <MainLayout />,
+        children: [{ index: true, element: bookingHistoryPage }],
         },
         {
-          path: "/__dev/admin/bookings/:bookingId/history",
-          element: <AdminLayout />,
-          children: [{ index: true, element: bookingHistoryPage }],
+        path: "/__dev/admin/bookings/:bookingId/history",
+        element: <AdminLayout />,
+        children: [{ index: true, element: bookingHistoryPage }],
         },
       ]
     : []),
