@@ -17,7 +17,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton"
 const initialParams: AuditParams = { pageIndex: 1, pageSize: 10, search: "", actionType: "ALL", from: "", to: "" }
 
 /** SCR-F2-024: "Audit History" tab of a dossier (TS and LM only; the BE answers 403 to customers). */
-export default function DossierAuditHistoryPage() {
+export function AuditHistoryPanel({ embedded = false }: { embedded?: boolean }) {
   const { dossierId } = useParams()
   const [params, setParams] = useState(initialParams)
   const overviewQuery = useDossierOverview(dossierId)
@@ -31,21 +31,21 @@ export default function DossierAuditHistoryPage() {
   const audit = auditQuery.data
 
   return (
-    <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
+    <div className={embedded ? "grid gap-5" : "booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10"}>
       <div className="booking-page-enter mx-auto w-full max-w-[1280px]">
-        <div className="mb-6">
+        {!embedded ? <div className="mb-6">
           <PageHeader title="AUDIT HISTORY" backHref="/compliance-dossiers" backLabel="Back to dossier tracking" />
           <p className="m-0 text-sm text-slate-500">
             View the immutable audit trail for ComplianceDossier{overview ? <span className="font-semibold text-slate-700"> {overview.bookingCode}</span> : null}.
           </p>
-        </div>
+        </div> : null}
 
         {overviewQuery.isError ? (
           <ErrorState message={getDossierErrorMessage(overviewQuery.error, "Unable to load this dossier.")} onRetry={() => void overviewQuery.refetch()} />
         ) : (
           <div className="grid gap-5">
-            {overview ? <DossierHeaderCard overview={overview} /> : <Skeleton className="h-20 rounded-none bg-[#e9e6de]" />}
-            {dossierId ? <DossierTabs dossierId={dossierId} active="audit" /> : null}
+            {!embedded ? (overview ? <DossierHeaderCard overview={overview} /> : <Skeleton className="h-20 rounded-none bg-[#e9e6de]" />) : null}
+            {!embedded && dossierId ? <DossierTabs dossierId={dossierId} active="audit" /> : null}
 
             <div role="note" className="flex items-start gap-2 rounded-[2px] border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs leading-5 text-sky-900">
               <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
@@ -82,4 +82,8 @@ export default function DossierAuditHistoryPage() {
       </div>
     </div>
   )
+}
+
+export default function DossierAuditHistoryPage() {
+  return <AuditHistoryPanel />
 }
