@@ -9,6 +9,9 @@ export const ROLE_ROUTES = {
   managerCreateUser: "/admin/users/new",
   customerHorses: "/my-horses",
   customerProfile: "/profile-settings",
+  complianceRequirements: "/compliance-requirements",
+  dossierTemplates: "/dossier-templates",
+  complianceDossiers: "/compliance-dossiers",
 } as const
 
 export const accountDetail = (id: string | number) => `${ROLE_ROUTES.managerUsers}/${encodeURIComponent(id)}`
@@ -18,6 +21,9 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
   const safePath = requestedPath.startsWith("/") && !requestedPath.startsWith("//") && !/^\/logout\/?$/i.test(requestedPath) ? requestedPath : ROLE_ROUTES.home
   if (normalizeRole(role) === "LOGISTICS_MANAGER") {
     return /^\/admin(?:\/|$)/.test(safePath) ? safePath : ROLE_ROUTES.managerHome
+  }
+  if (normalizeRole(role) === "TRANSPORT_SPECIALIST" && safePath === ROLE_ROUTES.home) {
+    return ROLE_ROUTES.complianceRequirements
   }
   return safePath
 }
@@ -29,6 +35,16 @@ const adminHeaderRoutes = [
   { path: "/admin/users", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "MANAGE EMPLOYEE ACCOUNTS" },
   { path: "/admin/transport-requests/:bookingId", label: "TRANSPORT REQUESTS", href: "/admin/transport-requests", title: "BOOKING DETAILS" },
   { path: "/admin/transport-requests", label: "TRANSPORT REQUESTS", href: "/admin/transport-requests", title: "" },
+  { path: `${ROLE_ROUTES.complianceRequirements}/new`, label: "COMPLIANCE REQUIREMENTS", href: ROLE_ROUTES.complianceRequirements, title: "CREATE REQUIREMENT" },
+  { path: `${ROLE_ROUTES.complianceRequirements}/:complianceRequirementId/edit`, label: "COMPLIANCE REQUIREMENTS", href: ROLE_ROUTES.complianceRequirements, title: "EDIT REQUIREMENT" },
+  { path: ROLE_ROUTES.complianceRequirements, label: "COMPLIANCE REQUIREMENTS", href: ROLE_ROUTES.complianceRequirements, title: "" },
+  { path: `${ROLE_ROUTES.dossierTemplates}/new`, label: "DOSSIER TEMPLATES", href: ROLE_ROUTES.dossierTemplates, title: "CREATE TEMPLATE" },
+  { path: `${ROLE_ROUTES.dossierTemplates}/:dossierTemplateId/edit`, label: "DOSSIER TEMPLATES", href: ROLE_ROUTES.dossierTemplates, title: "EDIT TEMPLATE" },
+  { path: ROLE_ROUTES.dossierTemplates, label: "DOSSIER TEMPLATES", href: ROLE_ROUTES.dossierTemplates, title: "" },
+  { path: `${ROLE_ROUTES.complianceDossiers}/new/:bookingId`, label: "DOSSIER TEMPLATES", href: ROLE_ROUTES.dossierTemplates, title: "APPLY TEMPLATE" },
+  { path: `${ROLE_ROUTES.complianceDossiers}/:dossierId/audit-history`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "AUDIT HISTORY" },
+  { path: `${ROLE_ROUTES.complianceDossiers}/:dossierId/requirements`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "REQUIREMENTS" },
+  { path: ROLE_ROUTES.complianceDossiers, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "" },
   ...["profile", "staff", "transport-plans", "transport-partners", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
 ]
 

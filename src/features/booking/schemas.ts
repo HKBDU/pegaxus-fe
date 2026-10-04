@@ -7,6 +7,8 @@ const optionalText = (max: number) => z.string().trim().max(max)
 
 const DATE_FORMAT = "yyyy-MM-dd"
 
+export const bookingIdSchema = z.string().uuid()
+
 export function getBookingDepartureDateRange(now = new Date()) {
   const utcToday = parseISO(now.toISOString().slice(0, 10))
 

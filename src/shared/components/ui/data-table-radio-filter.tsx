@@ -53,7 +53,7 @@ export function DataTableRadioFilter({
         sideOffset={2}
         className="w-[var(--radix-popover-trigger-width)] rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md"
       >
-        <div role="radiogroup" aria-label={ariaLabel ?? title} className="grid gap-1">
+        <div role="radiogroup" aria-label={ariaLabel ?? title} className="grid max-h-72 gap-1 overflow-y-auto">
           {options.map((option) => (
             <button
               type="button"
