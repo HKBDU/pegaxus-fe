@@ -119,7 +119,7 @@ export function UserAccountsTable({
           </div>
         ),
       },
-      { accessorKey: "employeeCode", header: "EMPLOYEE CODE" },
+      { accessorKey: "employeeCode", header: "EMPLOYEE CODE", enableHiding: false },
       {
         accessorKey: "email",
         header: "EMAIL",

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react"
 
 import { acquireEditLock, forgetEditLock, scheduleEditRelease } from "@/features/booking/editLock"
 import { bookingService } from "@/features/booking/services"
+import { bookingIdSchema } from "@/features/booking/schemas"
 import type { EntityId } from "@/shared/types"
 import type {
   Booking,
@@ -31,10 +32,12 @@ export function useBookings(params: BookingListParams) {
 }
 
 export function useBooking(id: EntityId) {
+  const parsedBookingId = bookingIdSchema.safeParse(id)
+
   return useQuery({
     queryKey: bookingKeys.detail(id),
     queryFn: () => bookingService.getBooking(id),
-    enabled: typeof id === "string" ? id.length > 0 : Number.isFinite(id) && id > 0,
+    enabled: parsedBookingId.success,
   })
 }
 

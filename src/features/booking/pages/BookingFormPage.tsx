@@ -450,6 +450,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
   const horseColumns = useMemo<ColumnDef<AvailableHorse>[]>(() => [
     {
       id: "select",
+      enableHiding: false,
       header: () => (
         <div className="flex justify-center">
           <Checkbox
@@ -483,7 +484,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
       header: "SEX",
       cell: ({ row }) => formatSex(row.original.sex),
     },
-    { accessorKey: "microchipNumber", header: "MICROCHIP NUMBER" },
+    { accessorKey: "microchipNumber", header: "MICROCHIP NUMBER", enableHiding: false },
   ], [allVisibleHorsesSelected, selectedIds, someVisibleHorsesSelected, toggleHorse, toggleVisibleHorses])
 
   const horseTable = useReactTable({

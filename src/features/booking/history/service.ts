@@ -8,11 +8,13 @@ import {
 
 export const bookingApi = {
   async getHistory(bookingId: string, signal?: AbortSignal) {
-    if (!bookingHistoryBookingIdSchema.safeParse(bookingId).success) {
+    const parsedBookingId = bookingHistoryBookingIdSchema.safeParse(bookingId);
+    if (!parsedBookingId.success) {
       throw new InvalidBookingHistoryIdError();
     }
+    const numericBookingId = String(parsedBookingId.data);
     const response = await apiClient.get<unknown, unknown>(
-      `/bookings/${encodeURIComponent(bookingId)}/histories`,
+      `/bookings/${encodeURIComponent(numericBookingId)}/histories`,
       {
         signal,
       },
