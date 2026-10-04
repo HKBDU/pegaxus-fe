@@ -1,6 +1,27 @@
 import type { AxiosRequestConfig } from "axios"
 
 import apiClient from "@/lib/axios"
+import {
+  dossierIdSchema,
+  dossierOverviewEnvelopeSchema,
+  dossierRequirementsEnvelopeSchema,
+  dossierRequirementsParamsSchema,
+  createUploadDocumentSchema,
+  uploadDocumentEnvelopeSchema,
+  dossierUploadedAssetsSchema,
+  complianceDocumentEnvelopeSchema,
+  createSubmitDocumentVersionSchema,
+  submitDocumentVersionEnvelopeSchema,
+  createUpdateDocumentMetadataSchema,
+  updateDocumentMetadataEnvelopeSchema,
+  approveDocumentReviewSchema,
+  approveDocumentEnvelopeSchema,
+  documentReviewSchema,
+  documentReviewEnvelopeSchema,
+  readyForSubmissionEnvelopeSchema,
+  missingDocumentReminderSchema,
+  missingDocumentReminderEnvelopeSchema,
+} from "./schemas"
 import type { EntityId, PaginationMeta } from "@/shared/types"
 import { MOCK_AUDIT_EVENTS, MOCK_DASHBOARD_ITEMS } from "@/features/dossier/constants/dossier.mock"
 import type {
@@ -12,6 +33,13 @@ import type {
   DashboardParams,
   DashboardResponse,
   DossierOverview,
+  ApproveDocumentInput,
+  DocumentReviewInput,
+  DossierRequirementsParams,
+  SendMissingDocumentReminderInput,
+  SubmitDocumentVersionInput,
+  UpdateDocumentMetadataInput,
+  UploadDocumentInput,
   ExportFormat,
 } from "@/features/dossier/types"
 
@@ -128,7 +156,7 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export const dossierService = {
+const dashboardService = {
   /** K1. */
   async getDashboard(params: DashboardParams): Promise<DashboardResponse> {
     if (useDossierMocks) {
@@ -160,7 +188,7 @@ export const dossierService = {
   },
 
   /** D7. */
-  async getOverview(dossierId: EntityId): Promise<DossierOverview> {
+  async getOverview(dossierId: EntityId, _signal?: AbortSignal): Promise<DossierOverview> {
     if (useDossierMocks) {
       await wait()
       const item = MOCK_DASHBOARD_ITEMS.find((candidate) => String(candidate.complianceDossierId) === String(dossierId))
@@ -177,12 +205,30 @@ export const dossierService = {
           mandatorySatisfiedOrWaived: 0,
           writeLocked: false,
           writeLockReason: null,
+          readyForSubmissionAt: null,
+          approvedAt: null,
+          rejectedAt: null,
+          closedAt: null,
+          rejectionReason: null,
+          note: null,
+          bookingSummary: {
+            bookingStatus: "APPROVED",
+            originCountry: "",
+            destinationCountry: "",
+            requestedDepartureDate: new Date().toISOString().slice(0, 10),
+            customerName: "",
+            horseCount: 0,
+            horses: [],
+          },
+          requirementSummary: { total: 0, pending: 0, requested: 0, provided: 0, satisfied: 0, rejected: 0, waived: 0 },
+          quarantineStatus: null,
+          customsClearanceStatus: null,
         }
       }
       if (!item) throw new Error("DOSSIER_NOT_FOUND")
       const mandatoryTotal = 8
       return {
-        complianceDossierId: item.complianceDossierId,
+        complianceDossierId: Number(item.complianceDossierId),
         dossierCode: item.dossierCode ?? `CD-${item.complianceDossierId}`,
         bookingId: 1000 + Number(item.complianceDossierId),
         bookingCode: item.bookingCode,
@@ -193,32 +239,28 @@ export const dossierService = {
         mandatorySatisfiedOrWaived: Math.round((item.progressPercent / 100) * mandatoryTotal),
         writeLocked: item.status === "CLOSED" || item.status === "SUBMITTED" || item.status === "APPROVED",
         writeLockReason: item.status === "CLOSED" ? "DOSSIER_CLOSED" : null,
+        readyForSubmissionAt: null,
+        approvedAt: null,
+        rejectedAt: null,
+        closedAt: null,
+        rejectionReason: null,
+        note: null,
+        bookingSummary: {
+          bookingStatus: "APPROVED",
+          originCountry: item.originCountry,
+          destinationCountry: item.destinationCountry,
+          requestedDepartureDate: item.requestedDepartureDate,
+          customerName: item.customerName,
+          horseCount: 0,
+          horses: [],
+        },
+        requirementSummary: { total: mandatoryTotal, pending: 0, requested: 0, provided: 0, satisfied: Math.round((item.progressPercent / 100) * mandatoryTotal), rejected: 0, waived: 0 },
+        quarantineStatus: null,
+        customsClearanceStatus: null,
       }
     }
-    const value = unwrapValue<{
-      complianceDossierId: EntityId
-      dossierCode: string | null
-      bookingId: EntityId
-      bookingCode: string
-      status: DossierOverview["status"] | null
-      completionPercent: number
-      fulfilledCount: number
-      requirementCount: number
-    }>(await api.get<unknown>(`${ENDPOINT}/${dossierId}`))
-
-    return {
-      complianceDossierId: value.complianceDossierId,
-      dossierCode: value.dossierCode ?? String(value.complianceDossierId),
-      bookingId: value.bookingId,
-      bookingCode: value.bookingCode,
-      status: value.status ?? "IN_PREPARATION",
-      openedAt: null,
-      progressPercent: value.completionPercent,
-      mandatoryTotal: value.requirementCount,
-      mandatorySatisfiedOrWaived: value.fulfilledCount,
-      writeLocked: value.status === "CLOSED" || value.status === "SUBMITTED" || value.status === "APPROVED",
-      writeLockReason: value.status === "CLOSED" ? "DOSSIER_CLOSED" : null,
-    }
+    const payload = await api.get<unknown>(`${ENDPOINT}/${dossierId}`)
+    return dossierOverviewEnvelopeSchema.parse(payload).value
   },
 
   /** K3. The audit trail is append-only: this service only reads. */
@@ -254,3 +296,102 @@ export const dossierService = {
     return { data: value.items, meta: toMeta(value) }
   },
 }
+// FE transport adapter pending the final U1/U3 backend DTO. Keep asset serialization here.
+function buildDossierDocumentRequest({ files, metadata }: Pick<UploadDocumentInput, "files"> & { metadata: object }) {
+  const fields: Record<string, string> = {};
+  for (const [key, value] of Object.entries(metadata ?? {})) {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed) fields[key] = trimmed;
+    }
+  }
+  return { files: dossierUploadedAssetsSchema.parse(files), ...fields };
+}
+
+const documentServiceMethods = {
+  async sendMissingRequirementReminder(input: SendMissingDocumentReminderInput) {
+    const id = dossierIdSchema.parse(input.dossierId);
+    const reminder = missingDocumentReminderSchema.parse(input.reminder);
+    const payload = await apiClient.post<unknown, unknown>(`compliance-dossiers/${id}/requirements/reminders`, reminder);
+    return missingDocumentReminderEnvelopeSchema.parse(payload);
+  },
+
+  async approveDocument(input: ApproveDocumentInput) {
+    approveDocumentReviewSchema.parse(input.review);
+    return approveDocumentEnvelopeSchema.parse(await dossierService.reviewComplianceDocument(input));
+  },
+
+  async reviewComplianceDocument(input: DocumentReviewInput) {
+    const documentId = dossierIdSchema.parse(input.documentId);
+    const versionId = dossierIdSchema.parse(String(input.versionId));
+    const review = documentReviewSchema.parse(input.review);
+    const payload = await apiClient.post<unknown, unknown>(
+      `compliance-documents/${documentId}/versions/${versionId}/reviews`, review,
+    );
+    return documentReviewEnvelopeSchema.parse(payload);
+  },
+
+  async markReadyForSubmission(dossierId: string) {
+    const id = dossierIdSchema.parse(dossierId);
+    const payload = await apiClient.patch<unknown, unknown>(`compliance-dossiers/${id}/ready-for-submission`);
+    return readyForSubmissionEnvelopeSchema.parse(payload);
+  },
+
+  async getRequirements(
+    dossierId: string,
+    params: DossierRequirementsParams,
+    signal?: AbortSignal,
+  ) {
+    const id = dossierIdSchema.parse(dossierId);
+    const query = dossierRequirementsParamsSchema.parse(params);
+    const payload = await apiClient.get<unknown, unknown>(
+      `compliance-dossiers/${encodeURIComponent(id)}/requirements`,
+      { params: query, signal },
+    );
+    return dossierRequirementsEnvelopeSchema.parse(payload).value;
+  },
+
+  async uploadComplianceDocument(input: UploadDocumentInput) {
+    const dossierId = dossierIdSchema.parse(input.dossierId);
+    const requirementId = dossierIdSchema.parse(String(input.requirementId));
+    const metadata = createUploadDocumentSchema(null).parse(input.metadata);
+    const payload = await apiClient.post<unknown, unknown>(
+      `compliance-dossiers/${encodeURIComponent(dossierId)}/requirements/${encodeURIComponent(requirementId)}/documents`,
+      buildDossierDocumentRequest({ files: input.files, metadata }),
+      { timeout: 120_000 },
+    );
+    return uploadDocumentEnvelopeSchema.parse(payload).value;
+  },
+
+  async getComplianceDocument(documentId: string, signal?: AbortSignal) {
+    const id = dossierIdSchema.parse(documentId);
+    const payload = await apiClient.get<unknown, unknown>(
+      `compliance-documents/${encodeURIComponent(id)}`,
+      { signal },
+    );
+    return complianceDocumentEnvelopeSchema.parse(payload).value;
+  },
+
+  async submitDocumentVersion(input: SubmitDocumentVersionInput) {
+    const id = dossierIdSchema.parse(input.documentId);
+    const metadata = createSubmitDocumentVersionSchema(null).parse(input.metadata);
+    const payload = await apiClient.post<unknown, unknown>(
+      `compliance-documents/${encodeURIComponent(id)}/versions`,
+      buildDossierDocumentRequest({ files: input.files, metadata }),
+      { timeout: 120_000 },
+    );
+    return submitDocumentVersionEnvelopeSchema.parse(payload).value;
+  },
+
+  async updateComplianceDocumentMetadata(input: UpdateDocumentMetadataInput) {
+    const id = dossierIdSchema.parse(input.documentId);
+    const changes = createUpdateDocumentMetadataSchema(null).parse(input.changes);
+    const payload = await apiClient.patch<unknown, unknown>(
+      `compliance-documents/${encodeURIComponent(id)}`,
+      changes,
+    );
+    return updateDocumentMetadataEnvelopeSchema.parse(payload).value;
+  },
+}
+
+export const dossierService = Object.assign(dashboardService, documentServiceMethods)

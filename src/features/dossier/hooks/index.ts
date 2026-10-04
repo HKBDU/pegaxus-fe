@@ -1,1 +1,1 @@
-export { dossierKeys, useAuditHistory, useDossierDashboard, useDossierOverview, useExportDashboard } from "./useDossier"
+export { dossierKeys, useAuditHistory, useDossierDashboard, useDossierOverview, useDossierRequirements, useExportDashboard } from "./useDossier"
