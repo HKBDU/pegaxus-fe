@@ -17,7 +17,6 @@ import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
-const FileViewerTestPage = lazy(() => import("@/Test"));
 const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
 const CreateEmployeeAccountPage = lazy(() => import("@/features/accounts/pages/CreateEmployeeAccountPage"));
 const ViewUserAccountPage = lazy(() => import("@/features/accounts/pages/ViewUserAccountPage"));
@@ -63,7 +62,20 @@ const bookingHistoryPage = (
   </Suspense>
 );
 
+// TEMP UC20-25 FINAL MANUAL UI TEST ROUTE — REMOVE AFTER TESTING
+const temporaryDossierRoutes = import.meta.env.DEV ? (() => {
+  const DossierManualPreviewPage = lazy(() => import("@/features/dossier/pages/DossierManualPreviewPage"));
+  return [{
+    path: "/dev/dossier/:dossierId",
+    element: <Suspense fallback={<LoadingState />}><DossierManualPreviewPage /></Suspense>,
+  }];
+})() : [];
+// END TEMP UC20-25 FINAL MANUAL UI TEST ROUTE
+
 export const router = createBrowserRouter([
+  // TEMP UC20-25 FINAL MANUAL UI TEST ROUTE — REMOVE AFTER TESTING
+  ...temporaryDossierRoutes,
+  // END TEMP UC20-25 FINAL MANUAL UI TEST ROUTE
   {
     path: "/",
     element: <MainLayout />,
@@ -274,22 +286,6 @@ export const router = createBrowserRouter([
           element: <AdminLayout />,
           children: [{ index: true, element: bookingHistoryPage }],
         },
-      {
-        path: "/__dev/file-viewer",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <FileViewerTestPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "/test",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <FileViewerTestPage />
-          </Suspense>
-        ),
-      },
       ]
     : []),
 ]);
