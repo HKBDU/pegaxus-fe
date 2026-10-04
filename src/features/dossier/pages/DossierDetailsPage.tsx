@@ -7,18 +7,16 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  EmptyState,
-  ErrorState,
-  LoadingState,
-} from "@/shared/components/common";
+import { ErrorState, LoadingState } from "@/shared/components/common";
 import { PageHeader } from "@/shared/components/PageHeader";
-import { Card, CardContent } from "@/shared/components/ui/card";
 import { AuthorityInspectionTab } from "@/features/clearance/components/AuthorityInspectionTab";
+import { DossierRequirementsPanel } from "@/features/compliance-catalog/pages/DossierRequirementsPage";
+import { AuditHistoryPanel } from "./DossierAuditHistoryPage";
 import { DossierOverview } from "../components/DossierOverview";
 import { DossierReadinessAction } from "../components/DossierReadinessAction";
 import { DossierRequirementsPreview } from "../components/DossierRequirementsPreview";
 import { useDossierOverview } from "../hooks/useDossier";
+import { useDossierRole } from "../hooks/useDossierRole";
 import { getDossierLoadErrorKind } from "../source";
 
 const sections = [
@@ -57,6 +55,8 @@ export default function DossierDetailsPage() {
   const { dossierId = "" } = useParams<{ dossierId: string }>();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<SectionId>("requirements");
+  const role = useDossierRole();
+  const visibleSections = role === "CUSTOMER" ? sections.filter(({ id }) => id === "requirements" || id === "documents") : sections;
   const query = useDossierOverview(dossierId);
   return (
     <div className="booking-page-shell min-w-0 px-5 py-6 font-sans sm:px-6 lg:px-10">
@@ -103,7 +103,7 @@ export default function DossierDetailsPage() {
                 aria-label="Dossier sections"
                 className="flex gap-1 overflow-x-auto"
               >
-                {sections.map(({ id, label, icon: Icon }) => (
+                {visibleSections.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     id={`dossier-tab-${id}`}
@@ -125,7 +125,9 @@ export default function DossierDetailsPage() {
               id={`dossier-panel-${activeSection}`}
               aria-labelledby={`dossier-tab-${activeSection}`}
             >
-              {activeSection === "requirements" || activeSection === "documents" ? (
+              {activeSection === "requirements" ? (
+                <DossierRequirementsPanel embedded />
+              ) : activeSection === "documents" ? (
                 <DossierRequirementsPreview
                   dossierId={dossierId}
                   horses={query.data.bookingSummary.horses}
@@ -136,11 +138,7 @@ export default function DossierDetailsPage() {
               ) : activeSection === "authority" ? (
                 <AuthorityInspectionTab dossier={query.data} />
               ) : (
-                <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
-                  <CardContent className="p-5">
-                    <EmptyState message="Open Audit History from the dossier tracking dashboard." />
-                  </CardContent>
-                </Card>
+                <AuditHistoryPanel embedded />
               )}
             </div>
           </>

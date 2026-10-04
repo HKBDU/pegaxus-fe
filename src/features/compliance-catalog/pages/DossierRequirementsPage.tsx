@@ -1,5 +1,5 @@
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
-import { LockKeyhole, MoreVertical, Plus, Trash2 } from "lucide-react"
+import { Ban, LockKeyhole, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -9,6 +9,7 @@ import { useAuthStore } from "@/features/auth/store"
 import { AddDossierRequirementDialog } from "@/features/compliance-catalog/components/AddDossierRequirementDialog"
 import { MandatoryBadge, REQUIREMENT_STATUS_OPTIONS, RequirementStatusBadge, ScopeBadge } from "@/features/compliance-catalog/components/RequirementBadges"
 import { RemoveDossierRequirementDialog } from "@/features/compliance-catalog/components/RemoveDossierRequirementDialog"
+import { DossierRequirementActionDialog, type DossierRequirementAction } from "@/features/compliance-catalog/components/DossierRequirementActionDialog"
 import { TruncatedText } from "@/features/compliance-catalog/components/TruncatedText"
 import {
   useActiveRequirementOptions,
@@ -39,13 +40,14 @@ const ALL_LINES: DossierRequirementParams = { pageIndex: 1, pageSize: 100, statu
  * "Requirements" tab of a dossier: the list (D8) plus Add (SCR-F2-009) and Remove (SCR-F2-010) for the TS.
  * Temporary host for those two dialogs until the dossier detail page (SCR-F2-008) embeds them.
  */
-export default function DossierRequirementsPage() {
+export function DossierRequirementsPanel({ embedded = false }: { embedded?: boolean }) {
   const { dossierId } = useParams()
   const principal = useAuthStore((state) => state.principal)
   const canManage = canAccess(principal, { anyRole: ["TRANSPORT_SPECIALIST"] })
   const [params, setParams] = useState(initialParams)
   const [addOpen, setAddOpen] = useState(false)
   const [removeTarget, setRemoveTarget] = useState<DossierRequirementItem | null>(null)
+  const [action, setAction] = useState<DossierRequirementAction>(null)
 
   const overviewQuery = useDossierOverview(dossierId)
   const listQuery = useDossierRequirements(dossierId, params)
@@ -108,6 +110,14 @@ export default function DossierRequirementsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" sideOffset={2} className="w-40 min-w-0 rounded-[2px] border-slate-200 p-0.5 shadow-md">
+                      {!row.original.document ? <DropdownMenuItem className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem]" onSelect={() => setAction({ type: "edit", requirement: row.original })}>
+                        <Pencil className="size-3.5" />
+                        Edit
+                      </DropdownMenuItem> : null}
+                      {!row.original.document && row.original.status !== "WAIVED" ? <DropdownMenuItem className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem]" onSelect={() => setAction({ type: "waive", requirement: row.original })}>
+                        <Ban className="size-3.5" />
+                        Waive
+                      </DropdownMenuItem> : null}
                       <DropdownMenuItem
                         variant="destructive"
                         className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem] data-[variant=destructive]:text-red-600 data-[variant=destructive]:focus:bg-accent data-[variant=destructive]:focus:text-red-700 data-[variant=destructive]:*:[svg]:text-red-600!"
@@ -145,9 +155,9 @@ export default function DossierRequirementsPage() {
   const lockMessage = getRequirementErrorMessage(new Error(overview?.writeLockReason ?? "DOSSIER_LOCKED"), "This dossier cannot be modified.")
 
   return (
-    <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
+    <div className={embedded ? "grid gap-5" : "booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10"}>
       <div className="booking-page-enter mx-auto w-full max-w-[1280px]">
-        <div className="mb-6">
+        {!embedded ? <div className="mb-6">
           <PageHeader
             title="DOSSIER REQUIREMENTS"
             backHref="/compliance-dossiers"
@@ -168,14 +178,14 @@ export default function DossierRequirementsPage() {
             }
           />
           <p className="m-0 text-sm text-slate-500">Manage the documents this booking has to provide.</p>
-        </div>
+        </div> : null}
 
         {overviewQuery.isError ? (
           <ErrorState message="Unable to load this dossier." onRetry={() => void overviewQuery.refetch()} />
         ) : (
           <div className="grid gap-5">
-            {overview ? <DossierHeaderCard overview={overview} /> : <Skeleton className="h-20 rounded-none bg-[#e9e6de]" />}
-            {dossierId ? <DossierTabs dossierId={dossierId} active="requirements" /> : null}
+            {!embedded ? (overview ? <DossierHeaderCard overview={overview} /> : <Skeleton className="h-20 rounded-none bg-[#e9e6de]" />) : null}
+            {!embedded && dossierId ? <DossierTabs dossierId={dossierId} active="requirements" /> : null}
 
             {locked ? (
               <div role="alert" className="flex items-start gap-2 rounded-[2px] border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900">
@@ -247,6 +257,11 @@ export default function DossierRequirementsPage() {
           attempt.reset()
         }}
       />
+      <DossierRequirementActionDialog dossierId={dossierId ?? ""} action={action} onClose={() => setAction(null)} />
     </div>
   )
+}
+
+export default function DossierRequirementsPage() {
+  return <DossierRequirementsPanel />
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type RowSelectionState, type SortingState } from "@tanstack/react-table"
-import { ArrowRight, History, ListChecks, MoreVertical } from "lucide-react"
+import { ArrowRight, MoreVertical } from "lucide-react"
 
 import { DashboardFilters } from "@/features/dossier/components/DashboardFilters"
 import { DossierProgressBar } from "@/features/dossier/components/DossierProgressBar"
@@ -96,14 +96,6 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
                 <DropdownMenuItem className={menuItemClass} onSelect={() => navigate(`/compliance-dossiers/${row.original.complianceDossierId}`)}>
                   <ArrowRight className="size-3.5 text-slate-700" />
                   View dossier
-                </DropdownMenuItem>
-                <DropdownMenuItem className={menuItemClass} onSelect={() => navigate(`/compliance-dossiers/${row.original.complianceDossierId}/requirements`)}>
-                  <ListChecks className="size-3.5 text-amber-600" />
-                  View requirements
-                </DropdownMenuItem>
-                <DropdownMenuItem className={menuItemClass} onSelect={() => navigate(`/compliance-dossiers/${row.original.complianceDossierId}/audit-history`)}>
-                  <History className="size-3.5 text-slate-600" />
-                  Audit history
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
