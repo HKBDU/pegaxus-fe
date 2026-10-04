@@ -7,6 +7,7 @@ export interface UploadItem {
   file: File
   status: UploadStatus
   progress: PresignedUploadProgress
+  progressVisible?: boolean
   publicId?: string
   errorCode?: string
   errorMessage?: string

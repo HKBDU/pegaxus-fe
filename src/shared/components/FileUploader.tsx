@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, KeyboardEvent } from 'react'
 import { AlertCircle, CheckCircle2, FileIcon, RotateCw, UploadCloud, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -33,8 +33,37 @@ export default function FileUploader({
     onUploaded, onChange, onError, onReject, errorMessages,
   })
   const [dragging, setDragging] = useState(false)
+  const [hiddenProgressIds, setHiddenProgressIds] = useState<Set<string>>(new Set())
+  const [collapsingIds, setCollapsingIds] = useState<Set<string>>(new Set())
+  const hideTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  const collapseTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const inputRef = useRef<HTMLInputElement>(null)
   const dragDepth = useRef(0)
+
+  useEffect(() => {
+    items.filter((item) => item.status === 'success').forEach((item) => {
+      if (hiddenProgressIds.has(item.id) || collapsingIds.has(item.id) || hideTimers.current.has(item.id)) return
+      hideTimers.current.set(item.id, setTimeout(() => {
+        setCollapsingIds((current) => new Set(current).add(item.id))
+        hideTimers.current.delete(item.id)
+        const collapseTimer = setTimeout(() => {
+          setHiddenProgressIds((current) => new Set(current).add(item.id))
+          setCollapsingIds((current) => {
+            const next = new Set(current)
+            next.delete(item.id)
+            return next
+          })
+          collapseTimers.current.delete(item.id)
+        }, 300)
+        collapseTimers.current.set(item.id, collapseTimer)
+      }, 5000))
+    })
+  }, [collapsingIds, hiddenProgressIds, items])
+
+  useEffect(() => () => {
+    hideTimers.current.forEach((timer) => clearTimeout(timer))
+    collapseTimers.current.forEach((timer) => clearTimeout(timer))
+  }, [])
 
   const onDragEnter = (event: DragEvent) => {
     event.preventDefault()
@@ -76,7 +105,7 @@ export default function FileUploader({
   ].filter(Boolean).join('. ')
 
   return (
-    <div className={cn('w-full', className)}>
+    <div className={cn('min-w-0 w-full max-w-full overflow-hidden', className)}>
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
@@ -88,7 +117,7 @@ export default function FileUploader({
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         className={cn(
-          'flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-10 text-center outline-none transition-colors',
+          'flex min-w-0 max-w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border-2 border-dashed px-6 py-10 text-center outline-none transition-colors',
           'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
           disabled ? 'cursor-not-allowed opacity-50' : dragging ? 'cursor-copy border-primary bg-primary/5' : 'cursor-pointer border-border hover:bg-muted/50',
         )}
@@ -106,15 +135,16 @@ export default function FileUploader({
       )}
 
       {items.length > 0 && (
-        <ul className="mt-4 space-y-2">
+        <ul className="mt-4 min-w-0 max-w-full space-y-2 overflow-hidden">
           {items.map((item) => {
             const inProgress = item.status === 'queued' || item.status === 'uploading'
+            if (item.status === 'success' && hiddenProgressIds.has(item.id)) return null
             return (
-              <li key={item.id} className="rounded-md border bg-card px-3 py-2">
+                  <li key={item.id} className={cn('min-w-0 max-w-full overflow-hidden rounded-md border bg-card px-3 py-2 transition-[max-height,opacity,transform,padding] duration-300 ease-out', collapsingIds.has(item.id) ? 'max-h-0 -translate-y-1 border-transparent px-0 py-0 opacity-0' : 'max-h-40')}>
                 <div className="flex items-center gap-3">
                   {item.status === 'success' ? <CheckCircle2 className="size-4 shrink-0 text-green-600" aria-hidden /> : item.status === 'error' ? <AlertCircle className="size-4 shrink-0 text-destructive" aria-hidden /> : <FileIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm" title={item.file.name}>{item.file.name}</p>
+                  <div className="w-0 min-w-0 max-w-full flex-1 overflow-hidden">
+                    {!(item.status === 'success' && hiddenProgressIds.has(item.id)) && <p className="max-w-full truncate text-sm" title={item.file.name}>{item.file.name}</p>}
                     <p className={cn('text-xs text-muted-foreground', item.status === 'error' && 'text-destructive')}>
                       {item.status === 'queued' && `${formatFileSize(item.file.size)} · Waiting`}
                       {item.status === 'uploading' && `${UPLOAD_STAGE_LABELS[item.progress.stage] ?? 'Working'} (${item.progress.percent}%)`}
@@ -122,10 +152,10 @@ export default function FileUploader({
                       {item.status === 'error' && item.errorMessage}
                     </p>
                   </div>
-                  {item.status === 'error' && <Button type="button" variant="ghost" size="sm" onClick={() => retry(item.id)} aria-label={`Retry ${item.file.name}`}><RotateCw className="size-4" aria-hidden />Retry</Button>}
-                  <Button type="button" variant="ghost" size="icon" className="size-8" onClick={() => remove(item.id)} aria-label={`${inProgress ? 'Cancel' : 'Remove'} ${item.file.name}`}><X className="size-4" aria-hidden /></Button>
+                  {item.status === 'error' && <Button type="button" variant="ghost" size="sm" onClick={() => { const timer = collapseTimers.current.get(item.id); if (timer) clearTimeout(timer); collapseTimers.current.delete(item.id); setCollapsingIds((current) => { const next = new Set(current); next.delete(item.id); return next }); setHiddenProgressIds((current) => { const next = new Set(current); next.delete(item.id); return next }); retry(item.id) }} aria-label={`Retry ${item.file.name}`}><RotateCw className="size-4" aria-hidden />Retry</Button>}
+                  <Button type="button" variant="ghost" size="icon" className="size-8 shrink-0" onClick={() => { const timer = collapseTimers.current.get(item.id); if (timer) clearTimeout(timer); collapseTimers.current.delete(item.id); setCollapsingIds((current) => { const next = new Set(current); next.delete(item.id); return next }); setHiddenProgressIds((current) => { const next = new Set(current); next.delete(item.id); return next }); remove(item.id) }} aria-label={`${inProgress ? 'Cancel' : 'Remove'} ${item.file.name}`}><X className="size-4" aria-hidden /></Button>
                 </div>
-                {(item.status === 'uploading' || item.status === 'success') && <Progress value={item.progress.percent} className={cn('mt-2 h-1.5', item.status === 'success' && '[&>*]:bg-green-600')} />}
+                {(item.status === 'uploading' || (item.status === 'success' && item.progressVisible !== false && !hiddenProgressIds.has(item.id))) && <Progress value={item.progress.percent} className={cn('mt-2 h-1.5 max-w-full', item.status === 'success' && '[&>*]:bg-green-600')} />}
               </li>
             )
           })}
