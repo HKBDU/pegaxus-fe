@@ -14,6 +14,7 @@ import {
 } from "@/shared/components/common";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import { AuthorityInspectionTab } from "@/features/clearance/components/AuthorityInspectionTab";
 import { DossierOverview } from "../components/DossierOverview";
 import { DossierReadinessAction } from "../components/DossierReadinessAction";
 import { DossierRequirementsPreview } from "../components/DossierRequirementsPreview";
@@ -27,14 +28,6 @@ const sections = [
   { id: "audit", label: "Audit History", icon: History },
 ] as const;
 type SectionId = (typeof sections)[number]["id"];
-
-const integrationMessages: Record<
-  Exclude<SectionId, "requirements" | "documents">,
-  string
-> = {
-  authority: "Authority and inspection module integration pending.",
-  audit: "Audit history integration pending.",
-};
 
 function QueryError({
   error,
@@ -140,10 +133,12 @@ export default function DossierDetailsPage() {
                   plannedDepartureDate={query.data.bookingSummary.requestedDepartureDate}
                   documentsOnly={activeSection === "documents"}
                 />
+              ) : activeSection === "authority" ? (
+                <AuthorityInspectionTab dossier={query.data} />
               ) : (
                 <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
                   <CardContent className="p-5">
-                    <EmptyState message={integrationMessages[activeSection]} />
+                    <EmptyState message="Open Audit History from the dossier tracking dashboard." />
                   </CardContent>
                 </Card>
               )}
