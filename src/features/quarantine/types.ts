@@ -65,6 +65,37 @@ export interface QuarantineProof {
   isFinalized: boolean
   finalizedAt: string | null
   files: ProofAttachmentFile[]
+  expectedHorses?: ExpectedQuarantineHorse[]
+  microchipChecklist?: MicrochipChecklistItem[]
+}
+
+export interface ExpectedQuarantineHorse {
+  horseId: number
+  horseName: string
+  microchipNumber: string
+}
+
+export interface MicrochipChecklistItem {
+  horseId: number
+  microchipNumber: string
+  isMatched: boolean
+}
+
+export interface FinalizeQuarantineProofRequest {
+  action: 'FINALIZE' | 'REJECT_PROOF'
+  officialVetName?: string
+  bcpReceiptNo?: string
+  status?: 'PASSED' | 'PASSED_WITH_CONDITIONS' | 'FAILED'
+  conditions?: string
+  microchipChecklist?: MicrochipChecklistItem[]
+  rejectionReason?: string
+  verificationNote?: string
+}
+
+export interface FinalizeQuarantineProofResponse {
+  quarantineProofId: number
+  status: QuarantineProofStatus
+  isFinalized: boolean
 }
 
 // ─── Booking Summary (for dossier trip context) ────────────────────────────────
