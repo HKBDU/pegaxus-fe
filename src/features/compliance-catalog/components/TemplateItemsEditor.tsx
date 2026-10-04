@@ -283,10 +283,10 @@ export function TemplateItemsEditor({ form, options, optionsLoading, fallbackNam
               <TriangleAlert className="size-3.5" />
             </AlertDialogMedia>
             <div className="grid gap-0.5">
-              <AlertDialogTitle className="m-0! font-heading text-base! leading-5! font-semibold! tracking-normal! text-slate-900">Remove this item?</AlertDialogTitle>
+              <AlertDialogTitle className="m-0! w-full! justify-self-start! text-left! font-heading text-base! leading-5! font-semibold! tracking-normal! text-slate-900">Remove this item?</AlertDialogTitle>
               <AlertDialogDescription className="text-xs leading-4 text-slate-600">
                 {removing?.complianceRequirementId ? <span className="font-semibold text-slate-900">{nameOf(removing.complianceRequirementId)}: </span> : null}
-                The item will be removed from this template and the remaining items are renumbered. The change is applied when you save the template.
+                Removes this item and renumbers the remaining items on save.
               </AlertDialogDescription>
             </div>
           </AlertDialogHeader>

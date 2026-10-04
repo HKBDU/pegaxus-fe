@@ -17,7 +17,8 @@ import type {
 
 const ENDPOINT = "compliance-dossiers"
 // Same switch as the catalog: the BE has no dossier endpoints yet, so the dev build answers from mock data.
-const useDossierMocks = import.meta.env.DEV && import.meta.env.VITE_COMPLIANCE_API_MOCKS !== "false"
+// Keep dashboard/audit API integration enabled by default; mocks are opt-in for UI work.
+const useDossierMocks = import.meta.env.VITE_COMPLIANCE_API_MOCKS === "true"
 
 const wait = (delay = 180) => new Promise((resolve) => window.setTimeout(resolve, delay))
 
@@ -163,6 +164,21 @@ export const dossierService = {
     if (useDossierMocks) {
       await wait()
       const item = MOCK_DASHBOARD_ITEMS.find((candidate) => String(candidate.complianceDossierId) === String(dossierId))
+      if (!item && String(dossierId) === "502") {
+        return {
+          complianceDossierId: 502,
+          dossierCode: "CD-20261004-7001",
+          bookingId: 1023,
+          bookingCode: "BK-FLOW2-1023",
+          status: "IN_PREPARATION",
+          openedAt: new Date().toISOString(),
+          progressPercent: 0,
+          mandatoryTotal: 0,
+          mandatorySatisfiedOrWaived: 0,
+          writeLocked: false,
+          writeLockReason: null,
+        }
+      }
       if (!item) throw new Error("DOSSIER_NOT_FOUND")
       const mandatoryTotal = 8
       return {
@@ -179,7 +195,30 @@ export const dossierService = {
         writeLockReason: item.status === "CLOSED" ? "DOSSIER_CLOSED" : null,
       }
     }
-    return unwrapValue<DossierOverview>(await api.get<unknown>(`${ENDPOINT}/${dossierId}`))
+    const value = unwrapValue<{
+      complianceDossierId: EntityId
+      dossierCode: string | null
+      bookingId: EntityId
+      bookingCode: string
+      status: DossierOverview["status"] | null
+      completionPercent: number
+      fulfilledCount: number
+      requirementCount: number
+    }>(await api.get<unknown>(`${ENDPOINT}/${dossierId}`))
+
+    return {
+      complianceDossierId: value.complianceDossierId,
+      dossierCode: value.dossierCode ?? String(value.complianceDossierId),
+      bookingId: value.bookingId,
+      bookingCode: value.bookingCode,
+      status: value.status ?? "IN_PREPARATION",
+      openedAt: null,
+      progressPercent: value.completionPercent,
+      mandatoryTotal: value.requirementCount,
+      mandatorySatisfiedOrWaived: value.fulfilledCount,
+      writeLocked: value.status === "CLOSED" || value.status === "SUBMITTED" || value.status === "APPROVED",
+      writeLockReason: value.status === "CLOSED" ? "DOSSIER_CLOSED" : null,
+    }
   },
 
   /** K3. The audit trail is append-only: this service only reads. */

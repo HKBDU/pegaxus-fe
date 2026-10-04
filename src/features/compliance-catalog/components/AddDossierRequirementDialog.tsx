@@ -126,7 +126,7 @@ export function AddDossierRequirementDialog({ open, onOpenChange, dossierId, boo
     try {
       const guarded = await attempt.run(() =>
         addRequirement.mutateAsync({
-          complianceRequirementId: Number(formValues.complianceRequirementId),
+          complianceRequirementId: formValues.complianceRequirementId,
           horseId: horseId === null ? null : Number(horseId),
           isMandatory: formValues.isMandatory === "YES",
           dueDate: formValues.dueDate || undefined,

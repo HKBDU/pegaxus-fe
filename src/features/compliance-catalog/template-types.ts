@@ -36,8 +36,10 @@ export interface DossierTemplateItem {
 /** GET /dossier-templates/{id} (T2). */
 export interface DossierTemplate extends DossierTemplateSummary {
   description: string | null
-  isReferenced: boolean
-  referenceCount: { complianceDossierCount: number }
+  /** Backend T2 returns this computed flag instead of referenceCount/isReferenced. */
+  canDelete: boolean
+  isReferenced?: boolean
+  referenceCount?: { complianceDossierCount: number }
   items: DossierTemplateItem[]
 }
 

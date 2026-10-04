@@ -14,9 +14,9 @@ function Cell({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** The booking the dossier is created for, shown on top of every wizard step. */
-export function BookingSummaryCard({ booking }: { booking: Booking }) {
+export function BookingSummaryCard({ booking, compact = false }: { booking: Booking; compact?: boolean }) {
   return (
-    <dl className="booking-panel m-0 grid gap-y-1 border bg-white px-5 py-1 sm:grid-cols-[1.2fr_1fr_1fr_0.7fr_1.4fr]">
+    <dl className={compact ? "m-0 grid gap-y-2" : "booking-panel m-0 grid gap-y-1 border bg-white px-5 py-1 sm:grid-cols-[1.2fr_1fr_1fr_0.7fr_1.4fr]"}>
       <Cell label="Booking code"><span className="break-all">{booking.bookingCode}</span></Cell>
       <Cell label="Route">
         <span className="truncate">{booking.originCountry}</span>

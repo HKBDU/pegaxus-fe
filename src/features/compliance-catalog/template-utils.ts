@@ -1,4 +1,5 @@
 import type { TemplateStatus } from "@/features/compliance-catalog/template-types"
+import { getBackendErrorMessage } from "@/features/compliance-catalog/utils"
 
 const templateStatusLabels: Record<TemplateStatus, string> = {
   DRAFT: "Draft",
@@ -12,6 +13,7 @@ const templateErrorMessages: Record<string, string> = {
   DTI_DUPLICATE: "Duplicate ComplianceRequirement or Sequence Number detected in the same template. Each requirement and sequence number must be unique within a DossierTemplate.",
   TEMPLATE_NEEDS_ONE_ITEM: "A DossierTemplate must contain at least 1 item.",
   TEMPLATE_IN_USE: "This DossierTemplate is linked to existing ComplianceDossiers, so it cannot be edited or deleted. Change its status to INACTIVE instead.",
+  DOSSIER_TEMPLATE_IN_USE: "This DossierTemplate is linked to existing ComplianceDossiers, so it cannot be deleted. Change its status to INACTIVE instead.",
   TEMPLATE_NOT_ACTIVATABLE: "A template needs at least 1 item and valid effective dates before it can be activated.",
   VALIDATION_ERROR: "Some fields are invalid. Check the form and try again.",
   NOT_FOUND: "This DossierTemplate no longer exists.",
@@ -24,7 +26,7 @@ export const getTemplateStatusLabel = (status: TemplateStatus) => templateStatus
 /** The service rethrows API failures as Error(errorCode); mock mode throws the same codes. */
 export function getTemplateErrorMessage(error: unknown, fallback: string) {
   const code = error instanceof Error ? error.message : ""
-  return templateErrorMessages[code] ?? fallback
+  return getBackendErrorMessage(error, templateErrorMessages[code] ?? fallback)
 }
 
 export function formatTemplateDate(value: string | null | undefined) {
@@ -47,7 +49,7 @@ const dossierErrorMessages: Record<string, string> = {
 
 export function getDossierErrorMessage(error: unknown, fallback: string) {
   const code = error instanceof Error ? error.message : ""
-  return dossierErrorMessages[code] ?? getTemplateErrorMessage(error, fallback)
+  return getBackendErrorMessage(error, dossierErrorMessages[code] ?? getTemplateErrorMessage(error, fallback))
 }
 
 // Messages for the errorCode values of D3/D5 (API contract, flow 2, section 6).
@@ -60,5 +62,5 @@ const requirementErrorMessages: Record<string, string> = {
 
 export function getRequirementErrorMessage(error: unknown, fallback: string) {
   const code = error instanceof Error ? error.message : ""
-  return requirementErrorMessages[code] ?? getDossierErrorMessage(error, fallback)
+  return getBackendErrorMessage(error, requirementErrorMessages[code] ?? getDossierErrorMessage(error, fallback))
 }

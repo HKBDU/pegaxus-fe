@@ -1,11 +1,12 @@
 import { ArrowLeft, ArrowRight, Check, FileX2 } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { ApplyStepper } from "@/features/compliance-catalog/components/ApplyStepper"
 import { BookingSummaryCard } from "@/features/compliance-catalog/components/BookingSummaryCard"
 import { CustomizeRequirementsStep } from "@/features/compliance-catalog/components/CustomizeRequirementsStep"
+import { RequirementCountTiles } from "@/features/compliance-catalog/components/RequirementCountTiles"
 import { ReviewDossierStep } from "@/features/compliance-catalog/components/ReviewDossierStep"
 import { SelectTemplateStep } from "@/features/compliance-catalog/components/SelectTemplateStep"
 import {
@@ -24,8 +25,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton"
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard"
 import type { EntityId } from "@/shared/types"
 
-/** Until the dossier detail page (SCR-F2-008) exists, a created dossier sends the TS back to the template catalog. */
-const AFTER_CREATE_PATH = "/dossier-templates"
+const AFTER_CREATE_PATH = (dossierId: EntityId) => `/compliance-dossiers/${dossierId}/requirements`
 
 const outlineButtonClass =
   "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[2px] border border-slate-300 bg-white px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-60"
@@ -92,6 +92,12 @@ export default function ApplyTemplatePage() {
   )
   const counts = useMemo(() => countRows(finalRows), [finalRows])
 
+  useEffect(() => {
+    if (existingQuery.data) {
+      navigate(`/compliance-dossiers/${existingQuery.data.complianceDossierId}/requirements`, { replace: true })
+    }
+  }, [existingQuery.data, navigate])
+
   const toggleItem = useCallback((key: string) => {
     setSelectedItemIds((current) => {
       const next = new Set(current)
@@ -150,7 +156,7 @@ export default function ApplyTemplatePage() {
       if (guarded.value.failedCustomCount > 0) {
         toast.warning(`${guarded.value.failedCustomCount} custom requirement(s) could not be added. Add them again from the dossier page.`)
       }
-      navigate(AFTER_CREATE_PATH)
+      navigate(AFTER_CREATE_PATH(guarded.value.complianceDossierId))
     } catch (error) {
       const code = error instanceof Error ? error.message : ""
       // The booking changed behind our back: re-read it so the page shows the real state instead of a stale wizard.
@@ -203,10 +209,13 @@ export default function ApplyTemplatePage() {
 
   if (existingQuery.data) {
     return (
-      <BlockedNotice
-        title="Dossier already exists"
-        message={`A ComplianceDossier (${existingQuery.data.dossierCode}) already exists for this booking. Please manage individual DossierRequirements instead.`}
-      />
+      <PageShell>
+        <div className="mx-auto mt-10 grid max-w-xl justify-items-center gap-2 rounded-[2px] border border-slate-200 bg-white p-8 text-center">
+          <Check className="size-8 text-emerald-600" aria-hidden="true" />
+          <h1 className="m-0! font-heading text-xl! font-bold! tracking-normal! text-slate-900! uppercase">Opening ComplianceDossier</h1>
+          <p className="m-0 text-sm text-slate-600">Dossier {existingQuery.data.dossierCode} already exists. Opening its requirements.</p>
+        </div>
+      </PageShell>
     )
   }
 
@@ -235,12 +244,23 @@ export default function ApplyTemplatePage() {
       <p className="m-0! mb-8! mt-1! max-w-3xl text-sm text-slate-500">{text.subtitle}</p>
 
       <div className="mb-5"><ApplyStepper step={step} /></div>
-      <div className="mb-5"><BookingSummaryCard booking={booking} /></div>
+      {step === 2 ? null : <div className="mb-5"><BookingSummaryCard booking={booking} /></div>}
 
       {step === 1 ? <SelectTemplateStep bookingId={booking.bookingId} selectedId={templateId} onSelect={setTemplateId} /> : null}
 
       {step === 2 ? (
         <>
+          <div className="mb-4 grid gap-4">
+            <section aria-labelledby="booking-information-title">
+              <h2 id="booking-information-title" className="sr-only">Booking Information</h2>
+              <BookingSummaryCard booking={booking} />
+            </section>
+            <section className="min-w-0" aria-labelledby="current-summary-title">
+              <h2 id="current-summary-title" className="m-0! font-heading text-sm! leading-5! font-bold! tracking-[0.04em]! text-[#ef8f00]! uppercase">Current Summary</h2>
+              <p className="m-0 mb-3 mt-0.5 text-xs text-slate-500">Overview of the requirements this dossier will contain.</p>
+              <RequirementCountTiles total={counts.total} horse={counts.horse} trip={counts.trip} />
+            </section>
+          </div>
           <CustomizeRequirementsStep
             booking={booking}
             template={template}
@@ -253,6 +273,7 @@ export default function ApplyTemplatePage() {
             onRemoveCustom={removeCustom}
             requirements={requirements}
             requirementsLoading={requirementsQuery.isLoading}
+            showSummary={false}
           />
           <div className="mt-6 flex items-center justify-between gap-2 border-t border-slate-200 pt-4">
             <button type="button" className={outlineButtonClass} onClick={() => setStep(1)}>

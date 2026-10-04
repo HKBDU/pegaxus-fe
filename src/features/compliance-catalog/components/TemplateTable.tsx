@@ -118,9 +118,8 @@ export function TemplateTable({
     try {
       const detail = await templateService.getTemplate(template.dossierTemplateId)
       setDialog({
-        variant: detail.isReferenced ? "delete-blocked" : "delete",
+        variant: detail.canDelete ? "delete" : "delete-blocked",
         template,
-        complianceDossierCount: detail.referenceCount.complianceDossierCount,
       })
     } catch (error) {
       toast.error(getTemplateErrorMessage(error, "Unable to check this template"))
@@ -144,7 +143,7 @@ export function TemplateTable({
       toast.success(variant === "delete" ? "DossierTemplate deleted successfully." : "DossierTemplate status updated successfully.")
       closeDialog()
     } catch (error) {
-      if (variant === "delete" && error instanceof Error && error.message === "TEMPLATE_IN_USE") {
+      if (variant === "delete" && error instanceof Error && (error.message === "TEMPLATE_IN_USE" || error.message === "DOSSIER_TEMPLATE_IN_USE")) {
         // A dossier was created from it after the list loaded: show the blocked state instead of a bare toast.
         setDialog({ variant: "delete-blocked", template })
         attempt.reset()

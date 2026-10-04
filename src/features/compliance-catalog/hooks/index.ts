@@ -18,4 +18,4 @@ export {
   useUpdateDossierTemplate,
 } from "./useDossierTemplates"
 export { applyKeys, useBookingForDossier, useCreateDossier, useExistingDossier, useRecommendedTemplates } from "./useApplyDossier"
-export { requirementKeys, useAddDossierRequirement, useDossierRequirements, useRemoveDossierRequirement } from "./useDossierRequirements"
+export { requirementKeys, useAddDossierRequirement, useDossierRequirements, useRemoveDossierRequirement, useUpdateDossierRequirement, useWaiveDossierRequirement } from "./useDossierRequirements"

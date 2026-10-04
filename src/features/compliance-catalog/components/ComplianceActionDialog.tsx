@@ -73,25 +73,25 @@ export function ComplianceActionDialog({
   const content = {
     deactivate: {
       title: "Deactivate requirement?",
-      description: "Deactivating this ComplianceRequirement will hide it from future DossierTemplate setups. Existing templates and active dossiers will not be affected.",
+      description: "Hidden from new template setups. Existing templates and active dossiers are unchanged.",
       confirm: "Confirm Deactivation",
       pending: "Deactivating...",
     },
     delete: {
       title: "Delete requirement?",
-      description: "Are you sure you want to permanently delete this ComplianceRequirement?",
+      description: "This permanently removes the requirement from the catalog.",
       confirm: "Confirm Delete",
       pending: "Deleting...",
     },
     "delete-blocked": {
       title: "Cannot delete requirement",
-      description: "This ComplianceRequirement is linked to existing DossierTemplates or active ComplianceDossiers. Please deactivate it instead.",
+      description: "Linked to existing templates or active dossiers. Deactivate it instead.",
       confirm: "",
       pending: "",
     },
     "edit-impact": {
       title: "Save changes to a requirement in use?",
-      description: "Editing it may affect active records. Confirm that you accept responsibility for this change.",
+      description: "This change may affect active records.",
       confirm: "Save changes",
       pending: "Saving...",
     },
@@ -99,13 +99,13 @@ export function ComplianceActionDialog({
 
   return (
     <AlertDialog open={variant !== null} onOpenChange={handleOpenChange}>
-      <AlertDialogContent className="gap-3 rounded-[2px] border-slate-200 bg-white p-4 text-slate-900 shadow-[0_14px_35px_rgba(15,23,42,0.16)] data-[size=default]:sm:max-w-[430px]">
-        <AlertDialogHeader className="grid grid-rows-none grid-cols-[28px_minmax(0,1fr)] place-items-start gap-2.5 text-left">
-          <AlertDialogMedia className={`m-0 grid size-7 shrink-0 place-items-center rounded-[2px] ${iconTone}`}>
+      <AlertDialogContent className="gap-2.5 rounded-[2px] border-slate-200 bg-white p-3.5 text-slate-900 shadow-[0_14px_35px_rgba(15,23,42,0.16)] data-[size=default]:sm:max-w-[390px]">
+        <AlertDialogHeader className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-2 text-left">
+          <AlertDialogMedia className={`m-0 grid size-6 shrink-0 place-items-center rounded-[2px] ${iconTone}`}>
             <Icon className="size-3.5" />
           </AlertDialogMedia>
           <div className="grid gap-0.5">
-            <AlertDialogTitle className="m-0! font-heading text-base! leading-5! font-semibold! tracking-normal! text-slate-900">
+            <AlertDialogTitle className="m-0! w-full! justify-self-start! text-left! font-heading text-base! leading-5! font-semibold! tracking-normal! text-slate-900">
               {content.title}
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs leading-4 text-slate-600">

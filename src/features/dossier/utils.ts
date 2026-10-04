@@ -67,9 +67,24 @@ const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "sh
 const dateTimeUtcFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "UTC" })
 const dateTimeLocalFormat = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })
 
-export const formatDossierDate = (value: string) => dateFormat.format(new Date(value))
-export const formatUtcDateTime = (value: string) => `${dateTimeUtcFormat.format(new Date(value))} UTC`
-export const formatLocalDateTime = (value: string) => dateTimeLocalFormat.format(new Date(value))
+function validDate(value: string | null | undefined) {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+export const formatDossierDate = (value: string | null | undefined) => {
+  const date = validDate(value)
+  return date ? dateFormat.format(date) : "—"
+}
+export const formatUtcDateTime = (value: string | null | undefined) => {
+  const date = validDate(value)
+  return date ? `${dateTimeUtcFormat.format(date)} UTC` : "—"
+}
+export const formatLocalDateTime = (value: string | null | undefined) => {
+  const date = validDate(value)
+  return date ? dateTimeLocalFormat.format(date) : "—"
+}
 
 const dashboardErrorMessages: Record<string, string> = {
   FORBIDDEN: "Access denied. Only Transport Specialists and Logistics Managers can open this page.",

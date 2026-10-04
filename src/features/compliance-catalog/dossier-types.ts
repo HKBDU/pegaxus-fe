@@ -89,3 +89,15 @@ export interface AddRequirementInput {
   dueDate?: string
   instruction?: string
 }
+
+/** Body of PATCH /compliance-dossiers/{id}/requirements/{requirementId}. */
+export interface UpdateRequirementInput {
+  isMandatory?: boolean
+  leadTimeDays?: number
+  instruction?: string
+  reason: string
+}
+
+export interface WaiveRequirementInput {
+  reason: string
+}

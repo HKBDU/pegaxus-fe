@@ -75,9 +75,9 @@ export function ReviewDossierStep({ booking, template, rows, counts }: ReviewDos
     <div className="grid gap-4">
       <div className="grid gap-4 lg:grid-cols-3">
         <InfoCard title="Booking Information">
-          <Line label="Booking code">{booking.bookingCode}</Line>
+          <Line label="Request ID">{booking.bookingCode}</Line>
           <Line label="Route">{booking.originCountry} → {booking.destinationCountry}</Line>
-          <Line label="Number of horses">{booking.horses.length}</Line>
+          <Line label="No. of horses">{booking.horses.length}</Line>
           <Line label="Status"><span className="inline-flex"><BookingStatusBadge status={booking.status} audience="manager" /></span></Line>
         </InfoCard>
 
@@ -99,7 +99,7 @@ export function ReviewDossierStep({ booking, template, rows, counts }: ReviewDos
 
         <InfoCard title="Final Output Summary">
           <Line label="ComplianceDossier">1</Line>
-          <Line label="Total requirements">{counts.total}</Line>
+          <Line label="Total DossierRequirements">{counts.total}</Line>
           <Line label="Horse-specific">{counts.horse} (for {booking.horses.length} {booking.horses.length === 1 ? "horse" : "horses"})</Line>
           <Line label="Trip-level">{counts.trip}</Line>
           <Line label="Status after creation">

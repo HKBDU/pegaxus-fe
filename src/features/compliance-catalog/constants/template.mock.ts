@@ -25,6 +25,7 @@ function mock(
     effectiveTo,
     itemCount: items.length,
     updatedAt,
+    canDelete: overrides.canDelete ?? !Boolean(overrides.isReferenced),
     isReferenced: false,
     referenceCount: { complianceDossierCount: 0 },
     // requirementName is filled by the service from the CR catalog.

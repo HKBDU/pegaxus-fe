@@ -18,7 +18,9 @@ import type {
 } from "@/features/compliance-catalog/types"
 
 const ENDPOINT = "compliance-requirements"
-export const useComplianceMocks = import.meta.env.DEV && import.meta.env.VITE_COMPLIANCE_API_MOCKS !== "false"
+// Mocks are opt-in so development screens exercise the configured Flow 2 API by default.
+export const useComplianceMocks = import.meta.env.VITE_COMPLIANCE_API_MOCKS === "true"
+export const useFlow2HttpMocks = import.meta.env.VITE_FLOW2_HTTP_MOCKS === "true"
 let mockRequirements = structuredClone(MOCK_COMPLIANCE_REQUIREMENTS)
 
 export function wait(delay = 180) {
@@ -35,11 +37,15 @@ export function unwrapValue<T>(payload: unknown): T {
 /** Error(errorCode) so the UI can react to codes; REFERENCE_IMPACT_CONFIRMATION_REQUIRED also carries the fresh counts. */
 export class ComplianceApiError extends Error {
   referenceCount?: ReferenceCount
+  backendMessage?: string
+  backendCode?: string
 
-  constructor(code: string, options?: { cause?: unknown; referenceCount?: ReferenceCount }) {
+  constructor(code: string, options?: { cause?: unknown; referenceCount?: ReferenceCount; backendMessage?: string; backendCode?: string }) {
     super(code, { cause: options?.cause })
     this.name = "ComplianceApiError"
     this.referenceCount = options?.referenceCount
+    this.backendMessage = options?.backendMessage
+    this.backendCode = options?.backendCode
   }
 }
 
@@ -47,8 +53,15 @@ async function callApi<T>(request: Promise<T>): Promise<T> {
   try {
     return await request
   } catch (error) {
-    const data = (error as { response?: { data?: { errorCode?: string; value?: { referenceCount?: ReferenceCount } } } }).response?.data
-    if (data?.errorCode) throw new ComplianceApiError(data.errorCode, { cause: error, referenceCount: data.value?.referenceCount })
+    const data = (error as { response?: { data?: { message?: string; errorCode?: string; value?: { referenceCount?: ReferenceCount } } } }).response?.data
+    if (data?.errorCode) {
+      throw new ComplianceApiError(data.errorCode, {
+        cause: error,
+        referenceCount: data.value?.referenceCount,
+        backendMessage: data.message,
+        backendCode: data.errorCode,
+      })
+    }
     throw error
   }
 }
@@ -58,7 +71,7 @@ export const api = {
   post: <T = unknown>(url: string, data?: unknown) => callApi(apiClient.post<unknown, T>(url, data)),
   put: <T = unknown>(url: string, data?: unknown) => callApi(apiClient.put<unknown, T>(url, data)),
   patch: <T = unknown>(url: string, data?: unknown) => callApi(apiClient.patch<unknown, T>(url, data)),
-  delete: <T = unknown>(url: string) => callApi(apiClient.delete<unknown, T>(url)),
+  delete: <T = unknown>(url: string, data?: unknown) => callApi(apiClient.delete<unknown, T>(url, data === undefined ? undefined : { data })),
 }
 
 function toSummary(requirement: ComplianceRequirement): ComplianceRequirementSummary {

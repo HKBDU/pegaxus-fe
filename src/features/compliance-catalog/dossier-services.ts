@@ -1,5 +1,5 @@
 import { bookingService } from "@/features/booking/services"
-import { api, ComplianceApiError, useComplianceMocks, wait } from "@/features/compliance-catalog/services"
+import { api, ComplianceApiError, useComplianceMocks, useFlow2HttpMocks, wait } from "@/features/compliance-catalog/services"
 import type {
   ComplianceDossierSummary,
   CreateDossierInput,
@@ -15,8 +15,8 @@ const mockDossiers = new Map<string, ComplianceDossierSummary>([
 ])
 
 const toDossierRequirementBody = (draft: CustomRequirementDraft) => ({
-  complianceRequirementId: Number(draft.complianceRequirementId),
-  horseId: draft.horseId === null ? null : Number(draft.horseId),
+  complianceRequirementId: draft.complianceRequirementId,
+  horseId: draft.horseId,
   isMandatory: draft.isMandatory,
   dueDate: draft.dueDate || undefined,
   instruction: draft.instruction || undefined,
@@ -30,7 +30,7 @@ function isNotFound(error: unknown) {
 export const dossierService = {
   /** D1: null when the booking has no dossier yet (the BE answers 404). */
   async getDossierOfBooking(bookingId: EntityId): Promise<ComplianceDossierSummary | null> {
-    if (useComplianceMocks) {
+    if (useComplianceMocks && !useFlow2HttpMocks) {
       await wait(120)
       return mockDossiers.get(String(bookingId)) ?? null
     }
@@ -48,7 +48,7 @@ export const dossierService = {
     const { bookingId, dossierTemplateId, selectedTemplateItemIds, customRequirements } = input
     const fromTemplate = dossierTemplateId !== undefined
 
-    if (useComplianceMocks) {
+    if (useComplianceMocks && !useFlow2HttpMocks) {
       await wait(400)
       const booking = await bookingService.getBooking(bookingId)
       if (booking.status !== "APPROVED") throw new ComplianceApiError("BOOKING_NOT_APPROVED")
@@ -70,7 +70,7 @@ export const dossierService = {
     }
 
     const body = fromTemplate
-      ? { dossierTemplateId: Number(dossierTemplateId), selectedTemplateItemIds: selectedTemplateItemIds.map(Number) }
+      ? { dossierTemplateId, selectedTemplateItemIds }
       : { manualRequirements: customRequirements.map(toDossierRequirementBody) }
     const payload = await api.post<{ value?: CreateDossierResult } & Partial<CreateDossierResult>>(`bookings/${bookingId}/compliance-dossier`, body)
     const created = (payload.value ?? payload) as Omit<CreateDossierResult, "failedCustomCount">

@@ -34,23 +34,23 @@ export function RemoveDossierRequirementDialog({ requirement, bookingCode, isPen
 
   return (
     <Dialog open={requirement !== null} onOpenChange={(next) => !next && !isPending && onClose()}>
-      <DialogContent className="gap-4 rounded-[2px] border-slate-200 bg-white p-5 sm:max-w-md">
+      <DialogContent className="gap-3 rounded-[2px] border-slate-200 bg-white p-3.5 sm:max-w-sm">
         {requirement ? (
           <>
-            <DialogHeader className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-3 text-left">
-              <span className={`grid size-10 place-items-center rounded-full ${blocked ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}>
-                {blocked ? <TriangleAlert className="size-5" aria-hidden="true" /> : <Trash2 className="size-5" aria-hidden="true" />}
+            <DialogHeader className="grid grid-cols-[24px_minmax(0,1fr)] items-start gap-2 text-left">
+              <span className={`grid size-6 place-items-center rounded-[2px] ${blocked ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}>
+                {blocked ? <TriangleAlert className="size-3.5" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}
               </span>
               <div className="grid gap-1">
-                <DialogTitle className="m-0! font-heading text-lg! font-bold! uppercase tracking-[0.02em]! text-slate-900">
+                <DialogTitle className="m-0! w-full! justify-self-start! text-left! font-heading text-base! font-bold! tracking-normal! text-slate-900">
                   {blocked ? "Cannot remove requirement" : "Remove dossier requirement?"}
                 </DialogTitle>
                 <DialogDescription className="text-xs leading-5 text-slate-600">
                   {protectedByMandatory
-                    ? "This is a mandatory DossierRequirement and cannot be removed from this ComplianceDossier."
+                    ? "Mandatory requirements cannot be removed."
                     : protectedByDocument
                       ? "A document was already submitted for this requirement, so it cannot be removed any more."
-                      : "This requirement is optional and can be removed from the current ComplianceDossier only."}
+                      : "Only this dossier line will be removed."}
                 </DialogDescription>
               </div>
             </DialogHeader>
@@ -69,14 +69,14 @@ export function RemoveDossierRequirementDialog({ requirement, bookingCode, isPen
                 <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                 <p className="m-0">
                   {protectedByMandatory
-                    ? "Mandatory core DossierRequirements cannot be removed. You may only modify optional requirements. Please manage the upload and review of this requirement instead."
+                    ? "Mandatory requirement. Manage its upload and review instead."
                     : "Cannot remove a DossierRequirement that already has a ComplianceDocument."}
                 </p>
               </div>
             ) : (
               <p className="m-0 flex items-start gap-2 rounded-[2px] border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900">
                 <FileText className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                Removing this requirement does not delete the ComplianceRequirement from the catalog. It is only removed from this ComplianceDossier.
+                Removes this line from the dossier only. The catalog requirement remains.
               </p>
             )}
 

@@ -18,7 +18,7 @@ export function RequirementCountTiles({ total, horse, trip, totalLabel = "Total 
   return (
     <dl className="m-0 grid grid-cols-3 gap-2">
       {tiles.map(({ label, value, hint, icon: Icon }) => (
-        <div key={label} className="min-w-0 rounded-[2px] border border-slate-200 bg-white p-2.5">
+        <div key={label} className="min-w-0 rounded-[2px] border border-slate-200 bg-white p-3">
           <Icon className="size-3.5 text-amber-600" aria-hidden="true" />
           <dd className="m-0 mt-1 text-xl font-bold leading-6 text-slate-900">{value}</dd>
           <dt className="text-[0.7rem] font-semibold leading-4 text-slate-700">{label}</dt>

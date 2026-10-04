@@ -65,7 +65,8 @@ function toPayload(values: TemplateFormValues, status: TemplateStatus): DossierT
     effectiveFrom: optional(values.effectiveFrom),
     effectiveTo: optional(values.effectiveTo),
     items: values.items.map((item) => ({
-      complianceRequirementId: Number(item.complianceRequirementId),
+      // ComplianceRequirement IDs are GUIDs in the backend; do not coerce them to numbers.
+      complianceRequirementId: item.complianceRequirementId,
       sequenceNo: Number(item.sequenceNo),
       isMandatory: item.isMandatory,
       appliesPerHorse: item.appliesPerHorse,
@@ -102,7 +103,7 @@ function TemplateForm({ mode, template }: { mode: "create" | "edit"; template?: 
   const effectiveFrom = useWatch({ control: form.control, name: "effectiveFrom" })
   const isEdit = mode === "edit"
   const isSaving = createTemplate.isPending || updateTemplate.isPending
-  const locked = isEdit && Boolean(template?.isReferenced)
+  const locked = isEdit && template?.canDelete === false
 
   const options = useMemo<RequirementOption[]>(() => {
     const active = (requirementsQuery.data ?? []).map((requirement) => ({
@@ -156,7 +157,7 @@ function TemplateForm({ mode, template }: { mode: "create" | "edit"; template?: 
           <div role="alert" className="mb-4 flex items-start gap-2 rounded-[2px] border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900">
             <Lock className="mt-0.5 size-3.5 shrink-0" />
             <p className="m-0">
-              This template is already used by {template?.referenceCount.complianceDossierCount} ComplianceDossier(s) and cannot be edited. Change its status to INACTIVE from the template list instead.
+              This template is already used by {template?.referenceCount?.complianceDossierCount ?? "existing"} ComplianceDossier(s) and cannot be edited. Change its status to INACTIVE from the template list instead.
             </p>
           </div>
         ) : null}

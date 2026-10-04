@@ -1,6 +1,6 @@
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
 import { Info, MoreVertical, Plus, Trash2, X } from "lucide-react"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { cn } from "@/lib/utils"
 import type { Booking } from "@/features/booking/types"
@@ -19,6 +19,7 @@ import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
 import { Skeleton } from "@/shared/components/ui/skeleton"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
 
 type Row =
   | { key: string; kind: "template"; item: DossierTemplateItem }
@@ -39,6 +40,7 @@ interface CustomizeRequirementsStepProps {
   onRemoveCustom: (key: string) => void
   requirements: ComplianceRequirementSummary[]
   requirementsLoading: boolean
+  showSummary?: boolean
 }
 
 /** SCR-F2-007, step 2: untick template lines that this trip does not need and add custom ones. */
@@ -54,11 +56,12 @@ export function CustomizeRequirementsStep({
   onRemoveCustom,
   requirements,
   requirementsLoading,
+  showSummary = true,
 }: CustomizeRequirementsStepProps) {
   const [pageIndex, setPageIndex] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [noticeOpen, setNoticeOpen] = useState(true)
-  const panelRef = useRef<HTMLDivElement>(null)
+  const [customOpen, setCustomOpen] = useState(false)
 
   const categoryById = useMemo(
     () => new Map(requirements.map((requirement) => [String(requirement.complianceRequirementId), requirement.category] as const)),
@@ -211,7 +214,7 @@ export function CustomizeRequirementsStep({
         </div>
       ) : null}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className={cn("grid items-start gap-6", showSummary ? "lg:grid-cols-[minmax(0,1fr)_340px]" : "grid-cols-1")}>
         <section aria-labelledby="selected-title" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -225,7 +228,7 @@ export function CustomizeRequirementsStep({
               <button
                 type="button"
                 className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[2px] bg-[#ef8f00] px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-950 transition-colors hover:bg-[#db8300] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                onClick={() => panelRef.current?.querySelector<HTMLElement>("button[role=combobox]")?.focus()}
+                onClick={() => setCustomOpen(true)}
               >
                 <Plus className="size-3.5" />
                 Add custom requirement
@@ -244,7 +247,7 @@ export function CustomizeRequirementsStep({
               headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
               rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60"
               cellClassName="px-2.5 py-2 text-xs"
-              emptyMessage="No requirements yet. Add a custom requirement on the right."
+              emptyMessage="No requirements yet. Add a custom requirement to continue."
               footer={
                 <TablePagination
                   meta={{
@@ -266,9 +269,7 @@ export function CustomizeRequirementsStep({
           )}
         </section>
 
-        <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
-          <AddCustomRequirementPanel ref={panelRef} horses={booking.horses} requirements={requirements} requirementsLoading={requirementsLoading} onAdd={onAddCustom} />
-
+        {showSummary ? <aside className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
           <section aria-labelledby="summary-title" className="booking-panel border bg-white p-5">
             <h2 id="summary-title" className={sectionTitleClass}>Current Summary</h2>
             <p className="m-0 mb-3 mt-0.5 text-xs text-slate-500">Overview of the requirements this dossier will contain.</p>
@@ -277,8 +278,24 @@ export function CustomizeRequirementsStep({
               {counts.total === 0 ? "Add at least one requirement to continue." : `Horse-related lines are counted once per horse (${booking.horses.length} in this booking).`}
             </p>
           </section>
-        </aside>
+        </aside> : null}
       </div>
+
+      <Dialog open={customOpen} onOpenChange={setCustomOpen}>
+        <DialogContent className="max-h-[92dvh] gap-0 overflow-y-auto rounded-[2px] border-slate-200 bg-white p-0 sm:max-w-5xl">
+          <DialogHeader className="border-b border-slate-200 px-6 py-4 text-left">
+            <DialogTitle className="m-0! font-heading text-2xl! font-bold! uppercase tracking-[0.02em]! text-[#ef8f00]!">Add custom dossier requirement</DialogTitle>
+            <DialogDescription className="m-0! text-xs text-slate-500">As a Transport Specialist, you can add a custom DossierRequirement to this ComplianceDossier.</DialogDescription>
+          </DialogHeader>
+          <div className="px-6 py-5">
+            <AddCustomRequirementPanel horses={booking.horses} requirements={requirements} requirementsLoading={requirementsLoading} onAdd={(draft) => {
+              const error = onAddCustom(draft)
+              if (!error) setCustomOpen(false)
+              return error
+            }} />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

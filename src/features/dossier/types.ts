@@ -61,7 +61,8 @@ export interface DossierOverview {
   bookingId: EntityId
   bookingCode: string
   status: DossierStatus
-  openedAt: string
+  /** D7 currently does not expose the dossier opened timestamp. */
+  openedAt: string | null
   progressPercent: number
   mandatoryTotal: number
   mandatorySatisfiedOrWaived: number

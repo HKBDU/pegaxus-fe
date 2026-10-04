@@ -28,10 +28,26 @@ const complianceErrorMessages: Record<string, string> = {
 export const getComplianceCategoryLabel = (category: ComplianceCategory) => categoryLabels[category]
 export const getComplianceStatusLabel = (status: ComplianceStatus) => statusLabels[status]
 
+export function getBackendErrorMessage(error: unknown, fallback = "Request failed") {
+  const value = error as {
+    backendMessage?: unknown
+    backendCode?: unknown
+    response?: { data?: { message?: unknown; errorCode?: unknown } }
+    cause?: { response?: { data?: { message?: unknown; errorCode?: unknown } } }
+  }
+  const data = value.response?.data ?? value.cause?.response?.data
+  const message = value.backendMessage ?? data?.message
+  if (typeof message === "string" && message.trim()) return message
+  const code = value.backendCode ?? data?.errorCode
+  if (typeof code === "string" && code.trim()) return code
+  if (error instanceof Error && error.message.trim()) return error.message
+  return fallback
+}
+
 /** The service rethrows API failures as Error(errorCode); mock mode throws the same codes. */
 export function getComplianceErrorMessage(error: unknown, fallback: string) {
   const code = error instanceof Error ? error.message : ""
-  return complianceErrorMessages[code] ?? fallback
+  return getBackendErrorMessage(error, complianceErrorMessages[code] ?? fallback)
 }
 
 export function formatValidity(requirement: Pick<ComplianceRequirementSummary, "validityRequired" | "validityPeriodDays">) {
