@@ -50,7 +50,6 @@ export const dossierHorseOptionSchema = z.object({
   horseId: entityId,
   horseName: z.string(),
 });
-
 export const bookingSummarySchema = z.object({
   bookingStatus: z.enum(BOOKING_STATUSES),
   originCountry: z.string(),

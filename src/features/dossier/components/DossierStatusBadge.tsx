@@ -1,12 +1,19 @@
-import { Circle } from "lucide-react";
-import { Badge } from "@/shared/components/ui/badge";
-import { dossierStatusLabels, dossierStatusStyles } from "../constants";
+import { cn } from "@/lib/utils"
+import type { DossierRequirementStatus, DossierStatus } from "@/features/dossier/types"
+import { dossierStatusLabels, dossierStatusStyles } from "../constants"
 
-export function DossierStatusBadge({ status }: { status: keyof typeof dossierStatusLabels }) {
+type BadgeStatus = DossierStatus | DossierRequirementStatus | "EXPIRED"
+
+export function DossierStatusBadge({ status, className }: { status: BadgeStatus; className?: string }) {
   return (
-    <Badge variant="outline" className={`inline-flex h-5 items-center gap-1 rounded-full px-1.5 py-0 text-[0.65rem] font-medium leading-none ${dossierStatusStyles[status]}`}>
-      <Circle aria-hidden="true" className="size-1! fill-current" />
+    <span
+      className={cn(
+        "inline-flex w-fit items-center whitespace-nowrap rounded-[2px] px-2 py-1 font-heading text-[0.62rem] font-semibold uppercase leading-none tracking-[0.06em]",
+        dossierStatusStyles[status],
+        className,
+      )}
+    >
       {dossierStatusLabels[status]}
-    </Badge>
-  );
+    </span>
+  )
 }

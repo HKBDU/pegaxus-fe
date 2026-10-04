@@ -1,6 +1,9 @@
 import {
   BarChart3,
   CircleArrowLeft,
+  ClipboardCheck,
+  FileStack,
+  Gauge,
   House,
   LogOut,
   MapPin,
@@ -14,6 +17,9 @@ import type { CSSProperties } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
+import { canAccess } from "@/features/auth/access-control"
+import { useAuthStore } from "@/features/auth/store"
+import { ROLE_ROUTES } from "@/app/route-config"
 import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu"
 import { cn } from "@/lib/utils"
 import type { AdminSidebarMenuProps, AdminSidebarProviderProps } from "@/shared/types/type"
@@ -33,9 +39,22 @@ const primaryItems = [
   { label: "Dashboard", href: "/admin", icon: House },
   { label: "Transport Requests", href: "/admin/transport-requests", icon: Truck },
   { label: "Transport Plans", href: "/admin/transport-plans", icon: MapPin },
+  { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
+  { label: "Dossier Templates", href: ROLE_ROUTES.dossierTemplates, icon: FileStack },
+  { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
   { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Transport Partners", href: "/admin/transport-partners", icon: ThumbsUp },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
+]
+
+const staffPrimaryItems = [
+  { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
+  { label: "Dossier Templates", href: ROLE_ROUTES.dossierTemplates, icon: FileStack },
+  { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
+]
+
+const staffSecondaryItems = [
+  { label: "Profile", href: ROLE_ROUTES.customerProfile, icon: UserRound },
 ]
 
 const secondaryItems = [
@@ -80,6 +99,9 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
 
 export function AdminSidebar() {
   const { setOpen } = useSidebar()
+  const principal = useAuthStore((state) => state.principal)
+  // Logistics managers get the full admin menu; other employees (e.g. Transport Specialist) only their own pages.
+  const isManager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
 
   return (
     <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
@@ -89,12 +111,12 @@ export function AdminSidebar() {
       <SidebarContent className="overflow-hidden bg-[#17191c]">
         <SidebarGroup className="px-0">
           <SidebarGroupContent>
-            <AdminSidebarMenu items={primaryItems} compact />
+            <AdminSidebarMenu items={isManager ? primaryItems : staffPrimaryItems} compact />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="shrink-0 border-white/10 bg-[#17191c] px-0 py-4">
-        <AdminSidebarMenu items={secondaryItems} compact />
+        <AdminSidebarMenu items={isManager ? secondaryItems : staffSecondaryItems} compact />
         <div className="lg:hidden">
           <AdminSidebarMenu items={[logoutItem]} compact />
         </div>

@@ -3,7 +3,7 @@ import { ZodError } from "zod";
 
 export class InvalidBookingHistoryIdError extends Error {
   constructor() {
-    super("A valid booking UUID is required to view its history.");
+    super("A valid numeric booking ID is required to view its history.");
     this.name = "InvalidBookingHistoryIdError";
   }
 }
@@ -27,7 +27,7 @@ export function isBookingNotFound(error: unknown) {
 
 export function bookingHistoryErrorMessage(error: unknown) {
   switch (bookingHistoryErrorKind(error)) {
-    case "invalid-id": return "A valid booking UUID is required to view its history.";
+    case "invalid-id": return "A valid numeric booking ID is required to view its history.";
     case "session": return "Your session has expired. Please sign in again.";
     case "access": return "You do not have permission to view this booking's history.";
     case "not-found": return "Booking not found. It may no longer exist or be available to you.";

@@ -56,6 +56,30 @@ const HorseDetailPage = lazy(
 const BookingStatusHistoryPage = lazy(
   () => import("@/features/booking/pages/BookingStatusHistoryPage"),
 );
+const ComplianceListPage = lazy(
+  () => import("@/features/compliance-catalog/pages/ComplianceListPage"),
+);
+const ComplianceFormPage = lazy(
+  () => import("@/features/compliance-catalog/pages/ComplianceFormPage"),
+);
+const TemplateListPage = lazy(
+  () => import("@/features/compliance-catalog/pages/TemplateListPage"),
+);
+const TemplateFormPage = lazy(
+  () => import("@/features/compliance-catalog/pages/TemplateFormPage"),
+);
+const ApplyTemplatePage = lazy(
+  () => import("@/features/compliance-catalog/pages/ApplyTemplatePage"),
+);
+const DossierDashboardPage = lazy(
+  () => import("@/features/dossier/pages/DossierDashboardPage"),
+);
+const DossierAuditHistoryPage = lazy(
+  () => import("@/features/dossier/pages/DossierAuditHistoryPage"),
+);
+const DossierRequirementsPage = lazy(
+  () => import("@/features/compliance-catalog/pages/DossierRequirementsPage"),
+);
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />
@@ -225,6 +249,97 @@ export const router = createBrowserRouter([
         element: <BookingDetailsPage audience="manager" />,
       },
       { path: "*", element: <NotFoundPage /> },
+    ],
+  },
+  {
+    // Flow 2 catalog: TS manages it, LM reads it (API contract C1-C6).
+    path: ROLE_ROUTES.complianceRequirements,
+    element: (
+      <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Suspense fallback={<LoadingState />}><ComplianceListPage /></Suspense>,
+      },
+      {
+        path: "new",
+        element: (
+          <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
+            <Suspense fallback={<LoadingState />}><ComplianceFormPage mode="create" /></Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: ":complianceRequirementId/edit",
+        element: (
+          <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
+            <Suspense fallback={<LoadingState />}><ComplianceFormPage mode="edit" /></Suspense>
+          </ProtectedRoute>
+        ),
+      },
+    ],
+  },
+  {
+    // Flow 2 templates (UC-17): TS manages them, LM reads them (API contract T1-T6).
+    path: ROLE_ROUTES.dossierTemplates,
+    element: (
+      <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Suspense fallback={<LoadingState />}><TemplateListPage /></Suspense>,
+      },
+      {
+        path: "new",
+        element: (
+          <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
+            <Suspense fallback={<LoadingState />}><TemplateFormPage mode="create" /></Suspense>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: ":dossierTemplateId/edit",
+        element: (
+          <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
+            <Suspense fallback={<LoadingState />}><TemplateFormPage mode="edit" /></Suspense>
+          </ProtectedRoute>
+        ),
+      },
+    ],
+  },
+  {
+    // Flow 2, UC-18: the TS creates the ComplianceDossier of an APPROVED booking.
+    path: `${ROLE_ROUTES.complianceDossiers}/new/:bookingId`,
+    element: (
+      <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Suspense fallback={<LoadingState />}><ApplyTemplatePage /></Suspense>,
+      },
+    ],
+  },
+  {
+    // Flow 2: tracking dashboard (UC-30), requirement management (UC-19) and audit history (UC-31). TS and LM only.
+    path: ROLE_ROUTES.complianceDossiers,
+    element: (
+      <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <Suspense fallback={<LoadingState />}><DossierDashboardPage /></Suspense> },
+      { path: ":dossierId/requirements", element: <Suspense fallback={<LoadingState />}><DossierRequirementsPage /></Suspense> },
+      { path: ":dossierId/audit-history", element: <Suspense fallback={<LoadingState />}><DossierAuditHistoryPage /></Suspense> },
     ],
   },
   {

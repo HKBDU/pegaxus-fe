@@ -85,7 +85,6 @@ export default function DossierDetailsPage() {
                 showBack={false}
                 className="w-auto"
               />
-              
             </div>
             <p className="text-xs text-gray-600 sm:text-sm">
               Manage legal and regulatory documents for this transport booking.

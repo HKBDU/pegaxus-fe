@@ -133,6 +133,7 @@ export function BookingTable({
       },
       {
         accessorKey: "bookingCode",
+        enableHiding: false,
         header: "REQUEST CODE",
         cell: ({ row }) => <span className="font-semibold text-slate-900">{row.original.bookingCode}</span>,
       },
@@ -186,6 +187,7 @@ export function BookingTable({
       },
       {
         id: "actions",
+        enableHiding: false,
         header: () => <span className="block w-full text-center">ACTIONS</span>,
         enableSorting: false,
         cell: ({ row }) => (

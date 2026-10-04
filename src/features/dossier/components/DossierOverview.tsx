@@ -65,7 +65,7 @@ export function DossierOverview({ dossier }: {
             </div>
             <p className="mb-4 break-all font-heading text-xl font-bold text-gray-900">{dossier.dossierCode}</p>
             <dl className="space-y-2">
-              <Detail label="Opened at">{formatBookingDate(dossier.openedAt, true)} UTC</Detail>
+              <Detail label="Opened at">{formatBookingDate(dossier.openedAt ?? "", true)} UTC</Detail>
               <Detail label="Status"><DossierStatusBadge status={dossier.status} /></Detail>
             </dl>
           </section>
