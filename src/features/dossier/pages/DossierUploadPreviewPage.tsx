@@ -58,7 +58,7 @@ export default function DossierUploadPreviewPage() {
               role="CUSTOMER"
               onClose={() => setSubmission(null)}
             />
-            <DocumentDetailsDialog documentId={viewDocumentId} onClose={() => setViewDocumentId(null)} />
+            <DocumentDetailsDialog documentId={viewDocumentId} dossierId={previewDossierId} requirementId={String(requirements.items.find((item) => String(item.document?.complianceDocumentId) === viewDocumentId)?.dossierRequirementId ?? "")} dossier={dossier} role="CUSTOMER" onClose={() => setViewDocumentId(null)} />
           </section>
         ) : null}
       </div>

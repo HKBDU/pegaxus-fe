@@ -14,6 +14,8 @@ import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
 import type { PaginationMeta } from "@/shared/types"
+import { dossierDetail } from "@/app/route-config"
+import { useDossierRole } from "../hooks/useDossierRole"
 
 const menuItemClass = "gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem]"
 
@@ -34,6 +36,7 @@ interface DashboardTableProps {
 
 export function DashboardTable({ items, filters, meta, isLoading, onSearchChange, onRouteChange, onStatusChange, onRiskChange, onSortChange, onReset, onPageChange, onPageSizeChange }: DashboardTableProps) {
   const navigate = useNavigate()
+  const role = useDossierRole()
   const [sorting, setSorting] = useState<SortingState>([])
 
   const columns = useMemo<ColumnDef<DashboardItem>[]>(
@@ -93,7 +96,7 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={2} className="w-44 min-w-0 rounded-[2px] border-slate-200 p-0.5 shadow-md">
-                <DropdownMenuItem className={menuItemClass} onSelect={() => navigate(`/compliance-dossiers/${row.original.complianceDossierId}`)}>
+                <DropdownMenuItem className={menuItemClass} onSelect={() => navigate(dossierDetail(row.original.complianceDossierId, role))}>
                   <ArrowRight className="size-3.5 text-slate-700" />
                   View dossier
                 </DropdownMenuItem>
@@ -103,7 +106,7 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         ),
       },
     ],
-    [navigate],
+    [navigate, role],
   )
 
   // The shared table only styles a row through its "selected" state, so urgent-risk rows are flagged that way (red tint).

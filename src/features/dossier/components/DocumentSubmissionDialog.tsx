@@ -15,17 +15,18 @@ import { getChangedDocumentMetadata, mapComplianceDocumentError, useComplianceDo
 import { mapUploadDocumentError, useUploadComplianceDocument } from "../hooks/useUploadComplianceDocument";
 import { createDocumentSubmissionSchema, validateUploadedAssets } from "../schemas";
 import { createDossierUploadedAsset, getUploadedAssetReferences } from "../lib/uploaded-assets";
-import { dossierSourceKind } from "../source";
-import type { ComplianceDocumentDetail, DossierOverview, DossierRequirement, DossierUploadedAssetRef, UploadDocumentMetadata } from "../types";
+import type { EntityId } from "@/shared/types";
+import type { z } from "zod";
+import type { ComplianceDocumentDetail, DossierOverview, DossierRequirement, DossierUploadedAssetRef } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
 import { DocumentVersionHistory } from "./DocumentVersionHistory";
 import { DocumentRequestAlert } from "./DocumentRequestAlert";
 import "./DocumentSubmissionDialog.css";
 
 type Mode = "initial" | "edit" | "update";
-type FormValues = UploadDocumentMetadata & { uploadNote: string; note: string };
+type FormValues = z.input<ReturnType<typeof createDocumentSubmissionSchema>>;
 const emptyValues: FormValues = {
-  documentName: "", documentNumber: "", issuingAuthority: "", issuedDate: "", expiryDate: "", uploadNote: "", note: "",
+  documentNumber: "", issuingAuthority: "", issuedDate: "", expiryDate: "", uploadNote: "",
 };
 const inputClass = "h-9 rounded-[2px] border-slate-300 bg-white text-xs transition-[border-color,box-shadow] focus-visible:border-primary focus-visible:ring-primary/20";
 
@@ -56,7 +57,7 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
   onClose: () => void;
 }) {
   const documentId = mode === "initial" ? null : String(requirement?.document?.complianceDocumentId ?? "");
-  const detailQuery = useComplianceDocument(documentId);
+  const detailQuery = useComplianceDocument(documentId, String(dossier.complianceDossierId), String(requirement?.dossierRequirementId ?? ""));
   const detail = detailQuery.data;
   const initialMutation = useUploadComplianceDocument();
   const versionMutation = useSubmitDocumentVersion();
@@ -70,8 +71,8 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
   const uploadedAssetsRef = useRef(new Map<string, DossierUploadedAssetRef>());
   const uploadSelectionLockedRef = useRef(false);
   const submitGuardRef = useRef(false);
-  const hydratedDocumentIdRef = useRef<number | null>(null);
-  const schema = createDocumentSubmissionSchema(requirement?.validUntil ?? null, plannedDepartureDate);
+  const hydratedDocumentIdRef = useRef<EntityId | null>(null);
+  const schema = createDocumentSubmissionSchema(requirement?.validUntil ?? null, plannedDepartureDate, mode);
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: emptyValues });
   const reset = form.reset;
   const pending = initialMutation.isPending || versionMutation.isPending || metadataMutation.isPending;
@@ -80,13 +81,11 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
     if (!detail || hydratedDocumentIdRef.current === detail.complianceDocumentId) return;
     hydratedDocumentIdRef.current = detail.complianceDocumentId;
     reset({
-      documentName: detail.documentName,
       documentNumber: detail.documentNumber ?? "",
       issuingAuthority: detail.issuingAuthority ?? "",
       issuedDate: detail.issuedDate ?? "",
       expiryDate: detail.expiryDate ?? "",
       uploadNote: "",
-      note: detail.note ?? "",
     });
   }, [detail, reset]);
 
@@ -123,10 +122,10 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
     onClose();
   };
 
-  const eligible = Boolean(requirement && role === "CUSTOMER" && dossier.status === "IN_PREPARATION" && !dossier.writeLocked && (
+  const eligible = Boolean(requirement && role === "CUSTOMER" && ["IN_PREPARATION", "REJECTED"].includes(dossier.status) && !dossier.writeLocked && (
     mode === "initial" ? canUploadInitialDocument(role, dossier, requirement) :
       requirement.status !== "SATISFIED" && requirement.status !== "WAIVED" && detail && (
-        mode === "edit" ? detail.status === "PROVIDED" && !detail.versions[0]?.review : detail.status === "REJECTED"
+        mode === "edit" ? detail.status === "PROVIDED" && detail.versions[0]?.review?.result !== "APPROVED" : detail.status === "REJECTED"
       )
   ));
 
@@ -139,10 +138,6 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
     }
     if (metadataOnly && (mode !== "edit" || !detail)) return;
     const changedMetadata = detail ? getChangedDocumentMetadata(values, detail) : {};
-    if (!metadataOnly && mode === "edit" && ("documentName" in changedMetadata || "note" in changedMetadata)) {
-      setSubmitError("Save Document Name or Document Note changes with Save Metadata Only before replacing files.");
-      return;
-    }
     submitGuardRef.current = true;
     setSubmitError("");
     let succeeded = false;
@@ -156,12 +151,12 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
       } else if (metadataOnly) {
         if (!Object.keys(changedMetadata).length) { setSubmitError("Change at least one metadata field before saving."); return; }
         await metadataMutation.mutateAsync({
-          documentId: String(detail!.complianceDocumentId), dossierId: String(dossier.complianceDossierId), changes: changedMetadata,
+          documentId: String(detail!.complianceDocumentId), dossierId: String(dossier.complianceDossierId), requirementId: requirement.dossierRequirementId, changes: changedMetadata,
         });
         toast.success("Document metadata updated successfully.");
       } else {
         const result = await versionMutation.mutateAsync({
-          documentId: String(detail!.complianceDocumentId), dossierId: String(dossier.complianceDossierId), files,
+          documentId: String(detail!.complianceDocumentId), dossierId: String(dossier.complianceDossierId), requirementId: requirement.dossierRequirementId, files,
           metadata: {
             documentNumber: values.documentNumber, issuingAuthority: values.issuingAuthority,
             issuedDate: values.issuedDate, expiryDate: values.expiryDate, uploadNote: values.uploadNote,
@@ -185,7 +180,7 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
 
   const title = mode === "initial" ? "Upload Compliance Document" : mode === "edit" ? "Edit Document" : "Update Document";
   const description = mode === "initial" ? "Submit files and document information for this dossier requirement."
-    : mode === "edit" ? "Update the uploaded document before review."
+    : mode === "edit" ? "Update the provided document. Version handling is determined by its review history."
       : "Correct the rejected document and respond to the revision request.";
 
   return (
@@ -212,15 +207,16 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
                 </dl>
               </section>
               {mode === "update" && detail ? <DocumentRevisionNotice document={detail} /> : null}
-              {mode === "edit" ? <p className="rounded-[2px] bg-sky-50 p-3 text-xs text-sky-800">This document has not been reviewed yet. Changes may update the existing version in place.</p> : null}
+              {mode === "edit" ? <p className="rounded-[2px] bg-sky-50 p-3 text-xs text-sky-800">Files replace the current version only when it has never been reviewed. Otherwise, the backend creates a new version. Saving metadata only does not replace files.</p> : null}
               {!eligible && mode !== "initial" ? <p role="alert" className="rounded-[2px] bg-amber-50 p-3 text-xs text-amber-800">This document is read-only. Refresh the dossier to see its current status.</p> : null}
               {showHistory && detail ? <DocumentVersionHistory versions={detail.versions} /> : null}
               <div className={mode === "initial" ? "space-y-3" : "grid gap-3 md:grid-cols-2"}>
                 <section className="rounded-[2px] border border-slate-200 bg-white p-4" aria-label="Document files">
                   <h3 className="mb-3 flex items-center gap-2 font-heading text-sm font-bold uppercase text-slate-900"><Upload className="size-4 text-primary" /> {mode === "initial" ? "Document files" : "Replacement files"}</h3>
+                  <p className="mb-3 text-xs text-slate-600">Select 1–10 files in the desired order. The first is primary. A replacement uses this entire file set, not just the changed pages.</p>
                   {detail?.versions[0]?.files.length ? <div className="mb-3 text-xs text-slate-600"><strong>Current files</strong><ul className="mt-1 space-y-1">{detail.versions[0].files.map((file) => <li key={`${file.sortOrder}-${file.fileName}`} className="truncate">{file.fileName}</li>)}</ul></div> : null}
                   {!filesConfirmed ? <>
-                    <FileUploader entity="attachment" accept={DOSSIER_UPLOAD_ACCEPT} maxSize={UPLOAD_MAX_FILE_BYTES} multiple
+                    <FileUploader entity="attachment" accept={DOSSIER_UPLOAD_ACCEPT} maxSize={UPLOAD_MAX_FILE_BYTES} maxFiles={10} multiple
                       disabled={pending || noRetry || !eligible} onUploaded={rememberUploadedFile} onChange={changeUploadedFiles}
                       title="Upload document files" hint="PDF, JPG, JPEG, PNG · Max 5 MiB per file"
                       onError={() => setFileError("A file failed to upload. Retry it or remove it before confirming the file list.")}
@@ -237,21 +233,19 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
                       uploadSelectionLockedRef.current = false; setFiles([]); setFilesConfirmed(false); setFileError(""); uploadedAssetsRef.current.clear();
                     }}>Choose files again</Button>
                   </div>}
-                  {dossierSourceKind === "mock" ? <p className="mt-2 text-xs text-amber-800">Dossier business data is mocked, but this shared uploader uses the real presigned backend and requires a valid session. Mock previews use local demonstration assets, not the uploaded file contents.</p> : null}
                   {fileError ? <p role="alert" className="mt-2 text-xs text-red-700">{fileError}</p> : null}
                   <p className="mt-3 flex items-start gap-2 rounded-[2px] bg-sky-50 px-3 py-2 text-xs text-slate-600"><Info className="mt-0.5 size-3.5 shrink-0 text-sky-700" />{mode === "initial" ? "All selected files will be grouped into one DocumentVersion v1." : "The backend decides whether this updates the current version or creates a new one."}</p>
                 </section>
                 <section className="rounded-[2px] border border-slate-200 bg-white p-4" aria-label="Document information">
                   <h3 className="mb-3 flex items-center gap-2 font-heading text-sm font-bold uppercase text-slate-900"><FileText className="size-4 text-primary" /> Document information</h3>
                   <div className={mode === "initial" ? "grid gap-3 sm:grid-cols-2" : "space-y-3"}>
-                    {(["documentName", "documentNumber", "issuingAuthority"] as const).filter((name) => mode === "initial" || mode === "edit" || name !== "documentName").map((name) => (
-                      <FormField key={name} control={form.control} name={name} render={({ field }) => <FormItem className={mode === "initial" && name === "documentName" ? "sm:col-span-2" : ""}><FormLabel className="text-xs text-slate-700">{{ documentName: "Document Name", documentNumber: "Document Number", issuingAuthority: "Issuing Authority" }[name]}</FormLabel><FormControl><Input {...field} className={inputClass} maxLength={name === "documentName" ? 201 : undefined} /></FormControl><FormMessage className="text-xs" /></FormItem>} />
+                    {(["documentNumber", "issuingAuthority"] as const).map((name) => (
+                      <FormField key={name} control={form.control} name={name} render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">{name === "documentNumber" ? "Document Number" : "Issuing Authority"}{mode === "initial" ? " *" : ""}</FormLabel><FormControl><Input {...field} value={field.value ?? ""} className={inputClass} maxLength={name === "documentNumber" ? 150 : 200} /></FormControl><FormMessage className="text-xs" /></FormItem>} />
                     ))}
                     <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
-                      {(["issuedDate", "expiryDate"] as const).map((name) => <FormField key={name} control={form.control} name={name} render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">{name === "issuedDate" ? "Issued Date" : "Expiry Date"}</FormLabel><FormControl><DatePicker value={field.value} onChange={field.onChange} onBlur={field.onBlur} aria-invalid={Boolean(form.formState.errors[name])} minDate={name === "expiryDate" ? [requirement?.validUntil, plannedDepartureDate?.slice(0, 10)].filter((date): date is string => Boolean(date)).sort().at(-1) : undefined} className={inputClass} /></FormControl><FormMessage className="text-xs" /></FormItem>} />)}
+                      {(["issuedDate", "expiryDate"] as const).map((name) => <FormField key={name} control={form.control} name={name} render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">{name === "issuedDate" ? "Issued Date" : "Expiry Date"}</FormLabel><FormControl><DatePicker value={field.value ?? ""} onChange={field.onChange} onBlur={field.onBlur} aria-invalid={Boolean(form.formState.errors[name])} minDate={name === "expiryDate" ? [requirement?.validUntil, plannedDepartureDate?.slice(0, 10)].filter((date): date is string => Boolean(date)).sort().at(-1) : undefined} className={inputClass} /></FormControl><FormMessage className="text-xs" /></FormItem>} />)}
                     </div>
-                    {mode === "edit" ? <><FormField control={form.control} name="note" render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">Document Note</FormLabel><FormControl><Input {...field} className={inputClass} /></FormControl><FormMessage className="text-xs" /></FormItem>} /><p className="text-[11px] text-slate-500">Document Name and Document Note changes use Save Metadata Only. Save those before replacing files.</p></> : null}
-                    {mode !== "initial" ? <FormField control={form.control} name="uploadNote" render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">Response Note</FormLabel><FormControl><Input {...field} className={inputClass} /></FormControl><p className="text-[11px] text-slate-500">Optional note for the Transport Specialist.</p><FormMessage className="text-xs" /></FormItem>} /> : null}
+                    <FormField control={form.control} name="uploadNote" render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">Upload Note</FormLabel><FormControl><Input {...field} value={field.value ?? ""} maxLength={2000} className={inputClass} /></FormControl><p className="text-[11px] text-slate-500">Optional note for this submission. Metadata-only saves do not change this note.</p><FormMessage className="text-xs" /></FormItem>} />
                   </div>
                 </section>
               </div>

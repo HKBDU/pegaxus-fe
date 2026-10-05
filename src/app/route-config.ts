@@ -12,10 +12,17 @@ export const ROLE_ROUTES = {
   complianceRequirements: "/compliance-requirements",
   dossierTemplates: "/dossier-templates",
   complianceDossiers: "/compliance-dossiers",
+  managerDossiers: "/admin/compliance-dossiers",
 } as const
 
 export const accountDetail = (id: string | number) => `${ROLE_ROUTES.managerUsers}/${encodeURIComponent(id)}`
 export const accountEdit = (id: string | number) => `${accountDetail(id)}/edit`
+export function dossierDetail(id: string | number, role?: string) {
+  const encodedId = encodeURIComponent(id)
+  if (role && normalizeRole(role) === "LOGISTICS_MANAGER") return `${ROLE_ROUTES.managerDossiers}/${encodedId}`
+  if (role && normalizeRole(role) === "TRANSPORT_SPECIALIST") return `${ROLE_ROUTES.complianceDossiers}/${encodedId}/details`
+  return `${ROLE_ROUTES.complianceDossiers}/${encodedId}`
+}
 
 export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home as string) {
   const safePath = requestedPath.startsWith("/") && !requestedPath.startsWith("//") && !/^\/logout\/?$/i.test(requestedPath) ? requestedPath : ROLE_ROUTES.home
@@ -29,6 +36,8 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
 }
 
 const adminHeaderRoutes = [
+  { path: `${ROLE_ROUTES.managerDossiers}/:dossierId`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "COMPLIANCE DOSSIER" },
+  { path: `${ROLE_ROUTES.complianceDossiers}/:dossierId/details`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "COMPLIANCE DOSSIER" },
   { path: ROLE_ROUTES.managerCreateUser, label: "USERS", href: ROLE_ROUTES.managerUsers, title: "CREATE EMPLOYEE ACCOUNT" },
   { path: "/admin/users/:employeeId/edit", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "EDIT EMPLOYEE ACCOUNT" },
   { path: "/admin/users/:employeeId", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "VIEW EMPLOYEE ACCOUNT" },

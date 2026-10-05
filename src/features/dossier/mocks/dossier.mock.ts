@@ -1,16 +1,29 @@
 import {
   dossierRequirementsParamsSchema,
-  approveDocumentReviewSchema,
-  approveDocumentEnvelopeSchema,
-  documentReviewSchema,
-  missingDocumentReminderSchema,
   dossierUploadedAssetsSchema,
 } from "../schemas";
+import { z } from "zod";
 import demoPdfUrl from "@/assets/a.pdf?url";
 import demoImageUrl from "@/assets/horse-card.png?url";
-import { isMissingDossierRequirement } from "../constants";
+import { DOCUMENT_REQUEST_TYPES, isMissingDossierRequirement } from "../constants";
 import { canMarkReadyForSubmission, getReviewBlockReason } from "../lib/document-review";
-import type { ApproveDocumentResponse, ApproveDocumentReview, DocumentReviewPayload, DocumentReviewResponse, ReadyForSubmissionResponse, ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, MissingDocumentReminderInput, MissingDocumentReminderResponse, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentMetadata, DossierUploadedAssetRef } from "../types";
+import type { ComplianceDocumentDetail, DossierMockScenario, DossierOverview, DossierRequirement, DossierRequirementsParams, DossierUploadedAssetRef } from "../types";
+
+// Legacy demonstration contracts are isolated from the runtime backend DTOs.
+const approveDocumentReviewSchema = z.object({ result: z.literal("APPROVED"), reviewComment: z.string().optional() });
+const documentReviewSchema = z.discriminatedUnion("result", [approveDocumentReviewSchema, z.object({ result: z.literal("REJECTED"), reviewComment: z.string().optional(), documentRequest: z.object({ requestType: z.enum(DOCUMENT_REQUEST_TYPES), message: z.string().min(15), dueDate: z.string().optional() }) })]);
+const missingDocumentReminderSchema = z.object({ dossierRequirementIds: z.array(z.union([z.number(), z.string()])), dueDate: z.string().optional(), note: z.string().optional() });
+const approveDocumentEnvelopeSchema = z.object({ isSuccess: z.literal(true), code: z.number(), message: z.string(), value: z.object({ documentReviewId: z.number(), dossierRequirementStatus: z.literal("SATISFIED") }) });
+type ApproveDocumentReview = z.infer<typeof approveDocumentReviewSchema>;
+type ApproveDocumentResponse = z.infer<typeof approveDocumentEnvelopeSchema>;
+type DocumentReviewPayload = z.infer<typeof documentReviewSchema>;
+type DocumentReviewResponse = { isSuccess: true; code: number; message: string; value: { documentReviewId: number; dossierRequirementStatus: "SATISFIED" | "REJECTED"; documentRequestId?: number; requestCode?: string; dossierStatus?: "IN_PREPARATION" } };
+type MissingDocumentReminderInput = z.infer<typeof missingDocumentReminderSchema>;
+type MissingDocumentReminderResponse = { isSuccess: true; code: number; message: string; value: { remindedCount: number } };
+type ReadyForSubmissionResponse = { isSuccess: true; code: number; message: string; value: null };
+type UploadDocumentMetadata = { documentName: string; documentNumber: string; issuingAuthority: string; issuedDate: string; expiryDate: string };
+type SubmitDocumentVersionInput = { metadata: Omit<UploadDocumentMetadata, "documentName"> & { uploadNote?: string } };
+type UpdateDocumentMetadataInput = { changes: Partial<UploadDocumentMetadata & { note: string }> };
 
 // Local demonstration fixtures, not a guessed Cloudinary URL or the customer's uploaded bytes.
 function mockFileProjection(files: DossierUploadedAssetRef[]) {

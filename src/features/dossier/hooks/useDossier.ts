@@ -14,6 +14,7 @@ export const dossierKeys = {
   requirementsRoot: (id: string) => ["dossier", dossierSourceKind, id, "requirements"] as const,
   missingRequirements: (id: string) => [...dossierKeys.requirementsRoot(id), "missing"] as const,
   audit: (id: string, params: AuditParams) => ["dossier", "audit", id, params] as const,
+  booking: (id: string) => ["dossier", dossierSourceKind, "booking", id] as const,
 }
 
 const retryLoad = (failures: number, error: unknown) => failures < 1 && getDossierLoadErrorKind(error) === "load"
@@ -51,6 +52,10 @@ export function useDossierRequirements(id: string, params: DossierRequirementsPa
     enabled: enabled && dossierIdSchema.safeParse(id).success,
     retry: retryLoad,
   })
+}
+
+export function useDossierByBooking(bookingId: string, enabled = true) {
+  return useQuery({ queryKey: dossierKeys.booking(bookingId), queryFn: ({ signal }) => dossierService.getDossierByBooking(bookingId, signal), enabled: enabled && dossierIdSchema.safeParse(bookingId).success, retry: retryLoad });
 }
 
 export function useAuditHistory(id: EntityId | undefined, params: AuditParams) {

@@ -2,8 +2,11 @@ import { formatBookingDate } from "@/features/booking/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
 import type { DossierRequirement } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
+import { useDossierRequirement } from "../hooks/useComplianceDocument";
+import { DocumentRequestComments } from "./DocumentRequestComments";
 
-export function DossierRequirementDetailsDialog({ requirement, onClose }: { requirement: DossierRequirement; onClose: () => void }) {
+export function DossierRequirementDetailsDialog({ requirement, dossierId, role, onClose }: { requirement: DossierRequirement; dossierId: string; role?: string; onClose: () => void }) {
+  const query = useDossierRequirement(dossierId, String(requirement.dossierRequirementId));
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90svh] overflow-y-auto rounded-[2px] bg-white">
@@ -19,6 +22,7 @@ export function DossierRequirementDetailsDialog({ requirement, onClose }: { requ
           {requirement.waivedReason ? <div className="sm:col-span-2"><dt className="text-xs text-muted-foreground">Waiver Reason</dt><dd className="mt-1 whitespace-pre-wrap break-words">{requirement.waivedReason}</dd></div> : null}
           {requirement.note ? <div className="sm:col-span-2"><dt className="text-xs text-muted-foreground">Note</dt><dd className="mt-1 whitespace-pre-wrap break-words">{requirement.note}</dd></div> : null}
         </dl>
+        {query.isPending ? <p role="status" className="text-xs">Loading requests…</p> : query.isError ? <p role="alert" className="text-xs text-red-700">Could not load requirement requests.</p> : query.data?.documentRequests.map((request) => <DocumentRequestComments key={request.documentRequestId} dossierId={dossierId} requirementId={String(requirement.dossierRequirementId)} request={request} canReadComments={role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST"} canComment={(role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST") && request.status === "OPEN"} />)}
       </DialogContent>
     </Dialog>
   );

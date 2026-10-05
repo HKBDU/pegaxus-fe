@@ -77,6 +77,7 @@ function RequirementRowActions({
     ? getCustomerDocumentActions(dossier, item)
     : getDossierRequirementActionLabels(role, item.status, Boolean(item.document))
       .filter((label) => label !== "Review Document" || canOpenDocumentReview(role, dossier, item));
+  if (item.openRequest?.status === "OPEN" && !labels.includes("View Request")) labels.push("View Request");
 
   return (
     <DropdownMenu>
@@ -102,6 +103,7 @@ function RequirementRowActions({
         ) : null}
         {labels.map((label) => {
           const actionEnabled = label === "View Requirement" ||
+            (label === "View Request" && item.openRequest?.status === "OPEN") ||
             ((label === "Request Missing Document" || label === "Send Reminder Again") &&
               canSendMissingDocumentReminder(role, dossier) && isMissingDossierRequirement(item)) ||
             (label === "Upload Document" && canUploadInitialDocument(role, dossier, item)) ||
@@ -295,7 +297,7 @@ export function DossierRequirementFilters({ params, horses, onChange }: {
           options={getDossierHorseFilterOptions(horses)}
           hideTitleWhenFiltered
           onValueChange={(horseId) => onChange({
-            horseId: horseId === "ALL" ? undefined : dossierRequirementsParamsSchema.shape.horseId.parse(Number(horseId)),
+            horseId: horseId === "ALL" ? undefined : dossierRequirementsParamsSchema.shape.horseId.parse(horseId),
           })}
         />
       </div>
@@ -331,7 +333,7 @@ export function DossierRequirementsPreview({
   const [viewRequirement, setViewRequirement] = useState<DossierRequirement | null>(null);
   const [reviewRequirement, setReviewRequirement] = useState<DossierRequirement | null>(null);
   const [detailsRequirement, setDetailsRequirement] = useState<DossierRequirement | null>(null);
-  const [reminder, setReminder] = useState<{ requirementId?: number } | null>(null);
+  const [reminder, setReminder] = useState<{ requirementId?: string | number } | null>(null);
   const [documentView, setDocumentView] = useState<"details" | "request" | "history">("details");
   const onAction = (item: DossierRequirement, label: string) => {
     if (label === "View Requirement") { setDetailsRequirement(item); return; }
@@ -344,6 +346,7 @@ export function DossierRequirementsPreview({
       return;
     }
     if (label === "View Document" || label === "View Version History" || label === "View Review Result" || label === "View Review History" || label === "View Request") {
+      if (label === "View Request" && !item.document) { setDetailsRequirement(item); return; }
       if (item.document) {
         setViewRequirement(item);
         setViewDocumentId(String(item.document.complianceDocumentId));
@@ -372,7 +375,7 @@ export function DossierRequirementsPreview({
   const visibleItems = result?.items.filter((item) => !documentsOnly || item.document !== null) ?? [];
   const tripItems = visibleItems.filter((item) => item.horseId === null);
   const horseGroups = new Map<
-    number,
+    string | number,
     { name: string; items: DossierRequirement[] }
   >();
   for (const item of visibleItems) {
@@ -502,7 +505,7 @@ export function DossierRequirementsPreview({
           key={submission.requirement.dossierRequirementId}
           dossier={dossier}
           requirement={submission.requirement}
-          plannedDepartureDate={dossier.bookingSummary.requestedDepartureDate}
+          plannedDepartureDate={dossier.bookingSummary.requestedDepartureDate ?? undefined}
           role={role}
           onClose={() => setSubmission(null)}
         />
@@ -512,12 +515,13 @@ export function DossierRequirementsPreview({
           dossier={dossier}
           requirement={submission?.requirement ?? null}
           mode={submission?.mode ?? "edit"}
-          plannedDepartureDate={plannedDepartureDate ?? dossier.bookingSummary.requestedDepartureDate}
+          plannedDepartureDate={plannedDepartureDate ?? dossier.bookingSummary.requestedDepartureDate ?? undefined}
           role={role}
           onClose={() => setSubmission(null)}
         />
       )}
       <DocumentDetailsDialog documentId={viewDocumentId} onClose={() => setViewDocumentId(null)}
+        dossierId={dossierId} requirementId={String(viewedRequirement?.dossierRequirementId ?? "")} dossier={dossier} role={role}
         view={documentView}
         onUpdate={canUpdateViewedDocument && viewedRequirement ? () => {
           setViewDocumentId(null);
@@ -531,7 +535,7 @@ export function DossierRequirementsPreview({
           onClose={() => setReviewRequirement(null)}
         />
       ) : null}
-      {detailsRequirement ? <DossierRequirementDetailsDialog requirement={result?.items.find((item) => item.dossierRequirementId === detailsRequirement.dossierRequirementId) ?? detailsRequirement} onClose={() => setDetailsRequirement(null)} /> : null}
+      {detailsRequirement ? <DossierRequirementDetailsDialog dossierId={dossierId} role={role} requirement={result?.items.find((item) => item.dossierRequirementId === detailsRequirement.dossierRequirementId) ?? detailsRequirement} onClose={() => setDetailsRequirement(null)} /> : null}
       {reminder ? <RequestMissingDocumentsDialog dossier={dossier} role={role} initialRequirementId={reminder.requirementId} onClose={() => setReminder(null)} /> : null}
     </section>
   );
