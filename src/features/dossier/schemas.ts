@@ -4,7 +4,10 @@ import { format } from "date-fns";
 import { DOCUMENT_REQUEST_TYPES, DOSSIER_REQUIREMENT_STATUSES, UPLOAD_ACCEPTED_MIME_TYPES, UPLOAD_MAX_FILE_BYTES } from "./constants";
 import type { DossierUploadedAssetRef, UploadDocumentError } from "./types";
 
-const entityId = z.number().int().positive();
+// Mock data uses numeric identifiers, while the real API uses UUIDs.
+// Keep the parsed contract compatible with both existing mock helpers and real responses.
+const entityId: z.ZodType<any> = z.union([z.number().int().positive(), z.string().uuid()]);
+const typedEntityId = z.union([z.number().int().positive(), z.string().uuid()]);
 const timestamp = z.iso.datetime({ offset: true });
 const date = z.iso.date();
 
@@ -143,7 +146,7 @@ export const dossierOverviewEnvelopeSchema = envelope(dossierOverviewSchema);
 export const dossierRequirementsEnvelopeSchema = envelope(dossierRequirementsPageSchema);
 
 export const missingDocumentReminderSchema = z.object({
-  dossierRequirementIds: z.array(entityId).min(1, "Select at least one missing requirement.")
+  dossierRequirementIds: z.array(typedEntityId).min(1, "Select at least one missing requirement.")
     .refine((ids) => new Set(ids).size === ids.length, "Selected requirements must be unique."),
   dueDate: z.union([z.literal(""), date]).optional(),
   note: z.string().trim().optional(),
@@ -298,7 +301,10 @@ export const createDocumentSubmissionSchema = (validUntil: string | null, planne
   z.object({ ...documentMetadataShape, uploadNote: z.string(), note: z.string() })
     .superRefine((value, context) => validateMetadataDates(value, context, validUntil, plannedDepartureDate));
 
-export const dossierIdSchema = z.string().regex(/^[1-9]\d*$/);
+export const dossierIdSchema = z.union([
+  z.string().regex(/^[1-9]\d*$/),
+  z.string().uuid(),
+]);
 export const dossierRequirementsParamsSchema = z.object({
   status: dossierRequirementStatusSchema.optional(),
   horseId: entityId.optional(),

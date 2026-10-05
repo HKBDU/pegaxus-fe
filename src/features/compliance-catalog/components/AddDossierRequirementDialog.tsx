@@ -53,6 +53,7 @@ interface AddDossierRequirementDialogProps {
   onOpenChange: (open: boolean) => void
   dossierId: EntityId
   bookingCode: string
+  plannedDepartureDate: string
   horses: HorseOption[]
   requirements: ComplianceRequirementSummary[]
   requirementsLoading: boolean
@@ -93,7 +94,7 @@ function PreviewLine({ label, children }: { label: string; children: ReactNode }
 }
 
 /** SCR-F2-009: adds one extra DossierRequirement to an existing ComplianceDossier (D3). */
-export function AddDossierRequirementDialog({ open, onOpenChange, dossierId, bookingCode, horses, requirements, requirementsLoading, existing }: AddDossierRequirementDialogProps) {
+export function AddDossierRequirementDialog({ open, onOpenChange, dossierId, bookingCode, plannedDepartureDate, horses, requirements, requirementsLoading, existing }: AddDossierRequirementDialogProps) {
   const addRequirement = useAddDossierRequirement(dossierId)
   const attempt = useRequestAttemptGuard()
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -131,6 +132,10 @@ export function AddDossierRequirementDialog({ open, onOpenChange, dossierId, boo
           isMandatory: formValues.isMandatory === "YES",
           dueDate: formValues.dueDate || undefined,
           instruction: formValues.instruction || undefined,
+          leadTimeDays: formValues.dueDate
+            ? Math.max(0, Math.round((Date.parse(`${plannedDepartureDate}T00:00:00Z`) - Date.parse(`${formValues.dueDate}T00:00:00Z`)) / 86_400_000))
+            : 0,
+          reason: "Added from dossier detail",
         }),
       )
       if (!guarded.started) return

@@ -210,10 +210,15 @@ export const requirementService = {
       })
       return { dossierRequirementId, status: "PENDING" }
     }
-    return unwrapValue<{ dossierRequirementId: EntityId; status: string }>(await api.post<unknown>(`compliance-dossiers/${dossierId}/requirements`, input))
+    const { dueDate: _dueDate, leadTimeDays, reason, ...requirement } = input
+    return unwrapValue<{ dossierRequirementId: EntityId; status: string }>(await api.post<unknown>(`compliance-dossiers/${dossierId}/requirements`, {
+      ...requirement,
+      leadTimeDays: leadTimeDays ?? 0,
+      reason: reason?.trim() || "Added from dossier detail",
+    }))
   },
 
-  /** D4. Backend exposes PATCH, not PUT. */
+  /** D4. Backend exposes PATCH for partial DossierRequirement updates. */
   async updateRequirement(dossierId: EntityId, dossierRequirementId: EntityId, input: UpdateRequirementInput): Promise<void> {
     if (useComplianceMocks && !useFlow2HttpMocks) {
       await wait(300)
@@ -224,7 +229,7 @@ export const requirementService = {
       item.note = input.instruction ?? item.note
       return
     }
-    await api.put(`compliance-dossiers/${dossierId}/requirements/${dossierRequirementId}`, input)
+    await api.patch(`compliance-dossiers/${dossierId}/requirements/${dossierRequirementId}`, input)
   },
 
   async waiveRequirement(dossierId: EntityId, dossierRequirementId: EntityId, input: WaiveRequirementInput): Promise<void> {

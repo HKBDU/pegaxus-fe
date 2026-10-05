@@ -240,6 +240,7 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
           onOpenChange={setAddOpen}
           dossierId={dossierId}
           bookingCode={overview.bookingCode}
+          plannedDepartureDate={overview.bookingSummary.requestedDepartureDate}
           horses={horses}
           requirements={requirementOptions.data ?? []}
           requirementsLoading={requirementOptions.isLoading}
