@@ -210,7 +210,20 @@ export function RequirementTable({
               </span>
             </div>
           ) : (
-            "—"
+            <div className="space-y-1.5">
+              <span className="block text-xs text-slate-500">No document submitted</span>
+              {canUploadInitialDocument(role, dossier, row.original) ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 rounded-[2px] px-2 text-xs"
+                  onClick={() => onAction(row.original, "Upload Document")}
+                >
+                  <Upload className="size-3.5" /> Upload Document
+                </Button>
+              ) : null}
+            </div>
           ),
       },
       {
@@ -354,6 +367,7 @@ export function DossierRequirementsPreview({
       }
       return;
     }
+    if (label === "Upload Document" && !canUploadInitialDocument(role, dossier, item)) return;
     const mode: SubmissionMode | null = label === "Upload Document" ? "initial"
       : label === "Edit Document" ? "edit" : label === "Update Document" ? "update" : null;
     if (mode) setSubmission({ requirement: item, mode });
@@ -372,7 +386,7 @@ export function DossierRequirementsPreview({
   const viewedRequirement = result?.items.find((item) => item.dossierRequirementId === viewRequirement?.dossierRequirementId) ?? viewRequirement;
   const canUpdateViewedDocument = role === "CUSTOMER" && viewedRequirement &&
     getCustomerDocumentActions(dossier, viewedRequirement).includes("Update Document");
-  const visibleItems = result?.items.filter((item) => !documentsOnly || item.document !== null) ?? [];
+  const visibleItems = result?.items ?? [];
   const tripItems = visibleItems.filter((item) => item.horseId === null);
   const horseGroups = new Map<
     string | number,
@@ -415,7 +429,7 @@ export function DossierRequirementsPreview({
             {documentsOnly ? "Documents / Reviews" : "Dossier requirements"}
           </h2>
           <p className="mt-1 text-xs text-gray-500">
-            {documentsOnly ? "Uploaded documents, reviews and version history from the current requirements page." : "Trip-level and horse-specific requirements from the current page."}
+            {documentsOnly ? "Document submissions, missing documents, reviews and version history from the current requirements page." : "Trip-level and horse-specific requirements from the current page."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -475,7 +489,7 @@ export function DossierRequirementsPreview({
           ) : null}
         </div>
       ) : (
-        <EmptyState message={documentsOnly ? "No uploaded documents on this requirements page. Change the filters or page to view other documents." : "No dossier requirements match the current filter."} />
+        <EmptyState message="No dossier requirements match the current filter." />
       )}
       {meta ? (
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
