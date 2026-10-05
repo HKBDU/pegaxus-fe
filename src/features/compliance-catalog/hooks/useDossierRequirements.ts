@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import type { AddRequirementInput, DossierRequirementParams, UpdateRequirementInput, WaiveRequirementInput } from "@/features/compliance-catalog/dossier-types"
 import { requirementService } from "@/features/compliance-catalog/requirement-services"
+import { dossierIdSchema } from "@/features/dossier/schemas"
 import type { EntityId } from "@/shared/types"
 
 export const requirementKeys = {
@@ -11,10 +12,11 @@ export const requirementKeys = {
 }
 
 export function useDossierRequirements(dossierId: EntityId | undefined, params: DossierRequirementParams) {
+  const validDossierId = dossierId !== undefined && dossierIdSchema.safeParse(String(dossierId)).success
   return useQuery({
     queryKey: requirementKeys.list(dossierId ?? "", params),
     queryFn: () => requirementService.getRequirements(dossierId as EntityId, params),
-    enabled: dossierId !== undefined && String(dossierId).length > 0,
+    enabled: validDossierId,
     placeholderData: (previousData) => previousData,
   })
 }

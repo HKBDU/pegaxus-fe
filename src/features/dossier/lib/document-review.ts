@@ -29,6 +29,7 @@ export function getReviewBlockReason({ role, dossier, requirement, document, tod
   if (!latest) return blocked("NO_DOCUMENT_VERSION", "No submitted version is available for review.");
   if (latest.review) return blocked("VERSION_ALREADY_REVIEWED", "This version has already been reviewed.");
   if (document.status === "APPROVED") return blocked("DOCUMENT_ALREADY_VERIFIED", "Approved documents are read-only.");
+  if (!requirement.document) return blocked("DOCUMENT_NOT_REVIEWABLE", "This document is no longer available for review. Refresh dossier requirements.");
   if (!canOpenDocumentReview(role, dossier, requirement) || document.status !== "PROVIDED" ||
     requirement.document?.complianceDocumentId !== document.complianceDocumentId ||
     requirement.dossierRequirementId !== document.dossierRequirementId ||

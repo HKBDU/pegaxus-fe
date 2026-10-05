@@ -152,6 +152,9 @@ export default function ApplyTemplatePage() {
         }),
       )
       if (!guarded.started) return
+      if (!guarded.value.complianceDossierId) {
+        throw new Error("DOSSIER_CREATE_RESPONSE_INVALID")
+      }
       toast.success("ComplianceDossier initialized successfully. DossierRequirements generated for customer.")
       if (guarded.value.failedCustomCount > 0) {
         toast.warning(`${guarded.value.failedCustomCount} custom requirement(s) could not be added. Add them again from the dossier page.`)

@@ -72,8 +72,10 @@ export const dossierService = {
     const body = fromTemplate
       ? { dossierTemplateId, selectedTemplateItemIds }
       : { manualRequirements: customRequirements.map(toDossierRequirementBody) }
-    const payload = await api.post<{ value?: CreateDossierResult } & Partial<CreateDossierResult>>(`bookings/${bookingId}/compliance-dossier`, body)
-    const created = (payload.value ?? payload) as Omit<CreateDossierResult, "failedCustomCount">
+    const payload = await api.post<unknown>(`bookings/${bookingId}/compliance-dossier`, body)
+    const envelope = payload as { value?: unknown; data?: { value?: unknown } }
+    const created = (envelope.value ?? envelope.data?.value ?? payload) as Partial<CreateDossierResult>
+    if (!created.complianceDossierId) throw new ComplianceApiError("DOSSIER_CREATE_RESPONSE_INVALID")
 
     let failedCustomCount = 0
     let addedCustom = 0
@@ -87,6 +89,10 @@ export const dossierService = {
         }
       }
     }
-    return { ...created, generatedRequirementCount: created.generatedRequirementCount + addedCustom, failedCustomCount }
+    return {
+      ...created,
+      generatedRequirementCount: (created.generatedRequirementCount ?? 0) + addedCustom,
+      failedCustomCount,
+    } as CreateDossierResult
   },
 }

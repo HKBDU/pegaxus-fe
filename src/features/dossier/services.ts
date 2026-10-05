@@ -3,7 +3,7 @@ import type { AxiosRequestConfig } from "axios"
 import apiClient from "@/lib/axios"
 import {
   dossierIdSchema,
-  dossierOverviewEnvelopeSchema,
+  dossierOverviewSchema,
   dossierRequirementsEnvelopeSchema,
   dossierRequirementsParamsSchema,
   createUploadDocumentSchema,
@@ -57,6 +57,64 @@ interface ApiEnvelope<T> {
 function unwrapValue<T>(payload: unknown): T {
   if (payload && typeof payload === "object" && "value" in payload) return (payload as ApiEnvelope<T>).value
   return payload as T
+}
+
+function asRecord(value: unknown): Record<string, any> {
+  return value && typeof value === "object" ? value as Record<string, any> : {}
+}
+
+function mapBackendDossierOverview(payload: unknown): DossierOverview {
+  const value = asRecord(unwrapValue(payload))
+  const dossierId = value.complianceDossierId
+  if (typeof dossierId !== "string" || !dossierId) throw new Error("DOSSIER_CONTRACT_MISMATCH")
+  const requirements = [
+    ...(Array.isArray(value.tripRequirements) ? value.tripRequirements : []),
+    ...(Array.isArray(value.horseRequirements) ? value.horseRequirements.flatMap((group: any) => group.requirements ?? []) : []),
+  ]
+  const count = (status: string) => requirements.filter((item: any) => item.status === status).length
+  const mandatory = requirements.filter((item: any) => item.isMandatory)
+  const horses = Array.isArray(value.horseRequirements)
+    ? value.horseRequirements.map((group: any) => ({ horseId: group.horseId, horseName: group.horseName }))
+    : []
+  const status = ["DRAFT", "IN_PREPARATION", "READY_FOR_SUBMISSION", "SUBMITTED", "PENDING", "APPROVED", "REJECTED", "CLOSED"].includes(value.status)
+    ? value.status
+    : "IN_PREPARATION"
+
+  return dossierOverviewSchema.parse({
+    complianceDossierId: dossierId,
+    dossierCode: value.dossierCode ?? `DOSSIER-${dossierId.slice(0, 8)}`,
+    bookingId: value.bookingId,
+    bookingCode: value.bookingCode ?? `BOOKING-${String(value.bookingId).slice(0, 8)}`,
+    status,
+    openedAt: value.openedAt ?? value.createdAt ?? new Date().toISOString(),
+    readyForSubmissionAt: null,
+    approvedAt: null,
+    rejectedAt: null,
+    closedAt: null,
+    rejectionReason: null,
+    note: null,
+    writeLocked: ["SUBMITTED", "APPROVED", "CLOSED"].includes(status),
+    writeLockReason: ["SUBMITTED", "APPROVED", "CLOSED"].includes(status) ? `DOSSIER_${status}` : null,
+    progressPercent: Number(value.completionPercent ?? 0),
+    mandatoryTotal: mandatory.length,
+    mandatorySatisfiedOrWaived: mandatory.filter((item: any) => ["SATISFIED", "WAIVED"].includes(item.status)).length,
+    bookingSummary: {
+      bookingStatus: ["DRAFT", "PENDING", "APPROVED", "REJECTED", "CANCELLED"].includes(value.bookingStatus) ? value.bookingStatus : "APPROVED",
+      originCountry: value.originCountry ?? "",
+      destinationCountry: value.destinationCountry ?? "",
+      requestedDepartureDate: value.requestedDepartureDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+      customerName: value.customerName ?? "",
+      horseCount: horses.length,
+      horses,
+    },
+    requirementSummary: {
+      total: requirements.length,
+      pending: count("PENDING"), requested: count("REQUESTED"), provided: count("PROVIDED"),
+      satisfied: count("SATISFIED"), rejected: count("REJECTED"), waived: count("WAIVED"),
+    },
+    quarantineStatus: null,
+    customsClearanceStatus: null,
+  })
 }
 
 /** Rethrows a BE error response as Error(errorCode) so the UI can react to codes like FORBIDDEN. */
@@ -260,7 +318,7 @@ const dashboardService = {
       }
     }
     const payload = await api.get<unknown>(`${ENDPOINT}/${dossierId}`)
-    return dossierOverviewEnvelopeSchema.parse(payload).value
+    return mapBackendDossierOverview(payload)
   },
 
   /** K3. The audit trail is append-only: this service only reads. */

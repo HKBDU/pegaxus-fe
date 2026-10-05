@@ -87,7 +87,9 @@ export interface AddRequirementInput {
   horseId: EntityId | null
   isMandatory: boolean
   dueDate?: string
+  leadTimeDays?: number
   instruction?: string
+  reason?: string
 }
 
 /** Body of PATCH /compliance-dossiers/{id}/requirements/{requirementId}. */
@@ -99,5 +101,5 @@ export interface UpdateRequirementInput {
 }
 
 export interface WaiveRequirementInput {
-  reason: string
+  waivedReason: string
 }
