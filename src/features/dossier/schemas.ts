@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { BOOKING_STATUSES } from "@/features/booking/types";
 import { DOSSIER_REQUIREMENT_STATUSES, UPLOAD_ACCEPTED_MIME_TYPES, UPLOAD_MAX_FILE_BYTES } from "./constants";
-import type { DossierUploadedAssetRef, UploadDocumentError } from "./types";
+import type { DossierUploadedAssetRef, UploadDocumentError, UploadDocumentMetadata } from "./types";
 
 // Mock data uses numeric identifiers, while the real API uses UUIDs.
 // Keep the parsed contract compatible with both existing mock helpers and real responses.
@@ -111,7 +111,7 @@ export const dossierOverviewSchema = z.object({
 });
 
 export const documentRequestSummarySchema = z.object({
-  documentRequestId: entityId, requestCode: z.string(), requestType: z.string(),
+  documentRequestId: entityId, requestCode: z.string(), requestType: z.string().nullable().default(null),
   message: z.string(), dueDate: date.nullable(),
   status: z.string().optional(), errorCategory: z.string().nullable().optional(), requestedAt: timestamp.optional(),
 });
@@ -255,6 +255,18 @@ const documentMetadataShape = {
   issuedDate: optionalDate,
   expiryDate: optionalDate,
 };
+function validateMetadataClears(
+  value: UploadDocumentMetadata,
+  context: z.RefinementCtx,
+  existingMetadata?: UploadDocumentMetadata,
+) {
+  for (const field of ["documentNumber", "issuingAuthority", "issuedDate", "expiryDate"] as const) {
+    if (value[field] !== undefined && !value[field]?.trim() &&
+      (!existingMetadata || existingMetadata[field]?.trim())) {
+      context.addIssue({ code: "custom", path: [field], message: "Clearing existing metadata is not supported. Keep its current value or enter a replacement." });
+    }
+  }
+}
 function validateMetadataDates(
   value: { issuedDate?: string | null; expiryDate?: string | null },
   context: z.RefinementCtx,
@@ -286,15 +298,19 @@ export const createSubmitDocumentVersionSchema = (validUntil: string | null, pla
 
 export const createUpdateDocumentMetadataSchema = (validUntil: string | null, plannedDepartureDate?: string | null) =>
   z.object({ documentNumber: documentMetadataShape.documentNumber.nullable().optional(), issuingAuthority: documentMetadataShape.issuingAuthority.nullable().optional(), issuedDate: optionalDate.nullable().optional(), expiryDate: optionalDate.nullable().optional() })
-    .superRefine((value, context) => validateMetadataDates(value, context, validUntil, plannedDepartureDate));
+    .superRefine((value, context) => {
+      validateMetadataClears(value, context);
+      validateMetadataDates(value, context, validUntil, plannedDepartureDate);
+    });
 
-export const createDocumentSubmissionSchema = (validUntil: string | null, plannedDepartureDate?: string | null, mode: "initial" | "edit" | "update" = "initial") =>
+export const createDocumentSubmissionSchema = (validUntil: string | null, plannedDepartureDate?: string | null, mode: "initial" | "edit" | "update" = "initial", existingMetadata?: UploadDocumentMetadata) =>
   z.object({ ...documentMetadataShape, documentNumber: documentMetadataShape.documentNumber.nullable().optional(), issuingAuthority: documentMetadataShape.issuingAuthority.nullable().optional(), issuedDate: optionalDate.nullable().optional(), expiryDate: optionalDate.nullable().optional(), uploadNote: z.string().max(2000).optional() })
     .superRefine((value, context) => {
       if (mode === "initial") {
         for (const field of ["documentNumber", "issuingAuthority", "issuedDate"] as const) if (!value[field]) context.addIssue({ code: "custom", path: [field], message: "This field is required." });
         if (validUntil && !value.expiryDate) context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date is required for this requirement." });
       }
+      if (mode !== "initial" && existingMetadata) validateMetadataClears(value, context, existingMetadata);
       validateMetadataDates(value, context, validUntil, plannedDepartureDate);
     });
 

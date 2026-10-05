@@ -8,32 +8,6 @@ import {
   documentVersionSchema,
 } from "../schemas";
 
-export const DOCUMENT_ERROR_CATEGORIES = {
-  UNCLEAR_IMAGE: 1,
-  EXPIRED: 2,
-  MISSING_STAMP: 3,
-  WRONG_PAGE: 4,
-  METADATA_MISMATCH: 5,
-  OTHER: 6,
-} as const;
-export const REQUIREMENT_STATUS_VALUES = {
-  PENDING: 1,
-  REQUESTED: 2,
-  PROVIDED: 3,
-  SATISFIED: 4,
-  REJECTED: 5,
-  WAIVED: 6,
-} as const;
-export const DOSSIER_STATUS_VALUES = {
-  DRAFT: 1,
-  IN_PREPARATION: 2,
-  READY_FOR_SUBMISSION: 3,
-  SUBMITTED: 4,
-  PENDING: 5,
-  APPROVED: 6,
-  REJECTED: 7,
-  CLOSED: 8,
-} as const;
 const id = z.string().uuid();
 const time = z.string().min(1);
 const actions = z.object({ canUpload: z.boolean(), canReview: z.boolean() });
@@ -140,7 +114,8 @@ export function unwrapBackendValue(payload: unknown): unknown {
 function mapRequest(request: z.infer<typeof requestDto>) {
   return {
     ...request,
-    requestType: request.errorCategory ?? "MISSING_DOCUMENT",
+    // The current request DTO exposes an error category, not its domain request type.
+    requestType: null,
   };
 }
 

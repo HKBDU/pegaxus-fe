@@ -195,5 +195,4 @@ export interface AuditResponse {
 }
 
 export type DossierSourceKind = "api" | "mock"
-export type DossierMockScenario = "normal" | "locked" | "empty" | "error"
 export type DossierLoadErrorKind = "forbidden" | "not-found" | "contract" | "unauthorized" | "load"

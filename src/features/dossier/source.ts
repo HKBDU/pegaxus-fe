@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { dossierIdSchema, dossierRequirementsParamsSchema } from "./schemas";
-import type { ApproveDocumentInput, DocumentReviewInput, DossierLoadErrorKind, DossierRequirementsParams, DossierSourceKind, SendMissingDocumentReminderInput, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
+import type { DocumentReviewInput, DossierLoadErrorKind, DossierRequirementsParams, DossierSourceKind, SendMissingDocumentReminderInput, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
 
 export async function loadMissingDossierRequirements(dossierId: string, signal?: AbortSignal) {
   const id = dossierIdSchema.parse(dossierId);
@@ -12,10 +12,6 @@ export async function loadMissingRequirementReminder(input: SendMissingDocumentR
   const id = dossierIdSchema.parse(input.dossierId);
   const { dossierService } = await import("./services");
   return dossierService.sendMissingRequirementReminder({ ...input, dossierId: id });
-}
-
-export async function loadApproveDocument(input: ApproveDocumentInput) {
-  return loadDocumentReview(input);
 }
 
 export async function loadDocumentReview(input: DocumentReviewInput) {

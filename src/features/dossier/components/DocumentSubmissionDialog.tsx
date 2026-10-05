@@ -72,7 +72,7 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
   const uploadSelectionLockedRef = useRef(false);
   const submitGuardRef = useRef(false);
   const hydratedDocumentIdRef = useRef<EntityId | null>(null);
-  const schema = createDocumentSubmissionSchema(requirement?.validUntil ?? null, plannedDepartureDate, mode);
+  const schema = createDocumentSubmissionSchema(requirement?.validUntil ?? null, plannedDepartureDate, mode, detail);
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: emptyValues });
   const reset = form.reset;
   const pending = initialMutation.isPending || versionMutation.isPending || metadataMutation.isPending;
@@ -238,6 +238,7 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
                 </section>
                 <section className="rounded-[2px] border border-slate-200 bg-white p-4" aria-label="Document information">
                   <h3 className="mb-3 flex items-center gap-2 font-heading text-sm font-bold uppercase text-slate-900"><FileText className="size-4 text-primary" /> Document information</h3>
+                  {mode !== "initial" ? <p className="mb-3 text-xs text-slate-600">Existing metadata cannot be cleared. Keep its current value or enter a replacement.</p> : null}
                   <div className={mode === "initial" ? "grid gap-3 sm:grid-cols-2" : "space-y-3"}>
                     {(["documentNumber", "issuingAuthority"] as const).map((name) => (
                       <FormField key={name} control={form.control} name={name} render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">{name === "documentNumber" ? "Document Number" : "Issuing Authority"}{mode === "initial" ? " *" : ""}</FormLabel><FormControl><Input {...field} value={field.value ?? ""} className={inputClass} maxLength={name === "documentNumber" ? 150 : 200} /></FormControl><FormMessage className="text-xs" /></FormItem>} />

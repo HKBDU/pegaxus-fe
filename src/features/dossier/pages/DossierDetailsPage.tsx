@@ -10,6 +10,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ErrorState, LoadingState } from "@/shared/components/common";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { AuthorityInspectionTab } from "@/features/clearance/components/AuthorityInspectionTab";
+import { DossierRequirementsPanel } from "@/features/compliance-catalog/pages/DossierRequirementsPage";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { AuditHistoryPanel } from "./DossierAuditHistoryPage";
 import { DossierOverview } from "../components/DossierOverview";
@@ -125,7 +126,9 @@ export default function DossierDetailsPage() {
               id={`dossier-panel-${activeSection}`}
               aria-labelledby={`dossier-tab-${activeSection}`}
             >
-              {activeSection === "requirements" || activeSection === "documents" ? (
+              {activeSection === "requirements" ? (
+                <DossierRequirementsPanel embedded />
+              ) : activeSection === "documents" ? (
                 <DossierRequirementsPreview
                   dossierId={dossierId}
                   horses={query.data.bookingSummary.horses}

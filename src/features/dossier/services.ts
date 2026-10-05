@@ -10,8 +10,6 @@ import {
   createSubmitDocumentVersionSchema,
   createUpdateDocumentMetadataSchema,
   updateDocumentMetadataEnvelopeSchema,
-  approveDocumentReviewSchema,
-  approveDocumentEnvelopeSchema,
   documentReviewSchema,
   documentReviewEnvelopeSchema,
   readyForSubmissionEnvelopeSchema,
@@ -29,7 +27,6 @@ import type {
   DashboardParams,
   DashboardResponse,
   DossierOverview,
-  ApproveDocumentInput,
   DocumentReviewInput,
   DossierRequirementsParams,
   SendMissingDocumentReminderInput,
@@ -241,11 +238,6 @@ const documentServiceMethods = {
     const payload = await apiClient.post<unknown, unknown>(`${ENDPOINT}/${id}/missing-document-reminders`, reminder);
     const response = payload as { value: { requirements: unknown[] } };
     return missingDocumentReminderEnvelopeSchema.parse({ ...response, value: { ...response.value, requirements: response.value.requirements.map(mapBackendRequirement) } });
-  },
-
-  async approveDocument(input: ApproveDocumentInput) {
-    approveDocumentReviewSchema.parse(input.review);
-    return approveDocumentEnvelopeSchema.parse(await dossierService.reviewComplianceDocument(input));
   },
 
   async reviewComplianceDocument(input: DocumentReviewInput) {
