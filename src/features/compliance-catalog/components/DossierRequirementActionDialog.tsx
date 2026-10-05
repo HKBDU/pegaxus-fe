@@ -33,7 +33,7 @@ export function DossierRequirementActionDialog({ dossierId, action, onClose }: {
         toast.success("DossierRequirement updated successfully.")
       } else {
         if (!reason.trim()) return
-        await waiveRequirement.mutateAsync({ dossierRequirementId: action.requirement.dossierRequirementId, input: { reason: reason.trim() } })
+        await waiveRequirement.mutateAsync({ dossierRequirementId: action.requirement.dossierRequirementId, input: { waivedReason: reason.trim() } })
         toast.success("DossierRequirement waived successfully.")
       }
       onClose()

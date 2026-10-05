@@ -23,7 +23,6 @@ import {
   missingDocumentReminderEnvelopeSchema,
 } from "./schemas"
 import type { EntityId, PaginationMeta } from "@/shared/types"
-import { bookingService } from "@/features/booking/services"
 import { MOCK_AUDIT_EVENTS, MOCK_DASHBOARD_ITEMS } from "@/features/dossier/constants/dossier.mock"
 import type {
   AuditEvent,
@@ -64,7 +63,7 @@ function asRecord(value: unknown): Record<string, any> {
   return value && typeof value === "object" ? value as Record<string, any> : {}
 }
 
-function mapBackendDossierOverview(payload: unknown, booking: Awaited<ReturnType<typeof bookingService.getBooking>>): DossierOverview {
+function mapBackendDossierOverview(payload: unknown): DossierOverview {
   const value = asRecord(unwrapValue(payload))
   const dossierId = value.complianceDossierId
   if (typeof dossierId !== "string" || !dossierId) throw new Error("DOSSIER_CONTRACT_MISMATCH")
@@ -74,6 +73,9 @@ function mapBackendDossierOverview(payload: unknown, booking: Awaited<ReturnType
   ]
   const count = (status: string) => requirements.filter((item: any) => item.status === status).length
   const mandatory = requirements.filter((item: any) => item.isMandatory)
+  const horses = Array.isArray(value.horseRequirements)
+    ? value.horseRequirements.map((group: any) => ({ horseId: group.horseId, horseName: group.horseName }))
+    : []
   const status = ["DRAFT", "IN_PREPARATION", "READY_FOR_SUBMISSION", "SUBMITTED", "PENDING", "APPROVED", "REJECTED", "CLOSED"].includes(value.status)
     ? value.status
     : "IN_PREPARATION"
@@ -82,9 +84,9 @@ function mapBackendDossierOverview(payload: unknown, booking: Awaited<ReturnType
     complianceDossierId: dossierId,
     dossierCode: value.dossierCode ?? `DOSSIER-${dossierId.slice(0, 8)}`,
     bookingId: value.bookingId,
-    bookingCode: value.bookingCode ?? booking.bookingCode,
+    bookingCode: value.bookingCode ?? `BOOKING-${String(value.bookingId).slice(0, 8)}`,
     status,
-    openedAt: booking.createdAt,
+    openedAt: value.openedAt ?? value.createdAt ?? new Date().toISOString(),
     readyForSubmissionAt: null,
     approvedAt: null,
     rejectedAt: null,
@@ -97,13 +99,13 @@ function mapBackendDossierOverview(payload: unknown, booking: Awaited<ReturnType
     mandatoryTotal: mandatory.length,
     mandatorySatisfiedOrWaived: mandatory.filter((item: any) => ["SATISFIED", "WAIVED"].includes(item.status)).length,
     bookingSummary: {
-      bookingStatus: booking.status,
-      originCountry: booking.originCountry,
-      destinationCountry: booking.destinationCountry,
-      requestedDepartureDate: booking.requestedDepartureDate.slice(0, 10),
-      customerName: booking.customer.fullName,
-      horseCount: booking.totalHorses,
-      horses: booking.horses.map((horse) => ({ horseId: horse.horseId, horseName: horse.horseName })),
+      bookingStatus: ["DRAFT", "PENDING", "APPROVED", "REJECTED", "CANCELLED"].includes(value.bookingStatus) ? value.bookingStatus : "APPROVED",
+      originCountry: value.originCountry ?? "",
+      destinationCountry: value.destinationCountry ?? "",
+      requestedDepartureDate: value.requestedDepartureDate?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+      customerName: value.customerName ?? "",
+      horseCount: horses.length,
+      horses,
     },
     requirementSummary: {
       total: requirements.length,
@@ -316,11 +318,7 @@ const dashboardService = {
       }
     }
     const payload = await api.get<unknown>(`${ENDPOINT}/${dossierId}`)
-    const raw = asRecord(unwrapValue(payload))
-    const bookingId = raw.bookingId
-    if (typeof bookingId !== "string" || !bookingId) throw new Error("DOSSIER_CONTRACT_MISMATCH")
-    const booking = await bookingService.getBooking(bookingId)
-    return mapBackendDossierOverview(payload, booking)
+    return mapBackendDossierOverview(payload)
   },
 
   /** K3. The audit trail is append-only: this service only reads. */

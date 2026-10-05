@@ -101,5 +101,5 @@ export interface UpdateRequirementInput {
 }
 
 export interface WaiveRequirementInput {
-  reason: string
+  waivedReason: string
 }
