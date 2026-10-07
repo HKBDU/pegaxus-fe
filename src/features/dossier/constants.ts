@@ -33,7 +33,7 @@ export function canUploadInitialDocument(
   requirement: DossierRequirement,
 ) {
   return role === "CUSTOMER" &&
-    dossier.status === "IN_PREPARATION" &&
+    ["IN_PREPARATION", "REJECTED"].includes(dossier.status) &&
     !dossier.writeLocked &&
     requirement.document === null &&
     (requirement.status === "PENDING" || requirement.status === "REQUESTED");
@@ -46,12 +46,12 @@ export function getCustomerDocumentActions(
   if (requirement.status === "WAIVED") return ["View Requirement"];
   const document = requirement.document;
   if (!document) {
-    return dossier.status === "IN_PREPARATION" && !dossier.writeLocked &&
+    return ["IN_PREPARATION", "REJECTED"].includes(dossier.status) && !dossier.writeLocked &&
       (requirement.status === "PENDING" || requirement.status === "REQUESTED")
       ? ["Upload Document"] : ["View Requirement"];
   }
   const actions = ["View Document"];
-  if (dossier.status === "IN_PREPARATION" && !dossier.writeLocked && requirement.status !== "SATISFIED") {
+  if (["IN_PREPARATION", "REJECTED"].includes(dossier.status) && !dossier.writeLocked && requirement.status !== "SATISFIED") {
     if (document.status === "PROVIDED") actions.push("Edit Document");
     if (document.status === "REJECTED") actions.push("Update Document");
   }
@@ -163,7 +163,7 @@ export const dossierRequirementStatusOptions = [
 ];
 
 export const dossierRequirementSortOptions = [
-  { value: "createdAt:asc", label: "Oldest created" },
+  { value: "createdAt:asc", label: "Default requirement order" },
   { value: "dueDate:asc", label: "Due date ascending" },
   { value: "dueDate:desc", label: "Due date descending" },
   { value: "status:asc", label: "Status ascending" },

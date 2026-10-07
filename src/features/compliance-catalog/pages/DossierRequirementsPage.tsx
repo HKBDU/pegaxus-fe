@@ -234,7 +234,7 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
         )}
       </div>
 
-      {overview && dossierId ? (
+      {overview && dossierId && overview.bookingSummary.requestedDepartureDate ? (
         <AddDossierRequirementDialog
           open={addOpen}
           onOpenChange={setAddOpen}
