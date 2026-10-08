@@ -24,11 +24,11 @@ export default function ApprovedBookingsPage() {
     hasPreviousPage: false, hasNextPage: false,
   }
 
-  return <div className="booking-page-shell min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
-    <div className="booking-page-enter mx-auto w-full max-w-[1152px] space-y-5">
+  return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
+    <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
       <div><PageHeader title="Approved Bookings" backHref={ROLE_ROUTES.managerHome} showBack={false} />
         <p className="text-xs text-slate-500 sm:text-sm">Approved transport requests ready for transport and route planning.</p></div>
-      <ApprovedBookingFilters params={params} onChange={changeFilters} onReset={() => setParams({ ...initialApprovedBookingParams })} />
+      <ApprovedBookingFilters params={params} onChange={changeFilters} />
       {error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
         <ApprovedBookingsTable bookings={query.data?.data ?? []} params={params} meta={meta} isLoading={query.isFetching || isSearchPending}
           onChange={changeFilters} onPageChange={(pageIndex) => {

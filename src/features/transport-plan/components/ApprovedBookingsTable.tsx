@@ -59,7 +59,7 @@ export function ApprovedBookingsTable({ bookings, params, meta, isLoading, onCha
     headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
     rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60"
     cellClassName="h-11 px-2.5 py-2 text-xs"
-    emptyMessage={<EmptyState message={hasApprovedBookingFilters(params) ? "No approved bookings match your filters. Adjust or reset the filters." : "No approved bookings yet. Bookings appear here after approval."} />}
+    emptyMessage={<EmptyState message={hasApprovedBookingFilters(params) ? "No approved bookings match your filters. Adjust your filters." : "No approved bookings yet. Bookings appear here after approval."} />}
     footer={<TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={(pageSize) => onChange({ pageSize })} pageSizeAriaLabel="Approved bookings per page" />}>
     <div className="flex justify-end"><DataTableViewOptions table={table} /></div>
   </DataTable>
