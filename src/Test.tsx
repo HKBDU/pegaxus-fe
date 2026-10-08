@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { isAxiosError } from "axios";
 import apiClient from "@/lib/axios";
+import {
+  reverseGeocodeGeoapify,
+  searchNearbyGeoapifyPlaces,
+  type GeoapifyPlace,
+} from "@/shared/utils/map";
 import { normalizeRole } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
 import {
@@ -9,6 +14,7 @@ import {
   MapViewer,
   RouteForm,
   type MapLocation,
+  type LocationFormValues,
 } from "@/shared/components/map";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -115,6 +121,14 @@ export default function Test() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [nearbyPlaces, setNearbyPlaces] = useState<GeoapifyPlace[]>([]);
+  const [nearbyOpen, setNearbyOpen] = useState(false);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [nearbyError, setNearbyError] = useState<string | null>(null);
+  const [locationFormValues, setLocationFormValues] = useState<
+    Partial<LocationFormValues> | undefined
+  >();
+  const nearbyAbortController = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -166,9 +180,80 @@ export default function Test() {
 
   function handleMapClick(point: { latitude: number; longitude: number }) {
     if (!isCoordinator || !addMode) return;
+
+    nearbyAbortController.current?.abort();
+    nearbyAbortController.current = new AbortController();
     setPickedPoint(point);
     setAddMode(false);
+    setNearbyPlaces([]);
+    setNearbyError(null);
+    setNearbyOpen(true);
+    setNearbyLoading(true);
+
+    void searchNearbyGeoapifyPlaces(point, nearbyAbortController.current.signal)
+      .then((places) => setNearbyPlaces(places))
+      .catch((loadError) => {
+        if (
+          loadError instanceof DOMException &&
+          loadError.name === "AbortError"
+        )
+          return;
+        setNearbyError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to search nearby places.",
+        );
+      })
+      .finally(() => setNearbyLoading(false));
+  }
+
+  function openLocationForm(values: Partial<LocationFormValues>) {
+    setLocationFormValues(values);
+    setNearbyOpen(false);
     setFormOpen(true);
+  }
+
+  function handleUseNearbyPlace(place: GeoapifyPlace) {
+    if (!pickedPoint) return;
+
+    openLocationForm({
+      name: place.name || place.address || "Nearby place",
+      address: place.address || "",
+      city: place.city || "",
+      stateProvince: place.stateProvince || "",
+      country: place.countryCode || place.country || "",
+      latitude: place.latitude,
+      longitude: place.longitude,
+      note: "",
+    });
+  }
+
+  async function handleUseExactPoint() {
+    if (!pickedPoint) return;
+
+    try {
+      const place = await reverseGeocodeGeoapify(pickedPoint);
+      openLocationForm({
+        name: place?.name || place?.address || "",
+        address: place?.address || "",
+        city: place?.city || "",
+        stateProvince: place?.stateProvince || "",
+        country: place?.countryCode || place?.country || "",
+        latitude: pickedPoint.latitude,
+        longitude: pickedPoint.longitude,
+        note: "",
+      });
+    } catch (loadError) {
+      toast.error(
+        loadError instanceof Error
+          ? loadError.message
+          : "Unable to reverse geocode this point.",
+      );
+      openLocationForm({
+        latitude: pickedPoint.latitude,
+        longitude: pickedPoint.longitude,
+      });
+    }
   }
 
   function handleLocationAction(
@@ -248,10 +333,63 @@ export default function Test() {
             <DialogTitle>Add Location</DialogTitle>
           </DialogHeader>
           <AddLocationForm
-            initialValues={pickedPoint ?? undefined}
+            key={`${locationFormValues?.latitude ?? "new"}-${locationFormValues?.longitude ?? "new"}`}
+            initialValues={locationFormValues}
             onCancel={() => setFormOpen(false)}
             onSubmit={handleAddLocation}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={nearbyOpen} onOpenChange={setNearbyOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Choose location point</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Nearby places within 10km of the clicked point.
+          </p>
+          {nearbyLoading && (
+            <p className="text-sm">Searching nearby places...</p>
+          )}
+          {nearbyError && (
+            <p className="text-sm text-destructive">{nearbyError}</p>
+          )}
+          {!nearbyLoading && !nearbyPlaces.length && !nearbyError && (
+            <p className="text-sm text-muted-foreground">
+              No supported nearby place found.
+            </p>
+          )}
+          <div className="grid gap-2">
+            {nearbyPlaces.map((place, index) => (
+              <button
+                key={`${place.latitude}-${place.longitude}-${index}`}
+                type="button"
+                className="rounded border p-3 text-left hover:border-amber-500 hover:bg-amber-50"
+                onClick={() => handleUseNearbyPlace(place)}
+              >
+                <span className="block font-semibold">
+                  {place.name || place.address || "Unnamed place"}
+                </span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  {place.address || "No address returned"}
+                </span>
+                <span className="mt-1 block font-mono text-xs text-muted-foreground">
+                  {place.latitude.toFixed(5)}, {place.longitude.toFixed(5)}
+                  {place.distanceMeters != null &&
+                    ` · ${Math.round(place.distanceMeters)}m`}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 border-t pt-3">
+            <Button variant="outline" onClick={() => setNearbyOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handleUseExactPoint()}>
+              Use exact clicked point
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

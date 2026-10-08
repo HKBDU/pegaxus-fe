@@ -1,8 +1,10 @@
 import type { Coordinates } from "./coordinates";
 
 const GEOAPIFY_BASE_URL = "https://api.geoapify.com/v1";
+const GEOAPIFY_PLACES_URL = "https://api.geoapify.com/v2";
 
 export type GeoapifyPlace = {
+  name?: string | null;
   address?: string | null;
   city?: string | null;
   stateProvince?: string | null;
@@ -10,7 +12,14 @@ export type GeoapifyPlace = {
   countryCode?: string | null;
   latitude: number;
   longitude: number;
+  distanceMeters?: number | null;
 };
+
+export const nearbyCategories = [
+  "populated_place.city",
+  "airport",
+  "service.vehicle",
+] as const;
 
 export class GeoapifyError extends Error {
   readonly code: "MISSING_KEY" | "NETWORK" | "QUOTA" | "INVALID_RESPONSE";
@@ -40,14 +49,14 @@ async function request<T>(
   path: string,
   params: Record<string, string>,
   signal?: AbortSignal,
+  baseUrl = GEOAPIFY_BASE_URL,
 ): Promise<T> {
   const searchParams = new URLSearchParams({ ...params, apiKey: getApiKey() });
 
   try {
-    const response = await fetch(
-      `${GEOAPIFY_BASE_URL}${path}?${searchParams}`,
-      { signal },
-    );
+    const response = await fetch(`${baseUrl}${path}?${searchParams}`, {
+      signal,
+    });
     if (
       response.status === 401 ||
       response.status === 403 ||
@@ -89,10 +98,13 @@ function parseFeature(
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
 
   return {
+    name: typeof properties.name === "string" ? properties.name : null,
     address:
-      typeof properties.address_line1 === "string"
-        ? properties.address_line1
-        : null,
+      typeof properties.formatted === "string"
+        ? properties.formatted
+        : typeof properties.address_line1 === "string"
+          ? properties.address_line1
+          : null,
     city: typeof properties.city === "string" ? properties.city : null,
     stateProvince:
       typeof properties.state === "string" ? properties.state : null,
@@ -103,6 +115,9 @@ function parseFeature(
         : null,
     latitude,
     longitude,
+    distanceMeters: Number.isFinite(Number(properties.distance))
+      ? Number(properties.distance)
+      : null,
   };
 }
 
@@ -120,6 +135,27 @@ export async function searchGeoapifyPlaces(
     { text: query.trim(), limit: "10" },
     signal,
   );
+  return (response.features ?? [])
+    .map(parseFeature)
+    .filter((place): place is GeoapifyPlace => place !== null);
+}
+
+export async function searchNearbyGeoapifyPlaces(
+  coordinates: Coordinates,
+  signal?: AbortSignal,
+): Promise<GeoapifyPlace[]> {
+  const response = await request<GeoapifyResponse>(
+    "/places",
+    {
+      categories: nearbyCategories.join(","),
+      filter: `circle:${coordinates.longitude},${coordinates.latitude},10000`,
+      bias: `proximity:${coordinates.longitude},${coordinates.latitude}`,
+      limit: "50",
+    },
+    signal,
+    GEOAPIFY_PLACES_URL,
+  );
+
   return (response.features ?? [])
     .map(parseFeature)
     .filter((place): place is GeoapifyPlace => place !== null);

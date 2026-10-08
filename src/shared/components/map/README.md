@@ -16,7 +16,11 @@ Mục tiêu của module là giữ phần bản đồ độc lập với API và
 - Popup cố định bên dưới thanh search, không tự làm map nhảy vị trí.
 - Search Location có debounce 300ms.
 - Click Location trong search để fly tới marker.
+- Chọn From/To khi tạo Route bằng searchable picker có debounce 300ms.
 - Click map trả về `{ latitude, longitude }`.
+- Add Location mode tìm Nearby POI trong bán kính 10km.
+- Nearby POI dùng trực tiếp name, address và tọa độ từ Places response.
+- Exact clicked point dùng Reverse Geocoding để gợi ý địa chỉ.
 - Render Route bằng GeoJSON `LineString` hoặc `MultiLineString`.
 - Add/Edit Location form có validation.
 - Route form có validation From/To không được trùng.
@@ -178,6 +182,19 @@ import {
   searchGeoapifyPlaces,
 } from "@/shared/utils/map";
 ```
+
+Add Location nearby search dùng đúng các category trong bán kính 10km:
+
+```ts
+const nearbyCategories = [
+  "populated_place.city",
+  "airport",
+  "commercial.port",
+  "service.vehicle",
+];
+```
+
+Luồng chọn POI không gọi thêm API. Chỉ luồng `Use exact clicked point` mới gọi Reverse Geocoding.
 
 Không hard-code API key trong source code. Geoapify Routing không được gọi từ frontend cho flow này; BE chịu trách nhiệm routing và lưu Route.
 
