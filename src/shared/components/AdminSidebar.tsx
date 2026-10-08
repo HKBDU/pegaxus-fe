@@ -38,6 +38,7 @@ import {
 const primaryItems = [
   { label: "Dashboard", href: "/admin", icon: House },
   { label: "Transport Requests", href: "/admin/transport-requests", icon: Truck },
+  { label: "Approved Bookings", href: ROLE_ROUTES.approvedBookings, icon: ClipboardCheck },
   { label: "Transport Plans", href: "/admin/transport-plans", icon: MapPin },
   { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
   { label: "Dossier Templates", href: ROLE_ROUTES.dossierTemplates, icon: FileStack },
@@ -51,6 +52,10 @@ const staffPrimaryItems = [
   { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
   { label: "Dossier Templates", href: ROLE_ROUTES.dossierTemplates, icon: FileStack },
   { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
+]
+
+const coordinatorPrimaryItems = [
+  { label: "Approved Bookings", href: ROLE_ROUTES.approvedBookings, icon: ClipboardCheck },
 ]
 
 const staffSecondaryItems = [
@@ -102,6 +107,7 @@ export function AdminSidebar() {
   const principal = useAuthStore((state) => state.principal)
   // Logistics managers get the full admin menu; other employees (e.g. Transport Specialist) only their own pages.
   const isManager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
+  const isCoordinator = canAccess(principal, { anyRole: ["FLEET_ROUTE_COORDINATOR"] })
 
   return (
     <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
@@ -111,7 +117,7 @@ export function AdminSidebar() {
       <SidebarContent className="overflow-hidden bg-[#17191c]">
         <SidebarGroup className="px-0">
           <SidebarGroupContent>
-            <AdminSidebarMenu items={isManager ? primaryItems : staffPrimaryItems} compact />
+            <AdminSidebarMenu items={isManager ? primaryItems : isCoordinator ? coordinatorPrimaryItems : staffPrimaryItems} compact />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

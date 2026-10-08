@@ -10,7 +10,7 @@ import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
-import { ROLE_ROUTES } from "./route-config";
+import { APPROVED_BOOKINGS_ACCESS, ROLE_ROUTES } from "./route-config";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
@@ -23,6 +23,8 @@ import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearan
 import CustomsClearanceReviewPage from "@/features/clearance/pages/CustomsClearanceReviewPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const ApprovedBookingsPage = lazy(() => import("@/features/transport-plan/pages/ApprovedBookingsPage"));
+const ApprovedBookingDetailsPage = lazy(() => import("@/features/transport-plan/pages/ApprovedBookingDetailsPage"));
 const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
 const CreateEmployeeAccountPage = lazy(() => import("@/features/accounts/pages/CreateEmployeeAccountPage"));
 const ViewUserAccountPage = lazy(() => import("@/features/accounts/pages/ViewUserAccountPage"));
@@ -96,6 +98,15 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  {
+    // A separate guarded branch keeps the other admin pages manager-only.
+    path: ROLE_ROUTES.approvedBookings,
+    element: <ProtectedRoute allowedRoles={APPROVED_BOOKINGS_ACCESS.anyRole}><AdminLayout /></ProtectedRoute>,
+    children: [
+      { index: true, element: <Suspense fallback={<LoadingState />}><ApprovedBookingsPage /></Suspense> },
+      { path: ":bookingId", element: <Suspense fallback={<LoadingState />}><ApprovedBookingDetailsPage /></Suspense> },
+    ],
+  },
   {
     path: "/",
     element: <MainLayout />,

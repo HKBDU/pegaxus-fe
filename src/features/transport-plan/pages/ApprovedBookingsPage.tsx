@@ -1,0 +1,40 @@
+import { useCallback, useState } from "react"
+import { ROLE_ROUTES } from "@/app/route-config"
+import { PageHeader } from "@/shared/components/PageHeader"
+import { ErrorState } from "@/shared/components/common"
+import { useDebounce } from "@/shared/hooks"
+import { ApprovedBookingFilters } from "../components/ApprovedBookingFilters"
+import { ApprovedBookingsTable } from "../components/ApprovedBookingsTable"
+import { changeApprovedBookingFilters, initialApprovedBookingParams } from "../constants"
+import { useApprovedBookings } from "../hooks/useApprovedBookings"
+import { getApprovedBookingError } from "../services"
+import type { ApprovedBookingsQueryParams } from "../types"
+
+export default function ApprovedBookingsPage() {
+  const [params, setParams] = useState(initialApprovedBookingParams)
+  const search = useDebounce(params.search, 300)
+  const isSearchPending = search !== params.search
+  const query = useApprovedBookings({ ...params, search })
+  const changeFilters = useCallback((patch: Partial<Omit<ApprovedBookingsQueryParams, "pageIndex">>) => {
+    setParams((current) => changeApprovedBookingFilters(current, patch))
+  }, [])
+  const error = query.isError && !isSearchPending ? getApprovedBookingError(query.error, "list") : null
+  const meta = query.data?.meta ?? {
+    currentPage: params.pageIndex, itemsPerPage: params.pageSize, totalItems: 0, totalPages: 0,
+    hasPreviousPage: false, hasNextPage: false,
+  }
+
+  return <div className="booking-page-shell min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
+    <div className="booking-page-enter mx-auto w-full max-w-[1152px] space-y-5">
+      <div><PageHeader title="Approved Bookings" backHref={ROLE_ROUTES.managerHome} showBack={false} />
+        <p className="text-xs text-slate-500 sm:text-sm">Approved transport requests ready for transport and route planning.</p></div>
+      <ApprovedBookingFilters params={params} onChange={changeFilters} onReset={() => setParams({ ...initialApprovedBookingParams })} />
+      {error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
+        <ApprovedBookingsTable bookings={query.data?.data ?? []} params={params} meta={meta} isLoading={query.isFetching || isSearchPending}
+          onChange={changeFilters} onPageChange={(pageIndex) => {
+            // Do not carry a page selected for the old search into the new search.
+            if (!isSearchPending && !query.isFetching) setParams((current) => ({ ...current, pageIndex }))
+          }} />}
+    </div>
+  </div>
+}
