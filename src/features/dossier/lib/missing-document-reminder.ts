@@ -1,30 +1,5 @@
-import { isMissingDossierRequirement } from "../constants";
-import type { DossierHorseOption, DossierRequirement, DossierRequirementsPage, DossierRequirementsParams, DocumentReviewError } from "../types";
+import type { DossierHorseOption, DossierRequirement, DocumentReviewError } from "../types";
 import { mapDocumentReviewError } from "./document-review";
-
-export async function collectMissingDossierRequirements(
-  loadPage: (params: DossierRequirementsParams, signal?: AbortSignal) => Promise<DossierRequirementsPage>,
-  signal?: AbortSignal,
-) {
-  const requirements = new Map<number, DossierRequirement>();
-  // Separate D8 filters; neither inherits the table's current horse, page or status.
-  for (const status of ["PENDING", "REQUESTED"] as const) {
-    let pageIndex = 1;
-    let totalPages = 1;
-    do {
-      signal?.throwIfAborted();
-      const page = await loadPage({ status, pageIndex, pageSize: 100, sortBy: "createdAt:asc" }, signal);
-      signal?.throwIfAborted();
-      if (page.pageIndex !== pageIndex) throw new Error("Unexpected D8 page index. Please refresh requirements.");
-      for (const item of page.items) {
-        if (isMissingDossierRequirement(item)) requirements.set(item.dossierRequirementId, item);
-      }
-      totalPages = page.totalPages;
-      pageIndex++;
-    } while (pageIndex <= totalPages);
-  }
-  return [...requirements.values()];
-}
 
 export function groupMissingDossierRequirements(items: readonly DossierRequirement[], horses: readonly DossierHorseOption[]) {
   const trip = items.filter((item) => item.horseId === null);

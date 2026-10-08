@@ -8,6 +8,7 @@ type ReviewContext = {
   document: ComplianceDocumentDetail;
   today: string;
   result?: "APPROVED" | "REJECTED";
+  expiryExceptionReason?: string;
 };
 
 export function getLatestDocumentVersion(document: ComplianceDocumentDetail) {
@@ -17,17 +18,17 @@ export function getLatestDocumentVersion(document: ComplianceDocumentDetail) {
 
 export function canOpenDocumentReview(role: string | undefined, dossier: DossierOverview, requirement: DossierRequirement) {
   return Boolean(role && normalizeRole(role) === "TRANSPORT_SPECIALIST" &&
-    !dossier.writeLocked && ["IN_PREPARATION", "READY_FOR_SUBMISSION"].includes(dossier.status) &&
+    !dossier.writeLocked && ["IN_PREPARATION", "REJECTED", "READY_FOR_SUBMISSION"].includes(dossier.status) &&
     requirement.status === "PROVIDED" && requirement.document?.status === "PROVIDED");
 }
 
-export function getReviewBlockReason({ role, dossier, requirement, document, today, result = "APPROVED" }: ReviewContext): DocumentReviewError | null {
+export function getReviewBlockReason({ role, dossier, requirement, document, today, result = "APPROVED", expiryExceptionReason }: ReviewContext): DocumentReviewError | null {
   const blocked = (code: string, message: string): DocumentReviewError => ({ code, message, refresh: false });
   if (!role || normalizeRole(role) !== "TRANSPORT_SPECIALIST") return blocked("FORBIDDEN", "Only a Transport Specialist can review this document.");
-  if (dossier.writeLocked || !["IN_PREPARATION", "READY_FOR_SUBMISSION"].includes(dossier.status)) return blocked("DOSSIER_LOCKED", "This dossier can no longer be reviewed in its current state.");
+  if (dossier.writeLocked || !["IN_PREPARATION", "REJECTED", "READY_FOR_SUBMISSION"].includes(dossier.status)) return blocked("DOSSIER_LOCKED", "This dossier can no longer be reviewed in its current state.");
   const latest = getLatestDocumentVersion(document);
   if (!latest) return blocked("NO_DOCUMENT_VERSION", "No submitted version is available for review.");
-  if (latest.review) return blocked("VERSION_ALREADY_REVIEWED", "This version has already been reviewed.");
+  if (latest.review?.result === "APPROVED") return blocked("VERSION_ALREADY_REVIEWED", "This version already has an active approval.");
   if (document.status === "APPROVED") return blocked("DOCUMENT_ALREADY_VERIFIED", "Approved documents are read-only.");
   if (!requirement.document) return blocked("DOCUMENT_NOT_REVIEWABLE", "This document is no longer available for review. Refresh dossier requirements.");
   if (!canOpenDocumentReview(role, dossier, requirement) || document.status !== "PROVIDED" ||
@@ -45,7 +46,7 @@ export function getReviewBlockReason({ role, dossier, requirement, document, tod
     !Number.isNaN(expiryTimestamp) && new Date(expiryTimestamp).toISOString().slice(0, 10) === expiry;
   if ((!expiry && requirement.validUntil) || (expiry &&
     (!validCalendarDate || dates.some((date) => expiry < date)))) {
-    return blocked("DOCUMENT_EXPIRY_INVALID", "Document expiry is no longer valid. Customer must update/re-upload before approval.");
+    if (!expiryExceptionReason?.trim()) return blocked("DOCUMENT_EXPIRY_INVALID", "Check document expiry. Provide an expiry exception reason if approving this document; the backend validates whether approval is allowed.");
   }
   return null;
 }
@@ -55,12 +56,12 @@ export function canReviewDocument(context: ReviewContext) {
 }
 
 export function isMandatoryDossierComplete(dossier: DossierOverview) {
-  return dossier.mandatoryTotal > 0 && dossier.mandatorySatisfiedOrWaived === dossier.mandatoryTotal;
+  return dossier.mandatorySatisfiedOrWaived === dossier.mandatoryTotal;
 }
 
 export function canMarkReadyForSubmission(role: string | undefined, dossier: DossierOverview) {
   return Boolean(role && normalizeRole(role) === "TRANSPORT_SPECIALIST" &&
-    dossier.status === "IN_PREPARATION" && !dossier.writeLocked && isMandatoryDossierComplete(dossier));
+    ["IN_PREPARATION", "REJECTED"].includes(dossier.status) && !dossier.writeLocked && isMandatoryDossierComplete(dossier));
 }
 
 export function mapDocumentReviewError(error: unknown): DocumentReviewError {
@@ -71,6 +72,8 @@ export function mapDocumentReviewError(error: unknown): DocumentReviewError {
     (typeof data?.code === "string" ? data.code : undefined) ??
     (status === 403 ? "FORBIDDEN" : status === 401 ? "UNAUTHORIZED" : status === 404 ? "NOT_FOUND" : response.message ?? "REVIEW_FAILED");
   const messages: Record<string, string> = {
+    EXPIRY_EXCEPTION_REQUIRED: "Expiry precedes departure. Provide an expiry exception reason to approve.",
+    DOCUMENT_REVIEW_CONFLICT: "The document changed. Refresh and verify the latest file and metadata before reviewing.",
     REQUEST_MESSAGE_TOO_SHORT: "Please provide detailed instructions of at least 15 characters.",
     DOCUMENT_REQUEST_REQUIRED: "A document request is required when rejecting a document.",
     VALIDATION_ERROR: "Check the request type, customer instructions and optional deadline.",

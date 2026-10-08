@@ -2,12 +2,14 @@ import { FileText, History } from "lucide-react";
 import { useState } from "react";
 import { formatBookingDate } from "@/features/booking/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
-import { useComplianceDocument } from "../hooks/useComplianceDocument";
-import type { DocumentVersion } from "../types";
+import { useComplianceDocument, useDocumentVersions } from "../hooks/useComplianceDocument";
+import type { DocumentVersion, DossierOverview } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
 import { Button } from "@/shared/components/ui/button";
 import { DocumentRequestAlert } from "./DocumentRequestAlert";
 import { DocumentFilesPreview } from "./DocumentFilesPreview";
+import { DocumentRequestComments } from "./DocumentRequestComments";
+import { RevokeDocumentReviewDialog } from "./RevokeDocumentReviewDialog";
 
 function VersionFiles({ files }: { files: DocumentVersion["files"] }) {
   const [open, setOpen] = useState(false);
@@ -43,12 +45,12 @@ export function DocumentVersionHistory({ versions }: { versions: DocumentVersion
           {version.files.length ? <VersionFiles files={version.files} /> : null}
           {version.uploadNote ? <p className="mt-2 text-slate-600"><strong>Upload Note:</strong> {version.uploadNote}</p> : null}
           {version.review ? (
-            <div className="mt-3 border-t border-slate-200 pt-2 text-slate-600">
-              <p><strong>Review Result:</strong> {version.review.result}</p>
-              <p><strong>Reviewer:</strong> {version.review.reviewedBy.fullName}</p>
-              <p><strong>Reviewed At:</strong> {formatBookingDate(version.review.reviewedAt)}</p>
-              {version.review.reviewComment ? <p><strong>Review Comment:</strong> {version.review.reviewComment}</p> : null}
-            </div>
+            (version.reviews ?? [version.review]).map((review) => <div key={review.documentReviewId} className="mt-3 border-t border-slate-200 pt-2 text-slate-600">
+              <p><strong>Review Result:</strong> {review.result}</p>
+              <p><strong>Reviewer:</strong> {review.reviewedBy.fullName || "Transport Specialist"}</p>
+              <p><strong>Reviewed At:</strong> {formatBookingDate(review.reviewedAt)}</p>
+              {review.reviewComment ? <p><strong>Review Comment:</strong> {review.reviewComment}</p> : null}
+            </div>)
           ) : <p className="mt-2 text-sky-700">Pending review</p>}
         </article>
       ))}
@@ -56,11 +58,14 @@ export function DocumentVersionHistory({ versions }: { versions: DocumentVersion
   );
 }
 
-export function DocumentDetailsDialog({ documentId, onClose, onUpdate, view = "details" }: { documentId: string | null; onClose: () => void; onUpdate?: () => void; view?: "details" | "request" | "history" }) {
-  const query = useComplianceDocument(documentId);
+export function DocumentDetailsDialog({ documentId, dossierId, requirementId, dossier, role, onClose, onUpdate, view = "details" }: { documentId: string | null; dossierId: string; requirementId: string; dossier: DossierOverview; role?: string; onClose: () => void; onUpdate?: () => void; view?: "details" | "request" | "history" }) {
+  const query = useComplianceDocument(documentId, documentId ? dossierId : undefined, documentId ? requirementId : undefined);
+  const history = useDocumentVersions(dossierId, requirementId, Boolean(documentId));
+  const [revokeOpen, setRevokeOpen] = useState(false);
   const document = query.data;
+  const close = () => { setRevokeOpen(false); onClose(); };
   return (
-    <Dialog open={Boolean(documentId)} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={Boolean(documentId)} onOpenChange={(open) => !open && close()}>
       <DialogContent className="max-h-[90svh] w-[min(100%-1.5rem,720px)] max-w-none overflow-y-auto rounded-[2px] border-slate-200 bg-[#f8f7f4] sm:max-w-none">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl uppercase text-primary">{view === "request" ? "Document Request" : view === "history" ? "Document Version / Review History" : "Document Details"}</DialogTitle>
@@ -80,7 +85,10 @@ export function DocumentDetailsDialog({ documentId, onClose, onUpdate, view = "d
               <div><dt className="text-slate-500">Issuing Authority</dt><dd>{document.issuingAuthority ?? "—"}</dd></div>
               <div><dt className="text-slate-500">Expiry Date</dt><dd>{document.expiryDate ? formatBookingDate(document.expiryDate) : "—"}</dd></div>
             </dl>
-            <DocumentVersionHistory versions={document.versions} />
+            {history.isError ? <div role="alert" className="text-xs"><p>Could not load version history.</p><Button variant="outline" size="sm" onClick={() => void history.refetch()}>Retry history</Button></div> : <DocumentVersionHistory versions={history.data ?? document.versions} />}
+            {(document.documentRequests ?? []).map((request) => <DocumentRequestComments key={request.documentRequestId} dossierId={dossierId} requirementId={requirementId} request={request} canReadComments={role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST"} canComment={(role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST") && request.status === "OPEN"} />)}
+            {role === "TRANSPORT_SPECIALIST" && !dossier.writeLocked && ["IN_PREPARATION", "REJECTED", "READY_FOR_SUBMISSION"].includes(dossier.status) && document.status === "APPROVED" && document.versions[0]?.review?.result === "APPROVED" ? <Button variant="destructive" onClick={() => setRevokeOpen(true)}>Revoke Approval</Button> : null}
+            {revokeOpen ? <RevokeDocumentReviewDialog dossierId={dossierId} requirementId={requirementId} document={document} onClose={() => { setRevokeOpen(false); onClose(); }} /> : null}
           </div>
         )}
       </DialogContent>

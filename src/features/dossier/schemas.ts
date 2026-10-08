@@ -1,15 +1,16 @@
 import { z } from "zod";
 import { BOOKING_STATUSES } from "@/features/booking/types";
-import { format } from "date-fns";
-import { DOCUMENT_REQUEST_TYPES, DOSSIER_REQUIREMENT_STATUSES, UPLOAD_ACCEPTED_MIME_TYPES, UPLOAD_MAX_FILE_BYTES } from "./constants";
-import type { DossierUploadedAssetRef, UploadDocumentError } from "./types";
+import { DOSSIER_REQUIREMENT_STATUSES, UPLOAD_ACCEPTED_MIME_TYPES, UPLOAD_MAX_FILE_BYTES } from "./constants";
+import type { DossierUploadedAssetRef, UploadDocumentError, UploadDocumentMetadata } from "./types";
 
 // Mock data uses numeric identifiers, while the real API uses UUIDs.
 // Keep the parsed contract compatible with both existing mock helpers and real responses.
 const entityId: z.ZodType<any> = z.union([z.number().int().positive(), z.string().uuid()]);
 const typedEntityId = z.union([z.number().int().positive(), z.string().uuid()]);
-const timestamp = z.iso.datetime({ offset: true });
+// System.Text.Json also returns DateTime values without an offset and with seven fractional digits.
+const timestamp = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/);
 const date = z.iso.date();
+const utcToday = () => new Date().toISOString().slice(0, 10);
 
 export const dossierStatusSchema = z.enum([
   "DRAFT",
@@ -31,7 +32,8 @@ export const dossierUploadedAssetSchema = z.object({
   mimeType: z.enum(UPLOAD_ACCEPTED_MIME_TYPES, { error: "Only PDF, JPG, JPEG, and PNG files are accepted." }),
   fileSizeBytes: z.number().int().nonnegative().max(UPLOAD_MAX_FILE_BYTES, "Each file must be 5 MiB or smaller."),
 });
-export const dossierUploadedAssetsSchema = z.array(dossierUploadedAssetSchema).min(1, "Confirm at least one successfully uploaded file.");
+export const dossierUploadedAssetsSchema = z.array(dossierUploadedAssetSchema).min(1, "Confirm at least one successfully uploaded file.")
+  .max(10, "Submit at most 10 files.").refine((files) => new Set(files.map((file) => file.publicId)).size === files.length, "File references must be unique.");
 
 export function validateUploadedAssets(files: readonly DossierUploadedAssetRef[]): UploadDocumentError | null {
   const result = dossierUploadedAssetsSchema.safeParse(files);
@@ -54,11 +56,11 @@ export const dossierHorseOptionSchema = z.object({
   horseName: z.string(),
 });
 export const bookingSummarySchema = z.object({
-  bookingStatus: z.enum(BOOKING_STATUSES),
-  originCountry: z.string(),
-  destinationCountry: z.string(),
-  requestedDepartureDate: date,
-  customerName: z.string(),
+  bookingStatus: z.enum(BOOKING_STATUSES).nullable(),
+  originCountry: z.string().nullable(),
+  destinationCountry: z.string().nullable(),
+  requestedDepartureDate: date.nullable(),
+  customerName: z.string().nullable(),
   horseCount: z.number().int().nonnegative(),
   horses: z.array(dossierHorseOptionSchema),
 });
@@ -83,7 +85,7 @@ export const dossierOverviewSchema = z.object({
   bookingId: entityId,
   bookingCode: z.string(),
   status: dossierStatusSchema,
-  openedAt: timestamp,
+  openedAt: timestamp.nullable(),
   readyForSubmissionAt: timestamp.nullable(),
   approvedAt: timestamp.nullable(),
   rejectedAt: timestamp.nullable(),
@@ -104,6 +106,14 @@ export const dossierOverviewSchema = z.object({
   customsClearanceStatus: proofStatus([
     "PENDING_VERIFICATION", "CLEARED", "HELD", "REJECTED",
   ]).nullable(),
+  isInitialized: z.boolean().optional(),
+  actions: z.object({ canUpload: z.boolean(), canReview: z.boolean() }).optional(),
+});
+
+export const documentRequestSummarySchema = z.object({
+  documentRequestId: entityId, requestCode: z.string(), requestType: z.string().nullable().default(null),
+  message: z.string(), dueDate: date.nullable(),
+  status: z.string().optional(), errorCategory: z.string().nullable().optional(), requestedAt: timestamp.optional(),
 });
 
 export const dossierRequirementSchema = z.object({
@@ -125,6 +135,11 @@ export const dossierRequirementSchema = z.object({
     status: complianceDocumentStatusSchema,
     latestVersionNo: z.number().int().positive(),
   }).nullable(),
+  requirementCode: z.string().optional(),
+  instruction: z.string().nullable().optional(),
+  leadTimeDays: z.number().nullable().optional(),
+  actions: z.object({ canUpload: z.boolean(), canReview: z.boolean() }).optional(),
+  openRequest: documentRequestSummarySchema.nullable().optional(),
 });
 
 export const dossierRequirementsPageSchema = z.object({
@@ -146,25 +161,25 @@ export const dossierOverviewEnvelopeSchema = envelope(dossierOverviewSchema);
 export const dossierRequirementsEnvelopeSchema = envelope(dossierRequirementsPageSchema);
 
 export const missingDocumentReminderSchema = z.object({
-  dossierRequirementIds: z.array(typedEntityId).min(1, "Select at least one missing requirement.")
+  requirementIds: z.array(typedEntityId).min(1, "Select at least one missing requirement.").max(100)
     .refine((ids) => new Set(ids).size === ids.length, "Selected requirements must be unique."),
-  dueDate: z.union([z.literal(""), date]).optional(),
-  note: z.string().trim().optional(),
-}).transform(({ dossierRequirementIds, dueDate, note }) => ({
-  dossierRequirementIds,
-  ...(dueDate ? { dueDate } : {}),
+  dueDate: date.refine((value) => value >= utcToday(), "Due date cannot be in the past."),
+  note: z.string().trim().max(2000).optional(),
+}).transform(({ requirementIds, dueDate, note }) => ({
+  requirementIds, dueDate,
   ...(note ? { note } : {}),
 }));
 
 export const missingDocumentReminderEnvelopeSchema = envelope(z.object({
-  remindedCount: z.number().int().nonnegative(),
-})).extend({ code: z.literal(200) });
+  reminderId: entityId, requirements: z.array(dossierRequirementSchema), emailSent: z.boolean(), deliveryWarning: z.string().nullable().optional(),
+}));
 
 export const uploadDocumentResultSchema = z.object({
   complianceDocumentId: entityId,
-  documentCode: z.string(),
+  documentCode: z.string().optional(),
   documentVersionId: entityId,
-  versionNo: z.literal(1),
+  versionNo: z.number().int().positive(),
+  dossierRequirementId: entityId.optional(), isNewVersion: z.boolean().optional(), status: z.string().optional(),
 });
 export const uploadDocumentEnvelopeSchema = z.object({
   isSuccess: z.literal(true),
@@ -176,19 +191,17 @@ export const uploadDocumentEnvelopeSchema = z.object({
 export const documentVersionFileSchema = z.object({
   fileName: z.string(), fileUrl: z.string(), mimeType: z.string(),
   fileSizeBytes: z.number().nonnegative(), sortOrder: z.number().int().nonnegative(),
+  documentAttachmentId: entityId.nullable().optional(),
 });
 export const documentReviewSummarySchema = z.object({
   documentReviewId: entityId, result: z.string(), reviewComment: z.string().nullable(),
   reviewedBy: z.object({ accountId: entityId, fullName: z.string() }), reviewedAt: timestamp,
 });
-export const documentRequestSummarySchema = z.object({
-  documentRequestId: entityId, requestCode: z.string(), requestType: z.string(),
-  message: z.string(), dueDate: date.nullable(),
-});
 export const documentVersionSchema = z.object({
   documentVersionId: entityId, versionNo: z.number().int().positive(),
   uploadNote: z.string().nullable(), uploadedAt: timestamp,
   files: z.array(documentVersionFileSchema), review: documentReviewSummarySchema.nullable(),
+  reviews: z.array(documentReviewSummarySchema).optional(),
 });
 export const complianceDocumentDetailSchema = z.object({
   complianceDocumentId: entityId, documentCode: z.string(), dossierRequirementId: entityId,
@@ -197,75 +210,72 @@ export const complianceDocumentDetailSchema = z.object({
   issuedDate: date.nullable(), expiryDate: date.nullable(), note: z.string().nullable(),
   updatedAt: timestamp, versions: z.array(documentVersionSchema),
   openRequest: documentRequestSummarySchema.nullable(),
+  documentRequests: z.array(documentRequestSummarySchema).optional(),
+  actions: z.object({ canUpload: z.boolean(), canReview: z.boolean() }).optional(),
 });
 export const complianceDocumentEnvelopeSchema = envelope(complianceDocumentDetailSchema);
 const approvalReview = z.object({
   result: z.literal("APPROVED"),
-  reviewComment: z.string().trim().optional(),
-});
-export const documentRequestFormSchema = z.object({
-  requestType: z.enum(DOCUMENT_REQUEST_TYPES),
-  message: z.string().trim().min(15, "Please provide detailed instructions of at least 15 characters."),
-  dueDate: z.union([z.literal(""), date]).optional(),
+  metadataConfirmed: z.literal(true), versionUploadedAt: timestamp, documentUpdatedAt: timestamp,
+  reviewNote: z.string().trim().max(2000).optional(), expiryExceptionReason: z.string().trim().max(2000).optional(),
 });
 const rejectionReview = z.object({
   result: z.literal("REJECTED"),
-  reviewComment: z.string().trim().optional(),
-  documentRequest: documentRequestFormSchema.transform(({ dueDate, ...request }) => ({
-    ...request,
-    ...(dueDate ? { dueDate } : {}),
-  })),
+  errorCategory: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]),
+  rejectionNote: z.string().trim().min(15).max(2000), revisionDeadline: date.refine((value) => value >= utcToday(), "Revision deadline cannot be in the past."),
+  requirementStatus: z.union([z.literal(2), z.literal(5)]), dossierStatus: z.union([z.literal(2), z.literal(7)]),
+  versionUploadedAt: timestamp, documentUpdatedAt: timestamp,
 });
-export const approveDocumentReviewSchema = approvalReview.transform(({ result, reviewComment }) => ({
-  result,
-  ...(reviewComment ? { reviewComment } : {}),
-}));
-export const rejectDocumentReviewSchema = rejectionReview.transform(({ reviewComment, ...review }) => ({
-  ...review,
-  ...(reviewComment ? { reviewComment } : {}),
-}));
-export const documentReviewSchema = z.discriminatedUnion("result", [approvalReview, rejectionReview])
-  .transform(({ reviewComment, ...review }) => ({
-    ...review,
-    ...(reviewComment ? { reviewComment } : {}),
-  }));
-export const approveDocumentEnvelopeSchema = envelope(z.object({
-  documentReviewId: entityId,
-  dossierRequirementStatus: z.literal("SATISFIED"),
-})).extend({ code: z.literal(201) });
-export const rejectDocumentEnvelopeSchema = envelope(z.object({
-  documentReviewId: entityId,
-  documentRequestId: entityId,
-  requestCode: z.string(),
-  dossierRequirementStatus: z.literal("REJECTED"),
-  dossierStatus: z.literal("IN_PREPARATION"),
-})).extend({ code: z.literal(201) });
-export const documentReviewEnvelopeSchema = z.union([approveDocumentEnvelopeSchema, rejectDocumentEnvelopeSchema]);
-export const readyForSubmissionEnvelopeSchema = envelope(z.null()).extend({ code: z.literal(200) });
+export const approveDocumentReviewSchema = approvalReview;
+export const rejectDocumentReviewSchema = rejectionReview;
+export const documentRequestFormSchema = rejectionReview.omit({ result: true, versionUploadedAt: true, documentUpdatedAt: true });
+export const documentReviewSchema = z.discriminatedUnion("result", [approvalReview, rejectionReview]);
+const backendReviewValue = z.object({
+  review: z.object({ documentReviewId: entityId, reviewedByAccountId: entityId, result: z.string(), reviewComment: z.string().nullable(), reviewedAt: timestamp }),
+  requirementStatus: dossierRequirementStatusSchema, documentStatus: complianceDocumentStatusSchema, dossierStatus: dossierStatusSchema,
+  documentVersionId: entityId.optional(), dossierRequirementId: entityId.optional(),
+  documentRequest: z.object({ documentRequestId: entityId, requestCode: z.string(), status: z.string(), errorCategory: z.string().nullable(), message: z.string(), dueDate: date.nullable(), requestedAt: timestamp }).optional(), emailSent: z.boolean().optional(), deliveryWarning: z.string().nullable().optional(),
+});
+export const approveDocumentEnvelopeSchema = envelope(backendReviewValue);
+export const rejectDocumentEnvelopeSchema = envelope(backendReviewValue);
+export const documentReviewEnvelopeSchema = envelope(backendReviewValue);
+export const readyForSubmissionEnvelopeSchema = envelope(z.object({ complianceDossierId: entityId, status: dossierStatusSchema, readyForSubmissionAt: timestamp.nullable() }));
 export const submitDocumentVersionEnvelopeSchema = z.union([
   envelope(z.object({ documentVersionId: entityId, versionNo: z.number().int().positive(), mode: z.literal("EDIT_IN_PLACE") })).extend({ code: z.literal(200) }),
   envelope(z.object({ documentVersionId: entityId, versionNo: z.number().int().positive(), mode: z.literal("NEW_VERSION") })).extend({ code: z.literal(201) }),
 ]);
 export const updateDocumentMetadataEnvelopeSchema = envelope(z.object({
-  complianceDocumentId: entityId, updatedAt: timestamp,
-})).extend({ code: z.literal(200) });
+  complianceDocumentId: entityId, documentNumber: z.string().nullable(), issuingAuthority: z.string().nullable(), issuedDate: date.nullable(), expiryDate: date.nullable(), status: complianceDocumentStatusSchema,
+}));
 
 const optionalDate = z.union([z.literal(""), date]);
 const documentMetadataShape = {
-  documentName: z.string().trim().max(200, "Document name must be 200 characters or fewer."),
-  documentNumber: z.string().trim(),
-  issuingAuthority: z.string().trim(),
+  documentNumber: z.string().trim().max(150),
+  issuingAuthority: z.string().trim().max(200),
   issuedDate: optionalDate,
   expiryDate: optionalDate,
 };
+function validateMetadataClears(
+  value: UploadDocumentMetadata,
+  context: z.RefinementCtx,
+  existingMetadata?: UploadDocumentMetadata,
+) {
+  for (const field of ["documentNumber", "issuingAuthority", "issuedDate", "expiryDate"] as const) {
+    if (value[field] !== undefined && !value[field]?.trim() &&
+      (!existingMetadata || existingMetadata[field]?.trim())) {
+      context.addIssue({ code: "custom", path: [field], message: "Clearing existing metadata is not supported. Keep its current value or enter a replacement." });
+    }
+  }
+}
 function validateMetadataDates(
-  value: { issuedDate?: string; expiryDate?: string },
+  value: { issuedDate?: string | null; expiryDate?: string | null },
   context: z.RefinementCtx,
   validUntil: string | null,
   plannedDepartureDate?: string | null,
 ) {
+  if (value.issuedDate && value.issuedDate > utcToday()) context.addIssue({ code: "custom", path: ["issuedDate"], message: "Issued date cannot be in the future." });
   if (!value.expiryDate) return;
-  if (value.expiryDate < format(new Date(), "yyyy-MM-dd")) {
+  if (value.expiryDate < utcToday()) {
     context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date cannot be in the past." });
   }
   if (value.issuedDate && value.expiryDate < value.issuedDate) {
@@ -274,32 +284,35 @@ function validateMetadataDates(
   if (validUntil && value.expiryDate < validUntil) {
     context.addIssue({ code: "custom", path: ["expiryDate"], message: `Document must remain valid through ${validUntil}.` });
   }
-  if (plannedDepartureDate && value.expiryDate < plannedDepartureDate.slice(0, 10)) {
+  if (plannedDepartureDate && value.expiryDate <= plannedDepartureDate.slice(0, 10)) {
     context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date cannot be before transport departure." });
   }
 }
 export const createUploadDocumentSchema = (
   validUntil: string | null,
   plannedDepartureDate?: string | null,
-) => z.object(documentMetadataShape).superRefine((value, context) =>
-  validateMetadataDates(value, context, validUntil, plannedDepartureDate));
+) => createDocumentSubmissionSchema(validUntil, plannedDepartureDate, "initial");
 
 export const createSubmitDocumentVersionSchema = (validUntil: string | null, plannedDepartureDate?: string | null) =>
-  z.object({
-    documentNumber: documentMetadataShape.documentNumber,
-    issuingAuthority: documentMetadataShape.issuingAuthority,
-    issuedDate: optionalDate,
-    expiryDate: optionalDate,
-    uploadNote: z.string().optional(),
-  }).superRefine((value, context) => validateMetadataDates(value, context, validUntil, plannedDepartureDate));
+  createDocumentSubmissionSchema(validUntil, plannedDepartureDate, "update");
 
 export const createUpdateDocumentMetadataSchema = (validUntil: string | null, plannedDepartureDate?: string | null) =>
-  z.object({ ...documentMetadataShape, note: z.string() }).partial()
-    .superRefine((value, context) => validateMetadataDates(value, context, validUntil, plannedDepartureDate));
+  z.object({ documentNumber: documentMetadataShape.documentNumber.nullable().optional(), issuingAuthority: documentMetadataShape.issuingAuthority.nullable().optional(), issuedDate: optionalDate.nullable().optional(), expiryDate: optionalDate.nullable().optional() })
+    .superRefine((value, context) => {
+      validateMetadataClears(value, context);
+      validateMetadataDates(value, context, validUntil, plannedDepartureDate);
+    });
 
-export const createDocumentSubmissionSchema = (validUntil: string | null, plannedDepartureDate?: string | null) =>
-  z.object({ ...documentMetadataShape, uploadNote: z.string(), note: z.string() })
-    .superRefine((value, context) => validateMetadataDates(value, context, validUntil, plannedDepartureDate));
+export const createDocumentSubmissionSchema = (validUntil: string | null, plannedDepartureDate?: string | null, mode: "initial" | "edit" | "update" = "initial", existingMetadata?: UploadDocumentMetadata) =>
+  z.object({ ...documentMetadataShape, documentNumber: documentMetadataShape.documentNumber.nullable().optional(), issuingAuthority: documentMetadataShape.issuingAuthority.nullable().optional(), issuedDate: optionalDate.nullable().optional(), expiryDate: optionalDate.nullable().optional(), uploadNote: z.string().max(2000).optional() })
+    .superRefine((value, context) => {
+      if (mode === "initial") {
+        for (const field of ["documentNumber", "issuingAuthority", "issuedDate"] as const) if (!value[field]) context.addIssue({ code: "custom", path: [field], message: "This field is required." });
+        if (validUntil && !value.expiryDate) context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date is required for this requirement." });
+      }
+      if (mode !== "initial" && existingMetadata) validateMetadataClears(value, context, existingMetadata);
+      validateMetadataDates(value, context, validUntil, plannedDepartureDate);
+    });
 
 export const dossierIdSchema = z.union([
   z.string().regex(/^[1-9]\d*$/),

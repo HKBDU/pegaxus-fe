@@ -28,7 +28,7 @@ export function MissingReminderPreview({ dossier, selected, dueDate, note }: {
       <h3 className="flex items-center gap-2 font-heading text-base uppercase"><UserRound className="size-4 text-primary" />Recipient &amp; Summary</h3>
       <div className="space-y-3 rounded-[2px] border border-border bg-slate-50 p-4 text-sm">
         <p className="text-xs text-muted-foreground">Recipient</p>
-        <p className="break-words font-semibold">{dossier.bookingSummary.customerName}</p>
+        <p className="break-words font-semibold">{dossier.bookingSummary.customerName ?? "Booking customer"}</p>
         <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"><Mail className="mt-0.5 size-4 shrink-0" />The customer will receive Email and Web Notification.</p>
       </div>
       <section className="space-y-3 rounded-[2px] border border-border p-4 text-sm" aria-label="Reminder preview">
@@ -51,7 +51,7 @@ function ReminderForm({ dossier, role, requirements, initialRequirementId, isRef
   dossier: DossierOverview;
   role: string | undefined;
   requirements: DossierRequirement[];
-  initialRequirementId?: number;
+  initialRequirementId?: string | number;
   isRefreshing: boolean;
   loadError: unknown;
   onRetry: () => void;
@@ -63,11 +63,11 @@ function ReminderForm({ dossier, role, requirements, initialRequirementId, isRef
   const form = useForm<MissingDocumentReminderFormValues, unknown, MissingDocumentReminderInput>({
     resolver: zodResolver(missingDocumentReminderSchema),
     defaultValues: {
-      dossierRequirementIds: requirements.filter((item) => initialRequirementId === undefined || item.dossierRequirementId === initialRequirementId).map((item) => item.dossierRequirementId),
+      requirementIds: requirements.filter((item) => initialRequirementId === undefined || item.dossierRequirementId === initialRequirementId).map((item) => item.dossierRequirementId),
       dueDate: "", note: "",
     },
   });
-  const chosenIds = form.watch("dossierRequirementIds");
+  const chosenIds = form.watch("requirementIds");
   const selected = requirements.filter((item) => chosenIds.includes(item.dossierRequirementId));
   const groups = groupMissingDossierRequirements(requirements, dossier.bookingSummary.horses);
   const eligible = canSendMissingDocumentReminder(role, dossier);
@@ -79,13 +79,15 @@ function ReminderForm({ dossier, role, requirements, initialRequirementId, isRef
   async function submit(values: MissingDocumentReminderInput) {
     if (disabled) return;
     // A refreshed D8 may remove a formerly missing selection. Never submit that stale ID.
-    const reminder = missingDocumentReminderSchema.safeParse({ ...values, dossierRequirementIds: selected.map((item) => item.dossierRequirementId) });
-    if (!reminder.success) { form.setError("dossierRequirementIds", { message: "Select at least one current missing requirement." }); return; }
+    const reminder = missingDocumentReminderSchema.safeParse({ ...values, requirementIds: selected.map((item) => item.dossierRequirementId) });
+    if (!reminder.success) { form.setError("requirementIds", { message: "Select at least one current missing requirement." }); return; }
     setError(null);
     try {
       const attempt = await mutation.sendReminder({ dossierId: String(dossier.complianceDossierId), reminder: reminder.data });
       if (!attempt.started) return;
-      toast.success(attempt.value.message, { description: `${attempt.value.value.remindedCount} requirement(s) reminded.` });
+      toast.success(attempt.value.message, { description: `${attempt.value.value.requirements.length} requirement(s) reminded.` });
+      if (attempt.value.value.deliveryWarning) toast.warning(attempt.value.value.deliveryWarning);
+      else if (!attempt.value.value.emailSent) toast.warning("Reminder saved, but email delivery failed. Do not send it again.");
       onClose();
     } catch (failure) {
       const mapped = mapMissingDocumentReminderError(failure, dossier.writeLockReason);
@@ -114,7 +116,7 @@ function ReminderForm({ dossier, role, requirements, initialRequirementId, isRef
             {loadError ? <div role="alert" className="space-y-2 rounded-[2px] border border-destructive/20 bg-destructive/5 p-3 text-sm"><p>{mapMissingDocumentReminderError(loadError, dossier.writeLockReason).message}</p><Button type="button" variant="outline" size="sm" disabled={pending || isRefreshing} onClick={onRetry}>Retry loading all requirements</Button></div> : null}
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
               <fieldset disabled={disabled} className="min-w-0 space-y-5 disabled:opacity-70">
-                <FormField control={form.control} name="dossierRequirementIds" render={({ field }) => (
+                <FormField control={form.control} name="requirementIds" render={({ field }) => (
                   <FormItem>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <FormLabel className="font-heading text-base uppercase">Missing Dossier Requirements</FormLabel>
@@ -148,15 +150,15 @@ function ReminderForm({ dossier, role, requirements, initialRequirementId, isRef
                 <section className="space-y-4" aria-label="Reminder details">
                   <h3 className="font-heading text-base uppercase">Reminder Details</h3>
                   <FormField control={form.control} name="dueDate" render={({ field }) => (
-                    <FormItem><FormLabel>Due Date <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
-                      <FormControl><DatePicker {...field} disabled={disabled} className="rounded-[2px]" placeholder="Optional submission deadline" /></FormControl>
+                    <FormItem><FormLabel>Due Date *</FormLabel>
+                      <FormControl><DatePicker {...field} disabled={disabled} className="rounded-[2px]" minDate={new Date().toISOString().slice(0, 10)} placeholder="Submission deadline" /></FormControl>
                       {field.value ? <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => field.onChange("")} className="h-auto px-0 py-1 text-xs">Clear date</Button> : null}
                       <FormMessage className="text-xs" />
                     </FormItem>
                   )} />
                   <FormField control={form.control} name="note" render={({ field }) => (
                     <FormItem><FormLabel>Additional Message <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
-                      <FormControl><Textarea {...field} className="min-h-28 resize-y rounded-[2px]" placeholder="Add instructions for the customer…" /></FormControl>
+                      <FormControl><Textarea {...field} maxLength={2000} className="min-h-28 resize-y rounded-[2px]" placeholder="Add instructions for the customer…" /></FormControl>
                       <FormMessage className="text-xs" />
                     </FormItem>
                   )} />
@@ -181,7 +183,7 @@ function ReminderForm({ dossier, role, requirements, initialRequirementId, isRef
 export function RequestMissingDocumentsDialog({ dossier, role, initialRequirementId, onClose }: {
   dossier: DossierOverview;
   role: string | undefined;
-  initialRequirementId?: number;
+  initialRequirementId?: string | number;
   onClose: () => void;
 }) {
   const eligible = canSendMissingDocumentReminder(role, dossier);

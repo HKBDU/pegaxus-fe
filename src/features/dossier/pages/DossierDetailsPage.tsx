@@ -11,6 +11,7 @@ import { ErrorState, LoadingState } from "@/shared/components/common";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { AuthorityInspectionTab } from "@/features/clearance/components/AuthorityInspectionTab";
 import { DossierRequirementsPanel } from "@/features/compliance-catalog/pages/DossierRequirementsPage";
+import { ROLE_ROUTES } from "@/app/route-config";
 import { AuditHistoryPanel } from "./DossierAuditHistoryPage";
 import { DossierOverview } from "../components/DossierOverview";
 import { DossierReadinessAction } from "../components/DossierReadinessAction";
@@ -65,7 +66,7 @@ export default function DossierDetailsPage() {
           <div className="min-w-0">
             <button
               type="button"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate(role === "TRANSPORT_SPECIALIST" ? ROLE_ROUTES.complianceDossiers : query.data?.bookingId ? `${role === "LOGISTICS_MANAGER" ? "/admin/transport-requests" : "/bookings"}/${encodeURIComponent(String(query.data.bookingId))}` : role === "LOGISTICS_MANAGER" ? "/admin/transport-requests" : "/bookings")}
               className="inline-flex items-center gap-[6px] pt-2 text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase hover:underline focus-visible:outline-2 focus-visible:outline-ring"
             >
               <ArrowLeft aria-hidden="true" className="size-3.5" /> Back to
@@ -132,7 +133,7 @@ export default function DossierDetailsPage() {
                   dossierId={dossierId}
                   horses={query.data.bookingSummary.horses}
                   dossier={query.data}
-                  plannedDepartureDate={query.data.bookingSummary.requestedDepartureDate}
+                  plannedDepartureDate={query.data.bookingSummary.requestedDepartureDate ?? undefined}
                   documentsOnly={activeSection === "documents"}
                 />
               ) : activeSection === "authority" ? (

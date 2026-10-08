@@ -103,51 +103,7 @@ const bookingHistoryPage = (
   </Suspense>
 );
 
-// TEMP UC20-25 FINAL MANUAL UI TEST ROUTE — REMOVE AFTER TESTING
-const temporaryDossierRoutes = import.meta.env.DEV
-  ? (() => {
-      const DossierManualPreviewPage = lazy(
-        () => import("@/features/dossier/pages/DossierManualPreviewPage"),
-      );
-      return [
-        {
-          path: "/dev/dossier/:dossierId",
-          element: (
-            <Suspense fallback={<LoadingState />}>
-              <DossierManualPreviewPage />
-            </Suspense>
-          ),
-        },
-      ];
-    })()
-  : [];
-// END TEMP UC20-25 FINAL MANUAL UI TEST ROUTE
-
-// TEMP MAP WHITEBOX TEST ROUTE — REMOVE AFTER MANUAL ROLE TESTING
-const temporaryMapRoutes = import.meta.env.DEV
-  ? (() => {
-      const MapWhiteboxTest = lazy(() => import("@/Test"));
-      return [
-        {
-          path: "/__dev/map",
-          element: (
-            <ProtectedRoute>
-              <Suspense fallback={<LoadingState />}>
-                <MapWhiteboxTest />
-              </Suspense>
-            </ProtectedRoute>
-          ),
-        },
-      ];
-    })()
-  : [];
-// END TEMP MAP WHITEBOX TEST ROUTE
-
 export const router = createBrowserRouter([
-  // TEMP UC20-25 FINAL MANUAL UI TEST ROUTE — REMOVE AFTER TESTING
-  ...temporaryDossierRoutes,
-  // END TEMP UC20-25 FINAL MANUAL UI TEST ROUTE
-  ...temporaryMapRoutes,
   {
     path: "/",
     element: <MainLayout />,
@@ -163,6 +119,10 @@ export const router = createBrowserRouter([
       {
         element: <ProtectedRoute />,
         children: [
+          {
+            path: "compliance-dossiers/:dossierId",
+            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><Suspense fallback={<LoadingState />}><DossierDetailsPage /></Suspense></ProtectedRoute>,
+          },
           {
             path: ROLE_ROUTES.customerHorses + "/:horseId",
             element: (
@@ -268,6 +228,7 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <Navigate to="transport-requests" replace /> },
+      { path: "compliance-dossiers/:dossierId", element: <Suspense fallback={<LoadingState />}><DossierDetailsPage /></Suspense> },
       {
         path: "booking",
         element: <Navigate to="/admin/transport-requests" replace />,
@@ -439,30 +400,10 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      {
-        index: true,
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <DossierDashboardPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: ":dossierId/requirements",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <DossierRequirementsPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: ":dossierId/audit-history",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <DossierAuditHistoryPage />
-          </Suspense>
-        ),
-      },
+      { index: true, element: <Suspense fallback={<LoadingState />}><DossierDashboardPage /></Suspense> },
+      { path: ":dossierId/details", element: <Suspense fallback={<LoadingState />}><DossierDetailsPage /></Suspense> },
+      { path: ":dossierId/requirements", element: <Suspense fallback={<LoadingState />}><DossierRequirementsPage /></Suspense> },
+      { path: ":dossierId/audit-history", element: <Suspense fallback={<LoadingState />}><DossierAuditHistoryPage /></Suspense> },
     ],
   },
   {

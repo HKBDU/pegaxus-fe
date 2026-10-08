@@ -73,9 +73,10 @@ export type MissingDocumentReminderResponse = z.infer<typeof missingDocumentRemi
 export type MissingDocumentReminderResult = MissingDocumentReminderResponse["value"]
 export type SendMissingDocumentReminderInput = { dossierId: string; reminder: MissingDocumentReminderInput }
 export type ApproveDocumentInput = {
-  documentId: string
-  versionId: number
+  documentId?: string
+  versionId: string | number
   dossierId: string
+  requirementId: string | number
   review: ApproveDocumentReview
 }
 export type DocumentReviewInput = Omit<ApproveDocumentInput, "review"> & { review: DocumentReviewPayload }
@@ -92,11 +93,11 @@ export type UploadDocumentError = {
   refresh?: "overview" | "requirements"
 }
 export type UploadDocumentMetadata = {
-  documentName: string
-  documentNumber: string
-  issuingAuthority: string
-  issuedDate: string
-  expiryDate: string
+  documentNumber?: string | null
+  issuingAuthority?: string | null
+  issuedDate?: string | null
+  expiryDate?: string | null
+  uploadNote?: string
 }
 export type DossierUploadedAssetRef = {
   publicId: string
@@ -106,20 +107,27 @@ export type DossierUploadedAssetRef = {
 }
 export type UploadDocumentInput = {
   dossierId: string
-  requirementId: number
+  requirementId: string | number
   files: DossierUploadedAssetRef[]
   metadata: UploadDocumentMetadata
 }
 export type SubmitDocumentVersionInput = {
-  documentId: string
-  dossierId?: string
+  documentId?: string
+  dossierId: string
+  requirementId: string | number
   files: DossierUploadedAssetRef[]
-  metadata: Pick<UploadDocumentMetadata, "documentNumber" | "issuingAuthority" | "issuedDate" | "expiryDate"> & { uploadNote?: string }
+  metadata: UploadDocumentMetadata
 }
 export type UpdateDocumentMetadataInput = {
-  documentId: string
-  dossierId?: string
-  changes: Partial<UploadDocumentMetadata & { note: string }>
+  documentId?: string
+  dossierId: string
+  requirementId: string | number
+  changes: Partial<Pick<UploadDocumentMetadata, "documentNumber" | "issuingAuthority" | "issuedDate" | "expiryDate">>
+}
+
+export type RevokeDocumentReviewInput = {
+  dossierId: string; requirementId: string | number; documentId?: string; versionId: string | number; reviewId: string;
+  review: { status: 3 | 5; reason: string }
 }
 
 export interface DashboardKpi {
@@ -187,5 +195,4 @@ export interface AuditResponse {
 }
 
 export type DossierSourceKind = "api" | "mock"
-export type DossierMockScenario = "normal" | "locked" | "empty" | "error"
 export type DossierLoadErrorKind = "forbidden" | "not-found" | "contract" | "unauthorized" | "load"

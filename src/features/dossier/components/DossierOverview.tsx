@@ -65,7 +65,7 @@ export function DossierOverview({ dossier }: {
             </div>
             <p className="mb-4 break-all font-heading text-xl font-bold text-gray-900">{dossier.dossierCode}</p>
             <dl className="space-y-2">
-              <Detail label="Opened at">{formatBookingDate(dossier.openedAt ?? "", true)} UTC</Detail>
+              {dossier.openedAt ? <Detail label="Opened at">{formatBookingDate(dossier.openedAt, true)} UTC</Detail> : null}
               <Detail label="Status"><DossierStatusBadge status={dossier.status} /></Detail>
             </dl>
           </section>
@@ -79,7 +79,7 @@ export function DossierOverview({ dossier }: {
               </div>
               <strong className="shrink-0 font-heading text-2xl text-primary">{dossier.progressPercent}%</strong>
             </div>
-            <p className="mt-4 text-xs text-gray-500">Progress is based on mandatory requirements.</p>
+            <p className="mt-4 text-xs text-gray-500">Progress is provided by the backend.</p>
             <dl aria-label="Requirement status counts" className="mt-3 flex flex-wrap gap-1.5">
               {requirementMetrics.map(({ key, label, status }) => (
                 <div key={key} className={`inline-flex items-center gap-2 rounded-[2px] border px-2 py-1 text-[11px] ${status ? dossierStatusStyles[status] : "border-slate-300 bg-slate-50 text-slate-700"}`}>
@@ -93,14 +93,14 @@ export function DossierOverview({ dossier }: {
             <h2 className="m-0! font-heading text-base! font-bold! uppercase text-gray-900!">Booking information</h2>
             <dl className="mt-4 space-y-2">
               <Detail label="Booking">{dossier.bookingCode}</Detail>
-              <Detail label="Status">{booking.bookingStatus === "CANCELLED" ? (
+              {booking.bookingStatus ? <Detail label="Status">{booking.bookingStatus === "CANCELLED" ? (
                 <Badge variant="outline" className="inline-flex h-5 items-center gap-1 rounded-full border-slate-300 bg-slate-100 px-1.5 py-0 text-[0.65rem] font-medium leading-none text-slate-600">
                   <Circle aria-hidden="true" className="size-1! fill-current" /> Cancelled
                 </Badge>
-              ) : <DossierStatusBadge status={booking.bookingStatus} />}</Detail>
-              <Detail label="Route">{booking.originCountry} → {booking.destinationCountry}</Detail>
-              <Detail label="Departure">{formatBookingDate(booking.requestedDepartureDate)}</Detail>
-              <Detail label="Customer">{booking.customerName}</Detail>
+              ) : <DossierStatusBadge status={booking.bookingStatus} />}</Detail> : null}
+              {booking.originCountry && booking.destinationCountry ? <Detail label="Route">{booking.originCountry} → {booking.destinationCountry}</Detail> : null}
+              {booking.requestedDepartureDate ? <Detail label="Departure">{formatBookingDate(booking.requestedDepartureDate)}</Detail> : null}
+              {booking.customerName ? <Detail label="Customer">{booking.customerName}</Detail> : null}
               <Detail label="Horses">{booking.horseCount}</Detail>
             </dl>
           </section>
