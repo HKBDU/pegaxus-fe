@@ -6,7 +6,7 @@ import { EmptyState } from "@/shared/components/common"
 import type { ApprovedBookingDetail } from "../types"
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+export function Section({ title, children }: { title: string; children: ReactNode }) {
   return <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
     <CardContent className="space-y-4 px-5 py-5 sm:px-6">
       <h2 className="font-heading text-lg uppercase tracking-wide">{title}</h2>
@@ -14,7 +14,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
     </CardContent>
   </Card>
 }
-function Field({ label, children }: { label: string; children: ReactNode }) {
+export function Field({ label, children }: { label: string; children: ReactNode }) {
   return <div className="min-w-0"><dt className="mb-1 text-xs text-slate-500">{label}</dt><dd className="whitespace-pre-wrap break-words text-sm text-slate-800">{children || "—"}</dd></div>
 }
 

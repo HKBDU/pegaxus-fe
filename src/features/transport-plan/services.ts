@@ -19,7 +19,7 @@ class ApprovedBookingApiError extends Error {
   }
 }
 
-function readEnvelope(response: unknown) {
+export function readEnvelope(response: unknown) {
   const parsed = envelopeSchema.parse(response)
   const envelope: ApiEnvelope<unknown> = parsed
   if (!envelope.isSuccess) throw new ApprovedBookingApiError(envelope.code, parsed.errorCode)
@@ -53,10 +53,15 @@ export const approvedBookingService = {
 }
 
 const errorSchema = z.object({ errorCode: z.string().optional() })
-export function getApprovedBookingError(error: unknown, context: "list" | "detail" = "detail") {
+export function getApiErrorInfo(error: unknown) {
   const payload = isAxiosError(error) ? errorSchema.safeParse(error.response?.data) : null
   const code = error instanceof ApprovedBookingApiError ? error.errorCode : payload?.success ? payload.data.errorCode : undefined
   const status = error instanceof ApprovedBookingApiError ? error.status : isAxiosError(error) ? error.response?.status : undefined
+  return { code, status }
+}
+
+export function getApprovedBookingError(error: unknown, context: "list" | "detail" = "detail") {
+  const { code, status } = getApiErrorInfo(error)
   if (code === "INVALID_SORT_PARAMETER") return { message: "This sort option is not supported. Reset the filters and try again.", retryable: false }
   if (status === 404 && context === "list") return { message: "The approved bookings API is not available. Please contact your administrator.", retryable: false }
   if (code === "BOOKING_NOT_FOUND" || status === 404) return { message: "Approved booking not found or no longer available.", retryable: false }

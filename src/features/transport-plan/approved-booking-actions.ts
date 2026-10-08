@@ -34,9 +34,8 @@ export function getApprovedBookingAction(principal: AuthPrincipal | null, bookin
   return { kind: "createRoutePlan", label: "Create Route Plan", targetId: booking.transportPlan.transportPlanId }
 }
 
-export const planningNavigationUnavailable: Record<ApprovedBookingAction["kind"], string> = {
+export const planningNavigationUnavailable: Record<Exclude<ApprovedBookingAction["kind"], "viewTransportPlan">, string> = {
   createTransportPlan: "Transport Plan creation (UC-34) is not available in this application yet.",
-  viewTransportPlan: "The Transport Plan detail page is not available in this application yet.",
   createRoutePlan: "The Route Builder (UC-33) is not available in this application yet.",
   viewRoutePlan: "The Route Plan detail page is not available in this application yet.",
 }

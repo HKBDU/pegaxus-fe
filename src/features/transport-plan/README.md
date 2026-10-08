@@ -20,13 +20,13 @@ Chỉ `LOGISTICS_MANAGER` và `FLEET_ROUTE_COORDINATOR` được truy cập. Nh�
 ## Phụ thuộc chưa có trong repo tại thời điểm triển khai
 
 1. BE hiện có `GET /api/v1/bookings/approved` với policy TS/RC và DTO `customerName`, `complianceDossier`, `routePlan`. Đây **không phải** AB1/AB2 dành cho LM/RC: chưa có `/api/v1/approved-bookings` hoặc endpoint detail tương ứng. Không dùng API cũ làm fallback. BE cần bổ sung read model theo contract trước khi kiểm thử dữ liệu thật.
-2. Chưa có trang/route UC-34 tạo/xem TransportPlan hay UC-33 tạo/xem RoutePlan. `approved-booking-actions.ts` xác định đúng hành động và ID đích; UI vô hiệu hóa điều hướng với lý do cụ thể đến khi các route thật được đăng ký. Không liên kết đến mục sidebar `/admin/transport-plans` đang chưa có trang.
+2. Trang xem TransportPlan đã có tại `/admin/transport-plans/:transportPlanId`; LM có thể mở bằng View Transport Plan. UC-34 tạo TransportPlan và UC-33 tạo/xem RoutePlan vẫn chưa có route; các hành động này tiếp tục bị vô hiệu hóa với lý do cụ thể.
 3. Không khai báo lại enum RoutePlan. Chỉ dùng `CANCELLED` đã đối chiếu `Pegaxus.Repository/Enum/RoutePlanEnum.cs` để loại tuyến PRIMARY đã hủy; những trạng thái khác hiển thị theo dữ liệu API.
 
 ## Kiểm thử
 
 ```powershell
-node --test --test-concurrency=1 src/features/transport-plan/approved-bookings.test.mjs
+node --test --test-concurrency=1 src/features/transport-plan/transport-plans.test.mjs
 corepack pnpm exec tsc -b --pretty false
 corepack pnpm run lint
 corepack pnpm run build
@@ -41,7 +41,7 @@ Sau khi BE có AB1/AB2, kiểm tra thủ công:
 2. Search theo booking code/customer, chọn scope/deposit/planning/date range; kiểm tra query Network đúng và pageIndex về 1.
 3. Thử bốn cách sort, đổi trang, đổi Rows per page và Reset. Kiểm tra không có request theo từng dòng.
 4. Thử danh sách rỗng, filter không khớp, lỗi mạng/Retry, 404 và 409 detail.
-5. LM: chưa có plan → Create Transport Plan; đã có → View Transport Plan. Hiện nút có lý do chưa có route UC-34.
+5. LM: chưa có plan → Create Transport Plan bị vô hiệu hóa do chưa có UC-34; đã có → View Transport Plan mở detail theo ID thật.
 6. RC: chưa có plan → chờ LM; plan chưa APPROVED → chờ duyệt/thanh toán; plan APPROVED không có PRIMARY còn hiệu lực → Create Route Plan; có PRIMARY → View Route Plan. Hiện điều hướng chờ route UC-33.
 7. Đăng nhập TS: không có menu Approved Bookings; mở trực tiếp hai URL phải chuyển đến unauthorized. RC vẫn không được mở các trang admin vốn chỉ dành cho LM.
 8. Kiểm tra desktop/mobile, cuộn ngang bảng, keyboard/focus và dropdown/date picker.
