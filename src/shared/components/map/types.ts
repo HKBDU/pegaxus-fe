@@ -29,6 +29,7 @@ export type MapRoute = {
   distanceKm?: number | null;
   durationMinutes?: number | null;
   source?: "saved" | "preview";
+  readonly?: boolean;
 };
 
 export type MapPoint = { latitude: number; longitude: number };

@@ -34,9 +34,13 @@ export function RouteLayer({ route, routes = [], geoJson }: RouteLayerProps) {
               type="line"
               layout={{ "line-cap": "round", "line-join": "round" }}
               paint={{
-                "line-color": index === 0 && route ? "#0f172a" : "#2563eb",
-                "line-width": index === 0 && route ? 4 : 3,
-                "line-opacity": 0.85,
+                "line-color": item.readonly
+                  ? "#94a3b8"
+                  : index === 0 && route
+                    ? "#0f172a"
+                    : "#2563eb",
+                "line-width": item.readonly ? 3 : index === 0 && route ? 4 : 3,
+                "line-opacity": item.readonly ? 0.35 : 0.85,
               }}
             />
           </Source>

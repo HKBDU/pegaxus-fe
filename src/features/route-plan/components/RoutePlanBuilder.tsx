@@ -22,6 +22,10 @@ import {
   type MapRoute,
 } from "@/shared/components/map";
 import { createRoutePlan } from "../services";
+import {
+  buildEffectiveBackupRoute,
+  validateRoutePlanRoute,
+} from "../route-continuity";
 import type { CreateRoutePlanRequest, RouteSegmentInput } from "../types";
 
 type WizardStep = 0 | 1 | 2;
@@ -161,6 +165,27 @@ const MOCK_ROUTES: MapRoute[] = [
         [8.6821, 50.1109],
       ],
     },
+  },
+];
+
+const MOCK_BACKUP_ROUTES: MapRoute[] = [
+  {
+    id: "backup-route-metz-cologne",
+    name: "Metz → Cologne Rest Stop (Backup)",
+    transportMode: "ROAD",
+    fromLocation: MOCK_LOCATIONS[1],
+    toLocation: MOCK_LOCATIONS[3],
+    distanceKm: 310,
+    durationMinutes: 210,
+  },
+  {
+    id: "backup-route-cologne-frankfurt",
+    name: "Cologne Rest Stop → Frankfurt (Backup)",
+    transportMode: "ROAD",
+    fromLocation: MOCK_LOCATIONS[3],
+    toLocation: MOCK_PLAN.to,
+    distanceKm: 102,
+    durationMinutes: 90,
   },
 ];
 
@@ -313,25 +338,87 @@ function SegmentCard({
   );
 }
 
+export type RoutePlanBuilderProps = {
+  transportPlanId?: string;
+  routeType?: "PRIMARY" | "BACKUP";
+  primaryRoutes?: MapRoute[];
+  backupRoutes?: MapRoute[];
+  primaryAvailable?: boolean;
+  primaryError?: string;
+};
+
 export function RoutePlanBuilder({
   transportPlanId = MOCK_PLAN.transportPlanId,
-}: {
-  transportPlanId?: string;
-}) {
+  routeType = "PRIMARY",
+  primaryRoutes,
+  backupRoutes,
+  primaryAvailable = true,
+  primaryError,
+}: RoutePlanBuilderProps) {
   const [step, setStep] = useState<WizardStep>(0);
   const [, setMode] = useState<MapMode>("buildPlan");
   const [segments, setSegments] = useState<DraftSegment[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [routeNote, setRouteNote] = useState("");
+  const isBackup = routeType === "BACKUP";
+  const readonlyPrimaryRoutes = primaryRoutes ?? MOCK_ROUTES;
+  const selectableRoutes = isBackup
+    ? (backupRoutes ?? MOCK_BACKUP_ROUTES)
+    : MOCK_ROUTES;
   const plan = useMemo(
-    () => ({ ...MOCK_PLAN, transportPlanId }),
-    [transportPlanId],
+    () => ({ ...MOCK_PLAN, transportPlanId, routeType }),
+    [routeType, transportPlanId],
+  );
+  const mapRoutes = useMemo(
+    () =>
+      isBackup
+        ? [
+            ...readonlyPrimaryRoutes.map((route) => ({
+              ...route,
+              readonly: true,
+            })),
+            ...selectableRoutes,
+          ]
+        : selectableRoutes,
+    [isBackup, readonlyPrimaryRoutes, selectableRoutes],
   );
   const selectedRoutes = useMemo(
-    () => segments.map((segment) => segment.route),
-    [segments],
+    () =>
+      isBackup
+        ? [
+            ...readonlyPrimaryRoutes.map((route) => ({
+              ...route,
+              readonly: true,
+            })),
+            ...segments.map((segment) => segment.route),
+          ]
+        : segments.map((segment) => segment.route),
+    [isBackup, readonlyPrimaryRoutes, segments],
+  );
+  const continuity = useMemo(
+    () =>
+      isBackup
+        ? buildEffectiveBackupRoute(
+            readonlyPrimaryRoutes,
+            segments.map((segment) => segment.route),
+            plan.from.id,
+            plan.to.id,
+          )
+        : validateRoutePlanRoute(
+            segments.map((segment) => segment.route),
+            plan.from.id,
+            plan.to.id,
+          ),
+    [isBackup, plan.from.id, plan.to.id, readonlyPrimaryRoutes, segments],
   );
 
   function addSegment(route: MapRoute) {
+    if (route.readonly) {
+      setMessage(
+        "Primary segments are view-only. Select a backup route to add it.",
+      );
+      return;
+    }
     if (segments.some((segment) => segment.route.id === route.id)) return;
     const previous = segments.at(-1)?.route.toLocation?.id;
     if (previous != null && route.fromLocation?.id !== previous) {
@@ -361,6 +448,7 @@ export function RoutePlanBuilder({
     return {
       routeType: plan.routeType,
       action,
+      ...(isBackup ? { routeNote: routeNote.trim() } : {}),
       segments: segments.map((segment, index): RouteSegmentInput => ({
         sequenceNo: index + 1,
         routeId: String(segment.route.id),
@@ -379,6 +467,20 @@ export function RoutePlanBuilder({
   async function save(action: CreateRoutePlanRequest["action"]) {
     if (!segments.length) {
       setMessage("Add at least one segment before saving.");
+      return;
+    }
+    if (!continuity.valid) {
+      setMessage(continuity.message ?? "Route segments are not continuous.");
+      return;
+    }
+    if (isBackup && !primaryAvailable) {
+      setMessage(
+        "A valid PRIMARY route plan is required before creating a backup route.",
+      );
+      return;
+    }
+    if (isBackup && routeNote.trim().length < 10) {
+      setMessage("Backup reason must be at least 10 characters.");
       return;
     }
     if (transportPlanId === MOCK_PLAN.transportPlanId) {
@@ -465,11 +567,19 @@ export function RoutePlanBuilder({
                   <h2 className="font-semibold">
                     Route Map & Suggested Routes
                   </h2>
-                  <Badge variant="outline">Build mode</Badge>
+                  <Badge variant="outline">
+                    {isBackup ? "Build backup mode" : "Build mode"}
+                  </Badge>
                 </div>
+                {isBackup && !primaryAvailable && (
+                  <div className="mb-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                    {primaryError ??
+                      "Primary route plan not found. Please create a primary route plan first."}
+                  </div>
+                )}
                 <MapViewer
                   locations={MOCK_LOCATIONS}
-                  routes={MOCK_ROUTES}
+                  routes={mapRoutes}
                   mode="buildPlan"
                   onModeChange={setMode}
                   onRouteSelect={addSegment}
@@ -479,7 +589,7 @@ export function RoutePlanBuilder({
                 <div className="mb-2 flex items-center justify-between">
                   <h2 className="font-semibold">Route Segments Builder</h2>
                   <span className="text-sm text-muted-foreground">
-                    {segments.length} segment(s)
+                    {segments.length} {isBackup ? "backup " : ""}segment(s)
                   </span>
                 </div>
                 <div className="grid gap-3">
@@ -516,6 +626,9 @@ export function RoutePlanBuilder({
                   </Button>
                   {message && (
                     <p className="text-sm text-amber-700">{message}</p>
+                  )}
+                  {continuity.message && (
+                    <p className="text-sm text-red-700">{continuity.message}</p>
                   )}
                 </div>
               </div>
@@ -565,6 +678,23 @@ export function RoutePlanBuilder({
                   BE validates continuity, rest rules, BCP, vehicle capacity and
                   provider compatibility.
                 </p>
+                {continuity.message && (
+                  <p className="text-sm text-red-700">{continuity.message}</p>
+                )}
+                {isBackup && (
+                  <label className="grid gap-2 text-sm font-medium">
+                    Backup reason
+                    <span className="font-normal text-muted-foreground">
+                      Minimum 10 characters
+                    </span>
+                    <textarea
+                      className="min-h-24 rounded border px-3 py-2 font-normal"
+                      value={routeNote}
+                      onChange={(event) => setRouteNote(event.target.value)}
+                      placeholder="Why is this backup route needed?"
+                    />
+                  </label>
+                )}
                 {message && (
                   <p className="text-sm text-emerald-700">{message}</p>
                 )}
@@ -594,7 +724,13 @@ export function RoutePlanBuilder({
             <ArrowLeft /> Back
           </Button>
           <Button
-            disabled={step === 2 || (step === 1 && !segments.length)}
+            disabled={
+              step === 2 ||
+              (step === 1 &&
+                (!segments.length ||
+                  !continuity.valid ||
+                  (isBackup && !primaryAvailable)))
+            }
             onClick={() =>
               setStep((value) => Math.min(2, value + 1) as WizardStep)
             }
