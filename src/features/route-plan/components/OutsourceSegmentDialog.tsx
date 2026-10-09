@@ -169,8 +169,7 @@ export function OutsourceSegmentDialog({
             {isOutsourced ? "Manage outsourced segment" : "Outsource segment"}
           </DialogTitle>
           <DialogDescription>
-            Only ACTIVE providers supporting {transportMode} are selectable. BE
-            clears internal vehicles/personnel when the link is saved.
+            Select a provider supporting {transportMode}.
           </DialogDescription>
         </DialogHeader>
         {isOutsourced ? (
@@ -219,10 +218,7 @@ export function OutsourceSegmentDialog({
               </Badge>
             )}
             <label className="grid gap-2 text-sm font-medium">
-              Service type / reference / note{" "}
-              <span className="font-normal text-muted-foreground">
-                stored in RoutePlanRoute.note by BE contract
-              </span>
+              Service type / reference / note
               <Textarea
                 value={serviceReference}
                 disabled={isSaving}

@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  GripVertical,
   MapPin,
   MoreVertical,
   Trash2,
@@ -21,6 +20,10 @@ import {
   type MapMode,
   type MapRoute,
 } from "@/shared/components/map";
+import { PageHeader } from "@/shared/components/PageHeader";
+import { ROLE_ROUTES } from "@/app/route-config";
+import { canAccess } from "@/features/auth/access-control";
+import { useAuthStore } from "@/features/auth/store";
 import { createRoutePlan, updateRoutePlan } from "../services";
 import {
   buildEffectiveBackupRoute,
@@ -34,6 +37,15 @@ import type { Provider } from "../types";
 import type { CreateRoutePlanRequest, RouteSegmentInput } from "../types";
 
 type WizardStep = 0 | 1 | 2;
+
+const FALLBACK_LOCATION: MapLocation = {
+  id: "unknown-location",
+  name: "Select a route origin",
+  city: "—",
+  country: "—",
+  latitude: 0,
+  longitude: 0,
+};
 
 type TransportPlanSummary = {
   transportPlanId: string;
@@ -203,39 +215,34 @@ const MOCK_BACKUP_ROUTES: MapRoute[] = [
   },
 ];
 
-const steps = ["Transport Details", "Route Builder", "Review & Save"];
+const steps = ["Transport Details", "Route Builder", "Save"];
 void MOCK_ROUTES;
 void MOCK_BACKUP_ROUTES;
 void MOCK_PLAN;
 void MOCK_LOCATIONS;
 
 function formatDate(value: string) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "UTC",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function Metadata({ plan }: { plan: TransportPlanSummary }) {
   const items = [
     ["TRANSPORT PLAN", plan.planCode],
     ["BOOKING", plan.bookingCode],
-    ["ROUTE TYPE", plan.routeType],
-    ["STATUS", plan.status],
     ["SCOPE", plan.scope],
     ["PLANNED DEPARTURE", formatDate(plan.departureAt)],
     ["PLANNED ARRIVAL", formatDate(plan.arrivalAt)],
-    ["FROM", plan.from.name],
-    ["TO", plan.to.name],
   ];
   return (
-    <div className="grid grid-cols-2 overflow-hidden rounded-xl border bg-card sm:grid-cols-3 lg:grid-cols-9">
+    <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-[2px] bg-card sm:grid-cols-3 lg:grid-cols-5">
       {items.map(([label, value]) => (
-        <div
-          key={label}
-          className="min-h-20 border-b border-r px-4 py-3 last:border-r-0 lg:border-b-0"
-        >
+        <div key={label} className="min-h-16 p-0">
           <p className="text-[10px] font-semibold tracking-[0.12em] text-muted-foreground">
             {label}
           </p>
@@ -254,19 +261,15 @@ function Progress({
   onChange: (step: WizardStep) => void;
 }) {
   return (
-    <div className="grid overflow-hidden rounded-t-xl border border-b-0 bg-card sm:grid-cols-3">
+    <div className="grid overflow-hidden rounded-t-[2px] bg-card sm:grid-cols-3">
       {steps.map((label, index) => (
         <button
           key={label}
           type="button"
-          disabled={index > step + 1}
-          onClick={() => index <= step && onChange(index as WizardStep)}
-          className={`border-b-4 px-5 py-4 text-left transition ${step === index ? "border-amber-500 text-slate-900" : "border-transparent text-muted-foreground"} disabled:cursor-not-allowed`}
+          onClick={() => onChange(index as WizardStep)}
+          className={`border-b-2 px-2 py-1 text-center transition ${step === index ? "border-amber-500 text-slate-900" : "border-transparent text-muted-foreground"}`}
         >
-          <span className="block text-[10px] font-bold tracking-[0.15em] text-amber-600">
-            STEP {String(index + 1).padStart(2, "0")}
-          </span>
-          <span className="mt-1 block font-[var(--heading)] text-lg font-bold uppercase">
+          <span className="block font-[var(--heading)] text-lg font-bold uppercase">
             {label}
           </span>
         </button>
@@ -288,11 +291,15 @@ function SegmentCard({
   onOutsource: (selection: OutsourceSegmentSelection | null) => void;
   routePlanId?: string;
 }) {
+  const principal = useAuthStore((state) => state.principal);
+  const canManageOutsource = canAccess(principal, {
+    anyRole: ["LOGISTICS_MANAGER"],
+  });
   return (
-    <Card className="gap-3 rounded-lg py-3 shadow-sm">
-      <CardContent className="px-4">
-        <div className="flex items-start gap-3">
-          <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-full bg-slate-600 text-xs font-bold text-white">
+    <Card className="gap-2 rounded-[2px] py-2 shadow-sm">
+      <CardContent className="px-3">
+        <div className="flex items-start gap-2">
+          <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-[2px] bg-slate-600 text-xs font-bold text-white">
             {index + 1}
           </span>
           <div className="min-w-0 flex-1">
@@ -303,7 +310,6 @@ function SegmentCard({
                 {segment.route.toLocation?.name}
               </p>
               <div className="flex items-center gap-1 text-muted-foreground">
-                <GripVertical className="size-4" aria-label="Reorder segment" />
                 <button
                   type="button"
                   onClick={onDelete}
@@ -314,7 +320,7 @@ function SegmentCard({
                 <MoreVertical className="size-4" />
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
               <div>
                 <p className="text-muted-foreground">Distance</p>
                 <p className="font-semibold">
@@ -331,24 +337,43 @@ function SegmentCard({
               </div>
               <div>
                 <p className="text-muted-foreground">Stop type</p>
-                <Badge variant="outline" className="mt-1">
+                <Badge variant="ghost" className="mt-1 border-0 px-0">
                   {segment.stopType.replace("_", " ")}
                 </Badge>
               </div>
               <div>
                 <span className="text-muted-foreground">Arrangement</span>
                 <div className="mt-1">
-                  <OutsourceSegmentDialog
-                    routePlanId={routePlanId}
-                    routePlanRouteId={
-                      segment.route.routePlanRouteId ?? String(segment.route.id)
-                    }
-                    transportMode={segment.route.transportMode ?? "ROAD"}
-                    isOutsourced={segment.arrangement === "OUTSOURCED"}
-                    currentProvider={segment.provider}
-                    currentNote={segment.note}
-                    onChanged={onOutsource}
-                  />
+                  {canManageOutsource ? (
+                    <OutsourceSegmentDialog
+                      routePlanId={routePlanId}
+                      routePlanRouteId={
+                        segment.route.routePlanRouteId ??
+                        String(segment.route.id)
+                      }
+                      transportMode={segment.route.transportMode ?? "ROAD"}
+                      isOutsourced={segment.arrangement === "OUTSOURCED"}
+                      currentProvider={segment.provider}
+                      currentNote={segment.note}
+                      onChanged={onOutsource}
+                    >
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-auto p-0 font-semibold hover:bg-transparent"
+                      >
+                        {segment.arrangement === "OUTSOURCED"
+                          ? "Outsource"
+                          : "Internal"}
+                      </Button>
+                    </OutsourceSegmentDialog>
+                  ) : (
+                    <span className="font-semibold">
+                      {segment.arrangement === "OUTSOURCED"
+                        ? "Outsource"
+                        : "Internal"}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -403,20 +428,39 @@ export function RoutePlanBuilder({
             : "REST_STOP",
     })),
   );
-  const [message, setMessage] = useState<string | null>(null);
+  const [buildMessage, setBuildMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [routeNote, setRouteNote] = useState(initialRouteNote);
   const [updateReason, setUpdateReason] = useState("");
   const isBackup = routeType === "BACKUP";
-  const readonlyPrimaryRoutes = primaryRoutes ?? [];
+  const readonlyPrimaryRoutes = useMemo(
+    () => primaryRoutes ?? [],
+    [primaryRoutes],
+  );
+  const fallbackFrom =
+    readonlyPrimaryRoutes[0]?.fromLocation ??
+    initialRoutes[0]?.fromLocation ??
+    FALLBACK_LOCATION;
+  const fallbackTo =
+    readonlyPrimaryRoutes.at(-1)?.toLocation ??
+    initialRoutes.at(-1)?.toLocation ??
+    fallbackFrom;
   const plan = useMemo(
     () => ({
       ...metadata,
-      from: metadata?.from,
-      to: metadata?.to,
+      planCode: metadata?.planCode ?? "—",
+      bookingCode: metadata?.bookingCode ?? "—",
+      status: metadata?.status ?? "DRAFT",
+      scope: metadata?.scope ?? "Domestic",
+      departureAt: metadata?.departureAt ?? "",
+      arrivalAt: metadata?.arrivalAt ?? "",
+      from: metadata?.from ?? fallbackFrom,
+      to: metadata?.to ?? fallbackTo,
       transportPlanId,
       routeType,
     }),
-    [metadata, routeType, transportPlanId],
+    [fallbackFrom, fallbackTo, metadata, routeType, transportPlanId],
   );
   const routeCatalog = useMemo(
     () =>
@@ -474,7 +518,7 @@ export function RoutePlanBuilder({
 
   function addSegment(route: MapRoute) {
     if (route.readonly) {
-      setMessage(
+      setBuildMessage(
         "Primary segments are view-only. Select a backup route to add it.",
       );
       return;
@@ -482,10 +526,10 @@ export function RoutePlanBuilder({
     if (segments.some((segment) => segment.route.id === route.id)) return;
     const previous = segments.at(-1)?.route.toLocation?.id;
     if (previous != null && route.fromLocation?.id !== previous) {
-      setMessage("Select a route connected to the last segment.");
+      setBuildMessage("Select a route connected to the last segment.");
       return;
     }
-    setMessage(null);
+    setBuildMessage(null);
     setSegments((current) => [
       ...current,
       {
@@ -531,8 +575,10 @@ export function RoutePlanBuilder({
   }
 
   async function save(action: CreateRoutePlanRequest["action"]) {
+    setSaveError(null);
+    setSaveNotice(null);
     if (!segments.length) {
-      setMessage("Add at least one segment before saving.");
+      setSaveError("Add at least one segment before saving.");
       return;
     }
     if (
@@ -540,27 +586,27 @@ export function RoutePlanBuilder({
         (segment) => segment.arrangement === "OUTSOURCED" && !segment.provider,
       )
     ) {
-      setMessage(
+      setSaveError(
         "Please select a valid Transport Provider for every outsourced segment.",
       );
       return;
     }
     if (!continuity.valid) {
-      setMessage(continuity.message ?? "Route segments are not continuous.");
+      setSaveError(continuity.message ?? "Route segments are not continuous.");
       return;
     }
     if (isBackup && !primaryAvailable) {
-      setMessage(
+      setSaveError(
         "A valid PRIMARY route plan is required before creating a backup route.",
       );
       return;
     }
     if (isBackup && routeNote.trim().length < 10) {
-      setMessage("Backup reason must be at least 10 characters.");
+      setSaveError("Backup reason must be at least 10 characters.");
       return;
     }
     if (edit && !updateReason.trim()) {
-      setMessage("Update reason is required.");
+      setSaveError("Update reason is required.");
       return;
     }
     try {
@@ -575,38 +621,39 @@ export function RoutePlanBuilder({
       } else {
         await createRoutePlan(transportPlanId, toPayload(action));
       }
-      setMessage(
+      setSaveNotice(
         action === "SAVE_DRAFT"
           ? "Draft saved."
           : "Submitted for legal review.",
       );
     } catch (error) {
-      setMessage(
+      setSaveError(
         error instanceof Error ? error.message : "Unable to save route plan.",
       );
     }
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-4 md:p-8">
-      <div className="mx-auto grid max-w-[1440px] gap-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.16em] text-primary">
-              RC · ROUTE PLANNING
-            </p>
-            <h1 className="mt-1 font-[var(--heading)] text-3xl font-bold uppercase text-slate-900">
-              Create Route Plan
-            </h1>
-          </div>
-          <Badge variant="outline">{plan.status}</Badge>
-        </div>
+    <main className="min-h-screen bg-slate-50 p-3 md:p-4">
+      <div className="mx-auto grid max-w-[1440px] gap-3">
+        <PageHeader
+          title={
+            isBackup
+              ? "CREATE CONTINGENCY ROUTE"
+              : edit
+                ? "EDIT ROUTE PLAN"
+                : "CREATE ROUTE PLAN"
+          }
+          backHref={ROLE_ROUTES.routePlans}
+          backLabel="BACK TO ROUTE PLANS"
+          action={<Badge variant="outline">{plan.status}</Badge>}
+        />
         <Metadata plan={plan} />
         <Progress step={step} onChange={setStep} />
-        <section className="rounded-b-xl border bg-white p-4 md:p-6">
+        <section className="rounded-b-[2px] bg-white p-3 md:p-4">
           {step === 0 && (
-            <div className="grid gap-5 lg:grid-cols-2">
-              <Card>
+            <div className="grid gap-3 lg:grid-cols-2">
+              <Card className="rounded-[2px]">
                 <CardHeader>
                   <CardTitle>Origin</CardTitle>
                 </CardHeader>
@@ -622,7 +669,7 @@ export function RoutePlanBuilder({
                   </div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="rounded-[2px]">
                 <CardHeader>
                   <CardTitle>Destination</CardTitle>
                 </CardHeader>
@@ -645,18 +692,16 @@ export function RoutePlanBuilder({
             </div>
           )}
           {step === 1 && (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.9fr)]">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.9fr)]">
               <div className="min-h-[560px]">
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="font-semibold">
-                    Route Map & Suggested Routes
-                  </h2>
+                  <h2 className="text-lg font-semibold">Route Map</h2>
                   <Badge variant="outline">
                     {isBackup ? "Build backup mode" : "Build mode"}
                   </Badge>
                 </div>
                 {isBackup && !primaryAvailable && (
-                  <div className="mb-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                  <div className="mb-2 rounded-[2px] border border-red-200 bg-red-50 p-2 text-sm text-red-800">
                     {primaryError ??
                       "Primary route plan not found. Please create a primary route plan first."}
                   </div>
@@ -676,7 +721,7 @@ export function RoutePlanBuilder({
                     {segments.length} {isBackup ? "backup " : ""}segment(s)
                   </span>
                 </div>
-                <div className="grid gap-3">
+                <div className="grid gap-2">
                   {segments.map((segment, index) => (
                     <SegmentCard
                       key={segment.id}
@@ -711,26 +756,25 @@ export function RoutePlanBuilder({
                     variant="outline"
                     className="w-fit"
                     onClick={() =>
-                      setMessage("Choose a route on the map to add a segment.")
+                      setBuildMessage(
+                        "Choose a route on the map to add a segment.",
+                      )
                     }
                   >
                     + Add Segment
                   </Button>
-                  {message && (
-                    <p className="text-sm text-amber-700">{message}</p>
-                  )}
-                  {continuity.message && (
-                    <p className="text-sm text-red-700">{continuity.message}</p>
+                  {buildMessage && (
+                    <p className="text-sm text-amber-700">{buildMessage}</p>
                   )}
                 </div>
               </div>
             </div>
           )}
           {step === 2 && (
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.9fr)]">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.9fr)]">
               <div className="min-h-[560px]">
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="font-semibold">Route Map</h2>
+                  <h2 className="text-lg font-semibold">Route Map</h2>
                   <Badge variant="outline">View mode</Badge>
                 </div>
                 <MapViewer
@@ -739,11 +783,9 @@ export function RoutePlanBuilder({
                   mode="view"
                 />
               </div>
-              <div className="grid content-start gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Review Route Plan</CardTitle>
-                  </CardHeader>
+              <div className="grid content-start gap-3">
+                <h2 className="text-lg font-semibold">Review</h2>
+                <Card className="rounded-[2px]">
                   <CardContent className="grid gap-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Segments</span>
@@ -766,13 +808,6 @@ export function RoutePlanBuilder({
                     </div>
                   </CardContent>
                 </Card>
-                <p className="text-sm text-muted-foreground">
-                  BE validates continuity, rest rules, BCP, vehicle capacity and
-                  provider compatibility.
-                </p>
-                {continuity.message && (
-                  <p className="text-sm text-red-700">{continuity.message}</p>
-                )}
                 {isBackup && (
                   <label className="grid gap-2 text-sm font-medium">
                     Backup reason
@@ -780,7 +815,7 @@ export function RoutePlanBuilder({
                       Minimum 10 characters
                     </span>
                     <textarea
-                      className="min-h-24 rounded border px-3 py-2 font-normal"
+                      className="min-h-20 rounded-[2px] border px-2 py-1.5 font-normal"
                       value={routeNote}
                       onChange={(event) => setRouteNote(event.target.value)}
                       placeholder="Why is this backup route needed?"
@@ -789,20 +824,20 @@ export function RoutePlanBuilder({
                 )}
                 {edit && (
                   <label className="grid gap-2 text-sm font-medium">
-                    Update reason
-                    <span className="font-normal text-muted-foreground">
-                      Required for optimistic locking audit
-                    </span>
                     <textarea
-                      className="min-h-24 rounded border px-3 py-2 font-normal"
+                      aria-label="Update reason"
+                      className="min-h-20 rounded-[2px] border px-2 py-1.5 font-normal"
                       value={updateReason}
                       onChange={(event) => setUpdateReason(event.target.value)}
                       placeholder="Why is this route plan being updated?"
                     />
                   </label>
                 )}
-                {message && (
-                  <p className="text-sm text-emerald-700">{message}</p>
+                {saveError && (
+                  <p className="text-sm text-red-700">{saveError}</p>
+                )}
+                {saveNotice && (
+                  <p className="text-sm text-emerald-700">{saveNotice}</p>
                 )}
                 <div className="flex flex-wrap gap-2">
                   <Button onClick={() => void save("SAVE_DRAFT")}>

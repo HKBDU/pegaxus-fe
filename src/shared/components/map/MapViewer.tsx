@@ -144,7 +144,7 @@ export function MapViewer({
   }
 
   return (
-    <div className="relative h-[min(85vh,720px)] min-h-[420px] w-full overflow-hidden rounded border bg-muted">
+    <div className="relative h-[min(87vh,720px)] min-h-[420px] w-full overflow-hidden rounded border bg-muted">
       {error && (
         <div className="absolute inset-0 z-20 grid place-items-center bg-white/90 p-4 text-center text-sm text-destructive">
           {error}
