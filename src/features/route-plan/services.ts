@@ -4,7 +4,7 @@ import type {
   ApiEnvelope, CancelRoutePlanRequest, CreateRoutePlanRequest, LegalReviewRequest, LegalReviewResult,
   Location, LocationListParams, PaginatedValue, Provider, ProviderListParams,
   RouteListParams, RouteMaster, RoutePlan, RoutePlanListParams, RoutePlanMutationResult,
-  UpdateRoutePlanRequest, Vehicle, VehicleListParams,
+  OutsourceSegmentRequest, OutsourceSegmentResult, UpdateRoutePlanRequest, Vehicle, VehicleListParams,
 } from './types'
 
 export class RoutePlanApiError extends Error {
@@ -46,6 +46,8 @@ export const createRoutePlan = (transportPlanId: string, payload: CreateRoutePla
 export const updateRoutePlan = (routePlanId: string, payload: UpdateRoutePlanRequest) => request<RoutePlanMutationResult>(apiClient.put(`${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}`, payload))
 export const cancelRoutePlan = (routePlanId: string, payload: CancelRoutePlanRequest) => request<RoutePlanMutationResult>(apiClient.post(`${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/cancel`, payload))
 export const submitLegalReview = (routePlanId: string, payload: LegalReviewRequest) => request<LegalReviewResult>(apiClient.post(`${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/legal-review`, payload))
+export const updateSegmentOutsourcing = (routePlanId: string, routePlanRouteId: string, payload: OutsourceSegmentRequest) => request<OutsourceSegmentResult>(apiClient.put(`${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/segments/${routePlanRouteId}/outsourcing`, payload))
+export const exportRoutePlanPdf = (routePlanId: string) => apiClient.get(`${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/export`, { params: { format: 'pdf' }, responseType: 'blob' })
 
 export function getRoutePlanError(error: unknown): { code: string; message: string } {
   if (error instanceof RoutePlanApiError) return { code: error.errorCode, message: error.message }

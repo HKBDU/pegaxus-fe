@@ -10,5 +10,6 @@ export * from "./MapViewer";
 export * from "./MapViewport";
 export * from "./RouteForm";
 export * from "./RouteLayer";
+export * from "./RoutePreviewLayer";
 export * from "./types";
 export * from "./useMapViewerState";

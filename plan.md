@@ -1,421 +1,613 @@
-# Plan — MapViewer và Map Utils
+# Kế hoạch code riêng cho Khuyên
 
-## 1. Phạm vi
+Phạm vi lấy từ:
 
-Implement đúng phần Map trong file TXT:
+- [flow3-frontend-task-assignment (1).md](<C:/Users/Administrator/Downloads/flow3-frontend-task-assignment (1).md>)
+- [flow3.md](<C:/Users/Administrator/Downloads/flow3.md>)
+- [flow3-screen-inventory.md](<F:/BA-learning/us-generate/agile-story-skills/docs/projects/pegaxus-document/screen/flow3-screen-inventory.md>)
 
-- Map Geoapify + React Map Libre.
-- Pan, zoom và hiển thị marker Location.
-- Location Details Popup khi hover/click marker.
-- Search Location bằng dropdown có sẵn, đọc dữ liệu từ DB.
-- Chọn Location rồi tự fly tới marker.
-- Coordinator chọn điểm trên map hoặc search để tạo Location.
-- Coordinator Add/Edit/Delete Location.
-- Coordinator chọn Location đầu/cuối để tạo Route.
-- Route preview bằng GeoJSON nếu backend trả geometry.
-- Role-based action visibility và thông báo chờ seed data cho phần `XXX`.
+## 1. Phạm vi Khuyên
 
-Không lập plan cho toàn bộ Flow 3. Không mở rộng sang Transport Plan, quotation, RoutePlan workflow, legal review, emergency change, notification inbox hoặc các màn hình quản trị riêng.
-
-## 2. File scope
-
-Path chính xác phải theo mục “Việc của Khuyên” trong TXT. Không tự tạo feature/page/router folder ngoài ownership đó.
-
-Nếu ownership của TXT dùng cấu trúc hiện tại, chỉ cần nhóm file tương đương:
+Feature chính:
 
 ```text
+src/features/route-plan/**
+src/shared/components/map/** (mở rộng component dùng chung nếu cần)
+src/shared/constants/route-plan-status.ts
+```
+
+Use case:
+
+| Step | Use case | Màn hình/chức năng |
+|---|---|---|
+| 1 | UC-33 | Tạo RoutePlan, route builder, lưu draft/gửi legal review |
+| 2 | UC-39 | Sửa RoutePlan, ghi đè toàn bộ `segments[]` |
+| 3 | UC-40 | Hủy RoutePlan đang `DRAFT` |
+| 4 | UC-37 | Tạo/sửa/xóa mềm contingency route |
+| 5 | UC-42 | Gán/gỡ outsource cho từng segment |
+| 6 | Shared map | Refactor mode, add-route preview, multi-route rendering và mobile fallback |
+| 7 | Shared map/feature | Build plan từ route đã lưu; persistence đi qua API contract, không tự tạo DB model trong FE |
+
+Không làm:
+
+- `src/app/router.tsx`
+- `src/app/route-config.ts`
+- `RoutePlanDetailPage.tsx`
+- `TransportPlanDetailPage.tsx`
+- `fleet`, `personnel`, `transport-plan`, `route-view`
+- UC-48 đổi lộ trình khẩn cấp; blocker C11 thuộc Dương/BE
+- Báo giá, đặt cọc, notification inbox, upload file
+- Không tự tạo API/DB `route_plan` mới cho map nếu BE contract chưa chốt; `buildPlan` là interaction state trước, không phải schema FE tự định nghĩa.
+
+## 2. Phát hiện quan trọng từ repo và điều chỉnh plan
+
+Repo đã có sẵn map module:
+
+```text
+src/shared/components/map/**
+src/shared/utils/map/**
+```
+
+Đã dùng:
+
+- MapLibre
+- `react-map-gl`
+- Geoapify
+- `MapViewer`
+- `RouteLayer`
+- `RouteForm`
+- Location search/reverse geocoding
+- GeoJSON validation
+
+Khoảng trống cần phát triển theo implementation hiện tại:
+
+- `useMapViewerState` đang dùng `selectionMode: SelectionMode | null`; `Test.tsx` lại có `addMode` riêng.
+- `SelectionMode` hiện chỉ có `ADD_LOCATION`, `FROM_LOCATION`, `TO_LOCATION`; chưa có `addRoute`/`buildPlan`.
+- `MapViewer` đang nhận một `route` và `RouteLayer` chỉ render một polyline.
+- `RouteForm` mới validate và phát payload qua `onSubmit`; whitebox chưa gọi mutation.
+- Geoapify mới có search/nearby/reverse geocoding; chưa có routing preview trả polyline/distance/duration.
+- Chưa có cache polyline, plan segment list, route-chain validation hoặc logic xử lý route/location dependency.
+
+Vì vậy chỉ phát triển tiếp trên module này. Không tạo lại Leaflet, không tạo `route-map` trong feature, không tạo thêm map module thứ hai.
+
+Các component dùng chung mới (nếu cần) phải đặt trực tiếp trong `src/shared/components/map/**`, cập nhật barrel export và README. Container của `route-plan` chịu trách nhiệm mapping DTO, gọi API, kiểm tra role và mutation.
+
+## 3. Cấu trúc file đề xuất
+
+```text
+src/features/route-plan/
+├── components/
+│   ├── RoutePlanBuilder.tsx
+│   ├── RoutePlanSegmentEditor.tsx
+│   ├── RoutePlanSummary.tsx
+│   ├── ContingencyRoutesTab.tsx
+│   ├── ContingencyRouteForm.tsx
+│   ├── LegalFeasibilityPanel.tsx
+│   ├── CancelRoutePlanDialog.tsx
+│   └── OutsourceSegmentDialog.tsx
+├── hooks/
+│   ├── useRoutePlanBuilder.ts
+│   ├── useRoutePlanDetail.ts
+│   └── useRoutePlanMutations.ts
+├── pages/
+│   ├── CreateRoutePlanPage.tsx
+│   ├── EditRoutePlanPage.tsx
+│   ├── CreateContingencyRoutePage.tsx
+│   └── EditContingencyRoutePage.tsx
+├── services.ts
+├── schemas.ts
+├── types.ts
+├── constants.ts
+└── index.ts
+
 src/shared/components/map/
-├── MapViewer.tsx                 # composition/orchestration only
-├── MapViewport.tsx               # react-map-gl/maplibre wrapper
-├── MapControls.tsx               # zoom, reset, fit bounds
-├── LocationMarkers.tsx            # marker list and selected/hover state
-├── LocationMarker.tsx             # single accessible marker
-├── LocationPopup.tsx              # location details and role actions
-├── LocationSearch.tsx             # searchable DB Location selector
-├── MapSelectionMode.tsx            # click-to-select From/To or Add Location
-├── RouteLayer.tsx                 # optional GeoJSON line source/layer
-├── useMapViewerState.ts            # selected/hovered/mode state only
-├── AddLocationForm.tsx            # Coordinator form UI only
-├── EditLocationForm.tsx           # Coordinator form UI only
-└── RouteForm.tsx                  # From/To and route fields UI only
+├── các file hiện có theo README
+├── useMapViewerState.ts      # mode duy nhất + state chọn điểm/preview dùng chung
+├── RoutePreviewLayer.tsx     # preview style khác route đã lưu
+├── component generic mới (chỉ khi dùng chung thật sự)
+└── index.ts
 
 src/shared/utils/map/
-├── coordinates.ts
-├── bounds.ts
-├── geojson.ts
-├── geoapify.ts
-└── index.ts
+└── routing.ts                # Geoapify routing preview, AbortSignal, normalize response
+
+src/shared/constants/
+└── route-plan-status.ts
 ```
 
-Có thể tách marker/popup thành component con trong cùng thư mục Map nếu cần. Không sửa `router`, layout, sidebar hoặc feature folder của người khác.
+## 4. Chi tiết từng step
 
-Dependency `maplibre-gl` và `react-map-gl` đã có trong working tree; không thêm lại hoặc revert.
+### Step 0 — Contract, type và status trước
 
-## 3. API liên quan trong `flow3.md`
+Tạo trước:
 
-### Đọc Location
+- `types.ts`: `RoutePlan`, `RouteSegment`, `LocationBrief`, `VehicleBrief`, `Outsourcing`
+- `schemas.ts`: validation form
+- `route-plan-status.ts`:
+  - enum/status label
+  - `canEditRoutePlan`
+  - `canCancelRoutePlan`
+  - điều kiện hiển thị button
+- `services.ts`: toàn bộ request của feature
+- error mapper theo `errorCode`
+- Map interaction state: một `mode: "view" | "addLocation" | "addRoute" | "buildPlan"`; không dùng song song `addMode`/`selectionMode` boolean.
+
+Nguyên tắc:
+
+- Dùng `updatedAt` khi update để chống ghi đè.
+- Không tự tính luật nghỉ ngơi, capacity, BCP.
+- Hiển thị lỗi BE như `422 SEGMENT_NOT_CONTINUOUS`, `REST_RULE_VIOLATION`, `VEHICLE_CAPACITY_EXCEEDED`.
+- Không rẽ nhánh theo HTTP status.
+- Khi đổi mode, dọn state của mode cũ: selected point, preview geometry, nearby result, abort request đang chạy.
+
+### Step 1 — UC-33: Create RoutePlan
+
+Route tạm:
 
 ```text
-GET /api/v1/locations
+/admin/__dev/route-plans/new/:transportPlanId
 ```
 
-Query:
-
-- `pageIndex`, `pageSize`.
-- `search`: `locationName`, `city`.
-- `country`.
-- `locationType`.
-
-Location fields dùng cho map/popup/form:
+API:
 
 ```text
-locationId
-locationName
-locationType
-address
-city
-stateProvince
-country
-latitude
-longitude
-locationNote
+GET  /transport-plans/{id}
+GET  /bookings/approved/{bookingId}
+GET  /locations
+GET  /routes
+GET  /vehicles
+GET  /transport-providers
+POST /transport-plans/{transportPlanId}/route-plans
+POST /route-plans/{routePlanId}/legal-review
 ```
 
-### Đọc Route master
+Chức năng:
+
+- Wizard 4 bước.
+- Chọn location/route master.
+- Thêm, xóa, sắp xếp segment.
+- Validate continuity của các segment.
+- Segment nội bộ:
+  - chỉ `ROAD`
+  - được chọn vehicle
+- Segment outsource:
+  - không chọn vehicle/driver/escort
+  - chọn provider phù hợp.
+- `SAVE_DRAFT`.
+- `SUBMIT_FOR_LEGAL_REVIEW`.
+- `LegalFeasibilityPanel` chỉ hiển thị dữ liệu legal review BE trả; không tự đánh giá feasibility ở FE.
+- Gửi đúng `segments[]`, `sequenceNo` liên tục từ `1`.
+
+Tái sử dụng:
+
+- `MapViewer`
+- `RouteForm`
+- `LocationSearch`
+- `RouteLayer`
+- `Input`, `Select`, `Dialog`, `Card`, `Button`, `Form`
+- `LoadingState`, `ErrorState`, toast hiện có
+
+### Step 2 — UC-39: Update RoutePlan
+
+Route tạm:
 
 ```text
-GET /api/v1/routes
+/admin/__dev/route-plans/:routePlanId/edit
 ```
 
-Query:
-
-- `fromLocationId`.
-- `toLocationId`.
-- `transportMode`: `ROAD`, `SEA`, `AIR`.
-- `search`: `routeCode`, `routeName`.
-- Pagination theo contract.
-
-Route fields liên quan map:
+API:
 
 ```text
-routeId
-routeCode
-routeName
-transportMode
-distanceKm
-estimatedDurationMinutes
-fromLocation
-toLocation
+GET /route-plans/{routePlanId}
+PUT /route-plans/{routePlanId}
+POST /route-plans/{routePlanId}/legal-review
 ```
 
-### API còn thiếu trong contract
+Chức năng:
 
-TXT yêu cầu Coordinator:
+- Chỉ cho sửa khi status là `DRAFT`.
+- Load `segments[]` hiện tại.
+- Ghi đè toàn bộ danh sách segment.
+- Bắt buộc `updateReason`.
+- Hiển thị `RouteCompare` trước/sau.
+- Giữ `updatedAt`.
+- Xử lý `409 ROUTE_LOCKED`.
+- Dùng chung builder của UC-33, không copy form.
 
-- Add/Edit/Delete Location.
-- Create/Edit/Delete Route.
+### Step 3 — UC-40: Cancel Draft RoutePlan
 
-`flow3.md` chỉ mô tả GET Location/Route, chưa có mutation endpoint master. Vì vậy plan chỉ chuẩn bị form, payload, selection state và callback; không tự đoán URL/method/request body.
-
-Khi BE bổ sung contract, service mutation cần:
-
-- Gửi đúng field schema.
-- Invalidate lại Location/Route list.
-- Focus marker mới hoặc clear marker đã soft-delete sau khi thành công.
-- Hiển thị `errorCode` và `errors[]` khi thất bại.
-
-Nếu Route chưa tồn tại, việc BE dùng tọa độ hai Location gọi Geoapify Routing, lấy GeoJSON và lưu Route là backend responsibility. Frontend không tự lưu dữ liệu master và không tự gửi distance/duration do frontend tính.
-
-## 4. MapViewer architecture
-
-MapViewer là component generic và chỉ làm composition/orchestration. MapViewer không chứa toàn bộ JSX, form schema, API call hoặc business mutation.
-
-### Trách nhiệm của `MapViewer.tsx`
-
-- Nhận props từ container.
-- Ghép `MapViewport`, `MapControls`, `LocationMarkers`, `LocationPopup`, `LocationSearch`, `MapSelectionMode` và `RouteLayer`.
-- Giữ state điều phối tối thiểu: selected location, hovered location, active selection mode.
-- Chuyển callback giữa các phần con.
-- Không gọi `/locations`, `/routes`, Geoapify mutation hoặc Location/Route mutation.
-- Không chứa form Add/Edit Location hoặc Route.
-
-### Các component con
-
-#### `MapViewport.tsx`
-
-- Khởi tạo React Map Libre.
-- Nhận view state, style URL, map event callbacks.
-- Xử lý pan/zoom native của map.
-- Expose ref/callback tối thiểu cho `flyTo`, `easeTo`, `fitBounds`.
-- Không biết role, API response hoặc form state.
-
-#### `MapControls.tsx`
-
-- Nút zoom in/out.
-- Nút reset view.
-- Nút fit bounds khi có dữ liệu.
-- Nút bật/tắt selection mode nếu UI cần.
-- Chỉ phát callback, không tự thay đổi domain state.
-
-#### `LocationMarkers.tsx` và `LocationMarker.tsx`
-
-- `LocationMarkers` map qua danh sách Location hợp lệ.
-- `LocationMarker` render một marker accessible.
-- Tách selected, hover, focus và click behavior khỏi MapViewer.
-- Không render form hoặc gọi API.
-
-#### `LocationPopup.tsx`
-
-- Render country code, name/type, address, coordinates và note.
-- Nhận `canEdit`/`canDelete` từ container.
-- Render action Edit/Delete chỉ khi được phép.
-- Phát `onEdit`/`onDelete`; không gọi mutation trực tiếp.
-
-#### `LocationSearch.tsx`
-
-- Render ô search/dropdown.
-- Nhận options, loading, empty state và selected value.
-- Phát Location được chọn để container gọi fly-to.
-- Không nhúng endpoint `/locations` vào UI primitive.
-
-#### `MapSelectionMode.tsx`
-
-- Quản lý presentation của chế độ click-to-select.
-- Phát `{ latitude, longitude }` khi map được click.
-- Hỗ trợ context selection: `ADD_LOCATION`, `FROM_LOCATION`, `TO_LOCATION`.
-- Không tự quyết định form nào mở.
-
-#### `RouteLayer.tsx`
-
-- Nhận GeoJSON đã validate.
-- Render line source/layer và selected route style.
-- Không tính distance/duration.
-- Không gọi Geoapify Routing.
-
-#### Form components
-
-- `AddLocationForm.tsx`: chỉ render/validate fields của Add Location.
-- `EditLocationForm.tsx`: dùng cùng field model, nhận initial data.
-- `RouteForm.tsx`: From, To, name, mode, note.
-- Form submit phát payload/callback ra container; mutation nằm ngoài MapViewer.
-- Dùng `react-hook-form`, `zod`, `Form`, `Input`, `Textarea`, `Select` và dialog có sẵn.
-
-Nếu Add/Edit form dùng chung nhiều field, tách thêm `LocationFormFields.tsx`; không copy JSX giữa hai form.
-
-### Luồng dữ liệu
+Component public:
 
 ```text
-Container/API data
-        │
-        ▼
-MapViewer + useMapViewerState
-   ┌────┼──────────┬─────────────┐
-   ▼    ▼          ▼             ▼
-Viewport Markers  Search      RouteLayer
-   │    │          │             │
-   └────┴────── callbacks ───────┘
-                    │
-                    ▼
-          Container / form mutation
+CancelRoutePlanDialog.tsx
 ```
 
-`useMapViewerState.ts` chỉ quản lý selected/hovered Location và selection mode. React Query, API data, form submit và toast không được đưa vào hook này.
+API:
 
-### Input tối thiểu
+```text
+POST /route-plans/{routePlanId}/cancel
+```
+
+Chức năng:
+
+- Chỉ hiện nút khi `canCancelRoutePlan(...) === true`.
+- Bắt buộc nhập `reason`.
+- Confirm bằng `AlertDialog`.
+- Sau thành công refresh route plan từ BE.
+- Dùng toast/error component sẵn có.
+- Không tự đổi status nếu request thất bại.
+
+### Step 4 — UC-37: Contingency Route
+
+Component public:
+
+```text
+ContingencyRoutesTab.tsx
+```
+
+Route tạm:
+
+```text
+/admin/__dev/route-plans/:routePlanId/contingency/new
+/admin/__dev/route-plans/:routePlanId/contingency/:backupId/edit
+```
+
+API dùng chung:
+
+```text
+POST /transport-plans/{transportPlanId}/route-plans
+GET  /transport-plans/{transportPlanId}/route-plans
+PUT  /route-plans/{routePlanId}
+POST /route-plans/{routePlanId}/cancel
+```
+
+Quy tắc:
+
+- Dùng `routeType = BACKUP`.
+- Tất cả segment backup dùng `BACKUP`.
+- Lý do tối thiểu 10 ký tự, gửi qua `routeNote`.
+- Không dùng các field cũ:
+  - `is_contingency`
+  - `CONTINGENCY`
+  - `primaryRoutePlanId`
+  - `replacesRoutePlanRouteId`
+- Xử lý:
+  - `409 IDENTICAL_CONTINGENCY_ROUTE`
+  - `409 DOSSIER_LOCKED`
+- Hiển thị cảnh báo khi tạo backup làm ComplianceDossier quay về `DRAFT`.
+
+### Step 5 — UC-42: Outsource theo segment
+
+Component public:
+
+```text
+OutsourceSegmentDialog.tsx
+```
+
+API:
+
+```text
+PUT /route-plans/{routePlanId}/segments/{routePlanRouteId}/outsourcing
+```
+
+Chức năng:
+
+- Chuyển segment nội bộ ↔ outsource.
+- Chọn provider `ACTIVE`.
+- Kiểm tra `supportedModes`.
+- Nhập `note` cho service reference/AWB/flight number.
+- Khi outsource:
+  - xóa lựa chọn vehicle phía client
+  - không gửi `vehicleIds`
+- Khi chuyển về nội bộ:
+  - cho chọn lại vehicle.
+- Hiển thị lỗi `PROVIDER_MODE_MISMATCH`.
+
+## 5. Phát triển trên shared map hiện có
+
+### Map
+
+Dùng lại trực tiếp:
+
+```text
+src/shared/components/map/MapViewer.tsx
+src/shared/components/map/RouteLayer.tsx
+src/shared/utils/map/**
+```
+
+Không làm lại:
+
+- Tạo map library mới.
+- Tự mock geometry.
+- Tự tính distance/duration.
+- Gửi geometry vào API RoutePlan.
+
+Geoapify:
+
+- MAP1 autocomplete.
+- MAP2 reverse geocoding.
+- MAP3 routing cho ROAD.
+- SEA/AIR vẽ đường thẳng.
+- API key chỉ đọc từ `.env`.
+
+### Capability bổ sung nếu thiếu
+
+Chỉ bổ sung vào `src/shared/components/map/**` khi có thể dùng ở nhiều màn hình/feature:
+
+- hiển thị nhiều segment theo sequence;
+- màu segment theo status/outsourced;
+- chọn/highlight segment;
+- fit map theo toàn bộ route;
+- fallback an toàn khi tọa độ null.
+
+Không đưa business rule của UC-33/37/39/40/42 vào component map.
+
+### Timeline/compare/status
+
+Nếu chưa có capability tương ứng, tạo component generic trong `shared/components/map`, không tạo trong `route-plan`. `RouteSegmentTimeline` nhận dữ liệu view model đã được feature adapter chuẩn hóa:
+
+- sequence
+- from/to
+- km
+- ETA
+- vehicle/provider/personnel
+- segment status
+- `dwellAfterMinutes`
+
+Tọa độ null không được làm crash map; timeline vẫn hiển thị.
+
+### Compare
+
+`RouteCompare` (nếu cần bổ sung) dùng cho:
+
+- UC-39 update.
+- Sau này Dương dùng cho UC-48.
+
+### Status
+
+Status enum/label/button condition chỉ đọc từ:
+
+```text
+src/shared/constants/route-plan-status.ts
+```
+
+Không để mỗi component tự định nghĩa lại enum hoặc điều kiện. `route-plan` chỉ truyền status và callback vào shared component.
+
+## 6. Kế hoạch hiệu chỉnh map theo implementation hiện tại
+
+### Step M1 — Gom mode về một state
+
+Refactor `src/shared/components/map/useMapViewerState.ts` và `types.ts`:
 
 ```ts
-type MapLocation = {
-  id: string | number
-  name: string
-  type?: string | null
-  country?: string | null
-  address?: string | null
-  city?: string | null
-  stateProvince?: string | null
-  latitude: number
-  longitude: number
-  note?: string | null
-}
+type MapMode = "view" | "addLocation" | "addRoute" | "buildPlan";
 ```
 
-Nhận thêm optional route GeoJSON để vẽ line.
+- `mode` có default `view`; không dùng `null`/nhiều boolean để biểu diễn mode.
+- `MapViewer` nhận mode/callback theo controlled props để container whitebox và `route-plan` cùng điều khiển được.
+- Giữ compatibility cho callback hiện có (`onMapClick`, `onLocationSelect`, `onRouteSelect`).
+- `MapSelectionMode` đổi label theo mode, có Cancel và bắt phím `Escape`.
+- Add route button đặt cạnh Add Location trong container hiện tại; nút active có trạng thái rõ ràng.
+- Chuyển mode phải dọn state mode cũ và abort request cũ.
 
-### Callback
-
-- `onLocationSelect(location)`.
-- `onLocationHover(location | null)`.
-- `onMapClick({ latitude, longitude })`.
-- `onMarkerAction(action, location)` cho Edit/Delete.
-- `onRouteSelect(route)` nếu route layer được bật.
-
-### Behavior
-
-- Kéo map, zoom in/out, reset view.
-- Hiển thị marker từ danh sách Location.
-- Hover marker hiển thị popup trên desktop.
-- Click/focus marker cũng mở popup để hỗ trợ mobile/keyboard.
-- Location selected có style khác marker thường.
-- Dropdown selection gọi `flyTo`/`easeTo`.
-- Có `fitBounds` khi load nhiều Location hoặc route geometry.
-- Map click chỉ phát event cho form cha xử lý.
-- Có loading, empty, invalid coordinate và map error state.
-- Marker/popup có accessible label; không phụ thuộc hover duy nhất.
-
-Popup hiển thị đúng TXT:
+State generic của map:
 
 ```text
-Mã quốc gia: Tên địa điểm - Loại địa điểm
-Địa chỉ cụ thể
-Latitude; Longitude
-Location Note
+mode
+selectedLocation / hoveredLocation
+startPoint / endPoint
+preview geometry + preview distance/duration + preview error
+nearby places + nearby loading/error
 ```
 
-## 5. Map utils
+State domain không đặt trong map:
 
-### Coordinate
+```text
+planSegments
+route plan name
+route-plan mutation state
+```
 
-- Parse decimal/string thành finite number.
-- Validate latitude `[-90, 90]`.
-- Validate longitude `[-180, 180]`.
-- Convert API `{ latitude, longitude }` sang MapLibre `[longitude, latitude]`.
-- Convert click point ngược thành `{ latitude, longitude }`.
-- Bỏ qua Location thiếu, `null`, `NaN`, `Infinity` coordinate.
+`buildPlan` chỉ là mode tương tác; không tự suy ra đây là bảng DB hay thay thế API RoutePlan.
 
-### Bounds
+### Step M2 — Add route mode
 
-- Tạo bounds từ Location list.
-- Tạo bounds từ LineString/MultiLineString GeoJSON.
-- Trả `null` nếu không có coordinate hợp lệ.
-- Hỗ trợ padding/minimum zoom.
-- Không mutate input.
+Phát triển trên `MapViewer`, `LocationMarkers`, `RouteLayer` và container test:
 
-### GeoJSON
+- Trong `addRoute`, click marker chọn location; click vùng trống bỏ qua.
+- Click lần một → `startPoint`; click lần hai → `endPoint`.
+- Highlight start/end; banner đổi theo trạng thái:
+  - `Chọn điểm bắt đầu`;
+  - `Chọn điểm kết thúc`;
+  - panel xác nhận.
+- Chặn A→A.
+- Kiểm tra cặp A→C với route đã load; nếu trùng thì cảnh báo và disable Save.
+- Khi đổi điểm cuối, xóa preview cũ trước khi request mới.
+- Giữ `RouteForm` làm fallback chọn From/To, nhất là mobile; không xóa form hiện tại.
 
-- Validate `Feature`, `FeatureCollection`, `LineString`, `MultiLineString`.
-- Chuẩn hóa coordinate order.
-- Tạo source data cho route line.
-- Không suy diễn distance/duration từ geometry để gửi ngược BE.
+`MapViewer` không tự gọi API danh sách route hoặc save route; container truyền locations/routes và xử lý callback.
 
-### Geoapify
+### Step M3 — Geoapify route preview
 
-- Tạo Map style URL từ `VITE_GEOAPIFY_API_KEY`.
-- Search địa điểm trên map.
-- Reverse geocode từ latitude/longitude.
-- Parse address, city, state/province, country, country code và coordinates.
-- Encode query parameters.
-- Abort request cũ khi query mới.
-- Map lỗi missing key, network và quota thành lỗi hiển thị được.
-- Không hard-code key hoặc gửi secret backend ra browser.
-- Không gọi Geoapify Routing từ FE cho flow BE đã nhận trách nhiệm này.
+Thêm utility generic tại `src/shared/utils/map/routing.ts`:
 
-## 6. Search Location
+- nhận tọa độ start/end và `AbortSignal`;
+- gọi Geoapify routing cho `ROAD`;
+- trả geometry/polyline chuẩn hóa bằng utility GeoJSON hiện có;
+- trả distance/duration dạng preview;
+- phân loại missing key, quota, network, invalid response và abort.
 
-Dùng component dropdown/select có sẵn trong `src/shared/components/ui/` nếu đáp ứng được.
+Quy tắc:
 
-Nếu Select hiện tại chưa search được:
+- Chỉ gọi khi đủ hai điểm hợp lệ.
+- Mỗi request có `AbortController`; request cũ bị hủy khi đổi điểm.
+- Có timeout ở container/utility.
+- Preview dùng `RoutePreviewLayer` hoặc prop style riêng, khác route đã lưu.
+- Lỗi preview giữ panel mở, disable Save, cho chọn lại điểm cuối.
+- Nhãn UI phải ghi rõ distance là `Estimated`.
+- Không dùng preview distance để thay thế distance chính thức từ BE.
 
-1. Tạo wrapper searchable tối thiểu trong cùng phạm vi Map/ownership.
-2. Wrapper chỉ quản lý input, option, loading, empty state và callback.
-3. Logic gọi `/locations` nằm ở container/service, không nằm trong UI primitive.
-4. Debounce search trước khi gọi API.
-5. Khi chọn option, truyền Location vào MapViewer để fly tới marker.
+### Step M4 — Save route
 
-## 7. Coordinator flow
+Trong container/feature service, không đặt mutation vào map component:
 
-### Add Location
+- Panel có Save, Chọn lại điểm cuối, Cancel.
+- Payload gửi location IDs nếu có; nếu API contract yêu cầu thì gửi tọa độ start/end.
+- BE là nơi validate hai điểm khác nhau, location tồn tại, route chưa trùng và gọi Geoapify để lưu distance/duration.
+- Save thành công lấy route chính thức từ response, thêm vào state/map và hiển thị distance BE trả.
+- Không optimistic commit nếu BE chưa xác nhận.
+- Sau khi lưu, `endPoint` trở thành `startPoint` mới để hỗ trợ chuỗi A→C→D→...→B.
+- Có nút Done để về `view`.
 
-1. Coordinator bấm `Add Location`.
-2. Chọn điểm bằng click map hoặc search trên Geoapify.
-3. Reverse geocode để gợi ý address/city/state/country.
-4. Hiển thị form:
-   - Name: bắt buộc.
-   - Type: optional, dropdown `CITY`, `BORDER_GATE`, `AIRPORT`, `SEAPORT`, `STABLE`, `REST_STOP`, `OTHER`.
-   - Address.
-   - City.
-   - State/Province.
-   - Country.
-   - Latitude/Longitude.
-   - Note: optional.
-5. Validate Name và coordinate.
-6. Submit mutation khi BE có endpoint.
-7. Thành công: refresh Location list, đóng form, focus Location mới.
-8. Thất bại: giữ form và hiển thị field errors/error code.
+Nếu endpoint Create/Edit/Delete Route chưa có trong contract, chỉ hoàn thiện preview/payload/error state và ghi blocker; không gọi endpoint giả.
 
-### Edit/Delete Location
+### Step M5 — View mode, saved routes và cache
 
-- Chỉ Coordinator thấy action trong popup.
-- Edit lấy dữ liệu Location hiện tại làm initial form.
-- Delete dùng confirm dialog có sẵn.
-- Vì DB soft delete, chỉ remove marker sau khi BE trả success.
-- Sau success refresh list và clear selection nếu Location đã xóa.
+Mở rộng `MapViewer`/`RouteLayer` theo hướng backward-compatible:
 
-## 8. Coordinator Route flow
+- hỗ trợ `routes: MapRoute[]`, không phá prop `route` hiện tại;
+- mỗi route có source/layer ID ổn định;
+- route đã lưu render theo geometry cache hoặc geometry do Geoapify trả;
+- route click trả đúng route qua `onRouteSelect`;
+- giữ hover marker và edit/delete location hiện có.
 
-### Chọn đầu/cuối
+Cache:
 
-- Chọn From/To bằng dropdown Location.
-- Hoặc bật selection mode rồi click marker.
-- Không cho From và To là cùng một Location.
-- Hiển thị endpoint/preview line nếu có geometry.
+- ưu tiên cache trong memory theo cặp `fromLocationId:toLocationId:transportMode`;
+- chỉ dùng `localStorage` nếu cần giữ qua reload và có version/TTL;
+- không cache lỗi/quota;
+- invalidation khi route/location thay đổi;
+- không gọi lại Geoapify khi cache còn hợp lệ.
 
-### Form Route
+Delete/edit dependency:
 
-- From Location: bắt buộc.
-- To Location: bắt buộc.
-- Route name.
-- Transport mode: `ROAD`, `SEA`, `AIR`.
-- Note: optional.
+- FE kiểm tra route liên quan trước khi mở delete location.
+- Nếu BE chưa có cascade policy, hiển thị cảnh báo và không giả định cascade.
+- Chốt một policy BE: block delete, cascade có kiểm soát, hoặc soft delete; FE chỉ phản ánh policy/error BE.
 
-Create/Edit/Delete Route chỉ được wire sau khi BE cung cấp mutation contract. Frontend không tự xác định Route bằng tên để gọi endpoint khi contract chưa định nghĩa; nếu API yêu cầu identifier, dùng `routeId`.
+### Step M6 — Build plan từ route đã lưu
 
-## 9. Role và phần `XXX`
+Đây là layer interaction/domain của `route-plan`, không nhét business flow vào map:
 
-- Dùng auth/access-control hiện có để kiểm tra role.
-- Coordinator thấy `Add/Edit/Delete Location` và `Create/Edit/Delete Route`.
-- Role khác chỉ thấy action read được phép.
-- Phần gán Vehicle cho ROAD và Provider/Driver/Escort theo mode chưa có seed data: không fake mutation.
-- Nếu UI có nút thuộc phần `XXX`, dùng `toast.info("Wait data of ...")` theo yêu cầu TXT.
-- Backend vẫn phải enforce authorization.
+- mode `buildPlan` dùng `planSegments: MapRoute[]` theo thứ tự;
+- `currentEnd` lấy từ segment cuối;
+- route polyline clickable; marker/vùng trống bỏ qua;
+- chỉ cho chọn route có `start === currentEnd`;
+- route đã nằm trong plan bị disable để tránh vòng lặp;
+- route không hợp lệ hiển thị mờ;
+- panel hiển thị thứ tự, start/end, xóa đoạn cuối, tổng distance cộng từ DB;
+- map đánh số segment và highlight các route thuộc plan;
+- tối thiểu một segment trước khi Save.
 
-## 10. Thứ tự code
+Payload persistence phải theo API contract hiện hành. Không tự đổi sang `name + routeIds` hoặc tạo bảng `route_plan_segment` nếu BE/contract Flow 3 chưa chốt. Nếu BE chốt API này, thêm service/schema riêng trong `route-plan`, không thêm vào shared map.
 
-1. Tạo coordinate, bounds, GeoJSON và Geoapify utilities.
-2. Tạo `MapViewport`, `MapControls`, `LocationMarker` và `LocationMarkers`.
-3. Tạo `LocationPopup`, `LocationSearch`, `MapSelectionMode` và `RouteLayer`.
-4. Tạo `useMapViewerState`, sau đó ghép các phần bằng `MapViewer` mỏng.
-5. Nối Location dropdown/search với L1 và fly-to.
-6. Thêm reverse geocode, `AddLocationForm`, `EditLocationForm` và `RouteForm`.
-7. Chỉ wire mutation khi BE cung cấp endpoint; không mở rộng sang phần Flow 3 khác.
+### Step M7 — Mobile, fallback và test matrix
 
-## 11. Verification
+- Mobile dùng tap thay hover; banner hiển thị tên điểm đã chọn.
+- `RouteForm` vẫn là fallback cho From/To.
+- Test mode transition: view → addLocation → addRoute → buildPlan và ngược lại.
+- Test đổi điểm cuối nhanh, AbortController và stale response.
+- Test Geoapify missing key/quota/network/timeout/no route.
+- Test A→A, route trùng, route chain không liên tục, save BE fail.
+- Test A→C→D→...→B, undo đoạn cuối, Done.
+- Test route/location edit/delete dependency.
+- Test mobile không phụ thuộc hover.
 
-```bash
-pnpm build
+## 7. Route tạm để test
+
+Không tự sửa router trung tâm nếu chưa được owner router đồng ý.
+
+Cách ít ảnh hưởng nhất:
+
+1. Tạo page test trong `src/features/route-plan/pages`.
+2. Export page/component từ `src/features/route-plan/index.ts`.
+3. Nhờ owner router thêm tạm một nhóm route:
+
+```text
+/admin/__dev/route-plans/new/:transportPlanId
+/admin/__dev/route-plans/:routePlanId/edit
+/admin/__dev/route-plans/:routePlanId/contingency/new
+```
+
+4. Xóa nhóm route này sau khi hoàn tất.
+5. Route production chính chỉ được owner router tích hợp sau cùng.
+
+Có thể dùng pattern dev route đang tồn tại trong `router.tsx`.
+
+## 8. Tách branch/commit
+
+Branch đề xuất:
+
+```text
+feat/flow3-route-plan-khuyen
+```
+
+Commit nhỏ:
+
+```text
+feat(flow3): add route plan contracts and status rules
+feat(flow3): unify shared map interaction modes
+feat(flow3): add shared route preview and multi-route rendering
+feat(flow3): implement create route plan
+feat(flow3): implement update route plan
+feat(flow3): implement cancel draft route plan
+feat(flow3): implement contingency route plans
+feat(flow3): implement outsourced route segments
+chore(flow3): add temporary route-plan test routes
+```
+
+Không sửa trực tiếp:
+
+```text
+src/features/fleet/**
+src/features/personnel/**
+src/features/transport-plan/**
+src/features/route-view/**
+RoutePlanDetailPage.tsx
+TransportPlanDetailPage.tsx
+src/app/route-config.ts
+```
+
+## 9. Blocker BE cần ghi chú
+
+Không chặn code FE:
+
+- C30: backup route khi ComplianceDossier đã đi xa; FE xử lý `409 DOSSIER_LOCKED`.
+- BE phải trả tọa độ `fromLocation`/`toLocation` trong:
+  - `/locations`
+  - `/routes`
+  - `/route-plans/{id}`
+- BE chưa trả geometry; FE chỉ gọi Geoapify để hiển thị.
+- `/routes` phải trả distance/duration theo contract.
+- `TransportPlan.status` phải là `APPROVED` trước khi tạo RoutePlan; test có thể seed/mock.
+- UC-48/C11 thuộc Dương, không triển khai trong phần Khuyên.
+- Không có endpoint notification inbox.
+- Không có API báo giá/đặt cọc trong Flow 3.
+- API Create/Edit/Delete Route, geometry persistence và Geoapify routing backend chưa có trong README/contract hiện tại; chỉ wire khi BE chốt.
+- Chính sách xóa Location có Route liên quan chưa chốt: block, cascade hay soft delete.
+- Cache polyline cần chốt scope: memory-only hay localStorage có TTL/version.
+- API build plan cần chốt payload (`routeIds` hay `segments[]`) trước khi implement persistence.
+
+## 10. Checklist hoàn tất
+
+- Mỗi UC có page/component/service riêng.
+- Map chỉ có một `mode`; không còn trạng thái chồng chéo giữa `addMode` và `selectionMode`.
+- Add route có preview, abort stale request, error state và estimated distance.
+- Save chỉ cập nhật map sau response thành công từ BE.
+- View hỗ trợ route đã lưu, cache có invalidation và không làm mất hover/edit/delete hiện tại.
+- Build plan giữ `planSegments` ở feature/domain layer, không đưa persistence vào shared map.
+- Không duplicate builder giữa create/update/backup.
+- Tái sử dụng tối đa `src/shared/components/ui`, `common`, `map`, `utils/map`.
+- Có loading/empty/error/success state.
+- Error hiển thị theo `errorCode` và `errors[].field`.
+- Kiểm tra role từ BE/route guard.
+- Không tự suy luận business rule nặng.
+- Chạy:
+
+```text
+pnpm exec tsc -b
 pnpm lint
+pnpm build
 pnpm check:cycles
 ```
 
-- Map load đúng Geoapify style.
-- Pan, zoom và fit bounds hoạt động.
-- Location list rỗng/thiếu coordinate không làm crash.
-- Marker hover/click/focus mở popup đúng nội dung.
-- Dropdown search có debounce và fly tới Location đúng.
-- Click map trả đúng latitude/longitude.
-- Reverse geocode điền gợi ý nhưng user vẫn sửa được.
-- Coordinator thấy đúng action; role khác không thấy mutation action.
-- From/To không được trùng.
-- GeoJSON route không làm hỏng marker layer.
-- Không gửi API key/secret sai nơi.
-- Không tự tạo endpoint hoặc gửi distance/duration chưa có trong contract.
-
-## 12. Nguyên tắc code
-
-- Chỉ code trong ownership Map của Khuyên.
-- Tái sử dụng UI, form, dialog, toast và auth utility trong `src/shared/`.
-- Không code lại API client hoặc UI primitive đã có.
-- MapViewer generic; API/business mutation nằm ở container/service được giao.
-- Mỗi component map có một trách nhiệm; MapViewer chỉ orchestration, không trở thành God File.
-- Không để form JSX, map imperative API, marker rendering và API mutation chung một file.
-- Format component/JSX nhiều dòng, dễ đọc.
-- Không tự đoán contract backend còn thiếu.
-- FE gọi API của BE; BE gọi API bên thứ ba.
+Đề xuất thứ tự thực hiện thực tế: **Step 0 → M1 → M2 → M3 → M4 → M5 → M6 → M7 → UC-33 → UC-39 → UC-40 → UC-37 → UC-42 → integration với route-view**.

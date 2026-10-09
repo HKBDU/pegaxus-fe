@@ -174,6 +174,19 @@ export interface LegalReviewRequest {
   blockedSegments?: number[]
 }
 
+export interface OutsourceSegmentRequest {
+  outsourced: boolean
+  transportProviderId?: string
+  note?: string
+}
+
+export interface OutsourceSegmentResult {
+  routePlanId: string
+  segment: RouteSegment
+  isPersonnelComplete: boolean
+  updatedAt: string
+}
+
 export interface RoutePlanMutationResult {
   routePlanId: string
   status: RoutePlanStatus

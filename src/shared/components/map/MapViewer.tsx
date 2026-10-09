@@ -12,6 +12,7 @@ import { LocationSearch } from "./LocationSearch";
 import { MapSelectionMode } from "./MapSelectionMode";
 import { MapViewport, type MapViewportHandle } from "./MapViewport";
 import { RouteLayer } from "./RouteLayer";
+import { RoutePreviewLayer } from "./RoutePreviewLayer";
 import { useMapViewerState } from "./useMapViewerState";
 import type { MapLocation, MapViewerProps } from "./types";
 
@@ -20,7 +21,11 @@ const EMPTY_LOCATIONS: MapLocation[] = [];
 export function MapViewer({
   locations,
   route,
+  routes = [],
   routeGeoJson,
+  preview,
+  mode,
+  onModeChange,
   styleUrl,
   loading,
   error,
@@ -34,6 +39,7 @@ export function MapViewer({
   onLocationSelect,
   onLocationHover,
   onMapClick,
+  onRoutePointSelect,
   onMarkerAction,
   onRouteSelect,
 }: MapViewerProps) {
@@ -41,7 +47,7 @@ export function MapViewer({
   const popupHideTimer = useRef<number | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [popupLocation, setPopupLocation] = useState<MapLocation | null>(null);
-  const state = useMapViewerState();
+  const state = useMapViewerState(mode, onModeChange);
   const validLocations = useMemo(
     () => locations.filter((location) => toMapPoint(location) !== null),
     [locations],
@@ -103,13 +109,18 @@ export function MapViewer({
 
   function selectLocation(location: MapLocation) {
     state.selectLocation(location);
+    if (state.mode === "addRoute") {
+      const point = { latitude: location.latitude, longitude: location.longitude };
+      state.selectRoutePoint(point);
+      onRoutePointSelect?.(point, location);
+    }
     onLocationSelect?.(location);
     viewport.current?.flyTo(location.longitude, location.latitude);
   }
 
   function handleMapClick(point: { latitude: number; longitude: number }) {
     onMapClick?.(point);
-    if (state.selectionMode === "ADD_LOCATION") state.setSelectionMode(null);
+    if (state.mode === "addLocation") state.setMode("view");
   }
 
   return (
@@ -146,10 +157,10 @@ export function MapViewer({
         ref={viewport}
         styleUrl={styleUrl ?? createGeoapifyMapStyleUrl()}
         onMapClick={handleMapClick}
-        interactiveLayerIds={route ? ["selected-route-line"] : undefined}
+        interactiveLayerIds={[...routes, ...(route ? [route] : [])].map((item) => `route-line-${String(item.id).replace(/[^a-zA-Z0-9_-]/g, "-")}`)}
         onInteractiveLayerClick={(layerId) => {
-          if (layerId === "selected-route-line" && route)
-            onRouteSelect?.(route);
+          const selected = [...routes, ...(route ? [route] : [])].find((item) => `route-line-${String(item.id).replace(/[^a-zA-Z0-9_-]/g, "-")}` === layerId);
+          if (selected) onRouteSelect?.(selected);
         }}
       >
         <LocationMarkers
@@ -158,7 +169,8 @@ export function MapViewer({
           onSelect={selectLocation}
           onHover={handleMarkerHover}
         />
-        <RouteLayer route={route} geoJson={routeGeoJson} />
+        <RouteLayer route={route} routes={routes} geoJson={routeGeoJson} />
+        {preview && <RoutePreviewLayer geometry={preview.geometry} />}
       </MapViewport>
       {popupLocation && (
         <LocationPopup
@@ -177,8 +189,8 @@ export function MapViewer({
         onFitBounds={() => allBounds && viewport.current?.fitBounds(allBounds)}
       />
       <MapSelectionMode
-        mode={state.selectionMode}
-        onModeChange={state.setSelectionMode}
+        mode={state.mode}
+        onModeChange={state.setMode}
       />
     </div>
   );
