@@ -1,4 +1,5 @@
 import { Outlet } from "react-router-dom"
+import { useLocation } from "react-router-dom"
 
 import { useAuthStore } from "@/features/auth/store"
 import { canAccess } from "@/features/auth/access-control"
@@ -29,10 +30,11 @@ export function MainLayout() {
   const { data: account } = useUser()
   const accessToken = useAuthStore((state) => state.accessToken)
   const principal = useAuthStore((state) => state.principal)
+  const { pathname } = useLocation()
 
   // Employee-facing routes use the desktop admin shell consistently, including
   // roles whose routes are shared with the customer-facing application.
-  if (accessToken && principal && !canAccess(principal, { anyRole: ["CUSTOMER"] })) {
+  if (pathname !== "/" && accessToken && principal && !canAccess(principal, { anyRole: ["CUSTOMER"] })) {
     return <AdminLayout />
   }
 
