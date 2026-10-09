@@ -4,5 +4,7 @@ export * from "./services";
 export * from "./types";
 export { RoutePlanBuilder } from "./components/RoutePlanBuilder";
 export { default as CreateContingencyRoutePage } from "./pages/CreateContingencyRoutePage";
+export { default as EditRoutePlanPage } from "./pages/EditRoutePlanPage";
+export { OutsourceSegmentDialog } from "./components/OutsourceSegmentDialog";
 export * from "./route-continuity";
 export { CancelRoutePlanDialog } from "./components/CancelRoutePlanDialog";

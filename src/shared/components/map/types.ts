@@ -20,6 +20,7 @@ export type SelectionMode = MapMode;
 
 export type MapRoute = {
   id: string | number;
+  routePlanRouteId?: string;
   name?: string | null;
   geometry?: unknown;
   geoJson?: unknown;

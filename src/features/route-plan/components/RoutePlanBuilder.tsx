@@ -21,11 +21,16 @@ import {
   type MapMode,
   type MapRoute,
 } from "@/shared/components/map";
-import { createRoutePlan } from "../services";
+import { createRoutePlan, updateRoutePlan } from "../services";
 import {
   buildEffectiveBackupRoute,
   validateRoutePlanRoute,
 } from "../route-continuity";
+import {
+  OutsourceSegmentDialog,
+  type OutsourceSegmentSelection,
+} from "./OutsourceSegmentDialog";
+import type { Provider } from "../types";
 import type { CreateRoutePlanRequest, RouteSegmentInput } from "../types";
 
 type WizardStep = 0 | 1 | 2;
@@ -35,7 +40,7 @@ type TransportPlanSummary = {
   planCode: string;
   bookingCode: string;
   routeType: "PRIMARY" | "BACKUP";
-  status: "DRAFT" | "APPROVED";
+  status: string;
   scope: "International" | "Domestic";
   departureAt: string;
   arrivalAt: string;
@@ -43,11 +48,20 @@ type TransportPlanSummary = {
   to: MapLocation;
 };
 
+export type RoutePlanBuilderMetadata = Partial<
+  Omit<TransportPlanSummary, "from" | "to">
+> & {
+  from?: MapLocation;
+  to?: MapLocation;
+};
+
 type DraftSegment = {
   id: string;
   route: MapRoute;
   arrangement: "INTERNAL" | "OUTSOURCED";
   stopType: "REST_STOP" | "BCP" | "DESTINATION";
+  provider?: Provider;
+  note?: string;
 };
 
 const MOCK_PLAN: TransportPlanSummary = {
@@ -261,12 +275,14 @@ function SegmentCard({
   segment,
   index,
   onDelete,
-  onArrangementChange,
+  onOutsource,
+  routePlanId,
 }: {
   segment: DraftSegment;
   index: number;
   onDelete: () => void;
-  onArrangementChange: (value: DraftSegment["arrangement"]) => void;
+  onOutsource: (selection: OutsourceSegmentSelection | null) => void;
+  routePlanId?: string;
 }) {
   return (
     <Card className="gap-3 rounded-lg py-3 shadow-sm">
@@ -315,21 +331,22 @@ function SegmentCard({
                   {segment.stopType.replace("_", " ")}
                 </Badge>
               </div>
-              <label>
+              <div>
                 <span className="text-muted-foreground">Arrangement</span>
-                <select
-                  className="mt-1 h-7 w-full rounded border bg-white px-1 text-xs"
-                  value={segment.arrangement}
-                  onChange={(event) =>
-                    onArrangementChange(
-                      event.target.value as DraftSegment["arrangement"],
-                    )
-                  }
-                >
-                  <option value="INTERNAL">Internal</option>
-                  <option value="OUTSOURCED">3rd Party</option>
-                </select>
-              </label>
+                <div className="mt-1">
+                  <OutsourceSegmentDialog
+                    routePlanId={routePlanId}
+                    routePlanRouteId={
+                      segment.route.routePlanRouteId ?? String(segment.route.id)
+                    }
+                    transportMode={segment.route.transportMode ?? "ROAD"}
+                    isOutsourced={segment.arrangement === "OUTSOURCED"}
+                    currentProvider={segment.provider}
+                    currentNote={segment.note}
+                    onChanged={onOutsource}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -345,6 +362,10 @@ export type RoutePlanBuilderProps = {
   backupRoutes?: MapRoute[];
   primaryAvailable?: boolean;
   primaryError?: string;
+  metadata?: RoutePlanBuilderMetadata;
+  initialRoutes?: MapRoute[];
+  initialRouteNote?: string;
+  edit?: { routePlanId: string; lastUpdatedAt: string };
 };
 
 export function RoutePlanBuilder({
@@ -354,20 +375,52 @@ export function RoutePlanBuilder({
   backupRoutes,
   primaryAvailable = true,
   primaryError,
+  metadata,
+  initialRoutes = [],
+  initialRouteNote = "",
+  edit,
 }: RoutePlanBuilderProps) {
   const [step, setStep] = useState<WizardStep>(0);
   const [, setMode] = useState<MapMode>("buildPlan");
-  const [segments, setSegments] = useState<DraftSegment[]>([]);
+  const [segments, setSegments] = useState<DraftSegment[]>(() =>
+    initialRoutes.map((route, index) => ({
+      id: `${route.id}-${index}`,
+      route,
+      arrangement: "INTERNAL",
+      stopType:
+        route.toLocation?.id === (metadata?.to?.id ?? MOCK_PLAN.to.id)
+          ? "DESTINATION"
+          : route.toLocation?.type === "BORDER_GATE"
+            ? "BCP"
+            : "REST_STOP",
+    })),
+  );
   const [message, setMessage] = useState<string | null>(null);
-  const [routeNote, setRouteNote] = useState("");
+  const [routeNote, setRouteNote] = useState(initialRouteNote);
+  const [updateReason, setUpdateReason] = useState("");
   const isBackup = routeType === "BACKUP";
   const readonlyPrimaryRoutes = primaryRoutes ?? MOCK_ROUTES;
-  const selectableRoutes = isBackup
-    ? (backupRoutes ?? MOCK_BACKUP_ROUTES)
-    : MOCK_ROUTES;
   const plan = useMemo(
-    () => ({ ...MOCK_PLAN, transportPlanId, routeType }),
-    [routeType, transportPlanId],
+    () => ({
+      ...MOCK_PLAN,
+      ...metadata,
+      from: metadata?.from ?? MOCK_PLAN.from,
+      to: metadata?.to ?? MOCK_PLAN.to,
+      transportPlanId,
+      routeType,
+    }),
+    [metadata, routeType, transportPlanId],
+  );
+  const routeCatalog = useMemo(
+    () =>
+      [
+        ...(isBackup ? (backupRoutes ?? MOCK_BACKUP_ROUTES) : MOCK_ROUTES),
+        ...initialRoutes,
+      ].filter(
+        (route, index, routes) =>
+          routes.findIndex((item) => item.id === route.id) === index,
+      ),
+    [backupRoutes, initialRoutes, isBackup],
   );
   const mapRoutes = useMemo(
     () =>
@@ -377,10 +430,10 @@ export function RoutePlanBuilder({
               ...route,
               readonly: true,
             })),
-            ...selectableRoutes,
+            ...routeCatalog,
           ]
-        : selectableRoutes,
-    [isBackup, readonlyPrimaryRoutes, selectableRoutes],
+        : routeCatalog,
+    [isBackup, readonlyPrimaryRoutes, routeCatalog],
   );
   const selectedRoutes = useMemo(
     () =>
@@ -458,7 +511,13 @@ export function RoutePlanBuilder({
         plannedDepartureAt: plan.departureAt,
         plannedArrivalAt: plan.arrivalAt,
         ...(segment.arrangement === "OUTSOURCED"
-          ? { outsourcing: { transportProviderId: "provider-placeholder" } }
+          ? {
+              outsourcing: {
+                transportProviderId:
+                  segment.provider?.transportProviderId ?? "",
+                note: segment.note,
+              },
+            }
           : {}),
       })),
     };
@@ -467,6 +526,16 @@ export function RoutePlanBuilder({
   async function save(action: CreateRoutePlanRequest["action"]) {
     if (!segments.length) {
       setMessage("Add at least one segment before saving.");
+      return;
+    }
+    if (
+      segments.some(
+        (segment) => segment.arrangement === "OUTSOURCED" && !segment.provider,
+      )
+    ) {
+      setMessage(
+        "Please select a valid Transport Provider for every outsourced segment.",
+      );
       return;
     }
     if (!continuity.valid) {
@@ -483,6 +552,10 @@ export function RoutePlanBuilder({
       setMessage("Backup reason must be at least 10 characters.");
       return;
     }
+    if (edit && !updateReason.trim()) {
+      setMessage("Update reason is required.");
+      return;
+    }
     if (transportPlanId === MOCK_PLAN.transportPlanId) {
       setMessage(
         `${action === "SAVE_DRAFT" ? "Draft" : "Legal review"} payload ready. Transport Plan is still mock data.`,
@@ -490,7 +563,17 @@ export function RoutePlanBuilder({
       return;
     }
     try {
-      await createRoutePlan(transportPlanId, toPayload(action));
+      if (edit) {
+        await updateRoutePlan(edit.routePlanId, {
+          lastUpdatedAt: edit.lastUpdatedAt,
+          updateReason: updateReason.trim(),
+          routeNote: routeNote.trim() || undefined,
+          action,
+          segments: toPayload(action).segments,
+        });
+      } else {
+        await createRoutePlan(transportPlanId, toPayload(action));
+      }
       setMessage(
         action === "SAVE_DRAFT"
           ? "Draft saved."
@@ -603,11 +686,19 @@ export function RoutePlanBuilder({
                           items.filter((item) => item.id !== segment.id),
                         )
                       }
-                      onArrangementChange={(arrangement) =>
+                      routePlanId={edit?.routePlanId}
+                      onOutsource={(selection) =>
                         setSegments((items) =>
                           items.map((item) =>
                             item.id === segment.id
-                              ? { ...item, arrangement }
+                              ? {
+                                  ...item,
+                                  arrangement: selection
+                                    ? "OUTSOURCED"
+                                    : "INTERNAL",
+                                  provider: selection?.provider,
+                                  note: selection?.note,
+                                }
                               : item,
                           ),
                         )
@@ -692,6 +783,20 @@ export function RoutePlanBuilder({
                       value={routeNote}
                       onChange={(event) => setRouteNote(event.target.value)}
                       placeholder="Why is this backup route needed?"
+                    />
+                  </label>
+                )}
+                {edit && (
+                  <label className="grid gap-2 text-sm font-medium">
+                    Update reason
+                    <span className="font-normal text-muted-foreground">
+                      Required for optimistic locking audit
+                    </span>
+                    <textarea
+                      className="min-h-24 rounded border px-3 py-2 font-normal"
+                      value={updateReason}
+                      onChange={(event) => setUpdateReason(event.target.value)}
+                      placeholder="Why is this route plan being updated?"
                     />
                   </label>
                 )}
