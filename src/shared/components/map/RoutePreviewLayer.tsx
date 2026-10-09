@@ -11,7 +11,11 @@ export function RoutePreviewLayer({ geometry }: { geometry: unknown }) {
         id="route-preview-line"
         type="line"
         layout={{ "line-cap": "round", "line-join": "round" }}
-        paint={{ "line-color": "#f59e0b", "line-width": 4, "line-dasharray": [2, 1] }}
+        paint={{
+          "line-color": "#f59e0b",
+          "line-width": 4,
+          "line-dasharray": [2, 1],
+        }}
       />
     </Source>
   );

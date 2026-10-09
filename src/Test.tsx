@@ -128,8 +128,13 @@ export default function Test() {
   const [nearbyOpen, setNearbyOpen] = useState(false);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [nearbyError, setNearbyError] = useState<string | null>(null);
-  const [routeStart, setRouteStart] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [routePreview, setRoutePreview] = useState<MapRoutePreview | null>(null);
+  const [routeStart, setRouteStart] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [routePreview, setRoutePreview] = useState<MapRoutePreview | null>(
+    null,
+  );
   const routeAbortController = useRef<AbortController | null>(null);
   const [locationFormValues, setLocationFormValues] = useState<
     Partial<LocationFormValues> | undefined
@@ -213,22 +218,41 @@ export default function Test() {
       .finally(() => setNearbyLoading(false));
   }
 
-  function handleRoutePointSelect(point: { latitude: number; longitude: number }) {
+  function handleRoutePointSelect(point: {
+    latitude: number;
+    longitude: number;
+  }) {
     if (!routeStart || routePreview) {
       routeAbortController.current?.abort();
       setRouteStart(point);
       setRoutePreview(null);
       return;
     }
-    if (routeStart.latitude === point.latitude && routeStart.longitude === point.longitude) return;
+    if (
+      routeStart.latitude === point.latitude &&
+      routeStart.longitude === point.longitude
+    )
+      return;
     routeAbortController.current?.abort();
     const controller = new AbortController();
     routeAbortController.current = controller;
     void previewGeoapifyRoute(routeStart, point, controller.signal)
       .then((result) => setRoutePreview(result))
       .catch((loadError) => {
-        if (loadError instanceof DOMException && loadError.name === "AbortError") return;
-        setRoutePreview({ geometry: null, distanceKm: 0, durationMinutes: 0, error: loadError instanceof Error ? loadError.message : "Unable to preview route." });
+        if (
+          loadError instanceof DOMException &&
+          loadError.name === "AbortError"
+        )
+          return;
+        setRoutePreview({
+          geometry: null,
+          distanceKm: 0,
+          durationMinutes: 0,
+          error:
+            loadError instanceof Error
+              ? loadError.message
+              : "Unable to preview route.",
+        });
       });
   }
 
@@ -318,8 +342,14 @@ export default function Test() {
             </span>
             {isCoordinator && (
               <>
-                <Button onClick={() => setMode(mode === "addLocation" ? "view" : "addLocation")}>
-                  {mode === "addLocation" ? "Cancel map selection" : "Add Location"}
+                <Button
+                  onClick={() =>
+                    setMode(mode === "addLocation" ? "view" : "addLocation")
+                  }
+                >
+                  {mode === "addLocation"
+                    ? "Cancel map selection"
+                    : "Add Location"}
                 </Button>
                 <Button
                   variant="outline"
@@ -329,7 +359,9 @@ export default function Test() {
                     setRoutePreview(null);
                   }}
                 >
-                  {mode === "addRoute" ? "Cancel route preview" : "Preview Route"}
+                  {mode === "addRoute"
+                    ? "Cancel route preview"
+                    : "Preview Route"}
                 </Button>
               </>
             )}
@@ -360,7 +392,8 @@ export default function Test() {
         )}
         {mode === "addRoute" && routePreview && (
           <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm">
-            {routePreview.error ?? `Estimated: ${routePreview.distanceKm.toFixed(1)} km · ${Math.round(routePreview.durationMinutes)} min`}
+            {routePreview.error ??
+              `Estimated: ${routePreview.distanceKm.toFixed(1)} km · ${Math.round(routePreview.durationMinutes)} min`}
           </p>
         )}
       </div>

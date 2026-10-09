@@ -25,6 +25,7 @@ export type MapRoute = {
   geoJson?: unknown;
   fromLocation?: MapLocation | null;
   toLocation?: MapLocation | null;
+  transportMode?: "ROAD" | "SEA" | "AIR";
   distanceKm?: number | null;
   durationMinutes?: number | null;
   source?: "saved" | "preview";
