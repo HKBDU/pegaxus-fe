@@ -5,6 +5,7 @@ import type { ApiEnvelope } from "@/features/booking/types"
 import type { EntityId, PaginatedResponse } from "@/shared/types"
 import { approvedBookingDetailSchema, approvedBookingsPageSchema, approvedBookingsQuerySchema, entityIdSchema } from "./schemas"
 import type { ApprovedBookingListItem, ApprovedBookingsQueryParams } from "./types"
+import { isFlow3MockMode } from "./source"
 
 const envelopeSchema = z.object({
   isSuccess: z.boolean(), code: z.number(), message: z.string(), value: z.unknown(), errorCode: z.string().nullish(),
@@ -35,9 +36,11 @@ export function buildApprovedBookingQuery(params: ApprovedBookingsQueryParams) {
 
 export const approvedBookingService = {
   async getApprovedBookings(params: ApprovedBookingsQueryParams, signal?: AbortSignal): Promise<PaginatedResponse<ApprovedBookingListItem>> {
-    const response = await apiClient.get<unknown, unknown>("/bookings/approved", {
-      params: buildApprovedBookingQuery(params), signal,
-    })
+    signal?.throwIfAborted()
+    const query = buildApprovedBookingQuery(params)
+    const response = !import.meta.env.PROD && isFlow3MockMode()
+      ? (await import("./mock/mock-service")).flow3MockService.getApprovedBookings(query)
+      : await apiClient.get<unknown, unknown>("/bookings/approved", { params: query, signal })
     const page = approvedBookingsPageSchema.parse(readEnvelope(response))
     return {
       data: page.items,
@@ -50,7 +53,10 @@ export const approvedBookingService = {
   },
   async getApprovedBooking(bookingId: EntityId, signal?: AbortSignal) {
     const id = entityIdSchema.parse(bookingId)
-    const response = await apiClient.get<unknown, unknown>(`/bookings/approved/${encodeURIComponent(id)}`, { signal })
+    signal?.throwIfAborted()
+    const response = !import.meta.env.PROD && isFlow3MockMode()
+      ? (await import("./mock/mock-service")).flow3MockService.getApprovedBooking(id)
+      : await apiClient.get<unknown, unknown>(`/bookings/approved/${encodeURIComponent(id)}`, { signal })
     return approvedBookingDetailSchema.parse(readEnvelope(response))
   },
 }

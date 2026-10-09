@@ -28,7 +28,7 @@ export function getApprovedBookingActions(principal: AuthPrincipal | null, booki
   const candidate = "routePlans" in booking ? booking.routePlans.find((item) => item.routeType === "PRIMARY" && item.status !== "CANCELLED") : booking.routePlan
   const route = candidate?.status === "CANCELLED" ? null : candidate
   const viewRoute: ApprovedBookingAction[] = route ? [{ kind: "viewRoutePlan", label: "View Route Plan", targetId: route.routePlanId,
-    blockedReason: "Route Plan navigation awaits the route-view feature and registered route." }] : []
+    blockedReason: "Route Plan navigation is pending router integration." }] : []
   if (canAccess(principal, { anyRole: ["FLEET_ROUTE_COORDINATOR"] })) {
     if (route) return [...viewPlan, ...viewRoute]
     return plan?.status === "APPROVED" ? [...viewPlan, { kind: "createRoutePlan", label: "Create Route Plan", targetId: plan.transportPlanId,

@@ -4,13 +4,18 @@ import type { EntityId, PaginatedResponse } from "@/shared/types"
 import { getApiErrorInfo, readEnvelope } from "./services"
 import { createTransportPlanSchema, updateTransportPlanSchema, transportPlanDetailSchema, transportPlanIdSchema, transportPlansPageSchema, transportPlansQuerySchema } from "./transport-plan.schemas"
 import type { CreateTransportPlanInput, UpdateTransportPlanInput, TransportPlanListItem, TransportPlansQueryParams } from "./transport-plan.types"
+import { isFlow3MockMode } from "./source"
 
 export const buildTransportPlanQuery = (params: TransportPlansQueryParams) => transportPlansQuerySchema.parse(params)
 const detailPath = (id: EntityId) => `/transport-plans/${encodeURIComponent(transportPlanIdSchema.parse(id))}`
 
 export const transportPlanService = {
   async getPlans(params: TransportPlansQueryParams, signal?: AbortSignal): Promise<PaginatedResponse<TransportPlanListItem>> {
-    const payload = await apiClient.get<unknown, unknown>("/transport-plans", { params: buildTransportPlanQuery(params), signal })
+    signal?.throwIfAborted()
+    const query = buildTransportPlanQuery(params)
+    const payload = !import.meta.env.PROD && isFlow3MockMode()
+      ? (await import("./mock/mock-service")).flow3MockService.getPlans(query)
+      : await apiClient.get<unknown, unknown>("/transport-plans", { params: query, signal })
     const page = transportPlansPageSchema.parse(readEnvelope(payload))
     return { data: page.items, meta: {
       currentPage: page.pageIndex, itemsPerPage: page.pageSize, totalItems: page.totalItems, totalPages: page.totalPages,
@@ -18,15 +23,25 @@ export const transportPlanService = {
     } }
   },
   async getPlan(id: EntityId, signal?: AbortSignal) {
-    const payload = await apiClient.get<unknown, unknown>(detailPath(id), { signal })
+    const path = detailPath(id)
+    signal?.throwIfAborted()
+    const payload = !import.meta.env.PROD && isFlow3MockMode()
+      ? (await import("./mock/mock-service")).flow3MockService.getPlan(String(id))
+      : await apiClient.get<unknown, unknown>(path, { signal })
     return transportPlanDetailSchema.parse(readEnvelope(payload))
   },
   async createPlan(bookingId: string, input: CreateTransportPlanInput) {
-    const payload = await apiClient.post<unknown, unknown>(`/bookings/${encodeURIComponent(transportPlanIdSchema.parse(bookingId))}/transport-plans`, createTransportPlanSchema.parse(input))
+    const id = transportPlanIdSchema.parse(bookingId), body = createTransportPlanSchema.parse(input)
+    const payload = !import.meta.env.PROD && isFlow3MockMode()
+      ? (await import("./mock/mock-service")).flow3MockService.createPlan(id, body)
+      : await apiClient.post<unknown, unknown>(`/bookings/${encodeURIComponent(id)}/transport-plans`, body)
     return transportPlanDetailSchema.parse(readEnvelope(payload))
   },
   async updatePlan(id: string, input: UpdateTransportPlanInput) {
-    const payload = await apiClient.put<unknown, unknown>(detailPath(id), updateTransportPlanSchema.parse(input))
+    const path = detailPath(id), body = updateTransportPlanSchema.parse(input)
+    const payload = !import.meta.env.PROD && isFlow3MockMode()
+      ? (await import("./mock/mock-service")).flow3MockService.updatePlan(id, body)
+      : await apiClient.put<unknown, unknown>(path, body)
     return transportPlanDetailSchema.parse(readEnvelope(payload))
   },
 }

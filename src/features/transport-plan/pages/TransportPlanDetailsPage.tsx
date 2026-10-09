@@ -18,6 +18,7 @@ import { TransportPlanStatusBadge } from "../components/TransportPlanStatusBadge
 import { TransportPlanGeneral } from "../components/TransportPlanGeneral"
 import { TransportPlanQuotation } from "../components/TransportPlanQuotation"
 import { TransportPlanPersonnel, type PersonnelPanelProps } from "../components/TransportPlanPersonnel"
+import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
 
 export function TransportPlanDetails({ plan, personnelPanel }: { plan: TransportPlanDetail; personnelPanel?: ComponentType<PersonnelPanelProps> }) {
   const [params, setParams] = useSearchParams()
@@ -51,6 +52,7 @@ function TransportPlanReadPage() {
   const error = query.isError ? getTransportPlanError(query.error) : null
   return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
     <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
+      <Flow3MockIndicator />
       <div><PageHeader title="Transport Plan Details" backHref={ROLE_ROUTES.transportPlans} backLabel="Back to Transport Plans" /></div>
       {!validId ? <ErrorState message="The transport plan identifier is invalid." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
         query.isPending ? <BookingDetailsSkeleton /> : query.data ? <TransportPlanDetails key={transportPlanId} plan={query.data} /> : null}

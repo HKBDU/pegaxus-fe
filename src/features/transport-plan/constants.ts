@@ -1,5 +1,5 @@
 import type { ApprovedBookingsQueryParams } from "./types"
-import { dossierStatusSchema, routePlanStatusSchema } from "./schemas"
+import { approvedBookingsQuerySchema, dossierStatusSchema, routePlanStatusSchema } from "./schemas"
 
 export const initialApprovedBookingParams: ApprovedBookingsQueryParams = {
   pageIndex: 1, pageSize: 20, search: "", sortBy: "requestedDepartureDate:asc",
@@ -32,4 +32,9 @@ export function changeApprovedBookingFilters(
 export function hasApprovedBookingFilters(params: ApprovedBookingsQueryParams) {
   return Boolean(params.search?.trim() || params.isInternational != null || params.transportPlanStatus || params.routePlanStatus ||
     params.hasRoutePlan != null || params.hasTransportPlan != null || params.hasComplianceDossier != null || params.complianceDossierStatus || params.departureFrom || params.departureTo)
+}
+
+export function buildDepartureRange(from: string, to: string) {
+  const range = approvedBookingsQuerySchema.parse({ ...initialApprovedBookingParams, departureFrom: from || undefined, departureTo: to || undefined })
+  return { departureFrom: range.departureFrom, departureTo: range.departureTo }
 }

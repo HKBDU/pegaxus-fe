@@ -9,6 +9,7 @@ import { changeApprovedBookingFilters, initialApprovedBookingParams } from "../c
 import { useApprovedBookings } from "../hooks/useApprovedBookings"
 import { getApprovedBookingError } from "../services"
 import type { ApprovedBookingsQueryParams } from "../types"
+import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
 
 export default function ApprovedBookingsPage() {
   const [params, setParams] = useState(initialApprovedBookingParams)
@@ -26,6 +27,7 @@ export default function ApprovedBookingsPage() {
 
   return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
     <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
+      <Flow3MockIndicator />
       <div><PageHeader title="Approved Bookings" backHref={ROLE_ROUTES.managerHome} showBack={false} />
         <p className="text-xs text-slate-500 sm:text-sm">Approved transport requests ready for transport and route planning.</p></div>
       <ApprovedBookingFilters params={params} onChange={changeFilters} />

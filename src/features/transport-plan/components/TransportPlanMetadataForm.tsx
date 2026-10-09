@@ -18,6 +18,7 @@ import { getTransportPlanError } from "../transport-plan.services"
 import { buildCreatePlanInput, buildUpdatePlanInput, canEditTransportPlan, editTransportPlanFormSchema, emptyPlanForm, planToForm, transportPlanFormSchema, type TransportPlanFormValues } from "../transport-plan.form"
 import type { TransportPlanDetail } from "../transport-plan.types"
 import { Section } from "./ApprovedBookingDetails"
+import { Flow3MockIndicator } from "./Flow3MockIndicator"
 
 const controlClass = "h-8 rounded-[2px] border-slate-300 bg-white text-xs shadow-none focus-visible:border-primary focus-visible:ring-primary/20"
 const fields = [
@@ -83,6 +84,7 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
     finally { setReloading(false) }
   }
   return <Form {...form}><form noValidate onSubmit={submit} className="space-y-5">
+    <Flow3MockIndicator />
     <Section title="Transport Plan Metadata">
       <p className="text-xs text-slate-500">Dates use your local time zone and are submitted in UTC. Leave optional numeric fields blank to omit them{baseline ? " and retain existing values" : ""}.</p>
       <fieldset disabled={isPending || !canWrite} className="grid gap-5 sm:grid-cols-2">
