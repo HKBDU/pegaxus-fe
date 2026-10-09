@@ -85,6 +85,7 @@ export type MapViewerProps = {
   searchEmptyMessage?: string;
   onSearchChange?: (value: string) => void;
   onLocationSelect?: (location: MapLocation) => void;
+  onMarkerSelect?: (location: MapLocation) => void;
   onLocationHover?: (location: MapLocation | null) => void;
   onMapClick?: (point: MapPoint) => void;
   onRoutePointSelect?: (point: MapPoint, location?: MapLocation) => void;

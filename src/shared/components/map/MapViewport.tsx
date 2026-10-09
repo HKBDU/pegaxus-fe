@@ -64,7 +64,6 @@ export const MapViewport = forwardRef<MapViewportHandle, MapViewportProps>(
       const point = toCoordinates([event.lngLat.lng, event.lngLat.lat]);
       if (point) onMapClick?.(point);
     }
-
     return (
       <Map
         ref={mapRef}

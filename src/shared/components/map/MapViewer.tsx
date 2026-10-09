@@ -38,6 +38,7 @@ export function MapViewer({
   searchEmptyMessage,
   onSearchChange,
   onLocationSelect,
+  onMarkerSelect,
   onLocationHover,
   onMapClick,
   onRoutePointSelect,
@@ -59,9 +60,6 @@ export function MapViewer({
     : null;
   const resolvedOtherRoutes = resolvedRoutes.filter(
     (item) => item.id !== route?.id,
-  );
-  const hasEstimatedRoute = resolvedRoutes.some(
-    (item) => item.source === "preview",
   );
   const validLocations = useMemo(
     () => locations.filter((location) => toMapPoint(location) !== null),
@@ -122,7 +120,7 @@ export function MapViewer({
     schedulePopupHide();
   }
 
-  function selectLocation(location: MapLocation) {
+  function selectLocation(location: MapLocation, fromSearch = false) {
     state.selectLocation(location);
     if (state.mode === "addRoute") {
       const point = {
@@ -133,7 +131,8 @@ export function MapViewer({
       onRoutePointSelect?.(point, location);
     }
     onLocationSelect?.(location);
-    if (state.mode !== "addRoute") {
+    if (!fromSearch) onMarkerSelect?.(location);
+    if (fromSearch) {
       viewport.current?.flyTo(location.longitude, location.latitude);
     }
   }
@@ -155,11 +154,6 @@ export function MapViewer({
           Loading locations...
         </div>
       )}
-      {hasEstimatedRoute && (
-        <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2 rounded bg-amber-100 px-3 py-2 text-xs font-medium text-amber-900 shadow">
-          Ước lượng · route preview unavailable
-        </div>
-      )}
       {!loading && !validLocations.length && (
         <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded bg-white px-3 py-2 text-sm shadow">
           No valid locations to display.
@@ -175,7 +169,7 @@ export function MapViewer({
             setSearchValue(value);
             onSearchChange?.(value);
           }}
-          onSelect={selectLocation}
+          onSelect={(location) => selectLocation(location, true)}
         />
       )}
       <MapViewport
@@ -198,7 +192,7 @@ export function MapViewer({
         <LocationMarkers
           locations={validLocations}
           selectedLocation={state.selectedLocation}
-          onSelect={selectLocation}
+          onSelect={(location) => selectLocation(location)}
           onHover={handleMarkerHover}
         />
         <RouteLayer

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   ArrowRight,
@@ -35,6 +36,11 @@ import {
 } from "./OutsourceSegmentDialog";
 import type { Provider } from "../types";
 import type { CreateRoutePlanRequest, RouteSegmentInput } from "../types";
+import {
+  Metadata as BuilderMetadata,
+  Progress as BuilderProgress,
+  SegmentCard as BuilderSegmentCard,
+} from "./RoutePlanBuilderParts";
 
 type WizardStep = 0 | 1 | 2;
 
@@ -75,6 +81,10 @@ type DraftSegment = {
   provider?: Provider;
   note?: string;
 };
+
+function arrangementForRoute(route: MapRoute): "INTERNAL" | "OUTSOURCED" {
+  return route.transportMode === "ROAD" ? "INTERNAL" : "OUTSOURCED";
+}
 
 const MOCK_PLAN: TransportPlanSummary = {
   transportPlanId: "mock-transport-plan",
@@ -337,7 +347,7 @@ function SegmentCard({
               </div>
               <div>
                 <p className="text-muted-foreground">Stop type</p>
-                <Badge variant="ghost" className="mt-1 border-0 px-0">
+                <Badge variant="outline" className="mt-1 border-0 px-0">
                   {segment.stopType.replace("_", " ")}
                 </Badge>
               </div>
@@ -384,6 +394,10 @@ function SegmentCard({
   );
 }
 
+void Metadata;
+void Progress;
+void SegmentCard;
+
 export type RoutePlanBuilderProps = {
   transportPlanId: string;
   routeType?: "PRIMARY" | "BACKUP";
@@ -419,7 +433,7 @@ export function RoutePlanBuilder({
     initialRoutes.map((route, index) => ({
       id: `${route.id}-${index}`,
       route,
-      arrangement: "INTERNAL",
+      arrangement: arrangementForRoute(route),
       stopType:
         route.toLocation?.id === metadata?.to?.id
           ? "DESTINATION"
@@ -433,6 +447,10 @@ export function RoutePlanBuilder({
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [routeNote, setRouteNote] = useState(initialRouteNote);
   const [updateReason, setUpdateReason] = useState("");
+  const [locationSearch, setLocationSearch] = useState("");
+  const [routeSearch, setRouteSearch] = useState("");
+  const [showRouteSearch, setShowRouteSearch] = useState(false);
+  const [sourceLocation, setSourceLocation] = useState<MapLocation | null>(null);
   const isBackup = routeType === "BACKUP";
   const readonlyPrimaryRoutes = useMemo(
     () => primaryRoutes ?? [],
@@ -473,19 +491,29 @@ export function RoutePlanBuilder({
       ),
     [backupRoutes, initialRoutes, isBackup, routes],
   );
-  const mapRoutes = useMemo(
-    () =>
-      isBackup
-        ? [
-            ...readonlyPrimaryRoutes.map((route) => ({
-              ...route,
-              readonly: true,
-            })),
-            ...routeCatalog,
-          ]
-        : routeCatalog,
-    [isBackup, readonlyPrimaryRoutes, routeCatalog],
-  );
+  const filteredRoutes = useMemo(() => {
+    const query = routeSearch.trim().toLowerCase();
+    if (!query) return routeCatalog;
+    return routeCatalog.filter((route) =>
+      [
+        route.name,
+        route.fromLocation?.name,
+        route.toLocation?.name,
+        route.transportMode,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [routeCatalog, routeSearch]);
+  const locationOptions = useMemo(() => {
+    const query = locationSearch.trim().toLowerCase();
+    if (!query) return locations;
+    return locations.filter((location) =>
+      [location.name, location.address, location.city, location.country]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)),
+    );
+  }, [locationSearch, locations]);
   const selectedRoutes = useMemo(
     () =>
       isBackup
@@ -535,7 +563,7 @@ export function RoutePlanBuilder({
       {
         id: `${route.id}-${Date.now()}`,
         route,
-        arrangement: "INTERNAL",
+        arrangement: arrangementForRoute(route),
         stopType:
           route.toLocation?.id === plan.to.id
             ? "DESTINATION"
@@ -544,6 +572,40 @@ export function RoutePlanBuilder({
               : "REST_STOP",
       },
     ]);
+  }
+
+  function selectMapLocation(location: MapLocation) {
+    if (!sourceLocation) {
+      setSourceLocation(location);
+      setBuildMessage(`Source selected: ${location.name}. Please choose a Destination.`);
+      return;
+    }
+    if (String(sourceLocation.id) === String(location.id)) {
+      setBuildMessage("Source and Destination must be different.");
+      return;
+    }
+    const found = routeCatalog.find(
+      (route) =>
+        String(route.fromLocation?.id) === String(sourceLocation.id) &&
+        String(route.toLocation?.id) === String(location.id),
+    );
+    if (found) {
+      toast(`${sourceLocation.name} → ${location.name}`, {
+        description: "Saved Route found.",
+        duration: 3000,
+        action: {
+          label: "Add",
+          onClick: () => {
+            addSegment(found);
+          },
+        },
+      });
+    } else {
+      toast.error(`${sourceLocation.name} → ${location.name}`, {
+        description: "No saved Route exists between these Locations.",
+      });
+    }
+    setSourceLocation(null);
   }
 
   function toPayload(
@@ -561,11 +623,10 @@ export function RoutePlanBuilder({
         transportMode: segment.route.transportMode,
         plannedDepartureAt: plan.departureAt,
         plannedArrivalAt: plan.arrivalAt,
-        ...(segment.arrangement === "OUTSOURCED"
+        ...(segment.arrangement === "OUTSOURCED" && segment.provider
           ? {
               outsourcing: {
-                transportProviderId:
-                  segment.provider?.transportProviderId ?? "",
+                transportProviderId: segment.provider.transportProviderId,
                 note: segment.note,
               },
             }
@@ -579,16 +640,6 @@ export function RoutePlanBuilder({
     setSaveNotice(null);
     if (!segments.length) {
       setSaveError("Add at least one segment before saving.");
-      return;
-    }
-    if (
-      segments.some(
-        (segment) => segment.arrangement === "OUTSOURCED" && !segment.provider,
-      )
-    ) {
-      setSaveError(
-        "Please select a valid Transport Provider for every outsourced segment.",
-      );
       return;
     }
     if (!continuity.valid) {
@@ -648,8 +699,8 @@ export function RoutePlanBuilder({
           backLabel="BACK TO ROUTE PLANS"
           action={<Badge variant="outline">{plan.status}</Badge>}
         />
-        <Metadata plan={plan} />
-        <Progress step={step} onChange={setStep} />
+        <BuilderMetadata plan={plan} />
+        <BuilderProgress step={step} onChange={setStep} />
         <section className="rounded-b-[2px] bg-white p-3 md:p-4">
           {step === 0 && (
             <div className="grid gap-3 lg:grid-cols-2">
@@ -708,10 +759,14 @@ export function RoutePlanBuilder({
                 )}
                 <MapViewer
                   locations={locations}
-                  routes={mapRoutes}
+                  routes={selectedRoutes}
                   mode="buildPlan"
                   onModeChange={setMode}
-                  onRouteSelect={addSegment}
+                  showSearch
+                  searchOptions={locationOptions}
+                  onSearchChange={setLocationSearch}
+                  onMarkerSelect={selectMapLocation}
+                  onRouteSelect={() => undefined}
                 />
               </div>
               <div>
@@ -722,8 +777,35 @@ export function RoutePlanBuilder({
                   </span>
                 </div>
                 <div className="grid gap-2">
+                  <div className="hidden">
+                    <label className="grid gap-2 text-sm font-medium">
+                      Search saved Route
+                      <input
+                        value={routeSearch}
+                        onChange={(event) => setRouteSearch(event.target.value)}
+                        placeholder="Search by route or Location"
+                        className="h-9 rounded border bg-white px-3 font-normal"
+                      />
+                    </label>
+                    <div className="mt-2 grid max-h-48 gap-1 overflow-y-auto">
+                      {filteredRoutes.map((route) => (
+                        <button
+                          key={route.id}
+                          type="button"
+                          className="rounded border bg-white px-3 py-2 text-left text-sm hover:border-amber-500 hover:bg-amber-50"
+                          onClick={() => addSegment(route)}
+                        >
+                          <span className="block font-medium">{route.name ?? "Unnamed Route"}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {route.fromLocation?.name} → {route.toLocation?.name} · {route.transportMode ?? "ROAD"}
+                          </span>
+                        </button>
+                      ))}
+                      {!filteredRoutes.length && <p className="text-xs text-muted-foreground">No saved Route found.</p>}
+                    </div>
+                  </div>
                   {segments.map((segment, index) => (
-                    <SegmentCard
+                    <BuilderSegmentCard
                       key={segment.id}
                       segment={segment}
                       index={index}
@@ -755,14 +837,39 @@ export function RoutePlanBuilder({
                     type="button"
                     variant="outline"
                     className="w-fit"
-                    onClick={() =>
-                      setBuildMessage(
-                        "Choose a route on the map to add a segment.",
-                      )
-                    }
+                    onClick={() => setShowRouteSearch((value) => !value)}
                   >
-                    + Add Segment
+                    {showRouteSearch ? "Close Route Search" : "+ Add Segment"}
                   </Button>
+                  {showRouteSearch && (
+                    <div className="rounded border bg-slate-50 p-3">
+                      <input
+                        value={routeSearch}
+                        onChange={(event) => setRouteSearch(event.target.value)}
+                        placeholder="Search saved Route"
+                        className="h-9 w-full rounded border bg-white px-3 text-sm"
+                      />
+                      <div className="mt-2 grid max-h-48 gap-1 overflow-y-auto">
+                        {filteredRoutes.map((route) => (
+                          <button
+                            key={route.id}
+                            type="button"
+                            className="rounded border bg-white px-3 py-2 text-left text-sm hover:border-amber-500 hover:bg-amber-50"
+                            onClick={() => {
+                              addSegment(route);
+                              setShowRouteSearch(false);
+                            }}
+                          >
+                            <span className="block font-medium">{route.name ?? "Unnamed Route"}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {route.fromLocation?.name} → {route.toLocation?.name} · {route.transportMode ?? "ROAD"}
+                            </span>
+                          </button>
+                        ))}
+                        {!filteredRoutes.length && <p className="text-xs text-muted-foreground">No saved Route found.</p>}
+                      </div>
+                    </div>
+                  )}
                   {buildMessage && (
                     <p className="text-sm text-amber-700">{buildMessage}</p>
                   )}

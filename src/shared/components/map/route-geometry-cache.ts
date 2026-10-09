@@ -3,6 +3,7 @@ import {
   type RoutePreviewError,
 } from "@/shared/utils/map/routing";
 import type { RouteGeometry } from "@/shared/utils/map";
+import { normalizeRouteGeoJson } from "@/shared/utils/map/geojson";
 import type { MapRoute } from "./types";
 
 export type ResolvedRouteGeometry = {
