@@ -14,7 +14,7 @@ export default function ApprovedBookingsPage() {
   const [params, setParams] = useState(initialApprovedBookingParams)
   const search = useDebounce(params.search, 300)
   const isSearchPending = search !== params.search
-  const query = useApprovedBookings({ ...params, search })
+  const query = useApprovedBookings({ ...params, search }, !isSearchPending)
   const changeFilters = useCallback((patch: Partial<Omit<ApprovedBookingsQueryParams, "pageIndex">>) => {
     setParams((current) => changeApprovedBookingFilters(current, patch))
   }, [])

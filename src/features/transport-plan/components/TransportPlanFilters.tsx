@@ -1,8 +1,8 @@
 import { Search } from "lucide-react"
 import { Input } from "@/shared/components/ui/input"
 import { DataTableRadioFilter } from "@/shared/components/ui/data-table-radio-filter"
-import { routePlanningStatusSchema } from "../schemas"
-import { planningOptions, transportPlanSortOptions, transportPlanStatusOptions } from "../transport-plan.constants"
+import { routePlanStatusSchema } from "../schemas"
+import { routeStatusOptions, transportPlanSortOptions, transportPlanStatusOptions } from "../transport-plan.constants"
 import { transportPlanSortSchema, transportPlanStatusSchema } from "../transport-plan.schemas"
 import type { TransportPlansQueryParams } from "../transport-plan.types"
 
@@ -23,8 +23,8 @@ export function TransportPlanFilters({ params, onChange }: {
           onValueChange={(value) => onChange({ status: value === "ALL" ? undefined : transportPlanStatusSchema.parse(value) })} />
       </div>
       <div className="w-[176px] shrink-0 [&>button]:w-full">
-        <DataTableRadioFilter title="Route planning" value={params.routePlanningStatus ?? "ALL"} options={planningOptions}
-          onValueChange={(value) => onChange({ routePlanningStatus: value === "ALL" ? undefined : routePlanningStatusSchema.parse(value) })} />
+        <DataTableRadioFilter title="Route status" value={params.routePlanStatus ?? "ALL"} options={routeStatusOptions}
+          onValueChange={(value) => onChange({ routePlanStatus: value === "ALL" ? undefined : routePlanStatusSchema.parse(value) })} />
       </div>
       <div className="w-[172px] shrink-0 [&>button]:w-full">
         <DataTableRadioFilter title="Newest created" ariaLabel="Sort transport plans" hideTitleWhenFiltered defaultValue="createdAt:desc"

@@ -27,7 +27,7 @@ export function ApprovedBookingDetails({ booking }: { booking: ApprovedBookingDe
         <Field label="Phone">{booking.customer.phone}</Field>
         <Field label="Origin">{booking.originAddress} ({booking.originCountry})</Field>
         <Field label="Destination">{booking.destinationAddress} ({booking.destinationCountry})</Field>
-        <Field label="Transport scope"><ApprovedBookingBadge value={booking.transportScope} /></Field>
+        <Field label="Transport scope"><ApprovedBookingBadge value={booking.isInternational ? "INTERNATIONAL" : "DOMESTIC"} /></Field>
         <Field label="Requested departure">{formatBookingDate(booking.requestedDepartureDate)}</Field>
         <Field label="Requested arrival">{formatBookingDate(booking.requestedArrivalDate)}</Field>
         <Field label="Total horses">{String(booking.totalHorses)}</Field>
@@ -58,8 +58,7 @@ export function ApprovedBookingDetails({ booking }: { booking: ApprovedBookingDe
       <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <Field label="Transport"><div className="space-y-1"><p>{booking.transport.transportCode}</p><ApprovedBookingBadge value={booking.transport.status} /></div></Field>
         <Field label="Transport plan">{booking.transportPlan ? <div className="space-y-1"><p>{booking.transportPlan.planCode}</p><ApprovedBookingBadge value={booking.transportPlan.status} /></div> : "Not created"}</Field>
-        <Field label="Deposit"><ApprovedBookingBadge value={booking.depositStatus} /></Field>
-        <Field label="Route planning"><ApprovedBookingBadge value={booking.routePlanningStatus} /></Field>
+        <Field label="Compliance dossier">{booking.complianceDossier ? <ApprovedBookingBadge value={booking.complianceDossier.status} /> : "Not created"}</Field>
       </dl>
       <div className="border-t pt-4">
         <h3 className="mb-3 text-sm font-medium">Route plans</h3>

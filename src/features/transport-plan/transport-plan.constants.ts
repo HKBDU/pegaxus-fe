@@ -1,4 +1,4 @@
-import { planningOptions } from "./constants"
+import { routeStatusOptions } from "./constants"
 import { transportPlanStatusSchema } from "./transport-plan.schemas"
 import type { TransportPlansQueryParams } from "./transport-plan.types"
 
@@ -15,10 +15,10 @@ export const transportPlanSortOptions = [
   { value: "plannedStartAt:asc", label: "Start: earliest" },
   { value: "plannedStartAt:desc", label: "Start: latest" },
 ]
-export { planningOptions }
+export { routeStatusOptions }
 export function changeTransportPlanFilters(current: TransportPlansQueryParams, patch: Partial<Omit<TransportPlansQueryParams, "pageIndex">>): TransportPlansQueryParams {
   return { ...current, ...patch, pageIndex: 1 }
 }
 export function hasTransportPlanFilters(params: TransportPlansQueryParams) {
-  return Boolean(params.search?.trim() || params.status || params.routePlanningStatus)
+  return Boolean(params.search?.trim() || params.status || params.routePlanStatus)
 }

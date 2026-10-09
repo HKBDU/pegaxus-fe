@@ -2,8 +2,8 @@ import { z } from "zod"
 import apiClient from "@/lib/axios"
 import type { EntityId, PaginatedResponse } from "@/shared/types"
 import { getApiErrorInfo, readEnvelope } from "./services"
-import { transportPlanAssignmentsSchema, transportPlanDetailSchema, transportPlanIdSchema, transportPlanQuotationSchema, transportPlansPageSchema, transportPlansQuerySchema } from "./transport-plan.schemas"
-import type { TransportPlanListItem, TransportPlansQueryParams } from "./transport-plan.types"
+import { createTransportPlanSchema, updateTransportPlanSchema, transportPlanDetailSchema, transportPlanIdSchema, transportPlansPageSchema, transportPlansQuerySchema } from "./transport-plan.schemas"
+import type { CreateTransportPlanInput, UpdateTransportPlanInput, TransportPlanListItem, TransportPlansQueryParams } from "./transport-plan.types"
 
 export const buildTransportPlanQuery = (params: TransportPlansQueryParams) => transportPlansQuerySchema.parse(params)
 const detailPath = (id: EntityId) => `/transport-plans/${encodeURIComponent(transportPlanIdSchema.parse(id))}`
@@ -21,27 +21,26 @@ export const transportPlanService = {
     const payload = await apiClient.get<unknown, unknown>(detailPath(id), { signal })
     return transportPlanDetailSchema.parse(readEnvelope(payload))
   },
-  async getQuotation(id: EntityId, signal?: AbortSignal) {
-    try {
-      const payload = await apiClient.get<unknown, unknown>(`${detailPath(id)}/quotation`, { signal })
-      return transportPlanQuotationSchema.parse(readEnvelope(payload))
-    } catch (error) {
-      const { code, status } = getApiErrorInfo(error)
-      // A missing quotation is normal; a missing endpoint/plan is still an error.
-      if (status === 404 && code === "QUOTATION_NOT_FOUND") return null
-      throw error
-    }
+  async createPlan(bookingId: string, input: CreateTransportPlanInput) {
+    const payload = await apiClient.post<unknown, unknown>(`/bookings/${encodeURIComponent(transportPlanIdSchema.parse(bookingId))}/transport-plans`, createTransportPlanSchema.parse(input))
+    return transportPlanDetailSchema.parse(readEnvelope(payload))
   },
-  async getAssignments(id: EntityId, signal?: AbortSignal) {
-    const payload = await apiClient.get<unknown, unknown>(`${detailPath(id)}/assignments`, { signal })
-    return transportPlanAssignmentsSchema.parse(readEnvelope(payload))
+  async updatePlan(id: string, input: UpdateTransportPlanInput) {
+    const payload = await apiClient.put<unknown, unknown>(detailPath(id), updateTransportPlanSchema.parse(input))
+    return transportPlanDetailSchema.parse(readEnvelope(payload))
   },
 }
 
 export function getTransportPlanError(error: unknown, context: "list" | "detail" | "quotation" | "personnel" = "detail") {
-  const { code, status } = getApiErrorInfo(error)
-  if (status === 401) return { message: "Your session has expired. Please sign in again.", retryable: false }
-  if (status === 403) return { message: "You do not have permission to view this transport plan.", retryable: false }
+  const { code, status, message } = getApiErrorInfo(error)
+  if (code === "PLAN_LOCKED") return { message: message || "This plan is locked because transportation has started or ended.", retryable: false }
+  if (code === "TRANSPORT_PLAN_MODIFIED") return { message: message || "This plan has changed. Reload Latest Data before saving again.", retryable: false }
+  if (code === "TRANSPORT_PLAN_ALREADY_EXISTS") return { message: message || "A plan already exists for this booking. Open the existing plan instead.", retryable: false }
+  if (code === "BOOKING_NOT_FOUND") return { message: message || "Booking not found.", retryable: false }
+  if (code === "INVALID_BOOKING_STATUS") return { message: message || "Booking must be approved before creating a plan.", retryable: false }
+  if (code === "VALIDATION_ERROR") return { message: message || "Check the transport plan fields and try again.", retryable: false }
+  if (code === "UNAUTHORIZED" || status === 401) return { message: "Your session has expired. Please sign in again.", retryable: false }
+  if (code === "FORBIDDEN" || status === 403) return { message: "You do not have permission to view this transport plan.", retryable: false }
   if (code === "TRANSPORT_PLAN_NOT_FOUND") return { message: "Transport plan not found or no longer available.", retryable: false }
   if (status === 404) return { message: context === "detail" ? "Transport plan not found or its API is unavailable." : "This transport plan API is not available. Please contact your administrator.", retryable: false }
   if (code === "INVALID_SORT_PARAMETER") return { message: "This sort option is not supported. Select another sort option.", retryable: false }

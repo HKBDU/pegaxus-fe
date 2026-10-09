@@ -1,10 +1,7 @@
 import type { EntityId } from "@/shared/types"
-import { EmptyState, ErrorState } from "@/shared/components/common"
-import { Skeleton } from "@/shared/components/ui/skeleton"
+import { EmptyState } from "@/shared/components/common"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
-import { useTransportPlanQuotation } from "../hooks/useTransportPlans"
 import { formatPlanDate, formatPlanMoney } from "../format"
-import { getTransportPlanError } from "../transport-plan.services"
 import type { TransportPlanQuotation as Quotation } from "../transport-plan.types"
 import { Field, Section } from "./ApprovedBookingDetails"
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
@@ -32,12 +29,8 @@ export function QuotationDetails({ quotation }: { quotation: Quotation }) {
   </Section>
 }
 
-export function TransportPlanQuotation({ transportPlanId }: { transportPlanId: EntityId }) {
-  const query = useTransportPlanQuotation(transportPlanId)
-  if (query.isPending) return <Skeleton aria-label="Loading quotation" className="h-56 rounded-[2px] bg-[#e9e6de]" />
-  if (query.isError) {
-    const error = getTransportPlanError(query.error, "quotation")
-    return <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} />
-  }
-  return query.data ? <QuotationDetails quotation={query.data} /> : <EmptyState message="No quotation has been created for this transport plan." />
+export function TransportPlanQuotation({ transportPlanId, quotation }: { transportPlanId: EntityId; quotation?: Quotation | null }) {
+  // Flow 6 can provide verified data here; Flow 3 never guesses an ID or fetches an obsolete endpoint.
+  return quotation && quotation.transportPlanId === transportPlanId ? <QuotationDetails quotation={quotation} /> :
+    <Section title="Quotation"><EmptyState message="Quotation details are not available yet. This tab is reserved for the Flow 6 quotation integration." /></Section>
 }

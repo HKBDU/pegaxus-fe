@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom"
+import { useParams, useSearchParams } from "react-router-dom"
 import { ROLE_ROUTES } from "@/app/route-config"
 import { useAuthStore } from "@/features/auth/store"
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
@@ -9,8 +9,10 @@ import { ApprovedBookingDetails } from "../components/ApprovedBookingDetails"
 import { ApprovedBookingPlanningAction } from "../components/ApprovedBookingPlanningAction"
 import { useApprovedBooking } from "../hooks/useApprovedBookings"
 import { getApprovedBookingError } from "../services"
+import CreateTransportPlanPage from "./CreateTransportPlanPage"
+import { entityIdSchema } from "../schemas"
 
-export default function ApprovedBookingDetailsPage() {
+function ApprovedBookingReadPage() {
   const { bookingId = "" } = useParams<{ bookingId: string }>()
   const principal = useAuthStore((state) => state.principal)
   const query = useApprovedBooking(bookingId)
@@ -23,7 +25,7 @@ export default function ApprovedBookingDetailsPage() {
         <PageHeader title="Approved Booking Details" backHref={ROLE_ROUTES.approvedBookings} backLabel="Back to approved bookings" />
         <p className="text-xs text-slate-500 sm:text-sm">Review the approved booking and its transport planning status. Booking information is read-only.</p>
       </div>
-      {!bookingId ? <ErrorState message="A booking identifier is required." /> : error ?
+      {!entityIdSchema.safeParse(bookingId).success ? <ErrorState message="The booking identifier is invalid." /> : error ?
         <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
         query.isPending ? <BookingDetailsSkeleton /> : booking ? <>
           <div className="flex flex-col justify-between gap-4 border-b pb-5 sm:flex-row sm:items-center">
@@ -34,4 +36,9 @@ export default function ApprovedBookingDetailsPage() {
         </> : null}
     </div>
   </div>
+}
+
+export default function ApprovedBookingDetailsPage() {
+  const [params] = useSearchParams()
+  return params.get("action") === "create-plan" ? <CreateTransportPlanPage /> : <ApprovedBookingReadPage />
 }

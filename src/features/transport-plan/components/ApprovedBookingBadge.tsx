@@ -2,8 +2,12 @@ import { Badge } from "@/shared/components/ui/badge"
 
 const tones: Record<string, string> = {
   PENDING: "border-amber-200 bg-amber-50 text-amber-700",
-  PAID: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  NOT_STARTED: "border-slate-200 bg-slate-100 text-slate-600",
+  DRAFT: "border-slate-200 bg-slate-100 text-slate-600",
+  APPROVED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  CONFIRMED: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  ACTIVE: "border-blue-200 bg-blue-50 text-blue-700",
+  CANCELLED: "border-red-200 bg-red-50 text-red-700",
+  REJECTED: "border-red-200 bg-red-50 text-red-700",
   IN_PROGRESS: "border-blue-200 bg-blue-50 text-blue-700",
   COMPLETED: "border-emerald-200 bg-emerald-50 text-emerald-700",
 }

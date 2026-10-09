@@ -9,11 +9,10 @@ import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Button } from "@/shared/components/ui/button"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
-import { formatPlanDate, formatPlanMoney } from "../format"
+import { formatPlanDate } from "../format"
 import { hasTransportPlanFilters } from "../transport-plan.constants"
 import { transportPlanSortSchema } from "../transport-plan.schemas"
 import type { TransportPlanListItem, TransportPlansQueryParams } from "../transport-plan.types"
-import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
 import { TransportPlanStatusBadge } from "./TransportPlanStatusBadge"
 
 export function TransportPlansTable({ plans, params, meta, isLoading, onChange, onPageChange }: {
@@ -29,9 +28,6 @@ export function TransportPlansTable({ plans, params, meta, isLoading, onChange, 
     { accessorKey: "plannedStartAt", header: "Planned start", enableSorting: true, cell: ({ row }) => formatPlanDate(row.original.plannedStartAt) },
     { accessorKey: "plannedEndAt", header: "Planned end", cell: ({ row }) => formatPlanDate(row.original.plannedEndAt) },
     { accessorKey: "status", header: "Status", cell: ({ row }) => <TransportPlanStatusBadge status={row.original.status} /> },
-    { id: "quotation", header: "Estimated quotation", cell: ({ row }) => formatPlanMoney(row.original.totalAmount, row.original.currency) },
-    { accessorKey: "depositStatus", header: "Deposit", cell: ({ row }) => <ApprovedBookingBadge value={row.original.depositStatus} /> },
-    { accessorKey: "routePlanningStatus", header: "Route planning", cell: ({ row }) => <ApprovedBookingBadge value={row.original.routePlanningStatus} /> },
     { id: "actions", header: "Actions", enableHiding: false, cell: ({ row }) => <Button asChild variant="ghost" size="icon" className="size-7 rounded-[2px]"><Link to={transportPlanDetail(row.original.transportPlanId)} aria-label={`View ${row.original.planCode}`}><Eye className="size-3.5" /></Link></Button> },
   ], [])
   const [sortId, direction] = params.sortBy.split(":")

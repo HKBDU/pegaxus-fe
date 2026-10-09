@@ -1,30 +1,22 @@
 import { z } from "zod"
-import { depositStatusSchema, entityIdSchema, routePlanningStatusSchema, transportScopeSchema } from "./schemas"
+import { entityIdSchema, routePlanStatusSchema, transportPlanStatusSchema } from "./schemas"
 
-export const transportPlanIdSchema = z.union([
-  z.number().int().positive(), z.uuid(), z.string().regex(/^[1-9]\d*$/),
-])
-export const transportPlanStatusSchema = z.enum(["DRAFT", "PENDING", "APPROVED", "IN_PROGRESS", "COMPLETED", "CANCELLED"])
+export const transportPlanIdSchema = entityIdSchema
+export { transportPlanStatusSchema }
 export const transportPlanSortSchema = z.enum(["createdAt:asc", "createdAt:desc", "plannedStartAt:asc", "plannedStartAt:desc"])
 export const transportPlanTabSchema = z.enum(["general", "quotation", "personnel"])
 export const transportPlansQuerySchema = z.object({
   pageIndex: z.number().int().positive(), pageSize: z.number().int().positive(),
   search: z.string().trim().optional().transform((value) => value || undefined),
   status: transportPlanStatusSchema.optional(),
-  routePlanningStatus: routePlanningStatusSchema.optional(),
+  routePlanStatus: routePlanStatusSchema.optional(),
   sortBy: transportPlanSortSchema,
 })
 const timestamp = z.iso.datetime({ offset: true })
 const optionalTimestamp = timestamp.nullish()
 const optionalText = z.string().nullish()
-const money = z.number().nonnegative().nullish()
-const currency = z.string().regex(/^[A-Za-z]{3}$/).nullish()
-const transportModes = z.array(z.enum(["ROAD", "SEA", "AIR"])).nullish()
 export const employeeBriefSchema = z.object({
   employeeId: entityIdSchema, employeeCode: z.string(), fullName: z.string(), role: z.string(),
-})
-const providerBriefSchema = z.object({
-  transportProviderId: entityIdSchema, providerCode: z.string(), providerName: z.string(),
 })
 const quotationStatusSchema = z.enum(["DRAFT", "ISSUED"])
 
@@ -32,9 +24,6 @@ export const transportPlanListItemSchema = z.object({
   transportPlanId: entityIdSchema, planCode: z.string(), status: transportPlanStatusSchema,
   bookingId: entityIdSchema, bookingCode: z.string(), customerName: z.string(),
   plannedStartAt: optionalTimestamp, plannedEndAt: optionalTimestamp,
-  transportModeOptions: transportModes,
-  totalAmount: money, currency,
-  depositStatus: depositStatusSchema, routePlanningStatus: routePlanningStatusSchema,
   updatedAt: timestamp,
 })
 export const transportPlansPageSchema = z.object({
@@ -44,24 +33,39 @@ export const transportPlansPageSchema = z.object({
 })
 export const transportPlanDetailSchema = z.object({
   transportPlanId: entityIdSchema, planCode: z.string(), status: transportPlanStatusSchema,
-  booking: z.object({ bookingId: entityIdSchema, bookingCode: z.string(), status: z.string(), transportScope: transportScopeSchema }),
+  booking: z.object({
+    bookingId: entityIdSchema, bookingCode: z.string(), status: z.string(), isInternational: z.boolean(), customerName: z.string(),
+    originAddress: z.string(), originCountry: z.string(), destinationAddress: z.string(), destinationCountry: z.string(),
+    totalHorses: z.number().int().nonnegative(), requestedDepartureDate: z.iso.date(), requestedArrivalDate: z.iso.date(), specialRequirements: optionalText,
+  }),
   transport: z.object({ transportId: entityIdSchema, transportCode: z.string(), status: z.string() }),
   plannedStartAt: optionalTimestamp, plannedEndAt: optionalTimestamp,
-  // C08 remains inconsistent in the document: accept omission, do not fabricate modes.
-  transportModeOptions: transportModes,
   planningNote: optionalText,
   estimatedDistanceKm: z.number().nonnegative().nullish(),
   estimatedDurationMinutes: z.number().nonnegative().nullish(),
-  providers: z.array(z.object({
-    provider: providerBriefSchema.extend({ status: z.string(), supportedModes: z.array(z.string()).optional() }),
-    serviceType: z.string(), assignedAt: timestamp, note: optionalText,
-  })),
   assignedEmployees: z.array(employeeBriefSchema.extend({ responsibility: z.string(), isPrimary: z.boolean(), assignedAt: timestamp })),
-  quotation: z.object({ quotationId: entityIdSchema, status: quotationStatusSchema, currency, totalAmount: money, issuedAt: optionalTimestamp }).nullish(),
-  depositStatus: depositStatusSchema, routePlanningStatus: routePlanningStatusSchema,
   approvedBy: employeeBriefSchema.nullish(), approvedAt: optionalTimestamp,
   createdAt: timestamp, updatedAt: timestamp,
 })
+const metadataFields = {
+  plannedStartAt: timestamp,
+  plannedEndAt: timestamp,
+  estimatedDistanceKm: z.number().finite().nonnegative().optional(),
+  estimatedDurationMinutes: z.number().finite().nonnegative().optional(),
+  planningNote: z.string().optional(),
+}
+export const createTransportPlanSchema = z.object(metadataFields).refine(
+  (input) => Date.parse(input.plannedEndAt) > Date.parse(input.plannedStartAt),
+  { message: "Planned end must be after planned start.", path: ["plannedEndAt"] },
+)
+export const updateTransportPlanSchema = z.object({
+  plannedStartAt: timestamp.optional(), plannedEndAt: timestamp.optional(),
+  estimatedDistanceKm: metadataFields.estimatedDistanceKm, estimatedDurationMinutes: metadataFields.estimatedDurationMinutes,
+  planningNote: metadataFields.planningNote, lastUpdatedAt: timestamp, updateReason: z.string().optional(),
+}).refine((input) => !input.plannedStartAt || !input.plannedEndAt || Date.parse(input.plannedEndAt) > Date.parse(input.plannedStartAt),
+  { message: "Planned end must be after planned start.", path: ["plannedEndAt"] })
+
+// Presentation contract retained for the existing quotation table only; no Flow 3 endpoint uses it.
 export const transportPlanQuotationSchema = z.object({
   quotationId: entityIdSchema, transportPlanId: entityIdSchema,
   versionNo: z.number().int().positive(), status: quotationStatusSchema,
@@ -72,19 +76,4 @@ export const transportPlanQuotationSchema = z.object({
     description: z.string(), amount: z.number().nonnegative(),
   })),
   note: optionalText, issuedAt: optionalTimestamp, createdAt: timestamp, updatedAt: timestamp,
-})
-export const transportPlanAssignmentsSchema = z.object({
-  transportPlanId: entityIdSchema,
-  phase1: z.object({ transportSpecialist: employeeBriefSchema.nullish(), routeCoordinator: employeeBriefSchema.nullish() }).nullish(),
-  phase2: z.object({
-    enabled: z.boolean(), routePlanId: entityIdSchema.nullish(),
-    personnelStatus: z.enum(["NOT_ASSIGNED", "PARTIALLY_ASSIGNED", "FULLY_ASSIGNED"]).nullish(),
-    segments: z.array(z.object({
-      routePlanRouteId: entityIdSchema, sequenceNo: z.number().int().positive(),
-      executionType: z.enum(["INTERNAL", "OUTSOURCED"]),
-      plannedDepartureAt: optionalTimestamp, plannedArrivalAt: optionalTimestamp,
-      driver: employeeBriefSchema.nullish(), escort: employeeBriefSchema.nullish(),
-      provider: providerBriefSchema.nullish(), isComplete: z.boolean().nullish(),
-    })).nullish(),
-  }).nullish(),
 })

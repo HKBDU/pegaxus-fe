@@ -1,20 +1,24 @@
 import { z } from "zod"
 
-export const entityIdSchema = z.union([z.string().trim().min(1), z.number().int().positive()])
-export const transportScopeSchema = z.enum(["DOMESTIC", "INTERNATIONAL"])
-export const depositStatusSchema = z.enum(["PENDING", "PAID"])
-export const routePlanningStatusSchema = z.enum(["NOT_STARTED", "IN_PROGRESS", "COMPLETED"])
+export const entityIdSchema = z.uuid()
+export const transportPlanStatusSchema = z.enum(["DRAFT", "PENDING", "APPROVED", "IN_PROGRESS", "COMPLETED", "CANCELLED"])
+export const routePlanStatusSchema = z.enum(["DRAFT", "CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED"])
+export const dossierStatusSchema = z.enum(["DRAFT", "IN_PREPARATION", "READY_FOR_SUBMISSION", "SUBMITTED", "PENDING", "APPROVED", "REJECTED", "CLOSED"])
 export const approvedBookingSortSchema = z.enum([
-  "requestedDepartureDate:asc", "requestedDepartureDate:desc", "approvedAt:asc", "approvedAt:desc",
+  "requestedDepartureDate:asc", "requestedDepartureDate:desc", "approvedAt:asc", "approvedAt:desc", "createdAt:asc", "createdAt:desc",
 ])
 
 export const approvedBookingsQuerySchema = z.object({
   pageIndex: z.number().int().positive(),
   pageSize: z.number().int().positive(),
   search: z.string().trim().optional().transform((value) => value || undefined),
-  transportScope: transportScopeSchema.optional(),
-  depositStatus: depositStatusSchema.optional(),
-  routePlanningStatus: routePlanningStatusSchema.optional(),
+  isInternational: z.boolean().optional(),
+  transportPlanStatus: transportPlanStatusSchema.optional(),
+  routePlanStatus: routePlanStatusSchema.optional(),
+  hasRoutePlan: z.boolean().optional(),
+  hasTransportPlan: z.boolean().optional(),
+  hasComplianceDossier: z.boolean().optional(),
+  complianceDossierStatus: dossierStatusSchema.optional(),
   departureFrom: z.iso.date().optional(),
   departureTo: z.iso.date().optional(),
   sortBy: approvedBookingSortSchema,
@@ -29,29 +33,37 @@ const customerSchema = z.object({
   fullName: z.string(),
 })
 const transportSchema = z.object({ transportId: entityIdSchema, transportCode: z.string() })
+export const planSummarySchema = z.object({
+  transportPlanId: entityIdSchema, planCode: z.string(), status: transportPlanStatusSchema,
+  plannedStartAt: z.iso.datetime({ offset: true }).nullish(), plannedEndAt: z.iso.datetime({ offset: true }).nullish(),
+  estimatedDistanceKm: z.number().nonnegative().nullish(), estimatedDurationMinutes: z.number().nonnegative().nullish(), planningNote: optionalText,
+})
+const dossierSummarySchema = z.object({ complianceDossierId: entityIdSchema, status: dossierStatusSchema })
+const routeSummarySchema = z.object({ routePlanId: entityIdSchema, routePlanCode: z.string(), status: routePlanStatusSchema })
 const bookingFields = {
   bookingId: entityIdSchema,
   bookingCode: z.string(),
   status: z.literal("APPROVED"),
-  customer: customerSchema,
   originAddress: z.string(),
   originCountry: z.string(),
   destinationAddress: z.string(),
   destinationCountry: z.string(),
-  transportScope: transportScopeSchema,
+  isInternational: z.boolean(),
   totalHorses: z.number().int().nonnegative(),
   requestedDepartureDate: z.iso.date(),
   requestedArrivalDate: z.iso.date(),
   specialRequirements: optionalText,
-  transport: transportSchema,
-  depositStatus: depositStatusSchema,
-  routePlanningStatus: routePlanningStatusSchema,
+  transportPlan: planSummarySchema.nullable(),
+  complianceDossier: dossierSummarySchema.nullable(),
 }
 
 export const approvedBookingListItemSchema = z.object({
   ...bookingFields,
+  customerName: z.string(),
+  customerCode: optionalText,
+  transportId: entityIdSchema,
+  routePlan: routeSummarySchema.nullable(),
   approvedAt: z.iso.datetime({ offset: true }),
-  transportPlanId: entityIdSchema.nullable(),
 })
 export const approvedBookingsPageSchema = z.object({
   items: z.array(approvedBookingListItemSchema),
@@ -75,11 +87,6 @@ export const approvedBookingDetailSchema = z.object({
     specialHandlingNotes: optionalText,
   })),
   transport: transportSchema.extend({ status: z.string().min(1) }),
-  transportPlan: z.object({
-    transportPlanId: entityIdSchema, planCode: z.string(), status: z.string().min(1),
-  }).nullable(),
   // Display the API statuses without introducing another RoutePlan state machine.
-  routePlans: z.array(z.object({
-    routePlanId: entityIdSchema, routePlanCode: z.string(), routeType: z.string(), status: z.string().min(1),
-  })),
+  routePlans: z.array(routeSummarySchema.extend({ routeType: z.enum(["PRIMARY", "BACKUP", "RETURN"]) })),
 })

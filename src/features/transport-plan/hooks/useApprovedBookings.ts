@@ -12,19 +12,20 @@ export const approvedBookingKeys = {
 
 const retry = (failureCount: number, error: Error) => failureCount < 1 && getApprovedBookingError(error).retryable
 
-export function useApprovedBookings(params: ApprovedBookingsQueryParams) {
+export function useApprovedBookings(params: ApprovedBookingsQueryParams, enabled = true) {
   return useQuery({
     queryKey: approvedBookingKeys.list(params),
     queryFn: ({ signal }) => approvedBookingService.getApprovedBookings(params, signal),
+    enabled,
     retry,
   })
 }
 
-export function useApprovedBooking(bookingId: EntityId) {
+export function useApprovedBooking(bookingId: EntityId, enabled = true) {
   return useQuery({
     queryKey: approvedBookingKeys.detail(bookingId),
     queryFn: ({ signal }) => approvedBookingService.getApprovedBooking(bookingId, signal),
-    enabled: entityIdSchema.safeParse(bookingId).success,
+    enabled: enabled && entityIdSchema.safeParse(bookingId).success,
     retry,
   })
 }
