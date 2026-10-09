@@ -1,6 +1,5 @@
 import {
   BarChart3,
-  CircleArrowLeft,
   ClipboardCheck,
   FileStack,
   Gauge,
@@ -32,7 +31,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  useSidebar,
 } from "@/shared/components/ui/sidebar"
 
 const primaryItems = [
@@ -78,6 +76,7 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
             <SidebarMenuButton
               asChild
               isActive={isActive}
+              tooltip={item.label}
               className={cn(
                 compact
                   ? "h-8 rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] transition-[color,background-color,transform] duration-200 ease-out hover:translate-x-0.5 hover:bg-white/5 hover:text-white"
@@ -87,7 +86,7 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
             >
               <NavLink to={item.href}>
                 <Icon className="size-4" />
-                <span>{item.label}</span>
+                <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -98,15 +97,14 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
 }
 
 export function AdminSidebar() {
-  const { setOpen } = useSidebar()
   const principal = useAuthStore((state) => state.principal)
   // Logistics managers get the full admin menu; other employees (e.g. Transport Specialist) only their own pages.
   const isManager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
 
   return (
-    <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
-      <div className="flex h-20 shrink-0 items-center justify-center bg-[#17191c] px-4">
-        <img src={logo} alt="Pegaxus" className="w-full max-w-[170px]" />
+    <Sidebar fixed={false} collapsible="icon" className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
+      <div className="relative flex h-20 shrink-0 items-center justify-center bg-[#17191c] px-4 group-data-[collapsible=icon]:px-2">
+        <img alt="Pegaxus" src={logo} className="w-full max-w-[170px] group-data-[collapsible=icon]:hidden" />
       </div>
       <SidebarContent className="overflow-hidden bg-[#17191c]">
         <SidebarGroup className="px-0">
@@ -123,18 +121,6 @@ export function AdminSidebar() {
         <div className="hidden lg:block">
           <AdminSidebarMenu items={[logoutItem]} compact />
         </div>
-        <SlidingSidebarMenu>
-          <SidebarMenuItem className="hidden lg:block" data-active-item="false">
-            <SidebarMenuButton
-              type="button"
-              onClick={() => setOpen(false)}
-              aria-label="Close sidebar"
-              className="h-8 justify-end rounded-none px-3 text-[11px] font-medium uppercase tracking-[0.04em] text-[#9ca1a8] hover:bg-white/5 hover:text-white"
-            >
-              <CircleArrowLeft className="!size-8 mr-3  shrink-0" />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SlidingSidebarMenu>
       </SidebarFooter>
     </Sidebar>
   )
