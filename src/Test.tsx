@@ -226,6 +226,7 @@ export default function Test() {
       routeAbortController.current?.abort();
       setRouteStart(point);
       setRoutePreview(null);
+      toast.info("Source selected. Please choose a Destination.");
       return;
     }
     if (

@@ -9,7 +9,6 @@ import { MapControls } from "./MapControls";
 import { LocationMarkers } from "./LocationMarkers";
 import { LocationPopup } from "./LocationPopup";
 import { LocationSearch } from "./LocationSearch";
-import { MapSelectionMode } from "./MapSelectionMode";
 import { MapViewport, type MapViewportHandle } from "./MapViewport";
 import { RouteLayer } from "./RouteLayer";
 import { RoutePreviewLayer } from "./RoutePreviewLayer";
@@ -134,7 +133,9 @@ export function MapViewer({
       onRoutePointSelect?.(point, location);
     }
     onLocationSelect?.(location);
-    viewport.current?.flyTo(location.longitude, location.latitude);
+    if (state.mode !== "addRoute") {
+      viewport.current?.flyTo(location.longitude, location.latitude);
+    }
   }
 
   function handleMapClick(point: { latitude: number; longitude: number }) {
@@ -143,7 +144,7 @@ export function MapViewer({
   }
 
   return (
-    <div className="relative min-h-96 overflow-hidden rounded border bg-muted">
+    <div className="relative h-[min(85vh,720px)] min-h-[420px] w-full overflow-hidden rounded border bg-muted">
       {error && (
         <div className="absolute inset-0 z-20 grid place-items-center bg-white/90 p-4 text-center text-sm text-destructive">
           {error}
@@ -210,7 +211,7 @@ export function MapViewer({
       {popupLocation && (
         <LocationPopup
           location={popupLocation}
-          open={!!state.hoveredLocation}
+          open={!!state.hoveredLocation && !searchValue.trim()}
           canEdit={canEditLocation}
           canDelete={canDeleteLocation}
           onClose={() => handleMarkerHover(null)}
@@ -223,7 +224,6 @@ export function MapViewer({
         canFitBounds={!!allBounds}
         onFitBounds={() => allBounds && viewport.current?.fitBounds(allBounds)}
       />
-      <MapSelectionMode mode={state.mode} onModeChange={state.setMode} />
     </div>
   );
 }

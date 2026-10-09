@@ -109,6 +109,11 @@ export async function resolveRouteGeometry(
   signal?: AbortSignal,
 ): Promise<ResolvedRouteGeometry> {
   const key = routeGeometryKey(route);
+  const savedGeometry = route.geometry ?? route.geoJson;
+  const normalizedSavedGeometry = normalizeRouteGeoJson(savedGeometry);
+  if (normalizedSavedGeometry) {
+    return { line: normalizedSavedGeometry, key, estimated: false, error: null };
+  }
   if (route.transportMode !== "ROAD") return fallback(route, key, null);
   if (!key) return fallback(route, null, "Route coordinates are unavailable.");
 

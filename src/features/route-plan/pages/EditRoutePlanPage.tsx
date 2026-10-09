@@ -146,6 +146,8 @@ export default function EditRoutePlanPage() {
       primaryAvailable={plan.routeType !== "BACKUP" || primaryRoutes.length > 0}
       primaryError="No valid PRIMARY route plan found. Please create a PRIMARY route plan first."
       edit={{ routePlanId: plan.routePlanId, lastUpdatedAt: plan.updatedAt }}
+      locations={[...initialRoutes, ...primaryRoutes].flatMap((route) => [route.fromLocation, route.toLocation]).filter((value): value is NonNullable<typeof value> => Boolean(value))}
+      routes={[...initialRoutes, ...primaryRoutes]}
     />
   );
 }

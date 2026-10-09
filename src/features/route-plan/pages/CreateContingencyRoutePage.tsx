@@ -101,10 +101,12 @@ export default function CreateContingencyRoutePage() {
   return (
     <RoutePlanBuilder
       routeType="BACKUP"
-      transportPlanId={transportPlanId}
+      transportPlanId={transportPlanId ?? ""}
       primaryRoutes={primaryRoutes}
       primaryAvailable={primaryRoutes.length > 0}
       primaryError={error}
+      locations={primaryRoutes.flatMap((route) => [route.fromLocation, route.toLocation]).filter((value): value is NonNullable<typeof value> => Boolean(value))}
+      routes={primaryRoutes}
     />
   );
 }

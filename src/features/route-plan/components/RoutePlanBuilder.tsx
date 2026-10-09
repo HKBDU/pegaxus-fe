@@ -204,6 +204,10 @@ const MOCK_BACKUP_ROUTES: MapRoute[] = [
 ];
 
 const steps = ["Transport Details", "Route Builder", "Review & Save"];
+void MOCK_ROUTES;
+void MOCK_BACKUP_ROUTES;
+void MOCK_PLAN;
+void MOCK_LOCATIONS;
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
@@ -356,7 +360,7 @@ function SegmentCard({
 }
 
 export type RoutePlanBuilderProps = {
-  transportPlanId?: string;
+  transportPlanId: string;
   routeType?: "PRIMARY" | "BACKUP";
   primaryRoutes?: MapRoute[];
   backupRoutes?: MapRoute[];
@@ -365,11 +369,13 @@ export type RoutePlanBuilderProps = {
   metadata?: RoutePlanBuilderMetadata;
   initialRoutes?: MapRoute[];
   initialRouteNote?: string;
+  locations: MapLocation[];
+  routes: MapRoute[];
   edit?: { routePlanId: string; lastUpdatedAt: string };
 };
 
 export function RoutePlanBuilder({
-  transportPlanId = MOCK_PLAN.transportPlanId,
+  transportPlanId,
   routeType = "PRIMARY",
   primaryRoutes,
   backupRoutes,
@@ -378,6 +384,8 @@ export function RoutePlanBuilder({
   metadata,
   initialRoutes = [],
   initialRouteNote = "",
+  locations,
+  routes,
   edit,
 }: RoutePlanBuilderProps) {
   const [step, setStep] = useState<WizardStep>(0);
@@ -388,7 +396,7 @@ export function RoutePlanBuilder({
       route,
       arrangement: "INTERNAL",
       stopType:
-        route.toLocation?.id === (metadata?.to?.id ?? MOCK_PLAN.to.id)
+        route.toLocation?.id === metadata?.to?.id
           ? "DESTINATION"
           : route.toLocation?.type === "BORDER_GATE"
             ? "BCP"
@@ -399,13 +407,12 @@ export function RoutePlanBuilder({
   const [routeNote, setRouteNote] = useState(initialRouteNote);
   const [updateReason, setUpdateReason] = useState("");
   const isBackup = routeType === "BACKUP";
-  const readonlyPrimaryRoutes = primaryRoutes ?? MOCK_ROUTES;
+  const readonlyPrimaryRoutes = primaryRoutes ?? [];
   const plan = useMemo(
     () => ({
-      ...MOCK_PLAN,
       ...metadata,
-      from: metadata?.from ?? MOCK_PLAN.from,
-      to: metadata?.to ?? MOCK_PLAN.to,
+      from: metadata?.from,
+      to: metadata?.to,
       transportPlanId,
       routeType,
     }),
@@ -414,13 +421,13 @@ export function RoutePlanBuilder({
   const routeCatalog = useMemo(
     () =>
       [
-        ...(isBackup ? (backupRoutes ?? MOCK_BACKUP_ROUTES) : MOCK_ROUTES),
+        ...(isBackup ? (backupRoutes ?? routes) : routes),
         ...initialRoutes,
       ].filter(
         (route, index, routes) =>
           routes.findIndex((item) => item.id === route.id) === index,
       ),
-    [backupRoutes, initialRoutes, isBackup],
+    [backupRoutes, initialRoutes, isBackup, routes],
   );
   const mapRoutes = useMemo(
     () =>
@@ -556,12 +563,6 @@ export function RoutePlanBuilder({
       setMessage("Update reason is required.");
       return;
     }
-    if (transportPlanId === MOCK_PLAN.transportPlanId) {
-      setMessage(
-        `${action === "SAVE_DRAFT" ? "Draft" : "Legal review"} payload ready. Transport Plan is still mock data.`,
-      );
-      return;
-    }
     try {
       if (edit) {
         await updateRoutePlan(edit.routePlanId, {
@@ -661,7 +662,7 @@ export function RoutePlanBuilder({
                   </div>
                 )}
                 <MapViewer
-                  locations={MOCK_LOCATIONS}
+                  locations={locations}
                   routes={mapRoutes}
                   mode="buildPlan"
                   onModeChange={setMode}
@@ -733,7 +734,7 @@ export function RoutePlanBuilder({
                   <Badge variant="outline">View mode</Badge>
                 </div>
                 <MapViewer
-                  locations={MOCK_LOCATIONS}
+                  locations={locations}
                   routes={selectedRoutes}
                   mode="view"
                 />

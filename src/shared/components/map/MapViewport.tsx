@@ -68,6 +68,7 @@ export const MapViewport = forwardRef<MapViewportHandle, MapViewportProps>(
     return (
       <Map
         ref={mapRef}
+        style={{ height: "100%", width: "100%" }}
         mapLib={maplibregl}
         initialViewState={initialViewState}
         mapStyle={styleUrl}
