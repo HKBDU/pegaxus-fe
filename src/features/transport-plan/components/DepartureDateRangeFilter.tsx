@@ -22,8 +22,8 @@ export function DepartureDateRangeFilter({ from, to, onChange }: {
     if (next) { setDraft({ from: from ?? "", to: to ?? "" }); setError("") }
     setOpen(next)
   }}>
-    <PopoverTrigger asChild><Button variant="outline" className="h-8 w-full justify-start rounded-[2px] border-slate-300 bg-white text-xs sm:w-auto" aria-label="Departure Date Range">
-      <CalendarDays className="size-3.5" /> {from || to ? `${from ?? "Any date"} → ${to ?? "Any date"}` : "Departure Date Range"}
+    <PopoverTrigger asChild><Button variant="outline" className="h-8 w-full min-w-0 justify-start rounded-[2px] border-slate-300 bg-white px-2.5 text-xs shadow-none" aria-label="Departure Date Range">
+      <CalendarDays className="size-3.5 shrink-0" /><span className="truncate" title={from || to ? `${from ?? "Any date"} → ${to ?? "Any date"}` : undefined}>{from || to ? `${from ?? "Any date"} → ${to ?? "Any date"}` : "Departure Date Range"}</span>
     </Button></PopoverTrigger>
     <PopoverContent align="end" className="w-72 space-y-3">
       <h3 className="text-sm font-semibold">Departure Date Range</h3>

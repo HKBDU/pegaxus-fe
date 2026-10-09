@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { Eye } from "lucide-react"
 import { createTable, getCoreRowModel, type ColumnDef, type SortingState, type VisibilityState } from "@tanstack/react-table"
@@ -15,8 +15,9 @@ import { transportPlanSortSchema } from "../transport-plan.schemas"
 import type { TransportPlanListItem, TransportPlansQueryParams } from "../transport-plan.types"
 import { TransportPlanStatusBadge } from "./TransportPlanStatusBadge"
 
-export function TransportPlansTable({ plans, params, meta, isLoading, onChange, onPageChange }: {
+export function TransportPlansTable({ plans, params, meta, isLoading, onChange, onPageChange, filters }: {
   plans: TransportPlanListItem[]; params: TransportPlansQueryParams; meta: PaginationMeta; isLoading: boolean
+  filters?: ReactNode
   onChange: (patch: Partial<Omit<TransportPlansQueryParams, "pageIndex">>) => void
   onPageChange: (page: number) => void
 }) {
@@ -60,6 +61,9 @@ export function TransportPlansTable({ plans, params, meta, isLoading, onChange, 
     rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60" cellClassName="h-11 px-2.5 py-2 text-xs"
     emptyMessage={<EmptyState message={hasTransportPlanFilters(params) ? "No transport plans match your search or filters. Adjust your selections." : "No transport plans are available yet."} />}
     footer={<TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={(pageSize) => onChange({ pageSize })} pageSizeAriaLabel="Transport plans per page" />}>
-    <div className="flex justify-end"><DataTableViewOptions table={table} /></div>
+    <div role="group" aria-label="Transport plans toolbar" className="flex min-w-0 items-start gap-2">
+      {filters && <div className="min-w-0 flex-1">{filters}</div>}
+      <div className="ml-auto flex shrink-0 justify-end"><DataTableViewOptions table={table} /></div>
+    </div>
   </DataTable>
 }

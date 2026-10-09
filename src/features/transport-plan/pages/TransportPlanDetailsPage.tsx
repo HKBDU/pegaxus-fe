@@ -11,8 +11,10 @@ import { transportPlanIdSchema, transportPlanTabSchema } from "../transport-plan
 import type { TransportPlanDetail } from "../transport-plan.types"
 import { Button } from "@/shared/components/ui/button"
 import { useAuthStore } from "@/features/auth/store"
+import { canAccess } from "@/features/auth/access-control"
+import { UsersRound } from "lucide-react"
 import { canEditTransportPlan } from "../transport-plan.form"
-import { editTransportPlanPath } from "../approved-booking-actions"
+import { editTransportPlanPath, getManagePersonnelAction } from "../approved-booking-actions"
 import EditTransportPlanPage from "./EditTransportPlanPage"
 import { TransportPlanStatusBadge } from "../components/TransportPlanStatusBadge"
 import { TransportPlanGeneral } from "../components/TransportPlanGeneral"
@@ -23,6 +25,7 @@ import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
 export function TransportPlanDetails({ plan, personnelPanel }: { plan: TransportPlanDetail; personnelPanel?: ComponentType<PersonnelPanelProps> }) {
   const [params, setParams] = useSearchParams()
   const principal = useAuthStore((state) => state.principal)
+  const personnelAction = getManagePersonnelAction(principal, plan)
   const selected = transportPlanTabSchema.safeParse(params.get("tab") ?? "general")
   const activeTab = selected.success ? selected.data : "general"
   return <div className="space-y-5">
@@ -30,9 +33,12 @@ export function TransportPlanDetails({ plan, personnelPanel }: { plan: Transport
       <div className="space-y-2"><h2 className="font-heading text-2xl">{plan.planCode}</h2><p className="text-sm text-slate-500">Booking: {plan.booking.bookingCode}</p></div>
       <div className="flex flex-wrap items-center gap-3">
         <TransportPlanStatusBadge status={plan.status} />
+        {personnelAction?.href ? <Button asChild className="rounded-md"><Link to={personnelAction.href}><UsersRound aria-hidden="true" className="size-4" />Manage Personnel</Link></Button> : null}
         {canEditTransportPlan(principal, plan) ? <Button asChild variant="outline" className="rounded-[2px] bg-white"><Link to={editTransportPlanPath(plan.transportPlanId)}>Edit Transport Plan</Link></Button> : null}
       </div>
     </div>
+    {canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) && ["DRAFT", "PENDING"].includes(plan.status) ?
+      <p className="text-xs text-slate-500">Approve this transport plan before assigning a Transport Specialist or Fleet/Route Coordinator.</p> : null}
     <Tabs.Root value={activeTab} onValueChange={(value) => setParams((current) => { const next = new URLSearchParams(current); next.set("tab", transportPlanTabSchema.parse(value)); return next })}>
       <Tabs.List aria-label="Transport plan sections" className="mb-5 flex flex-nowrap gap-5 overflow-x-auto border-b border-slate-200">
         {([{ value: "general", label: "General" }, { value: "quotation", label: "Quotation" }, { value: "personnel", label: "Personnel" }]).map((tab) =>

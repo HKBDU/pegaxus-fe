@@ -2,6 +2,7 @@ import { canAccess } from "@/features/auth/access-control"
 import type { AuthPrincipal } from "@/features/auth/types"
 import { approvedBookingDetail, transportPlanDetail, dossierDetail, ROLE_ROUTES } from "@/app/route-config"
 import type { ApprovedBookingDetail, ApprovedBookingListItem } from "./types"
+import type { TransportPlanDetail } from "./transport-plan.types"
 
 // Existing detail routes host these forms until the router owner registers standalone routes.
 export const createTransportPlanPath = (bookingId: string) => `${approvedBookingDetail(bookingId)}?action=create-plan`
@@ -17,13 +18,19 @@ export type ApprovedBookingAction = {
   blockedReason?: string
 }
 
+export function getManagePersonnelAction(principal: AuthPrincipal | null, plan: Pick<TransportPlanDetail, "transportPlanId" | "status"> | null): ApprovedBookingAction | undefined {
+  if (!plan || plan.status !== "APPROVED" || !canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })) return undefined
+  return { kind: "managePersonnel", label: "Manage Personnel", targetId: plan.transportPlanId, href: `${transportPlanDetail(plan.transportPlanId)}?tab=personnel` }
+}
+
 export function getApprovedBookingActions(principal: AuthPrincipal | null, booking: ApprovedBookingDetail | ApprovedBookingListItem): ApprovedBookingAction[] {
   if (booking.status !== "APPROVED") return []
   const plan = booking.transportPlan
   const viewPlan: ApprovedBookingAction[] = plan ? [{ kind: "viewTransportPlan", label: "View Transport Plan", targetId: plan.transportPlanId, href: transportPlanDetail(plan.transportPlanId) }] : []
   if (canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })) {
     if (!plan) return [{ kind: "createTransportPlan", label: "Create Transport Plan", targetId: booking.bookingId, href: createTransportPlanPath(booking.bookingId) }]
-    return plan.status === "APPROVED" ? [...viewPlan, { kind: "managePersonnel", label: "Manage Personnel", targetId: plan.transportPlanId, href: `${transportPlanDetail(plan.transportPlanId)}?tab=personnel` }] : viewPlan
+    const personnelAction = getManagePersonnelAction(principal, plan)
+    return personnelAction ? [...viewPlan, personnelAction] : viewPlan
   }
   const candidate = "routePlans" in booking ? booking.routePlans.find((item) => item.routeType === "PRIMARY" && item.status !== "CANCELLED") : booking.routePlan
   const route = candidate?.status === "CANCELLED" ? null : candidate

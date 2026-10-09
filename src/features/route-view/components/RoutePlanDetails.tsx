@@ -1,6 +1,7 @@
 import type { ComponentType } from "react"
 import { Tabs } from "radix-ui"
 import { useSearchParams } from "react-router-dom"
+import { GitBranch, ListOrdered, MapPin } from "lucide-react"
 import { routeViewTabSchema } from "../schemas"
 import type { RouteDetailPath, RouteMapViewerProps, RoutePlanDetail } from "../types"
 import { RoutePlanHeader } from "./RoutePlanHeader"
@@ -20,9 +21,9 @@ export function RoutePlanDetails({ plan, mapViewer, routeDetailPath }: { plan: R
     <Tabs.Root value={active} onValueChange={(value) => setParams((current) => {
       const next = new URLSearchParams(current); next.set("tab", routeViewTabSchema.parse(value)); return next
     })}>
-      <Tabs.List aria-label="Route plan sections" className="mb-5 flex flex-nowrap gap-5 overflow-x-auto border-b border-slate-200">
-        {[{ value: "map", label: "Map View" }, { value: "segments", label: "Segment List" }, { value: "contingency", label: "Contingency" }].map((tab) =>
-          <Tabs.Trigger key={tab.value} value={tab.value} className="shrink-0 whitespace-nowrap border-b-2 border-transparent px-1 py-2.5 font-heading text-sm uppercase text-slate-500 outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30 data-[state=active]:border-primary data-[state=active]:text-primary">{tab.label}</Tabs.Trigger>)}
+      <Tabs.List aria-label="Route plan sections" className="mb-5 flex flex-nowrap gap-1 overflow-x-auto border-b border-slate-200 sm:gap-3">
+        {[{ value: "map", label: "Map View", icon: MapPin }, { value: "segments", label: "Segment List", icon: ListOrdered }, { value: "contingency", label: "Contingency", icon: GitBranch }].map(({ value, label, icon: Icon }) =>
+          <Tabs.Trigger key={value} value={value} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t-md border-b-2 border-transparent px-2.5 py-3 font-heading text-sm uppercase text-slate-500 outline-none hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-primary/30 data-[state=active]:border-primary data-[state=active]:bg-primary/5 data-[state=active]:text-primary"><Icon aria-hidden="true" className="size-3.5" />{label}</Tabs.Trigger>)}
       </Tabs.List>
       <Tabs.Content value="map" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><RoutePlanMapPanel plan={plan} mapViewer={mapViewer} /></Tabs.Content>
       <Tabs.Content value="segments" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><RouteSegmentList segments={plan.segments} /></Tabs.Content>

@@ -27,6 +27,10 @@ const ApprovedBookingsPage = lazy(() => import("@/features/transport-plan/pages/
 const ApprovedBookingDetailsPage = lazy(() => import("@/features/transport-plan/pages/ApprovedBookingDetailsPage"));
 const TransportPlansPage = lazy(() => import("@/features/transport-plan/pages/TransportPlansPage"));
 const TransportPlanDetailsPage = lazy(() => import("@/features/transport-plan/pages/TransportPlanDetailsPage"));
+// TEMP UC-38 LOCAL PREVIEW: remove this declaration after manual testing; do not commit.
+const DevRoutePlanDetailPage = import.meta.env.DEV
+  ? lazy(() => import("@/features/route-view/pages/RoutePlanDetailPage"))
+  : () => null;
 const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
 const CreateEmployeeAccountPage = lazy(() => import("@/features/accounts/pages/CreateEmployeeAccountPage"));
 const ViewUserAccountPage = lazy(() => import("@/features/accounts/pages/ViewUserAccountPage"));
@@ -480,6 +484,15 @@ export const router = createBrowserRouter([
   },
   ...(import.meta.env.DEV
     ? [
+        // BEGIN TEMP UC-38 LOCAL PREVIEW — remove only this route object after testing.
+        {
+          path: "/__dev/flow3/route-plans/:routePlanId",
+          element: <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"]}><AdminLayout /></ProtectedRoute>,
+          children: [{ index: true, element: <Suspense fallback={<LoadingState />}>
+            <DevRoutePlanDetailPage routeDetailPath={(id: string) => `/__dev/flow3/route-plans/${encodeURIComponent(id)}`} />
+          </Suspense> }],
+        },
+        // END TEMP UC-38 LOCAL PREVIEW
         {
         path: "/__dev/customer/bookings/:bookingId/history",
         element: <MainLayout />,

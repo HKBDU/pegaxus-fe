@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { getCoreRowModel, useReactTable, type ColumnDef, type SortingState } from "@tanstack/react-table"
 import { approvedBookingDetail } from "@/app/route-config"
@@ -22,9 +22,10 @@ interface Props {
   isLoading: boolean
   onChange: (patch: Partial<Omit<ApprovedBookingsQueryParams, "pageIndex">>) => void
   onPageChange: (page: number) => void
+  filters?: ReactNode
 }
 
-export function ApprovedBookingsTable({ bookings, params, meta, isLoading, onChange, onPageChange }: Props) {
+export function ApprovedBookingsTable({ bookings, params, meta, isLoading, onChange, onPageChange, filters }: Props) {
   const columns = useMemo<ColumnDef<ApprovedBookingListItem>[]>(() => [
     { accessorKey: "bookingCode", header: "Booking", enableHiding: false, cell: ({ row }) => <Link className="font-semibold text-primary underline-offset-2 hover:underline" to={approvedBookingDetail(row.original.bookingId)}>{row.original.bookingCode}</Link> },
     { accessorKey: "customerName", header: "Customer", cell: ({ row }) => <div className="min-w-32 whitespace-normal"><p className="font-medium">{row.original.customerName}</p>{row.original.customerCode && <p className="mt-1 text-[10px] text-slate-500">{row.original.customerCode}</p>}</div> },
@@ -61,6 +62,9 @@ export function ApprovedBookingsTable({ bookings, params, meta, isLoading, onCha
     cellClassName="h-11 px-2.5 py-2 text-xs"
     emptyMessage={<EmptyState message={hasApprovedBookingFilters(params) ? "No approved bookings match your filters. Adjust your filters." : "No approved bookings yet. Bookings appear here after approval."} />}
     footer={<TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={(pageSize) => onChange({ pageSize })} pageSizeAriaLabel="Approved bookings per page" />}>
-    <div className="flex justify-end"><DataTableViewOptions table={table} /></div>
+    <div role="group" aria-label="Approved bookings toolbar" className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-start">
+      {filters && <div className="min-w-0 flex-1">{filters}</div>}
+      <div className="flex shrink-0 justify-end"><DataTableViewOptions table={table} /></div>
+    </div>
   </DataTable>
 }
