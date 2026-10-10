@@ -169,12 +169,12 @@ export default function MapAssetsPage() {
     }
   }
 
-  function useNearbyPlace(place: GeoapifyPlace) {
+  function handleNearbyPlace(place: GeoapifyPlace) {
     setNearbyOpen(false)
-    setLocationEditor({ mode: "add", location: placeToLocation(place, `nearby-${Date.now()}`) })
+    setLocationEditor({ mode: "add", location: placeToLocation(place, `nearby-${place.latitude}-${place.longitude}`) })
   }
 
-  async function useExactPoint() {
+  async function handleExactPoint() {
     if (!pickedPoint) return
     setNearbyLoading(true)
     try {
@@ -308,7 +308,7 @@ export default function MapAssetsPage() {
             {!nearbyLoading && !nearbyError && nearbyPlaces.length === 0 && <p className="py-4 text-sm text-slate-500">No matching POI found.</p>}
             <div className="max-h-72 space-y-2 overflow-auto">
               {nearbyPlaces.map((place, index) => (
-                <button key={`${place.latitude}-${place.longitude}-${index}`} className="block w-full rounded border px-3 py-2 text-left text-sm hover:bg-orange-50" onClick={() => useNearbyPlace(place)}>
+                <button key={`${place.latitude}-${place.longitude}-${index}`} className="block w-full rounded border px-3 py-2 text-left text-sm hover:bg-orange-50" onClick={() => handleNearbyPlace(place)}>
                   <span className="font-medium">{place.name || "Unnamed place"}</span>
                   <span className="block text-xs text-slate-500">{place.address || place.city || place.country || "No address"}{place.distanceMeters !== undefined && place.distanceMeters !== null && ` · ${Math.round(place.distanceMeters)} m`}</span>
                   <span className="block text-xs text-slate-500">{place.latitude.toFixed(6)}, {place.longitude.toFixed(6)}</span>
@@ -317,7 +317,7 @@ export default function MapAssetsPage() {
             </div>
             <div className="flex justify-end gap-2 border-t pt-3">
               <Button variant="outline" onClick={() => setNearbyOpen(false)}>Cancel</Button>
-              <Button onClick={() => void useExactPoint()} disabled={!pickedPoint || nearbyLoading}>Use exact clicked point</Button>
+              <Button onClick={() => void handleExactPoint()} disabled={!pickedPoint || nearbyLoading}>Use exact clicked point</Button>
             </div>
           </DialogContent>
         </Dialog>
