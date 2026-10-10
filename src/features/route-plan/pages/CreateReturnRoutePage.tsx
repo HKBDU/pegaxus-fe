@@ -74,7 +74,7 @@ export default function CreateReturnRoutePage() {
           metadata: {
             planCode: raw.planCode,
             bookingCode: raw.bookingCode,
-            status: raw.status ?? "APPROVED",
+            status: "DRAFT",
             scope: raw.isCrossBorder ? "International" : "Domestic",
             departureAt: raw.plannedDepartureAt,
             arrivalAt: raw.plannedArrivalAt,

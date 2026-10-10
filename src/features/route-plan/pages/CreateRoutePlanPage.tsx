@@ -24,7 +24,7 @@ export default function CreateRoutePlanPage() {
       const from = toLocation(raw.fromLocation ?? raw.origin);
       const to = toLocation(raw.toLocation ?? raw.destination);
       if (!from || !to) throw new Error("Transport Plan does not contain valid origin and destination coordinates.");
-      setData({ locations, routes: routeResult.items.flatMap((x) => { const value = toRoute(x, locations); return value ? [value] : []; }), metadata: { planCode: raw.planCode, bookingCode: raw.bookingCode, status: raw.status ?? "APPROVED", scope: raw.isCrossBorder ? "International" : "Domestic", departureAt: raw.plannedDepartureAt, arrivalAt: raw.plannedArrivalAt, from, to } });
+      setData({ locations, routes: routeResult.items.flatMap((x) => { const value = toRoute(x, locations); return value ? [value] : []; }), metadata: { planCode: raw.planCode, bookingCode: raw.bookingCode, status: "DRAFT", scope: raw.isCrossBorder ? "International" : "Domestic", departureAt: raw.plannedDepartureAt, arrivalAt: raw.plannedArrivalAt, from, to } });
     }).catch((e) => setError(e instanceof Error ? e.message : "Unable to load Transport Plan."));
   }, [transportPlanId]);
   if (error) return <main className="grid min-h-screen place-items-center p-6 text-destructive">{error}</main>;

@@ -30,6 +30,7 @@ import {
 import type {
   CreateRoutePlanRequest,
   RouteSegmentInput,
+  RoutePlanStatus,
   RouteType,
 } from "../types";
 import {
@@ -46,6 +47,7 @@ import {
   type WizardStep,
 } from "./RoutePlanBuilderParts";
 import { RoutePlanEndpointsStep } from "./RoutePlanEndpointsStep";
+import { RoutePlanStatusBadge } from "./RoutePlanStatusBadge";
 
 export type { RoutePlanBuilderMetadata } from "./RoutePlanBuilderParts";
 
@@ -63,7 +65,7 @@ type TransportPlanSummary = {
   planCode: string;
   bookingCode: string;
   routeType: RouteType;
-  status: string;
+  status: RoutePlanStatus;
   scope: "International" | "Domestic";
   departureAt: string;
   arrivalAt: string;
@@ -78,7 +80,7 @@ const MOCK_PLAN: TransportPlanSummary = {
   planCode: "TP-20261001-001",
   bookingCode: "REQ-20261001-0005",
   routeType: "PRIMARY",
-  status: "APPROVED",
+  status: "CONFIRMED",
   scope: "International",
   departureAt: "2026-10-27T09:30:00Z",
   arrivalAt: "2026-10-30T09:30:00Z",
@@ -700,7 +702,7 @@ export function RoutePlanBuilder({
           }
           backHref={ROLE_ROUTES.routePlans}
           backLabel="BACK TO ROUTE PLANS"
-          action={<Badge variant="outline">{plan.status}</Badge>}
+          action={<RoutePlanStatusBadge status={plan.status} />}
         />
         <BuilderMetadata plan={plan} />
         <BuilderProgress step={step} onChange={setStep} />
