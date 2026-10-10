@@ -51,7 +51,7 @@ const transportPlan = {
   toLocation: loc("98"),
 }
 
-const segment = (route: RouteMaster, sequenceNo: number, routeType: "PRIMARY" | "BACKUP" = "PRIMARY"): RouteSegment => ({
+const segment = (route: RouteMaster, sequenceNo: number, routeType: "PRIMARY" | "BACKUP" | "RETURN" = "PRIMARY"): RouteSegment => ({
   routePlanRouteId: `mock-segment-${route.routeId}`,
   sequenceNo,
   routeType,

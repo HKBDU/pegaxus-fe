@@ -4,7 +4,7 @@
 >
 > **Nguyên tắc khi UC và ERD V7 lệch nhau:** **DB V7 là nguồn chuẩn**, contract bám DB; không yêu cầu BE sửa DB trừ khi không có cách nào làm được. Chỉ các điểm còn mở mới nằm ở [Mục 1](#1-️-conflict-còn-mở-cần-team-confirm); các điểm đã chốt đã được áp dụng thẳng vào contract.
 >
-> **Thông báo:** Flow 3 không có endpoint thông báo. Các API ghi (PS1, PS3, PS4, PS5, RP1, RP4, RP7, OS1, TP4, EC1, EC2…) phải tự gọi `NotificationService.Queue` cho từng người nhận, `SaveChanges` cùng transaction, rồi `FlushAsync` (đẩy SignalR) sau khi commit; cơ chế đầy đủ, người nhận, loại và mức ưu tiên xem [bảng Thông báo](#thông-báo-mà-be-tự-ghi-trong-các-api-không-có-endpoint--be-đọc-trước) ngay bên dưới.
+> **Thông báo:** Flow 3 không có endpoint thông báo. Các API ghi (PS1, PS3, PS4, PS5, RP1, RP4, RP7, OS1, TP4, EC1–EC4…) phải tự gọi `NotificationService.Queue` cho từng người nhận, `SaveChanges` cùng transaction, rồi `FlushAsync` (đẩy SignalR) sau khi commit; cơ chế đầy đủ, người nhận, loại và mức ưu tiên xem [bảng Thông báo](#thông-báo-mà-be-tự-ghi-trong-các-api-không-có-endpoint--be-đọc-trước) ngay bên dưới.
 
 ## Field BE tính khi trả response (không lưu DB) — BE đọc trước
 
@@ -20,13 +20,14 @@ Các field dưới đây **không có cột trong DB V7**; BE tính từ các b�
 | `isCrossBorder` (RoutePlan)                                                  | Có ít nhất một chặng mà `fromLocation.country ≠ toLocation.country`                                                                                                                                           | `RoutePlanRoute`, `Route`, `Location`                                            |
 | `totalDistanceKm`, `estimatedDurationMinutes` (RoutePlan)                    | `totalDistanceKm` = tổng `Route.distance_km` các chặng; `estimatedDurationMinutes` = `planned_arrival_at` chặng cuối − `planned_departure_at` chặng đầu (phút). Ghi vào cột có sẵn của `RoutePlan` khi lưu    | `Route`, `RoutePlanRoute`, `RoutePlan`                                           |
 | `plannedDepartureAt`, `plannedArrivalAt` (RoutePlan)                         | `planned_departure_at` chặng đầu / `planned_arrival_at` chặng cuối                                                                                                                                            | `RoutePlanRoute`                                                                 |
+| `replacesSequenceNo` (RoutePlan BACKUP) | Tìm chặng primary có `fromLocation` = `fromLocation` của chặng đầu backup (→ `from`) và chặng primary có `toLocation` = `toLocation` của chặng cuối backup, ở sau hoặc cùng chặng đó (→ `to`); không khớp thì từ chối ngay khi lưu (R16) | `RoutePlanRoute`, `Location` |
 | `segment.status` (Segment)                                                   | `actual_departure_at` null → `PENDING`; có `actual_departure_at`, chưa có `actual_arrival_at` → `IN_PROGRESS`; có `actual_arrival_at` → `COMPLETED`                                                           | `RoutePlanRoute`                                                                 |
 | `segment.dwellAfterMinutes`                                                  | `planned_departure_at` chặng kế − `planned_arrival_at` chặng này (phút); `null` ở chặng cuối                                                                                                                  | `RoutePlanRoute`                                                                 |
 | `segment.isOutsourced`                                                       | `transport_provider_id IS NOT NULL`                                                                                                                                                                           | `RoutePlanRoute`                                                                 |
 | `segment.vehicles`                                                           | Các `Vehicle` gán cho chặng                                                                                                                                                                                   | `RoutePlanRouteVehicle`, `Vehicle`                                               |
 | `isPersonnelComplete` (RoutePlan)                                            | Mọi chặng **nội bộ** (`transport_provider_id IS NULL`) có cả `driver_employee_id` và `escort_employee_id`                                                                                                     | `RoutePlanRoute`                                                                 |
 | `phase2.enabled`, `personnelAssignmentPhase2Enabled` (PS2, RP7)              | RoutePlan chính (`routeType = PRIMARY`) có `status ∈ {CONFIRMED, ACTIVE}`                                                                                                                                     | `RoutePlan`                                                                      |
-| `customerUploadEnabled` (RP7)                                                | `ComplianceDossier.status ≠ DRAFT` (sau RP7 khả thi là `IN_PREPARATION`)                                                                                                                                      | `ComplianceDossier`                                                              |
+| `customerUploadEnabled` (RP7)                                                | `ComplianceDossier.status ≠ DRAFT` (sau RP7 khả thi là `IN_PREPARATION`); luôn `false` với RoutePlan `RETURN` (Customer không nộp thêm)                                                                       | `ComplianceDossier`                                                              |
 | `phase1.isAssigned`, `phase1.isLocked`, `phase2.segments[].isComplete` (PS2) | `isAssigned`: plan có dòng `EmployeeTransportPlan` cho cả TS và RC. `isLocked` = `phase2.enabled`. `isComplete`: chặng thuê ngoài, hoặc đã có Driver và Escort                                                | `EmployeeTransportPlan`, `RoutePlanRoute`                                        |
 | `legalReview` (RP3, RP7)                                                     | Lấy từ dòng `AuditDossier` mới nhất của CDos có `action_type` là thẩm định lộ trình: `reviewedBy`/`reviewedAt` = `actor_account_id`/`created_at`; `isFeasible`, `note`, `blockedSegments` ở `details` (jsonb) | `AuditDossier`                                                                   |
 | `registrationStatus`, `insuranceStatus` (Vehicle)                            | Ngày hết hạn `≤` hôm nay → `EXPIRED`; còn `< 7` ngày → `EXPIRING_SOON`; còn lại `VALID`; ngày hết hạn `null` → `VALID`                                                                                        | `Vehicle.registration_expiry_date`, `insurance_expiry_date`                      |
@@ -48,27 +49,34 @@ Theo cơ chế SignalR của BE (`SIGNALR_NOTIFICATION.md`): mọi thông báo c
 
 Phía FE (Flow 8, không thuộc Flow 3): giữ một kết nối SignalR `/hubs/notifications`, nhận `ReceiveNotification`, gửi `AcknowledgeDelivered`, và dùng REST `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`. Flow 3 chỉ cần `ActionUrl` mở đúng trang.
 
-Bảng chỉ dùng enum có sẵn của DB (`notification_type`, `priority`), không có tên sự kiện riêng. `Title`/`Message` do BE viết (cột "Title gợi ý" chỉ là ví dụ). `ReferenceType` dùng tên entity (như ví dụ `ComplianceDossier` của BE): `TransportPlan` hoặc `RoutePlan`; `ReferenceId` là uuid của entity đó. Cột "Nguồn": UC nào nêu thông báo này; "Đề xuất" là phần UC không nói rõ.
+Bảng chỉ dùng enum có sẵn của DB (`notification_type`, `priority`), không có tên sự kiện riêng. `Title`/`Message` do BE viết (cột "Title gợi ý" chỉ là ví dụ). `ReferenceType` dùng tên entity (như ví dụ `ComplianceDossier` của BE): `TransportPlan` hoặc `RoutePlan`; `ReferenceId` là uuid của entity đó. Cột "Nguồn": UC nào nêu thông báo này; "Ngoài UC" là phần UC không nói rõ nhưng đã được thống nhất.
 
 | API gây ra | Người nhận | `Type` | `Priority` | Title gợi ý | `ReferenceType` | `ActionUrl` | Nguồn |
 | ---------- | ---------- | ------ | ---------- | ----------- | --------------- | ----------- | ----- |
 | TP4 (sửa TransportPlan) | TS, RC (nếu đã được phân công) | `TRANSPORT` | `NORMAL` | Transport plan updated | `TransportPlan` | `/admin/transport-plans/{transportPlanId}` | UC-35 bước 7 |
 | TP4 | Customer | `TRANSPORT` | `NORMAL` | Transport plan updated | `TransportPlan` | trang của Flow 1 | UC-35 bước 7 |
 | PS1 (phân công đợt 1) | TS, RC | `TRANSPORT` | `NORMAL` | You have been assigned to a transport | `TransportPlan` | `/admin/approved-bookings/{bookingId}` | UC-36 bước 4 |
-| PS5 (đổi TS/RC đợt 1) | TS, RC (người mới và người bị thay) | `TRANSPORT` | `NORMAL` | Transport assignment changed | `TransportPlan` | `/admin/approved-bookings/{bookingId}` | Đề xuất (UC-36 ALT-01 chỉ nêu đổi tài xế) |
-| RP1 / RP4 với `SUBMIT_FOR_LEGAL_REVIEW` | TS được phân công | `ROUTE` | `HIGH` | Route plan waiting for legal review | `RoutePlan` | `/admin/route-plans/{routePlanId}` | UC-33 bước 6, UC-39 bước 6, UC-37 bước 7 |
+| PS5 (đổi TS/RC đợt 1) | TS, RC (người mới và người bị thay) | `TRANSPORT` | `NORMAL` | Transport assignment changed | `TransportPlan` | `/admin/approved-bookings/{bookingId}` | Ngoài UC (UC-36 ALT-01 chỉ nêu đổi tài xế) |
+| RP1 / RP4 với `SUBMIT_FOR_LEGAL_REVIEW` | TS được phân công | `ROUTE` | `HIGH` | Route plan waiting for legal review | `RoutePlan` | `/admin/route-plans/{routePlanId}` | UC-33 bước 6, UC-39 bước 6, UC-37 bước 7. RETURN: chỉ sau khi LM duyệt ở EC2 |
 | RP7 với `isFeasible = false` | RC | `ROUTE` | `HIGH` | Route plan rejected by Transport Specialist | `RoutePlan` | `/admin/route-plans/{routePlanId}` | UC-33 ALT-01 bước 2 |
-| RP7 với `isFeasible = true` | Customer | `ROUTE` | `HIGH` | Route confirmed, please upload legal documents | `RoutePlan` | trang của Flow 2 | UC-47 bước 6 (UC-47 đã bỏ, chuyển hiệu ứng sang RP7) |
-| RP7 với `isFeasible = true` | RC | `ROUTE` | `HIGH` | Route confirmed | `RoutePlan` | `/admin/route-plans/{routePlanId}` | Đề xuất |
-| RP7 với `isFeasible = true` | LM | `ROUTE` | `HIGH` | Route confirmed, ready for driver and escort assignment | `RoutePlan` | `/admin/personnel-assignment/{transportPlanId}` | Đề xuất (UC-33 bước 8 nói mở phân công đợt 2, không nói thông báo) |
+| RP7 với `isFeasible = true` (PRIMARY, BACKUP) | Customer | `ROUTE` | `HIGH` | Route confirmed, please upload legal documents | `RoutePlan` | trang của Flow 2 | UC-47 bước 6 (UC-47 đã bỏ, chuyển hiệu ứng sang RP7). RETURN: không gửi (Customer không nộp thêm) |
+| RP7 với `isFeasible = true` | RC | `ROUTE` | `HIGH` | Route confirmed | `RoutePlan` | `/admin/route-plans/{routePlanId}` | Ngoài UC |
+| RP7 với `isFeasible = true` (PRIMARY, BACKUP) | LM | `ROUTE` | `HIGH` | Route confirmed, ready for driver and escort assignment | `RoutePlan` | `/admin/personnel-assignment/{transportPlanId}` | Ngoài UC (UC-33 bước 8 nói mở phân công đợt 2, không nói thông báo) |
+| RP7 với `isFeasible = true` (RETURN) | LM | `ROUTE` | `HIGH` | Return route confirmed, please assign vehicles and activate | `RoutePlan` | `/admin/route-plans/{routePlanId}` | Luồng RETURN (mục 12.2 bước 4) |
 | OS1 (gán thuê ngoài) | RC | `ROUTE` | `NORMAL` | Segment outsourced to a transport provider | `RoutePlan` | `/admin/route-plans/{routePlanId}` | UC-42 bước 9 |
 | PS3 (phân công đợt 2) | Driver, Escort | `ROUTE` | `HIGH` | You have been assigned to a route | `RoutePlan` | trang của Flow 4 | UC-36 bước 9 |
 | PS4 (đổi Driver/Escort một chặng) | Driver/Escort mới | `ROUTE` | `HIGH` | You have been assigned to a route | `RoutePlan` | trang của Flow 4 | UC-36 ALT-01 bước 4 |
-| PS4 | Driver/Escort cũ | `ROUTE` | `NORMAL` | You have been removed from a route | `RoutePlan` | trang của Flow 4 | Đề xuất |
-| EC1 (RC gửi yêu cầu đổi lộ trình, C11) | LM | `ROUTE` | `URGENT` | Route change request | `RoutePlan` | `/admin/route-plans/{routePlanId}` | Đề xuất (UC-48 chỉ nói LM nhận cảnh báo sự cố UC-57) |
-| EC2 `APPROVE` (C11) | TS | `ROUTE` | `URGENT` | Route changed during transit | `RoutePlan` | `/admin/route-plans/{routePlanId}` | UC-48 bước 5 |
-| EC2 `APPROVE` (C11) | Customer, Driver | `ROUTE` | `URGENT` | Route changed during transit | `RoutePlan` | trang của Flow 1 / Flow 4 | UC-48 bước 5 |
-| EC2 `REJECT` (C11) | RC | `ROUTE` | `HIGH` | Route change request rejected | `RoutePlan` | `/admin/route-plans/{routePlanId}` | UC-48 ALT-01 bước 3 |
+| PS4 | Driver/Escort cũ | `ROUTE` | `NORMAL` | You have been removed from a route | `RoutePlan` | trang của Flow 4 | Ngoài UC |
+| RP1 với `routeType = RETURN` | LM | `ROUTE` | `URGENT` | Emergency return request | `RoutePlan` | `/admin/route-plans/{routePlanId}` | Luồng RETURN (mục 12.2 bước 1) |
+| EC1 (RC gửi yêu cầu bật BACKUP) | LM | `ROUTE` | `URGENT` | Route change request | `RoutePlan` | `/admin/route-plans/{routePlanId}` | Ngoài UC (UC-48 chỉ nói LM nhận cảnh báo sự cố UC-57) |
+| EC2 `APPROVE` (BACKUP) | RC | `ROUTE` | `HIGH` | Route change approved | `RoutePlan` | `/admin/route-plans/{routePlanId}` | Ngoài UC (UC-48 bước 5 liệt kê TS; bỏ vì giấy tờ BACKUP đã soạn từ đầu) |
+| EC2 `APPROVE` (RETURN) | TS | `ROUTE` | `HIGH` | Return route approved, please supplement the compliance dossier | `RoutePlan` | `/admin/route-plans/{routePlanId}` | Luồng RETURN (mục 12.2 bước 2) |
+| EC2 `APPROVE` (RETURN) | RC | `ROUTE` | `HIGH` | Return route approved, please finalize the route | `RoutePlan` | `/admin/route-plans/{routePlanId}` | Luồng RETURN (mục 12.2 bước 2) |
+| EC2 `APPROVE` (BACKUP) | Customer, Driver | `ROUTE` | `URGENT` | Route changed during transit | `RoutePlan` | trang của Flow 1 / Flow 4 | UC-48 bước 5 |
+| EC2 `REJECT` (BACKUP, RETURN) | RC | `ROUTE` | `HIGH` | Route change request rejected | `RoutePlan` | `/admin/route-plans/{routePlanId}` | UC-48 ALT-01 bước 3 |
+| EC3 | Customer | `ROUTE` | `URGENT` | Return route applied | `RoutePlan` | trang của Flow 1 | Luồng RETURN (mục 12.2 bước 5) |
+| EC3 | RC | `ROUTE` | `HIGH` | Return route activated | `RoutePlan` | `/admin/route-plans/{routePlanId}` | Luồng RETURN (mục 12.2 bước 5) |
+| EC4 | Driver | `ROUTE` | `URGENT` | Return route is ready, start returning | `RoutePlan` | trang của Flow 4 | Luồng RETURN (mục 12.2 bước 6) |
 
 **Provider thuê ngoài không nhận thông báo:** hệ thống không quản lý bên thứ 3 (ngoài phạm vi), nên không gửi gì cho Provider dù UC-36 bước 9 và UC-42 bước 9 có nhắc "xác nhận cho Provider".
 
@@ -103,7 +111,7 @@ Apply Template giờ áp dụng cho **Transport / TransportPlan** do LM đã l�
 - [9. Route Plan (UC-33, UC-37 → UC-40)](#9-route-plan-uc-33-uc-37--uc-40)
 - [10. Xác nhận pháp lý của TS (UC-33, UC-39)](#10-xác-nhận-pháp-lý-của-ts-uc-33-uc-39)
 - [11. Phân công nhân sự (UC-36)](#11-phân-công-nhân-sự-uc-36)
-- [12. Thay đổi lộ trình khẩn cấp (UC-48)](#12-thay-đổi-lộ-trình-khẩn-cấp-uc-48--chờ-chốt)
+- [12. Thay đổi lộ trình khẩn cấp (UC-48)](#12-thay-đổi-lộ-trình-khẩn-cấp-uc-48)
 - [13. Mapping UC → API](#13-mapping-uc--api)
 
 ---
@@ -166,8 +174,6 @@ Kế thừa `api-contract/flow1.md` và `flow2.md`: Base URL `/api/v1`, ID `uuid
 | ID         | Vấn đề                                                                                                                                                                                                                                                                                    | Ảnh hưởng                                                           | Đề xuất (contract đang dùng)                                                                                                                                                                                                         | Xác nhận |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
 | 🔴 **C05** | **Hai nơi lưu phân công đợt 1.** V7 có `BookingEmployeeAssignment` (giao TS/RC theo Booking, có `status ACTIVE/REVOKED`) và `EmployeeTransportPlan` (UC-34/36, Flow 2 R13). Unique `(booking_id, assignment_role)` không lọc `status = ACTIVE` nên không giữ được lịch sử khi thay người. | PS1, PS5, PS2                                                       | Contract chỉ ghi `EmployeeTransportPlan`. Cần BE chốt bỏ hay dùng `BookingEmployeeAssignment` làm lịch sử (partial unique `WHERE status = 'ACTIVE'`).                                                                                | ☐        |
-| 🟠 **C11** | **Đổi lộ trình khẩn cấp (UC-48).** V7 không có bảng lưu đề xuất đổi lộ trình, nên contract chỉ dùng bảng có sẵn: phương án = một `RoutePlan` `BACKUP`/`RETURN` đã `CONFIRMED`, yêu cầu gửi qua `Notification`.                                                                            | EC1, EC2 ([mục 12](#12-thay-đổi-lộ-trình-khẩn-cấp-uc-48--chờ-chốt)) | Làm được với DB hiện tại. Cần BE xác nhận 3 mặc định ở mục 12: RoutePlan chính → `CANCELLED` khi phương án `ACTIVE`; không có API danh sách yêu cầu (LM mở từ Notification); chi phí phát sinh chỉ nằm trong `Notification.message`. | ☐        |
-| 🟠 **C30** | **Tạo backup khi CDos đã đi xa.** Quy tắc đã chốt: tạo RoutePlan `BACKUP` thì `ComplianceDossier` `IN_PREPARATION → DRAFT` để TS thẩm định lại (RP7). Nếu CDos đã `READY_FOR_SUBMISSION`/`SUBMITTED`/… thì không rõ có được lùi về `DRAFT` không.                                         | RP1                                                                 | Chỉ cho tạo BACKUP khi CDos `DRAFT`/`IN_PREPARATION`, ngược lại `409 DOSSIER_LOCKED`.                                                                                                                                                | ☐        |
 | 🟡 **C29** | **Ai chuyển `Transport` sang `READY`.** V7 có `transport_status = CREATED/PLANNING/READY`, UC không nói ai chuyển.                                                                                                                                                                        | TP1, PS3                                                            | `CREATED → PLANNING` khi tạo TransportPlan; `→ READY` do BE tự chuyển khi RoutePlan `PRIMARY` `CONFIRMED` và mọi chặng nội bộ đã có Driver + Escort. `IN_TRANSIT/COMPLETED` do Flow 4.                                               | ☐        |
 | ⚪ **C25** | **Đổi trạng thái xe đang `ASSIGNED`.** `ASSIGNED` là giá trị toàn cục nhưng gán xe theo khoảng thời gian; UC-46 chỉ chặn xe đang chạy.                                                                                                                                                    | VH5                                                                 | Chặn cả `ASSIGNED` và `IN_USE` bằng `409 VEHICLE_STATUS_LOCKED`.                                                                                                                                                                     | ☐        |
 | ⚪ **C20** | `TransportProvider.tax_code` chưa unique; `provider_code`, `vehicle_code`, `license_plate` unique cả bản đã xóa mềm (UC chỉ cần unique trên bản chưa xóa); `supported_modes varchar(100)` là chuỗi CSV.                                                                                   | PV3, PV4, VH3, VH4                                                  | Kiểm tra unique trên bản chưa xóa; `supportedModes` là mảng, lưu CSV `"AIR,ROAD"`. Đề xuất partial unique index.                                                                                                                     | ☐        |
@@ -180,8 +186,6 @@ Cột FE owner là người làm màn hình liên quan.
 
 | ID | API bị ảnh hưởng | Use case | FE owner (màn hình) | Có chặn code không |
 | -- | ---------------- | -------- | ------------------- | ------------------ |
-| **C11** | EC1, EC2 | UC-48 | Dương (`SCR-F3-030`, `031`, dialog `040`) | Có, nên chờ BE xác nhận 3 mặc định ở mục 12; code trước có thể phải làm lại |
-| **C30** | RP1 (khi tạo `BACKUP`), RP7 | UC-37 | Khuyên (`SCR-F3-013`, `014`) | Không. Mặc định: CDos quá `IN_PREPARATION` → `409 DOSSIER_LOCKED` |
 | **C05** | PS1, PS5, PS2 | UC-36 (đợt 1) | Uyên (`SCR-F3-015`, `016`) | Không. Contract chỉ ghi `EmployeeTransportPlan` |
 | **C29** | TP1, PS3 | UC-34, UC-36 | Chỉ BE (không có màn hình) | Không. BE tự chuyển `Transport` sang `READY` |
 | **C25** | VH5 | UC-46 | Uyên (`SCR-F3-027`) | Không. Mặc định chặn xe `ASSIGNED`/`IN_USE` bằng `409 VEHICLE_STATUS_LOCKED` |
@@ -194,7 +198,7 @@ Cột FE owner là người làm màn hình liên quan.
 | Tài liệu                                                 | Nội dung cũ cần sửa                                                                                                                                                |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | UC-34, UC-35, screen `SCR-F3-004/007`                    | UC đã bỏ báo giá, nhưng screen còn biểu mẫu báo giá và `QUOTED_PENDING_DEPOSIT`. Contract không có API báo giá.                                                    |
-| UC-42                                                    | Còn `service_type`; DB chỉ có `transport_provider_id` và `note` trên `RoutePlanRoute`. Contract chỉ dùng `note` (ghi số chuyến bay/AWB vào `note`).                |
+| UC-42                                                    | Còn `service_type`; DB chỉ có `transport_provider_id` và `note` trên `RoutePlanRoute`. Contract chỉ dùng `note` (ghi số chuyến bay/AWB vào `note`). |
 | UC-37, UC-38, screen `SCR-F3-013/014`                    | Còn `is_contingency`, `CONTINGENCY`, phạm vi "1 chặng cụ thể". DB chỉ có `RoutePlanRoute.route_type = PRIMARY/BACKUP/RETURN`.                                      |
 | UC-47, `SCR-F3-028/029`, mục #49, menu "Route Approvals" | Đã bỏ: `CONFIRMED` do TS xác nhận thay cho bước Manager duyệt. UC-39 bước 7 còn nhắc "trình LM (UC-47)".                                                           |
 | UC-43/46 và screen xe                                    | Còn `IN_TRANSIT`, `SUSPENDED`, `OUT_OF_SERVICE`; DB là `IN_USE`, `INACTIVE`.                                                                                       |
@@ -254,13 +258,15 @@ Mọi enum dùng **đúng giá trị V7**. Các giá trị chỉ suy ra (chặng
 
 `CONFIRMED` = TS xác nhận "xin được hết" (kèm chuyển `ComplianceDossier` `DRAFT → IN_PREPARATION`). Từ `CONFIRMED`: mở upload giấy tờ cho Customer, mở phân công đợt 2 (Driver + Escort), notify LM. **Sau `CONFIRMED` không có API nào sửa chặng, provider hay xe của RoutePlan đó** (đổi khi đang chạy: UC-48, mục 12). Không còn trạng thái chờ Manager duyệt.
 
-Khi RC **tạo mới một RoutePlan `BACKUP`** (RP1), `ComplianceDossier` đang `IN_PREPARATION` được đưa **về `DRAFT`** trong cùng transaction để TS thẩm định lại (RP7). RP7 khả thi sẽ đưa CDos `DRAFT → IN_PREPARATION` và RoutePlan được thẩm định `DRAFT → CONFIRMED`. Customer chỉ thấy CDos khi `status ≠ DRAFT` (Flow 2). Xem C30.
+Khi RC **tạo mới một RoutePlan `BACKUP`** (RP1), `ComplianceDossier` đang `IN_PREPARATION` được đưa **về `DRAFT`** trong cùng transaction để TS thẩm định lại (RP7). RP7 khả thi sẽ đưa CDos `DRAFT → IN_PREPARATION` và RoutePlan được thẩm định `DRAFT → CONFIRMED`. Customer chỉ thấy CDos khi `status ≠ DRAFT` (Flow 2). Nếu CDos đã qua `IN_PREPARATION` (`READY_FOR_SUBMISSION`, `SUBMITTED`…) thì không tạo thêm backup được → `409 DOSSIER_LOCKED`.
+
+**RETURN** (giữa đường, CDos đã `APPROVED`) đi theo luồng riêng ở [mục 12.2](#122-return-quay-đầu-khẩn-cấp-uc-48-exc-01): RP1 **không** đổi CDos; LM duyệt ở EC2 mới đưa CDos `APPROVED → DRAFT`; RP7 (khả thi) đưa CDos `DRAFT → IN_PREPARATION` rồi tự chạy tới `APPROVED` (Customer không nộp thêm) và RoutePlan `→ CONFIRMED`; EC3 kích hoạt `CONFIRMED → ACTIVE`.
 
 ### 2.3. Quy tắc
 
 | #   | Quy tắc                                                                                                                                                                                                                                                                                                                                                                                    |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| R1  | **Phân quyền:** LM: UC-32, 34, 35, 36, 41, 42, 43–46, 48 và UC-37 (backup). RC: UC-32, 33, 37–40, 43–46, EC1 và CRUD Location/Route master (LOC3–5, ROT3–5). TS: xem Route Plan + RP7. Server luôn kiểm tra role; RC/TS chỉ truy cập Transport Plan mình được phân công (`EmployeeTransportPlan`), LM xem tất cả.                                                                          |
+| R1  | **Phân quyền:** LM: UC-32, 34, 35, 36, 41, 42, 43–46, 48 và UC-37 (backup), EC3. RC: UC-32, 33, 37–40, 43–46, RETURN (RP1), EC1, EC4 và CRUD Location/Route master (LOC3–5, ROT3–5). TS: xem Route Plan + RP7. Server luôn kiểm tra role; RC/TS chỉ truy cập Transport Plan mình được phân công (`EmployeeTransportPlan`), LM xem tất cả.                                                                          |
 | R2  | **Điều kiện lập plan:** `Booking.status = APPROVED` và đã có `Transport` (R12 flow1). Mỗi Booking chỉ có **1 TransportPlan chưa hủy** (UC-34 EXC-01).                                                                                                                                                                                                                                      |
 | R3  | **Cổng đặt cọc (UC-33):** tạo RoutePlan chỉ khi `TransportPlan.status = APPROVED`. Chưa đạt → `422 DEPOSIT_REQUIRED`.                                                                                                                                                                                                                                                                      |
 | R4  | **Phân công 2 đợt (UC-36):** Đợt 1 (TS + RC) chỉ gán khi `TransportPlan.status = APPROVED`; không gán lúc tạo TransportPlan. Đợt 2 (Driver + Escort theo chặng) chỉ khi RoutePlan **PRIMARY** `CONFIRMED`. Chặng thuê ngoài **không** nhận Driver/Escort.                                                                                                                                  |
@@ -270,11 +276,13 @@ Khi RC **tạo mới một RoutePlan `BACKUP`** (RP1), `ComplianceDossier` đang
 | R8  | **BCP bắt buộc xuyên biên giới:** Booking quốc tế phải có ≥ 1 điểm dừng/điểm nối thuộc `location_type ∈ {BORDER_GATE, AIRPORT, SEAPORT}`; thiếu → `422 BCP_REQUIRED`. Trạm dừng/BCP không có bảng riêng: là `Location` nối hai chặng, thời gian dừng suy ra từ `dwellAfterMinutes`.                                                                                                        |
 | R9  | **Vehicle trên chặng:** `vehicle.transportMode = route.transportMode`; xe `AVAILABLE` hoặc `ASSIGNED` nhưng **không chồng lịch** với chặng khác (so khoảng `[plannedDepartureAt, plannedArrivalAt]` trên `RoutePlanRouteVehicle`); đăng kiểm/bảo hiểm chưa hết hạn tại ngày chặng; tổng `capacityHorses` ≥ số ngựa của Booking. Chặng thuê ngoài **không** nhận `vehicleIds`.              |
 | R10 | **Trạng thái xe tự động:** `AVAILABLE → ASSIGNED` khi gán vào chặng thuộc RoutePlan `CONFIRMED`; `ASSIGNED → IN_USE` khi chuyến khởi hành (Flow 4); trả về `AVAILABLE` khi không còn chặng nào chưa hoàn thành. Không có API đổi thủ công sang `ASSIGNED/IN_USE`.                                                                                                                          |
-| R11 | **Loại RoutePlan suy ra từ `RoutePlanRoute.route_type`:** mọi chặng `PRIMARY` ⇒ lộ trình chính; có chặng `BACKUP` ⇒ lộ trình dự phòng; `RETURN` ⇒ phương án quay đầu. Mỗi TransportPlan tối đa **1 PRIMARY chưa hủy**; BACKUP cần đã có PRIMARY chưa hủy. Backup trùng hệt chuỗi `routeId` của PRIMARY → `409 IDENTICAL_CONTINGENCY_ROUTE`. Lý do lập backup lưu ở `RoutePlan.route_note`. |
+| R11 | **Loại RoutePlan suy ra từ `RoutePlanRoute.route_type`:** mọi chặng `PRIMARY` ⇒ lộ trình chính; có chặng `BACKUP` ⇒ lộ trình dự phòng; `RETURN` ⇒ phương án quay đầu. Mỗi TransportPlan tối đa **1 PRIMARY chưa hủy**; BACKUP cần đã có PRIMARY chưa hủy. Lý do lập backup/RETURN lưu ở `RoutePlan.route_note`. Backup chỉ thay một đoạn của primary: xem R16. |
 | R12 | **Hủy RoutePlan (UC-40):** chỉ `DRAFT`, có lý do (gửi trong request, ghi vào `route_note`); không đổi trạng thái Booking/TransportPlan; bản ghi giữ lại (`status = CANCELLED`). Sau khi hủy PRIMARY, `hasRoutePlan` về `false`.                                                                                                                                                            |
 | R13 | **Route master tái sử dụng:** chặng gửi `routeId` có sẵn, hoặc `fromLocationId + toLocationId + transportMode` để BE tìm/tạo `Route` (distance/duration lấy từ Map service).                                                                                                                                                                                                               |
 | R14 | **Atomic:** các side effect của một API ghi (đổi status + gán nhân sự/xe + đổi status CDos + `Queue` thông báo) được lưu bằng một lần `SaveChanges`/transaction; `FlushAsync` đẩy SignalR chỉ chạy **sau khi commit thành công**. Chi tiết ở bảng Thông báo đầu file. |
 | R15 | **Server tính toán:** `totalDistanceKm`, `estimatedDurationMinutes`, `dwellAfterMinutes`, các giá trị suy ra đều do server tính, không tin giá trị client gửi (V7 ghi chú 9).                                                                                                                                                                                                              |
+| R16 | **Backup thay một đoạn của primary.** RoutePlan `BACKUP` chỉ chứa phần thay thế, không phải cả tuyến. Ví dụ primary `A→B→C→D→E`, backup `C→D'→E`. Chặng đầu của backup phải bắt đầu tại `fromLocation` của một chặng primary, chặng cuối phải kết thúc tại `toLocation` của chặng primary đó hoặc chặng đứng sau; các chặng primary nằm giữa hai điểm này là **đoạn bị thay**. Khi backup được bật (UC-48), lộ trình hiệu lực = chặng primary trước đoạn bị thay + chặng backup + chặng primary sau đoạn bị thay (`A→B→C→D'→E`). DB không có cột "đoạn bị thay": BE suy ra bằng cách khớp `fromLocation` đầu và `toLocation` cuối của backup với chuỗi primary. R5–R8 (liên tục, nghỉ, 24h, BCP) tính trên **lộ trình hiệu lực đã ghép**, không tính riêng backup. Hai điểm đầu/cuối này lấy từ primary và **không đổi được** sau khi tạo (RP4 không cho đổi hai đầu). Hai đầu không khớp primary → `422 BACKUP_NOT_ANCHORED`; backup trùng hệt đoạn primary bị thay (cùng chuỗi `routeId`) → `409 IDENTICAL_CONTINGENCY_ROUTE`. |
+| R17 | **RETURN: quay đầu khẩn cấp giữa đường.** RETURN không lập sẵn: RC tạo RoutePlan `RETURN` (RP1) khi `Transport` đang `IN_TRANSIT`, kèm lý do ở `routeNote`. Chặng đầu của RETURN bắt đầu tại vị trí hiện tại (một `Location`, RC có thể tạo bằng LOC3/ROT3), chặng cuối kết thúc tại điểm xuất phát. CDos lúc này `APPROVED` bị khóa nên RETURN đi qua cổng LM: LM duyệt (EC2) thì CDos `APPROVED → DRAFT` để TS bổ sung giấy tờ; TS xác nhận ở RP7 thì CDos tự chạy `IN_PREPARATION → READY_FOR_SUBMISSION → SUBMITTED → APPROVED` và RoutePlan `CONFIRMED`; LM kích hoạt (EC3) và RC báo Driver (EC4). Customer **không** nộp thêm giấy tờ. Mỗi Transport tối đa **1 RETURN chưa hủy**. Thứ tự sự cố: primary gặp sự cố → bật backup; backup cũng gặp sự cố → RETURN (không giao hàng nữa). Khi bật RETURN, lộ trình hiệu lực = các chặng đã đi + chặng `RETURN`, các chặng chưa đi bị bỏ. **Driver/Escort giữ nguyên người đang phụ trách chuyến**, không dùng PS3. **Xe:** RETURN thường dùng chính xe đang chở ngựa (`IN_USE`) và lịch chồng với các chặng chưa đi của primary; R9 và `SCHEDULE_CONFLICT` bỏ qua hai trường hợp này khi xe đã gán cho PRIMARY của cùng Transport. |
 
 ---
 
@@ -337,7 +345,7 @@ Mọi `...Id` là `uuid` (string).
 | ----------------------------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------- |
 | `routePlanRouteId`                        | uuid                    |                                                                                                                              |
 | `sequenceNo`                              | number                  | 1…n (mỗi RoutePlan có dãy riêng)                                                                                             |
-| `routeType`                               | string                  | `PRIMARY`                                                                                                                    | `BACKUP` (suy ra từ `route_type` các chặng, R11); bỏ trống = tất cả | / `BACKUP` / `RETURN` (`route_type` của chặng) |
+| `routeType`                               | string                  | `PRIMARY` / `BACKUP` / `RETURN` (`route_type` của chặng)                                                                |
 | `route`                                   | object                  | `routeId`, `routeCode`, `routeName`, `transportMode`, `distanceKm`, `estimatedDurationMinutes`                               |
 | `fromLocation` / `toLocation`             | `LocationBrief`         | Có `latitude`/`longitude`                                                                                                    |
 | `plannedDepartureAt` / `plannedArrivalAt` | string                  |                                                                                                                              |
@@ -365,7 +373,8 @@ Mọi `...Id` là `uuid` (string).
 | `segments`                                     | `Segment[]`    | Theo `sequenceNo`                                                                                                                         |
 | `isPersonnelComplete`                          | boolean        | `true` khi mọi chặng nội bộ đã có Driver và Escort (chặng thuê ngoài không cần)                                                           |
 | `legalReview`                                  | object \| null | Suy ra từ `ComplianceDossier`, không có bảng riêng: `isFeasible`, `note`, `blockedSegments`, `reviewedBy` (`EmployeeBrief`), `reviewedAt` |
-| `routeNote`                                    | string \| null | `route_note`; với BACKUP là lý do lập dự phòng                                                                                            |
+| `replacesSequenceNo`                           | object \| null | Chỉ BACKUP: `{ from, to }` = `sequenceNo` các chặng primary bị thay (suy ra, R16)                                          |
+| `routeNote`                                    | string \| null | `route_note`; với BACKUP là lý do lập dự phòng, với RETURN là lý do quay đầu khẩn cấp                                                                                            |
 | `createdAt`, `updatedAt`                       | string         | `updatedAt` dùng cho `lastUpdatedAt`                                                                                                      |
 
 ### 3.7. `TransportPlan`
@@ -773,7 +782,7 @@ Không có dữ liệu → `200`, `items: []` (FE hiển thị "Hiện chưa có
     "transport": {
       "transportId": "uuid",
       "transportCode": "TR-20261001-0005",
-      "status": "CREATED"
+      "status": "PLANNING"
     },
     "transportPlan": {
       "transportPlanId": "uuid",
@@ -965,6 +974,8 @@ Chỉ sửa khi `status ∈ {DRAFT, PENDING, APPROVED}` (trước `IN_PROGRESS`)
   "planningNote": "Updated schedule"
 }
 ```
+
+Thêm `400 VALIDATION_ERROR` khi `plannedEndAt ≤ plannedStartAt` (sau khi gộp với giá trị cũ).
 
 **`200 OK`** — trả `TransportPlan` đầy đủ (cùng cấu trúc TP3). Hệ thống gửi thông báo cập nhật cho Customer, TS, RC.
 
@@ -1215,16 +1226,18 @@ UC-42. Chỉ ghi `transport_provider_id` (và `note`) trên `RoutePlanRoute`. DB
 
 `PUT /api/v1/route-plans/{routePlanId}/segments/{routePlanRouteId}/outsourcing`
 
-Chỉ khi RoutePlan `status = DRAFT`; sau `CONFIRMED` không còn sửa chặng (đổi khi đang chạy: UC-48, mục 12) → `409 ROUTE_LOCKED`. Không đổi status route.
+Chỉ khi RoutePlan `status = DRAFT`; sau `CONFIRMED` không còn sửa chặng (đổi khi đang chạy: UC-48, mục 12; RoutePlan RETURN đã `CONFIRMED` gán provider qua EC3) → `409 ROUTE_LOCKED`. Không đổi status route.
 
 | Field                 | Type    | Bắt buộc                | Mô tả                                                              |
 | --------------------- | ------- | ----------------------- | ------------------------------------------------------------------ |
+| `lastUpdatedAt`       | string  | Yes                     | `updatedAt` của RoutePlan                                          |
 | `outsourced`          | boolean | Yes                     | `true` = thuê ngoài; `false` = chuyển về nội bộ                    |
 | `transportProviderId` | uuid    | Khi `outsourced = true` | Provider `ACTIVE`, `supportedModes` chứa `transportMode` của chặng |
 | `note`                | string  | No                      | Số chuyến bay / AWB / mã booking dịch vụ thuê ngoài (UC-42 bước 6) |
 
 ```json
 {
+  "lastUpdatedAt": "2026-10-08T08:00:00Z",
   "outsourced": true,
   "transportProviderId": "uuid",
   "note": "Lufthansa Cargo CDG-LHR"
@@ -1266,13 +1279,14 @@ Chỉ khi RoutePlan `status = DRAFT`; sau `CONFIRMED` không còn sửa chặng 
 }
 ```
 
-Gỡ về nội bộ: body `{ "outsourced": false }` → `isOutsourced: false`, `outsourcing: null`; hệ thống bật lại yêu cầu gán Driver/Escort ở [PS3](#ps3-giao-nhiệm-vụ-đợt-2-theo-route).
+Gỡ về nội bộ: body `{ "lastUpdatedAt": "…", "outsourced": false }` → `isOutsourced: false`, `outsourcing: null`; hệ thống bật lại yêu cầu gán Driver/Escort ở [PS3](#ps3-phân-công-đợt-2-lần-đầu-cả-route).
 
 | HTTP | errorCode                                    | Message                                                               |
 | ---- | -------------------------------------------- | --------------------------------------------------------------------- |
 | 400  | `PROVIDER_REQUIRED`                          | Please select a valid Transport Provider for this outsourced segment. |
 | 404  | `ROUTE_PLAN_NOT_FOUND` / `SEGMENT_NOT_FOUND` | Route Plan / Segment not found                                        |
 | 409  | `ROUTE_LOCKED`                               | The route plan can no longer be modified (use emergency change)       |
+| 409  | `ROUTE_PLAN_MODIFIED`                        | The route plan was just modified. Please reload the page              |
 | 409  | `PROVIDER_INACTIVE`                          | Provider is not ACTIVE                                                |
 | 422  | `PROVIDER_MODE_MISMATCH`                     | The provider does not support the transport mode of this segment      |
 
@@ -1570,7 +1584,7 @@ UC-46. ⚠️ C25.
 | Field           | Type   | Bắt buộc | Mô tả                                                                          |
 | --------------- | ------ | -------- | ------------------------------------------------------------------------------ |
 | `lastUpdatedAt` | string | Yes      |                                                                                |
-| `status`        | string | Yes      | **Chỉ** `AVAILABLE`, `MAINTENANCE`, `INACTIVE`. `ASSIGNED`/`IN_USE` → `400`    |
+| `status`        | string | Yes      | Trạng thái đích, **chỉ** `AVAILABLE`, `MAINTENANCE`, `INACTIVE`. Gửi `ASSIGNED`/`IN_USE` → `400 VALIDATION_ERROR` |
 | `reason`        | string | Yes      | Ghi chú / lý do thay đổi (DB V7 không có cột lưu riêng; đưa vào log/thông báo) |
 
 ```json
@@ -1597,7 +1611,7 @@ UC-46. ⚠️ C25.
 }
 ```
 
-Xe sang trạng thái khác `AVAILABLE` tự động bị ẩn khỏi danh sách gợi ý khi lập route/phân công (UC-46 ALT-01). Xe đang `ASSIGNED` hoặc `IN_USE` → `409 VEHICLE_STATUS_LOCKED`.
+Xe sang trạng thái khác `AVAILABLE` tự động bị ẩn khỏi danh sách gợi ý khi lập route/phân công (UC-46 ALT-01). Xe **hiện đang** `ASSIGNED` hoặc `IN_USE` → `409 VEHICLE_STATUS_LOCKED` (khác với trạng thái đích ở trên). Thiếu `reason` → `400 VALIDATION_ERROR`.
 
 ---
 
@@ -1605,10 +1619,10 @@ Xe sang trạng thái khác `AVAILABLE` tự động bị ẩn khỏi danh sách
 
 | #   | API                               | Method & Endpoint                                     | Role                              |
 | --- | --------------------------------- | ----------------------------------------------------- | --------------------------------- |
-| RP1 | Tạo Route Plan (chính / dự phòng) | `POST /transport-plans/{transportPlanId}/route-plans` | RC (PRIMARY, BACKUP); LM (BACKUP) |
+| RP1 | Tạo Route Plan (chính / dự phòng / quay về) | `POST /transport-plans/{transportPlanId}/route-plans` | RC (PRIMARY, BACKUP, RETURN); LM (BACKUP) |
 | RP2 | Danh sách Route Plan của plan     | `GET /transport-plans/{transportPlanId}/route-plans`  | RC, LM, TS                        |
 | RP3 | Chi tiết Route Plan               | `GET /route-plans/{routePlanId}`                      | RC, LM, TS                        |
-| RP4 | Sửa Route Plan                    | `PUT /route-plans/{routePlanId}`                      | RC (PRIMARY, BACKUP); LM (BACKUP) |
+| RP4 | Sửa Route Plan                    | `PUT /route-plans/{routePlanId}`                      | RC (PRIMARY, BACKUP, RETURN); LM (BACKUP) |
 | RP5 | Hủy Route Plan                    | `POST /route-plans/{routePlanId}/cancel`              | RC; LM (BACKUP)                   |
 | RP6 | Xuất PDF                          | `GET /route-plans/{routePlanId}/export`               | RC, LM                            |
 
@@ -1623,9 +1637,15 @@ Xe sang trạng thái khác `AVAILABLE` tự động bị ẩn khỏi danh sách
 | 404  | `ROUTE_NOT_FOUND` / `LOCATION_NOT_FOUND` / `VEHICLE_NOT_FOUND` | Route / Location / Vehicle not found                                                                                                          | RP1, RP4  |
 | 409  | `PRIMARY_ROUTE_PLAN_EXISTS`                                    | A primary route plan already exists for this transport plan                                                                                   | RP1       |
 | 409  | `PRIMARY_ROUTE_PLAN_REQUIRED`                                  | A backup route plan requires an existing primary route plan                                                                                   | RP1       |
-| 409  | `DOSSIER_LOCKED`                                               | A backup route plan cannot be created once the compliance dossier is past IN_PREPARATION (C30)                                                | RP1       |
+| 409  | `DOSSIER_LOCKED`                                               | A backup route plan cannot be created once the compliance dossier is past IN_PREPARATION                                                      | RP1       |
+| 409  | `DOSSIER_NOT_APPROVED`                                         | A return route plan requires an approved compliance dossier (Transport is in transit)                                                         | RP1, EC2  |
+| 409  | `RETURN_ROUTE_PLAN_EXISTS`                                     | A return route plan already exists for this transport plan                                                                                    | RP1       |
+| 409  | `TRANSPORT_NOT_IN_TRANSIT`                                     | A return route plan can only be created while the transport is in transit                                                                     | RP1, EC1–EC3 |
 | 409  | `IDENTICAL_CONTINGENCY_ROUTE`                                  | Contingency route cannot be identical to the primary route. Please select alternative waypoints or border checkpoints.                        | RP1, RP4  |
+| 422  | `BACKUP_NOT_ANCHORED`                                          | The backup route must start and end on locations of the primary route (R16)                                                                   | RP1, RP4  |
 | 409  | `INVALID_ROUTE_PLAN_STATUS`                                    | This action cannot be performed while the route plan is in {status} status                                                                    | RP4, RP5  |
+| 409  | `RETURN_NOT_APPROVED`                                          | A return route plan cannot be submitted for legal review before the Logistics Manager approves it (EC2)                                       | RP4       |
+| 409  | `RETURN_ALREADY_APPROVED`                                      | An approved return route plan cannot be cancelled                                                                                             | RP5       |
 | 409  | `ROUTE_LOCKED`                                                 | Transport is currently in transit. Please use Emergency Route Change (UC-48) for in-transit modifications.                                    | RP4       |
 | 409  | `ROUTE_PLAN_MODIFIED`                                          | The route plan was just modified. Please reload the page                                                                                      | RP4, RP5  |
 | 409  | `SCHEDULE_CONFLICT`                                            | A selected vehicle is already assigned during this time slot                                                                                  | RP1, RP4  |
@@ -1657,18 +1677,18 @@ Xe sang trạng thái khác `AVAILABLE` tự động bị ẩn khỏi danh sách
 
 ### RP1. Tạo Route Plan (chính / dự phòng)
 
-UC-33 (PRIMARY) và UC-37 (BACKUP). Mọi chặng của RoutePlan mới nhận `route_type` = `routeType` của request (R11).
+UC-33 (PRIMARY), UC-37 (BACKUP) và UC-48 (RETURN, R17). Mọi chặng của RoutePlan mới nhận `route_type` = `routeType` của request (R11).
 
 `POST /api/v1/transport-plans/{transportPlanId}/route-plans`
 
-Điều kiện: Booking `APPROVED`; `TransportPlan.status = APPROVED` (R3). BACKUP yêu cầu đã có PRIMARY chưa hủy. **Tạo BACKUP** còn đưa `ComplianceDossier` `IN_PREPARATION → DRAFT` trong cùng transaction để TS thẩm định lại qua RP7 (mục 2.2, C30).
+Điều kiện: Booking `APPROVED`; `TransportPlan.status = APPROVED` (R3). BACKUP yêu cầu đã có PRIMARY chưa hủy và chỉ chứa **đoạn thay thế** của primary (R16). **Tạo BACKUP** còn đưa `ComplianceDossier` `IN_PREPARATION → DRAFT` trong cùng transaction để TS thẩm định lại qua RP7 (mục 2.2). **RETURN** (R17): chỉ khi `Transport.status = IN_TRANSIT`, đã có PRIMARY, CDos `APPROVED`, chưa có RETURN chưa hủy; **không** đổi CDos và không thông báo TS, chỉ thông báo LM (`URGENT`); `action = SUBMIT_FOR_LEGAL_REVIEW` với RETURN → `400 VALIDATION_ERROR`.
 
-| Field       | Type   | Bắt buộc     | Mô tả                                                                                        |
-| ----------- | ------ | ------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ----------- |
-| `routeType` | string | Yes          | `PRIMARY`                                                                                    | `BACKUP` (suy ra từ `route_type` các chặng, R11); bỏ trống = tất cả | \| `BACKUP` |
-| `segments`  | array  | Yes          | ≥ 1 chặng, [9.1](#91-cấu-trúc-segments-khi-tạosửa)                                           |
-| `routeNote` | string | Khi `BACKUP` | Ghi chú; với BACKUP là lý do lập dự phòng (≥ 10 ký tự)                                       |
-| `action`    | string | Yes          | `SAVE_DRAFT` (→ `DRAFT`, không báo TS) \| `SUBMIT_FOR_LEGAL_REVIEW` (vẫn `DRAFT`, notify TS) |
+| Field       | Type   | Bắt buộc               | Mô tả                                                                                                           |
+| ----------- | ------ | ---------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `routeType` | string | Yes                    | `PRIMARY` \| `BACKUP` \| `RETURN`                                                                              |
+| `segments`  | array  | Yes                    | ≥ 1 chặng, [9.1](#91-cấu-trúc-segments-khi-tạosửa)                                                              |
+| `routeNote` | string | Khi `BACKUP`, `RETURN` | Ghi chú; với BACKUP là lý do lập dự phòng, với RETURN là lý do quay đầu khẩn cấp (≥ 10 ký tự)                    |
+| `action`    | string | Yes                    | `SAVE_DRAFT` (→ `DRAFT`, không báo TS) \| `SUBMIT_FOR_LEGAL_REVIEW` (vẫn `DRAFT`, notify TS). RETURN chỉ dùng `SAVE_DRAFT` |
 
 ```json
 {
@@ -1876,6 +1896,7 @@ UC-33 (PRIMARY) và UC-37 (BACKUP). Mọi chặng của RoutePlan mới nhận `
     ],
     "isPersonnelComplete": false,
     "legalReview": null,
+    "replacesSequenceNo": null,
     "routeNote": "Direct air route",
     "createdAt": "2026-10-08T08:00:00Z",
     "updatedAt": "2026-10-08T08:00:00Z"
@@ -1915,7 +1936,9 @@ UC-33 (PRIMARY) và UC-37 (BACKUP). Mọi chặng của RoutePlan mới nhận `
 }
 ```
 
-Response `201` cùng cấu trúc, `routeType: "BACKUP"`, `status: "DRAFT"`. Khi `SUBMIT_FOR_LEGAL_REVIEW` hệ thống notify TS để chuẩn bị giấy tờ cho tuyến dự phòng (UC-37 bước 7, AC-002).
+Response `201` cùng cấu trúc, `routeType: "BACKUP"`, `status: "DRAFT"`, `replacesSequenceNo: { "from": 1, "to": 2 }`. Khi `SUBMIT_FOR_LEGAL_REVIEW` hệ thống notify TS để chuẩn bị giấy tờ cho tuyến dự phòng (UC-37 bước 7, AC-002).
+
+**Return (UC-48 EXC-01, R17).** Cùng cấu trúc request với `"routeType": "RETURN"` và `"action": "SAVE_DRAFT"`; `routeNote` là lý do. Response `201` cùng cấu trúc, `routeType: "RETURN"`, `status: "DRAFT"`. Đây chính là yêu cầu gửi LM; LM duyệt ở [EC2](#12-thay-đổi-lộ-trình-khẩn-cấp-uc-48).
 
 ### RP2. Danh sách Route Plan của Transport Plan
 
@@ -1923,11 +1946,11 @@ UC-38 (chuyển tab tuyến chính / dự phòng), UC-37 (danh sách dự phòng
 
 `GET /api/v1/transport-plans/{transportPlanId}/route-plans?routeType=BACKUP&includeCancelled=false`
 
-| Query              | Type    | Bắt buộc | Mô tả             |
-| ------------------ | ------- | -------- | ----------------- | ------------------------------------------------------------------- | ------------------------------ |
-| `routeType`        | string  | No       | `PRIMARY`         | `BACKUP` (suy ra từ `route_type` các chặng, R11); bỏ trống = tất cả | \| `BACKUP`; bỏ trống = tất cả |
-| `status`           | string  | No       | `RoutePlanStatus` |
-| `includeCancelled` | boolean | No       | Mặc định `false`  |
+| Query              | Type    | Bắt buộc | Mô tả                                                                                        |
+| ------------------ | ------- | -------- | -------------------------------------------------------------------------------------------- |
+| `routeType`        | string  | No       | `PRIMARY` \| `BACKUP` \| `RETURN` (suy ra từ `route_type` các chặng, R11); bỏ trống = tất cả |
+| `status`           | string  | No       | `RoutePlanStatus`                                                                            |
+| `includeCancelled` | boolean | No       | Mặc định `false`                                                                             |
 
 **`200 OK`** — không phân trang (một plan chỉ có vài phương án).
 
@@ -1947,6 +1970,8 @@ UC-38 (chuyển tab tuyến chính / dự phòng), UC-37 (danh sách dự phòng
         "estimatedDurationMinutes": 750,
         "segmentCount": 3,
         "isPersonnelComplete": false,
+        "replacesSequenceNo": null,
+        "routeNote": "Direct air route",
         "updatedAt": "2026-10-08T08:00:00Z"
       },
       {
@@ -1958,6 +1983,8 @@ UC-38 (chuyển tab tuyến chính / dự phòng), UC-37 (danh sách dự phòng
         "estimatedDurationMinutes": 720,
         "segmentCount": 2,
         "isPersonnelComplete": false,
+        "replacesSequenceNo": { "from": 1, "to": 2 },
+        "routeNote": "Backup via Dunkirk",
         "updatedAt": "2026-10-08T09:00:00Z"
       }
     ]
@@ -1984,16 +2011,21 @@ UC-38. Dữ liệu cho bản đồ + timeline (SCR-F3-009, SCR-F3-032).
     "routePlanId": "uuid",
     "routePlanCode": "RP-20261001-0001",
     "transportPlanId": "uuid",
+    "bookingId": "uuid",
+    "bookingCode": "REQ-20261001-0005",
     "routeType": "PRIMARY",
     "status": "CONFIRMED",
     "isCrossBorder": true,
     "totalDistanceKm": 612.4,
     "estimatedDurationMinutes": 750,
+    "plannedDepartureAt": "2026-10-27T06:00:00Z",
+    "plannedArrivalAt": "2026-10-27T19:30:00Z",
     "segments": ["…cùng cấu trúc Segment như RP1…"],
     "isPersonnelComplete": false,
     "legalReview": {
       "isFeasible": true,
       "note": "All required permits are obtainable",
+      "blockedSegments": [],
       "reviewedBy": {
         "employeeId": "uuid",
         "employeeCode": "EMP-2026-021",
@@ -2002,6 +2034,8 @@ UC-38. Dữ liệu cho bản đồ + timeline (SCR-F3-009, SCR-F3-032).
       },
       "reviewedAt": "2026-10-09T08:00:00Z"
     },
+    "replacesSequenceNo": null,
+    "routeNote": "Direct air route",
     "createdAt": "2026-10-08T08:00:00Z",
     "updatedAt": "2026-10-09T10:00:00Z"
   }
@@ -2012,7 +2046,7 @@ UC-38. Dữ liệu cho bản đồ + timeline (SCR-F3-009, SCR-F3-032).
 
 ### RP4. Sửa Route Plan
 
-UC-39 (PRIMARY) và UC-37 (BACKUP). Ghi đè toàn bộ `segments` (thêm/sửa/xóa chặng). Chỉ khi `status = DRAFT` (kể cả sau khi TS báo không khả thi). `CONFIRMED` trở đi → `409 ROUTE_LOCKED` (đổi lộ trình khi đang chạy dùng UC-48). Chặng cũ bị xóa trong lần sửa được ghi audit (AC-002 UC-33).
+UC-39 (PRIMARY), UC-37 (BACKUP) và RETURN (sau khi LM duyệt ở EC2). Ghi đè toàn bộ `segments` (thêm/sửa/xóa chặng). Chỉ khi `status = DRAFT` (kể cả sau khi TS báo không khả thi). `CONFIRMED` trở đi → `409 ROUTE_LOCKED` (đổi lộ trình khi đang chạy dùng UC-48). Chặng cũ bị xóa trong lần sửa được ghi audit (AC-002 UC-33). RoutePlan `RETURN` chỉ gửi thẩm định (`SUBMIT_FOR_LEGAL_REVIEW`) được sau khi LM duyệt ở EC2; trước đó → `409 RETURN_NOT_APPROVED`.
 
 `PUT /api/v1/route-plans/{routePlanId}`
 
@@ -2077,7 +2111,7 @@ UC-39 (PRIMARY) và UC-37 (BACKUP). Ghi đè toàn bộ `segments` (thêm/sửa/
 
 ### RP5. Hủy Route Plan
 
-UC-40 (PRIMARY, RC) và UC-37 (BACKUP, soft-cancel). Chỉ khi `DRAFT`; `CONFIRMED` trở đi → `409 INVALID_ROUTE_PLAN_STATUS` (message "Cannot cancel a Confirmed Route Plan. Please contact Logistics Manager if a route change is required."). Giải phóng xe đã giữ chỗ. Không đổi trạng thái Booking hay TransportPlan.
+UC-40 (PRIMARY, RC) và UC-37 (BACKUP, soft-cancel). Chỉ khi `DRAFT`; RoutePlan `RETURN` đã được LM duyệt ở EC2 (CDos đã mở lại) không hủy được → `409 RETURN_ALREADY_APPROVED`; `CONFIRMED` trở đi → `409 INVALID_ROUTE_PLAN_STATUS` (message "Cannot cancel a Confirmed Route Plan. Please contact Logistics Manager if a route change is required."). Giải phóng xe đã giữ chỗ. Không đổi trạng thái Booking hay TransportPlan.
 
 `POST /api/v1/route-plans/{routePlanId}/cancel`
 
@@ -2143,7 +2177,7 @@ Lỗi (`404 ROUTE_PLAN_NOT_FOUND`, `400 VALIDATION_ERROR` khi `format` khác `pd
 
 ### RP7. TS xác nhận / từ chối tính khả thi pháp lý
 
-UC-33 bước 7 và ALT-01; UC-39 bước 7. Chỉ khi `DRAFT`. Atomic (R14). Áp dụng cho cả RoutePlan PRIMARY và BACKUP.
+UC-33 bước 7 và ALT-01; UC-39 bước 7. Chỉ khi `DRAFT`. Atomic (R14). Áp dụng cho RoutePlan PRIMARY, BACKUP và RETURN (nhánh RETURN ở cuối mục).
 
 `POST /api/v1/route-plans/{routePlanId}/legal-review`
 
@@ -2208,6 +2242,9 @@ UC-33 bước 7 và ALT-01; UC-39 bước 7. Chỉ khi `DRAFT`. Atomic (R14). Á
 | ---- | ------------------ | -------------------------------------------- |
 | 400  | `VALIDATION_ERROR` | `note` là bắt buộc khi `isFeasible = false`  |
 | 403  | `FORBIDDEN`        | Chỉ TS được phân công vào Transport Plan này |
+| 409  | `RETURN_NOT_APPROVED` | RoutePlan RETURN chưa được LM duyệt (CDos chưa mở lại `DRAFT`, EC2) |
+
+**Nhánh RETURN (R17, mục 12.2 bước 4).** Chỉ khi LM đã duyệt ở EC2 (CDos `DRAFT`), nếu không → `409 RETURN_NOT_APPROVED`. `isFeasible = true`: cùng transaction CDos `DRAFT → IN_PREPARATION → READY_FOR_SUBMISSION → SUBMITTED → APPROVED` (ghi `AuditDossier` từng bước; Customer không nộp thêm nên không có bước nộp), RoutePlan `DRAFT → CONFIRMED`. **Không** mở upload cho Customer (`customerUploadEnabled: false`), **không** mở phân công đợt 2 (`personnelAssignmentPhase2Enabled: false`, Driver/Escort giữ nguyên), không thông báo Customer. Thông báo LM (để gán xe/provider và kích hoạt bằng EC3) và RC. `isFeasible = false` như trên: route giữ `DRAFT`, notify RC.
 
 ---
 
@@ -2250,6 +2287,7 @@ Phân công 2 đợt. Quy tắc dưới đây dựa trên UC-34/36, `EmployeeTra
 | 409  | `PHASE1_ALREADY_ASSIGNED`                                                                        | Phase 1 has already been assigned. Use PUT to change personnel                                 | PS1                |
 | 409  | `PHASE1_NOT_ASSIGNED`                                                                            | Phase 1 has not been assigned yet. Use POST to assign                                          | PS5                |
 | 409  | `PHASE1_LOCKED`                                                                                  | Phase 1 cannot be changed once Phase 2 is open (Route Plan confirmed)                          | PS5                |
+| 409  | `TRANSPORT_PLAN_MODIFIED` / `ROUTE_PLAN_MODIFIED`                                                | The plan was just modified. Please reload the page                                             | PS5 / PS3, PS4     |
 | 422  | `ROUTE_NOT_CONFIRMED`                                                                            | Cannot assign Driver and Escort until Route Plan is Confirmed                                  | PS3, PS4           |
 | 409  | `SEGMENT_ALREADY_ASSIGNED`                                                                       | The segment already has a Driver/Escort. Use PUT on the segment to change personnel            | PS3                |
 | 409  | `SEGMENT_LOCKED`                                                                                 | The segment is in progress or completed                                                        | PS4                |
@@ -2358,12 +2396,17 @@ Thay TS và/hoặc RC. Chỉ khi đã có phân công đợt 1 (chưa có → `4
 
 | Field                   | Type   | Bắt buộc | Mô tả                 |
 | ----------------------- | ------ | -------- | --------------------- |
+| `lastUpdatedAt`         | string | Yes      | `updatedAt` của TransportPlan |
 | `transportSpecialistId` | uuid   | No       | Bỏ trống = giữ nguyên |
 | `routeCoordinatorId`    | uuid   | No       | Bỏ trống = giữ nguyên |
 | `reason`                | string | Yes      | Lý do thay người      |
 
 ```json
-{ "routeCoordinatorId": "uuid", "reason": "Previous coordinator is on leave" }
+{
+  "lastUpdatedAt": "2026-10-06T08:00:00Z",
+  "routeCoordinatorId": "uuid",
+  "reason": "Previous coordinator is on leave"
+}
 ```
 
 **`200 OK`** — cùng cấu trúc response PS1 (`assignedEmployees`, `updatedAt`).
@@ -2476,7 +2519,40 @@ UC-36 luồng đợt 2 ("Xác nhận & Giao nhiệm vụ Chuyến đi"). Atomic:
 }
 ```
 
-**`201 Created`** — trả `routePlanId`, `isPersonnelComplete`, `segments[]` (mỗi chặng: `routePlanRouteId`, `sequenceNo`, `isOutsourced`, `driver`, `escort`, `provider`), `updatedAt`, cùng cấu trúc `phase2.segments` của PS2.
+**`201 Created`** — `segments[]` cùng cấu trúc `phase2.segments` của PS2.
+
+```json
+{
+  "isSuccess": true,
+  "code": 201,
+  "message": "Phase 2 personnel assigned successfully",
+  "value": {
+    "routePlanId": "uuid",
+    "isPersonnelComplete": true,
+    "segments": [
+      {
+        "routePlanRouteId": "uuid",
+        "sequenceNo": 1,
+        "isOutsourced": false,
+        "driver": {
+          "employeeId": "uuid",
+          "employeeCode": "EMP-2026-081",
+          "fullName": "Tran Van Nam",
+          "role": "DRIVER"
+        },
+        "escort": {
+          "employeeId": "uuid",
+          "employeeCode": "EMP-2026-090",
+          "fullName": "Le Van Binh",
+          "role": "ESCORT"
+        },
+        "provider": null
+      }
+    ],
+    "updatedAt": "2026-10-09T10:30:00Z"
+  }
+}
+```
 
 ### PS4. Đổi nhân sự một chặng (đợt 2)
 
@@ -2486,44 +2562,249 @@ UC-36 ALT-01 ("Thay đổi / Điều động nhân sự bổ sung"). Dùng cho D
 
 | Field              | Type   | Bắt buộc | Mô tả                 |
 | ------------------ | ------ | -------- | --------------------- |
+| `lastUpdatedAt`    | string | Yes      | `updatedAt` của RoutePlan |
 | `driverEmployeeId` | uuid   | No       | Bỏ trống = giữ nguyên |
 | `escortEmployeeId` | uuid   | No       | Bỏ trống = giữ nguyên |
 | `reason`           | string | Yes      | Lý do điều động       |
 
 ```json
-{ "driverEmployeeId": "uuid", "reason": "Previous driver is sick" }
+{
+  "lastUpdatedAt": "2026-10-09T10:00:00Z",
+  "driverEmployeeId": "uuid",
+  "reason": "Previous driver is sick"
+}
 ```
 
 **`200 OK`** — trả `routePlanId`, `segment` (cấu trúc như một phần tử `phase2.segments` của PS2), `isPersonnelComplete`, `updatedAt`.
 
 ---
 
-## 12. Thay đổi lộ trình khẩn cấp (UC-48) — chờ chốt (C11)
+## 12. Thay đổi lộ trình khẩn cấp (UC-48)
 
-> **Đề xuất, chưa phải contract chốt.** V7 không có bảng đề xuất đổi lộ trình, nên đề xuất dưới đây chỉ dùng bảng có sẵn: `RoutePlan` + `RoutePlanRoute.route_type` (`BACKUP`/`RETURN`) + `Notification`. Chỉ implement sau khi BE trả lời 3 câu hỏi cuối mục. Thay đổi lệch **< 50 km và < 1 giờ** do Driver tự chọn được ghi nhận ở Flow 4 (BR-036), không qua các API này. Chỉ áp dụng khi `Transport.status = IN_TRANSIT`.
+> V7 không có bảng đề xuất đổi lộ trình, nên mục này chỉ dùng bảng có sẵn: `RoutePlan` + `RoutePlanRoute.route_type` (`BACKUP`/`RETURN`) + `Notification` + `AuditDossier`. Thay đổi lệch **< 50 km và < 1 giờ** do Driver tự chọn được ghi nhận ở Flow 4 (BR-036), không qua các API này. Chỉ áp dụng khi `Transport.status = IN_TRANSIT`.
 
-**Luồng đề xuất**
+Có hai phương án, chuẩn bị ở hai thời điểm khác nhau:
 
-1. RC chuẩn bị phương án: dùng RoutePlan `BACKUP` đã `CONFIRMED` có sẵn (UC-37), hoặc tạo mới bằng RP1 (`routeType = BACKUP`; `RETURN` cho phương án quay đầu) rồi TS xác nhận qua RP7.
-2. RC gửi yêu cầu (EC1) cho phương án đó. LM nhận thông báo `URGENT`.
-3. LM quyết định (EC2): duyệt thì phương án chuyển `ACTIVE`; từ chối thì RC được thông báo để lập phương án khác. Duyệt phương án `RETURN` chính là "quay đầu khẩn cấp" (UC-48 EXC-01).
+| | BACKUP | RETURN |
+| --- | --- | --- |
+| Lập RoutePlan | **Trước khi khởi hành** (RP1), TS thẩm định qua RP7 cùng lộ trình chính (R16) | **Giữa đường**, khi có sự cố (RP1 do RC tạo lúc đó, R17) |
+| Giấy tờ | TS soạn từ đầu, Customer nộp luôn | TS bổ sung vào CDos đã mở lại; Customer **không** nộp thêm |
+| Yêu cầu | EC1 (RC) | RP1 `routeType = RETURN` kèm lý do ở `routeNote` |
+| LM quyết định | EC2: duyệt thì `CONFIRMED → ACTIVE` | EC2: duyệt thì mở lại CDos `APPROVED → DRAFT` |
+| Kích hoạt | Ngay khi EC2 duyệt | EC3 (LM), sau khi TS xác nhận ở RP7 |
 
-| #   | API                         | Method & Endpoint                                 | Role |
-| --- | --------------------------- | ------------------------------------------------- | ---- |
-| EC1 | RC gửi yêu cầu đổi lộ trình | `POST /route-plans/{routePlanId}/change-request`  | RC   |
-| EC2 | LM quyết định               | `POST /route-plans/{routePlanId}/change-decision` | LM   |
+### 12.1. BACKUP
 
-`{routePlanId}` là phương án **đã `CONFIRMED`** (BACKUP hoặc RETURN).
+1. Trước khi khởi hành: RC lập RoutePlan `BACKUP` (RP1), TS thẩm định qua RP7. Khi primary gặp sự cố, RC gửi yêu cầu bật backup (EC1); LM nhận thông báo `URGENT`.
+2. LM quyết định (EC2): duyệt thì backup `CONFIRMED → ACTIVE`, thông báo RC, Customer, Driver; từ chối thì RC được thông báo để lập phương án khác.
 
-**EC1** — body: `reason` (bắt buộc), `newEstimatedArrivalAt` (bắt buộc), `estimatedExtraCost` + `currency` (tùy chọn), `note`. Không ghi bảng mới: tạo `Notification` (`ROUTE`, `URGENT`, `reference_type = ROUTE_PLAN`, `reference_id = routePlanId`) gửi LM. Lỗi: `409 TRANSPORT_NOT_IN_TRANSIT`, `409 INVALID_ROUTE_PLAN_STATUS` (phương án chưa `CONFIRMED`), `422 APPROVAL_NOT_REQUIRED` (dưới ngưỡng BR-036: không đổi BCP, không thêm trạm nghỉ 24h, lệch < 50 km, trễ < 1 giờ).
+### 12.2. RETURN (quay đầu khẩn cấp, UC-48 EXC-01)
 
-**EC2** — body: `lastUpdatedAt`, `decision` (`APPROVE` \| `REJECT`), `note` (bắt buộc khi `REJECT`, ≥ 10 ký tự). `APPROVE`: phương án `CONFIRMED → ACTIVE`; notify TS (cập nhật chứng từ BCP mới), Customer (lịch + vị trí mới), Driver (route mới). `REJECT`: notify RC. Lỗi: `409 ROUTE_PLAN_MODIFIED`, `409 INVALID_ROUTE_PLAN_STATUS`.
+RETURN xảy ra giữa đường nên không thể chuẩn bị sẵn. CDos lúc này đã `APPROVED` nên bị khóa (Flow 2, UC-19); luồng dưới đây mở lại CDos có kiểm soát.
 
-**3 điểm DB V7 không nói rõ — mặc định đề xuất (BE xác nhận):**
+1. **RC gửi yêu cầu = tạo RoutePlan RETURN** bằng RP1 (`routeType = RETURN`, `routeNote` là lý do, ≥ 10 ký tự, `action = SAVE_DRAFT`). Điều kiện: `Transport.status = IN_TRANSIT`, đã có PRIMARY, CDos `APPROVED`, chưa có RETURN nào chưa hủy. RoutePlan ở `DRAFT`; CDos **chưa đổi**. Thông báo LM (`URGENT`). TS chưa được báo ở bước này.
+2. **LM quyết định (EC2).** `APPROVE`: CDos `APPROVED → DRAFT` (ghi `AuditDossier`), thông báo TS (để bổ sung giấy tờ) và RC. `REJECT`: RoutePlan RETURN `DRAFT → CANCELLED`, lý do (`note`) ghi vào `route_note`, thông báo RC; RC có thể gửi yêu cầu RETURN mới.
+3. **RC và TS soạn song song.** RC chỉnh lộ trình RETURN nếu cần (RP4, `SUBMIT_FOR_LEGAL_REVIEW` để báo TS). TS vào CDos bổ sung giấy tờ còn thiếu (Flow 2): yêu cầu thêm thuộc CDos (không gắn riêng vào RoutePlan), ghi `RETURN` ở `instruction`/`note`.
+4. **TS xác nhận (RP7, `isFeasible = true`).** Cùng transaction: CDos `DRAFT → IN_PREPARATION`, rồi tự chạy tiếp `READY_FOR_SUBMISSION → SUBMITTED → APPROVED` (ghi `AuditDossier` từng bước; Customer không nộp thêm giấy tờ); RoutePlan RETURN `DRAFT → CONFIRMED`. Không mở upload cho Customer, không mở phân công đợt 2. Thông báo LM và RC.
+5. **LM kích hoạt (EC3).** Gán thêm xe/provider cho các chặng RETURN (nếu cần), RoutePlan `CONFIRMED → ACTIVE`, thông báo Customer đã áp dụng lộ trình RETURN và RC.
+6. **RC báo Driver (EC4).** Driver đang phụ trách chuyến biết CDos đã duyệt, RoutePlan RETURN đã có, bắt đầu quay về.
 
-1. **RoutePlan chính khi phương án `ACTIVE`:** `route_plan_status` không có trạng thái "đã bị thay thế", nên đề xuất RoutePlan chính chuyển `CANCELLED`; các chặng đã đi vẫn giữ `actual_departure_at/actual_arrival_at` làm lịch sử.
-2. **Danh sách yêu cầu chờ LM duyệt:** không có bảng, nên không có API danh sách; LM mở từ `Notification` (`notification_type = ROUTE`, `priority = URGENT`, `reference_type = ROUTE_PLAN`, `reference_id` = phương án) do EC1 tạo, đồng thời phương án đang `CONFIRMED` còn Transport `IN_TRANSIT`.
-3. **Chi phí phát sinh (`estimatedExtraCost`):** chỉ nằm trong nội dung `Notification.message`; việc ghi nhận chi phí chính thức thuộc Flow 5.
+Từ lúc RC tạo yêu cầu đến khi LM kích hoạt, `Transport` vẫn `IN_TRANSIT` (DB không có trạng thái tạm dừng). Khi RETURN `ACTIVE`, lộ trình hiệu lực = các chặng đã đi + chặng `RETURN`; các chặng chưa đi của primary bị bỏ (R17). Yêu cầu RETURN **không có API riêng**: chính là RP1. LM mở yêu cầu từ thông báo (deep link tới RoutePlan) hoặc xem RP2 của TransportPlan (`routeType = RETURN`, `status = DRAFT`); không có danh sách yêu cầu toàn hệ thống.
+
+| #   | API                                  | Method & Endpoint                                   | Role |
+| --- | ------------------------------------ | --------------------------------------------------- | ---- |
+| EC1 | RC gửi yêu cầu bật BACKUP            | `POST /route-plans/{routePlanId}/change-request`    | RC   |
+| EC2 | LM quyết định (BACKUP hoặc RETURN)   | `POST /route-plans/{routePlanId}/change-decision`   | LM   |
+| EC3 | LM kích hoạt RETURN, báo Customer    | `POST /route-plans/{routePlanId}/return-activation` | LM   |
+| EC4 | RC báo Driver bắt đầu quay về        | `POST /route-plans/{routePlanId}/driver-notice`     | RC   |
+
+**Lỗi dùng chung của EC1–EC4** (ngoài lỗi chung mục 0):
+
+| HTTP | errorCode                   | Message                                                                        | Dùng ở        |
+| ---- | --------------------------- | ------------------------------------------------------------------------------ | ------------- |
+| 404  | `ROUTE_PLAN_NOT_FOUND`      | Route Plan not found                                                           | EC1–EC4       |
+| 409  | `INVALID_ROUTE_PLAN_STATUS` | This action cannot be performed while the route plan is in {status} status     | EC1–EC4       |
+| 409  | `ROUTE_PLAN_MODIFIED`       | The route plan was just modified. Please reload the page                       | EC2, EC3      |
+| 409  | `TRANSPORT_NOT_IN_TRANSIT`  | The transport is not in transit                                                | EC1–EC3       |
+| 409  | `DOSSIER_NOT_APPROVED`      | The compliance dossier must be approved to approve a return route plan         | EC2           |
+| 422  | `APPROVAL_NOT_REQUIRED`     | The change is below the approval threshold (BR-036)                            | EC1           |
+
+### EC1. RC gửi yêu cầu bật BACKUP
+
+Chỉ cho phương án **BACKUP đã `CONFIRMED`**. Không ghi bảng mới: tạo `Notification` (`ROUTE`, `URGENT`, `reference_type = RoutePlan`, `reference_id = routePlanId`) gửi LM. `422 APPROVAL_NOT_REQUIRED` khi dưới ngưỡng BR-036 (không đổi BCP, không thêm trạm nghỉ 24h, lệch < 50 km, trễ < 1 giờ).
+
+`POST /api/v1/route-plans/{routePlanId}/change-request`
+
+| Field                   | Type   | Bắt buộc | Mô tả                                       |
+| ----------------------- | ------ | -------- | ------------------------------------------- |
+| `reason`                | string | Yes      | Lý do đổi lộ trình, ≥ 10 ký tự              |
+| `newEstimatedArrivalAt` | string | Yes      | ETA mới                                     |
+| `estimatedExtraCost`    | number | No       | Chi phí phát sinh ước tính (chỉ vào thông báo) |
+| `currency`              | string | Khi có `estimatedExtraCost` | Mã tiền tệ, ví dụ `EUR`     |
+| `note`                  | string | No       |                                             |
+
+```json
+{
+  "reason": "Snow closed the primary road section near Calais",
+  "newEstimatedArrivalAt": "2026-10-28T10:00:00Z",
+  "estimatedExtraCost": 1200.0,
+  "currency": "EUR",
+  "note": "Driver informed by phone"
+}
+```
+
+**`200 OK`**
+
+```json
+{
+  "isSuccess": true,
+  "code": 200,
+  "message": "Route change request sent successfully",
+  "value": {
+    "routePlanId": "uuid",
+    "routeType": "BACKUP",
+    "status": "CONFIRMED",
+    "requestedAt": "2026-10-28T02:10:00Z"
+  }
+}
+```
+
+### EC2. LM quyết định
+
+`POST /api/v1/route-plans/{routePlanId}/change-decision`
+
+| Field           | Type   | Bắt buộc        | Mô tả                                              |
+| --------------- | ------ | --------------- | -------------------------------------------------- |
+| `lastUpdatedAt` | string | Yes             | `updatedAt` của RoutePlan                          |
+| `decision`      | string | Yes             | `APPROVE` \| `REJECT`                              |
+| `note`          | string | Khi `REJECT`    | ≥ 10 ký tự; với RETURN ghi vào `route_note`        |
+
+Rẽ nhánh theo loại RoutePlan:
+
+| Loại     | Điều kiện                                         | `APPROVE`                                         | `REJECT`                           |
+| -------- | ------------------------------------------------- | ------------------------------------------------- | ---------------------------------- |
+| `BACKUP` | `CONFIRMED`                                       | `CONFIRMED → ACTIVE`; notify RC, Customer, Driver | notify RC                          |
+| `RETURN` | `DRAFT`, Transport `IN_TRANSIT`, CDos `APPROVED`  | CDos `APPROVED → DRAFT`; notify TS, RC            | RoutePlan `→ CANCELLED`; notify RC |
+
+```json
+{
+  "lastUpdatedAt": "2026-10-28T02:10:00Z",
+  "decision": "APPROVE",
+  "note": "Approved, return immediately"
+}
+```
+
+**`200 OK`** — `status` là trạng thái RoutePlan sau quyết định; `complianceDossier` chỉ có với RETURN.
+
+```json
+{
+  "isSuccess": true,
+  "code": 200,
+  "message": "Route change approved successfully",
+  "value": {
+    "routePlanId": "uuid",
+    "routeType": "RETURN",
+    "decision": "APPROVE",
+    "status": "DRAFT",
+    "complianceDossier": {
+      "complianceDossierId": "uuid",
+      "status": "DRAFT"
+    },
+    "updatedAt": "2026-10-28T02:30:00Z"
+  }
+}
+```
+
+BACKUP `APPROVE` trả `status: "ACTIVE"`, `complianceDossier: null`; `REJECT` của RETURN trả `status: "CANCELLED"`; `REJECT` của BACKUP giữ `status: "CONFIRMED"`.
+
+### EC3. LM kích hoạt RETURN
+
+Điều kiện: RoutePlan RETURN ở `CONFIRMED` (đã qua RP7) và Transport `IN_TRANSIT`. Đây là chỗ **duy nhất** sau `CONFIRMED` cho phép đổi xe và provider của chặng RETURN (RP4, OS1 vẫn `ROUTE_LOCKED`). Áp dụng R9, R10 và R17 cho xe; chặng thuê ngoài không nhận xe.
+
+`POST /api/v1/route-plans/{routePlanId}/return-activation`
+
+| Field           | Type   | Bắt buộc | Mô tả                                                                                       |
+| --------------- | ------ | -------- | ------------------------------------------------------------------------------------------- |
+| `lastUpdatedAt` | string | Yes      | `updatedAt` của RoutePlan                                                                   |
+| `segments`      | array  | No       | `{ routePlanRouteId, vehicleIds?, outsourcing? { transportProviderId, note } }`; bỏ trống = giữ nguyên |
+| `note`          | string | No       |                                                                                             |
+
+```json
+{
+  "lastUpdatedAt": "2026-10-28T04:00:00Z",
+  "segments": [
+    {
+      "routePlanRouteId": "uuid",
+      "vehicleIds": ["uuid"]
+    }
+  ],
+  "note": "Same truck continues to the origin stable"
+}
+```
+
+**`200 OK`** — `segments` là mảng [`Segment`](#35-segment-một-routeplanroute) đầy đủ.
+
+```json
+{
+  "isSuccess": true,
+  "code": 200,
+  "message": "Return route activated successfully",
+  "value": {
+    "routePlanId": "uuid",
+    "routeType": "RETURN",
+    "status": "ACTIVE",
+    "segments": ["…cùng cấu trúc Segment như RP1…"],
+    "updatedAt": "2026-10-28T04:10:00Z"
+  }
+}
+```
+
+Lỗi riêng: `409 SCHEDULE_CONFLICT`, `409 PROVIDER_INACTIVE`, `422 OUTSOURCED_SEGMENT`, `422 VEHICLE_MODE_MISMATCH`, `422 VEHICLE_UNAVAILABLE`, `422 VEHICLE_CAPACITY_EXCEEDED`, `422 PROVIDER_MODE_MISMATCH`.
+
+### EC4. RC báo Driver bắt đầu quay về
+
+Không đổi trạng thái; chỉ tạo `Notification` (`ROUTE`, `URGENT`) gửi Driver đang phụ trách chuyến (Driver của các chặng PRIMARY, R17). Điều kiện: RoutePlan RETURN ở `CONFIRMED` hoặc `ACTIVE`; RC phải được phân công vào Transport Plan này (`403 FORBIDDEN`).
+
+`POST /api/v1/route-plans/{routePlanId}/driver-notice`
+
+| Field     | Type   | Bắt buộc | Mô tả                                |
+| --------- | ------ | -------- | ------------------------------------ |
+| `message` | string | No       | Lời nhắn thêm vào nội dung thông báo |
+
+```json
+{ "message": "Dossier approved, follow the return route plan" }
+```
+
+**`200 OK`**
+
+```json
+{
+  "isSuccess": true,
+  "code": 200,
+  "message": "Driver notified successfully",
+  "value": {
+    "routePlanId": "uuid",
+    "notifiedDrivers": [
+      {
+        "employeeId": "uuid",
+        "employeeCode": "EMP-2026-081",
+        "fullName": "Tran Van Nam",
+        "role": "DRIVER"
+      }
+    ],
+    "sentAt": "2026-10-28T04:15:00Z"
+  }
+}
+```
+
+### Quy ước cho BE (DB V7 không nói rõ)
+
+1. **RoutePlan chính khi bật backup/RETURN:** bật phương án không hủy primary mà ghép đoạn thay vào (R16, R17). RoutePlan chính **giữ nguyên trạng thái** (`ACTIVE`); phương án chuyển `→ ACTIVE`; lộ trình hiệu lực là bản ghép. Mỗi lúc chỉ cho một backup `ACTIVE` trên cùng đoạn; backup chồng lên đoạn đã có backup `ACTIVE` → `409`.
+2. **Danh sách yêu cầu chờ LM duyệt:** không có bảng, nên không có API danh sách toàn hệ thống. BACKUP: LM mở từ `Notification` (`notification_type = ROUTE`, `priority = URGENT`, `reference_id` = phương án). RETURN: từ `Notification` hoặc RP2 của TransportPlan.
+3. **Chi phí phát sinh (`estimatedExtraCost`, EC1):** chỉ nằm trong `Notification.message`; ghi nhận chính thức thuộc Flow 5.
+4. **RP7 nhánh RETURN tự chạy CDos tới `APPROVED` trong một transaction** (không có Customer nộp, không có cơ quan duyệt).
+5. **CDos `APPROVED → DRAFT` chỉ do EC2 (RETURN) thực hiện**, là ngoại lệ của luật khóa CDos `SUBMITTED`/`APPROVED` ở UC-19 (Flow 2).
+6. **Xe của RETURN:** thường là chính xe đang chở ngựa (`IN_USE`) và lịch chồng với các chặng chưa đi của primary. R9/`SCHEDULE_CONFLICT` bỏ qua hai trường hợp này khi xe đã gán cho PRIMARY của cùng Transport.
 
 ---
 
@@ -2547,6 +2828,6 @@ UC-36 ALT-01 ("Thay đổi / Điều động nhân sự bổ sung"). Dùng cho D
 | UC-45 | VH4                                            |
 | UC-46 | VH5                                            |
 | UC-47 | Đã bỏ: hiệu ứng nằm ở RP7 (UC-33)              |
-| UC-48 | EC1, EC2 — đề xuất, chờ chốt (C11)             |
+| UC-48 | RP1 (`routeType = RETURN`), RP7, EC1, EC2, EC3, EC4 |
 
-**Tổng endpoint:** 10 Location/Route master (LOC1–5, ROT1–5) + 2 booking + 4 TransportPlan + 6 personnel + 6 provider + 1 outsourcing + 5 vehicle + 7 route plan = **41 endpoint** (+ 2 endpoint EC1–EC2 chờ chốt). Geoapify (MAP1–MAP3) do FE gọi trực tiếp, không tính.
+**Tổng endpoint:** 10 Location/Route master (LOC1–5, ROT1–5) + 2 booking + 4 TransportPlan + 6 personnel + 6 provider + 1 outsourcing + 5 vehicle + 7 route plan + 4 đổi lộ trình khẩn cấp (EC1–EC4) = **45 endpoint**. Geoapify (MAP1–MAP3) do FE gọi trực tiếp, không tính.

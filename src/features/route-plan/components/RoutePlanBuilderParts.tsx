@@ -9,7 +9,7 @@ import {
   OutsourceSegmentDialog,
   type OutsourceSegmentSelection,
 } from "./OutsourceSegmentDialog";
-import type { Provider } from "../types";
+import type { Provider, RouteType } from "../types";
 
 export type WizardStep = 0 | 1 | 2;
 
@@ -17,7 +17,7 @@ export type TransportPlanSummary = {
   transportPlanId: string;
   planCode: string;
   bookingCode: string;
-  routeType: "PRIMARY" | "BACKUP";
+  routeType: RouteType;
   status: string;
   scope: "International" | "Domestic";
   departureAt: string;
