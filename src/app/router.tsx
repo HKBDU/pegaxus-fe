@@ -100,7 +100,6 @@ const DossierRequirementsPage = lazy(
 const CreateRoutePlanPage = lazy(() => import("@/features/route-plan/pages/CreateRoutePlanPage"));
 const CreateContingencyRoutePage = lazy(() => import("@/features/route-plan/pages/CreateContingencyRoutePage"));
 const CreateReturnRoutePage = lazy(() => import("@/features/route-plan/pages/CreateReturnRoutePage"));
-const LegalFeasibilityTestPage = lazy(() => import("@/features/route-plan/pages/LegalFeasibilityTestPage"));
 const EditRoutePlanPage = lazy(() => import("@/features/route-plan/pages/EditRoutePlanPage"));
 const MapAssetsPage = lazy(() => import("@/features/route-plan/pages/MapAssetsPage"));
 const bookingHistoryPage = (
@@ -317,7 +316,6 @@ export const router = createBrowserRouter([
       { path: ":routePlanId/edit", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><EditRoutePlanPage /></Suspense></ProtectedRoute> },
       { path: "new/:transportPlanId/contingency", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateContingencyRoutePage /></Suspense></ProtectedRoute> },
       { path: "new/:transportPlanId/return", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateReturnRoutePage /></Suspense></ProtectedRoute> },
-      { path: "feasibility-test", element: <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}><Suspense fallback={<LoadingState />}><LegalFeasibilityTestPage /></Suspense></ProtectedRoute> },
     ],
   },
   {
