@@ -6,7 +6,7 @@ import { ArrowRight, Check, Clock3, Route } from "lucide-react"
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge"
 import { useRoutePlanAlternatives } from "../hooks/useRoutePlanDetail"
 import { getRouteViewError } from "../services"
-import { distanceLabel, durationLabel } from "../display"
+import { distanceLabel, durationLabel, replacementLabel } from "../display"
 import type { RouteDetailPath, RoutePlanDetail } from "../types"
 
 export function RouteContingencyTab({ plan, routeDetailPath }: { plan: RoutePlanDetail; routeDetailPath?: RouteDetailPath }) {
@@ -16,7 +16,7 @@ export function RouteContingencyTab({ plan, routeDetailPath }: { plan: RoutePlan
   const items = query.data?.items ?? []
   return <section aria-label="Alternative routes" className="space-y-4">
     <header className="space-y-1"><h2 className="font-heading text-lg font-medium uppercase text-slate-900">Alternative Routes</h2>
-      <p className="text-xs text-slate-500">Compare prepared route alternatives for this transport plan. This view is read-only.</p>
+      <p className="text-xs text-slate-500">View the PRIMARY, BACKUP and RETURN routes for this transport plan. Backup metrics cover only the replacement segments, not the combined journey.</p>
     </header>
     {!items.some((item) => item.routePlanId !== plan.routePlanId) && <EmptyState message="No alternative routes have been prepared for this transport plan." />}
     <div className="grid gap-4 sm:grid-cols-2">{items.map((item) => <article key={item.routePlanId} data-selected={item.routePlanId === plan.routePlanId} className={`flex min-w-0 flex-col gap-4 rounded-lg border bg-white p-4 sm:p-5 ${item.routePlanId === plan.routePlanId ? "border-primary/50" : "border-slate-200"}`}>
@@ -27,6 +27,7 @@ export function RouteContingencyTab({ plan, routeDetailPath }: { plan: RoutePlan
         <div><dt className="mb-1 flex items-center gap-1 text-[10px] uppercase tracking-wide text-slate-500"><Clock3 aria-hidden="true" className="size-3" />Duration</dt><dd className="text-sm font-semibold text-slate-900">{durationLabel(item.estimatedDurationMinutes)}</dd></div>
       </dl>
       <p className="text-xs text-slate-500">{item.segmentCount} segments</p>
+      {item.routeType === "BACKUP" && <p className="text-xs text-slate-500">Replaces: {replacementLabel(item)} · Replacement distance and duration only</p>}
       <div className="mt-auto flex min-h-10 items-center justify-end border-t border-slate-100 pt-3">
         {item.routePlanId === plan.routePlanId ? <p className="mr-auto flex items-center gap-1.5 text-xs font-medium text-primary"><Check aria-hidden="true" className="size-3.5" />Current route</p> : routeDetailPath ?
           <Button asChild variant="outline" size="sm" className="rounded-md"><Link to={routeDetailPath(item.routePlanId)}>View Route Plan<ArrowRight aria-hidden="true" className="size-3.5" /></Link></Button> :

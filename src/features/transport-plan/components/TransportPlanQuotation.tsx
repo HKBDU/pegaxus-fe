@@ -34,9 +34,10 @@ export function TransportPlanQuotation({ transportPlanId, quotation, canManage =
   // Flow 6 can provide verified data here; Flow 3 never guesses an ID or fetches an obsolete endpoint.
   return quotation && quotation.transportPlanId === transportPlanId ? <QuotationDetails quotation={quotation} /> :
     <Section title="Quotation & Payment">
-      <p className="text-sm text-slate-600">Quotation acceptance and deposit are the milestone between plan creation and Phase 1 assignment.</p>
-      <EmptyState message="Quotation management is handled in Flow 6. Integration is not available yet." />
-      {canManage && <div className="space-y-2"><Button variant="outline" disabled title="The verified Flow 6 API and quotation workspace are not available in this checkout." className="rounded-md">Set Quotation</Button>
-        <p className="text-xs text-slate-500">Set, edit and issue actions require the Flow 6 integration. TransportPlan metadata updates never persist quotation or payment data.</p></div>}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-1"><p className="text-sm text-slate-600">Plan creation → Quotation acceptance &amp; deposit → Phase 1 assignment.</p>
+          <p className="text-xs text-slate-500">Quotation and payment integration is pending. No financial status is available here yet.</p></div>
+        {canManage && <Button variant="outline" size="sm" disabled title="Quotation management is not available yet." className="rounded-md">Set / Issue Quotation</Button>}
+      </div>
     </Section>
 }

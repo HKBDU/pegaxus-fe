@@ -11,7 +11,6 @@ import { transportPlanIdSchema, transportPlanTabSchema } from "../transport-plan
 import type { TransportPlanDetail } from "../transport-plan.types"
 import { Button } from "@/shared/components/ui/button"
 import { useAuthStore } from "@/features/auth/store"
-import { canAccess } from "@/features/auth/access-control"
 import { UsersRound } from "lucide-react"
 import { canEditTransportPlan } from "../transport-plan.form"
 import { editTransportPlanPath, getManagePersonnelAction } from "../approved-booking-actions"
@@ -22,13 +21,18 @@ import { TransportPlanQuotation } from "../components/TransportPlanQuotation"
 import { TransportPlanPersonnel, type PersonnelPanelProps } from "../components/TransportPlanPersonnel"
 import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
 import { TransportPlanWorkspace } from "../components/TransportPlanWorkspace"
+import { TransportOverview } from "../components/TransportOverview"
+import { getWorkspaceRole } from "../workspace-role"
+import { useApprovedBooking } from "../hooks/useApprovedBookings"
+import { getApprovedBookingError } from "../services"
 
 export function TransportPlanDetails({ plan, personnelPanel }: { plan: TransportPlanDetail; personnelPanel?: ComponentType<PersonnelPanelProps> }) {
   const [params, setParams] = useSearchParams()
   const principal = useAuthStore((state) => state.principal)
+  const manager = getWorkspaceRole(principal) === "manager"
   const personnelAction = getManagePersonnelAction(principal, plan)
   const selected = transportPlanTabSchema.safeParse(params.get("tab") ?? "general")
-  const activeTab = selected.success ? selected.data : "general"
+  const activeTab = manager && selected.success ? selected.data : "general"
   return <div className="space-y-5">
     <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-5">
       <div className="space-y-2"><h2 className="font-heading text-2xl">{plan.planCode}</h2><p className="text-sm text-slate-500">Booking: {plan.booking.bookingCode}</p></div>
@@ -38,21 +42,19 @@ export function TransportPlanDetails({ plan, personnelPanel }: { plan: Transport
         {canEditTransportPlan(principal, plan) ? <Button asChild variant="outline" className="rounded-[2px] bg-white"><Link to={editTransportPlanPath(plan.transportPlanId)}>Edit Transport Plan</Link></Button> : null}
       </div>
     </div>
-    {canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) && ["DRAFT", "PENDING"].includes(plan.status) ?
+    <TransportOverview journey={plan.booking} customerName={plan.booking.customerName} plannedStartAt={plan.plannedStartAt} />
+    {manager && ["DRAFT", "PENDING"].includes(plan.status) ?
       <p className="text-xs text-slate-500">Phase 1 assignment requires a customer-approved TransportPlan after quotation acceptance and deposit in Flow 6.</p> : null}
-    {canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) && <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-white p-4">
-      <div><h3 className="font-heading text-base uppercase">Quotation &amp; Payment</h3><p className="text-xs text-slate-500">Plan creation → Flow 6 quotation acceptance and deposit → Phase 1 assignment.</p></div>
-      <Button asChild variant="outline" size="sm" className="rounded-md"><Link to={`?tab=quotation`}>View Quotation &amp; Payment</Link></Button>
-    </div>}
+    {manager ? <><TransportPlanQuotation transportPlanId={plan.transportPlanId} canManage />
     <Tabs.Root value={activeTab} onValueChange={(value) => setParams((current) => { const next = new URLSearchParams(current); next.set("tab", transportPlanTabSchema.parse(value)); return next })}>
       <Tabs.List aria-label="Transport plan sections" className="mb-5 flex flex-nowrap gap-5 overflow-x-auto border-b border-slate-200">
-        {([{ value: "general", label: "General" }, { value: "quotation", label: "Quotation" }, { value: "personnel", label: "Personnel" }]).map((tab) =>
+        {([{ value: "general", label: "General" }, { value: "personnel", label: "Personnel" }]).map((tab) =>
           <Tabs.Trigger key={tab.value} value={tab.value} className="shrink-0 whitespace-nowrap border-b-2 border-transparent px-0.5 py-2.5 font-heading text-sm uppercase text-slate-500 outline-none hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-amber-500/30 data-[state=active]:border-[#ef8f00] data-[state=active]:text-[#ef8f00]">{tab.label}</Tabs.Trigger>)}
       </Tabs.List>
       <Tabs.Content value="general" className="space-y-5 outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><TransportPlanGeneral plan={plan} /><TransportPlanWorkspace plan={plan} /></Tabs.Content>
-      <Tabs.Content value="quotation" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><TransportPlanQuotation transportPlanId={plan.transportPlanId} canManage={canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })} /></Tabs.Content>
-      <Tabs.Content value="personnel" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><TransportPlanPersonnel transportPlanId={plan.transportPlanId} panel={personnelPanel} /></Tabs.Content>
+      <Tabs.Content value="personnel" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30">{personnelAction ? <TransportPlanPersonnel transportPlanId={plan.transportPlanId} panel={personnelPanel} /> : <p className="text-sm text-slate-500">Personnel assignment opens after the transport plan is approved.</p>}</Tabs.Content>
     </Tabs.Root>
+    </> : <TransportPlanWorkspace plan={plan} />}
   </div>
 }
 
@@ -60,13 +62,18 @@ function TransportPlanReadPage() {
   const { transportPlanId = "" } = useParams<{ transportPlanId: string }>()
   const validId = transportPlanIdSchema.safeParse(transportPlanId).success
   const query = useTransportPlan(transportPlanId)
+  const principal = useAuthStore(state => state.principal)
+  const staff = ["coordinator", "specialist"].includes(getWorkspaceRole(principal) ?? "")
+  // TP3 and AB2 must both authorize staff before rendering the shared UC-32 workspace.
+  const access = useApprovedBooking(query.data?.booking.bookingId ?? "", staff && Boolean(query.data) && !query.isError)
+  const accessError = staff && access.isError ? getApprovedBookingError(access.error) : null
   const error = query.isError ? getTransportPlanError(query.error) : null
   return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
     <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
       <Flow3MockIndicator />
       <div><PageHeader title="Transport Plan Details" backHref={ROLE_ROUTES.transportPlans} backLabel="Back to Transport Plans" /></div>
       {!validId ? <ErrorState message="The transport plan identifier is invalid." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
-        query.isPending ? <BookingDetailsSkeleton /> : query.data ? <TransportPlanDetails key={transportPlanId} plan={query.data} /> : null}
+        query.isPending || (staff && access.isPending) ? <BookingDetailsSkeleton /> : accessError ? <ErrorState message={accessError.message} onRetry={accessError.retryable ? () => void access.refetch() : undefined} /> : query.data ? <TransportPlanDetails key={transportPlanId} plan={query.data} /> : null}
     </div>
   </div>
 }

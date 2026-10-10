@@ -4,7 +4,7 @@ import { entityIdSchema, routePlanStatusSchema, transportPlanStatusSchema } from
 export const transportPlanIdSchema = entityIdSchema
 export { transportPlanStatusSchema }
 export const transportPlanSortSchema = z.enum(["createdAt:asc", "createdAt:desc", "plannedStartAt:asc", "plannedStartAt:desc"])
-export const transportPlanTabSchema = z.enum(["general", "quotation", "personnel"])
+export const transportPlanTabSchema = z.enum(["general", "personnel"])
 export const transportPlansQuerySchema = z.object({
   pageIndex: z.number().int().positive(), pageSize: z.number().int().positive(),
   search: z.string().trim().optional().transform((value) => value || undefined),

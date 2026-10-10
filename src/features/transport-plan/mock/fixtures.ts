@@ -43,6 +43,7 @@ function routeFixture(index: number, plan: TransportPlanDetail, backup = false, 
     totalDistanceKm: empty ? 0 : backup ? 650 : 612.4, estimatedDurationMinutes: empty ? 0 : backup ? 840 : 750,
     plannedDepartureAt: `${departureDate}T06:00:00Z`, plannedArrivalAt: `${departureDate}T20:00:00Z`,
     segments, isPersonnelComplete: !backup && !empty,
+    replacesSequenceNo: backup ? { from: 1, to: 3 } : null,
     legalReview: index === 6 || missingCoordinates ? { isFeasible: !missingCoordinates, note: missingCoordinates ? "Demo permit restriction; coordinator revision required." : "Demo legal feasibility confirmed.",
       blockedSegments: missingCoordinates ? [3] : [], reviewedBy: employee(1, "TRANSPORT_SPECIALIST"), reviewedAt: timestamp } : null,
     routeNote: backup ? "Fictional backup option; not an operational itinerary." : null, createdAt: timestamp, updatedAt: timestamp,
@@ -78,5 +79,18 @@ export function createFlow3Fixtures() {
   }] : [])
   const routes = [5, 6, 7, 8].map((index) => routeFixture(index, plans.find((plan) => plan.transportPlanId === mockId(3, index))!, false, index === 7, index === 8))
   routes.push(routeFixture(9, plans.find((plan) => plan.transportPlanId === mockId(3, 6))!, true))
+  // Additive scenarios; existing fixture IDs and preview scenarios stay intact.
+  const partialBackup = routeFixture(10, plans.find(plan => plan.transportPlanId === mockId(3, 6))!, true)
+  partialBackup.segments = partialBackup.segments.slice(0, 1).map(segment => ({ ...segment,
+    route: { ...segment.route, routeName: "Alternative Paris to CDG", distanceKm: 62, estimatedDurationMinutes: 100 },
+    fromLocation: locations[0], toLocation: locations[1], dwellAfterMinutes: null,
+  }))
+  routes.push({ ...partialBackup, replacesSequenceNo: { from: 1, to: 1 }, totalDistanceKm: 62, estimatedDurationMinutes: 100 })
+  const returnRoute = routeFixture(11, plans.find(plan => plan.transportPlanId === mockId(3, 8))!)
+  routes.push({ ...returnRoute, routeType: "RETURN", status: "DRAFT", routeNote: "Development-only emergency return; approval actions are not implemented.", isPersonnelComplete: true,
+    segments: returnRoute.segments.slice(0, 1).map(segment => ({ ...segment, routeType: "RETURN", fromLocation: locations[1], toLocation: locations[0],
+      route: { ...segment.route, routeName: "Return from CDG to Paris", distanceKm: 48.2, estimatedDurationMinutes: 110 }, dwellAfterMinutes: null })),
+    totalDistanceKm: 48.2, estimatedDurationMinutes: 110,
+  })
   return { bookings, plans, routes }
 }

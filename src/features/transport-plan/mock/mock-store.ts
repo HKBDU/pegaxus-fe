@@ -101,7 +101,7 @@ export function createFlow3MockStore() {
       if (!plans.some((plan) => plan.transportPlanId === planId)) return failure(404, "TRANSPORT_PLAN_NOT_FOUND", "Transport plan not found.")
       return success({ items: routesFor(planId).filter((route) => (!params.routeType || route.routeType === params.routeType) && (!params.status || route.status === params.status) &&
         (params.includeCancelled || route.status !== "CANCELLED")).map((route) => ({ ...routeSummary(route), totalDistanceKm: route.totalDistanceKm, estimatedDurationMinutes: route.estimatedDurationMinutes,
-          segmentCount: route.segments.length, isPersonnelComplete: route.isPersonnelComplete, updatedAt: route.updatedAt })) })
+          segmentCount: route.segments.length, isPersonnelComplete: route.isPersonnelComplete, replacesSequenceNo: route.replacesSequenceNo, routeNote: route.routeNote, updatedAt: route.updatedAt })) })
     },
     getRoute(id: string) {
       const route = routes.find((item) => item.routePlanId === id)

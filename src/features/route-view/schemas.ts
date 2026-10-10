@@ -7,6 +7,8 @@ export const routeTypeSchema = z.enum(["PRIMARY", "BACKUP", "RETURN"])
 const transportModeSchema = z.enum(["ROAD", "SEA", "AIR"])
 const timestamp = z.iso.datetime({ offset: true })
 const text = z.string().nullish()
+const replacesSequenceNoSchema = z.object({ from: z.number().int().positive(), to: z.number().int().positive() })
+  .refine(range => range.to >= range.from, "The replacement segment range is invalid.").nullish()
 // Missing/invalid coordinates must not discard otherwise usable segment data.
 const coordinate = z.union([z.number(), z.string()]).nullish()
 export const routeLocationSchema = z.object({
@@ -37,11 +39,11 @@ export const routePlanDetailSchema = z.object({
   routeType: routeTypeSchema, status: routePlanStatusSchema, isCrossBorder: z.boolean(),
   totalDistanceKm: z.number().nonnegative(), estimatedDurationMinutes: z.number().nonnegative(),
   plannedDepartureAt: timestamp, plannedArrivalAt: timestamp, segments: z.array(routeSegmentSchema), isPersonnelComplete: z.boolean(),
-  legalReview: routeLegalReviewSchema.nullable(), routeNote: text, createdAt: timestamp, updatedAt: timestamp,
+  legalReview: routeLegalReviewSchema.nullable(), replacesSequenceNo: replacesSequenceNoSchema, routeNote: text, createdAt: timestamp, updatedAt: timestamp,
 })
 export const routePlanSummarySchema = routePlanDetailSchema.pick({
   routePlanId: true, routePlanCode: true, routeType: true, status: true, totalDistanceKm: true, estimatedDurationMinutes: true, isPersonnelComplete: true, updatedAt: true,
-}).extend({ segmentCount: z.number().int().nonnegative() })
+}).extend({ segmentCount: z.number().int().nonnegative(), replacesSequenceNo: replacesSequenceNoSchema, routeNote: text })
 export const routePlansSchema = z.object({ items: z.array(routePlanSummarySchema) })
-export const routePlansQuerySchema = z.object({ routeType: z.enum(["PRIMARY", "BACKUP"]).optional(), status: routePlanStatusSchema.optional(), includeCancelled: z.boolean().optional() })
+export const routePlansQuerySchema = z.object({ routeType: routeTypeSchema.optional(), status: routePlanStatusSchema.optional(), includeCancelled: z.boolean().optional() })
 export const routeViewTabSchema = z.enum(["map", "segments", "contingency"])

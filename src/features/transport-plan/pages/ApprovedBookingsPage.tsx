@@ -12,9 +12,11 @@ import type { ApprovedBookingsQueryParams } from "../types"
 import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
 import { canAccess } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
+import { getWorkspaceRole, workspaceLabels } from "../workspace-role"
 
 export default function ApprovedBookingsPage() {
   const principal = useAuthStore(state => state.principal)
+  const role = getWorkspaceRole(principal)
   const subtitle = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) ? "Transport planning and operations overview." :
     canAccess(principal, { anyRole: ["FLEET_ROUTE_COORDINATOR"] }) ? "Transports assigned for route planning." : "Transports assigned for legal preparation."
   const [params, setParams] = useState(initialApprovedBookingParams)
@@ -34,7 +36,7 @@ export default function ApprovedBookingsPage() {
   return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
     <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
       <Flow3MockIndicator />
-      <div><PageHeader title="Assigned Transports" backHref={ROLE_ROUTES.managerHome} showBack={false} />
+      <div><PageHeader title={role ? workspaceLabels[role].list : "Transports"} backHref={ROLE_ROUTES.managerHome} showBack={false} />
         <p className="text-xs text-slate-500 sm:text-sm">{subtitle}</p></div>
       {error ? <>{filters}<ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /></> :
         <ApprovedBookingsTable bookings={query.data?.data ?? []} params={params} meta={meta} isLoading={query.isFetching || isSearchPending}

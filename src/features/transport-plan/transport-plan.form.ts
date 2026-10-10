@@ -62,7 +62,7 @@ export function buildUpdatePlanInput(values: TransportPlanFormValues, plan: Tran
   if (valid.updateReason.trim()) input.updateReason = valid.updateReason.trim()
   return updateTransportPlanSchema.parse(input)
 }
-export function canEditTransportPlan(principal: AuthPrincipal | null, plan: TransportPlanDetail) {
+export function canEditTransportPlan(principal: AuthPrincipal | null, plan: Pick<TransportPlanDetail, "status" | "transport">) {
   return canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) && ["DRAFT", "PENDING", "APPROVED"].includes(plan.status) &&
     !["IN_TRANSIT", "COMPLETED", "CANCELLED"].includes(plan.transport.status)
 }

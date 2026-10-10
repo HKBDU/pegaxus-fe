@@ -2,16 +2,17 @@ import { formatBookingDate } from "@/features/booking/utils"
 import { Card, CardContent } from "@/shared/components/ui/card"
 import { ArrowRight, CalendarClock, Clock3, Route, UsersRound, Waypoints } from "lucide-react"
 import type { RoutePlanDetail } from "../types"
-import { durationLabel } from "../display"
+import { durationLabel, replacementLabel } from "../display"
 
 export function RoutePlanOverview({ plan }: { plan: RoutePlanDetail }) {
   const metrics = [
-    { label: "Distance", value: plan.totalDistanceKm == null ? "—" : plan.totalDistanceKm.toLocaleString("en-GB", { maximumFractionDigits: 1 }), unit: plan.totalDistanceKm == null ? undefined : "km", description: "Planned route distance", icon: Route, complete: false },
-    { label: "Duration", value: durationLabel(plan.estimatedDurationMinutes), description: "Estimated duration", icon: Clock3, complete: false },
+    { label: "Distance", value: plan.totalDistanceKm == null ? "—" : plan.totalDistanceKm.toLocaleString("en-GB", { maximumFractionDigits: 1 }), unit: plan.totalDistanceKm == null ? undefined : "km", description: plan.routeType === "BACKUP" ? "Replacement distance only" : "Planned route distance", icon: Route, complete: false },
+    { label: "Duration", value: durationLabel(plan.estimatedDurationMinutes), description: plan.routeType === "BACKUP" ? "Replacement duration only" : "Estimated duration", icon: Clock3, complete: false },
     { label: "Segments", value: String(plan.segments.length), description: "Planned transport legs", icon: Waypoints, complete: false },
     { label: "Personnel", value: plan.isPersonnelComplete ? "Complete" : "Incomplete", description: "Assignment status", icon: UsersRound, complete: plan.isPersonnelComplete },
   ]
   return <section aria-label="Route overview" className="space-y-4">
+    {plan.routeType === "BACKUP" && <p className="text-xs text-slate-500">Replaces: {replacementLabel(plan)}. Metrics below do not represent the full combined journey.</p>}
     <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">{metrics.map(({ label, value, unit, description, icon: Icon, complete }) => <Card key={label} className="gap-0 rounded-lg border-slate-200 bg-white py-0 shadow-none"><CardContent className="flex h-full flex-col gap-3 p-4">
       <div className="flex items-center justify-between gap-2"><p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">{label}</p>
         <span className={`flex size-8 shrink-0 items-center justify-center rounded-md ${complete ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}><Icon aria-hidden="true" className="size-4" /></span>

@@ -18,7 +18,7 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   return <div className="min-w-0"><dt className="mb-1 text-xs text-slate-500">{label}</dt><dd className="whitespace-pre-wrap break-words text-sm text-slate-800">{children || "—"}</dd></div>
 }
 
-export function ApprovedBookingDetails({ booking }: { booking: ApprovedBookingDetail }) {
+export function ApprovedBookingDetails({ booking, showDossier = false }: { booking: ApprovedBookingDetail; showDossier?: boolean }) {
   return <div className="space-y-5">
     <Section title="Customer & requested journey">
       <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -58,7 +58,7 @@ export function ApprovedBookingDetails({ booking }: { booking: ApprovedBookingDe
       <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <Field label="Transport">{booking.transport ? <div className="space-y-1"><p>{booking.transport.transportCode}</p><ApprovedBookingBadge value={booking.transport.status} /></div> : "Not available"}</Field>
         <Field label="Transport plan">{booking.transportPlan ? <div className="space-y-1"><p>{booking.transportPlan.planCode}</p><ApprovedBookingBadge value={booking.transportPlan.status} /></div> : "Not created"}</Field>
-        <Field label="Compliance dossier">{booking.complianceDossier ? <ApprovedBookingBadge value={booking.complianceDossier.status} /> : "Not created"}</Field>
+        {showDossier && <Field label="Compliance dossier">{booking.complianceDossier ? <ApprovedBookingBadge value={booking.complianceDossier.status} /> : "Not created"}</Field>}
       </dl>
     </Section>
   </div>

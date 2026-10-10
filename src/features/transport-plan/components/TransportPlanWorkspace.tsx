@@ -5,6 +5,7 @@ import { useApprovedBooking } from "../hooks/useApprovedBookings"
 import { getApprovedBookingError } from "../services"
 import type { TransportPlanDetail } from "../transport-plan.types"
 import { TransportWorkspace } from "./TransportWorkspace"
+import { getWorkspaceRole } from "../workspace-role"
 
 // One AB2 read for the selected plan supplies dossier/horse context absent from TP3.
 export function TransportPlanWorkspace({ plan }: { plan: TransportPlanDetail }) {
@@ -17,6 +18,6 @@ export function TransportPlanWorkspace({ plan }: { plan: TransportPlanDetail }) 
   }
   if (!query.data) return null
   // Do not combine context from a different/latest plan with the selected TP3 record.
-  if (query.data.transportPlan?.transportPlanId !== plan.transportPlanId) return <p className="text-sm text-slate-500">The transport workspace belongs to the latest plan. Refresh the transport detail to select that plan.</p>
-  return <TransportWorkspace principal={principal} showPlanningReference={false} booking={{ ...query.data, transportPlan: plan, transport: plan.transport }} />
+  if (query.data.transportPlan?.transportPlanId !== plan.transportPlanId) return <p className="text-sm text-slate-500">This workspace belongs to another transport plan. Open the current transport detail to select its latest plan.</p>
+  return <TransportWorkspace principal={principal} showPlanningReference={getWorkspaceRole(principal) !== "manager"} booking={{ ...query.data, transportPlan: plan, transport: plan.transport }} />
 }

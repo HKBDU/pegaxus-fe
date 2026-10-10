@@ -4,13 +4,14 @@ import { approvedBookingDetail, transportPlanDetail, dossierDetail, ROLE_ROUTES 
 import { getRouteDetailPath } from "@/features/route-view/navigation"
 import type { ApprovedBookingDetail, ApprovedBookingListItem } from "./types"
 import type { TransportPlanDetail } from "./transport-plan.types"
+import { canEditTransportPlan } from "./transport-plan.form"
 
 // Existing detail routes host these forms until the router owner registers standalone routes.
 export const createTransportPlanPath = (bookingId: string) => `${approvedBookingDetail(bookingId)}?action=create-plan`
 export const editTransportPlanPath = (id: string) => `${transportPlanDetail(id)}?action=edit`
 
 export type ApprovedBookingAction = {
-  kind: "createTransportPlan" | "viewTransportPlan" | "managePersonnel" | "createRoutePlan" | "viewRoutePlan" | "applyDossierTemplate" | "viewComplianceDossier" | "viewDossierRequirements"
+  kind: "createTransportPlan" | "viewTransportPlan" | "editTransportPlan" | "managePersonnel" | "createRoutePlan" | "viewRoutePlan" | "applyDossierTemplate" | "viewComplianceDossier" | "viewDossierRequirements"
   label: string
   targetId: string
   href?: string
@@ -35,8 +36,12 @@ export function getApprovedBookingActions(principal: AuthPrincipal | null, booki
         ...(hasTransport ? { href: createTransportPlanPath(booking.bookingId) } : { blockedReason: "A transport must exist before creating its plan." }) }]
     }
     const personnelAction = getManagePersonnelAction(principal, plan)
-    return personnelAction ? [...viewPlan, personnelAction] : viewPlan
+    const editPlan: ApprovedBookingAction[] = "transport" in booking && booking.transport && canEditTransportPlan(principal, { status: plan.status, transport: booking.transport })
+      ? [{ kind: "editTransportPlan", label: "Edit Transport Plan", targetId: plan.transportPlanId, href: editTransportPlanPath(plan.transportPlanId) }] : []
+    return [...viewPlan, ...editPlan, ...(personnelAction ? [personnelAction] : [])]
   }
+  // Action eligibility only; never use this to filter AB1 or grant access to AB2.
+  if (plan?.status !== "APPROVED") return []
   const candidate = "routePlans" in booking ? booking.routePlans.find((item) => item.routeType === "PRIMARY" && item.status !== "CANCELLED") : booking.routePlan
   const route = candidate?.status === "CANCELLED" ? null : candidate
   const routeDetailPath = getRouteDetailPath()

@@ -14,6 +14,8 @@ import type { ApprovedBookingListItem, ApprovedBookingsQueryParams } from "../ty
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
 import { ApprovedBookingActionMenu } from "./ApprovedBookingActionMenu"
 import { TransportPlanStatusBadge } from "./TransportPlanStatusBadge"
+import { useAuthStore } from "@/features/auth/store"
+import { getWorkspaceRole } from "../workspace-role"
 
 interface Props {
   bookings: ApprovedBookingListItem[]
@@ -26,6 +28,9 @@ interface Props {
 }
 
 export function ApprovedBookingsTable({ bookings, params, meta, isLoading, onChange, onPageChange, filters }: Props) {
+  const principal = useAuthStore(state => state.principal)
+  const role = getWorkspaceRole(principal)
+  const showDossier = role === "manager" || role === "specialist"
   const columns = useMemo<ColumnDef<ApprovedBookingListItem>[]>(() => [
     // AB1 has transportId but no transportCode. Never substitute the booking reference or fetch each row.
     { id: "transport", header: "Transport Code", enableHiding: false, cell: ({ row }) => <Link className="font-semibold text-primary underline-offset-2 hover:underline" to={approvedBookingDetail(row.original.bookingId)}>Not available</Link> },
@@ -38,9 +43,9 @@ export function ApprovedBookingsTable({ bookings, params, meta, isLoading, onCha
     { accessorKey: "approvedAt", header: "Approved", enableSorting: true, cell: ({ row }) => row.original.approvedAt ? formatBookingDate(row.original.approvedAt, true) : "—" },
     { id: "transportPlan", header: "Transport plan", cell: ({ row }) => row.original.transportPlan ? <TransportPlanStatusBadge status={row.original.transportPlan.status} /> : "Not created" },
     { id: "routePlan", header: "Primary route", cell: ({ row }) => row.original.routePlan ? <ApprovedBookingBadge value={row.original.routePlan.status} /> : "Not created" },
-    { id: "complianceDossier", header: "Dossier", cell: ({ row }) => row.original.complianceDossier ? <ApprovedBookingBadge value={row.original.complianceDossier.status} /> : "Not created" },
+    ...(showDossier ? [{ id: "complianceDossier", header: "Dossier", cell: ({ row }) => row.original.complianceDossier ? <ApprovedBookingBadge value={row.original.complianceDossier.status} /> : "Not created" } satisfies ColumnDef<ApprovedBookingListItem>] : []),
     { id: "actions", header: "Actions", enableHiding: false, cell: ({ row }) => <ApprovedBookingActionMenu booking={row.original} /> },
-  ], [])
+  ], [showDossier])
   const [sortId, direction] = params.sortBy.split(":")
   const sorting: SortingState = [{ id: sortId, desc: direction === "desc" }]
   const table = useReactTable({
