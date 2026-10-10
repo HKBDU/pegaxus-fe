@@ -16,7 +16,7 @@ const timestamp = z.iso.datetime({ offset: true })
 const optionalTimestamp = timestamp.nullish()
 const optionalText = z.string().nullish()
 export const employeeBriefSchema = z.object({
-  employeeId: entityIdSchema, employeeCode: z.string(), fullName: z.string(), role: z.string(),
+  employeeId: entityIdSchema, employeeCode: optionalText, fullName: z.string(), role: z.string(),
 })
 const quotationStatusSchema = z.enum(["DRAFT", "ISSUED"])
 
@@ -36,15 +36,18 @@ export const transportPlanDetailSchema = z.object({
   booking: z.object({
     bookingId: entityIdSchema, bookingCode: z.string(), status: z.string(), isInternational: z.boolean(), customerName: z.string(),
     originAddress: z.string(), originCountry: z.string(), destinationAddress: z.string(), destinationCountry: z.string(),
-    totalHorses: z.number().int().nonnegative(), requestedDepartureDate: z.iso.date(), requestedArrivalDate: z.iso.date(), specialRequirements: optionalText,
+    totalHorses: z.number().int().nonnegative(), requestedDepartureDate: z.iso.date(), requestedArrivalDate: z.iso.date().nullish(), specialRequirements: optionalText,
   }),
   transport: z.object({ transportId: entityIdSchema, transportCode: z.string(), status: z.string() }),
   plannedStartAt: optionalTimestamp, plannedEndAt: optionalTimestamp,
   planningNote: optionalText,
   estimatedDistanceKm: z.number().nonnegative().nullish(),
   estimatedDurationMinutes: z.number().nonnegative().nullish(),
-  assignedEmployees: z.array(employeeBriefSchema.extend({ responsibility: z.string(), isPrimary: z.boolean(), assignedAt: timestamp })),
-  approvedBy: employeeBriefSchema.nullish(), approvedAt: optionalTimestamp,
+  // BE assignments use employeeName; route/fixture briefs use fullName. Map at the DTO boundary.
+  assignedEmployees: z.array(employeeBriefSchema.extend({ fullName: z.string().optional(), employeeName: z.string().optional(), responsibility: optionalText, isPrimary: z.boolean(), assignedAt: timestamp })
+    .refine(item => Boolean(item.fullName || item.employeeName), { message: "An assigned employee name is required." })
+    .transform(({ employeeName, ...item }) => ({ ...item, fullName: item.fullName || employeeName! }))),
+  approvedBy: z.object({ employeeId: entityIdSchema, fullName: z.string() }).nullish(), approvedAt: optionalTimestamp,
   createdAt: timestamp, updatedAt: timestamp,
 })
 const metadataFields = {

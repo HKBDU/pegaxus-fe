@@ -2,7 +2,7 @@ import { useParams, useSearchParams } from "react-router-dom"
 import { ROLE_ROUTES } from "@/app/route-config"
 import { useAuthStore } from "@/features/auth/store"
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
-import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
+import { ApprovedBookingBadge } from "../components/ApprovedBookingBadge"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { ErrorState } from "@/shared/components/common"
 import { ApprovedBookingDetails } from "../components/ApprovedBookingDetails"
@@ -12,6 +12,7 @@ import { getApprovedBookingError } from "../services"
 import CreateTransportPlanPage from "./CreateTransportPlanPage"
 import { entityIdSchema } from "../schemas"
 import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
+import { TransportWorkspace } from "../components/TransportWorkspace"
 
 function ApprovedBookingReadPage() {
   const { bookingId = "" } = useParams<{ bookingId: string }>()
@@ -24,17 +25,20 @@ function ApprovedBookingReadPage() {
     <div className="booking-page-enter mx-auto w-full max-w-[1152px] space-y-5">
       <Flow3MockIndicator />
       <div>
-        <PageHeader title="Approved Booking Details" backHref={ROLE_ROUTES.approvedBookings} backLabel="Back to approved bookings" />
-        <p className="text-xs text-slate-500 sm:text-sm">Review the approved booking and its transport planning status. Booking information is read-only.</p>
+        <PageHeader title="Transport Details" backHref={ROLE_ROUTES.approvedBookings} backLabel="Back to Assigned Transports" />
+        <p className="text-xs text-slate-500 sm:text-sm">Review transport operations, planning references and the approved booking. Booking information is read-only.</p>
       </div>
       {!entityIdSchema.safeParse(bookingId).success ? <ErrorState message="The booking identifier is invalid." /> : error ?
         <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
         query.isPending ? <BookingDetailsSkeleton /> : booking ? <>
           <div className="flex flex-col justify-between gap-4 border-b pb-5 sm:flex-row sm:items-center">
-            <div className="space-y-2"><h2 className="font-heading text-2xl">{booking.bookingCode}</h2><BookingStatusBadge status={booking.status} audience="manager" /></div>
+            <div className="space-y-2"><h2 className="font-heading text-2xl">{booking.transport?.transportCode ?? "Transport not available"}</h2>
+              <p className="text-xs text-slate-500">Booking Reference: {booking.bookingCode}</p>
+              {booking.transport && <ApprovedBookingBadge value={booking.transport.status} />}</div>
             <ApprovedBookingPlanningAction principal={principal} booking={booking} />
           </div>
           <ApprovedBookingDetails booking={booking} />
+          <TransportWorkspace booking={booking} principal={principal} />
         </> : null}
     </div>
   </div>

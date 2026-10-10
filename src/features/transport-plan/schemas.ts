@@ -51,7 +51,7 @@ const bookingFields = {
   isInternational: z.boolean(),
   totalHorses: z.number().int().nonnegative(),
   requestedDepartureDate: z.iso.date(),
-  requestedArrivalDate: z.iso.date(),
+  requestedArrivalDate: z.iso.date().nullish(),
   specialRequirements: optionalText,
   transportPlan: planSummarySchema.nullable(),
   complianceDossier: dossierSummarySchema.nullable(),
@@ -61,9 +61,9 @@ export const approvedBookingListItemSchema = z.object({
   ...bookingFields,
   customerName: z.string(),
   customerCode: optionalText,
-  transportId: entityIdSchema,
+  transportId: entityIdSchema.nullish(),
   routePlan: routeSummarySchema.nullable(),
-  approvedAt: z.iso.datetime({ offset: true }),
+  approvedAt: z.iso.datetime({ offset: true }).nullish(),
 })
 export const approvedBookingsPageSchema = z.object({
   items: z.array(approvedBookingListItemSchema),
@@ -86,7 +86,7 @@ export const approvedBookingDetailSchema = z.object({
     passportNumber: optionalText,
     specialHandlingNotes: optionalText,
   })),
-  transport: transportSchema.extend({ status: z.string().min(1) }),
+  transport: transportSchema.extend({ status: z.string().min(1) }).nullable(),
   // Display the API statuses without introducing another RoutePlan state machine.
   routePlans: z.array(routeSummarySchema.extend({ routeType: z.enum(["PRIMARY", "BACKUP", "RETURN"]) })),
 })

@@ -66,7 +66,7 @@ export function createFlow3Fixtures() {
   })
   // Dates span a month boundary without invalid date strings.
   bookings.forEach((booking, offset) => { booking.requestedDepartureDate = new Date(Date.UTC(2026, 9, 27 + offset)).toISOString().slice(0, 10) })
-  const plans: TransportPlanDetail[] = bookings.flatMap((booking, offset) => statuses[offset] ? [{
+  const plans: TransportPlanDetail[] = bookings.flatMap((booking, offset) => statuses[offset] && booking.transport ? [{
     transportPlanId: mockId(3, offset + 1), planCode: `TP-DEMO-${String(offset + 1).padStart(4, "0")}`, status: statuses[offset]!,
     booking: { ...booking, customerName: booking.customer.fullName }, transport: booking.transport,
     plannedStartAt: `${booking.requestedDepartureDate}T06:00:00Z`, plannedEndAt: "2026-11-05T20:00:00Z",

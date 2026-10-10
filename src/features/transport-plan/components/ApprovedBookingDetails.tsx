@@ -29,7 +29,7 @@ export function ApprovedBookingDetails({ booking }: { booking: ApprovedBookingDe
         <Field label="Destination">{booking.destinationAddress} ({booking.destinationCountry})</Field>
         <Field label="Transport scope"><ApprovedBookingBadge value={booking.isInternational ? "INTERNATIONAL" : "DOMESTIC"} /></Field>
         <Field label="Requested departure">{formatBookingDate(booking.requestedDepartureDate)}</Field>
-        <Field label="Requested arrival">{formatBookingDate(booking.requestedArrivalDate)}</Field>
+        <Field label="Requested arrival">{booking.requestedArrivalDate ? formatBookingDate(booking.requestedArrivalDate) : "—"}</Field>
         <Field label="Total horses">{String(booking.totalHorses)}</Field>
       </dl>
     </Section>
@@ -56,18 +56,10 @@ export function ApprovedBookingDetails({ booking }: { booking: ApprovedBookingDe
     </Section>
     <Section title="Operational status">
       <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <Field label="Transport"><div className="space-y-1"><p>{booking.transport.transportCode}</p><ApprovedBookingBadge value={booking.transport.status} /></div></Field>
+        <Field label="Transport">{booking.transport ? <div className="space-y-1"><p>{booking.transport.transportCode}</p><ApprovedBookingBadge value={booking.transport.status} /></div> : "Not available"}</Field>
         <Field label="Transport plan">{booking.transportPlan ? <div className="space-y-1"><p>{booking.transportPlan.planCode}</p><ApprovedBookingBadge value={booking.transportPlan.status} /></div> : "Not created"}</Field>
         <Field label="Compliance dossier">{booking.complianceDossier ? <ApprovedBookingBadge value={booking.complianceDossier.status} /> : "Not created"}</Field>
       </dl>
-      <div className="border-t pt-4">
-        <h3 className="mb-3 text-sm font-medium">Route plans</h3>
-        {!booking.routePlans.length ? <p className="text-sm text-slate-500">No route plan has been created.</p> : <ul className="space-y-2">
-          {booking.routePlans.map((route) => <li key={route.routePlanId} className="flex flex-wrap items-center gap-3 rounded-[2px] border p-3 text-sm">
-            <span className="font-medium">{route.routePlanCode}</span><ApprovedBookingBadge value={route.routeType} /><ApprovedBookingBadge value={route.status} />
-          </li>)}
-        </ul>}
-      </div>
     </Section>
   </div>
 }

@@ -61,9 +61,9 @@ export function TransportPlansTable({ plans, params, meta, isLoading, onChange, 
     rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60" cellClassName="h-11 px-2.5 py-2 text-xs"
     emptyMessage={<EmptyState message={hasTransportPlanFilters(params) ? "No transport plans match your search or filters. Adjust your selections." : "No transport plans are available yet."} />}
     footer={<TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={(pageSize) => onChange({ pageSize })} pageSizeAriaLabel="Transport plans per page" />}>
-    <div role="group" aria-label="Transport plans toolbar" className="flex min-w-0 items-start gap-2">
+    <div role="group" aria-label="Transport plans toolbar" className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-start">
       {filters && <div className="min-w-0 flex-1">{filters}</div>}
-      <div className="ml-auto flex shrink-0 justify-end"><DataTableViewOptions table={table} /></div>
+      <div className="flex shrink-0 justify-end"><DataTableViewOptions table={table} /></div>
     </div>
   </DataTable>
 }

@@ -29,7 +29,7 @@ export function createFlow3MockStore() {
   const routeSummary = (route: typeof routes[number]) => ({ routePlanId: route.routePlanId, routePlanCode: route.routePlanCode, status: route.status, routeType: route.routeType })
   const bookingListRow = (booking: ApprovedBookingDetail) => {
     const plan = planFor(booking), primary = routesFor(plan?.transportPlanId).find((route) => route.routeType === "PRIMARY" && route.status !== "CANCELLED")
-    return { ...booking, customerName: booking.customer.fullName, customerCode: booking.customer.customerCode, transportId: booking.transport.transportId,
+    return { ...booking, customerName: booking.customer.fullName, customerCode: booking.customer.customerCode, transportId: booking.transport?.transportId ?? null,
       transportPlan: planSummary(plan), routePlan: primary ? routeSummary(primary) : null, approvedAt: "2026-10-01T08:00:00Z", createdAt: `${booking.requestedDepartureDate}T00:00:00Z` }
   }
   return {
@@ -69,6 +69,7 @@ export function createFlow3MockStore() {
     createPlan(bookingId: string, input: CreateTransportPlanInput) {
       const booking = bookings.find((item) => item.bookingId === bookingId)
       if (!booking) return failure(404, "BOOKING_NOT_FOUND", "Booking not found.")
+      if (!booking.transport) return failure(409, "TRANSPORT_NOT_FOUND", "The approved booking has no transport.")
       if (planFor(booking)) return failure(409, "TRANSPORT_PLAN_ALREADY_EXISTS", "Transport Plan already exists for this booking. Please edit the existing plan.")
       const parsed = createTransportPlanSchema.safeParse(input)
       if (!parsed.success) return failure(400, "VALIDATION_ERROR", "Check the transport plan metadata.")

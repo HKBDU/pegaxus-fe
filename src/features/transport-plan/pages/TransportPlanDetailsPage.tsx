@@ -21,6 +21,7 @@ import { TransportPlanGeneral } from "../components/TransportPlanGeneral"
 import { TransportPlanQuotation } from "../components/TransportPlanQuotation"
 import { TransportPlanPersonnel, type PersonnelPanelProps } from "../components/TransportPlanPersonnel"
 import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
+import { TransportPlanWorkspace } from "../components/TransportPlanWorkspace"
 
 export function TransportPlanDetails({ plan, personnelPanel }: { plan: TransportPlanDetail; personnelPanel?: ComponentType<PersonnelPanelProps> }) {
   const [params, setParams] = useSearchParams()
@@ -38,14 +39,18 @@ export function TransportPlanDetails({ plan, personnelPanel }: { plan: Transport
       </div>
     </div>
     {canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) && ["DRAFT", "PENDING"].includes(plan.status) ?
-      <p className="text-xs text-slate-500">Approve this transport plan before assigning a Transport Specialist or Fleet/Route Coordinator.</p> : null}
+      <p className="text-xs text-slate-500">Phase 1 assignment requires a customer-approved TransportPlan after quotation acceptance and deposit in Flow 6.</p> : null}
+    {canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) && <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-white p-4">
+      <div><h3 className="font-heading text-base uppercase">Quotation &amp; Payment</h3><p className="text-xs text-slate-500">Plan creation → Flow 6 quotation acceptance and deposit → Phase 1 assignment.</p></div>
+      <Button asChild variant="outline" size="sm" className="rounded-md"><Link to={`?tab=quotation`}>View Quotation &amp; Payment</Link></Button>
+    </div>}
     <Tabs.Root value={activeTab} onValueChange={(value) => setParams((current) => { const next = new URLSearchParams(current); next.set("tab", transportPlanTabSchema.parse(value)); return next })}>
       <Tabs.List aria-label="Transport plan sections" className="mb-5 flex flex-nowrap gap-5 overflow-x-auto border-b border-slate-200">
         {([{ value: "general", label: "General" }, { value: "quotation", label: "Quotation" }, { value: "personnel", label: "Personnel" }]).map((tab) =>
           <Tabs.Trigger key={tab.value} value={tab.value} className="shrink-0 whitespace-nowrap border-b-2 border-transparent px-0.5 py-2.5 font-heading text-sm uppercase text-slate-500 outline-none hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-amber-500/30 data-[state=active]:border-[#ef8f00] data-[state=active]:text-[#ef8f00]">{tab.label}</Tabs.Trigger>)}
       </Tabs.List>
-      <Tabs.Content value="general" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><TransportPlanGeneral plan={plan} /></Tabs.Content>
-      <Tabs.Content value="quotation" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><TransportPlanQuotation transportPlanId={plan.transportPlanId} /></Tabs.Content>
+      <Tabs.Content value="general" className="space-y-5 outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><TransportPlanGeneral plan={plan} /><TransportPlanWorkspace plan={plan} /></Tabs.Content>
+      <Tabs.Content value="quotation" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><TransportPlanQuotation transportPlanId={plan.transportPlanId} canManage={canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })} /></Tabs.Content>
       <Tabs.Content value="personnel" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><TransportPlanPersonnel transportPlanId={plan.transportPlanId} panel={personnelPanel} /></Tabs.Content>
     </Tabs.Root>
   </div>

@@ -28,7 +28,7 @@ export default function CreateTransportPlanPage() {
           <Field label="Origin">{booking.originAddress} ({booking.originCountry})</Field><Field label="Destination">{booking.destinationAddress} ({booking.destinationCountry})</Field>
           <Field label="Requested dates">{booking.requestedDepartureDate} → {booking.requestedArrivalDate}</Field>
         </dl></Section>
-        {booking.transportPlan ? <Section title="Transport Plan Already Exists"><p className="text-sm text-slate-600">This booking already has a transport plan. Open it to review or edit its metadata.</p><Button asChild className="rounded-[2px]"><Link to={transportPlanDetail(booking.transportPlan.transportPlanId)}>View Transport Plan</Link></Button></Section> :
+        {booking.transportPlan ? <Section title="Transport Plan Already Exists"><p className="text-sm text-slate-600">This booking already has a transport plan. Open it to review or edit its metadata.</p><Button asChild className="rounded-[2px]"><Link to={transportPlanDetail(booking.transportPlan.transportPlanId)}>View Transport Plan</Link></Button></Section> : !booking.transport ? <ErrorState message="The approved booking has no transport. A transport must exist before creating its plan." /> :
           <TransportPlanMetadataForm bookingId={bookingId} cancelHref={approvedBookingDetail(bookingId)} onDuplicate={() => query.refetch()} />}
       </> : null}
     </div>
