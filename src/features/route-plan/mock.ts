@@ -106,7 +106,13 @@ export async function mockGetRoutePlan(id: string) { return clone(plans.find((pl
 
 export async function mockCreateRoutePlan(id: string, input: CreateRoutePlanRequest) {
   const primary = plans.find((plan) => plan.transportPlanId === id && plan.routeType === "PRIMARY")
-  const sourceRoutes = input.routeType === "BACKUP" && primary ? primary.segments.map((item) => item.route) : routes
+  const sourceRoutes: RouteMaster[] = input.routeType === "BACKUP" && primary
+    ? primary.segments.map(({ route }) => {
+      const master = routes.find((item) => item.routeId === route.routeId)
+      if (!master) throw new Error(`Mock route not found: ${route.routeId}`)
+      return master
+    })
+    : routes
   const created: RoutePlan = { ...plans[0], routePlanId: `mock-${input.routeType.toLowerCase()}-${Date.now()}`, routePlanCode: `RP-MOCK-${input.routeType}`, transportPlanId: id, routeType: input.routeType, status: "DRAFT", routeNote: input.routeNote ?? null, segments: sourceRoutes.map((route, index) => segment(route, index + 1, input.routeType)), updatedAt: new Date().toISOString() }
   plans = [created, ...plans]
   return clone(created)
