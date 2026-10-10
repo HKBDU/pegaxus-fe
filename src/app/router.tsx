@@ -89,6 +89,10 @@ const DossierAuditHistoryPage = lazy(
 const DossierRequirementsPage = lazy(
   () => import("@/features/compliance-catalog/pages/DossierRequirementsPage"),
 );
+const VehicleListPage = lazy(() => import("@/features/fleet/pages/VehicleListPage"));
+const VehicleFormPage = lazy(() => import("@/features/fleet/pages/VehicleFormPage"));
+const VehicleDetailPage = lazy(() => import("@/features/fleet/pages/VehicleDetailPage"));
+const ProviderListPage = lazy(() => import("@/features/fleet/pages/ProviderListPage"));
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />
@@ -251,6 +255,31 @@ export const router = createBrowserRouter([
       },
       { path: "*", element: <NotFoundPage /> },
     ],
+  },
+  {
+    // Flow 3 fleet (UC-43..46): Logistics Manager and Fleet & Route Coordinator share the vehicle pages.
+    path: ROLE_ROUTES.vehicles,
+    element: (
+      <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <Suspense fallback={<LoadingState />}><VehicleListPage /></Suspense> },
+      { path: "new", element: <Suspense fallback={<LoadingState />}><VehicleFormPage mode="create" /></Suspense> },
+      { path: ":vehicleId", element: <Suspense fallback={<LoadingState />}><VehicleDetailPage /></Suspense> },
+      { path: ":vehicleId/edit", element: <Suspense fallback={<LoadingState />}><VehicleFormPage mode="edit" /></Suspense> },
+    ],
+  },
+  {
+    // Flow 3 transport providers (UC-41): Logistics Manager only.
+    path: ROLE_ROUTES.transportProviders,
+    element: (
+      <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [{ index: true, element: <Suspense fallback={<LoadingState />}><ProviderListPage /></Suspense> }],
   },
   {
     // Flow 2 catalog: TS manages it, LM reads it (API contract C1-C6).

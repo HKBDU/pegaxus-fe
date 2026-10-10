@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  CarFront,
   CircleArrowLeft,
   ClipboardCheck,
   FileStack,
@@ -43,7 +44,8 @@ const primaryItems = [
   { label: "Dossier Templates", href: ROLE_ROUTES.dossierTemplates, icon: FileStack },
   { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
   { label: "Users", href: "/admin/users", icon: UsersRound },
-  { label: "Transport Partners", href: "/admin/transport-partners", icon: ThumbsUp },
+  { label: "Vehicles", href: ROLE_ROUTES.vehicles, icon: CarFront },
+  { label: "Transport Providers", href: ROLE_ROUTES.transportProviders, icon: ThumbsUp },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
 ]
 
@@ -51,6 +53,10 @@ const staffPrimaryItems = [
   { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
   { label: "Dossier Templates", href: ROLE_ROUTES.dossierTemplates, icon: FileStack },
   { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
+]
+
+const fleetCoordinatorItems = [
+  { label: "Vehicles", href: ROLE_ROUTES.vehicles, icon: CarFront },
 ]
 
 const staffSecondaryItems = [
@@ -102,6 +108,7 @@ export function AdminSidebar() {
   const principal = useAuthStore((state) => state.principal)
   // Logistics managers get the full admin menu; other employees (e.g. Transport Specialist) only their own pages.
   const isManager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
+  const isFleetCoordinator = canAccess(principal, { anyRole: ["FLEET_ROUTE_COORDINATOR"] })
 
   return (
     <Sidebar fixed={false} collapsible="offcanvas" className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
@@ -111,7 +118,7 @@ export function AdminSidebar() {
       <SidebarContent className="overflow-hidden bg-[#17191c]">
         <SidebarGroup className="px-0">
           <SidebarGroupContent>
-            <AdminSidebarMenu items={isManager ? primaryItems : staffPrimaryItems} compact />
+            <AdminSidebarMenu items={isManager ? primaryItems : isFleetCoordinator ? fleetCoordinatorItems : staffPrimaryItems} compact />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
