@@ -49,8 +49,12 @@ type LocationResponse = {
 type ListResponse = {
   value?: {
     items?: LocationResponse[];
+    totalPages?: number;
+    hasNextPage?: boolean;
   };
   items?: LocationResponse[];
+  totalPages?: number;
+  hasNextPage?: boolean;
 };
 
 function toMapLocation(location: LocationResponse): MapLocation {
@@ -69,11 +73,29 @@ function toMapLocation(location: LocationResponse): MapLocation {
 }
 
 async function getLocations(): Promise<MapLocation[]> {
-  const response = (await apiClient.get("/locations", {
-    params: { pageIndex: 1, pageSize: 100 },
-  })) as unknown as ListResponse;
-  const items = response.value?.items ?? response.items ?? [];
-  return items.filter((location) => !location.isDeleted).map(toMapLocation);
+  const pageSize = 100;
+  const locations: LocationResponse[] = [];
+  let pageIndex = 1;
+
+  while (pageIndex <= 1000) {
+    const response = (await apiClient.get("/locations", {
+      params: { pageIndex, pageSize },
+    })) as unknown as ListResponse;
+    const items = response.value?.items ?? response.items ?? [];
+    locations.push(...items);
+
+    const totalPages = response.value?.totalPages ?? response.totalPages;
+    const hasNextPage = response.value?.hasNextPage ?? response.hasNextPage;
+    if (hasNextPage === false || (totalPages !== undefined && pageIndex >= totalPages)) {
+      break;
+    }
+    if (items.length < pageSize && totalPages === undefined && hasNextPage === undefined) {
+      break;
+    }
+    pageIndex += 1;
+  }
+
+  return locations.filter((location) => !location.isDeleted).map(toMapLocation);
 }
 
 export default function Test() {
