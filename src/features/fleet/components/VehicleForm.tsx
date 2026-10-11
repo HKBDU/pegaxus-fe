@@ -9,18 +9,16 @@ import { cn } from "@/lib/utils"
 import { VehicleStatusBadge } from "@/features/fleet/components/VehicleBadges"
 import {
   EQUIPMENT_PRESETS,
-  TRANSPORT_MODE_LABEL,
   VEHICLE_CAPACITY_MAX,
   VEHICLE_CAPACITY_MIN,
 } from "@/features/fleet/constants/fleet.constants"
 import { toVehicleDefaults } from "@/features/fleet/vehicle-form"
 import { vehicleFormSchema, type VehicleFormValues } from "@/features/fleet/schemas"
-import { TRANSPORT_MODES, type Vehicle } from "@/features/fleet/types"
+import { type Vehicle } from "@/features/fleet/types"
 import { Button } from "@/shared/components/ui/button"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form"
 import { Input } from "@/shared/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
 
 export type VehicleFormMode = "create" | "edit" | "view"
@@ -169,28 +167,6 @@ export function VehicleForm({ mode, vehicle, isSaving = false, cancelHref, onSub
                 <TextField control={form.control} name="vehicleName" label="Vehicle name" placeholder="e.g., Pegaxus Titan Cruiser" />
               </>
             ) : null}
-            <FormField
-              control={form.control}
-              name="transportMode"
-              render={({ field }) => (
-                <FormItem className="gap-1.5">
-                  <FormLabel className={labelClass}>Transport mode <span className="text-red-600">*</span></FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange} disabled={isSaving || isView}>
-                    <FormControl>
-                      <SelectTrigger className={cn(controlClass, "justify-between")}>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="rounded-[2px]">
-                      {TRANSPORT_MODES.map((modeOption) => (
-                        <SelectItem key={modeOption} value={modeOption} className="text-xs">{TRANSPORT_MODE_LABEL[modeOption]}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
-            />
             <TextField control={form.control} name="licensePlate" label="License plate / registration no." placeholder="e.g., 29C-882.14" required />
           </Section>
 

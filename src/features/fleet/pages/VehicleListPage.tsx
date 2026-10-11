@@ -17,7 +17,8 @@ const initialParams: VehicleListParams = {
   pageIndex: 1,
   pageSize: 8,
   search: "",
-  transportMode: "ALL",
+  // Internal fleet is road-only (task doc, UC-43): the list is always filtered to ROAD.
+  transportMode: "ROAD",
   status: "ALL",
   vehicleType: "ALL",
   minCapacity: "ALL",

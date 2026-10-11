@@ -49,7 +49,8 @@ export function toVehiclePayload(values: VehicleFormValues): VehiclePayload {
   return {
     vehicleCode: values.vehicleCode.trim(),
     vehicleName: optional(values.vehicleName),
-    transportMode: values.transportMode,
+    // Internal fleet is road-only: the mode is a constant, not a user choice.
+    transportMode: "ROAD",
     licensePlate: optional(values.licensePlate),
     vehicleType: optional(values.vehicleType),
     manufacturer: optional(values.manufacturer),

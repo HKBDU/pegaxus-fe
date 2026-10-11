@@ -185,7 +185,8 @@ export const vehicleService = {
           pageIndex: params.pageIndex,
           pageSize: params.pageSize,
           search: params.search.trim(),
-          transportMode: params.transportMode,
+          // Internal fleet is road-only (flow3 task doc): the list is always filtered to ROAD.
+          transportMode: "ROAD",
           status: params.status,
           vehicleType: params.vehicleType,
           minCapacity: params.minCapacity,
@@ -412,6 +413,7 @@ export const providerService = {
     if (useFleetMocks) {
       await wait()
       const provider = findMockProvider(id)
+      if (payload.lastUpdatedAt !== provider.updatedAt) throw new FleetApiError("PROVIDER_MODIFIED")
       provider.status = payload.status
       provider.updatedAt = new Date().toISOString()
       return { transportProviderId: provider.transportProviderId, status: provider.status, updatedAt: provider.updatedAt }

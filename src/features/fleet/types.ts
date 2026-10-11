@@ -153,9 +153,11 @@ export interface ProviderPayload {
 /** PUT /transport-providers/{id} (PV4): providerCode is immutable, status uses PV5. */
 export type ProviderUpdatePayload = Omit<ProviderPayload, "providerCode"> & { lastUpdatedAt: string }
 
+/** PATCH /transport-providers/{id}/status (PV5). lastUpdatedAt: the BE rejects the call without it (409 PROVIDER_MODIFIED when stale). */
 export interface ProviderStatusPayload {
   status: ProviderStatus
   reason?: string
+  lastUpdatedAt: string
 }
 
 export interface ProviderCounts {

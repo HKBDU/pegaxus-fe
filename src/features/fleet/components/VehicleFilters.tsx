@@ -4,11 +4,10 @@ import { FilterX, Search, X } from "lucide-react"
 import {
   CAPACITY_FILTER_OPTIONS,
   DEFAULT_VEHICLE_SORT,
-  TRANSPORT_MODE_SHORT,
   VEHICLE_STATUS_LABEL,
   VEHICLE_TYPE_OPTIONS,
 } from "@/features/fleet/constants/fleet.constants"
-import { TRANSPORT_MODES, VEHICLE_STATUSES, type TransportMode, type VehicleListParams, type VehicleStatus } from "@/features/fleet/types"
+import { VEHICLE_STATUSES, type VehicleListParams, type VehicleStatus } from "@/features/fleet/types"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
@@ -57,13 +56,12 @@ interface VehicleFiltersProps {
   trailing?: ReactNode
 }
 
-/** SCR-F3-023 filter panel: search + mode + status + vehicle type + capacity (VH1 query). */
+/** SCR-F3-023 filter panel: search + status + vehicle type + capacity (VH1 query). Mode is fixed to ROAD, so there is no mode filter.. */
 export function VehicleFilters({ filters, onSearchChange, onPatch, onReset, trailing }: VehicleFiltersProps) {
   const [localSearch, setLocalSearch] = useState(filters.search)
   const debouncedSearch = useDebounce(localSearch, 300)
   const hasActiveFilters =
     Boolean(localSearch) ||
-    filters.transportMode !== "ALL" ||
     filters.status !== "ALL" ||
     filters.vehicleType !== "ALL" ||
     filters.minCapacity !== "ALL" ||
@@ -72,7 +70,7 @@ export function VehicleFilters({ filters, onSearchChange, onPatch, onReset, trai
   useEffect(() => onSearchChange(debouncedSearch), [debouncedSearch, onSearchChange])
 
   return (
-    <div role="toolbar" aria-label="Vehicle filters" className="booking-panel grid gap-3 border bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,1.4fr)_repeat(4,minmax(0,1fr))_auto]">
+    <div role="toolbar" aria-label="Vehicle filters" className="booking-panel grid gap-3 border bg-white p-4 sm:grid-cols-2 lg:grid-cols-[minmax(14rem,1.4fr)_repeat(3,minmax(0,1fr))_auto]">
       <div className="grid min-w-0 gap-1 sm:col-span-2 lg:col-span-1">
         <span className={labelClass}>Search</span>
         <div className="relative">
@@ -93,13 +91,6 @@ export function VehicleFilters({ filters, onSearchChange, onPatch, onReset, trai
         </div>
       </div>
 
-      <FilterSelect
-        label="Mode"
-        value={filters.transportMode}
-        allLabel="All Modes"
-        options={TRANSPORT_MODES.map((mode) => ({ value: mode, label: TRANSPORT_MODE_SHORT[mode] }))}
-        onChange={(value) => onPatch({ transportMode: value as TransportMode | "ALL" })}
-      />
       <FilterSelect
         label="Status"
         value={filters.status}

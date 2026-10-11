@@ -1,14 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useQueryClient } from "@tanstack/react-query"
 import { Trash2 } from "lucide-react"
 import { useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
 import { ProviderStatusBadge } from "@/features/fleet/components/ProviderBadges"
-import { useChangeProviderStatus, useDeleteProvider } from "@/features/fleet/hooks"
+import { providerKeys, useChangeProviderStatus, useDeleteProvider } from "@/features/fleet/hooks"
 import { providerStatusSchema, type ProviderStatusFormValues } from "@/features/fleet/schemas"
 import { PROVIDER_STATUSES, type Provider } from "@/features/fleet/types"
-import { getFleetErrorMessage } from "@/features/fleet/utils"
+import { getFleetErrorCode, getFleetErrorMessage } from "@/features/fleet/utils"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -32,6 +33,7 @@ const controlClass = "w-full rounded-md border border-slate-200 bg-white px-3 te
 /** PV5: change provider status; Inactive / Suspended need a reason. */
 export function ProviderStatusDialog({ provider, onOpenChange }: { provider: Provider | null; onOpenChange: (open: boolean) => void }) {
   const changeStatus = useChangeProviderStatus()
+  const queryClient = useQueryClient()
   const attempt = useRequestAttemptGuard()
   const form = useForm<ProviderStatusFormValues>({
     resolver: zodResolver(providerStatusSchema),
@@ -48,7 +50,7 @@ export function ProviderStatusDialog({ provider, onOpenChange }: { provider: Pro
       const guarded = await attempt.run(() =>
         changeStatus.mutateAsync({
           id: provider.transportProviderId,
-          payload: { status: values.status, ...(values.reason ? { reason: values.reason } : {}) },
+          payload: { status: values.status, ...(values.reason ? { reason: values.reason } : {}), lastUpdatedAt: provider.updatedAt },
         }),
       )
       if (!guarded.started) return
@@ -57,6 +59,11 @@ export function ProviderStatusDialog({ provider, onOpenChange }: { provider: Pro
     } catch (error) {
       attempt.reset()
       toast.error(getFleetErrorMessage(error, "Unable to update the provider status."))
+      if (getFleetErrorCode(error) === "PROVIDER_MODIFIED") {
+        // Stale updatedAt: reload the list so the next attempt starts from the current row.
+        void queryClient.invalidateQueries({ queryKey: providerKeys.lists() })
+        onOpenChange(false)
+      }
     }
   })
 
