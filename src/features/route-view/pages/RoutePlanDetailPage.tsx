@@ -1,4 +1,4 @@
-import type { ComponentType } from "react"
+import { useEffect, useRef, type ComponentType } from "react"
 import { useParams, useSearchParams } from "react-router-dom"
 import { useMutationState } from "@tanstack/react-query"
 import { ROLE_ROUTES } from "@/app/route-config"
@@ -43,19 +43,33 @@ export default function RoutePlanDetailPage({ mapViewer, routeDetailPath, emerge
     return next
   })
   const plan = query.data
+  const hasPlan = Boolean(plan)
+  const pageRef = useRef<HTMLDivElement>(null)
+  const fullPageMode = mode === "decision" || mode === "activation"
+  const waitingForAction = Boolean(mode && mode !== "overview") && context.loading
+  useEffect(() => {
+    if (!hasPlan || waitingForAction || mode === "request" || mode === "notice") return
+    const heading = pageRef.current?.querySelector<HTMLElement>("h1")
+    heading?.focus({ preventScroll: true })
+    pageRef.current?.scrollIntoView({ block: "start" })
+  }, [routePlanId, mode, hasPlan, waitingForAction])
   let workspace
   if (context.data && plan) {
     if (activeMode === "decision") workspace = <RouteChangeDecisionPanel plan={plan} context={context.data} onBack={() => changeMode()} />
     if (activeMode === "activation") workspace = <ReturnActivationPanel plan={plan} context={context.data} onBack={() => changeMode()} />
     if (mode && mode !== "overview" && !activeMode) workspace = <div className="space-y-3"><ErrorState message="This emergency action is unavailable for your role or the current route and transport state." /><Button variant="outline" onClick={() => changeMode()}>Back to Route Plan</Button></div>
   }
-  return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
+  return <div ref={pageRef} className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] scroll-mt-24 px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
     <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
       <Flow3MockIndicator />
       {allowed && valid && !error && !accessFailure && plan ? <>
-        {context.loading ? <Skeleton role="status" aria-label="Loading emergency context" className="h-24 w-full" /> : context.error ? <ErrorState message={getEmergencyError(context.error).message} /> : null}
-        <RoutePlanDetails key={routePlanId} plan={plan} mapViewer={mapViewer} routeDetailPath={routeDetailPath}
-          emergencyArea={context.data ? <EmergencyActionBar plan={plan} context={context.data} onAction={changeMode} /> : undefined} emergencyWorkspace={workspace} />
+        {waitingForAction ? <Skeleton role="status" aria-label="Loading emergency context" className="h-80 w-full" /> : context.error && mode && mode !== "overview" ?
+          <div className="space-y-3"><ErrorState message={getEmergencyError(context.error).message} /><Button variant="outline" onClick={() => changeMode()}>Back to Route Plan</Button></div> : workspace ?
+          <div key={`${routePlanId}-${mode}`}>{workspace}</div> : !fullPageMode ? <>
+            {context.error && <ErrorState message={getEmergencyError(context.error).message} />}
+            <RoutePlanDetails key={routePlanId} plan={plan} mapViewer={mapViewer} routeDetailPath={routeDetailPath}
+              emergencyArea={context.data ? <EmergencyActionBar plan={plan} context={context.data} onAction={changeMode} /> : undefined} />
+          </> : null}
         {context.data && activeMode === "request" && <BackupActivationRequestDialog key={routePlanId} plan={plan} context={context.data} onClose={() => changeMode()} />}
         {context.data && activeMode === "notice" && <DriverNoticeDialog key={routePlanId} plan={plan} context={context.data} onClose={() => changeMode()} />}
       </> : <>

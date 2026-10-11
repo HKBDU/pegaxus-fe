@@ -32,16 +32,16 @@ export function DriverNoticeDialog({ plan, context, onClose }: { plan: RoutePlan
     } catch { /* The mutation error remains visible below; no success or status change is fabricated. */ }
   })
   return <Dialog open onOpenChange={open => { if (!open && !busy) onClose() }}>
-    <DialogContent showCloseButton={!busy} className="flex max-h-[90svh] flex-col gap-0 overflow-hidden rounded-md p-0 sm:max-w-xl" onInteractOutside={event => { if (busy) event.preventDefault() }} onEscapeKeyDown={event => { if (busy) event.preventDefault() }} onCloseAutoFocus={event => { event.preventDefault(); document.getElementById(`emergency-notice-${plan.routePlanId}`)?.focus() }}>
-      <DialogHeader className="border-b border-l-4 border-l-primary p-5 pr-10 text-left"><DialogTitle className="font-heading text-2xl uppercase">Notify Driver</DialogTitle><DialogDescription>Send emergency return instructions to the assigned Driver(s).</DialogDescription></DialogHeader>
-      <Form {...form}><form onSubmit={submit} className="flex min-h-0 flex-col"><div className="min-h-0 space-y-4 overflow-y-auto p-5">
+    <DialogContent showCloseButton={!busy} className="flex max-h-[90svh] flex-col gap-0 overflow-hidden rounded-xl border-slate-200 bg-white p-0 shadow-xl sm:max-w-xl" onInteractOutside={event => { if (busy) event.preventDefault() }} onEscapeKeyDown={event => { if (busy) event.preventDefault() }} onCloseAutoFocus={event => { event.preventDefault(); document.getElementById(`emergency-notice-${plan.routePlanId}`)?.focus() }}>
+      <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-5 pr-12 text-left"><div className="mb-2 flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><BellRing aria-hidden="true" className="size-5" /></div><DialogTitle className="font-heading text-2xl uppercase text-slate-900">Notify Driver</DialogTitle><DialogDescription>Send emergency return instructions to the assigned Driver(s).</DialogDescription></DialogHeader>
+      <Form {...form}><form onSubmit={submit} className="flex min-h-0 flex-col"><div className="min-h-0 space-y-5 overflow-y-auto px-6 py-5">
         {mutation.data ? <DriverNoticeSuccess result={mutation.data} /> : <>
-          <EmergencyChangeSummary plan={plan} title="Active Return" /><p className="text-sm text-slate-600">The backend determines the Driver(s) currently responsible for this transport. No manual recipient selection is needed.</p>
+          <EmergencyChangeSummary plan={plan} title="Active Return" compact /><p className="text-xs leading-5 text-slate-500">Drivers currently responsible for this transport receive the notice. Confirmed recipients appear after sending.</p>
           <FormField control={form.control} name="message" render={({ field }) => <FormItem><FormLabel>Additional Message (optional)</FormLabel><FormControl><Textarea {...field} disabled={busy} className="min-h-24 rounded-md" /></FormControl><FormMessage /></FormItem>} />
           <EmergencyFeedback error={mutation.error} latestUpdatedAt={plan.updatedAt} />
         </>}
-      </div><DialogFooter className="shrink-0 border-t bg-white p-4"><Button type="button" variant="outline" disabled={busy} onClick={onClose}>{mutation.data ? "Close" : "Cancel"}</Button>
-        {!mutation.data && <Button type="submit" disabled={busy || attempt.isBlocked}>{busy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <BellRing aria-hidden="true" className="size-4" />}{busy ? "Sending…" : "Send Notification"}</Button>}
+      </div><DialogFooter className="shrink-0 border-t bg-slate-50 px-6 py-4"><Button type="button" variant="outline" className="rounded-lg" disabled={busy} onClick={onClose}>{mutation.data ? "Back to Route Plan" : "Cancel"}</Button>
+        {!mutation.data && <Button type="submit" className="rounded-lg" disabled={busy || attempt.isBlocked}>{busy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <BellRing aria-hidden="true" className="size-4" />}{busy ? "Sending…" : "Send Notification"}</Button>}
       </DialogFooter></form></Form>
     </DialogContent>
   </Dialog>

@@ -6,6 +6,7 @@ import type { TransportPlanQuotation as Quotation } from "../transport-plan.type
 import { Field, Section } from "./ApprovedBookingDetails"
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
 import { Button } from "@/shared/components/ui/button"
+import { ReceiptText } from "lucide-react"
 
 export function QuotationDetails({ quotation }: { quotation: Quotation }) {
   return <Section title="Quotation & Payment">
@@ -33,11 +34,9 @@ export function QuotationDetails({ quotation }: { quotation: Quotation }) {
 export function TransportPlanQuotation({ transportPlanId, quotation, canManage = false }: { transportPlanId: EntityId; quotation?: Quotation | null; canManage?: boolean }) {
   // Flow 6 can provide verified data here; Flow 3 never guesses an ID or fetches an obsolete endpoint.
   return quotation && quotation.transportPlanId === transportPlanId ? <QuotationDetails quotation={quotation} /> :
-    <Section title="Quotation & Payment">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1"><p className="text-sm text-slate-600">Plan creation → Quotation acceptance &amp; deposit → Phase 1 assignment.</p>
-          <p className="text-xs text-slate-500">Quotation and payment integration is pending. No financial status is available here yet.</p></div>
+    <section aria-label="Quotation and payment checkpoint" className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600"><ReceiptText aria-hidden="true" className="size-5" /></span><div><h2 className="font-heading text-base uppercase">Quotation &amp; Payment</h2>
+          <p className="mt-1 text-xs text-slate-500">Quotation acceptance and deposit precede Phase 1 assignment. Financial details are not available here yet.</p></div></div>
         {canManage && <Button variant="outline" size="sm" disabled title="Quotation management is not available yet." className="rounded-md">Set / Issue Quotation</Button>}
-      </div>
-    </Section>
+    </section>
 }

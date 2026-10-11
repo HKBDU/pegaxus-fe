@@ -1,4 +1,6 @@
 import type { ReactNode } from "react"
+import type { LucideIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { formatBookingDate } from "@/features/booking/utils"
 import { Card, CardContent } from "@/shared/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
@@ -6,16 +8,22 @@ import { EmptyState } from "@/shared/components/common"
 import type { ApprovedBookingDetail } from "../types"
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
 
-export function Section({ title, children }: { title: string; children: ReactNode }) {
-  return <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
+export function Section({ title, children, description, icon: Icon, actions, className }: { title: string; children: ReactNode; description?: string; icon?: LucideIcon; actions?: ReactNode; className?: string }) {
+  return <Card className={cn("booking-panel min-w-0 gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm", className)}>
     <CardContent className="space-y-4 px-5 py-5 sm:px-6">
-      <h2 className="font-heading text-lg uppercase tracking-wide">{title}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <div className="flex min-w-0 items-center gap-3">
+          {Icon && <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon aria-hidden="true" className="size-4" /></span>}
+          <div><h2 className="font-heading text-lg uppercase tracking-wide text-slate-900">{title}</h2>{description && <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>}</div>
+        </div>
+        {actions}
+      </div>
       {children}
     </CardContent>
   </Card>
 }
 export function Field({ label, children }: { label: string; children: ReactNode }) {
-  return <div className="min-w-0"><dt className="mb-1 text-xs text-slate-500">{label}</dt><dd className="whitespace-pre-wrap break-words text-sm text-slate-800">{children || "—"}</dd></div>
+  return <div className="min-w-0"><dt className="mb-1.5 text-xs text-slate-500">{label}</dt><dd className="whitespace-pre-wrap break-words text-sm font-medium leading-6 text-slate-800">{children || "—"}</dd></div>
 }
 
 export function ApprovedBookingDetails({ booking, showDossier = false }: { booking: ApprovedBookingDetail; showDossier?: boolean }) {

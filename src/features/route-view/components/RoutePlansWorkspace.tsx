@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom"
+import { Route } from "lucide-react"
 import type { AuthPrincipal } from "@/features/auth/types"
 import { transportPlanDetail } from "@/app/route-config"
 import { Button } from "@/shared/components/ui/button"
@@ -14,7 +15,7 @@ import { beforeDeparture, getPendingRouteCreation } from "../workspace-actions"
 import { RoutePlansTable } from "./RoutePlansTable"
 
 function UnavailableAction({ label, reason }: { label: string; reason: string }) {
-  return <div className="space-y-1"><Button variant="outline" size="sm" disabled title={reason} className="rounded-md">{label}</Button><p className="max-w-sm text-[11px] text-slate-500">{reason}</p></div>
+  return <div className="space-y-1"><Button size="sm" disabled title={reason} className="rounded-md">{label}</Button><p className="max-w-sm text-[11px] text-slate-500">{reason}</p></div>
 }
 
 // RP2 is scoped to one selected plan, never fetched for each row of the transport list.
@@ -34,14 +35,11 @@ export function RoutePlansWorkspace({ transportPlanId, planStatus, transportStat
   const title = specialist ? "Route Legal Review" : manager ? "Route Monitoring" : "Route Plans"
   const creation = getPendingRouteCreation(items, context)
   const error = query.isError ? getRouteViewError(query.error) : null
-  return <Section title={title}>
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className="max-w-2xl text-xs text-slate-500">PRIMARY is the main route, BACKUP replaces the indicated primary segments, and RETURN is an emergency return route. Backup distance and duration cover only the replacement, not the combined journey.</p>
-      {allowed && validId && query.isSuccess && creation && <UnavailableAction {...creation} />}
-    </div>
+  return <Section title={title} icon={Route} description="Primary journey, backup alternatives and emergency return routes."
+    actions={allowed && validId && query.isSuccess && creation ? <UnavailableAction {...creation} /> : undefined}>
     {!allowed ? <ErrorState message="You do not have permission to view route plans." /> : !validId ? <ErrorState message="A valid transport plan is required to load route plans." /> : error ?
       <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> : <>
-        {coordinator && !unlocked && <p className="text-xs text-slate-500">Standard route editing is unavailable when transport is in transit, closed, or its status is unavailable. Emergency changes belong to UC-48.</p>}
+        {coordinator && !unlocked && <p className="text-xs text-slate-500">Standard editing is locked. Available emergency actions appear in each route's menu.</p>}
         {coordinator && planStatus !== "APPROVED" && <p className="text-xs text-slate-500">Route planning requires an APPROVED transport plan and Phase 1 assignment.</p>}
         <RoutePlansTable routes={items} context={context} routeDetailPath={routeDetailPath} isLoading={query.isPending} />
         {!routeDetailPath && <p className="text-xs text-slate-500">Route detail navigation is not available in this environment yet.</p>}

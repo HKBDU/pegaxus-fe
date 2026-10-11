@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Link } from "react-router-dom"
-import { MoreHorizontal } from "lucide-react"
+import { MoreHorizontal, Eye, CheckCircle2 } from "lucide-react"
 import { createTable, getCoreRowModel, type ColumnDef } from "@tanstack/react-table"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { Button } from "@/shared/components/ui/button"
@@ -23,12 +23,12 @@ export function RoutePlansTable({ routes, context, routeDetailPath, isLoading = 
     { accessorKey: "estimatedDurationMinutes", header: "Duration", cell: ({ row }) => durationLabel(row.original.estimatedDurationMinutes) },
     { accessorKey: "segmentCount", header: "Segments" },
     { id: "replaces", header: "Replaces Segments", cell: ({ row }) => replacementLabel(row.original) },
-    { accessorKey: "isPersonnelComplete", header: "Personnel", cell: ({ row }) => <span className={row.original.isPersonnelComplete ? "text-emerald-700" : "text-slate-500"}>{row.original.isPersonnelComplete ? "Complete" : "Incomplete"}</span> },
+    { accessorKey: "isPersonnelComplete", header: "Personnel", cell: ({ row }) => <span className={`inline-flex items-center gap-1.5 ${row.original.isPersonnelComplete ? "text-emerald-700" : "text-slate-500"}`}>{row.original.isPersonnelComplete && <CheckCircle2 aria-hidden="true" className="size-3.5" />}{row.original.isPersonnelComplete ? "Complete" : "Incomplete"}</span> },
     { accessorKey: "updatedAt", header: "Last Updated", cell: ({ row }) => formatPlanDate(row.original.updatedAt) },
     { id: "actions", header: "Actions", cell: ({ row }) => <DropdownMenu>
       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-7 rounded-[2px]" aria-label={`Actions for ${row.original.routePlanCode}`}><MoreHorizontal aria-hidden="true" className="size-4" /></Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-w-72">
-        {routeDetailPath ? <DropdownMenuItem asChild><Link to={routeDetailPath(row.original.routePlanId)}>View Details</Link></DropdownMenuItem> : <DropdownMenuItem disabled title="Route detail navigation is not available yet.">View Details — unavailable</DropdownMenuItem>}
+        {routeDetailPath ? <DropdownMenuItem asChild><Link to={routeDetailPath(row.original.routePlanId)}><Eye aria-hidden="true" className="size-4" />View Details</Link></DropdownMenuItem> : <DropdownMenuItem disabled title="Route detail navigation is not available yet.">View Details — unavailable</DropdownMenuItem>}
         {getPendingRouteActions(row.original, context).map(action => <DropdownMenuItem key={action.label} disabled title={action.reason} className="items-start"><span>{action.label}<span className="mt-1 block whitespace-normal text-[11px]">{action.reason}</span></span></DropdownMenuItem>)}
         {getEmergencyActions(row.original, context).map(action => routeDetailPath ? <DropdownMenuItem key={action} asChild><Link to={emergencyActionPath(routeDetailPath(row.original.routePlanId), action)}>{emergencyActionLabels[action]}</Link></DropdownMenuItem> : <DropdownMenuItem key={action} disabled title="Route detail registration is required.">{emergencyActionLabels[action]} — navigation pending</DropdownMenuItem>)}
       </DropdownMenuContent>

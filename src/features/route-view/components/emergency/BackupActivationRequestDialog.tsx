@@ -44,20 +44,20 @@ export function BackupActivationRequestDialog({ plan, context, onClose }: { plan
     }
   })
   return <Dialog open onOpenChange={open => { if (!open && !busy) onClose() }}>
-    <DialogContent showCloseButton={!busy} className="flex max-h-[90svh] flex-col gap-0 overflow-hidden rounded-md p-0 sm:max-w-xl" onInteractOutside={event => { if (busy) event.preventDefault() }} onEscapeKeyDown={event => { if (busy) event.preventDefault() }} onCloseAutoFocus={event => { event.preventDefault(); document.getElementById(`emergency-request-${plan.routePlanId}`)?.focus() }}>
-      <DialogHeader className="border-b border-l-4 border-l-primary p-5 pr-10 text-left"><DialogTitle className="font-heading text-2xl uppercase">Request Route Change</DialogTitle><DialogDescription>Request activation of a prepared contingency route. Logistics Manager makes the final decision.</DialogDescription></DialogHeader>
+    <DialogContent showCloseButton={!busy} className="flex max-h-[90svh] flex-col gap-0 overflow-hidden rounded-xl border-slate-200 bg-white p-0 shadow-xl sm:max-w-xl" onInteractOutside={event => { if (busy) event.preventDefault() }} onEscapeKeyDown={event => { if (busy) event.preventDefault() }} onCloseAutoFocus={event => { event.preventDefault(); document.getElementById(`emergency-request-${plan.routePlanId}`)?.focus() }}>
+      <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-5 pr-12 text-left"><div className="mb-2 flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary"><Send aria-hidden="true" className="size-5" /></div><DialogTitle className="font-heading text-2xl uppercase text-slate-900">Request Backup Activation</DialogTitle><DialogDescription>Send this prepared backup to Logistics Manager for approval.</DialogDescription></DialogHeader>
       <Form {...form}><form noValidate onSubmit={submit} className="flex min-h-0 flex-col">
-        <div className="min-h-0 space-y-5 overflow-y-auto p-5"><EmergencyChangeSummary plan={plan} title="Selected Backup" />
+        <div className="min-h-0 space-y-6 overflow-y-auto px-6 py-5"><EmergencyChangeSummary plan={plan} title="Selected Backup" compact />
           <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
             {controls.map(control => <FormField key={control.name} control={form.control} name={control.name} render={({ field }) => <FormItem className={control.type === "textarea" || control.name === "newEstimatedArrivalAt" ? "sm:col-span-2" : undefined}>
               <FormLabel>{control.label}{"required" in control && control.required ? " *" : ""}</FormLabel><FormControl>
                 {control.type === "textarea" ? <Textarea {...field} className="min-h-20 rounded-md" /> : <Input {...field} type={control.type} step="any" className="rounded-md" />}
               </FormControl><FormMessage /></FormItem>} />)}
           </fieldset>
-          <p className="rounded-md bg-primary/5 p-3 text-xs text-slate-600">An urgent notification goes to Logistics Manager. Estimated costs are informational; this does not change the route or record a financial charge. Date and time use your local time zone.</p>
+          <p className="text-xs leading-5 text-slate-500">The route stays confirmed until approval. Extra cost is an estimate, not a charge. Enter the new arrival time in your local time zone.</p>
           <EmergencyFeedback error={mutation.error} latestUpdatedAt={plan.updatedAt} />
         </div>
-        <DialogFooter className="shrink-0 border-t bg-white p-4"><Button type="button" variant="outline" disabled={busy} onClick={onClose}>Cancel</Button><Button type="submit" disabled={busy || attempt.isBlocked}>{busy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <Send aria-hidden="true" className="size-4" />}{busy ? "Sending…" : "Send Request"}</Button></DialogFooter>
+        <DialogFooter className="shrink-0 border-t bg-slate-50 px-6 py-4"><Button type="button" variant="outline" className="rounded-lg" disabled={busy} onClick={onClose}>Cancel</Button><Button type="submit" className="rounded-lg" disabled={busy || attempt.isBlocked}>{busy ? <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> : <Send aria-hidden="true" className="size-4" />}{busy ? "Sending…" : "Send Request"}</Button></DialogFooter>
       </form></Form>
     </DialogContent>
   </Dialog>

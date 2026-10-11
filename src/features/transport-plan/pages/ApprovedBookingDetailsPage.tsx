@@ -40,7 +40,7 @@ function ApprovedBookingReadPage() {
               {booking.transport && <ApprovedBookingBadge value={booking.transport.status} />}</div>
             <ApprovedBookingPlanningAction principal={principal} booking={booking} />
           </div>
-          <TransportOverview journey={booking} customerName={booking.customer.fullName} plannedStartAt={booking.transportPlan?.plannedStartAt} />
+          <TransportOverview journey={booking} customerName={booking.customer.fullName} plannedStartAt={booking.transportPlan?.plannedStartAt} transportStatus={booking.transport?.status} />
           <TransportWorkspace booking={booking} principal={principal} />
           <details className="min-w-0 rounded-[2px] border border-slate-200 bg-white p-4">
             <summary className="cursor-pointer font-heading text-base uppercase">Booking &amp; Customer Details</summary>

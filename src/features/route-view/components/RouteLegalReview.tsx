@@ -1,12 +1,12 @@
 import { formatBookingDate } from "@/features/booking/utils"
 import { Badge } from "@/shared/components/ui/badge"
+import { ShieldCheck } from "lucide-react"
 import { Field, Section } from "@/features/transport-plan/components/ApprovedBookingDetails"
 import type { RouteLegalReviewData } from "../types"
 
 export function RouteLegalReview({ review }: { review: RouteLegalReviewData | null }) {
-  return <Section title="Legal Feasibility">
+  return <Section title="Legal Feasibility" icon={ShieldCheck} actions={review ? <Badge variant="outline" className={`h-6 rounded-md px-2.5 text-[11px] ${review.isFeasible ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>{review.isFeasible ? "Feasible" : "Not feasible"}</Badge> : undefined}>
     {!review ? <p className="text-sm text-slate-500">Not reviewed yet</p> : <>
-      <Badge variant="outline" className={`h-5 rounded-md px-2 py-0 text-[10px] leading-none ${review.isFeasible ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>{review.isFeasible ? "Feasible" : "Not feasible"}</Badge>
       <dl className="grid gap-4 sm:grid-cols-3">
         {review.reviewedBy && <Field label="Reviewed by">{review.reviewedBy.fullName}</Field>}
         {review.reviewedAt && <Field label="Reviewed at">{formatBookingDate(review.reviewedAt, true)}</Field>}
