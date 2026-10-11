@@ -4,27 +4,48 @@ import type { MapRoute } from "./types";
 
 type RouteLayerProps = {
   route?: MapRoute | null;
+  routes?: MapRoute[];
   geoJson?: unknown;
 };
 
-export function RouteLayer({ route, geoJson }: RouteLayerProps) {
-  const sourceData = createRouteSourceData(
-    geoJson ?? route?.geoJson ?? route?.geometry,
-  );
-  if (!sourceData) return null;
-
+export function RouteLayer({ route, routes = [], geoJson }: RouteLayerProps) {
+  const items = route
+    ? [route, ...routes.filter((item) => item.id !== route.id)]
+    : routes;
   return (
-    <Source id="selected-route" type="geojson" data={sourceData}>
-      <Layer
-        id="selected-route-line"
-        type="line"
-        layout={{ "line-cap": "round", "line-join": "round" }}
-        paint={{
-          "line-color": "#0f172a",
-          "line-width": 4,
-          "line-opacity": 0.85,
-        }}
-      />
-    </Source>
+    <>
+      {items.map((item, index) => {
+        const sourceData = createRouteSourceData(
+          index === 0 && route
+            ? (geoJson ?? item.geoJson ?? item.geometry)
+            : (item.geoJson ?? item.geometry),
+        );
+        if (!sourceData) return null;
+        const suffix = String(item.id).replace(/[^a-zA-Z0-9_-]/g, "-");
+        return (
+          <Source
+            key={suffix}
+            id={`route-${suffix}`}
+            type="geojson"
+            data={sourceData}
+          >
+            <Layer
+              id={`route-line-${suffix}`}
+              type="line"
+              layout={{ "line-cap": "round", "line-join": "round" }}
+              paint={{
+                "line-color": item.readonly
+                  ? "#94a3b8"
+                  : index === 0 && route
+                    ? "#0f172a"
+                    : "#2563eb",
+                "line-width": item.readonly ? 3 : index === 0 && route ? 4 : 3,
+                "line-opacity": item.readonly ? 0.35 : 0.85,
+              }}
+            />
+          </Source>
+        );
+      })}
+    </>
   );
 }

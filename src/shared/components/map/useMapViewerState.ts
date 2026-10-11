@@ -1,16 +1,20 @@
 import { useCallback, useState } from "react";
-import type { MapLocation, SelectionMode } from "./types";
+import type { MapLocation, MapMode, MapPoint } from "./types";
 
-export function useMapViewerState() {
+export function useMapViewerState(
+  controlledMode?: MapMode,
+  onModeChange?: (mode: MapMode) => void,
+) {
   const [selectedLocation, setSelectedLocation] = useState<MapLocation | null>(
     null,
   );
   const [hoveredLocation, setHoveredLocation] = useState<MapLocation | null>(
     null,
   );
-  const [selectionMode, setSelectionMode] = useState<SelectionMode | null>(
-    null,
-  );
+  const [internalMode, setInternalMode] = useState<MapMode>("view");
+  const [startPoint, setStartPoint] = useState<MapPoint | null>(null);
+  const [endPoint, setEndPoint] = useState<MapPoint | null>(null);
+  const mode = controlledMode ?? internalMode;
 
   const selectLocation = useCallback((location: MapLocation | null) => {
     setSelectedLocation(location);
@@ -21,13 +25,34 @@ export function useMapViewerState() {
     setHoveredLocation(null);
   }, []);
 
+  const setMode = useCallback((nextMode: MapMode) => {
+    setInternalMode(nextMode);
+    setSelectedLocation(null);
+    setHoveredLocation(null);
+    setStartPoint(null);
+    setEndPoint(null);
+    onModeChange?.(nextMode);
+  }, [onModeChange]);
+
+  const selectRoutePoint = useCallback((point: MapPoint) => {
+    if (!startPoint || endPoint) {
+      setStartPoint(point);
+      setEndPoint(null);
+    } else {
+      setEndPoint(point);
+    }
+  }, [endPoint, startPoint]);
+
   return {
     selectedLocation,
     hoveredLocation,
-    selectionMode,
+    mode,
+    startPoint,
+    endPoint,
     selectLocation,
     setHoveredLocation,
-    setSelectionMode,
+    setMode,
+    selectRoutePoint,
     clearSelection,
   };
 }

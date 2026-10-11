@@ -64,10 +64,10 @@ export const MapViewport = forwardRef<MapViewportHandle, MapViewportProps>(
       const point = toCoordinates([event.lngLat.lng, event.lngLat.lat]);
       if (point) onMapClick?.(point);
     }
-
     return (
       <Map
         ref={mapRef}
+        style={{ height: "100%", width: "100%" }}
         mapLib={maplibregl}
         initialViewState={initialViewState}
         mapStyle={styleUrl}

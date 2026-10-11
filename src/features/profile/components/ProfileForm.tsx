@@ -35,15 +35,10 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
   const [errors, setErrors] = useState<ProfileFormErrors>({})
 
   useEffect(() => {
-    if (!avatar) {
-      setAvatarPreviewUrl(undefined)
-      return
+    return () => {
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl)
     }
-
-    const previewUrl = URL.createObjectURL(avatar)
-    setAvatarPreviewUrl(previewUrl)
-    return () => URL.revokeObjectURL(previewUrl)
-  }, [avatar])
+  }, [avatarPreviewUrl])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -69,7 +64,11 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
     <form id="profile-form" onSubmit={handleSubmit} className="grid min-w-0 gap-3 lg:grid-cols-[minmax(160px,4fr)_minmax(0,8fr)]">
       <div className="relative min-w-0">
         <ProfileAvatarPreview className="h-full min-h-0" badge={<ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none shadow-sm" />} initials={getInitials(profile.fullName)} avatarUrl={avatarPreviewUrl ?? profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
-        <Input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" id="profile-avatar" type="file" accept="image/jpeg,image/png" aria-label="Upload profile avatar" onChange={(event) => setAvatar(event.target.files?.[0])} />
+        <Input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" id="profile-avatar" type="file" accept="image/jpeg,image/png" aria-label="Upload profile avatar" onChange={(event) => {
+          const file = event.target.files?.[0]
+          setAvatar(file)
+          setAvatarPreviewUrl(file ? URL.createObjectURL(file) : undefined)
+        }} />
       </div>
       <div className="grid min-w-0 content-start gap-0">
         <div className="flex min-w-0 flex-col gap-1">

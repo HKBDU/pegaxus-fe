@@ -10,5 +10,8 @@ export * from "./MapViewer";
 export * from "./MapViewport";
 export * from "./RouteForm";
 export * from "./RouteLayer";
+export * from "./RoutePreviewLayer";
+export * from "./route-geometry-cache";
+export * from "./useResolvedRouteGeometries";
 export * from "./types";
 export * from "./useMapViewerState";

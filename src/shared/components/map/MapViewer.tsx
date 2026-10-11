@@ -9,18 +9,24 @@ import { MapControls } from "./MapControls";
 import { LocationMarkers } from "./LocationMarkers";
 import { LocationPopup } from "./LocationPopup";
 import { LocationSearch } from "./LocationSearch";
-import { MapSelectionMode } from "./MapSelectionMode";
 import { MapViewport, type MapViewportHandle } from "./MapViewport";
 import { RouteLayer } from "./RouteLayer";
+import { RoutePreviewLayer } from "./RoutePreviewLayer";
+import { useResolvedRouteGeometries } from "./useResolvedRouteGeometries";
 import { useMapViewerState } from "./useMapViewerState";
 import type { MapLocation, MapViewerProps } from "./types";
 
 const EMPTY_LOCATIONS: MapLocation[] = [];
+const EMPTY_ROUTES: NonNullable<MapViewerProps["routes"]> = [];
 
 export function MapViewer({
   locations,
   route,
+  routes = EMPTY_ROUTES,
   routeGeoJson,
+  preview,
+  mode,
+  onModeChange,
   styleUrl,
   loading,
   error,
@@ -32,8 +38,10 @@ export function MapViewer({
   searchEmptyMessage,
   onSearchChange,
   onLocationSelect,
+  onMarkerSelect,
   onLocationHover,
   onMapClick,
+  onRoutePointSelect,
   onMarkerAction,
   onRouteSelect,
 }: MapViewerProps) {
@@ -41,7 +49,18 @@ export function MapViewer({
   const popupHideTimer = useRef<number | null>(null);
   const [searchValue, setSearchValue] = useState("");
   const [popupLocation, setPopupLocation] = useState<MapLocation | null>(null);
-  const state = useMapViewerState();
+  const state = useMapViewerState(mode, onModeChange);
+  const routeSources = useMemo(
+    () => [...(route ? [route] : []), ...routes],
+    [route, routes],
+  );
+  const resolvedRoutes = useResolvedRouteGeometries(routeSources);
+  const resolvedRoute = route
+    ? resolvedRoutes.find((item) => item.id === route.id)
+    : null;
+  const resolvedOtherRoutes = resolvedRoutes.filter(
+    (item) => item.id !== route?.id,
+  );
   const validLocations = useMemo(
     () => locations.filter((location) => toMapPoint(location) !== null),
     [locations],
@@ -101,19 +120,30 @@ export function MapViewer({
     schedulePopupHide();
   }
 
-  function selectLocation(location: MapLocation) {
+  function selectLocation(location: MapLocation, fromSearch = false) {
     state.selectLocation(location);
+    if (state.mode === "addRoute") {
+      const point = {
+        latitude: location.latitude,
+        longitude: location.longitude,
+      };
+      state.selectRoutePoint(point);
+      onRoutePointSelect?.(point, location);
+    }
     onLocationSelect?.(location);
-    viewport.current?.flyTo(location.longitude, location.latitude);
+    if (!fromSearch) onMarkerSelect?.(location);
+    if (fromSearch) {
+      viewport.current?.flyTo(location.longitude, location.latitude);
+    }
   }
 
   function handleMapClick(point: { latitude: number; longitude: number }) {
     onMapClick?.(point);
-    if (state.selectionMode === "ADD_LOCATION") state.setSelectionMode(null);
+    if (state.mode === "addLocation") state.setMode("view");
   }
 
   return (
-    <div className="relative min-h-96 overflow-hidden rounded border bg-muted">
+    <div className="relative h-[min(87vh,720px)] min-h-[420px] w-full overflow-hidden rounded border bg-muted">
       {error && (
         <div className="absolute inset-0 z-20 grid place-items-center bg-white/90 p-4 text-center text-sm text-destructive">
           {error}
@@ -139,31 +169,43 @@ export function MapViewer({
             setSearchValue(value);
             onSearchChange?.(value);
           }}
-          onSelect={selectLocation}
+          onSelect={(location) => selectLocation(location, true)}
         />
       )}
       <MapViewport
         ref={viewport}
         styleUrl={styleUrl ?? createGeoapifyMapStyleUrl()}
         onMapClick={handleMapClick}
-        interactiveLayerIds={route ? ["selected-route-line"] : undefined}
+        interactiveLayerIds={[...routes, ...(route ? [route] : [])].map(
+          (item) =>
+            `route-line-${String(item.id).replace(/[^a-zA-Z0-9_-]/g, "-")}`,
+        )}
         onInteractiveLayerClick={(layerId) => {
-          if (layerId === "selected-route-line" && route)
-            onRouteSelect?.(route);
+          const selected = [...routes, ...(route ? [route] : [])].find(
+            (item) =>
+              `route-line-${String(item.id).replace(/[^a-zA-Z0-9_-]/g, "-")}` ===
+              layerId,
+          );
+          if (selected) onRouteSelect?.(selected);
         }}
       >
         <LocationMarkers
           locations={validLocations}
           selectedLocation={state.selectedLocation}
-          onSelect={selectLocation}
+          onSelect={(location) => selectLocation(location)}
           onHover={handleMarkerHover}
         />
-        <RouteLayer route={route} geoJson={routeGeoJson} />
+        <RouteLayer
+          route={resolvedRoute}
+          routes={resolvedOtherRoutes}
+          geoJson={routeGeoJson}
+        />
+        {preview && <RoutePreviewLayer geometry={preview.geometry} />}
       </MapViewport>
       {popupLocation && (
         <LocationPopup
           location={popupLocation}
-          open={!!state.hoveredLocation}
+          open={!!state.hoveredLocation && !searchValue.trim()}
           canEdit={canEditLocation}
           canDelete={canDeleteLocation}
           onClose={() => handleMarkerHover(null)}
@@ -175,10 +217,6 @@ export function MapViewer({
         viewport={viewport}
         canFitBounds={!!allBounds}
         onFitBounds={() => allBounds && viewport.current?.fitBounds(allBounds)}
-      />
-      <MapSelectionMode
-        mode={state.selectionMode}
-        onModeChange={state.setSelectionMode}
       />
     </div>
   );

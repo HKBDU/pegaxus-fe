@@ -22,6 +22,9 @@ Mục tiêu của module là giữ phần bản đồ độc lập với API và
 - Nearby POI dùng trực tiếp name, address và tọa độ từ Places response.
 - Exact clicked point dùng Reverse Geocoding để gợi ý địa chỉ.
 - Render Route bằng GeoJSON `LineString` hoặc `MultiLineString`.
+- Render nhiều Route qua `routes`, vẫn giữ compatibility với prop `route`.
+- Một mode duy nhất: `view`, `addLocation`, `addRoute`, `buildPlan`.
+- Route preview Geoapify có abort, timeout và estimated distance/duration.
 - Add/Edit Location form có validation.
 - Route form có validation From/To không được trùng.
 - Hiển thị Edit/Delete theo callback và quyền do container truyền vào.
@@ -196,7 +199,7 @@ const nearbyCategories = [
 
 Luồng chọn POI không gọi thêm API. Chỉ luồng `Use exact clicked point` mới gọi Reverse Geocoding.
 
-Không hard-code API key trong source code. Geoapify Routing không được gọi từ frontend cho flow này; BE chịu trách nhiệm routing và lưu Route.
+Không hard-code API key trong source code. Geoapify Routing preview chỉ dùng cho interaction; không thay thế distance/duration chính thức từ BE.
 
 ## Whitebox test
 
@@ -229,7 +232,8 @@ map/
 ├── LocationPopup.tsx          # Popup hover
 ├── LocationSearch.tsx         # Search UI
 ├── MapSelectionMode.tsx       # Hiển thị selection mode
-├── RouteLayer.tsx              # GeoJSON line
+├── RouteLayer.tsx              # GeoJSON line, single/multi route
+├── RoutePreviewLayer.tsx       # Preview line
 ├── useMapViewerState.ts        # State selected/hovered/mode
 ├── AddLocationForm.tsx
 ├── EditLocationForm.tsx

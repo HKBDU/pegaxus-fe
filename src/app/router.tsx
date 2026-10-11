@@ -97,6 +97,10 @@ const DossierAuditHistoryPage = lazy(
 const DossierRequirementsPage = lazy(
   () => import("@/features/compliance-catalog/pages/DossierRequirementsPage"),
 );
+const CreateRoutePlanPage = lazy(() => import("@/features/route-plan/pages/CreateRoutePlanPage"));
+const CreateContingencyRoutePage = lazy(() => import("@/features/route-plan/pages/CreateContingencyRoutePage"));
+const EditRoutePlanPage = lazy(() => import("@/features/route-plan/pages/EditRoutePlanPage"));
+const MapAssetsPage = lazy(() => import("@/features/route-plan/pages/MapAssetsPage"));
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />
@@ -286,6 +290,30 @@ export const router = createBrowserRouter([
         element: <BookingDetailsPage audience="manager" />,
       },
       { path: "*", element: <NotFoundPage /> },
+    ],
+  },
+  {
+    path: ROLE_ROUTES.mapAssets,
+    element: (
+      <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <Suspense fallback={<LoadingState />}><MapAssetsPage /></Suspense> },
+    ],
+  },
+  {
+    path: "/admin/route-plans",
+    element: (
+      <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: "new/:transportPlanId", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateRoutePlanPage /></Suspense></ProtectedRoute> },
+      { path: ":routePlanId/edit", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><EditRoutePlanPage /></Suspense></ProtectedRoute> },
+      { path: "new/:transportPlanId/contingency", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateContingencyRoutePage /></Suspense></ProtectedRoute> },
     ],
   },
   {

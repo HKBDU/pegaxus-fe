@@ -14,15 +14,32 @@ export type MapLocation = {
 };
 
 export type LocationAction = "EDIT" | "DELETE";
-export type SelectionMode = "ADD_LOCATION" | "FROM_LOCATION" | "TO_LOCATION";
+export type MapMode = "view" | "addLocation" | "addRoute" | "buildPlan";
+/** @deprecated Use MapMode. Kept as a source-compatible alias for consumers. */
+export type SelectionMode = MapMode;
 
 export type MapRoute = {
   id: string | number;
+  routePlanRouteId?: string;
   name?: string | null;
   geometry?: unknown;
   geoJson?: unknown;
   fromLocation?: MapLocation | null;
   toLocation?: MapLocation | null;
+  transportMode?: "ROAD" | "SEA" | "AIR";
+  distanceKm?: number | null;
+  durationMinutes?: number | null;
+  source?: "saved" | "preview";
+  readonly?: boolean;
+};
+
+export type MapPoint = { latitude: number; longitude: number };
+
+export type MapRoutePreview = {
+  geometry: unknown;
+  distanceKm: number;
+  durationMinutes: number;
+  error?: string | null;
 };
 
 export type LocationFormValues = {
@@ -52,7 +69,11 @@ export type RouteFormValues = {
 export type MapViewerProps = {
   locations: MapLocation[];
   route?: MapRoute | null;
+  routes?: MapRoute[];
   routeGeoJson?: unknown;
+  preview?: MapRoutePreview | null;
+  mode?: MapMode;
+  onModeChange?: (mode: MapMode) => void;
   styleUrl?: string;
   loading?: boolean;
   error?: string | null;
@@ -64,8 +85,10 @@ export type MapViewerProps = {
   searchEmptyMessage?: string;
   onSearchChange?: (value: string) => void;
   onLocationSelect?: (location: MapLocation) => void;
+  onMarkerSelect?: (location: MapLocation) => void;
   onLocationHover?: (location: MapLocation | null) => void;
-  onMapClick?: (point: { latitude: number; longitude: number }) => void;
+  onMapClick?: (point: MapPoint) => void;
+  onRoutePointSelect?: (point: MapPoint, location?: MapLocation) => void;
   onMarkerAction?: (action: LocationAction, location: MapLocation) => void;
   onRouteSelect?: (route: MapRoute) => void;
 };

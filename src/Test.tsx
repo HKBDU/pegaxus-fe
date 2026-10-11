@@ -14,8 +14,11 @@ import {
   MapViewer,
   RouteForm,
   type MapLocation,
+  type MapMode,
+  type MapRoutePreview,
   type LocationFormValues,
 } from "@/shared/components/map";
+import { previewGeoapifyRoute } from "@/shared/utils/map/routing";
 import { Button } from "@/shared/components/ui/button";
 import {
   Card,
@@ -114,7 +117,7 @@ export default function Test() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [addMode, setAddMode] = useState(false);
+  const [mode, setMode] = useState<MapMode>("view");
   const [formOpen, setFormOpen] = useState(false);
   const [routeFormOpen, setRouteFormOpen] = useState(false);
   const [pickedPoint, setPickedPoint] = useState<{
@@ -125,6 +128,14 @@ export default function Test() {
   const [nearbyOpen, setNearbyOpen] = useState(false);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [nearbyError, setNearbyError] = useState<string | null>(null);
+  const [routeStart, setRouteStart] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [routePreview, setRoutePreview] = useState<MapRoutePreview | null>(
+    null,
+  );
+  const routeAbortController = useRef<AbortController | null>(null);
   const [locationFormValues, setLocationFormValues] = useState<
     Partial<LocationFormValues> | undefined
   >();
@@ -179,12 +190,12 @@ export default function Test() {
   }, [locations, search]);
 
   function handleMapClick(point: { latitude: number; longitude: number }) {
-    if (!isCoordinator || !addMode) return;
+    if (!isCoordinator || mode !== "addLocation") return;
 
     nearbyAbortController.current?.abort();
     nearbyAbortController.current = new AbortController();
     setPickedPoint(point);
-    setAddMode(false);
+    setMode("view");
     setNearbyPlaces([]);
     setNearbyError(null);
     setNearbyOpen(true);
@@ -205,6 +216,45 @@ export default function Test() {
         );
       })
       .finally(() => setNearbyLoading(false));
+  }
+
+  function handleRoutePointSelect(point: {
+    latitude: number;
+    longitude: number;
+  }) {
+    if (!routeStart || routePreview) {
+      routeAbortController.current?.abort();
+      setRouteStart(point);
+      setRoutePreview(null);
+      toast.info("Source selected. Please choose a Destination.");
+      return;
+    }
+    if (
+      routeStart.latitude === point.latitude &&
+      routeStart.longitude === point.longitude
+    )
+      return;
+    routeAbortController.current?.abort();
+    const controller = new AbortController();
+    routeAbortController.current = controller;
+    void previewGeoapifyRoute(routeStart, point, controller.signal)
+      .then((result) => setRoutePreview(result))
+      .catch((loadError) => {
+        if (
+          loadError instanceof DOMException &&
+          loadError.name === "AbortError"
+        )
+          return;
+        setRoutePreview({
+          geometry: null,
+          distanceKm: 0,
+          durationMinutes: 0,
+          error:
+            loadError instanceof Error
+              ? loadError.message
+              : "Unable to preview route.",
+        });
+      });
   }
 
   function openLocationForm(values: Partial<LocationFormValues>) {
@@ -293,14 +343,26 @@ export default function Test() {
             </span>
             {isCoordinator && (
               <>
-                <Button onClick={() => setAddMode((value) => !value)}>
-                  {addMode ? "Cancel map selection" : "Add Location"}
+                <Button
+                  onClick={() =>
+                    setMode(mode === "addLocation" ? "view" : "addLocation")
+                  }
+                >
+                  {mode === "addLocation"
+                    ? "Cancel map selection"
+                    : "Add Location"}
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => setRouteFormOpen(true)}
+                  onClick={() => {
+                    setMode(mode === "addRoute" ? "view" : "addRoute");
+                    setRouteStart(null);
+                    setRoutePreview(null);
+                  }}
                 >
-                  Create Route
+                  {mode === "addRoute"
+                    ? "Cancel route preview"
+                    : "Preview Route"}
                 </Button>
               </>
             )}
@@ -311,6 +373,10 @@ export default function Test() {
           locations={locations}
           loading={loading}
           error={error}
+          mode={mode}
+          onModeChange={setMode}
+          preview={routePreview}
+          onRoutePointSelect={handleRoutePointSelect}
           showSearch
           searchOptions={searchOptions}
           onSearchChange={setSearch}
@@ -320,9 +386,15 @@ export default function Test() {
           onMarkerAction={handleLocationAction}
         />
 
-        {addMode && (
+        {mode === "addLocation" && (
           <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm">
             Click any point on the map to prepare Add Location.
+          </p>
+        )}
+        {mode === "addRoute" && routePreview && (
+          <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm">
+            {routePreview.error ??
+              `Estimated: ${routePreview.distanceKm.toFixed(1)} km · ${Math.round(routePreview.durationMinutes)} min`}
           </p>
         )}
       </div>
