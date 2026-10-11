@@ -102,6 +102,7 @@ const CreateContingencyRoutePage = lazy(() => import("@/features/route-plan/page
 const CreateReturnRoutePage = lazy(() => import("@/features/route-plan/pages/CreateReturnRoutePage"));
 const EditRoutePlanPage = lazy(() => import("@/features/route-plan/pages/EditRoutePlanPage"));
 const MapAssetsPage = lazy(() => import("@/features/route-plan/pages/MapAssetsPage"));
+const PersonnelAssignmentPage = lazy(() => import("@/features/personnel/pages/PersonnelAssignmentPage"));
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />
@@ -292,6 +293,16 @@ export const router = createBrowserRouter([
       },
       { path: "*", element: <NotFoundPage /> },
     ],
+  },
+  {
+    // Flow 3 personnel assignment (UC-36): Logistics Manager only (PS1/PS3/PS4/PS5/PS6 are LM-only).
+    path: `${ROLE_ROUTES.personnelAssignment}/:transportPlanId`,
+    element: (
+      <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [{ index: true, element: <Suspense fallback={<LoadingState />}><PersonnelAssignmentPage /></Suspense> }],
   },
   {
     path: ROLE_ROUTES.mapAssets,
