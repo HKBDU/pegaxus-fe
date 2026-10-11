@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useId, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -11,6 +11,8 @@ import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttempt
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
+import { DatePicker } from "@/shared/components/ui/date-picker"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
 import { useCreateTransportPlan, useUpdateTransportPlan } from "../hooks/useTransportPlans"
 import { getApiErrorInfo } from "../services"
@@ -24,11 +26,15 @@ import { Flow3MockIndicator } from "./Flow3MockIndicator"
 
 const controlClass = "h-8 rounded-[2px] border-slate-300 bg-white text-xs shadow-none focus-visible:border-primary focus-visible:ring-primary/20"
 const fields = [
-  { name: "plannedStartAt", label: "Planned Start", type: "datetime-local" },
-  { name: "plannedEndAt", label: "Planned End", type: "datetime-local" },
+  { name: "plannedStartAt", label: "Planned Start", type: "date-time" },
+  { name: "plannedEndAt", label: "Planned End", type: "date-time" },
   { name: "estimatedDistanceKm", label: "Estimated Distance (km)", type: "number" },
   { name: "estimatedDurationMinutes", label: "Estimated Duration (minutes)", type: "number" },
 ] as const
+const timeOptions = {
+  hours: Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0")),
+  minutes: Array.from({ length: 60 }, (_, index) => String(index).padStart(2, "0")),
+}
 
 export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadLatest, onDuplicate, onCancel, onCreated }: {
   bookingId: string; plan?: TransportPlanDetail; cancelHref: string
@@ -36,6 +42,7 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
   onCancel?: () => void; onCreated?: (plan: TransportPlanDetail) => void
 }) {
   const navigate = useNavigate()
+  const scheduleId = useId()
   const principal = useAuthStore((state) => state.principal)
   // Background TP3 refreshes must never silently replace the version the manager edited.
   const [baseline, setBaseline] = useState(plan)
@@ -94,9 +101,37 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
     <Section title="Transport Plan Metadata">
       <p className="text-xs text-slate-500">Dates use your local time zone and are submitted in UTC. Leave optional numeric fields blank to omit them{baseline ? " and retain existing values" : ""}.</p>
       <fieldset disabled={isPending || !canWrite} className="grid gap-5 sm:grid-cols-2">
-        {fields.map(({ name, label, type }) => <FormField key={name} control={form.control} name={name} render={({ field }) =>
-          <FormItem><FormLabel className="font-heading text-xs uppercase">{label}{type === "datetime-local" && !baseline ? " *" : ""}</FormLabel>
-            <FormControl><Input {...field} type={type} step={name === "estimatedDurationMinutes" ? "1" : "any"} min={type === "number" ? "0" : undefined} className={controlClass} /></FormControl><FormMessage /></FormItem>} />)}
+        {fields.map(({ name, label, type }) => <FormField key={name} control={form.control} name={name} render={({ field }) => {
+          const [date = "", time = ""] = field.value.split("T")
+          const [hours = "", minutes = "", seconds] = time.split(":")
+          const changeDate = (value: string) => {
+            if (isPending || !canWrite) return
+            field.onChange(value ? `${value}T${time || "00:00"}` : "")
+            field.onBlur()
+          }
+          const changeTime = (part: "hours" | "minutes", value: string) => {
+            if (isPending || !canWrite) return
+            // Keep the local date and existing seconds/milliseconds; UTC conversion stays in the submit mapping.
+            const nextHours = part === "hours" ? value : hours || "00"
+            const nextMinutes = part === "minutes" ? value : minutes || "00"
+            field.onChange(`${date}T${nextHours}:${nextMinutes}${seconds === undefined ? "" : `:${seconds}`}`)
+            field.onBlur()
+          }
+          return <FormItem className="min-w-0"><FormLabel className="font-heading text-xs uppercase">{label}{type === "date-time" && !baseline ? " *" : ""}</FormLabel>
+            {type === "date-time" ? <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(0,1fr)_10rem]">
+              <FormControl><DatePicker ref={field.ref} value={date} onChange={changeDate} onBlur={field.onBlur} disabled={isPending || !canWrite} placeholder="DD / MM / YYYY" className={controlClass} /></FormControl>
+              <div className="flex min-w-0 items-center gap-1">
+                {(["hours", "minutes"] as const).map((part, index) => <div key={part} className="flex min-w-0 flex-1 items-center gap-1">
+                  {index ? <span aria-hidden="true" className="text-xs text-slate-500">:</span> : null}
+                  <Select value={part === "hours" ? hours : minutes} onValueChange={(value) => changeTime(part, value)} onOpenChange={(open) => { if (!open) field.onBlur() }} disabled={isPending || !canWrite}>
+                    <FormControl id={`${scheduleId}-${name}-${part}`}><SelectTrigger size="sm" aria-label={`${label} ${part}`} className={`${controlClass} w-full min-w-0`}><SelectValue placeholder={part === "hours" ? "HH" : "MM"} /></SelectTrigger></FormControl>
+                    <SelectContent className="z-[60] max-h-60 min-w-0">{timeOptions[part].map((value) => <SelectItem key={value} value={value} className="text-xs">{value}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>)}
+              </div>
+            </div> : <FormControl><Input {...field} type="number" step={name === "estimatedDurationMinutes" ? "1" : "any"} min="0" className={controlClass} /></FormControl>}
+            <FormMessage /></FormItem>
+        }} />)}
         <FormField control={form.control} name="planningNote" render={({ field }) => <FormItem className="sm:col-span-2">
           <FormLabel className="font-heading text-xs uppercase">Planning Note</FormLabel><FormControl><Textarea {...field} className="min-h-24 rounded-[2px] border-slate-300 text-xs shadow-none" /></FormControl><FormMessage /></FormItem>} />
         {baseline ? <FormField control={form.control} name="updateReason" render={({ field }) => <FormItem className="sm:col-span-2">

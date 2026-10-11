@@ -9,6 +9,7 @@ import { CancelBookingDialog } from "@/features/booking/components/CancelBooking
 import { useBooking } from "@/features/booking/hooks"
 import type { BookingAudience } from "@/features/booking/types"
 import { formatBookingDate, formatSex } from "@/features/booking/utils"
+import { BookingTransportPlanAction } from "@/features/transport-plan/components/BookingTransportPlanAction"
 import { cn } from "@/lib/utils"
 import { ErrorState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
@@ -120,6 +121,13 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                     Approve
                   </button>
                 </>
+              ) : null}
+              {audience === "manager" && booking.status === "APPROVED" && typeof booking.bookingId === "string" ? (
+                <BookingTransportPlanAction
+                  key={booking.bookingId}
+                  bookingId={booking.bookingId}
+                  status={booking.status}
+                />
               ) : null}
               <Link
                 to={`/bookings/${encodeURIComponent(String(booking.bookingId))}/history`}

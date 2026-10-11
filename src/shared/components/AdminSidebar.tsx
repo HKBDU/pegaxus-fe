@@ -18,7 +18,7 @@ import { NavLink, useLocation } from "react-router-dom"
 import logo from "@/assets/logo-dark.png"
 import { canAccess } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
-import { ROLE_ROUTES } from "@/app/route-config"
+import { APPROVED_BOOKINGS_ACCESS, ROLE_ROUTES } from "@/app/route-config"
 import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu"
 import { cn } from "@/lib/utils"
 import type { AdminSidebarMenuProps, AdminSidebarProviderProps } from "@/shared/types/type"
@@ -36,7 +36,6 @@ import {
 const primaryItems = [
   { label: "Dashboard", href: "/admin", icon: House },
   { label: "Transport Requests", href: "/admin/transport-requests", icon: Truck },
-  { label: "Approved Bookings", href: ROLE_ROUTES.approvedBookings, icon: ClipboardCheck },
   { label: "Transport Plans", href: ROLE_ROUTES.transportPlans, icon: MapPin },
   { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
   { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
@@ -55,6 +54,8 @@ const routeCoordinatorItems = [
   { label: "Route Plans", href: ROLE_ROUTES.routePlans, icon: MapPin },
   { label: "Map Assets", href: ROLE_ROUTES.mapAssets, icon: MapPin },
 ]
+
+const approvedBookingsItem = { label: "Approved Bookings", href: ROLE_ROUTES.approvedBookings, icon: ClipboardCheck }
 
 const staffSecondaryItems = [
   { label: "Profile", href: ROLE_ROUTES.customerProfile, icon: UserRound },
@@ -106,6 +107,10 @@ export function AdminSidebar() {
   // Logistics managers get the full admin menu; other employees (e.g. Transport Specialist) only their own pages.
   const isManager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
   const isRouteCoordinator = canAccess(principal, { anyRole: ["FLEET_ROUTE_COORDINATOR"] })
+  const items = isManager ? primaryItems : [
+    ...(canAccess(principal, APPROVED_BOOKINGS_ACCESS) ? [approvedBookingsItem] : []),
+    ...(isRouteCoordinator ? routeCoordinatorItems : staffPrimaryItems),
+  ]
 
   return (
     <Sidebar fixed={false} collapsible="icon" className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
@@ -115,7 +120,7 @@ export function AdminSidebar() {
       <SidebarContent className="overflow-hidden bg-[#17191c]">
         <SidebarGroup className="px-0">
           <SidebarGroupContent>
-            <AdminSidebarMenu items={isManager ? primaryItems : isRouteCoordinator ? routeCoordinatorItems : staffPrimaryItems} compact />
+            <AdminSidebarMenu items={items} compact />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
