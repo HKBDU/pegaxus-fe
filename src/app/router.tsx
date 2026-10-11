@@ -10,7 +10,7 @@ import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
-import { ROLE_ROUTES } from "./route-config";
+import { APPROVED_BOOKINGS_ACCESS, TRANSPORT_PLANS_ACCESS, ROLE_ROUTES } from "./route-config";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
@@ -103,6 +103,21 @@ const CreateReturnRoutePage = lazy(() => import("@/features/route-plan/pages/Cre
 const EditRoutePlanPage = lazy(() => import("@/features/route-plan/pages/EditRoutePlanPage"));
 const MapAssetsPage = lazy(() => import("@/features/route-plan/pages/MapAssetsPage"));
 const PersonnelAssignmentPage = lazy(() => import("@/features/personnel/pages/PersonnelAssignmentPage"));
+const ApprovedBookingsPage = lazy(
+  () => import("@/features/transport-plan/pages/ApprovedBookingsPage"),
+);
+const ApprovedBookingDetailsPage = lazy(
+  () => import("@/features/transport-plan/pages/ApprovedBookingDetailsPage"),
+);
+const TransportPlansPage = lazy(
+  () => import("@/features/transport-plan/pages/TransportPlansPage"),
+);
+const TransportPlanDetailsPage = lazy(
+  () => import("@/features/transport-plan/pages/TransportPlanDetailsPage"),
+);
+const DevRoutePlanDetailPage = lazy(
+  () => import("@/features/route-view/pages/RoutePlanDetailPage"),
+);
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />
@@ -110,6 +125,23 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  {
+    path: ROLE_ROUTES.transportPlans,
+    element: <ProtectedRoute allowedRoles={TRANSPORT_PLANS_ACCESS.anyRole}><AdminLayout /></ProtectedRoute>,
+    children: [
+      { index: true, element: <Suspense fallback={<LoadingState />}><TransportPlansPage /></Suspense> },
+      { path: ":transportPlanId", element: <Suspense fallback={<LoadingState />}><TransportPlanDetailsPage /></Suspense> },
+    ],
+  },
+  {
+    // A separate guarded branch keeps the other admin pages manager-only.
+    path: ROLE_ROUTES.approvedBookings,
+    element: <ProtectedRoute allowedRoles={APPROVED_BOOKINGS_ACCESS.anyRole}><AdminLayout /></ProtectedRoute>,
+    children: [
+      { index: true, element: <Suspense fallback={<LoadingState />}><ApprovedBookingsPage /></Suspense> },
+      { path: ":bookingId", element: <Suspense fallback={<LoadingState />}><ApprovedBookingDetailsPage /></Suspense> },
+    ],
+  },
   {
     path: "/",
     element: <MainLayout />,
@@ -584,6 +616,15 @@ export const router = createBrowserRouter([
   },
   ...(import.meta.env.DEV
     ? [
+        // BEGIN TEMP UC-38 LOCAL PREVIEW — remove only this route object after testing.
+        {
+          path: "/__dev/flow3/route-plans/:routePlanId",
+          element: <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"]}><AdminLayout /></ProtectedRoute>,
+          children: [{ index: true, element: <Suspense fallback={<LoadingState />}>
+            <DevRoutePlanDetailPage routeDetailPath={(id: string) => `/__dev/flow3/route-plans/${encodeURIComponent(id)}`} />
+          </Suspense> }],
+        },
+        // END TEMP UC-38 LOCAL PREVIEW
         {
           path: "/__dev/customer/bookings/:bookingId/history",
           element: <MainLayout />,

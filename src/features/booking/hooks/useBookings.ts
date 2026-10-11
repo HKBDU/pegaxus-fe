@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { acquireEditLock, forgetEditLock, scheduleEditRelease } from "@/features/booking/editLock"
 import { bookingService } from "@/features/booking/services"
 import { bookingIdSchema } from "@/features/booking/schemas"
+import { approvedBookingKeys } from "@/features/transport-plan/hooks/useApprovedBookings"
 import type { EntityId } from "@/shared/types"
 import type {
   Booking,
@@ -161,6 +162,7 @@ export function useApproveBooking() {
   return useMutation({
     mutationFn: (bookingId: EntityId) => bookingService.approveBooking(bookingId),
     onSuccess: (_, bookingId) => {
+      void queryClient.invalidateQueries({ queryKey: approvedBookingKeys.detail(bookingId) })
       void queryClient.invalidateQueries({ queryKey: bookingKeys.detail(bookingId) })
       void queryClient.invalidateQueries({ queryKey: bookingKeys.lists() })
     },
