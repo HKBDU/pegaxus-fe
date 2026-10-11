@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
-import { Ban, CircleCheck, Clock, MoreHorizontal, Pencil, Plus, RefreshCw, RotateCcw, Search, Trash2, Truck, X } from "lucide-react"
+import { Ban, CircleCheck, Clock, Eye, MoreHorizontal, Pencil, Plus, RefreshCw, RotateCcw, Search, Trash2, Truck, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { ProviderDeleteDialog, ProviderStatusDialog } from "@/features/fleet/components/ProviderActionDialogs"
+import { ProviderDetailDialog } from "@/features/fleet/components/ProviderDetailDialog"
 import { ProviderFormDialog } from "@/features/fleet/components/ProviderFormDialog"
 import { ProviderModeBadge, ProviderStatusBadge } from "@/features/fleet/components/ProviderBadges"
 import { PROVIDER_MODE_LABEL, PROVIDER_PAGE_SIZE_OPTIONS } from "@/features/fleet/constants/fleet.constants"
@@ -59,6 +60,7 @@ const menuItemClass = "gap-2 rounded-md px-2 py-1.5 text-xs"
 export function ProviderTable({ providers, filters, meta, isLoading, onSearchChange, onPatch, onReset, onPageChange, onPageSizeChange, onAdd }: ProviderTableProps) {
   const [localSearch, setLocalSearch] = useState(filters.search)
   const debouncedSearch = useDebounce(localSearch, 300)
+  const [viewTarget, setViewTarget] = useState<Provider | null>(null)
   const [editTarget, setEditTarget] = useState<Provider | null>(null)
   const [statusTarget, setStatusTarget] = useState<Provider | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Provider | null>(null)
@@ -68,7 +70,20 @@ export function ProviderTable({ providers, filters, meta, isLoading, onSearchCha
 
   const columns = useMemo<ColumnDef<Provider>[]>(
     () => [
-      { accessorKey: "providerCode", header: "Provider Code", cell: ({ row }) => <span className="font-bold text-slate-900">{row.original.providerCode}</span> },
+      {
+        accessorKey: "providerCode",
+        header: "Provider Code",
+        cell: ({ row }) => (
+          <button
+            type="button"
+            title="View provider details"
+            onClick={() => setViewTarget(row.original)}
+            className="font-bold text-slate-900 underline-offset-2 hover:text-[#ef5b0c] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40"
+          >
+            {row.original.providerCode}
+          </button>
+        ),
+      },
       { accessorKey: "providerName", header: "Provider Name", cell: ({ row }) => <span className="block min-w-36 whitespace-normal font-semibold text-slate-900">{row.original.providerName}</span> },
       {
         id: "serviceType",
@@ -106,6 +121,10 @@ export function ProviderTable({ providers, filters, meta, isLoading, onSearchCha
         header: () => <span className="block w-full text-center">Actions</span>,
         cell: ({ row }) => (
           <div className="flex items-center justify-center gap-1.5">
+            <Button type="button" variant="outline" className="h-7 gap-1 rounded-md px-2 text-xs" onClick={() => setViewTarget(row.original)}>
+              <Eye className="size-3" />
+              View
+            </Button>
             <Button type="button" variant="outline" className="h-7 gap-1 rounded-md px-2 text-xs" onClick={() => setEditTarget(row.original)}>
               <Pencil className="size-3" />
               Edit
@@ -218,6 +237,14 @@ export function ProviderTable({ providers, filters, meta, isLoading, onSearchCha
         />
       </div>
 
+      <ProviderDetailDialog
+        provider={viewTarget}
+        onOpenChange={(open) => !open && setViewTarget(null)}
+        onEdit={(provider) => {
+          setViewTarget(null)
+          setEditTarget(provider)
+        }}
+      />
       <ProviderFormDialog target={editTarget} onOpenChange={(open) => !open && setEditTarget(null)} />
       <ProviderStatusDialog provider={statusTarget} onOpenChange={(open) => !open && setStatusTarget(null)} />
       <ProviderDeleteDialog provider={deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} />
