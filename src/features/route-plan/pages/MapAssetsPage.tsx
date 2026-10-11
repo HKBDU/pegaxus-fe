@@ -27,6 +27,7 @@ import {
   type GeoapifyPlace,
 } from "@/shared/utils/map";
 import { previewGeoapifyRoute } from "@/shared/utils/map/routing";
+import { clearRouteGeometryMemory } from "@/shared/components/map/route-geometry-cache";
 
 type AssetLocation = MapLocation;
 
@@ -41,6 +42,8 @@ type LocationResponse = {
   latitude?: number | string | null;
   longitude?: number | string | null;
   locationNote?: string | null;
+  updatedAt?: string | null;
+  lastUpdatedAt?: string | null;
   isDeleted?: boolean;
 };
 
@@ -63,6 +66,7 @@ type RouteResponse = {
   toLocation: LocationResponse;
   distanceKm?: number | null;
   estimatedDurationMinutes?: number | null;
+  updatedAt?: string | null;
 };
 
 type RouteListResponse = {
@@ -70,6 +74,7 @@ type RouteListResponse = {
   items?: RouteResponse[];
 };
 
+type LocationMutationResponse = { value?: { updatedAt?: string | null } };
 type RouteMutationResponse = { value?: RouteResponse };
 
 function toMapLocation(item: LocationResponse): MapLocation {
@@ -84,6 +89,7 @@ function toMapLocation(item: LocationResponse): MapLocation {
     latitude: Number(item.latitude),
     longitude: Number(item.longitude),
     note: item.locationNote,
+    updatedAt: item.updatedAt ?? item.lastUpdatedAt,
   };
 }
 
@@ -113,6 +119,7 @@ function toMapRoute(item: RouteResponse): MapRoute | null {
     toLocation,
     distanceKm: item.distanceKm,
     durationMinutes: item.estimatedDurationMinutes,
+    updatedAt: item.updatedAt,
   };
 }
 
@@ -133,6 +140,13 @@ async function loadRoutes(): Promise<MapRoute[]> {
     const route = toMapRoute(item);
     return route ? [route] : [];
   });
+}
+
+async function reloadRoutes(setRoutes: (routes: MapRoute[]) => void) {
+  clearRouteGeometryMemory();
+  const data = await loadRoutes();
+  setRoutes(data);
+  return data;
 }
 
 const locationFormValues = (location: MapLocation): LocationFormValues => ({
@@ -423,9 +437,31 @@ export default function MapAssetsPage() {
       note: payload.note,
       latitude: payload.latitude,
       longitude: payload.longitude,
+      updatedAt: locationEditor.location.updatedAt,
     };
+    let lastUpdatedAt = locationEditor.location.updatedAt;
+    if (!lastUpdatedAt) {
+      try {
+        const response = (await apiClient.get(
+          `/locations/${locationId}`,
+        )) as unknown as { value?: LocationResponse } & LocationResponse;
+        const detail = response.value ?? response;
+        lastUpdatedAt = detail?.updatedAt ?? detail?.lastUpdatedAt;
+      } catch (error) {
+        toast.error(
+          getApiErrorMessage(error, "Unable to load location version."),
+        );
+        return;
+      }
+    }
+    if (!lastUpdatedAt) {
+      toast.error(
+        "Location has no concurrency timestamp. Reload the list and try again.",
+      );
+      return;
+    }
     try {
-      await apiClient.put(`/locations/${locationId}`, {
+      const response = (await apiClient.put(`/locations/${locationId}`, {
         locationName: payload.name,
         locationType: payload.type,
         address: payload.address,
@@ -435,8 +471,9 @@ export default function MapAssetsPage() {
         latitude: payload.latitude,
         longitude: payload.longitude,
         locationNote: payload.note,
-        lastUpdatedAt: new Date().toISOString(),
-      });
+        lastUpdatedAt,
+      })) as unknown as LocationMutationResponse;
+      nextLocation.updatedAt = response.value?.updatedAt ?? lastUpdatedAt;
     } catch (error) {
       toast.error(getApiErrorMessage(error, "Unable to update location."));
       return;
@@ -462,6 +499,16 @@ export default function MapAssetsPage() {
           route.toLocation?.id !== location.id,
       ),
     );
+    try {
+      await reloadRoutes(setRoutes);
+    } catch (error) {
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Location deleted, but routes could not be refreshed.",
+        ),
+      );
+    }
   }
 
   async function saveRoute(values: RouteFormValues) {
@@ -500,12 +547,20 @@ export default function MapAssetsPage() {
       routeNote: values.note,
     };
     let savedRoute: MapRoute | null = null;
+    const lastUpdatedAt = routeEditor?.route?.updatedAt;
+    if (routeEditor?.mode === "edit" && !lastUpdatedAt) {
+      toast.error(
+        "Route has no concurrency timestamp. Reload the list and try again.",
+      );
+      return;
+    }
     try {
       if (routeEditor?.mode === "edit") {
-        await apiClient.put(`/routes/${route.id}`, {
+        const response = (await apiClient.put(`/routes/${route.id}`, {
           ...routePayload,
-          lastUpdatedAt: new Date().toISOString(),
-        });
+          lastUpdatedAt,
+        })) as unknown as RouteMutationResponse;
+        route.updatedAt = response.value?.updatedAt ?? lastUpdatedAt;
       } else {
         const response = (await apiClient.post(
           "/routes",
@@ -517,13 +572,24 @@ export default function MapAssetsPage() {
       toast.error(getApiErrorMessage(error, "Unable to save route."));
       return;
     }
-    setRoutes((items) =>
-      routeEditor?.route
-        ? items.map((item) =>
-            item.id === routeEditor.route?.id ? route : item,
-          )
-        : [savedRoute ?? route, ...items],
-    );
+    const localRoute = savedRoute ?? route;
+    try {
+      await reloadRoutes(setRoutes);
+    } catch (error) {
+      setRoutes((items) =>
+        routeEditor?.route
+          ? items.map((item) =>
+              item.id === routeEditor.route?.id ? localRoute : item,
+            )
+          : [localRoute, ...items],
+      );
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Route saved, but the route list could not be refreshed.",
+        ),
+      );
+    }
     setRouteEditor(null);
     setRoutePoints([]);
     setRoutePreview(null);
@@ -542,7 +608,17 @@ export default function MapAssetsPage() {
       toast.error(getApiErrorMessage(error, "Unable to delete route."));
       return;
     }
-    setRoutes((items) => items.filter((item) => item.id !== route.id));
+    try {
+      await reloadRoutes(setRoutes);
+    } catch (error) {
+      setRoutes((items) => items.filter((item) => item.id !== route.id));
+      toast.error(
+        getApiErrorMessage(
+          error,
+          "Route deleted, but the route list could not be refreshed.",
+        ),
+      );
+    }
   }
 
   return (
