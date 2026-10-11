@@ -3,7 +3,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton"
 import { ErrorState } from "@/shared/components/common"
 import { useApprovedBooking } from "../hooks/useApprovedBookings"
 import { getApprovedBookingError } from "../services"
-import type { TransportPlanDetail } from "../transport-plan.types"
+import type { TransportPlanDetail } from "../types"
 import { TransportWorkspace } from "./TransportWorkspace"
 import { getWorkspaceRole } from "../workspace-role"
 

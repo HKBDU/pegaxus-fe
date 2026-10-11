@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import type { EntityId } from "@/shared/types"
 import { approvedBookingService, buildApprovedBookingQuery, getApprovedBookingError } from "../services"
-import { entityIdSchema } from "../schemas"
+import { actionEntityIdSchema } from "../schemas"
 import type { ApprovedBookingsQueryParams } from "../types"
 
 export const approvedBookingKeys = {
@@ -25,7 +25,7 @@ export function useApprovedBooking(bookingId: EntityId, enabled = true) {
   return useQuery({
     queryKey: approvedBookingKeys.detail(bookingId),
     queryFn: ({ signal }) => approvedBookingService.getApprovedBooking(bookingId, signal),
-    enabled: enabled && entityIdSchema.safeParse(bookingId).success,
+    enabled: enabled && actionEntityIdSchema.safeParse(bookingId).success,
     retry,
   })
 }

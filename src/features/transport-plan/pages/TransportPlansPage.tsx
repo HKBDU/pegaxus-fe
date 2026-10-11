@@ -5,10 +5,10 @@ import { ErrorState } from "@/shared/components/common"
 import { useDebounce } from "@/shared/hooks"
 import { TransportPlanFilters } from "../components/TransportPlanFilters"
 import { TransportPlansTable } from "../components/TransportPlansTable"
-import { changeTransportPlanFilters, initialTransportPlanParams } from "../transport-plan.constants"
+import { changeTransportPlanFilters, initialTransportPlanParams } from "../constants"
 import { useTransportPlans } from "../hooks/useTransportPlans"
-import { getTransportPlanError } from "../transport-plan.services"
-import type { TransportPlansQueryParams } from "../transport-plan.types"
+import { getTransportPlanError } from "../services"
+import type { TransportPlansQueryParams } from "../types"
 import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
 
 export default function TransportPlansPage() {

@@ -1,5 +1,5 @@
 import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
-import type { TransportPlanStatus } from "../transport-plan.types"
+import type { TransportPlanStatus } from "../types"
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
 
 export function TransportPlanStatusBadge({ status }: { status: TransportPlanStatus }) {

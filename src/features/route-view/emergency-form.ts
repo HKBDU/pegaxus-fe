@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { transportPlanFormSchema } from "@/features/transport-plan/transport-plan.form"
+import { transportPlanFormSchema } from "@/features/transport-plan/schemas"
 import { backupChangeRequestSchema } from "./schemas"
 
 export const backupRequestDefaults = { reason: "", newEstimatedArrivalAt: "", estimatedExtraCost: "", currency: "", note: "" }

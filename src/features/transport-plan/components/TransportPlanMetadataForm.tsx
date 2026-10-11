@@ -14,9 +14,11 @@ import { Input } from "@/shared/components/ui/input"
 import { Textarea } from "@/shared/components/ui/textarea"
 import { useCreateTransportPlan, useUpdateTransportPlan } from "../hooks/useTransportPlans"
 import { getApiErrorInfo } from "../services"
-import { getTransportPlanError, isTransportPlanConcurrencyCode, isTransportPlanLockedCode } from "../transport-plan.services"
-import { buildCreatePlanInput, buildUpdatePlanInput, canEditTransportPlan, editTransportPlanFormSchema, emptyPlanForm, planToForm, transportPlanFormSchema, type TransportPlanFormValues } from "../transport-plan.form"
-import type { TransportPlanDetail } from "../transport-plan.types"
+import { getTransportPlanError, isTransportPlanConcurrencyCode, isTransportPlanLockedCode, isTransportPlanDuplicateCode } from "../services"
+import { buildCreatePlanInput, buildUpdatePlanInput, canEditTransportPlan, planToForm } from "../transport-plan.form"
+import { transportPlanFormSchema, editTransportPlanFormSchema } from "../schemas"
+import { emptyPlanForm } from "../constants"
+import type { TransportPlanDetail, TransportPlanFormValues } from "../types"
 import { Section } from "./ApprovedBookingDetails"
 import { Flow3MockIndicator } from "./Flow3MockIndicator"
 
@@ -28,9 +30,10 @@ const fields = [
   { name: "estimatedDurationMinutes", label: "Estimated Duration (minutes)", type: "number" },
 ] as const
 
-export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadLatest, onDuplicate }: {
+export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadLatest, onDuplicate, onCancel, onCreated }: {
   bookingId: string; plan?: TransportPlanDetail; cancelHref: string
   reloadLatest?: () => Promise<TransportPlanDetail | undefined>; onDuplicate?: () => Promise<unknown>
+  onCancel?: () => void; onCreated?: (plan: TransportPlanDetail) => void
 }) {
   const navigate = useNavigate()
   const principal = useAuthStore((state) => state.principal)
@@ -61,6 +64,7 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
       }
       if (!result.started) return
       toast.success(baseline ? "Transport plan updated successfully." : "Transport plan created successfully.")
+      if (!baseline) onCreated?.(result.value)
       navigate(transportPlanDetail(result.value.transportPlanId), { replace: true })
     } catch (error) {
       const info = getApiErrorInfo(error)
@@ -70,7 +74,9 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
         if (Object.hasOwn(emptyPlanForm, name)) form.setError(name as keyof TransportPlanFormValues, { type: "server", message: item.message })
       }
       setProblem({ code: info.code, message: error instanceof z.ZodError ? "Check the highlighted fields and try again." : getTransportPlanError(error).message })
-      if (info.code === "TRANSPORT_PLAN_ALREADY_EXISTS") await onDuplicate?.()
+      if (isTransportPlanDuplicateCode(info.code)) {
+        try { await onDuplicate?.() } catch { /* Keep the original mutation error visible if the refresh fails. */ }
+      }
     }
   })
   const reload = async () => {
@@ -101,7 +107,7 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
       <p>{problem.message}</p>
       {isTransportPlanConcurrencyCode(problem.code) && reloadLatest ? <><p className="text-xs">Reloading replaces your unsaved changes with the latest server data.</p><Button type="button" variant="outline" disabled={isPending} onClick={() => void reload()}>Reload Latest Data</Button></> : null}
     </div> : null}
-    <div className="flex justify-end gap-3"><Button type="button" variant="outline" disabled={isPending} className="rounded-[2px] bg-white" onClick={() => navigate(cancelHref)}>Cancel</Button>
+    <div className="flex justify-end gap-3"><Button type="button" variant="outline" disabled={isPending} className="rounded-[2px] bg-white" onClick={() => onCancel ? onCancel() : navigate(cancelHref)}>Cancel</Button>
       <Button type="submit" disabled={isPending || blocked || attempt.isBlocked || (Boolean(baseline) && !form.formState.isDirty)} className="rounded-[2px]">{isPending ? "Saving..." : baseline ? "Save Changes" : "Save Transport Plan"}</Button></div>
   </form></Form>
 }

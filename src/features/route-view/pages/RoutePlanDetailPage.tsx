@@ -9,7 +9,7 @@ import { useAuthStore } from "@/features/auth/store"
 import { Flow3MockIndicator } from "@/features/transport-plan/components/Flow3MockIndicator"
 import { useRoutePlanDetail } from "../hooks/useRoutePlanDetail"
 import { canViewRoute, getRouteViewError, getEmergencyError } from "../services"
-import { routePlanIdSchema } from "../schemas"
+import { actionEntityIdSchema } from "@/features/transport-plan/schemas"
 import { RoutePlanDetails } from "../components/RoutePlanDetails"
 import type { RouteDetailPath, RouteMapViewerProps } from "../types"
 import type { EmergencyAction } from "../types"
@@ -28,7 +28,7 @@ export default function RoutePlanDetailPage({ mapViewer, routeDetailPath, emerge
   const [params, setParams] = useSearchParams()
   const principal = useAuthStore((state) => state.principal)
   const allowed = canViewRoute(principal) && (!emergencyView || getWorkspaceRole(principal) === "manager")
-  const valid = routePlanIdSchema.safeParse(routePlanId).success
+  const valid = actionEntityIdSchema.safeParse(routePlanId).success
   const query = useRoutePlanDetail(routePlanId, allowed)
   const error = query.isError ? getRouteViewError(query.error) : null
   const context = useEmergencyContext(query.data, allowed && !error)

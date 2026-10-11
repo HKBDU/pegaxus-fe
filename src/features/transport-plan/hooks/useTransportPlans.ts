@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query"
 import type { EntityId } from "@/shared/types"
-import { buildTransportPlanQuery, getTransportPlanError, transportPlanService } from "../transport-plan.services"
-import { transportPlanIdSchema } from "../transport-plan.schemas"
-import type { CreateTransportPlanInput, UpdateTransportPlanInput, TransportPlanDetail, TransportPlansQueryParams } from "../transport-plan.types"
+import { buildTransportPlanQuery, getTransportPlanError, transportPlanService } from "../services"
+import { actionEntityIdSchema } from "../schemas"
+import type { CreateTransportPlanInput, UpdateTransportPlanInput, TransportPlanDetail, TransportPlansQueryParams } from "../types"
 import { approvedBookingKeys } from "./useApprovedBookings"
 import { canAccess } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
@@ -19,7 +19,7 @@ export function useTransportPlans(params: TransportPlansQueryParams, enabled = t
   return useQuery({ queryKey: transportPlanKeys.list(params), queryFn: ({ signal }) => transportPlanService.getPlans(params, signal), enabled, retry })
 }
 export function useTransportPlan(id: EntityId, enabled = true) {
-  return useQuery({ queryKey: transportPlanKeys.detail(id), queryFn: ({ signal }) => transportPlanService.getPlan(id, signal), enabled: enabled && transportPlanIdSchema.safeParse(id).success, retry })
+  return useQuery({ queryKey: transportPlanKeys.detail(id), queryFn: ({ signal }) => transportPlanService.getPlan(id, signal), enabled: enabled && actionEntityIdSchema.safeParse(id).success, retry })
 }
 export async function refreshTransportPlanQueries(client: QueryClient, plan: TransportPlanDetail) {
   client.setQueryData(transportPlanKeys.detail(plan.transportPlanId), plan)
@@ -28,12 +28,14 @@ export async function refreshTransportPlanQueries(client: QueryClient, plan: Tra
     client.invalidateQueries({ queryKey: transportPlanKeys.detail(plan.transportPlanId) }),
     client.invalidateQueries({ queryKey: ["approved-bookings", "list"] }),
     client.invalidateQueries({ queryKey: approvedBookingKeys.detail(plan.booking.bookingId) }),
+    client.invalidateQueries({ queryKey: ["bookings", "list"] }),
+    client.invalidateQueries({ queryKey: ["bookings", "detail", plan.booking.bookingId] }),
   ])
 }
 export function useCreateTransportPlan(bookingId: string) {
   const client = useQueryClient()
   const principal = useAuthStore((state) => state.principal)
-  return useMutation({ mutationFn: (input: CreateTransportPlanInput) => {
+  return useMutation({ mutationKey: ["transport-plans", "create", bookingId], mutationFn: (input: CreateTransportPlanInput) => {
     if (!canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })) throw new Error("Only Logistics Managers can create transport plans.")
     return transportPlanService.createPlan(bookingId, input)
   }, onSuccess: (plan) => refreshTransportPlanQueries(client, plan) })

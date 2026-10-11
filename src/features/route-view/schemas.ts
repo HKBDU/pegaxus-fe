@@ -1,6 +1,6 @@
 import { z } from "zod"
-import { dossierStatusSchema, entityIdSchema, routePlanStatusSchema } from "@/features/transport-plan/schemas"
-import { employeeBriefSchema } from "@/features/transport-plan/transport-plan.schemas"
+import { actionEntityIdSchema, dossierStatusSchema, entityIdSchema, routePlanStatusSchema } from "@/features/transport-plan/schemas"
+import { employeeBriefSchema } from "@/features/transport-plan/schemas"
 
 export const routePlanIdSchema = entityIdSchema
 export const routeTypeSchema = z.enum(["PRIMARY", "BACKUP", "RETURN"])
@@ -72,11 +72,11 @@ export const routeChangeDecisionSchema = z.object({
   path: ["note"], message: "Explain the rejection in at least 10 characters.",
 })
 export const returnSegmentOverrideSchema = z.object({
-  routePlanRouteId: entityIdSchema.refine(id => id !== "00000000-0000-0000-0000-000000000000"),
-  vehicleIds: z.array(entityIdSchema.refine(id => id !== "00000000-0000-0000-0000-000000000000")).max(100).refine(ids => new Set(ids).size === ids.length, {
+  routePlanRouteId: actionEntityIdSchema.refine(id => id !== "00000000-0000-0000-0000-000000000000"),
+  vehicleIds: z.array(actionEntityIdSchema.refine(id => id !== "00000000-0000-0000-0000-000000000000")).max(100).refine(ids => new Set(ids).size === ids.length, {
     message: "Submit each vehicle only once.",
   }).optional(),
-  outsourcing: z.object({ transportProviderId: entityIdSchema.refine(id => id !== "00000000-0000-0000-0000-000000000000"), note: optionalNote }).optional(),
+  outsourcing: z.object({ transportProviderId: actionEntityIdSchema.refine(id => id !== "00000000-0000-0000-0000-000000000000"), note: optionalNote }).optional(),
 }).refine(input => input.vehicleIds === undefined || input.outsourcing === undefined, {
   path: ["vehicleIds"], message: "A segment cannot receive both vehicles and outsourcing.",
 })

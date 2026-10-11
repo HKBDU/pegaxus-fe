@@ -5,8 +5,9 @@ import { canAccess } from "@/features/auth/access-control"
 import type { AuthPrincipal } from "@/features/auth/types"
 import { useAuthStore } from "@/features/auth/store"
 import { readEnvelope, getApiErrorInfo } from "@/features/transport-plan/services"
+import { actionEntityIdSchema } from "@/features/transport-plan/schemas"
 import { isFlow3MockMode } from "@/features/transport-plan/source"
-import { routePlanIdSchema, routePlanDetailSchema, routePlansQuerySchema, routePlansSchema } from "./schemas"
+import { routePlanDetailSchema, routePlansQuerySchema, routePlansSchema } from "./schemas"
 import type { RoutePlansQuery } from "./types"
 import { backupChangeRequestSchema, backupChangeRequestResultSchema, routeChangeDecisionSchema, routeChangeDecisionResultSchema,
   returnActivationSchema, returnActivationResultSchema, driverNoticeSchema, driverNoticeResultSchema } from "./schemas"
@@ -15,7 +16,7 @@ import type { EmergencyAction, EmergencyRequestMap, EmergencyResultMap } from ".
 
 export const canViewRoute = (principal: AuthPrincipal | null) => canAccess(principal, { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] })
 export const canExportRoute = (principal: AuthPrincipal | null) => canAccess(principal, { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR"] })
-const routePath = (id: string) => `/route-plans/${encodeURIComponent(routePlanIdSchema.parse(id))}`
+const routePath = (id: string) => `/route-plans/${encodeURIComponent(actionEntityIdSchema.parse(id))}`
 
 const emergencyContracts = {
   request: { path: "change-request", input: backupChangeRequestSchema, output: backupChangeRequestResultSchema },
@@ -68,7 +69,7 @@ async function parseErrorBlob(blob: Blob) {
 
 export const routeViewService = {
   async getRoutes(transportPlanId: string, params: RoutePlansQuery = {}, signal?: AbortSignal) {
-    const id = routePlanIdSchema.parse(transportPlanId), query = routePlansQuerySchema.parse(params)
+    const id = actionEntityIdSchema.parse(transportPlanId), query = routePlansQuerySchema.parse(params)
     signal?.throwIfAborted()
     const payload = !import.meta.env.PROD && isFlow3MockMode()
       ? (await import("@/features/transport-plan/mock/mock-service")).flow3MockService.getRoutes(id, query)

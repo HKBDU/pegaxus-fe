@@ -9,8 +9,4 @@ export function getWorkspaceRole(principal: AuthPrincipal | null) {
   return null
 }
 
-export const workspaceLabels = {
-  manager: { list: "Transport Management", workspace: "Management Workspace" },
-  coordinator: { list: "Assigned Transports", workspace: "Route Coordinator Workspace" },
-  specialist: { list: "Assigned Transports", workspace: "Transport Specialist Workspace" },
-} as const
+export { workspaceLabels } from "./constants"

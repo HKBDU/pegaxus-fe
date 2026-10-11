@@ -2,9 +2,9 @@ import { Search } from "lucide-react"
 import { Input } from "@/shared/components/ui/input"
 import { DataTableRadioFilter } from "@/shared/components/ui/data-table-radio-filter"
 import { routePlanStatusSchema } from "../schemas"
-import { routeStatusOptions, transportPlanSortOptions, transportPlanStatusOptions } from "../transport-plan.constants"
-import { transportPlanSortSchema, transportPlanStatusSchema } from "../transport-plan.schemas"
-import type { TransportPlansQueryParams } from "../transport-plan.types"
+import { routeStatusOptions, transportPlanSortOptions, transportPlanStatusOptions } from "../constants"
+import { transportPlanSortSchema, transportPlanStatusSchema } from "../schemas"
+import type { TransportPlansQueryParams } from "../types"
 
 export function TransportPlanFilters({ params, onChange }: {
   params: TransportPlansQueryParams

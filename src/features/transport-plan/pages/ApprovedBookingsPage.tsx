@@ -12,7 +12,8 @@ import type { ApprovedBookingsQueryParams } from "../types"
 import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
 import { canAccess } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
-import { getWorkspaceRole, workspaceLabels } from "../workspace-role"
+import { getWorkspaceRole } from "../workspace-role"
+import { workspaceLabels } from "../constants"
 
 export default function ApprovedBookingsPage() {
   const principal = useAuthStore(state => state.principal)

@@ -6,9 +6,9 @@ import { PageHeader } from "@/shared/components/PageHeader"
 import { ErrorState } from "@/shared/components/common"
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
 import { useTransportPlan } from "../hooks/useTransportPlans"
-import { getTransportPlanError } from "../transport-plan.services"
-import { transportPlanIdSchema, transportPlanTabSchema } from "../transport-plan.schemas"
-import type { TransportPlanDetail } from "../transport-plan.types"
+import { getTransportPlanError } from "../services"
+import { actionEntityIdSchema, transportPlanTabSchema } from "../schemas"
+import type { TransportPlanDetail } from "../types"
 import { Button } from "@/shared/components/ui/button"
 import { useAuthStore } from "@/features/auth/store"
 import { UsersRound } from "lucide-react"
@@ -22,7 +22,8 @@ import { TransportPlanPersonnel, type PersonnelPanelProps } from "../components/
 import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
 import { TransportPlanWorkspace } from "../components/TransportPlanWorkspace"
 import { TransportOverview } from "../components/TransportOverview"
-import { getWorkspaceRole, workspaceLabels } from "../workspace-role"
+import { getWorkspaceRole } from "../workspace-role"
+import { workspaceLabels } from "../constants"
 import { useApprovedBooking } from "../hooks/useApprovedBookings"
 import { getApprovedBookingError } from "../services"
 
@@ -60,7 +61,7 @@ export function TransportPlanDetails({ plan, personnelPanel }: { plan: Transport
 
 function TransportPlanReadPage() {
   const { transportPlanId = "" } = useParams<{ transportPlanId: string }>()
-  const validId = transportPlanIdSchema.safeParse(transportPlanId).success
+  const validId = actionEntityIdSchema.safeParse(transportPlanId).success
   const query = useTransportPlan(transportPlanId)
   const principal = useAuthStore(state => state.principal)
   const role = getWorkspaceRole(principal)
@@ -72,7 +73,7 @@ function TransportPlanReadPage() {
   return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
     <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
       <Flow3MockIndicator />
-      <div><PageHeader title="Transport Plan Details" backHref={ROLE_ROUTES.approvedBookings} backLabel={`Back to ${role ? workspaceLabels[role].list : "Transports"}`} /></div>
+      <div><PageHeader title="Transport Plan Details" backHref={role === "manager" ? ROLE_ROUTES.transportPlans : ROLE_ROUTES.approvedBookings} backLabel={role === "manager" ? "Back to Transport Plans" : `Back to ${role ? workspaceLabels[role].list : "Transports"}`} /></div>
       {!validId ? <ErrorState message="The transport plan identifier is invalid." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
         query.isPending || (staff && access.isPending) ? <BookingDetailsSkeleton /> : accessError ? <ErrorState message={accessError.message} onRetry={accessError.retryable ? () => void access.refetch() : undefined} /> : query.data ? <TransportPlanDetails key={transportPlanId} plan={query.data} /> : null}
     </div>

@@ -1,5 +1,5 @@
 import type { ApprovedBookingDetail } from "../types"
-import type { TransportPlanDetail, TransportPlanStatus } from "../transport-plan.types"
+import type { TransportPlanDetail, TransportPlanStatus } from "../types"
 import { routePlanDetailSchema } from "@/features/route-view/schemas"
 
 export const mockId = (group: number, index: number) => `${group.toString(16).padStart(8, "0")}-0000-4000-8000-${index.toString(16).padStart(12, "0")}`

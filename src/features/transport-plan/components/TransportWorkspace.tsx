@@ -10,7 +10,8 @@ import type { ApprovedBookingDetail } from "../types"
 import { Section, Field } from "./ApprovedBookingDetails"
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
 import { TransportPlanQuotation } from "./TransportPlanQuotation"
-import { getWorkspaceRole, workspaceLabels } from "../workspace-role"
+import { getWorkspaceRole } from "../workspace-role"
+import { workspaceLabels } from "../constants"
 
 export function TransportWorkspace({ booking, principal, showPlanningReference = true }: { booking: ApprovedBookingDetail; principal: AuthPrincipal | null; showPlanningReference?: boolean }) {
   const role = getWorkspaceRole(principal)

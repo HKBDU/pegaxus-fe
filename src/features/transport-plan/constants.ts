@@ -1,5 +1,5 @@
-import type { ApprovedBookingsQueryParams } from "./types"
-import { approvedBookingsQuerySchema, dossierStatusSchema, routePlanStatusSchema } from "./schemas"
+import type { ApprovedBookingsQueryParams, TransportPlansQueryParams } from "./types"
+import { approvedBookingsQuerySchema, dossierStatusSchema, routePlanStatusSchema, transportPlanStatusSchema } from "./schemas"
 
 export const initialApprovedBookingParams: ApprovedBookingsQueryParams = {
   pageIndex: 1, pageSize: 20, search: "", sortBy: "requestedDepartureDate:asc",
@@ -37,4 +37,30 @@ export function hasApprovedBookingFilters(params: ApprovedBookingsQueryParams) {
 export function buildDepartureRange(from: string, to: string) {
   const range = approvedBookingsQuerySchema.parse({ ...initialApprovedBookingParams, departureFrom: from || undefined, departureTo: to || undefined })
   return { departureFrom: range.departureFrom, departureTo: range.departureTo }
+}
+
+export const initialTransportPlanParams: TransportPlansQueryParams = {
+  pageIndex: 1, pageSize: 20, search: "", sortBy: "createdAt:desc",
+}
+export const emptyPlanForm = { plannedStartAt: "", plannedEndAt: "", estimatedDistanceKm: "", estimatedDurationMinutes: "", planningNote: "", updateReason: "" }
+export const workspaceLabels = {
+  manager: { list: "Transport Management", workspace: "Management Workspace" },
+  coordinator: { list: "Assigned Transports", workspace: "Route Coordinator Workspace" },
+  specialist: { list: "Assigned Transports", workspace: "Transport Specialist Workspace" },
+} as const
+export const transportPlanStatusOptions = [
+  { value: "ALL", label: "All statuses" },
+  ...transportPlanStatusSchema.options.map((value) => ({ value, label: formatStatusLabel(value) })),
+]
+export const transportPlanSortOptions = [
+  { value: "createdAt:desc", label: "Newest created" },
+  { value: "createdAt:asc", label: "Oldest created" },
+  { value: "plannedStartAt:asc", label: "Start: earliest" },
+  { value: "plannedStartAt:desc", label: "Start: latest" },
+]
+export function changeTransportPlanFilters(current: TransportPlansQueryParams, patch: Partial<Omit<TransportPlansQueryParams, "pageIndex">>): TransportPlansQueryParams {
+  return { ...current, ...patch, pageIndex: 1 }
+}
+export function hasTransportPlanFilters(params: TransportPlansQueryParams) {
+  return Boolean(params.search?.trim() || params.status || params.routePlanStatus)
 }

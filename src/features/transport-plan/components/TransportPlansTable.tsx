@@ -10,9 +10,9 @@ import { Button } from "@/shared/components/ui/button"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { formatPlanDate } from "../format"
-import { hasTransportPlanFilters } from "../transport-plan.constants"
-import { transportPlanSortSchema } from "../transport-plan.schemas"
-import type { TransportPlanListItem, TransportPlansQueryParams } from "../transport-plan.types"
+import { hasTransportPlanFilters } from "../constants"
+import { transportPlanSortSchema } from "../schemas"
+import type { TransportPlanListItem, TransportPlansQueryParams } from "../types"
 import { TransportPlanStatusBadge } from "./TransportPlanStatusBadge"
 
 export function TransportPlansTable({ plans, params, meta, isLoading, onChange, onPageChange, filters }: {

@@ -1,4 +1,4 @@
-import { useParams, useSearchParams } from "react-router-dom"
+import { useParams } from "react-router-dom"
 import { ROLE_ROUTES } from "@/app/route-config"
 import { useAuthStore } from "@/features/auth/store"
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
@@ -6,17 +6,16 @@ import { ApprovedBookingBadge } from "../components/ApprovedBookingBadge"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { ErrorState } from "@/shared/components/common"
 import { ApprovedBookingDetails } from "../components/ApprovedBookingDetails"
-import { ApprovedBookingPlanningAction } from "../components/ApprovedBookingPlanningAction"
 import { useApprovedBooking } from "../hooks/useApprovedBookings"
 import { getApprovedBookingError } from "../services"
-import CreateTransportPlanPage from "./CreateTransportPlanPage"
-import { entityIdSchema } from "../schemas"
+import { actionEntityIdSchema } from "../schemas"
 import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
 import { TransportWorkspace } from "../components/TransportWorkspace"
 import { TransportOverview } from "../components/TransportOverview"
-import { getWorkspaceRole, workspaceLabels } from "../workspace-role"
+import { getWorkspaceRole } from "../workspace-role"
+import { workspaceLabels } from "../constants"
 
-function ApprovedBookingReadPage() {
+export default function ApprovedBookingDetailsPage() {
   const { bookingId = "" } = useParams<{ bookingId: string }>()
   const principal = useAuthStore((state) => state.principal)
   const role = getWorkspaceRole(principal)
@@ -31,14 +30,13 @@ function ApprovedBookingReadPage() {
         <PageHeader title="Transport Detail" backHref={ROLE_ROUTES.approvedBookings} backLabel={`Back to ${role ? workspaceLabels[role].list : "Transports"}`} />
         <p className="text-xs text-slate-500 sm:text-sm">Review transport operations, planning references and the approved booking. Booking information is read-only.</p>
       </div>
-      {!entityIdSchema.safeParse(bookingId).success ? <ErrorState message="The booking identifier is invalid." /> : error ?
+      {!actionEntityIdSchema.safeParse(bookingId).success ? <ErrorState message="The booking identifier is invalid." /> : error ?
         <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
         query.isPending ? <BookingDetailsSkeleton /> : booking ? <>
           <div className="flex flex-col justify-between gap-4 border-b pb-5 sm:flex-row sm:items-center">
             <div className="space-y-2"><h2 className="font-heading text-2xl">{booking.transport?.transportCode ?? "Transport not available"}</h2>
               <p className="text-xs text-slate-500">Booking Reference: {booking.bookingCode}</p>
               {booking.transport && <ApprovedBookingBadge value={booking.transport.status} />}</div>
-            <ApprovedBookingPlanningAction principal={principal} booking={booking} />
           </div>
           <TransportOverview journey={booking} customerName={booking.customer.fullName} plannedStartAt={booking.transportPlan?.plannedStartAt} transportStatus={booking.transport?.status} />
           <TransportWorkspace booking={booking} principal={principal} />
@@ -49,9 +47,4 @@ function ApprovedBookingReadPage() {
         </> : null}
     </div>
   </div>
-}
-
-export default function ApprovedBookingDetailsPage() {
-  const [params] = useSearchParams()
-  return params.get("action") === "create-plan" ? <CreateTransportPlanPage /> : <ApprovedBookingReadPage />
 }

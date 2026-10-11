@@ -1,5 +1,5 @@
 import { formatPlanDate } from "../format"
-import type { TransportPlanDetail } from "../transport-plan.types"
+import type { TransportPlanDetail } from "../types"
 import { Field, Section } from "./ApprovedBookingDetails"
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
 
