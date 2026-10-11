@@ -44,6 +44,7 @@ export async function refreshEmergencyQueries(client: QueryClient, plan: Pick<Ro
     ...keys.map(queryKey => client.invalidateQueries({ queryKey })),
     ...(updatesWorkspace ? [
       client.invalidateQueries({ queryKey: transportPlanKeys.detail(plan.transportPlanId) }),
+      client.invalidateQueries({ queryKey: ["transport-plans", "list"] }),
       client.invalidateQueries({ queryKey: approvedBookingKeys.detail(plan.bookingId) }),
       client.invalidateQueries({ queryKey: ["approved-bookings", "list"] }),
       // Invalidate only already-cached route details of this transport, not every route.

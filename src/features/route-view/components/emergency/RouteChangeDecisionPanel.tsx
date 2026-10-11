@@ -19,7 +19,7 @@ import { isRelatedPrimary } from "../../route-comparison"
 import { RouteChangeComparison } from "./RouteChangeComparison"
 import { EmergencyFeedback } from "./EmergencyFeedback"
 
-const rejectionSchema = z.object({ note: z.string().trim().min(10, "Explain the rejection in at least 10 characters.") })
+const rejectionSchema = z.object({ note: z.string().max(4000).trim().min(10, "Explain the rejection in at least 10 characters.") })
 
 export function RouteChangeDecisionPanel({ plan, context, onBack }: { plan: RoutePlanDetail; context: EmergencyContext; onBack: () => void }) {
   const [baseline, setBaseline] = useState(plan.updatedAt)

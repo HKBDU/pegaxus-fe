@@ -14,7 +14,7 @@ import { Input } from "@/shared/components/ui/input"
 import { Textarea } from "@/shared/components/ui/textarea"
 import { useCreateTransportPlan, useUpdateTransportPlan } from "../hooks/useTransportPlans"
 import { getApiErrorInfo } from "../services"
-import { getTransportPlanError } from "../transport-plan.services"
+import { getTransportPlanError, isTransportPlanConcurrencyCode, isTransportPlanLockedCode } from "../transport-plan.services"
 import { buildCreatePlanInput, buildUpdatePlanInput, canEditTransportPlan, editTransportPlanFormSchema, emptyPlanForm, planToForm, transportPlanFormSchema, type TransportPlanFormValues } from "../transport-plan.form"
 import type { TransportPlanDetail } from "../transport-plan.types"
 import { Section } from "./ApprovedBookingDetails"
@@ -45,7 +45,7 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
   const update = useUpdateTransportPlan(plan?.transportPlanId ?? "")
   const isPending = create.isPending || update.isPending || attempt.isRunning || form.formState.isSubmitting || reloading
   const canWrite = baseline ? canEditTransportPlan(principal, baseline) : canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
-  const blocked = !canWrite || problem?.code === "TRANSPORT_PLAN_MODIFIED" || problem?.code === "PLAN_LOCKED"
+  const blocked = !canWrite || isTransportPlanConcurrencyCode(problem?.code) || isTransportPlanLockedCode(problem?.code)
   const submit = form.handleSubmit(async (values) => {
     if (blocked) return
     setProblem(null)
@@ -90,7 +90,7 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
       <fieldset disabled={isPending || !canWrite} className="grid gap-5 sm:grid-cols-2">
         {fields.map(({ name, label, type }) => <FormField key={name} control={form.control} name={name} render={({ field }) =>
           <FormItem><FormLabel className="font-heading text-xs uppercase">{label}{type === "datetime-local" && !baseline ? " *" : ""}</FormLabel>
-            <FormControl><Input {...field} type={type} step="any" min={type === "number" ? "0" : undefined} className={controlClass} /></FormControl><FormMessage /></FormItem>} />)}
+            <FormControl><Input {...field} type={type} step={name === "estimatedDurationMinutes" ? "1" : "any"} min={type === "number" ? "0" : undefined} className={controlClass} /></FormControl><FormMessage /></FormItem>} />)}
         <FormField control={form.control} name="planningNote" render={({ field }) => <FormItem className="sm:col-span-2">
           <FormLabel className="font-heading text-xs uppercase">Planning Note</FormLabel><FormControl><Textarea {...field} className="min-h-24 rounded-[2px] border-slate-300 text-xs shadow-none" /></FormControl><FormMessage /></FormItem>} />
         {baseline ? <FormField control={form.control} name="updateReason" render={({ field }) => <FormItem className="sm:col-span-2">
@@ -99,7 +99,7 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
     </Section>
     {problem ? <div role="alert" className="space-y-3 rounded-[2px] border border-red-200 bg-red-50 p-4 text-sm text-red-800">
       <p>{problem.message}</p>
-      {problem.code === "TRANSPORT_PLAN_MODIFIED" && reloadLatest ? <><p className="text-xs">Reloading replaces your unsaved changes with the latest server data.</p><Button type="button" variant="outline" disabled={isPending} onClick={() => void reload()}>Reload Latest Data</Button></> : null}
+      {isTransportPlanConcurrencyCode(problem.code) && reloadLatest ? <><p className="text-xs">Reloading replaces your unsaved changes with the latest server data.</p><Button type="button" variant="outline" disabled={isPending} onClick={() => void reload()}>Reload Latest Data</Button></> : null}
     </div> : null}
     <div className="flex justify-end gap-3"><Button type="button" variant="outline" disabled={isPending} className="rounded-[2px] bg-white" onClick={() => navigate(cancelHref)}>Cancel</Button>
       <Button type="submit" disabled={isPending || blocked || attempt.isBlocked || (Boolean(baseline) && !form.formState.isDirty)} className="rounded-[2px]">{isPending ? "Saving..." : baseline ? "Save Changes" : "Save Transport Plan"}</Button></div>

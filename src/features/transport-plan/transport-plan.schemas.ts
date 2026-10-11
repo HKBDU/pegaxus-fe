@@ -5,6 +5,7 @@ export const transportPlanIdSchema = entityIdSchema
 export { transportPlanStatusSchema }
 export const transportPlanSortSchema = z.enum(["createdAt:asc", "createdAt:desc", "plannedStartAt:asc", "plannedStartAt:desc"])
 export const transportPlanTabSchema = z.enum(["general", "personnel"])
+const maxDurationMinutes = 2_147_483_647
 export const transportPlansQuerySchema = z.object({
   pageIndex: z.number().int().positive(), pageSize: z.number().int().positive(),
   search: z.string().trim().optional().transform((value) => value || undefined),
@@ -42,7 +43,7 @@ export const transportPlanDetailSchema = z.object({
   plannedStartAt: optionalTimestamp, plannedEndAt: optionalTimestamp,
   planningNote: optionalText,
   estimatedDistanceKm: z.number().nonnegative().nullish(),
-  estimatedDurationMinutes: z.number().nonnegative().nullish(),
+  estimatedDurationMinutes: z.number().int().min(0).max(maxDurationMinutes).nullish(),
   // BE assignments use employeeName; route/fixture briefs use fullName. Map at the DTO boundary.
   assignedEmployees: z.array(employeeBriefSchema.extend({ fullName: z.string().optional(), employeeName: z.string().optional(), responsibility: optionalText, isPrimary: z.boolean(), assignedAt: timestamp })
     .refine(item => Boolean(item.fullName || item.employeeName), { message: "An assigned employee name is required." })
@@ -54,7 +55,7 @@ const metadataFields = {
   plannedStartAt: timestamp,
   plannedEndAt: timestamp,
   estimatedDistanceKm: z.number().finite().nonnegative().optional(),
-  estimatedDurationMinutes: z.number().finite().nonnegative().optional(),
+  estimatedDurationMinutes: z.number().finite().int().min(0).max(maxDurationMinutes).optional(),
   planningNote: z.string().optional(),
 }
 export const createTransportPlanSchema = z.object(metadataFields).refine(

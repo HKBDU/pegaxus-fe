@@ -37,7 +37,7 @@ export function DriverNoticeDialog({ plan, context, onClose }: { plan: RoutePlan
       <Form {...form}><form onSubmit={submit} className="flex min-h-0 flex-col"><div className="min-h-0 space-y-5 overflow-y-auto px-6 py-5">
         {mutation.data ? <DriverNoticeSuccess result={mutation.data} /> : <>
           <EmergencyChangeSummary plan={plan} title="Active Return" compact /><p className="text-xs leading-5 text-slate-500">Drivers currently responsible for this transport receive the notice. Confirmed recipients appear after sending.</p>
-          <FormField control={form.control} name="message" render={({ field }) => <FormItem><FormLabel>Additional Message (optional)</FormLabel><FormControl><Textarea {...field} disabled={busy} className="min-h-24 rounded-md" /></FormControl><FormMessage /></FormItem>} />
+          <FormField control={form.control} name="message" render={({ field }) => <FormItem><FormLabel>Additional Message (optional)</FormLabel><FormControl><Textarea {...field} maxLength={4000} disabled={busy} className="min-h-24 rounded-md" /></FormControl><FormMessage /></FormItem>} />
           <EmergencyFeedback error={mutation.error} latestUpdatedAt={plan.updatedAt} />
         </>}
       </div><DialogFooter className="shrink-0 border-t bg-slate-50 px-6 py-4"><Button type="button" variant="outline" className="rounded-lg" disabled={busy} onClick={onClose}>{mutation.data ? "Back to Route Plan" : "Cancel"}</Button>

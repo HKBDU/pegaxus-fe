@@ -36,7 +36,7 @@ const transportSchema = z.object({ transportId: entityIdSchema, transportCode: z
 export const planSummarySchema = z.object({
   transportPlanId: entityIdSchema, planCode: z.string(), status: transportPlanStatusSchema,
   plannedStartAt: z.iso.datetime({ offset: true }).nullish(), plannedEndAt: z.iso.datetime({ offset: true }).nullish(),
-  estimatedDistanceKm: z.number().nonnegative().nullish(), estimatedDurationMinutes: z.number().nonnegative().nullish(), planningNote: optionalText,
+  estimatedDistanceKm: z.number().nonnegative().nullish(), estimatedDurationMinutes: z.number().int().min(0).max(2_147_483_647).nullish(), planningNote: optionalText,
 })
 const dossierSummarySchema = z.object({ complianceDossierId: entityIdSchema, status: dossierStatusSchema })
 const routeSummarySchema = z.object({ routePlanId: entityIdSchema, routePlanCode: z.string(), status: routePlanStatusSchema })

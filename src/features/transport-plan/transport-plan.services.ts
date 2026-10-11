@@ -9,6 +9,14 @@ import { isFlow3MockMode } from "./source"
 export const buildTransportPlanQuery = (params: TransportPlansQueryParams) => transportPlansQuerySchema.parse(params)
 const detailPath = (id: EntityId) => `/transport-plans/${encodeURIComponent(transportPlanIdSchema.parse(id))}`
 
+export function isTransportPlanConcurrencyCode(code?: string | null) {
+  return code === "TRANSPORT_PLAN_CONCURRENCY_CONFLICT" || code === "TRANSPORT_PLAN_MODIFIED"
+}
+
+export function isTransportPlanLockedCode(code?: string | null) {
+  return code === "PLAN_LOCKED" || code === "INVALID_TRANSPORT_PLAN_STATUS"
+}
+
 export const transportPlanService = {
   async getPlans(params: TransportPlansQueryParams, signal?: AbortSignal): Promise<PaginatedResponse<TransportPlanListItem>> {
     signal?.throwIfAborted()
@@ -48,8 +56,8 @@ export const transportPlanService = {
 
 export function getTransportPlanError(error: unknown, context: "list" | "detail" | "quotation" | "personnel" = "detail") {
   const { code, status, message } = getApiErrorInfo(error)
-  if (code === "PLAN_LOCKED") return { message: message || "This plan is locked because transportation has started or ended.", retryable: false }
-  if (code === "TRANSPORT_PLAN_MODIFIED") return { message: message || "This plan has changed. Reload Latest Data before saving again.", retryable: false }
+  if (isTransportPlanLockedCode(code)) return { message: message || "This plan is no longer editable in its current status.", retryable: false }
+  if (isTransportPlanConcurrencyCode(code)) return { message: message || "This plan has changed. Reload Latest Data before saving again.", retryable: false }
   if (code === "TRANSPORT_PLAN_ALREADY_EXISTS") return { message: message || "A plan already exists for this booking. Open the existing plan instead.", retryable: false }
   if (code === "BOOKING_NOT_FOUND") return { message: message || "Booking not found.", retryable: false }
   if (code === "INVALID_BOOKING_STATUS") return { message: message || "Booking must be approved before creating a plan.", retryable: false }

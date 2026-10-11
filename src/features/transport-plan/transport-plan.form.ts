@@ -14,9 +14,10 @@ function validLocalDate(value: string) {
 }
 const localDate = z.string().refine(validLocalDate, "Enter a valid date and time.")
 const optionalNumber = z.string().refine((value) => !value.trim() || (Number.isFinite(Number(value)) && Number(value) >= 0), "Enter a non-negative number.")
+const optionalWholeNumber = z.string().refine((value) => !value.trim() || (Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) <= 2_147_483_647), "Enter whole minutes between 0 and 2,147,483,647.")
 const formFields = {
   plannedStartAt: localDate, plannedEndAt: localDate,
-  estimatedDistanceKm: optionalNumber, estimatedDurationMinutes: optionalNumber,
+  estimatedDistanceKm: optionalNumber, estimatedDurationMinutes: optionalWholeNumber,
   planningNote: z.string(), updateReason: z.string(),
 }
 export const transportPlanFormSchema = z.object(formFields).refine(

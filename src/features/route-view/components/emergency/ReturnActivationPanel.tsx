@@ -46,7 +46,7 @@ export function ReturnActivationPanel({ plan, context, onBack }: { plan: RoutePl
       <p className="text-xs text-slate-500">Activation retains the listed vehicles, providers, Driver and Escort. Reassignment is not available here.</p>
     </Section>
     <Section title="Activation Details"><p className="text-sm leading-6 text-slate-600">The confirmed return replaces the remaining journey. Customer and Coordinator are notified; the transport stays in transit.</p>
-      <div className="space-y-2"><Label htmlFor="return-activation-note">Activation Note (optional)</Label><Textarea id="return-activation-note" value={note} disabled={busy || Boolean(mutation.data)} onChange={event => { setNote(event.target.value); attempt.reset() }} className="min-h-20 rounded-md" /></div>
+      <div className="space-y-2"><Label htmlFor="return-activation-note">Activation Note (optional)</Label><Textarea id="return-activation-note" maxLength={4000} value={note} disabled={busy || Boolean(mutation.data)} onChange={event => { setNote(event.target.value); attempt.reset() }} className="min-h-20 rounded-md" /></div>
     </Section>
     {mutation.data && <p role="status" className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm">Return activated. Backend route status: {mutation.data.status}.</p>}
     {versionChanged && !mutation.error && <div role="alert" className="space-y-2 rounded-md border bg-muted p-3 text-sm"><p>The route version changed. Review the current segments before activation. Your note is retained.</p><Button variant="outline" onClick={reviewLatest}>Use Reviewed Version</Button></div>}

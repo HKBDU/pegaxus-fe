@@ -7,6 +7,7 @@ export const routeTypeSchema = z.enum(["PRIMARY", "BACKUP", "RETURN"])
 const transportModeSchema = z.enum(["ROAD", "SEA", "AIR"])
 const timestamp = z.iso.datetime({ offset: true })
 const text = z.string().nullish()
+const durationMinutes = z.number().int().min(0).max(2_147_483_647)
 const replacesSequenceNoSchema = z.object({ from: z.number().int().positive(), to: z.number().int().positive() })
   .refine(range => range.to >= range.from, "The replacement segment range is invalid.").nullish()
 // Missing/invalid coordinates must not discard otherwise usable segment data.
@@ -22,10 +23,10 @@ const providerSchema = z.object({
 export const routeSegmentSchema = z.object({
   routePlanRouteId: entityIdSchema, sequenceNo: z.number().int().positive(), routeType: routeTypeSchema,
   route: z.object({ routeId: entityIdSchema, routeCode: z.string(), routeName: text, transportMode: transportModeSchema,
-    distanceKm: z.number().nonnegative().nullish(), estimatedDurationMinutes: z.number().nonnegative().nullish() }),
+    distanceKm: z.number().nonnegative().nullish(), estimatedDurationMinutes: durationMinutes.nullish() }),
   fromLocation: routeLocationSchema, toLocation: routeLocationSchema,
   plannedDepartureAt: timestamp.nullish(), plannedArrivalAt: timestamp.nullish(), actualDepartureAt: timestamp.nullish(), actualArrivalAt: timestamp.nullish(),
-  status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]), dwellAfterMinutes: z.number().nonnegative().nullish(), isOutsourced: z.boolean(),
+  status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]), dwellAfterMinutes: durationMinutes.nullish(), isOutsourced: z.boolean(),
   vehicles: z.array(z.object({ vehicleId: entityIdSchema, vehicleCode: z.string(), vehicleName: text, licensePlate: text,
     transportMode: transportModeSchema, capacityHorses: z.number().int().nonnegative().nullish() })),
   // Current BE returns ProviderResponse directly; keep the established UI/mock shape.
@@ -38,7 +39,7 @@ export const routeLegalReviewSchema = z.object({
 export const routePlanDetailSchema = z.object({
   routePlanId: entityIdSchema, routePlanCode: z.string(), transportPlanId: entityIdSchema, bookingId: entityIdSchema, bookingCode: z.string(),
   routeType: routeTypeSchema, status: routePlanStatusSchema, isCrossBorder: z.boolean(),
-  totalDistanceKm: z.number().nonnegative(), estimatedDurationMinutes: z.number().nonnegative(),
+  totalDistanceKm: z.number().nonnegative(), estimatedDurationMinutes: durationMinutes,
   plannedDepartureAt: timestamp.nullish(), plannedArrivalAt: timestamp.nullish(), segments: z.array(routeSegmentSchema), isPersonnelComplete: z.boolean(),
   legalReview: routeLegalReviewSchema.nullable(), replacesSequenceNo: replacesSequenceNoSchema, routeNote: text, createdAt: timestamp, updatedAt: timestamp,
 })
@@ -49,12 +50,18 @@ export const routePlansSchema = z.object({ items: z.array(routePlanSummarySchema
 export const routePlansQuerySchema = z.object({ routeType: routeTypeSchema.optional(), status: routePlanStatusSchema.optional(), includeCancelled: z.boolean().optional() })
 export const routeViewTabSchema = z.enum(["map", "segments", "contingency"])
 
-const optionalNote = z.string().trim().optional().transform(value => value || undefined)
+const optionalNote = z.string().max(4000).trim().optional().transform(value => value || undefined)
+const optionalCurrency = optionalNote.refine(value => value === undefined || /^[A-Z]{3}$/.test(value), {
+  message: "Enter a three-letter uppercase ISO currency code.",
+})
+const extraCost = z.number().finite().min(0).max(9_999_999_999_999_998).refine(value => Number(value.toFixed(2)) === value, {
+  message: "Enter an amount with no more than two decimal places.",
+})
 export const backupChangeRequestSchema = z.object({
-  reason: z.string().trim().min(10, "Explain the change in at least 10 characters."),
+  reason: z.string().max(4000).trim().min(10, "Explain the change in at least 10 characters."),
   newEstimatedArrivalAt: timestamp,
-  estimatedExtraCost: z.number().finite().optional(),
-  currency: optionalNote,
+  estimatedExtraCost: extraCost.optional(),
+  currency: optionalCurrency,
   note: optionalNote,
 }).refine(input => input.estimatedExtraCost === undefined || Boolean(input.currency), {
   path: ["currency"], message: "Currency is required when an extra cost is supplied.",
@@ -65,14 +72,16 @@ export const routeChangeDecisionSchema = z.object({
   path: ["note"], message: "Explain the rejection in at least 10 characters.",
 })
 export const returnSegmentOverrideSchema = z.object({
-  routePlanRouteId: entityIdSchema,
-  vehicleIds: z.array(entityIdSchema).optional(),
-  outsourcing: z.object({ transportProviderId: entityIdSchema, note: optionalNote }).optional(),
+  routePlanRouteId: entityIdSchema.refine(id => id !== "00000000-0000-0000-0000-000000000000"),
+  vehicleIds: z.array(entityIdSchema.refine(id => id !== "00000000-0000-0000-0000-000000000000")).max(100).refine(ids => new Set(ids).size === ids.length, {
+    message: "Submit each vehicle only once.",
+  }).optional(),
+  outsourcing: z.object({ transportProviderId: entityIdSchema.refine(id => id !== "00000000-0000-0000-0000-000000000000"), note: optionalNote }).optional(),
 }).refine(input => input.vehicleIds === undefined || input.outsourcing === undefined, {
   path: ["vehicleIds"], message: "A segment cannot receive both vehicles and outsourcing.",
 })
 export const returnActivationSchema = z.object({
-  lastUpdatedAt: timestamp, segments: z.array(returnSegmentOverrideSchema).optional(), note: optionalNote,
+  lastUpdatedAt: timestamp, segments: z.array(returnSegmentOverrideSchema).max(100).optional(), note: optionalNote,
 }).refine(input => !input.segments || new Set(input.segments.map(segment => segment.routePlanRouteId)).size === input.segments.length, {
   path: ["segments"], message: "Submit each segment only once.",
 })
