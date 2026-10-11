@@ -20,6 +20,7 @@ export const ROLE_ROUTES = {
   personnelAssignment: "/admin/personnel-assignment",
 } as const
 
+export const routePlanDetail = (routePlanId: string) => `${ROLE_ROUTES.routePlans}/${encodeURIComponent(routePlanId)}`
 export const routePlanCreate = (transportPlanId: string) => `${ROLE_ROUTES.routePlans}/new/${encodeURIComponent(transportPlanId)}`
 export const routePlanEdit = (routePlanId: string) => `${ROLE_ROUTES.routePlans}/${encodeURIComponent(routePlanId)}/edit`
 export const contingencyRouteCreate = (transportPlanId: string) => `${ROLE_ROUTES.routePlans}/new/${encodeURIComponent(transportPlanId)}/contingency`

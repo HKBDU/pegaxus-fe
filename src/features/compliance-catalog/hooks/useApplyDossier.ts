@@ -28,6 +28,8 @@ export function useExistingDossier(bookingId: EntityId | undefined) {
   return useQuery({
     queryKey: applyKeys.existing(bookingId ?? ""),
     queryFn: () => dossierService.getDossierOfBooking(bookingId as EntityId),
+    // D1 answers 200 with complianceDossierId: null while no dossier exists; only a real id means "already exists".
+    select: (dossier) => (dossier?.complianceDossierId ? dossier : null),
     enabled: bookingId !== undefined && String(bookingId).length > 0,
     staleTime: 0,
   })

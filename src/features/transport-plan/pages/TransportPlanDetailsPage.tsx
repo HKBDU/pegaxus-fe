@@ -26,6 +26,7 @@ import { getWorkspaceRole } from "../workspace-role"
 import { workspaceLabels } from "../constants"
 import { useApprovedBooking } from "../hooks/useApprovedBookings"
 import { getApprovedBookingError } from "../services"
+import { PersonnelAssignmentPanel } from "@/features/personnel"
 
 export function TransportPlanDetails({ plan, personnelPanel }: { plan: TransportPlanDetail; personnelPanel?: ComponentType<PersonnelPanelProps> }) {
   const [params, setParams] = useSearchParams()
@@ -75,7 +76,7 @@ function TransportPlanReadPage() {
       <Flow3MockIndicator />
       <div><PageHeader title="Transport Plan Details" backHref={role === "manager" ? ROLE_ROUTES.transportPlans : ROLE_ROUTES.approvedBookings} backLabel={role === "manager" ? "Back to Transport Plans" : `Back to ${role ? workspaceLabels[role].list : "Transports"}`} /></div>
       {!validId ? <ErrorState message="The transport plan identifier is invalid." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
-        query.isPending || (staff && access.isPending) ? <BookingDetailsSkeleton /> : accessError ? <ErrorState message={accessError.message} onRetry={accessError.retryable ? () => void access.refetch() : undefined} /> : query.data ? <TransportPlanDetails key={transportPlanId} plan={query.data} /> : null}
+        query.isPending || (staff && access.isPending) ? <BookingDetailsSkeleton /> : accessError ? <ErrorState message={accessError.message} onRetry={accessError.retryable ? () => void access.refetch() : undefined} /> : query.data ? <TransportPlanDetails key={transportPlanId} plan={query.data} personnelPanel={PersonnelAssignmentPanel} /> : null}
     </div>
   </div>
 }
