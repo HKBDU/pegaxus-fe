@@ -28,8 +28,15 @@ import {
 } from "@/shared/utils/map";
 import { previewGeoapifyRoute } from "@/shared/utils/map/routing";
 import { clearRouteGeometryMemory } from "@/shared/components/map/route-geometry-cache";
-
-type AssetLocation = MapLocation;
+import type {
+  LocationCreateResponse,
+  LocationListResponse,
+  LocationMutationResponse,
+  LocationResponse,
+  RouteListResponse,
+  RouteMutationResponse,
+  RouteResponse,
+} from "@/features/route-plan/types";
 
 const LOCATION_SEARCH_CATEGORIES = [
   "airport",
@@ -125,58 +132,6 @@ async function searchGeoapifyLocationPlaces(
     ];
   });
 }
-
-type LocationResponse = {
-  locationId: string | number;
-  locationName: string;
-  locationType?: string | null;
-  address?: string | null;
-  city?: string | null;
-  stateProvince?: string | null;
-  country?: string | null;
-  latitude?: number | string | null;
-  longitude?: number | string | null;
-  locationNote?: string | null;
-  updatedAt?: string | null;
-  lastUpdatedAt?: string | null;
-  isDeleted?: boolean;
-};
-
-type LocationListResponse = {
-  value?: {
-    items?: LocationResponse[];
-    totalPages?: number;
-    hasNextPage?: boolean;
-  };
-  items?: LocationResponse[];
-  totalPages?: number;
-  hasNextPage?: boolean;
-};
-
-type LocationCreateResponse = {
-  value?: LocationResponse;
-  locationId?: string | number;
-  locationName?: string;
-};
-
-type RouteResponse = {
-  routeId: string | number;
-  routeName?: string | null;
-  transportMode?: "ROAD" | "SEA" | "AIR" | null;
-  fromLocation: LocationResponse;
-  toLocation: LocationResponse;
-  distanceKm?: number | null;
-  estimatedDurationMinutes?: number | null;
-  updatedAt?: string | null;
-};
-
-type RouteListResponse = {
-  value?: { items?: RouteResponse[] };
-  items?: RouteResponse[];
-};
-
-type LocationMutationResponse = { value?: { updatedAt?: string | null } };
-type RouteMutationResponse = { value?: RouteResponse };
 
 function toMapLocation(item: LocationResponse): MapLocation {
   return {
@@ -310,7 +265,7 @@ function straightLineGeometry(from: MapLocation, to: MapLocation) {
 }
 
 export default function MapAssetsPage() {
-  const [locations, setLocations] = useState<AssetLocation[]>([]);
+  const [locations, setLocations] = useState<MapLocation[]>([]);
   const [routes, setRoutes] = useState<MapRoute[]>([]);
   const [locationEditor, setLocationEditor] = useState<{
     mode: "add" | "edit";
@@ -810,8 +765,8 @@ export default function MapAssetsPage() {
               searchLoading={searchLoading}
               searchEmptyMessage={
                 mapMode === "addLocation"
-                  ? "Không tìm thấy địa điểm phù hợp tại EU."
-                  : "Không tìm thấy location."
+                  ? "Can not find any location in EU."
+                  : "Can not find any location."
               }
               onSearchChange={handleSearchChange}
               onLocationSelect={(location) => {

@@ -1,6 +1,59 @@
 import type { RoutePlanStatus } from "@/shared/constants/route-plan-status";
 
 export type { RoutePlanStatus };
+export type LocationResponse = {
+  locationId: string | number;
+  locationName: string;
+  locationType?: string | null;
+  address?: string | null;
+  city?: string | null;
+  stateProvince?: string | null;
+  country?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  locationNote?: string | null;
+  updatedAt?: string | null;
+  lastUpdatedAt?: string | null;
+  isDeleted?: boolean;
+};
+
+export type LocationListResponse = {
+  value?: {
+    items?: LocationResponse[];
+    totalPages?: number;
+    hasNextPage?: boolean;
+  };
+  items?: LocationResponse[];
+  totalPages?: number;
+  hasNextPage?: boolean;
+};
+
+export type LocationCreateResponse = {
+  value?: LocationResponse;
+  locationId?: string | number;
+  locationName?: string;
+};
+
+export type RouteResponse = {
+  routeId: string | number;
+  routeName?: string | null;
+  transportMode?: "ROAD" | "SEA" | "AIR" | null;
+  fromLocation: LocationResponse;
+  toLocation: LocationResponse;
+  distanceKm?: number | null;
+  estimatedDurationMinutes?: number | null;
+  updatedAt?: string | null;
+};
+
+export type RouteListResponse = {
+  value?: { items?: RouteResponse[] };
+  items?: RouteResponse[];
+};
+
+export type LocationMutationResponse = {
+  value?: { updatedAt?: string | null };
+};
+export type RouteMutationResponse = { value?: RouteResponse };
 export type RouteType = "PRIMARY" | "BACKUP" | "RETURN";
 export type TransportMode = "ROAD" | "SEA" | "AIR";
 export type SegmentStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED";
