@@ -1,8 +1,10 @@
-import { formatBookingDate } from "@/features/booking/utils"
+import { formatBookingDate as formatDate } from "@/features/booking/utils"
 import { Card, CardContent } from "@/shared/components/ui/card"
 import { ArrowRight, CalendarClock, Clock3, Route, UsersRound, Waypoints } from "lucide-react"
 import type { RoutePlanDetail } from "../types"
 import { durationLabel, replacementLabel } from "../display"
+
+const formatBookingDate = (value: string | null | undefined, includeTime: boolean) => value ? formatDate(value, includeTime) : "Not scheduled"
 
 export function RoutePlanOverview({ plan }: { plan: RoutePlanDetail }) {
   const metrics = [

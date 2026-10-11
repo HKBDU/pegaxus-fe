@@ -18,15 +18,15 @@ export function RouteSegmentList({ segments, review }: { segments: RouteSegment[
         const impact = review?.impact(segment)
         const details = <>
           <dl className={`grid gap-4 text-sm sm:grid-cols-2 ${review ? "" : "lg:grid-cols-3"}`}>
-            <Field label="Planned departure">{formatBookingDate(segment.plannedDepartureAt, true)}</Field>
-            <Field label="Planned arrival">{formatBookingDate(segment.plannedArrivalAt, true)}</Field>
+            <Field label="Planned departure">{segment.plannedDepartureAt ? formatBookingDate(segment.plannedDepartureAt, true) : "Not scheduled"}</Field>
+            <Field label="Planned arrival">{segment.plannedArrivalAt ? formatBookingDate(segment.plannedArrivalAt, true) : "Not scheduled"}</Field>
             <Field label="Distance">{distanceLabel(segment.route.distanceKm)}</Field>
             <Field label="Duration">{durationLabel(segment.route.estimatedDurationMinutes)}</Field>
             {segment.actualDepartureAt && <Field label="Actual departure">{formatBookingDate(segment.actualDepartureAt, true)}</Field>}
             {segment.actualArrivalAt && <Field label="Actual arrival">{formatBookingDate(segment.actualArrivalAt, true)}</Field>}
             {segment.dwellAfterMinutes != null && <Field label="Dwell after segment">{`${segment.dwellAfterMinutes} min`}</Field>}
             {segment.isOutsourced ? <Field label="Provider">{segment.outsourcing?.provider.providerName ?? "Provider information unavailable"}</Field> : <>
-              <Field label="Vehicles">{segment.vehicles.length ? <ul className="space-y-1">{segment.vehicles.map((vehicle) => <li key={vehicle.vehicleId}>{vehicle.vehicleName} · {vehicle.licensePlate || vehicle.vehicleCode} · {vehicle.capacityHorses} horses</li>)}</ul> : "Not assigned"}</Field>
+              <Field label="Vehicles">{segment.vehicles.length ? <ul className="space-y-1">{segment.vehicles.map((vehicle) => <li key={vehicle.vehicleId}>{vehicle.vehicleName || vehicle.vehicleCode} · {vehicle.licensePlate || vehicle.vehicleCode} · {vehicle.capacityHorses == null ? "Capacity unavailable" : `${vehicle.capacityHorses} horses`}</li>)}</ul> : "Not assigned"}</Field>
               <Field label="Driver">{segment.driver?.fullName ?? "Not assigned"}</Field><Field label="Escort">{segment.escort?.fullName ?? "Not assigned"}</Field>
             </>}
           </dl>
@@ -41,7 +41,7 @@ export function RouteSegmentList({ segments, review }: { segments: RouteSegment[
           <p className="break-words text-sm font-semibold">{segment.fromLocation.locationName} → {segment.toLocation.locationName}</p>
           {review ? <>
             <p className="text-xs leading-5 text-slate-500">{impact?.detail}</p>
-            <p className="text-xs text-slate-600">Planned arrival · {formatBookingDate(segment.plannedArrivalAt, true)}</p>
+            <p className="text-xs text-slate-600">Planned arrival · {segment.plannedArrivalAt ? formatBookingDate(segment.plannedArrivalAt, true) : "Not scheduled"}</p>
             <details className="border-t border-slate-100 pt-3"><summary className="cursor-pointer text-xs font-semibold text-slate-700">Timing, resources &amp; notes</summary><div className="mt-4 space-y-4">{details}</div></details>
           </> : details}
         </Section>

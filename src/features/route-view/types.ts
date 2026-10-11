@@ -10,15 +10,7 @@ export type RouteSegment = z.infer<typeof routeSegmentSchema>
 export type RouteLegalReviewData = z.infer<typeof routeLegalReviewSchema>
 export type RouteLocation = z.infer<typeof routeLocationSchema>
 
-// Narrow read-only boundary matching the audited MapViewer public API.
-// No import from an unmerged shared module and no independent map implementation.
-export type RouteMapLocation = { id: string; name: string; type?: string | null; city?: string | null; country?: string | null; latitude: number; longitude: number }
-export type RouteMapViewerProps = {
-  locations: RouteMapLocation[]
-  canEditLocation: false
-  canDeleteLocation: false
-  showSearch: false
-}
+export type { MapLocation as RouteMapLocation, MapViewerProps as RouteMapViewerProps } from "@/shared/components/map"
 export type RouteDetailPath = (routePlanId: string) => string
 
 export type EmergencyRequestMap = {

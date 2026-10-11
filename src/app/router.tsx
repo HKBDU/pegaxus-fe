@@ -102,6 +102,21 @@ const CreateContingencyRoutePage = lazy(() => import("@/features/route-plan/page
 const CreateReturnRoutePage = lazy(() => import("@/features/route-plan/pages/CreateReturnRoutePage"));
 const EditRoutePlanPage = lazy(() => import("@/features/route-plan/pages/EditRoutePlanPage"));
 const MapAssetsPage = lazy(() => import("@/features/route-plan/pages/MapAssetsPage"));
+const ApprovedBookingsPage = lazy(
+  () => import("@/features/transport-plan/pages/ApprovedBookingsPage"),
+);
+const ApprovedBookingDetailsPage = lazy(
+  () => import("@/features/transport-plan/pages/ApprovedBookingDetailsPage"),
+);
+const TransportPlansPage = lazy(
+  () => import("@/features/transport-plan/pages/TransportPlansPage"),
+);
+const TransportPlanDetailsPage = lazy(
+  () => import("@/features/transport-plan/pages/TransportPlanDetailsPage"),
+);
+const DevRoutePlanDetailPage = lazy(
+  () => import("@/features/route-view/pages/RoutePlanDetailPage"),
+);
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />

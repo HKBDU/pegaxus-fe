@@ -5,7 +5,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton"
 import type { RoutePlanDetail } from "../../types"
 import { getSegmentImpact, orderedSegments } from "../../route-comparison"
 import { replacementLabel } from "../../display"
-import { toRouteMapLocations } from "../../adapters/route-plan-map.adapter"
+import { RoutePlanMap } from "../RoutePlanMap"
 import { RouteSegmentList } from "../RouteSegmentList"
 import { RouteLegalReview } from "../RouteLegalReview"
 import { EmergencyChangeSummary } from "./EmergencyChangeSummary"
@@ -13,21 +13,19 @@ import { EmergencyChangeSummary } from "./EmergencyChangeSummary"
 export function RouteChangeComparison({ primary, proposed, loading, error }: { primary?: RoutePlanDetail; proposed: RoutePlanDetail; loading: boolean; error?: string }) {
   const isBackup = proposed.routeType === "BACKUP"
   const destination = orderedSegments(proposed).at(-1)?.toLocation.locationName
-  const currentLocations = primary ? toRouteMapLocations(primary).length : 0
-  const proposedLocations = toRouteMapLocations(proposed).length
   return <div className="min-w-0 space-y-5">
     <section aria-label="Route comparison map"><Section title="Route Comparison Map" icon={MapPin}>
-      <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5 text-center sm:min-h-80 lg:min-h-96">
-        <MapPin aria-hidden="true" className="size-9 text-slate-400" />
-        <h3 className="text-base font-semibold text-slate-800">Map data unavailable</h3>
-        <p className="max-w-lg text-sm leading-6 text-slate-500">The shared route comparison map is not connected and route geometry is not supplied. Review the actual locations and segment sequence below.</p>
-        <p className="text-xs text-slate-500">{primary ? `${currentLocations} PRIMARY locations with coordinates` : "PRIMARY locations awaiting data"} · {proposedLocations} proposed locations with coordinates</p>
+      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+        <div className="min-w-0 space-y-3 border-t-4 border-slate-600 pt-3">
+          <h3 className="text-sm font-semibold text-slate-800">Current PRIMARY</h3>
+          {error ? <ErrorState message={error} /> : loading ? <Skeleton role="status" aria-label="Loading primary map" className="h-[360px] sm:h-[420px] xl:h-[460px]" /> : primary ? <RoutePlanMap plan={primary} /> : <EmptyState message="No current primary route is available." />}
+        </div>
+        <div className="min-w-0 space-y-3 border-t-4 border-primary pt-3">
+          <h3 className="text-sm font-semibold text-slate-800">Proposed {proposed.routeType}</h3>
+          <RoutePlanMap plan={proposed} />
+        </div>
       </div>
-      <ul aria-label="Route comparison legend" className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600">
-        <li className="flex items-center gap-2"><span aria-hidden="true" className="size-2.5 rounded-sm bg-slate-700" />PRIMARY</li>
-        <li className="flex items-center gap-2"><span aria-hidden="true" className="size-2.5 rounded-sm bg-primary" />Proposed {proposed.routeType}</li>
-        <li className="flex items-center gap-2"><span aria-hidden="true" className="size-2.5 rounded-sm border-2 border-primary" />{isBackup ? "Affected PRIMARY segments" : "Remaining PRIMARY legs"}</li>
-      </ul>
+      <p className="text-xs leading-5 text-slate-500">Two independent maps show the supplied stops for each route. Panel labels identify PRIMARY and proposed routes; marker colors do not indicate replacement or travel progress. {isBackup ? "The timeline below identifies the exact replacement range." : "The timeline below distinguishes completed and remaining legs."}</p>
     </Section></section>
     <div className="grid min-w-0 gap-5 lg:grid-cols-2">
       {error ? <ErrorState message={error} /> : loading ? <div role="status" aria-label="Loading route comparison" className="space-y-3"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div> : primary ? <EmergencyChangeSummary plan={primary} title="Current Primary Route" /> : <Section title="Current Primary Route"><EmptyState message="No current primary route is available." /></Section>}

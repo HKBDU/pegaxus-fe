@@ -21,14 +21,15 @@ const providerSchema = z.object({
 })
 export const routeSegmentSchema = z.object({
   routePlanRouteId: entityIdSchema, sequenceNo: z.number().int().positive(), routeType: routeTypeSchema,
-  route: z.object({ routeId: entityIdSchema, routeCode: z.string(), routeName: z.string(), transportMode: transportModeSchema,
+  route: z.object({ routeId: entityIdSchema, routeCode: z.string(), routeName: text, transportMode: transportModeSchema,
     distanceKm: z.number().nonnegative().nullish(), estimatedDurationMinutes: z.number().nonnegative().nullish() }),
   fromLocation: routeLocationSchema, toLocation: routeLocationSchema,
-  plannedDepartureAt: timestamp, plannedArrivalAt: timestamp, actualDepartureAt: timestamp.nullish(), actualArrivalAt: timestamp.nullish(),
+  plannedDepartureAt: timestamp.nullish(), plannedArrivalAt: timestamp.nullish(), actualDepartureAt: timestamp.nullish(), actualArrivalAt: timestamp.nullish(),
   status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]), dwellAfterMinutes: z.number().nonnegative().nullish(), isOutsourced: z.boolean(),
-  vehicles: z.array(z.object({ vehicleId: entityIdSchema, vehicleCode: z.string(), vehicleName: z.string(), licensePlate: text,
-    transportMode: transportModeSchema, capacityHorses: z.number().int().nonnegative() })),
-  outsourcing: z.object({ provider: providerSchema }).nullable(), driver: employeeBriefSchema.nullable(), escort: employeeBriefSchema.nullable(), note: text,
+  vehicles: z.array(z.object({ vehicleId: entityIdSchema, vehicleCode: z.string(), vehicleName: text, licensePlate: text,
+    transportMode: transportModeSchema, capacityHorses: z.number().int().nonnegative().nullish() })),
+  // Current BE returns ProviderResponse directly; keep the established UI/mock shape.
+  outsourcing: z.union([z.object({ provider: providerSchema }), providerSchema.transform(provider => ({ provider }))]).nullable(), driver: employeeBriefSchema.nullable(), escort: employeeBriefSchema.nullable(), note: text,
 })
 export const routeLegalReviewSchema = z.object({
   isFeasible: z.boolean(), note: text, blockedSegments: z.array(z.number().int().positive()).nullish(),
@@ -38,7 +39,7 @@ export const routePlanDetailSchema = z.object({
   routePlanId: entityIdSchema, routePlanCode: z.string(), transportPlanId: entityIdSchema, bookingId: entityIdSchema, bookingCode: z.string(),
   routeType: routeTypeSchema, status: routePlanStatusSchema, isCrossBorder: z.boolean(),
   totalDistanceKm: z.number().nonnegative(), estimatedDurationMinutes: z.number().nonnegative(),
-  plannedDepartureAt: timestamp, plannedArrivalAt: timestamp, segments: z.array(routeSegmentSchema), isPersonnelComplete: z.boolean(),
+  plannedDepartureAt: timestamp.nullish(), plannedArrivalAt: timestamp.nullish(), segments: z.array(routeSegmentSchema), isPersonnelComplete: z.boolean(),
   legalReview: routeLegalReviewSchema.nullable(), replacesSequenceNo: replacesSequenceNoSchema, routeNote: text, createdAt: timestamp, updatedAt: timestamp,
 })
 export const routePlanSummarySchema = routePlanDetailSchema.pick({
