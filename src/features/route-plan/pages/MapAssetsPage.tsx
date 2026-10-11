@@ -31,6 +31,101 @@ import { clearRouteGeometryMemory } from "@/shared/components/map/route-geometry
 
 type AssetLocation = MapLocation;
 
+const LOCATION_SEARCH_CATEGORIES = [
+  "airport",
+  "pet.animal_boarding",
+  "sport.horse_riding",
+  "pet.veterinary",
+].join(",");
+
+const EU_COUNTRY_CODES = new Set([
+  "at",
+  "be",
+  "bg",
+  "hr",
+  "cy",
+  "cz",
+  "dk",
+  "ee",
+  "fi",
+  "fr",
+  "de",
+  "gr",
+  "hu",
+  "ie",
+  "it",
+  "lv",
+  "lt",
+  "lu",
+  "mt",
+  "nl",
+  "pl",
+  "pt",
+  "ro",
+  "sk",
+  "si",
+  "es",
+  "se",
+]);
+
+const EU_SEARCH_RECT = "rect:-31,71,45,34";
+
+async function searchGeoapifyLocationPlaces(
+  query: string,
+  signal: AbortSignal,
+): Promise<GeoapifyPlace[]> {
+  const apiKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
+  if (!apiKey) throw new Error("Geoapify API key is not configured.");
+
+  const params = new URLSearchParams({
+    categories: LOCATION_SEARCH_CATEGORIES,
+    filter: EU_SEARCH_RECT,
+    name: query,
+    limit: "20",
+    lang: "en",
+    apiKey,
+  });
+  const response = await fetch(
+    `https://api.geoapify.com/v2/places?${params.toString()}`,
+    { signal },
+  );
+  if (!response.ok) {
+    throw new Error("Không thể tìm địa điểm trên Geoapify.");
+  }
+
+  const body = (await response.json()) as {
+    features?: Array<{ properties?: Record<string, unknown> }>;
+  };
+  return (body.features ?? []).flatMap((feature) => {
+    const properties = feature.properties;
+    const countryCode =
+      typeof properties?.country_code === "string"
+        ? properties.country_code.toLowerCase()
+        : "";
+    if (!EU_COUNTRY_CODES.has(countryCode)) return [];
+    const latitude = Number(properties?.lat);
+    const longitude = Number(properties?.lon);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return [];
+    return [
+      {
+        name: typeof properties?.name === "string" ? properties.name : null,
+        address:
+          typeof properties?.formatted === "string"
+            ? properties.formatted
+            : null,
+        city: typeof properties?.city === "string" ? properties.city : null,
+        stateProvince:
+          typeof properties?.state === "string" ? properties.state : null,
+        country:
+          typeof properties?.country === "string" ? properties.country : null,
+        countryCode: countryCode || null,
+        latitude,
+        longitude,
+      } satisfies GeoapifyPlace,
+    ];
+  });
+}
+
 type LocationResponse = {
   locationId: string | number;
   locationName: string;
@@ -143,10 +238,17 @@ async function loadLocations(): Promise<MapLocation[]> {
 
     const totalPages = response.value?.totalPages ?? response.totalPages;
     const hasNextPage = response.value?.hasNextPage ?? response.hasNextPage;
-    if (hasNextPage === false || (totalPages !== undefined && pageIndex >= totalPages)) {
+    if (
+      hasNextPage === false ||
+      (totalPages !== undefined && pageIndex >= totalPages)
+    ) {
       break;
     }
-    if (items.length < pageSize && totalPages === undefined && hasNextPage === undefined) {
+    if (
+      items.length < pageSize &&
+      totalPages === undefined &&
+      hasNextPage === undefined
+    ) {
       break;
     }
     pageIndex += 1;
@@ -226,6 +328,7 @@ export default function MapAssetsPage() {
   );
   const [routePoints, setRoutePoints] = useState<MapLocation[]>([]);
   const [searchOptions, setSearchOptions] = useState<MapLocation[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [nearbyPlaces, setNearbyPlaces] = useState<GeoapifyPlace[]>([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [nearbyOpen, setNearbyOpen] = useState(false);
@@ -235,6 +338,7 @@ export default function MapAssetsPage() {
     longitude: number;
   } | null>(null);
   const nearbyAbort = useRef<AbortController | null>(null);
+  const searchAbort = useRef<AbortController | null>(null);
   const routeAbort = useRef<AbortController | null>(null);
   const [routePreview, setRoutePreview] = useState<{
     geometry: unknown;
@@ -277,10 +381,56 @@ export default function MapAssetsPage() {
     };
   }
 
-  function handleSearchChange(query: string) {
+  async function handleSearchChange(query: string) {
+    searchAbort.current?.abort();
+    searchAbort.current = null;
+
+    if (mapMode === "addLocation") {
+      const normalizedQuery = query.trim();
+      if (!normalizedQuery) {
+        setSearchOptions([]);
+        setSearchLoading(false);
+        return;
+      }
+
+      const controller = new AbortController();
+      searchAbort.current = controller;
+      setSearchLoading(true);
+      try {
+        const places = await searchGeoapifyLocationPlaces(
+          normalizedQuery,
+          controller.signal,
+        );
+        setSearchOptions(
+          places.map((place, index) =>
+            placeToLocation(
+              place,
+              `geoapify-${place.latitude}-${place.longitude}-${index}`,
+            ),
+          ),
+        );
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setSearchOptions([]);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Không thể tìm địa điểm trên Geoapify.",
+          );
+        }
+      } finally {
+        if (searchAbort.current === controller) {
+          searchAbort.current = null;
+          setSearchLoading(false);
+        }
+      }
+      return;
+    }
+
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) {
       setSearchOptions(locations);
+      setSearchLoading(false);
       return;
     }
 
@@ -297,6 +447,7 @@ export default function MapAssetsPage() {
           .some((value) => value!.toLowerCase().includes(normalizedQuery)),
       ),
     );
+    setSearchLoading(false);
   }
 
   async function handleMapClick(point: {
@@ -656,10 +807,26 @@ export default function MapAssetsPage() {
               preview={routePreview}
               showSearch
               searchOptions={searchOptions}
+              searchLoading={searchLoading}
+              searchEmptyMessage={
+                mapMode === "addLocation"
+                  ? "Không tìm thấy địa điểm phù hợp tại EU."
+                  : "Không tìm thấy location."
+              }
               onSearchChange={handleSearchChange}
+              onLocationSelect={(location) => {
+                if (mapMode !== "addLocation") return;
+                searchAbort.current?.abort();
+                setSearchLoading(false);
+                setMapMode("view");
+                setLocationEditor({ mode: "add", location });
+              }}
               mode={mapMode}
               onModeChange={(mode) => {
                 setMapMode(mode === "buildPlan" ? "view" : mode);
+                searchAbort.current?.abort();
+                setSearchLoading(false);
+                setSearchOptions(mode === "addLocation" ? [] : locations);
                 if (mode !== "addRoute") setRoutePoints([]);
               }}
               canEditLocation
