@@ -1,4 +1,4 @@
-import type { ComponentType } from "react"
+import type { ComponentType, ReactNode } from "react"
 import { Tabs } from "radix-ui"
 import { useSearchParams } from "react-router-dom"
 import { GitBranch, ListOrdered, MapPin } from "lucide-react"
@@ -11,12 +11,14 @@ import { RouteSegmentList } from "./RouteSegmentList"
 import { RouteContingencyTab } from "./RouteContingencyTab"
 import { RouteLegalReview } from "./RouteLegalReview"
 
-export function RoutePlanDetails({ plan, mapViewer, routeDetailPath }: { plan: RoutePlanDetail; mapViewer?: ComponentType<RouteMapViewerProps>; routeDetailPath?: RouteDetailPath }) {
+export function RoutePlanDetails({ plan, mapViewer, routeDetailPath, emergencyArea, emergencyWorkspace }: { plan: RoutePlanDetail; mapViewer?: ComponentType<RouteMapViewerProps>; routeDetailPath?: RouteDetailPath; emergencyArea?: ReactNode; emergencyWorkspace?: ReactNode }) {
   const [params, setParams] = useSearchParams()
   const selected = routeViewTabSchema.safeParse(params.get("tab") ?? "map")
   const active = selected.success ? selected.data : "map"
   return <div className="space-y-5">
     <RoutePlanHeader plan={plan} />
+    {emergencyArea}
+    {emergencyWorkspace ?? <>
     <RoutePlanOverview plan={plan} />
     <Tabs.Root value={active} onValueChange={(value) => setParams((current) => {
       const next = new URLSearchParams(current); next.set("tab", routeViewTabSchema.parse(value)); return next
@@ -30,5 +32,6 @@ export function RoutePlanDetails({ plan, mapViewer, routeDetailPath }: { plan: R
       <Tabs.Content value="contingency" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><RouteContingencyTab plan={plan} routeDetailPath={routeDetailPath} /></Tabs.Content>
     </Tabs.Root>
     <RouteLegalReview review={plan.legalReview} />
+    </>}
   </div>
 }

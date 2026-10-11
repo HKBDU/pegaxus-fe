@@ -1,5 +1,6 @@
 import type { ApprovedBookingDetail } from "../types"
 import type { TransportPlanDetail, TransportPlanStatus } from "../transport-plan.types"
+import { routePlanDetailSchema } from "@/features/route-view/schemas"
 
 export const mockId = (group: number, index: number) => `${group.toString(16).padStart(8, "0")}-0000-4000-8000-${index.toString(16).padStart(12, "0")}`
 const timestamp = "2026-10-09T08:00:00Z"
@@ -35,7 +36,7 @@ function routeFixture(index: number, plan: TransportPlanDetail, backup = false, 
     driver: backup || offset === 1 ? null : employee(3, "DRIVER"), escort: backup || offset === 1 ? null : employee(4, "ESCORT"),
     note: offset === 1 ? "Fictional outsourced segment for development only." : null,
   }))
-  return {
+  return routePlanDetailSchema.parse({
     routePlanId: mockId(4, index), routePlanCode: `RP-DEMO-${String(index).padStart(4, "0")}`, transportPlanId: plan.transportPlanId,
     bookingId: plan.booking.bookingId, bookingCode: plan.booking.bookingCode, routeType: type,
     status: index === 6 ? "CONFIRMED" : "DRAFT", isCrossBorder: true,
@@ -47,7 +48,16 @@ function routeFixture(index: number, plan: TransportPlanDetail, backup = false, 
     legalReview: index === 6 || missingCoordinates ? { isFeasible: !missingCoordinates, note: missingCoordinates ? "Demo permit restriction; coordinator revision required." : "Demo legal feasibility confirmed.",
       blockedSegments: missingCoordinates ? [3] : [], reviewedBy: employee(1, "TRANSPORT_SPECIALIST"), reviewedAt: timestamp } : null,
     routeNote: backup ? "Fictional backup option; not an operational itinerary." : null, createdAt: timestamp, updatedAt: timestamp,
-  }
+  })
+}
+
+// Additional emergency scenarios; none of the UC32/34/35/38 fixture IDs change.
+export const emergencyMockIds = {
+  backupPrimary: mockId(4, 20), backup: mockId(4, 21), backupPlan: mockId(3, 20),
+  returnPrimary: mockId(4, 22), returnDraft: mockId(4, 23), returnBooking: mockId(1, 21), returnPlan: mockId(3, 21),
+  confirmedReturnPrimary: mockId(4, 24), returnConfirmed: mockId(4, 25), confirmedReturnPlan: mockId(3, 22),
+  belowThresholdBackup: mockId(4, 27), resourceConflictReturn: mockId(4, 29),
+  returnActive: mockId(4, 31),
 }
 
 export function createFlow3Fixtures() {
@@ -92,5 +102,41 @@ export function createFlow3Fixtures() {
       route: { ...segment.route, routeName: "Return from CDG to Paris", distanceKm: 48.2, estimatedDurationMinutes: 110 }, dwellAfterMinutes: null })),
     totalDistanceKm: 48.2, estimatedDurationMinutes: 110,
   })
+  for (const index of [20, 21, 22, 23, 24, 25]) {
+    const booking: ApprovedBookingDetail = structuredClone(bookings[5])
+    Object.assign(booking, { bookingId: mockId(1, index), bookingCode: `REQ-DEMO-${index}`, transportPlan: null, routePlans: [],
+      transport: { transportId: mockId(2, index), transportCode: `TR-DEMO-${index}`, status: "IN_TRANSIT" },
+      complianceDossier: { complianceDossierId: mockId(7, index), status: "APPROVED" } })
+    const plan: TransportPlanDetail = { ...structuredClone(plans.find(item => item.transportPlanId === mockId(3, 6))!),
+      transportPlanId: mockId(3, index), planCode: `TP-EMERGENCY-${index}`, status: "APPROVED",
+      booking: { ...booking, customerName: booking.customer.fullName }, transport: booking.transport!, planningNote: "Development-only UC48 in-transit scenario." }
+    bookings.push(booking); plans.push(plan)
+    const primaryIndex = 20 + (index - 20) * 2
+    const primary = routeFixture(primaryIndex, plan)
+    primary.status = "ACTIVE"
+    primary.segments[0].status = "COMPLETED"
+    primary.segments[0].actualDepartureAt = primary.segments[0].plannedDepartureAt
+    primary.segments[0].actualArrivalAt = primary.segments[0].plannedArrivalAt
+    routes.push(primary)
+    const proposed = routeFixture(primaryIndex + 1, plan, index === 20 || index === 23)
+    proposed.status = index === 21 ? "DRAFT" : index === 25 ? "ACTIVE" : "CONFIRMED"
+    proposed.legalReview = proposed.status !== "DRAFT" ? { isFeasible: true, note: "Mock TS feasibility confirmation.", blockedSegments: [], reviewedBy: employee(1, "TRANSPORT_SPECIALIST"), reviewedAt: timestamp } : null
+    if (proposed.routeType === "BACKUP") {
+      // Replacement starts after the completed first primary segment.
+      proposed.segments = proposed.segments.slice(1).map((segment, offset) => ({ ...segment, sequenceNo: offset + 1,
+        ...(offset === 0 ? { fromLocation: primary.segments[1].fromLocation } : {}) }))
+      proposed.replacesSequenceNo = { from: 2, to: 3 }
+      proposed.totalDistanceKm = 410; proposed.estimatedDurationMinutes = 600
+      proposed.routeNote = "Prepared contingency via Dover; replacement metrics only."
+    } else {
+      const leg = proposed.segments[0]
+      proposed.routeType = "RETURN"; proposed.replacesSequenceNo = null
+      proposed.routeNote = "Emergency return due to unsafe conditions at the destination."
+      proposed.segments = [{ ...leg, routeType: "RETURN", fromLocation: locations[1], toLocation: locations[0], dwellAfterMinutes: null,
+        route: { ...leg.route, routeName: "Emergency return to Paris", distanceKm: 48.2, estimatedDurationMinutes: 110 } }]
+      proposed.totalDistanceKm = 48.2; proposed.estimatedDurationMinutes = 110
+    }
+    routes.push(proposed)
+  }
   return { bookings, plans, routes }
 }

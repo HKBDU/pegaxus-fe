@@ -28,8 +28,8 @@ export function RoutePlansWorkspace({ transportPlanId, planStatus, transportStat
   const role = getWorkspaceRole(principal)
   const manager = role === "manager", coordinator = role === "coordinator", specialist = role === "specialist"
   const unlocked = beforeDeparture(transportStatus)
-  const context = { principal, planStatus, transportStatus, dossierStatus }
   const items = query.data?.items ?? []
+  const context = { principal, planStatus, transportStatus, dossierStatus, hasActivePrimary: items.some(route => route.routeType === "PRIMARY" && route.status === "ACTIVE") }
   const primary = items.find(item => item.routeType === "PRIMARY" && item.status !== "CANCELLED")
   const title = specialist ? "Route Legal Review" : manager ? "Route Monitoring" : "Route Plans"
   const creation = getPendingRouteCreation(items, context)

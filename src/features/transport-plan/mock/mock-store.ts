@@ -2,7 +2,11 @@ import { approvedBookingDetailSchema, approvedBookingsPageSchema, approvedBookin
 import { createTransportPlanSchema, transportPlanDetailSchema, transportPlansQuerySchema, updateTransportPlanSchema } from "../transport-plan.schemas"
 import type { ApprovedBookingDetail, ApprovedBookingsQueryParams } from "../types"
 import type { CreateTransportPlanInput, TransportPlanDetail, TransportPlansQueryParams, UpdateTransportPlanInput } from "../transport-plan.types"
-import { createFlow3Fixtures } from "./fixtures"
+import { createFlow3Fixtures, emergencyMockIds } from "./fixtures"
+import type { AuthPrincipal } from "@/features/auth/types"
+import { canUseEmergencyAction } from "@/features/route-view/emergency-policy"
+import { backupChangeRequestSchema, routeChangeDecisionSchema, returnActivationSchema, driverNoticeSchema } from "@/features/route-view/schemas"
+import type { EmergencyAction } from "@/features/route-view/types"
 
 const success = <T>(value: T, code = 200) => ({ isSuccess: true as const, code, message: "Development mock response", value: structuredClone(value) })
 const failure = (code: number, errorCode: string, message: string) => ({ isSuccess: false as const, code, errorCode, message, value: null })
@@ -106,6 +110,87 @@ export function createFlow3MockStore() {
     getRoute(id: string) {
       const route = routes.find((item) => item.routePlanId === id)
       return route ? success(route) : failure(404, "ROUTE_PLAN_NOT_FOUND", "Route plan not found.")
+    },
+    executeEmergency(action: EmergencyAction, id: string, input: unknown, principal: AuthPrincipal | null) {
+      if (!canUseEmergencyAction(action, principal)) return failure(403, "FORBIDDEN", "This role cannot perform the emergency action.")
+      const route = routes.find(item => item.routePlanId === id)
+      if (!route) return failure(404, "ROUTE_PLAN_NOT_FOUND", "Route plan not found.")
+      const plan = plans.find(item => item.transportPlanId === route.transportPlanId)!
+      const booking = bookings.find(item => item.bookingId === route.bookingId)!
+      if (plan.transport.status !== "IN_TRANSIT") return failure(409, "TRANSPORT_NOT_IN_TRANSIT", "The transport is not in transit.")
+      const invalidStatus = () => failure(409, "INVALID_ROUTE_PLAN_STATUS", "The route status does not allow this action.")
+      const modified = () => failure(409, "ROUTE_PLAN_MODIFIED", "The route plan was just modified. Review the latest data.")
+      const invalid = () => failure(400, "VALIDATION_ERROR", "Check the emergency form fields.")
+      if (action === "request") {
+        const parsed = backupChangeRequestSchema.safeParse(input)
+        if (!parsed.success) return invalid()
+        if (route.routeType !== "BACKUP" || route.status !== "CONFIRMED") return invalidStatus()
+        if (!routesFor(plan.transportPlanId).some(item => item.routeType === "PRIMARY" && item.status === "ACTIVE")) return invalidStatus()
+        if (id === emergencyMockIds.belowThresholdBackup) return failure(422, "APPROVAL_NOT_REQUIRED", "The change is below BR-036 approval threshold.")
+        // EC1 only simulates notification; it does not persist a ChangeRequest or change route status.
+        return success({ routePlanId: id, routeType: "BACKUP", status: "CONFIRMED", requestedAt: now() })
+      }
+      if (action === "decision") {
+        const parsed = routeChangeDecisionSchema.safeParse(input)
+        if (!parsed.success) return invalid()
+        const body = parsed.data
+        if (body.lastUpdatedAt !== route.updatedAt) return modified()
+        if (!((route.routeType === "BACKUP" && route.status === "CONFIRMED") || (route.routeType === "RETURN" && route.status === "DRAFT"))) return invalidStatus()
+        if (route.routeType === "RETURN") {
+          if (body.decision === "APPROVE") {
+            if (booking.complianceDossier?.status !== "APPROVED") return failure(409, "DOSSIER_NOT_APPROVED", "Return approval requires an approved dossier.")
+            booking.complianceDossier.status = "DRAFT"
+          } else { route.status = "CANCELLED"; route.routeNote = body.note }
+        } else if (body.decision === "APPROVE") route.status = "ACTIVE"
+        route.updatedAt = now()
+        return success({ routePlanId: id, routeType: route.routeType, decision: body.decision, status: route.status,
+          complianceDossier: route.routeType === "RETURN" ? booking.complianceDossier : null, updatedAt: route.updatedAt })
+      }
+      if (action === "activation") {
+        const parsed = returnActivationSchema.safeParse(input)
+        if (!parsed.success) return invalid()
+        const body = parsed.data
+        if (body.lastUpdatedAt !== route.updatedAt) return modified()
+        if (route.routeType !== "RETURN" || route.status !== "CONFIRMED") return invalidStatus()
+        if (booking.complianceDossier?.status !== "APPROVED") return failure(409, "DOSSIER_NOT_APPROVED", "Complete the legal and dossier workflow first.")
+        if (id === emergencyMockIds.resourceConflictReturn) return { ...failure(409, "SCHEDULE_CONFLICT", "Mock scheduling conflict."), errors: [{ field: "segments[0].vehicleIds", message: "The vehicle is already reserved." }] }
+        const nextSegments = structuredClone(route.segments)
+        for (const override of body.segments ?? []) {
+          const segment = nextSegments.find(item => item.routePlanRouteId === override.routePlanRouteId)
+          if (!segment) return invalid()
+          if (override.vehicleIds !== undefined) {
+            if (segment.isOutsourced) return failure(422, "OUTSOURCED_SEGMENT", "An outsourced segment cannot receive vehicles.")
+            const vehicles = routes.flatMap(item => item.segments.flatMap(leg => leg.vehicles))
+            const selected = override.vehicleIds.map(vehicleId => vehicles.find(vehicle => vehicle.vehicleId === vehicleId))
+            if (selected.some(vehicle => !vehicle)) return failure(422, "VEHICLE_UNAVAILABLE", "Vehicle not available.")
+            if (selected.some(vehicle => vehicle!.transportMode !== segment.route.transportMode)) return failure(422, "VEHICLE_MODE_MISMATCH", "Vehicle mode does not match.")
+            segment.vehicles = selected.filter(vehicle => vehicle !== undefined)
+          }
+          if (override.outsourcing) {
+            const provider = routes.flatMap(item => item.segments.map(leg => leg.outsourcing?.provider)).find(item => item?.transportProviderId === override.outsourcing!.transportProviderId)
+            if (!provider || provider.status !== "ACTIVE") return failure(409, "PROVIDER_INACTIVE", "Provider unavailable.")
+            if (!provider.supportedModes.includes(segment.route.transportMode)) return failure(422, "PROVIDER_MODE_MISMATCH", "Provider mode does not match.")
+            segment.isOutsourced = true; segment.vehicles = []; segment.outsourcing = { provider }
+          }
+        }
+        route.segments = nextSegments; route.status = "ACTIVE"; route.updatedAt = now()
+        return success({ routePlanId: id, routeType: "RETURN", status: "ACTIVE", segments: route.segments, updatedAt: route.updatedAt })
+      }
+      const parsed = driverNoticeSchema.safeParse(input)
+      if (!parsed.success) return invalid()
+      if (route.routeType !== "RETURN" || !["CONFIRMED", "ACTIVE"].includes(route.status)) return invalidStatus()
+      const drivers = routesFor(plan.transportPlanId).filter(item => item.routeType === "PRIMARY").flatMap(item => item.segments.map(segment => segment.driver)).filter(driver => driver !== null)
+      return success({ routePlanId: id, notifiedDrivers: [...new Map(drivers.map(driver => [driver.employeeId, driver])).values()], sentAt: now() })
+    },
+    // Test-only simulation of the external TS/RP7 transaction. Never called by UC48 UI.
+    simulateReturnLegalReview(id: string) {
+      const route = routes.find(item => item.routePlanId === id)
+      const booking = bookings.find(item => item.bookingId === route?.bookingId)
+      if (!route || route.routeType !== "RETURN" || route.status !== "DRAFT" || booking?.complianceDossier?.status !== "DRAFT") return failure(409, "RETURN_NOT_APPROVED", "LM approval must precede RP7.")
+      booking.complianceDossier.status = "APPROVED"
+      route.status = "CONFIRMED"; route.updatedAt = now()
+      route.legalReview = { isFeasible: true, note: "Simulated external RP7 return confirmation.", blockedSegments: [], reviewedAt: route.updatedAt }
+      return success(route)
     },
   }
 }

@@ -7,6 +7,7 @@ export type RouteWorkspaceContext = {
   planStatus: string
   transportStatus?: string | null
   dossierStatus?: string | null
+  hasActivePrimary?: boolean
 }
 export type PendingRouteAction = { label: string; reason: string }
 export const beforeDeparture = (status?: string | null) => Boolean(status && ["CREATED", "PLANNING", "READY"].includes(status))

@@ -8,10 +8,56 @@ import { readEnvelope, getApiErrorInfo } from "@/features/transport-plan/service
 import { isFlow3MockMode } from "@/features/transport-plan/source"
 import { routePlanIdSchema, routePlanDetailSchema, routePlansQuerySchema, routePlansSchema } from "./schemas"
 import type { RoutePlansQuery } from "./types"
+import { backupChangeRequestSchema, backupChangeRequestResultSchema, routeChangeDecisionSchema, routeChangeDecisionResultSchema,
+  returnActivationSchema, returnActivationResultSchema, driverNoticeSchema, driverNoticeResultSchema } from "./schemas"
+import { canUseEmergencyAction } from "./emergency-policy"
+import type { EmergencyAction, EmergencyRequestMap, EmergencyResultMap } from "./types"
 
 export const canViewRoute = (principal: AuthPrincipal | null) => canAccess(principal, { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] })
 export const canExportRoute = (principal: AuthPrincipal | null) => canAccess(principal, { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR"] })
 const routePath = (id: string) => `/route-plans/${encodeURIComponent(routePlanIdSchema.parse(id))}`
+
+const emergencyContracts = {
+  request: { path: "change-request", input: backupChangeRequestSchema, output: backupChangeRequestResultSchema },
+  decision: { path: "change-decision", input: routeChangeDecisionSchema, output: routeChangeDecisionResultSchema },
+  activation: { path: "return-activation", input: returnActivationSchema, output: returnActivationResultSchema },
+  notice: { path: "driver-notice", input: driverNoticeSchema, output: driverNoticeResultSchema },
+}
+export async function executeEmergencyAction<A extends EmergencyAction>(action: A, id: string, input: EmergencyRequestMap[A]): Promise<EmergencyResultMap[A]> {
+  const path = routePath(id), contract = emergencyContracts[action]
+  const principal = useAuthStore.getState().principal
+  if (!canUseEmergencyAction(action, principal)) {
+    readEnvelope({ isSuccess: false, code: 403, errorCode: "FORBIDDEN", message: "You do not have permission to perform this emergency action.", value: null })
+  }
+  const body = contract.input.parse(input)
+  const payload = !import.meta.env.PROD && isFlow3MockMode()
+    ? (await import("@/features/transport-plan/mock/mock-service")).flow3MockService.executeEmergency(action, id, body, principal)
+    : await apiClient.post<unknown, unknown>(`${path}/${contract.path}`, body)
+  return contract.output.parse(readEnvelope(payload)) as EmergencyResultMap[A]
+}
+
+export function getEmergencyError(error: unknown) {
+  const info = getApiErrorInfo(error)
+  const messages: Record<string, string> = {
+    APPROVAL_NOT_REQUIRED: "This change is below the approval threshold. No emergency approval request was sent.",
+    ROUTE_PLAN_MODIFIED: "This route changed while you were working. Review the latest route before submitting again.",
+    INVALID_ROUTE_PLAN_STATUS: "This action is no longer available for the current route status.",
+    TRANSPORT_NOT_IN_TRANSIT: "Emergency actions require a transport that is in transit.",
+    DOSSIER_NOT_APPROVED: "The compliance dossier must be approved before this return can proceed.",
+    SCHEDULE_CONFLICT: "A segment resource has a scheduling conflict.",
+    PROVIDER_INACTIVE: "The selected transport provider is inactive.",
+    OUTSOURCED_SEGMENT: "Vehicles cannot be assigned to an outsourced segment.",
+    VEHICLE_MODE_MISMATCH: "The vehicle mode does not match the segment.",
+    VEHICLE_UNAVAILABLE: "A vehicle is unavailable for this segment.",
+    VEHICLE_CAPACITY_EXCEEDED: "Vehicle capacity is insufficient for this segment.",
+    PROVIDER_MODE_MISMATCH: "The provider does not support this segment's transport mode.",
+  }
+  const denied = info.status === 403 || info.code === "FORBIDDEN"
+  const unauthorized = info.status === 401 || info.code === "UNAUTHORIZED"
+  return { ...info, denied, unauthorized, stale: info.code === "ROUTE_PLAN_MODIFIED",
+    message: denied ? "You do not have permission to access this emergency workspace." : unauthorized ? "Your session has expired. Please sign in again." :
+      error instanceof z.ZodError ? "Check the form fields or contact support if the API response is unexpected." : messages[info.code ?? ""] || info.message || (error instanceof Error ? error.message : "Unable to complete the emergency action.") }
+}
 
 async function parseErrorBlob(blob: Blob) {
   let payload: unknown

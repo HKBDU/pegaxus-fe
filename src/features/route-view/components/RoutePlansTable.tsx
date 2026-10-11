@@ -10,6 +10,7 @@ import { formatPlanDate } from "@/features/transport-plan/format"
 import { distanceLabel, durationLabel, replacementLabel } from "../display"
 import { getPendingRouteActions, type RouteWorkspaceContext } from "../workspace-actions"
 import type { RouteDetailPath, RoutePlanSummary } from "../types"
+import { emergencyActionLabels, emergencyActionPath, getEmergencyActions } from "../emergency-policy"
 
 export function RoutePlansTable({ routes, context, routeDetailPath, isLoading = false }: {
   routes: RoutePlanSummary[]; context: RouteWorkspaceContext; routeDetailPath?: RouteDetailPath; isLoading?: boolean
@@ -29,6 +30,7 @@ export function RoutePlansTable({ routes, context, routeDetailPath, isLoading = 
       <DropdownMenuContent align="end" className="max-w-72">
         {routeDetailPath ? <DropdownMenuItem asChild><Link to={routeDetailPath(row.original.routePlanId)}>View Details</Link></DropdownMenuItem> : <DropdownMenuItem disabled title="Route detail navigation is not available yet.">View Details — unavailable</DropdownMenuItem>}
         {getPendingRouteActions(row.original, context).map(action => <DropdownMenuItem key={action.label} disabled title={action.reason} className="items-start"><span>{action.label}<span className="mt-1 block whitespace-normal text-[11px]">{action.reason}</span></span></DropdownMenuItem>)}
+        {getEmergencyActions(row.original, context).map(action => routeDetailPath ? <DropdownMenuItem key={action} asChild><Link to={emergencyActionPath(routeDetailPath(row.original.routePlanId), action)}>{emergencyActionLabels[action]}</Link></DropdownMenuItem> : <DropdownMenuItem key={action} disabled title="Route detail registration is required.">{emergencyActionLabels[action]} — navigation pending</DropdownMenuItem>)}
       </DropdownMenuContent>
     </DropdownMenu> },
   ], [context, routeDetailPath])

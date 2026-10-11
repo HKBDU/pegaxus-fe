@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { entityIdSchema, routePlanStatusSchema } from "@/features/transport-plan/schemas"
+import { dossierStatusSchema, entityIdSchema, routePlanStatusSchema } from "@/features/transport-plan/schemas"
 import { employeeBriefSchema } from "@/features/transport-plan/transport-plan.schemas"
 
 export const routePlanIdSchema = entityIdSchema
@@ -47,3 +47,44 @@ export const routePlanSummarySchema = routePlanDetailSchema.pick({
 export const routePlansSchema = z.object({ items: z.array(routePlanSummarySchema) })
 export const routePlansQuerySchema = z.object({ routeType: routeTypeSchema.optional(), status: routePlanStatusSchema.optional(), includeCancelled: z.boolean().optional() })
 export const routeViewTabSchema = z.enum(["map", "segments", "contingency"])
+
+const optionalNote = z.string().trim().optional().transform(value => value || undefined)
+export const backupChangeRequestSchema = z.object({
+  reason: z.string().trim().min(10, "Explain the change in at least 10 characters."),
+  newEstimatedArrivalAt: timestamp,
+  estimatedExtraCost: z.number().finite().optional(),
+  currency: optionalNote,
+  note: optionalNote,
+}).refine(input => input.estimatedExtraCost === undefined || Boolean(input.currency), {
+  path: ["currency"], message: "Currency is required when an extra cost is supplied.",
+})
+export const routeChangeDecisionSchema = z.object({
+  lastUpdatedAt: timestamp, decision: z.enum(["APPROVE", "REJECT"]), note: optionalNote,
+}).refine(input => input.decision !== "REJECT" || (input.note?.length ?? 0) >= 10, {
+  path: ["note"], message: "Explain the rejection in at least 10 characters.",
+})
+export const returnSegmentOverrideSchema = z.object({
+  routePlanRouteId: entityIdSchema,
+  vehicleIds: z.array(entityIdSchema).optional(),
+  outsourcing: z.object({ transportProviderId: entityIdSchema, note: optionalNote }).optional(),
+}).refine(input => input.vehicleIds === undefined || input.outsourcing === undefined, {
+  path: ["vehicleIds"], message: "A segment cannot receive both vehicles and outsourcing.",
+})
+export const returnActivationSchema = z.object({
+  lastUpdatedAt: timestamp, segments: z.array(returnSegmentOverrideSchema).optional(), note: optionalNote,
+}).refine(input => !input.segments || new Set(input.segments.map(segment => segment.routePlanRouteId)).size === input.segments.length, {
+  path: ["segments"], message: "Submit each segment only once.",
+})
+export const driverNoticeSchema = z.object({ message: optionalNote })
+export const backupChangeRequestResultSchema = z.object({
+  routePlanId: entityIdSchema, routeType: z.literal("BACKUP"), status: z.literal("CONFIRMED"), requestedAt: timestamp,
+})
+export const routeChangeDecisionResultSchema = z.object({
+  routePlanId: entityIdSchema, routeType: z.enum(["BACKUP", "RETURN"]), decision: z.enum(["APPROVE", "REJECT"]),
+  status: routePlanStatusSchema, updatedAt: timestamp,
+  complianceDossier: z.object({ complianceDossierId: entityIdSchema, status: dossierStatusSchema }).nullable(),
+})
+export const returnActivationResultSchema = z.object({
+  routePlanId: entityIdSchema, routeType: z.literal("RETURN"), status: z.literal("ACTIVE"), segments: z.array(routeSegmentSchema), updatedAt: timestamp,
+})
+export const driverNoticeResultSchema = z.object({ routePlanId: entityIdSchema, notifiedDrivers: z.array(employeeBriefSchema), sentAt: timestamp })
