@@ -132,14 +132,14 @@ const location: MapLocation = {
 
 ## Các callback chính
 
-| Callback | Khi nào chạy |
-| --- | --- |
+| Callback           | Khi nào chạy                              |
+| ------------------ | ----------------------------------------- |
 | `onLocationSelect` | User chọn marker hoặc option trong search |
-| `onLocationHover` | User hover vào/rời marker |
-| `onMapClick` | User click một điểm trên map |
-| `onMarkerAction` | User bấm Edit/Delete trong popup |
-| `onRouteSelect` | User click Route line |
-| `onSearchChange` | Search input sau debounce |
+| `onLocationHover`  | User hover vào/rời marker                 |
+| `onMapClick`       | User click một điểm trên map              |
+| `onMarkerAction`   | User bấm Edit/Delete trong popup          |
+| `onRouteSelect`    | User click Route line                     |
+| `onSearchChange`   | Search input sau debounce                 |
 
 `MapViewer` không gọi API mutation và không kiểm tra role. Container cần truyền:
 
@@ -213,7 +213,7 @@ Trang test:
 
 - Login qua BE bằng từng role.
 - Gọi `GET /locations` bằng access token thật.
-- Nếu BE chưa có Location, fallback sang `/locations-camelcase.json`.
+- Nếu BE chưa trả về Location, hiển thị trạng thái rỗng/lỗi từ API; không dùng dữ liệu fallback.
 - Hiển thị nguồn dữ liệu `BE` hoặc `MOCK`.
 - Coordinator thấy các action Add Location và Create Route.
 - Role khác chỉ thấy chức năng đọc.

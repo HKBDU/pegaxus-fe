@@ -215,8 +215,12 @@ export interface LegalReviewResult extends RoutePlanMutationResult {
 
 export interface RoutePlanListParams {
   routeType?: RouteType;
-  pageIndex?: number;
-  pageSize?: number;
+  status?: RoutePlanStatus;
+  includeCancelled?: boolean;
+}
+
+export interface RoutePlanListValue {
+  items: RoutePlan[];
 }
 
 export interface MasterListParams {

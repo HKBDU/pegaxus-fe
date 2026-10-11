@@ -88,8 +88,6 @@ export default function EditRoutePlanPage() {
         if (routePlan.routeType !== "BACKUP") return;
         const routePlans = await getRoutePlans(routePlan.transportPlanId, {
           routeType: "PRIMARY",
-          pageIndex: 1,
-          pageSize: 20,
         });
         const primary = routePlans.items.find(
           (item) => item.routeType === "PRIMARY" && item.status !== "CANCELLED",
