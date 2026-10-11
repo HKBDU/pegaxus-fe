@@ -23,18 +23,18 @@ import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearan
 import CustomsClearanceReviewPage from "@/features/clearance/pages/CustomsClearanceReviewPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
-const ApprovedBookingsPage = lazy(() => import("@/features/transport-plan/pages/ApprovedBookingsPage"));
-const ApprovedBookingDetailsPage = lazy(() => import("@/features/transport-plan/pages/ApprovedBookingDetailsPage"));
-const TransportPlansPage = lazy(() => import("@/features/transport-plan/pages/TransportPlansPage"));
-const TransportPlanDetailsPage = lazy(() => import("@/features/transport-plan/pages/TransportPlanDetailsPage"));
-// TEMP UC-38 LOCAL PREVIEW: remove this declaration after manual testing; do not commit.
-const DevRoutePlanDetailPage = import.meta.env.DEV
-  ? lazy(() => import("@/features/route-view/pages/RoutePlanDetailPage"))
-  : () => null;
-const ManageUserAccountsPage = lazy(() => import("@/features/accounts/pages/ManageUserAccountsPage"));
-const CreateEmployeeAccountPage = lazy(() => import("@/features/accounts/pages/CreateEmployeeAccountPage"));
-const ViewUserAccountPage = lazy(() => import("@/features/accounts/pages/ViewUserAccountPage"));
-const EditUserAccountPage = lazy(() => import("@/features/accounts/pages/EditUserAccountPage"));
+const ManageUserAccountsPage = lazy(
+  () => import("@/features/accounts/pages/ManageUserAccountsPage"),
+);
+const CreateEmployeeAccountPage = lazy(
+  () => import("@/features/accounts/pages/CreateEmployeeAccountPage"),
+);
+const ViewUserAccountPage = lazy(
+  () => import("@/features/accounts/pages/ViewUserAccountPage"),
+);
+const EditUserAccountPage = lazy(
+  () => import("@/features/accounts/pages/EditUserAccountPage"),
+);
 const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
 const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const GoogleCallbackPage = lazy(
@@ -97,6 +97,11 @@ const DossierAuditHistoryPage = lazy(
 const DossierRequirementsPage = lazy(
   () => import("@/features/compliance-catalog/pages/DossierRequirementsPage"),
 );
+const CreateRoutePlanPage = lazy(() => import("@/features/route-plan/pages/CreateRoutePlanPage"));
+const CreateContingencyRoutePage = lazy(() => import("@/features/route-plan/pages/CreateContingencyRoutePage"));
+const CreateReturnRoutePage = lazy(() => import("@/features/route-plan/pages/CreateReturnRoutePage"));
+const EditRoutePlanPage = lazy(() => import("@/features/route-plan/pages/EditRoutePlanPage"));
+const MapAssetsPage = lazy(() => import("@/features/route-plan/pages/MapAssetsPage"));
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />
@@ -192,19 +197,35 @@ export const router = createBrowserRouter([
           },
           {
             path: "bookings",
-            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingListPage /></ProtectedRoute>,
+            element: (
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <BookingListPage />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "bookings/new",
-            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingFormPage mode="create" /></ProtectedRoute>,
+            element: (
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <BookingFormPage mode="create" />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "bookings/:bookingId",
-            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingDetailsPage /></ProtectedRoute>,
+            element: (
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <BookingDetailsPage />
+              </ProtectedRoute>
+            ),
           },
           {
             path: "bookings/:bookingId/edit",
-            element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><BookingFormPage mode="edit" /></ProtectedRoute>,
+            element: (
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <BookingFormPage mode="edit" />
+              </ProtectedRoute>
+            ),
           },
         ],
       },
@@ -260,15 +281,27 @@ export const router = createBrowserRouter([
       },
       {
         path: ROLE_ROUTES.managerCreateUser,
-        element: <Suspense fallback={<LoadingState />}><CreateEmployeeAccountPage /></Suspense>,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <CreateEmployeeAccountPage />
+          </Suspense>
+        ),
       },
       {
         path: "users/:employeeId",
-        element: <Suspense fallback={<LoadingState />}><ViewUserAccountPage /></Suspense>,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <ViewUserAccountPage />
+          </Suspense>
+        ),
       },
       {
         path: "users/:employeeId/edit",
-        element: <Suspense fallback={<LoadingState />}><EditUserAccountPage /></Suspense>,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <EditUserAccountPage />
+          </Suspense>
+        ),
       },
       {
         path: "transport-requests/:bookingId",
@@ -278,23 +311,56 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    path: ROLE_ROUTES.mapAssets,
+    element: (
+      <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { index: true, element: <Suspense fallback={<LoadingState />}><MapAssetsPage /></Suspense> },
+    ],
+  },
+  {
+    path: "/admin/route-plans",
+    element: (
+      <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: "new/:transportPlanId", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateRoutePlanPage /></Suspense></ProtectedRoute> },
+      { path: ":routePlanId/edit", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><EditRoutePlanPage /></Suspense></ProtectedRoute> },
+      { path: "new/:transportPlanId/contingency", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateContingencyRoutePage /></Suspense></ProtectedRoute> },
+      { path: "new/:transportPlanId/return", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateReturnRoutePage /></Suspense></ProtectedRoute> },
+    ],
+  },
+  {
     // Flow 2 catalog: TS manages it, LM reads it (API contract C1-C6).
     path: ROLE_ROUTES.complianceRequirements,
     element: (
-      <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
+      <ProtectedRoute
+        allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}
+      >
         <AdminLayout />
       </ProtectedRoute>
     ),
     children: [
       {
         index: true,
-        element: <Suspense fallback={<LoadingState />}><ComplianceListPage /></Suspense>,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <ComplianceListPage />
+          </Suspense>
+        ),
       },
       {
         path: "new",
         element: (
           <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
-            <Suspense fallback={<LoadingState />}><ComplianceFormPage mode="create" /></Suspense>
+            <Suspense fallback={<LoadingState />}>
+              <ComplianceFormPage mode="create" />
+            </Suspense>
           </ProtectedRoute>
         ),
       },
@@ -302,7 +368,9 @@ export const router = createBrowserRouter([
         path: ":complianceRequirementId/edit",
         element: (
           <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
-            <Suspense fallback={<LoadingState />}><ComplianceFormPage mode="edit" /></Suspense>
+            <Suspense fallback={<LoadingState />}>
+              <ComplianceFormPage mode="edit" />
+            </Suspense>
           </ProtectedRoute>
         ),
       },
@@ -312,20 +380,28 @@ export const router = createBrowserRouter([
     // Flow 2 templates (UC-17): TS manages them, LM reads them (API contract T1-T6).
     path: ROLE_ROUTES.dossierTemplates,
     element: (
-      <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
+      <ProtectedRoute
+        allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}
+      >
         <AdminLayout />
       </ProtectedRoute>
     ),
     children: [
       {
         index: true,
-        element: <Suspense fallback={<LoadingState />}><TemplateListPage /></Suspense>,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TemplateListPage />
+          </Suspense>
+        ),
       },
       {
         path: "new",
         element: (
           <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
-            <Suspense fallback={<LoadingState />}><TemplateFormPage mode="create" /></Suspense>
+            <Suspense fallback={<LoadingState />}>
+              <TemplateFormPage mode="create" />
+            </Suspense>
           </ProtectedRoute>
         ),
       },
@@ -333,7 +409,9 @@ export const router = createBrowserRouter([
         path: ":dossierTemplateId/edit",
         element: (
           <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
-            <Suspense fallback={<LoadingState />}><TemplateFormPage mode="edit" /></Suspense>
+            <Suspense fallback={<LoadingState />}>
+              <TemplateFormPage mode="edit" />
+            </Suspense>
           </ProtectedRoute>
         ),
       },
@@ -350,7 +428,11 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Suspense fallback={<LoadingState />}><ApplyTemplatePage /></Suspense>,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <ApplyTemplatePage />
+          </Suspense>
+        ),
       },
     ],
   },
@@ -358,7 +440,9 @@ export const router = createBrowserRouter([
     // Flow 2: tracking dashboard (UC-30), requirement management (UC-19) and audit history (UC-31). TS and LM only.
     path: ROLE_ROUTES.complianceDossiers,
     element: (
-      <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
+      <ProtectedRoute
+        allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}
+      >
         <AdminLayout />
       </ProtectedRoute>
     ),
@@ -378,6 +462,26 @@ export const router = createBrowserRouter([
         </Suspense>
       </ProtectedRoute>
     ),
+  },
+  {
+    path: "/compliance-dossiers/:dossierId",
+    element: (
+      <ProtectedRoute
+        allowedRoles={["CUSTOMER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}
+      >
+        <MainLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <DossierDetailsPage />
+          </Suspense>
+        ),
+      },
+    ],
   },
   {
     element: <AuthShell />,
@@ -449,7 +553,9 @@ export const router = createBrowserRouter([
       },
       {
         element: (
-          <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
+          <ProtectedRoute
+            allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}
+          >
             <AdminLayout />
           </ProtectedRoute>
         ),
@@ -494,14 +600,14 @@ export const router = createBrowserRouter([
         },
         // END TEMP UC-38 LOCAL PREVIEW
         {
-        path: "/__dev/customer/bookings/:bookingId/history",
-        element: <MainLayout />,
-        children: [{ index: true, element: bookingHistoryPage }],
+          path: "/__dev/customer/bookings/:bookingId/history",
+          element: <MainLayout />,
+          children: [{ index: true, element: bookingHistoryPage }],
         },
         {
-        path: "/__dev/admin/bookings/:bookingId/history",
-        element: <AdminLayout />,
-        children: [{ index: true, element: bookingHistoryPage }],
+          path: "/__dev/admin/bookings/:bookingId/history",
+          element: <AdminLayout />,
+          children: [{ index: true, element: bookingHistoryPage }],
         },
       ]
     : []),

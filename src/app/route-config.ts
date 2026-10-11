@@ -15,7 +15,14 @@ export const ROLE_ROUTES = {
   dossierTemplates: "/dossier-templates",
   complianceDossiers: "/compliance-dossiers",
   managerDossiers: "/admin/compliance-dossiers",
+  routePlans: "/admin/route-plans",
+  mapAssets: "/admin/map-assets",
 } as const
+
+export const routePlanCreate = (transportPlanId: string) => `${ROLE_ROUTES.routePlans}/new/${encodeURIComponent(transportPlanId)}`
+export const routePlanEdit = (routePlanId: string) => `${ROLE_ROUTES.routePlans}/${encodeURIComponent(routePlanId)}/edit`
+export const contingencyRouteCreate = (transportPlanId: string) => `${ROLE_ROUTES.routePlans}/new/${encodeURIComponent(transportPlanId)}/contingency`
+export const returnRouteCreate = (transportPlanId: string) => `${ROLE_ROUTES.routePlans}/new/${encodeURIComponent(transportPlanId)}/return`
 
 export const accountDetail = (id: string | number) => `${ROLE_ROUTES.managerUsers}/${encodeURIComponent(id)}`
 export const approvedBookingDetail = (id: string | number) => `${ROLE_ROUTES.approvedBookings}/${encodeURIComponent(id)}`
