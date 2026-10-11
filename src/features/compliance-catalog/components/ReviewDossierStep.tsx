@@ -72,7 +72,7 @@ export function ReviewDossierStep({ booking, template, rows, counts }: ReviewDos
   const table = useReactTable({ data: pageRows, columns, getRowId: (row) => row.key, getCoreRowModel: getCoreRowModel() })
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <div className="grid gap-4 lg:grid-cols-3">
         <InfoCard title="Booking Information">
           <Line label="Request ID">{booking.bookingCode}</Line>

@@ -199,7 +199,7 @@ export function CustomizeRequirementsStep({
   })
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       {noticeOpen ? (
         <div role="note" className="flex items-start gap-2 rounded-[2px] border border-sky-200 bg-sky-50 px-3 py-2.5 text-xs leading-5 text-sky-900">
           <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />

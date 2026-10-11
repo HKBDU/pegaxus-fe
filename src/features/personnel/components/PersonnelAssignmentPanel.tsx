@@ -124,7 +124,7 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
   else if (phase1Ready && phase1.isLocked) phase1Hint = "Phase 1 is locked because Phase 2 is open."
 
   return (
-    <div className={cn("grid gap-5", className)}>
+    <div className={cn("grid grid-cols-[minmax(0,1fr)] gap-5", className)}>
       {/* ------------------------------------------------ Phase 1 */}
       <section className="booking-panel border bg-white p-5" aria-labelledby="phase1-title">
         <div className="flex flex-wrap items-start justify-between gap-3">
