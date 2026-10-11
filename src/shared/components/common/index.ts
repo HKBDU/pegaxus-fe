@@ -1,5 +1,6 @@
 export { EmptyState, ErrorState, LoadingState } from './EmptyState'
 export { NotFoundPage } from './NotFoundPage'
+export { UnauthorizedPage } from './UnauthorizedPage'
 export { Pagination } from './Pagination'
 export { PageSizeSelect } from './PageSizeSelect'
 export { TablePagination } from './TablePagination'

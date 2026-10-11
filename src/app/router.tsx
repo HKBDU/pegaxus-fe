@@ -2,9 +2,9 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import {
-  ErrorState,
   LoadingState,
   NotFoundPage,
+  UnauthorizedPage,
 } from "@/shared/components/common";
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
@@ -212,16 +212,6 @@ export const router = createBrowserRouter([
           },
         ],
       },
-      {
-        path: "unauthorized",
-        element: (
-          <ErrorState message="You do not have permission to view this page." />
-        ),
-      },
-      {
-        path: "*",
-        element: <NotFoundPage />,
-      },
     ],
   },
   {
@@ -290,7 +280,6 @@ export const router = createBrowserRouter([
         path: "transport-requests/:bookingId",
         element: <BookingDetailsPage audience="manager" />,
       },
-      { path: "*", element: <NotFoundPage /> },
     ],
   },
   {
@@ -585,4 +574,12 @@ export const router = createBrowserRouter([
         },
       ]
     : []),
+  {
+    path: "/unauthorized",
+    element: <UnauthorizedPage />,
+  },
+  {
+    path: "*",
+    element: <NotFoundPage />,
+  },
 ]);
