@@ -5,6 +5,8 @@ import { matchPath } from "react-router-dom"
 export const ROLE_ROUTES = {
   home: "/",
   managerHome: "/admin",
+  approvedBookings: "/admin/approved-bookings",
+  transportPlans: "/admin/transport-plans",
   managerUsers: "/admin/users",
   managerCreateUser: "/admin/users/new",
   customerHorses: "/my-horses",
@@ -23,6 +25,8 @@ export const contingencyRouteCreate = (transportPlanId: string) => `${ROLE_ROUTE
 export const returnRouteCreate = (transportPlanId: string) => `${ROLE_ROUTES.routePlans}/new/${encodeURIComponent(transportPlanId)}/return`
 
 export const accountDetail = (id: string | number) => `${ROLE_ROUTES.managerUsers}/${encodeURIComponent(id)}`
+export const approvedBookingDetail = (id: string | number) => `${ROLE_ROUTES.approvedBookings}/${encodeURIComponent(id)}`
+export const transportPlanDetail = (id: string | number) => `${ROLE_ROUTES.transportPlans}/${encodeURIComponent(id)}`
 export const accountEdit = (id: string | number) => `${accountDetail(id)}/edit`
 export function dossierDetail(id: string | number, role?: string) {
   const encodedId = encodeURIComponent(id)
@@ -43,6 +47,10 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
 }
 
 const adminHeaderRoutes = [
+  { path: `${ROLE_ROUTES.transportPlans}/:transportPlanId`, label: "TRANSPORT PLANS", href: ROLE_ROUTES.transportPlans, title: "TRANSPORT PLAN DETAILS" },
+  { path: ROLE_ROUTES.transportPlans, label: "TRANSPORT PLANS", href: ROLE_ROUTES.transportPlans, title: "" },
+  { path: `${ROLE_ROUTES.approvedBookings}/:bookingId`, label: "APPROVED BOOKINGS", href: ROLE_ROUTES.approvedBookings, title: "APPROVED BOOKING DETAILS" },
+  { path: ROLE_ROUTES.approvedBookings, label: "APPROVED BOOKINGS", href: ROLE_ROUTES.approvedBookings, title: "" },
   { path: `${ROLE_ROUTES.managerDossiers}/:dossierId`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "COMPLIANCE DOSSIER" },
   { path: `${ROLE_ROUTES.complianceDossiers}/:dossierId/details`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "COMPLIANCE DOSSIER" },
   { path: ROLE_ROUTES.managerCreateUser, label: "USERS", href: ROLE_ROUTES.managerUsers, title: "CREATE EMPLOYEE ACCOUNT" },
@@ -69,5 +77,7 @@ export function getAdminHeaderContext(pathname: string) {
 }
 
 export const CUSTOMER_ONLY: AccessPolicy = { anyRole: ["CUSTOMER"] }
+export const APPROVED_BOOKINGS_ACCESS: AccessPolicy = { anyRole: ["FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
+export const TRANSPORT_PLANS_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
 export const LOGISTICS_MANAGER_READ: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER"] }
 export const PROFILE_ROLES: AccessPolicy = { anyRole: ["CUSTOMER", "LOGISTICS_MANAGER", "TRANSPORT_SPECIALIST", "FLEET_ROUTE_COORDINATOR", "DRIVER", "ESCORT"] }
