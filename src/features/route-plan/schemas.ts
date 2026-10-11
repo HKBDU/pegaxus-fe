@@ -35,13 +35,16 @@ export const routeSegmentSchema = z.object({
 const action = z.enum(['SAVE_DRAFT', 'SUBMIT_FOR_LEGAL_REVIEW'])
 
 export const createRoutePlanSchema = z.object({
-  routeType: z.enum(['PRIMARY', 'BACKUP']),
+  routeType: z.enum(['PRIMARY', 'BACKUP', 'RETURN']),
   segments: z.array(routeSegmentSchema).min(1, 'Add at least one segment.'),
   routeNote: z.string().trim().max(2000).optional(),
   action,
 }).superRefine((value, context) => {
-  if (value.routeType === 'BACKUP' && !value.routeNote?.trim()) {
-    context.addIssue({ code: 'custom', path: ['routeNote'], message: 'A reason is required for a backup route.' })
+  if ((value.routeType === 'BACKUP' || value.routeType === 'RETURN') && (value.routeNote?.trim().length ?? 0) < 10) {
+    context.addIssue({ code: 'custom', path: ['routeNote'], message: 'A route reason must be at least 10 characters.' })
+  }
+  if (value.routeType === 'RETURN' && value.action !== 'SAVE_DRAFT') {
+    context.addIssue({ code: 'custom', path: ['action'], message: 'A return route can only be saved as draft.' })
   }
   validateSequence(value.segments, context)
 })

@@ -156,7 +156,7 @@ export interface RouteSegmentInput {
 }
 
 export interface CreateRoutePlanRequest {
-  routeType: "PRIMARY" | "BACKUP";
+  routeType: RouteType;
   segments: RouteSegmentInput[];
   routeNote?: string;
   action: RoutePlanAction;

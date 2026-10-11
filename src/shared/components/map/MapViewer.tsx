@@ -44,6 +44,8 @@ export function MapViewer({
   onRoutePointSelect,
   onMarkerAction,
   onRouteSelect,
+  buildStartLocation,
+  buildEndLocation,
 }: MapViewerProps) {
   const viewport = useRef<MapViewportHandle>(null);
   const popupHideTimer = useRef<number | null>(null);
@@ -192,6 +194,8 @@ export function MapViewer({
         <LocationMarkers
           locations={validLocations}
           selectedLocation={state.selectedLocation}
+          startLocation={mode === "buildPlan" ? buildStartLocation : null}
+          endLocation={mode === "buildPlan" ? buildEndLocation : null}
           onSelect={(location) => selectLocation(location)}
           onHover={handleMarkerHover}
         />

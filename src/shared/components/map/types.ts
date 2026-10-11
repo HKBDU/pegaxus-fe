@@ -30,6 +30,7 @@ export type MapRoute = {
   distanceKm?: number | null;
   durationMinutes?: number | null;
   source?: "saved" | "preview";
+  routePlanType?: "PRIMARY" | "BACKUP" | "RETURN";
   readonly?: boolean;
 };
 
@@ -91,6 +92,8 @@ export type MapViewerProps = {
   onRoutePointSelect?: (point: MapPoint, location?: MapLocation) => void;
   onMarkerAction?: (action: LocationAction, location: MapLocation) => void;
   onRouteSelect?: (route: MapRoute) => void;
+  buildStartLocation?: MapLocation | null;
+  buildEndLocation?: MapLocation | null;
 };
 
 export type ValidatedRouteGeometry = RouteGeometry | null;

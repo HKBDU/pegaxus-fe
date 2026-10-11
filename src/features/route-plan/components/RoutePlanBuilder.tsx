@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import {
   ArrowLeft,
   ArrowRight,
-  MapPin,
   MoreVertical,
   Trash2,
 } from "lucide-react";
@@ -12,8 +11,6 @@ import { Button } from "@/shared/components/ui/button";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/shared/components/ui/card";
 import {
   MapViewer,
@@ -30,19 +27,29 @@ import {
   buildEffectiveBackupRoute,
   validateRoutePlanRoute,
 } from "../route-continuity";
+import type {
+  CreateRoutePlanRequest,
+  RouteSegmentInput,
+  RoutePlanStatus,
+  RouteType,
+} from "../types";
 import {
   OutsourceSegmentDialog,
   type OutsourceSegmentSelection,
 } from "./OutsourceSegmentDialog";
-import type { Provider } from "../types";
-import type { CreateRoutePlanRequest, RouteSegmentInput } from "../types";
 import {
+  arrangementForRoute,
+  type DraftSegment,
   Metadata as BuilderMetadata,
   Progress as BuilderProgress,
   SegmentCard as BuilderSegmentCard,
+  type RoutePlanBuilderMetadata,
+  type WizardStep,
 } from "./RoutePlanBuilderParts";
+import { RoutePlanEndpointsStep } from "./RoutePlanEndpointsStep";
+import { RoutePlanStatusBadge } from "./RoutePlanStatusBadge";
 
-type WizardStep = 0 | 1 | 2;
+export type { RoutePlanBuilderMetadata } from "./RoutePlanBuilderParts";
 
 const FALLBACK_LOCATION: MapLocation = {
   id: "unknown-location",
@@ -57,8 +64,8 @@ type TransportPlanSummary = {
   transportPlanId: string;
   planCode: string;
   bookingCode: string;
-  routeType: "PRIMARY" | "BACKUP";
-  status: string;
+  routeType: RouteType;
+  status: RoutePlanStatus;
   scope: "International" | "Domestic";
   departureAt: string;
   arrivalAt: string;
@@ -66,32 +73,14 @@ type TransportPlanSummary = {
   to: MapLocation;
 };
 
-export type RoutePlanBuilderMetadata = Partial<
-  Omit<TransportPlanSummary, "from" | "to">
-> & {
-  from?: MapLocation;
-  to?: MapLocation;
-};
-
-type DraftSegment = {
-  id: string;
-  route: MapRoute;
-  arrangement: "INTERNAL" | "OUTSOURCED";
-  stopType: "REST_STOP" | "BCP" | "DESTINATION";
-  provider?: Provider;
-  note?: string;
-};
-
-function arrangementForRoute(route: MapRoute): "INTERNAL" | "OUTSOURCED" {
-  return route.transportMode === "ROAD" ? "INTERNAL" : "OUTSOURCED";
-}
+type RoutePlanRouteFilter = "ALL" | RouteType;
 
 const MOCK_PLAN: TransportPlanSummary = {
   transportPlanId: "mock-transport-plan",
   planCode: "TP-20261001-001",
   bookingCode: "REQ-20261001-0005",
   routeType: "PRIMARY",
-  status: "APPROVED",
+  status: "CONFIRMED",
   scope: "International",
   departureAt: "2026-10-27T09:30:00Z",
   arrivalAt: "2026-10-30T09:30:00Z",
@@ -400,9 +389,10 @@ void SegmentCard;
 
 export type RoutePlanBuilderProps = {
   transportPlanId: string;
-  routeType?: "PRIMARY" | "BACKUP";
+  routeType?: RouteType;
   primaryRoutes?: MapRoute[];
   backupRoutes?: MapRoute[];
+  routePlanRoutes?: MapRoute[];
   primaryAvailable?: boolean;
   primaryError?: string;
   metadata?: RoutePlanBuilderMetadata;
@@ -418,6 +408,7 @@ export function RoutePlanBuilder({
   routeType = "PRIMARY",
   primaryRoutes,
   backupRoutes,
+  routePlanRoutes,
   primaryAvailable = true,
   primaryError,
   metadata,
@@ -449,14 +440,20 @@ export function RoutePlanBuilder({
   const [updateReason, setUpdateReason] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
   const [routeSearch, setRouteSearch] = useState("");
+  const [routePlanTypeFilter, setRoutePlanTypeFilter] = useState<RoutePlanRouteFilter>("ALL");
   const [showRouteSearch, setShowRouteSearch] = useState(false);
   const [sourceLocation, setSourceLocation] = useState<MapLocation | null>(null);
+  const [returnOrigin, setReturnOrigin] = useState<MapLocation | null>(
+    () => initialRoutes[0]?.fromLocation ?? null,
+  );
   const isBackup = routeType === "BACKUP";
+  const isReturn = routeType === "RETURN";
   const readonlyPrimaryRoutes = useMemo(
     () => primaryRoutes ?? [],
     [primaryRoutes],
   );
   const fallbackFrom =
+    (isReturn ? returnOrigin : null) ??
     readonlyPrimaryRoutes[0]?.fromLocation ??
     initialRoutes[0]?.fromLocation ??
     FALLBACK_LOCATION;
@@ -473,28 +470,29 @@ export function RoutePlanBuilder({
       scope: metadata?.scope ?? "Domestic",
       departureAt: metadata?.departureAt ?? "",
       arrivalAt: metadata?.arrivalAt ?? "",
-      from: metadata?.from ?? fallbackFrom,
-      to: metadata?.to ?? fallbackTo,
+      from: isReturn ? fallbackFrom : (metadata?.from ?? fallbackFrom),
+      to: isReturn ? (metadata?.from ?? fallbackTo) : (metadata?.to ?? fallbackTo),
       transportPlanId,
       routeType,
     }),
-    [fallbackFrom, fallbackTo, metadata, routeType, transportPlanId],
+    [fallbackFrom, fallbackTo, isReturn, metadata, routeType, transportPlanId],
   );
   const routeCatalog = useMemo(
     () =>
       [
         ...(isBackup ? (backupRoutes ?? routes) : routes),
+        ...(isReturn ? (routePlanRoutes ?? []) : []),
         ...initialRoutes,
       ].filter(
         (route, index, routes) =>
           routes.findIndex((item) => item.id === route.id) === index,
       ),
-    [backupRoutes, initialRoutes, isBackup, routes],
+    [backupRoutes, initialRoutes, isBackup, isReturn, routePlanRoutes, routes],
   );
   const filteredRoutes = useMemo(() => {
     const query = routeSearch.trim().toLowerCase();
-    if (!query) return routeCatalog;
     return routeCatalog.filter((route) =>
+      (routePlanTypeFilter === "ALL" || route.routePlanType === routePlanTypeFilter) &&
       [
         route.name,
         route.fromLocation?.name,
@@ -504,7 +502,7 @@ export function RoutePlanBuilder({
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(query)),
     );
-  }, [routeCatalog, routeSearch]);
+  }, [routeCatalog, routePlanTypeFilter, routeSearch]);
   const locationOptions = useMemo(() => {
     const query = locationSearch.trim().toLowerCase();
     if (!query) return locations;
@@ -575,6 +573,11 @@ export function RoutePlanBuilder({
   }
 
   function selectMapLocation(location: MapLocation) {
+    if (isReturn) {
+      setReturnOrigin(location);
+      setBuildMessage(`Return origin selected: ${location.name}.`);
+      return;
+    }
     if (!sourceLocation) {
       setSourceLocation(location);
       setBuildMessage(`Source selected: ${location.name}. Please choose a Destination.`);
@@ -614,7 +617,7 @@ export function RoutePlanBuilder({
     return {
       routeType: plan.routeType,
       action,
-      ...(isBackup ? { routeNote: routeNote.trim() } : {}),
+      ...(isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
       segments: segments.map((segment, index): RouteSegmentInput => ({
         sequenceNo: index + 1,
         routeId: String(segment.route.id),
@@ -652,7 +655,7 @@ export function RoutePlanBuilder({
       );
       return;
     }
-    if (isBackup && routeNote.trim().length < 10) {
+    if ((isBackup || isReturn) && routeNote.trim().length < 10) {
       setSaveError("Backup reason must be at least 10 characters.");
       return;
     }
@@ -689,7 +692,9 @@ export function RoutePlanBuilder({
       <div className="mx-auto grid max-w-[1440px] gap-3">
         <PageHeader
           title={
-            isBackup
+            isReturn
+              ? "CREATE RETURN ROUTE"
+              : isBackup
               ? "CREATE CONTINGENCY ROUTE"
               : edit
                 ? "EDIT ROUTE PLAN"
@@ -697,50 +702,19 @@ export function RoutePlanBuilder({
           }
           backHref={ROLE_ROUTES.routePlans}
           backLabel="BACK TO ROUTE PLANS"
-          action={<Badge variant="outline">{plan.status}</Badge>}
+          action={<RoutePlanStatusBadge status={plan.status} />}
         />
         <BuilderMetadata plan={plan} />
         <BuilderProgress step={step} onChange={setStep} />
         <section className="rounded-b-[2px] bg-white p-3 md:p-4">
           {step === 0 && (
-            <div className="grid gap-3 lg:grid-cols-2">
-              <Card className="rounded-[2px]">
-                <CardHeader>
-                  <CardTitle>Origin</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-start gap-3">
-                    <MapPin className="mt-1 text-emerald-600" />
-                    <div>
-                      <p className="text-xl font-semibold">{plan.from.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {plan.from.city}, {plan.from.country}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="rounded-[2px]">
-                <CardHeader>
-                  <CardTitle>Destination</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-start gap-3">
-                    <MapPin className="mt-1 text-red-600" />
-                    <div>
-                      <p className="text-xl font-semibold">{plan.to.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {plan.to.city}, {plan.to.country}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <p className="text-sm text-muted-foreground lg:col-span-2">
-                Origin and destination come from the approved Transport Plan.
-                They are display-only in this step.
-              </p>
-            </div>
+            <RoutePlanEndpointsStep
+              from={plan.from}
+              to={plan.to}
+              returnMode={isReturn}
+              locations={locations}
+              onFromChange={setReturnOrigin}
+            />
           )}
           {step === 1 && (
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.9fr)]">
@@ -748,7 +722,11 @@ export function RoutePlanBuilder({
                 <div className="mb-2 flex items-center justify-between">
                   <h2 className="text-lg font-semibold">Route Map</h2>
                   <Badge variant="outline">
-                    {isBackup ? "Build backup mode" : "Build mode"}
+                    {isReturn
+                      ? "Build return mode"
+                      : isBackup
+                        ? "Build backup mode"
+                        : "Build mode"}
                   </Badge>
                 </div>
                 {isBackup && !primaryAvailable && (
@@ -767,13 +745,15 @@ export function RoutePlanBuilder({
                   onSearchChange={setLocationSearch}
                   onMarkerSelect={selectMapLocation}
                   onRouteSelect={() => undefined}
+                  buildStartLocation={plan.from}
+                  buildEndLocation={plan.to}
                 />
               </div>
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <h2 className="font-semibold">Route Segments Builder</h2>
                   <span className="text-sm text-muted-foreground">
-                    {segments.length} {isBackup ? "backup " : ""}segment(s)
+                    {segments.length} {isReturn ? "return " : isBackup ? "backup " : ""}segment(s)
                   </span>
                 </div>
                 <div className="grid gap-2">
@@ -843,12 +823,25 @@ export function RoutePlanBuilder({
                   </Button>
                   {showRouteSearch && (
                     <div className="rounded border bg-slate-50 p-3">
-                      <input
-                        value={routeSearch}
-                        onChange={(event) => setRouteSearch(event.target.value)}
-                        placeholder="Search saved Route"
-                        className="h-9 w-full rounded border bg-white px-3 text-sm"
-                      />
+                      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                        <input
+                          value={routeSearch}
+                          onChange={(event) => setRouteSearch(event.target.value)}
+                          placeholder="Search saved Route or Location"
+                          className="h-9 w-full rounded border bg-white px-3 text-sm"
+                        />
+                        <select
+                          value={routePlanTypeFilter}
+                          onChange={(event) => setRoutePlanTypeFilter(event.target.value as RoutePlanRouteFilter)}
+                          className="h-9 rounded border bg-white px-3 text-sm"
+                          aria-label="Filter route plan type"
+                        >
+                          <option value="ALL">All Route Plan Types</option>
+                          <option value="PRIMARY">PRIMARY</option>
+                          <option value="BACKUP">BACKUP</option>
+                          <option value="RETURN">RETURN</option>
+                        </select>
+                      </div>
                       <div className="mt-2 grid max-h-48 gap-1 overflow-y-auto">
                         {filteredRoutes.map((route) => (
                           <button
@@ -915,9 +908,9 @@ export function RoutePlanBuilder({
                     </div>
                   </CardContent>
                 </Card>
-                {isBackup && (
+                {(isBackup || isReturn) && (
                   <label className="grid gap-2 text-sm font-medium">
-                    Backup reason
+                    {isReturn ? "Return reason" : "Backup reason"}
                     <span className="font-normal text-muted-foreground">
                       Minimum 10 characters
                     </span>
@@ -950,12 +943,14 @@ export function RoutePlanBuilder({
                   <Button onClick={() => void save("SAVE_DRAFT")}>
                     Save Draft
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => void save("SUBMIT_FOR_LEGAL_REVIEW")}
-                  >
-                    Submit for legal review
-                  </Button>
+                  {!isReturn && (
+                    <Button
+                      variant="outline"
+                      onClick={() => void save("SUBMIT_FOR_LEGAL_REVIEW")}
+                    >
+                      Submit for legal review
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -974,10 +969,11 @@ export function RoutePlanBuilder({
           <Button
             disabled={
               step === 2 ||
-              (step === 1 &&
+                  (step === 1 &&
                 (!segments.length ||
                   !continuity.valid ||
-                  (isBackup && !primaryAvailable)))
+                      (isBackup && !primaryAvailable) ||
+                      (isReturn && !returnOrigin)))
             }
             onClick={() =>
               setStep((value) => Math.min(2, value + 1) as WizardStep)
