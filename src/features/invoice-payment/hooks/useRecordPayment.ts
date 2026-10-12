@@ -1,11 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { recordPayment, InvoiceServiceError } from '@/features/invoice-payment/services'
-import type { RecordPaymentPayload, RecordPaymentResponse } from '@/shared/types/invoice'
-
-export type RecordPaymentInput = {
-  invoiceId: string
-  payload: RecordPaymentPayload
-}
+import type { RecordPaymentInput, RecordPaymentResponse } from '@/features/invoice-payment/types'
 
 export function useRecordPayment() {
   return useMutation<RecordPaymentResponse, InvoiceServiceError, RecordPaymentInput>({

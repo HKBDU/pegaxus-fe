@@ -4,15 +4,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/shared/components/ui/label'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { INVOICE_ACTION, INVOICE_STATUS, INVOICE_STATUS_LABELS } from '@/shared/constants/invoice'
-import type { Invoice, CancelInvoiceResponse } from '@/shared/types/invoice'
+import type { CancelInvoiceDialogProps } from '@/features/invoice-payment/types'
 import { useCancelInvoice } from '@/features/invoice-payment/hooks/useCancelInvoice'
 import { mapPaymentError } from '@/features/invoice-payment/utils/payment.error'
 import { validateCancellation } from '@/features/invoice-payment/utils/payment.validation'
-
-type CancelInvoiceDialogProps = {
-  invoice: Invoice
-  onCancelled: (response: CancelInvoiceResponse) => void
-}
 
 const STATUS_WARNINGS = {
   [INVOICE_STATUS.DRAFT]: 'This draft has not been issued and will remain hidden from the customer after cancellation.',

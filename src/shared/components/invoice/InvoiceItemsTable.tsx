@@ -22,7 +22,7 @@ export function InvoiceItemsTable({
           <TableRow>
             <TableHead>Type</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead className="text-right">Qty</TableHead>
+            <TableHead className="text-right">Quantity</TableHead>
             <TableHead className="text-right">Unit price</TableHead>
             <TableHead className="text-right">Total</TableHead>
           </TableRow>

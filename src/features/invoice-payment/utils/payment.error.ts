@@ -1,8 +1,7 @@
 import {
   PAYMENT_ERROR_CODES,
-  type PaymentErrorCode,
 } from '@/features/invoice-payment/constants/payment.constants'
-
+import type { PaymentErrorCode, PaymentErrorState } from '@/features/invoice-payment/types'
 const PAYMENT_ERROR_MESSAGES: Record<PaymentErrorCode, string> = {
   PARTIAL_PAYMENT_NOT_SUPPORTED: 'Only full payment of the invoice total is accepted.',
   CURRENCY_MISMATCH: 'Payment currency must match the invoice currency.',
@@ -12,12 +11,6 @@ const PAYMENT_ERROR_MESSAGES: Record<PaymentErrorCode, string> = {
   PAYMENT_IN_PROGRESS: 'A payment for this invoice is being processed.',
   VALIDATION_ERROR: 'Check the payment details and try again.',
   PAYMENT_GATEWAY_ERROR: 'Payment gateway is unavailable. Please try again later.',
-}
-
-export type PaymentErrorState = {
-  errorCode?: string
-  message: string
-  retryable: boolean
 }
 
 export function getPaymentErrorMessage(errorCode?: string, fallback?: string) {

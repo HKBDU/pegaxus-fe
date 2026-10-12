@@ -1,11 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { cancelInvoice, InvoiceServiceError } from '@/features/invoice-payment/services'
-import type { CancelInvoicePayload, CancelInvoiceResponse } from '@/shared/types/invoice'
-
-export type CancelInvoiceInput = {
-  invoiceId: string
-  payload: CancelInvoicePayload
-}
+import type { CancelInvoiceInput, CancelInvoiceResponse } from '@/features/invoice-payment/types'
 
 export function useCancelInvoice() {
   return useMutation<CancelInvoiceResponse, InvoiceServiceError, CancelInvoiceInput>({

@@ -6,16 +6,11 @@ import { Label } from '@/shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/components/ui/select'
 import { Textarea } from '@/shared/components/ui/textarea'
 import { INVOICE_ACTION, INVOICE_TYPE, PAYMENT_METHOD, type PaymentMethod } from '@/shared/constants/invoice'
-import type { Invoice, RecordPaymentResponse } from '@/shared/types/invoice'
+import type { RecordPaymentDialogProps } from '@/features/invoice-payment/types'
 import { useRecordPayment } from '@/features/invoice-payment/hooks/useRecordPayment'
 import { mapPaymentError } from '@/features/invoice-payment/utils/payment.error'
 import { formatPaymentAmount, toPaymentTimestamp } from '@/features/invoice-payment/utils/payment.format'
 import { validateRecordPayment } from '@/features/invoice-payment/utils/payment.validation'
-
-type RecordPaymentDialogProps = {
-  invoice: Invoice
-  onRecorded: (response: RecordPaymentResponse) => void
-}
 
 function localDateTimeValue() {
   const date = new Date()

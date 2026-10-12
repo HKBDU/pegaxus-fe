@@ -1,10 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { InvoiceServiceError, startOnlinePayment } from '@/features/invoice-payment/services'
-import type { OnlinePaymentResponse } from '@/shared/types/invoice'
-
-export type OnlinePaymentInput = {
-  invoiceId: string
-}
+import type { OnlinePaymentInput, OnlinePaymentResponse } from '@/features/invoice-payment/types'
 
 export function useOnlinePayment() {
   return useMutation<OnlinePaymentResponse, InvoiceServiceError, OnlinePaymentInput>({

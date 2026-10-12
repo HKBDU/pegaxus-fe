@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
+import { CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import type { InvoiceCurrency } from '@/shared/constants/invoice'
 import type { InvoiceSummary } from '@/shared/types/invoice'
 import { MoneyText } from './MoneyText'
@@ -20,7 +20,7 @@ export function InvoiceSummaryCard({
   ] as const
 
   return (
-    <Card className="rounded-[2px]">
+    <div>
       <CardHeader>
         <CardTitle>Summary{estimate ? ' (estimate)' : ''}</CardTitle>
       </CardHeader>
@@ -36,6 +36,6 @@ export function InvoiceSummaryCard({
           <MoneyText amount={summary.grandTotal} currency={currency} />
         </div>
       </CardContent>
-    </Card>
+    </div>
   )
 }

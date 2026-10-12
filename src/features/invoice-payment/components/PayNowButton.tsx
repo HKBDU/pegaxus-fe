@@ -1,10 +1,10 @@
 import { Button } from '@/shared/components/ui/button'
 import { INVOICE_ACTION } from '@/shared/constants/invoice'
-import type { Invoice } from '@/shared/types/invoice'
+import type { PayNowButtonProps } from '@/features/invoice-payment/types'
 import { useOnlinePayment } from '@/features/invoice-payment/hooks/useOnlinePayment'
 import { mapPaymentError } from '@/features/invoice-payment/utils/payment.error'
 
-export function PayNowButton({ invoice }: { invoice: Invoice }) {
+export function PayNowButton({ invoice }: PayNowButtonProps) {
   const mutation = useOnlinePayment()
   const canPay = invoice.availableActions.includes(INVOICE_ACTION.PAY_NOW)
 

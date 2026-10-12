@@ -24,4 +24,3 @@ export const PAYMENT_METHOD_VALUES = [
   PAYMENT_METHOD.OTHER,
 ] as const
 
-export type PaymentErrorCode = (typeof PAYMENT_ERROR_CODES)[keyof typeof PAYMENT_ERROR_CODES]
