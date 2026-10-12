@@ -20,6 +20,7 @@ export const ROLE_ROUTES = {
   routePlans: "/admin/route-plans",
   mapAssets: "/admin/map-assets",
   personnelAssignment: "/admin/personnel-assignment",
+  invoices: "/admin/invoices",
 } as const
 
 export const routePlanDetail = (routePlanId: string) => `${ROLE_ROUTES.routePlans}/${encodeURIComponent(routePlanId)}`
@@ -27,6 +28,10 @@ export const routePlanCreate = (transportPlanId: string) => `${ROLE_ROUTES.route
 export const routePlanEdit = (routePlanId: string) => `${ROLE_ROUTES.routePlans}/${encodeURIComponent(routePlanId)}/edit`
 export const contingencyRouteCreate = (transportPlanId: string) => `${ROLE_ROUTES.routePlans}/new/${encodeURIComponent(transportPlanId)}/contingency`
 export const returnRouteCreate = (transportPlanId: string) => `${ROLE_ROUTES.routePlans}/new/${encodeURIComponent(transportPlanId)}/return`
+
+export const invoiceDetail = (invoiceId: string) => `${ROLE_ROUTES.invoices}/${encodeURIComponent(invoiceId)}`
+export const invoiceEdit = (invoiceId: string) => `${invoiceDetail(invoiceId)}/edit`
+export const invoiceCreate = (bookingId: string) => `${ROLE_ROUTES.invoices}/new/${encodeURIComponent(bookingId)}`
 
 export const personnelAssignmentPath = (transportPlanId: string) => `${ROLE_ROUTES.personnelAssignment}/${encodeURIComponent(transportPlanId)}`
 
@@ -83,6 +88,10 @@ const adminHeaderRoutes = [
   { path: `${ROLE_ROUTES.complianceDossiers}/:dossierId/audit-history`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "AUDIT HISTORY" },
   { path: `${ROLE_ROUTES.complianceDossiers}/:dossierId/requirements`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "REQUIREMENTS" },
   { path: ROLE_ROUTES.complianceDossiers, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "" },
+  { path: `${ROLE_ROUTES.invoices}/new/:bookingId`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "CREATE INVOICE" },
+  { path: `${ROLE_ROUTES.invoices}/:invoiceId/edit`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "EDIT INVOICE" },
+  { path: `${ROLE_ROUTES.invoices}/:invoiceId`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "INVOICE DETAILS" },
+  { path: ROLE_ROUTES.invoices, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "" },
   { path: `${ROLE_ROUTES.personnelAssignment}/:transportPlanId`, label: "TRANSPORT PLANS", href: "/admin/transport-plans", title: "PERSONNEL ASSIGNMENT" },
   ...["profile", "staff", "transport-plans", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
 ]

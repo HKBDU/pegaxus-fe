@@ -107,6 +107,9 @@ const CreateReturnRoutePage = lazy(() => import("@/features/route-plan/pages/Cre
 const EditRoutePlanPage = lazy(() => import("@/features/route-plan/pages/EditRoutePlanPage"));
 const MapAssetsPage = lazy(() => import("@/features/route-plan/pages/MapAssetsPage"));
 const PersonnelAssignmentPage = lazy(() => import("@/features/personnel/pages/PersonnelAssignmentPage"));
+const InvoiceFormPage = lazy(() => import("@/features/invoice/pages/InvoiceFormPage"));
+const InvoiceDetailPlaceholderPage = lazy(() => import("@/features/invoice/pages/InvoiceDetailPlaceholderPage"));
+const InvoiceListPlaceholderPage = lazy(() => import("@/features/invoice/pages/InvoiceListPlaceholderPage"));
 const ApprovedBookingsPage = lazy(
   () => import("@/features/transport-plan/pages/ApprovedBookingsPage"),
 );
@@ -327,6 +330,11 @@ export const router = createBrowserRouter([
         path: "transport-requests/:bookingId",
         element: <BookingDetailsPage audience="manager" />,
       },
+      // Flow 6 (UC-67, UC-68). The list and detail routes use temporary pages until the invoice-view feature is merged.
+      { path: "invoices", element: <Suspense fallback={<LoadingState />}><InvoiceListPlaceholderPage /></Suspense> },
+      { path: "invoices/new/:bookingId", element: <Suspense fallback={<LoadingState />}><InvoiceFormPage mode="create" /></Suspense> },
+      { path: "invoices/:invoiceId", element: <Suspense fallback={<LoadingState />}><InvoiceDetailPlaceholderPage /></Suspense> },
+      { path: "invoices/:invoiceId/edit", element: <Suspense fallback={<LoadingState />}><InvoiceFormPage mode="edit" /></Suspense> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
