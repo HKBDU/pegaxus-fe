@@ -15,6 +15,8 @@ export const ROLE_ROUTES = {
   dossierTemplates: "/dossier-templates",
   complianceDossiers: "/compliance-dossiers",
   managerDossiers: "/admin/compliance-dossiers",
+  vehicles: "/vehicles",
+  transportProviders: "/transport-providers",
   routePlans: "/admin/route-plans",
   mapAssets: "/admin/map-assets",
   personnelAssignment: "/admin/personnel-assignment",
@@ -47,10 +49,18 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
   if (normalizeRole(role) === "TRANSPORT_SPECIALIST" && safePath === ROLE_ROUTES.home) {
     return ROLE_ROUTES.complianceRequirements
   }
+  if (normalizeRole(role) === "FLEET_ROUTE_COORDINATOR" && safePath === ROLE_ROUTES.home) {
+    return ROLE_ROUTES.vehicles
+  }
   return safePath
 }
 
 const adminHeaderRoutes = [
+  { path: `${ROLE_ROUTES.vehicles}/new`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "ADD NEW VEHICLE" },
+  { path: `${ROLE_ROUTES.vehicles}/:vehicleId/edit`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "EDIT VEHICLE" },
+  { path: `${ROLE_ROUTES.vehicles}/:vehicleId`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "VEHICLE DETAILS" },
+  { path: ROLE_ROUTES.vehicles, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "" },
+  { path: ROLE_ROUTES.transportProviders, label: "TRANSPORT PROVIDERS", href: ROLE_ROUTES.transportProviders, title: "" },
   { path: `${ROLE_ROUTES.transportPlans}/:transportPlanId`, label: "TRANSPORT PLANS", href: ROLE_ROUTES.transportPlans, title: "TRANSPORT PLAN DETAILS" },
   { path: ROLE_ROUTES.transportPlans, label: "TRANSPORT PLANS", href: ROLE_ROUTES.transportPlans, title: "" },
   { path: `${ROLE_ROUTES.approvedBookings}/:bookingId`, label: "APPROVED BOOKINGS", href: ROLE_ROUTES.approvedBookings, title: "APPROVED BOOKING DETAILS" },
@@ -74,7 +84,7 @@ const adminHeaderRoutes = [
   { path: `${ROLE_ROUTES.complianceDossiers}/:dossierId/requirements`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "REQUIREMENTS" },
   { path: ROLE_ROUTES.complianceDossiers, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "" },
   { path: `${ROLE_ROUTES.personnelAssignment}/:transportPlanId`, label: "TRANSPORT PLANS", href: "/admin/transport-plans", title: "PERSONNEL ASSIGNMENT" },
-  ...["profile", "staff", "transport-plans", "transport-partners", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
+  ...["profile", "staff", "transport-plans", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
 ]
 
 export function getAdminHeaderContext(pathname: string) {

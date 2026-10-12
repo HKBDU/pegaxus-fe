@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  CarFront,
   ClipboardCheck,
   FileStack,
   Gauge,
@@ -40,7 +41,8 @@ const primaryItems = [
   { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
   { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
   { label: "Users", href: "/admin/users", icon: UsersRound },
-  { label: "Transport Partners", href: "/admin/transport-partners", icon: ThumbsUp },
+  { label: "Vehicles", href: ROLE_ROUTES.vehicles, icon: CarFront },
+  { label: "Transport Providers", href: ROLE_ROUTES.transportProviders, icon: ThumbsUp },
   { label: "Reports", href: "/admin/reports", icon: BarChart3 },
 ]
 
@@ -51,6 +53,7 @@ const staffPrimaryItems = [
 ]
 
 const routeCoordinatorItems = [
+  { label: "Vehicles", href: ROLE_ROUTES.vehicles, icon: CarFront },
   { label: "Route Plans", href: ROLE_ROUTES.routePlans, icon: MapPin },
   { label: "Map Assets", href: ROLE_ROUTES.mapAssets, icon: MapPin },
 ]
