@@ -35,8 +35,8 @@ export default function InvoiceListPage() {
   if (!canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })) return <ErrorState message="Only Logistics Managers can access the invoice list." />
   return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10"><div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
     <InvoiceMockIndicator /><div><PageHeader title="Invoices" backHref="/admin" showBack={false} /><p className="text-xs text-slate-500 sm:text-sm">View invoices, financial summaries and payment receipts.</p></div>
-    <InvoiceFilters params={params} search={search} onSearchChange={search => change({ search })} onChange={change} onReset={() => setUrl({}, { replace: true })} />
-    {!parsed.success ? <ErrorState message="The invoice filters or date ranges are invalid. Reset filters to continue." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
+    <InvoiceFilters params={params} search={search} onSearchChange={search => change({ search })} onChange={change} />
+    {!parsed.success ? <ErrorState message="The invoice filters or date ranges are invalid. Check or clear the affected filters, or correct the URL parameters." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
       <InvoiceTable items={query.data?.items ?? []} meta={meta} isLoading={query.isPending || query.isFetching || waiting} filtered={filterKeys.some(key => Boolean(params[key]))}
         onPageChange={pageIndex => { if (!query.isFetching && !waiting) change({ pageIndex }) }} onPageSizeChange={pageSize => change({ pageSize })} />}
   </div></div>
