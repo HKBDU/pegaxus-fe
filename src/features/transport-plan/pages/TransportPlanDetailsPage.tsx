@@ -27,8 +27,9 @@ import { workspaceLabels } from "../constants"
 import { useApprovedBooking } from "../hooks/useApprovedBookings"
 import { getApprovedBookingError } from "../services"
 import { PersonnelAssignmentPanel } from "@/features/personnel"
+import { InvoicesPanel } from "@/features/invoice-view/components/InvoicesPanel"
 
-export function TransportPlanDetails({ plan, personnelPanel }: { plan: TransportPlanDetail; personnelPanel?: ComponentType<PersonnelPanelProps> }) {
+export function TransportPlanDetails({ plan, personnelPanel, onCreateInvoice }: { plan: TransportPlanDetail; personnelPanel?: ComponentType<PersonnelPanelProps>; onCreateInvoice?: (bookingId: string) => void }) {
   const [params, setParams] = useSearchParams()
   const principal = useAuthStore((state) => state.principal)
   const manager = getWorkspaceRole(principal) === "manager"
@@ -42,6 +43,7 @@ export function TransportPlanDetails({ plan, personnelPanel }: { plan: Transport
         <TransportPlanStatusBadge status={plan.status} />
         {personnelAction?.href ? <Button asChild className="rounded-md"><Link to={personnelAction.href}><UsersRound aria-hidden="true" className="size-4" />Manage Personnel</Link></Button> : null}
         {canEditTransportPlan(principal, plan) ? <Button asChild variant="outline" className="rounded-[2px] bg-white"><Link to={editTransportPlanPath(plan.transportPlanId)}>Edit Transport Plan</Link></Button> : null}
+        {manager && onCreateInvoice ? <Button className="rounded-[2px]" onClick={() => onCreateInvoice(plan.booking.bookingId)}>Create Invoice</Button> : null}
       </div>
     </div>
     <TransportOverview journey={plan.booking} customerName={plan.booking.customerName} plannedStartAt={plan.plannedStartAt} transportStatus={plan.transport.status} />
@@ -50,17 +52,18 @@ export function TransportPlanDetails({ plan, personnelPanel }: { plan: Transport
     {manager ? <><TransportPlanQuotation transportPlanId={plan.transportPlanId} canManage />
     <Tabs.Root value={activeTab} onValueChange={(value) => setParams((current) => { const next = new URLSearchParams(current); next.set("tab", transportPlanTabSchema.parse(value)); return next })}>
       <Tabs.List aria-label="Transport plan sections" className="mb-5 flex flex-nowrap gap-2 overflow-x-auto border-b border-slate-200">
-        {([{ value: "general", label: "General" }, { value: "personnel", label: "Personnel" }]).map((tab) =>
+        {([{ value: "general", label: "General" }, { value: "personnel", label: "Personnel" }, { value: "invoices", label: "Invoices" }]).map((tab) =>
           <Tabs.Trigger key={tab.value} value={tab.value} className="shrink-0 whitespace-nowrap rounded-t-lg border-b-2 border-transparent px-5 py-3 font-heading text-sm uppercase text-slate-500 outline-none hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-primary/30 data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-primary">{tab.label}</Tabs.Trigger>)}
       </Tabs.List>
       <Tabs.Content value="general" className="space-y-5 outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"><TransportPlanGeneral plan={plan} /><TransportPlanWorkspace plan={plan} /></Tabs.Content>
       <Tabs.Content value="personnel" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30">{personnelAction ? <TransportPlanPersonnel transportPlanId={plan.transportPlanId} panel={personnelPanel} /> : <p className="text-sm text-slate-500">Personnel assignment opens after the transport plan is approved.</p>}</Tabs.Content>
+      <Tabs.Content value="invoices" className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30">{activeTab === "invoices" ? <InvoicesPanel bookingId={plan.booking.bookingId} /> : null}</Tabs.Content>
     </Tabs.Root>
     </> : <TransportPlanWorkspace plan={plan} />}
   </div>
 }
 
-function TransportPlanReadPage() {
+function TransportPlanReadPage({ onCreateInvoice }: { onCreateInvoice?: (bookingId: string) => void }) {
   const { transportPlanId = "" } = useParams<{ transportPlanId: string }>()
   const validId = actionEntityIdSchema.safeParse(transportPlanId).success
   const query = useTransportPlan(transportPlanId)
@@ -76,12 +79,12 @@ function TransportPlanReadPage() {
       <Flow3MockIndicator />
       <div><PageHeader title="Transport Plan Details" backHref={role === "manager" ? ROLE_ROUTES.transportPlans : ROLE_ROUTES.approvedBookings} backLabel={role === "manager" ? "Back to Transport Plans" : `Back to ${role ? workspaceLabels[role].list : "Transports"}`} /></div>
       {!validId ? <ErrorState message="The transport plan identifier is invalid." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
-        query.isPending || (staff && access.isPending) ? <BookingDetailsSkeleton /> : accessError ? <ErrorState message={accessError.message} onRetry={accessError.retryable ? () => void access.refetch() : undefined} /> : query.data ? <TransportPlanDetails key={transportPlanId} plan={query.data} personnelPanel={PersonnelAssignmentPanel} /> : null}
+        query.isPending || (staff && access.isPending) ? <BookingDetailsSkeleton /> : accessError ? <ErrorState message={accessError.message} onRetry={accessError.retryable ? () => void access.refetch() : undefined} /> : query.data ? <TransportPlanDetails key={transportPlanId} plan={query.data} personnelPanel={PersonnelAssignmentPanel} onCreateInvoice={onCreateInvoice} /> : null}
     </div>
   </div>
 }
 
-export default function TransportPlanDetailsPage() {
+export default function TransportPlanDetailsPage({ onCreateInvoice }: { onCreateInvoice?: (bookingId: string) => void }) {
   const [params] = useSearchParams()
-  return params.get("action") === "edit" ? <EditTransportPlanPage /> : <TransportPlanReadPage />
+  return params.get("action") === "edit" ? <EditTransportPlanPage /> : <TransportPlanReadPage onCreateInvoice={onCreateInvoice} />
 }

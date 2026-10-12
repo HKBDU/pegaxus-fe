@@ -102,7 +102,7 @@ export const approvedBookingDetailSchema = z.object({
 
 export const transportPlanIdSchema = entityIdSchema
 export const transportPlanSortSchema = z.enum(["createdAt:asc", "createdAt:desc", "plannedStartAt:asc", "plannedStartAt:desc"])
-export const transportPlanTabSchema = z.enum(["general", "personnel"])
+export const transportPlanTabSchema = z.enum(["general", "personnel", "invoices"])
 const maxDurationMinutes = 2_147_483_647
 export const transportPlansQuerySchema = z.object({
   pageIndex: z.number().int().positive(), pageSize: z.number().int().positive(),
