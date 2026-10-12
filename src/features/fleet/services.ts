@@ -24,8 +24,8 @@ import { computeExpiryStatus, computeWarnings } from "@/features/fleet/utils"
 const VEHICLES = "vehicles"
 const PROVIDERS = "transport-providers"
 
-/** No BE yet: mocks are on by default. Set VITE_FLEET_API_MOCKS=false to call the real Flow 3 API. */
-export const useFleetMocks = import.meta.env.VITE_FLEET_API_MOCKS !== "false"
+/** The BE serves the fleet APIs, so the real Flow 3 API is the default. Set VITE_FLEET_API_MOCKS=true for the local demo data. */
+export const useFleetMocks = import.meta.env.VITE_FLEET_API_MOCKS === "true"
 
 /** Error(errorCode) so the UI reacts to contract codes; `errors` carries per-field validation messages. */
 export class FleetApiError extends Error {
