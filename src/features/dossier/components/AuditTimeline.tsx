@@ -21,7 +21,7 @@ const toneBadge: Record<AuditTone, string> = {
   accent: "border-orange-200 bg-orange-50 text-orange-700",
 }
 
-const GRID = "lg:grid-cols-[15rem_15rem_13rem_12rem_minmax(0,1fr)]"
+const GRID = "xl:grid-cols-[15rem_15rem_13rem_12rem_minmax(0,1fr)]"
 
 interface AuditTimelineProps {
   events: AuditEvent[]
@@ -34,7 +34,7 @@ interface AuditTimelineProps {
 export function AuditTimeline({ events, isLoading, onViewVersionHistory }: AuditTimelineProps) {
   return (
     <div className="booking-panel border bg-white">
-      <div role="row" className={cn("hidden gap-4 border-b border-slate-200 bg-[#e9e6de] py-3 pl-12 pr-4 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600 lg:grid", GRID)}>
+      <div role="row" className={cn("hidden gap-4 border-b border-slate-200 bg-[#e9e6de] py-3 pl-12 pr-4 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600 xl:grid", GRID)}>
         <span role="columnheader">Timestamp</span>
         <span role="columnheader">Action</span>
         <span role="columnheader">Actor</span>

@@ -6,7 +6,7 @@ export const locationFormSchema = z.object({
   address: z.string(),
   city: z.string(),
   stateProvince: z.string(),
-  country: z.string(),
+  country: z.string().trim().min(1, "Country is required."),
   latitude: z.number().finite().min(-90).max(90),
   longitude: z.number().finite().min(-180).max(180),
   note: z.string(),

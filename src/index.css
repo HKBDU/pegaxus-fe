@@ -495,7 +495,10 @@ body {
 .booking-page-shell {
   position: relative;
   isolation: isolate;
-  overflow: hidden;
+  /* No overflow: hidden here. It silently clipped any content wider than the viewport (cut tables, toolbars and
+     forms with no way to scroll). Wide content must shrink or scroll inside its own container instead. */
+  min-width: 0;
+  max-width: 100%;
   background:
     radial-gradient(circle at 88% 4%, rgb(239 143 0 / 0.09), transparent 24rem),
     linear-gradient(180deg, #f8f7f4 0%, #f3f1ec 100%);

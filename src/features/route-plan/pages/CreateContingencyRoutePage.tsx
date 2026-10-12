@@ -41,8 +41,6 @@ export default function CreateContingencyRoutePage() {
     let active = true;
     void getRoutePlans(transportPlanId, {
       routeType: "PRIMARY",
-      pageIndex: 1,
-      pageSize: 20,
     })
       .then((result) => {
         if (!active) return;

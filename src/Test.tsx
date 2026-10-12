@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { isAxiosError } from "axios";
 import apiClient from "@/lib/axios";
 import {
   reverseGeocodeGeoapify,
@@ -50,8 +49,12 @@ type LocationResponse = {
 type ListResponse = {
   value?: {
     items?: LocationResponse[];
+    totalPages?: number;
+    hasNextPage?: boolean;
   };
   items?: LocationResponse[];
+  totalPages?: number;
+  hasNextPage?: boolean;
 };
 
 function toMapLocation(location: LocationResponse): MapLocation {
@@ -69,42 +72,30 @@ function toMapLocation(location: LocationResponse): MapLocation {
   };
 }
 
-async function getMockLocations(): Promise<MapLocation[]> {
-  const response = await fetch("/locations-camelcase.json");
-  if (!response.ok) {
-    throw new Error(`Unable to load location mock: ${response.status}`);
-  }
+async function getLocations(): Promise<MapLocation[]> {
+  const pageSize = 100;
+  const locations: LocationResponse[] = [];
+  let pageIndex = 1;
 
-  const items = (await response.json()) as LocationResponse[];
-  return items.filter((location) => !location.isDeleted).map(toMapLocation);
-}
-
-function shouldFallbackToMock(error: unknown) {
-  if (!isAxiosError(error)) return true;
-
-  const status = error.response?.status;
-  return !status || status === 404 || status >= 500;
-}
-
-async function getLocations(): Promise<{
-  data: MapLocation[];
-  source: "BE" | "MOCK";
-}> {
-  try {
+  while (pageIndex <= 1000) {
     const response = (await apiClient.get("/locations", {
-      params: { pageIndex: 1, pageSize: 100 },
+      params: { pageIndex, pageSize },
     })) as unknown as ListResponse;
     const items = response.value?.items ?? response.items ?? [];
-    const data = items
-      .filter((location) => !location.isDeleted)
-      .map(toMapLocation);
+    locations.push(...items);
 
-    if (data.length) return { data, source: "BE" };
-  } catch (error) {
-    if (!shouldFallbackToMock(error)) throw error;
+    const totalPages = response.value?.totalPages ?? response.totalPages;
+    const hasNextPage = response.value?.hasNextPage ?? response.hasNextPage;
+    if (hasNextPage === false || (totalPages !== undefined && pageIndex >= totalPages)) {
+      break;
+    }
+    if (items.length < pageSize && totalPages === undefined && hasNextPage === undefined) {
+      break;
+    }
+    pageIndex += 1;
   }
 
-  return { data: await getMockLocations(), source: "MOCK" };
+  return locations.filter((location) => !location.isDeleted).map(toMapLocation);
 }
 
 export default function Test() {
@@ -113,7 +104,6 @@ export default function Test() {
   const isCoordinator =
     role === "FLEET_ROUTE_COORDINATOR" || role === "COORDINATOR";
   const [locations, setLocations] = useState<MapLocation[]>([]);
-  const [dataSource, setDataSource] = useState<"BE" | "MOCK">("BE");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -149,15 +139,9 @@ export default function Test() {
       setError(null);
 
       try {
-        const result = await getLocations();
+        const data = await getLocations();
         if (active) {
-          setLocations(result.data);
-          setDataSource(result.source);
-          if (result.source === "MOCK") {
-            toast.info(
-              "BE has no Locations. Showing public/locations-camelcase.json.",
-            );
-          }
+          setLocations(data);
         }
       } catch (loadError) {
         if (active) {
@@ -337,9 +321,6 @@ export default function Test() {
           <CardContent className="flex flex-wrap items-center gap-3">
             <span className="rounded bg-slate-100 px-3 py-2 text-sm">
               Current role: <strong>{role}</strong>
-            </span>
-            <span className="rounded bg-slate-100 px-3 py-2 text-sm">
-              Location source: <strong>{dataSource}</strong>
             </span>
             {isCoordinator && (
               <>
