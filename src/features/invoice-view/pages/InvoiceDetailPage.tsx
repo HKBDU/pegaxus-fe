@@ -15,14 +15,14 @@ import type { InvoiceAction, InvoiceDetail } from "../types"
 import { InvoiceBadge, InvoiceMockIndicator } from "../components/InvoicePresentation"
 import { invoiceDate } from "../format"
 import { InvoiceDetailSections } from "../components/InvoiceDetailSections"
+import { InvoiceStatusHistory } from "../components/InvoiceStatusHistory"
 
 export type InvoiceActionComponentProps = { invoice: InvoiceDetail; onInvoiceChanged: () => Promise<void> }
 export type InvoiceDetailPageProps = {
   actionComponents?: Partial<Record<InvoiceAction, ComponentType<InvoiceActionComponentProps>>>
-  statusHistoryPanel?: ComponentType<{ invoiceId: string }>
 }
 
-export default function InvoiceDetailPage({ actionComponents = {}, statusHistoryPanel: HistoryPanel }: InvoiceDetailPageProps) {
+export default function InvoiceDetailPage({ actionComponents = {} }: InvoiceDetailPageProps) {
   const { invoiceId = "", bookingId = "" } = useParams<{ invoiceId: string; bookingId?: string }>()
   const principal = useAuthStore(state => state.principal)
   const manager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
@@ -34,7 +34,7 @@ export default function InvoiceDetailPage({ actionComponents = {}, statusHistory
   const returnSearch = (location.state as { invoiceListSearch?: unknown } | null)?.invoiceListSearch
   const backHref = manager ? invoiceListPath + (typeof returnSearch === "string" ? `?${new URLSearchParams(returnSearch)}` : "") : `/bookings/${encodeURIComponent(bookingId)}`
   const invoice = query.data, error = query.isError ? getInvoiceError(query.error) : null
-  const activeTab = HistoryPanel && params.get("tab") === "history" ? "history" : "overview"
+  const activeTab = params.get("tab") === "history" ? "history" : "overview"
   async function onInvoiceChanged() {
     await client.invalidateQueries({ queryKey: ["invoice-view"] })
   }
@@ -58,9 +58,9 @@ export default function InvoiceDetailPage({ actionComponents = {}, statusHistory
         {invoice.type === "CREDIT_NOTE" ? <p role="note" className="rounded-[2px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">Credit note — Compensation payable to the customer.</p> : null}
         <Tabs.Root value={activeTab} onValueChange={tab => setParams(current => { const next = new URLSearchParams(current); next.set("tab", tab); return next })}>
           <Tabs.List aria-label="Invoice sections" className="mb-5 flex gap-2 overflow-x-auto border-b border-slate-200"><Tabs.Trigger value="overview" className="border-b-2 border-transparent px-5 py-3 font-heading text-sm uppercase focus-visible:outline-primary data-[state=active]:border-primary data-[state=active]:text-primary">Overview</Tabs.Trigger>
-            <Tabs.Trigger value="history" disabled={!HistoryPanel} title={HistoryPanel ? undefined : "Status History will be integrated with UC-72."} className="border-b-2 border-transparent px-5 py-3 font-heading text-sm uppercase disabled:opacity-40 data-[state=active]:border-primary data-[state=active]:text-primary">Status History</Tabs.Trigger></Tabs.List>
-          <Tabs.Content value="overview" className="outline-none"><InvoiceDetailSections invoice={invoice} manager={manager} /></Tabs.Content>
-          {HistoryPanel ? <Tabs.Content value="history"><HistoryPanel invoiceId={invoice.invoiceId} /></Tabs.Content> : null}
+            <Tabs.Trigger value="history" className="border-b-2 border-transparent px-5 py-3 font-heading text-sm uppercase focus-visible:outline-primary data-[state=active]:border-primary data-[state=active]:text-primary">Status History</Tabs.Trigger></Tabs.List>
+          <Tabs.Content value="overview" className="outline-none focus-visible:ring-2 focus-visible:ring-primary/30"><InvoiceDetailSections invoice={invoice} manager={manager} /></Tabs.Content>
+          <Tabs.Content value="history" className="outline-none focus-visible:ring-2 focus-visible:ring-primary/30">{activeTab === "history" ? <InvoiceStatusHistory invoiceId={invoice.invoiceId} /> : null}</Tabs.Content>
         </Tabs.Root>
       </> : null}
   </div></div>

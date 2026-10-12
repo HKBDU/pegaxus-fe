@@ -28,3 +28,9 @@ export function useInvoice(invoiceId: string, enabled = true) {
   return useQuery({ queryKey: ["invoice-view", ...scope, "detail", invoiceId], queryFn: ({ signal }) => invoiceViewService.detail(invoiceId, signal),
     enabled: enabled && invoiceIdSchema.safeParse(invoiceId).success && canAccess(principal, { anyRole: ["LOGISTICS_MANAGER", "CUSTOMER"] }), retry })
 }
+export function useInvoiceStatusHistory(invoiceId: string, enabled = true) {
+  const { principal, scope } = useInvoiceScope()
+  return useQuery({ queryKey: ["invoice-view", ...scope, "history", invoiceId], queryFn: ({ signal }) => invoiceViewService.statusHistory(invoiceId, signal),
+    enabled: enabled && invoiceIdSchema.safeParse(invoiceId).success && canAccess(principal, { anyRole: ["LOGISTICS_MANAGER", "CUSTOMER"] }),
+    staleTime: 60_000, retry })
+}

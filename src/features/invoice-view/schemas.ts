@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { invoiceTypes, invoiceStatuses, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts } from "./constants"
+import { invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts } from "./constants"
 
 export const invoiceIdSchema = z.string().trim().min(1)
 const date = z.iso.date()
@@ -10,6 +10,15 @@ const amount = z.number().finite()
 export const invoiceTypeSchema = z.enum(invoiceTypes)
 export const invoiceStatusSchema = z.enum(invoiceStatuses)
 export const invoiceSortSchema = z.enum(invoiceSorts)
+export const invoiceHistoryTypeSchema = z.enum(invoiceHistoryTypes)
+export const invoiceStatusHistoryEventSchema = z.object({
+  historyId: invoiceIdSchema, type: invoiceHistoryTypeSchema,
+  previousStatus: invoiceStatusSchema.nullable(), newStatus: invoiceStatusSchema,
+  reason: text,
+  changedBy: z.object({ accountId: invoiceIdSchema.nullable(), fullName: z.string(), role: text }),
+  changedAt: timestamp,
+})
+export const invoiceStatusHistorySchema = z.array(invoiceStatusHistoryEventSchema)
 export const bookingInvoiceQuerySchema = z.object({
   pageIndex: z.number().int().positive(), pageSize: z.number().int().positive(),
   type: invoiceTypeSchema.optional(), status: invoiceStatusSchema.optional(), sortBy: invoiceSortSchema,

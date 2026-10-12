@@ -1,9 +1,10 @@
-import type { InvoiceDetail } from "../types"
+import type { InvoiceDetail, InvoiceStatusHistoryEvent } from "../types"
 
 export const mockInvoiceId = (index: number) => `00000051-0000-4000-8000-${String(index).padStart(12, "0")}`
 export const invoiceMockBookingId = "00000001-0000-4000-8000-000000000002"
 export const invoiceMockPlanId = "00000003-0000-4000-8000-000000000002"
 export const invoiceMockEmptyBookingId = "flow6-demo-empty-booking"
+export const invoiceMockEmptyHistoryId = mockInvoiceId(9)
 const scenarios: { type: InvoiceDetail["type"]; status: InvoiceDetail["status"]; issued: boolean; receipt?: InvoiceDetail["receipts"][number]["status"] }[] = [
   { type: "QUOTATION", status: "ISSUED", issued: true },
   { type: "DEPOSIT", status: "DRAFT", issued: false },
@@ -70,4 +71,33 @@ export function createInvoiceFixtures(customerId = "flow6-demo-customer"): Invoi
       createdAt, updatedAt: "2026-10-12T11:00:00Z",
     }
   })
+}
+
+// Stable IV10 read fixtures derived from the existing invoice timestamps only.
+// Invoice #9 deliberately has missing audit data to demonstrate a successful empty response.
+export function createInvoiceHistoryFixtures(invoice: InvoiceDetail): InvoiceStatusHistoryEvent[] {
+  if (invoice.invoiceId === invoiceMockEmptyHistoryId) return []
+  const manager = { accountId: "flow6-demo-manager", fullName: "Demo Logistics Manager", role: "LOGISTICS_MANAGER" }
+  const system = { accountId: null, fullName: "System", role: null }
+  const events: InvoiceStatusHistoryEvent[] = []
+  const add = (type: InvoiceStatusHistoryEvent["type"], previousStatus: InvoiceStatusHistoryEvent["previousStatus"],
+    newStatus: InvoiceStatusHistoryEvent["newStatus"], changedAt: string, changedBy: InvoiceStatusHistoryEvent["changedBy"], reason: string | null = null) => {
+    events.push({ historyId: `${invoice.invoiceId}-history-${type}`, type, previousStatus, newStatus, reason, changedBy, changedAt })
+  }
+  add("CREATE", null, "DRAFT", invoice.createdAt, manager)
+  if (invoice.issuedAt) add("ISSUE", "DRAFT", "ISSUED", invoice.issuedAt, manager)
+  if (invoice.status === "OVERDUE" && invoice.type !== "QUOTATION") {
+    // Overdue is the first UTC day after the due date, never before ISSUE.
+    const overdueAt = new Date(Date.parse(`${invoice.dueDate}T00:00:00Z`) + 24 * 60 * 60 * 1000 + 5 * 60 * 1000).toISOString()
+    add("MARK_OVERDUE", "ISSUED", "OVERDUE", overdueAt, system)
+  }
+  if (invoice.status === "PAID" && invoice.paidAt && invoice.type !== "QUOTATION") {
+    const receipt = invoice.receipts.find(item => item.status === "CONFIRMED")
+    const actor = receipt?.recordedBy ? { ...receipt.recordedBy, role: "LOGISTICS_MANAGER" } : system
+    add("RECORD_PAYMENT", "ISSUED", "PAID", invoice.paidAt, actor)
+  }
+  if (invoice.status === "CANCELLED" && invoice.cancelledAt) {
+    add("CANCEL", invoice.issuedAt ? "ISSUED" : "DRAFT", "CANCELLED", invoice.cancelledAt, manager, invoice.cancellationReason)
+  }
+  return events
 }

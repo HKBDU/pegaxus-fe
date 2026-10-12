@@ -4,5 +4,6 @@ export type { InvoiceDetailPageProps, InvoiceActionComponentProps } from "./page
 export { CustomerInvoicesTab } from "./components/CustomerInvoicesTab"
 export { InvoicesPanel } from "./components/InvoicesPanel"
 export { invoiceViewService } from "./services"
-export { useInvoice, useInvoices, useBookingInvoices } from "./hooks/useInvoices"
-export type { InvoiceDetail, InvoiceListItem, InvoiceAction } from "./types"
+export { useInvoice, useInvoices, useBookingInvoices, useInvoiceStatusHistory } from "./hooks/useInvoices"
+export { InvoiceStatusHistory } from "./components/InvoiceStatusHistory"
+export type { InvoiceDetail, InvoiceListItem, InvoiceAction, InvoiceStatusHistoryEvent, InvoiceHistoryType } from "./types"

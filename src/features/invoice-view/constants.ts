@@ -1,6 +1,7 @@
 // Temporary feature-local contract boundary until Khuyên's shared invoice exports are merged.
 export const invoiceTypes = ["QUOTATION", "DEPOSIT", "FINAL", "SUPPLEMENTARY", "CREDIT_NOTE"] as const
 export const invoiceStatuses = ["DRAFT", "ISSUED", "PAID", "OVERDUE", "CANCELLED"] as const
+export const invoiceHistoryTypes = ["CREATE", "ISSUE", "RECORD_PAYMENT", "MARK_OVERDUE", "CANCEL"] as const
 export const invoiceItemTypes = ["TRANSPORT_FEE", "HORSE_SERVICE_FEE", "HANDLING_FEE", "COMPLIANCE_FEE", "EMERGENCY_COST", "OTHER"] as const
 export const invoiceActions = ["EDIT", "ISSUE", "RECORD_PAYMENT", "PAY_NOW", "CANCEL", "CREATE_ANOTHER"] as const
 export const receiptStatuses = ["PENDING", "CONFIRMED", "FAILED"] as const

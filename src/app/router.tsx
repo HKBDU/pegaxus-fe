@@ -138,7 +138,6 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    // A separate guarded branch keeps the other admin pages manager-only.
     path: ROLE_ROUTES.approvedBookings,
     element: <ProtectedRoute allowedRoles={APPROVED_BOOKINGS_ACCESS.anyRole}><AdminLayout /></ProtectedRoute>,
     children: [

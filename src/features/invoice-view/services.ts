@@ -2,7 +2,7 @@ import { isAxiosError } from "axios"
 import { z } from "zod"
 import apiClient from "@/lib/axios"
 import type { PaginationMeta } from "@/shared/types"
-import { invoiceEnvelopeSchema, invoiceIdSchema, invoicePageSchema, invoiceDetailSchema, invoiceQuerySchema, bookingInvoiceQuerySchema } from "./schemas"
+import { invoiceEnvelopeSchema, invoiceIdSchema, invoicePageSchema, invoiceDetailSchema, invoiceQuerySchema, bookingInvoiceQuerySchema, invoiceStatusHistorySchema } from "./schemas"
 import { isFlow6MockMode } from "./source"
 import type { InvoicePage, InvoiceQueryParams, BookingInvoiceQueryParams } from "./types"
 
@@ -43,6 +43,15 @@ export const invoiceViewService = {
       ? (await import("./mocks/invoice.mock")).invoiceMock.detail(id)
       : await apiClient.get<unknown, unknown>(`/invoices/${encodeURIComponent(id)}`, { signal })
     return invoiceDetailSchema.parse(readEnvelope(response))
+  },
+  async statusHistory(invoiceId: string, signal?: AbortSignal) {
+    const id = invoiceIdSchema.parse(invoiceId)
+    signal?.throwIfAborted()
+    const response = !import.meta.env.PROD && isFlow6MockMode()
+      ? (await import("./mocks/invoice.mock")).invoiceMock.statusHistory(id)
+      : await apiClient.get<unknown, unknown>(`/invoices/${encodeURIComponent(id)}/status-history`, { signal })
+    return invoiceStatusHistorySchema.parse(readEnvelope(response))
+      .sort((a, b) => Date.parse(a.changedAt) - Date.parse(b.changedAt))
   },
 }
 export function getInvoiceError(error: unknown) {

@@ -1,7 +1,7 @@
 import { canAccess } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
 import type { InvoiceDetail, InvoiceListItem, InvoiceQueryParams, BookingInvoiceQueryParams } from "../types"
-import { createInvoiceFixtures, invoiceMockEmptyBookingId } from "./fixtures"
+import { createInvoiceFixtures, createInvoiceHistoryFixtures, invoiceMockEmptyBookingId } from "./fixtures"
 
 const success = (value: unknown) => ({ isSuccess: true, code: 200, message: "Development mock invoices retrieved.", value })
 const failure = (code: number, errorCode: string, message: string) => ({ isSuccess: false, code, errorCode, message, value: null })
@@ -37,6 +37,17 @@ function page(invoices: InvoiceDetail[], query: InvoiceQueryParams | BookingInvo
     pageIndex: query.pageIndex, pageSize: query.pageSize, totalItems: items.length, totalPages: Math.ceil(items.length / query.pageSize) })
 }
 export const invoiceMock = {
+  statusHistory(invoiceId: string) {
+    const ctx = context()
+    if (!ctx.authenticated) return failure(401, "UNAUTHORIZED", "Please sign in.")
+    if (!ctx.manager && !ctx.customer) return failure(403, "FORBIDDEN", "You cannot view invoice history.")
+    const invoice = ctx.invoices.find(item => item.invoiceId === invoiceId)
+    if (!invoice || (!ctx.manager && invoice.customer.customerId !== ctx.customerId)) return failure(404, "INVOICE_NOT_FOUND", "Invoice not found.")
+    if (!ctx.manager && !invoice.issuedAt) return failure(403, "FORBIDDEN", "Customer cannot view history for an invoice that was never issued.")
+    const events = createInvoiceHistoryFixtures(invoice)
+    // This is the mock API's response rule, not a second filtering rule in the UI.
+    return success(ctx.manager ? events : events.filter(event => event.type !== "CREATE" && event.newStatus !== "DRAFT"))
+  },
   list(query: InvoiceQueryParams) {
     const ctx = context()
     if (!ctx.authenticated) return failure(401, "UNAUTHORIZED", "Please sign in.")
