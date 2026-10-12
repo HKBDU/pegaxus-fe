@@ -33,7 +33,7 @@ export default function CreateReturnRoutePage() {
       getTransportPlan(transportPlanId),
       getLocations({ pageIndex: 1, pageSize: 200 }),
       getRoutes({ pageIndex: 1, pageSize: 200 }),
-      getRoutePlans(transportPlanId, { pageIndex: 1, pageSize: 200 }),
+      getRoutePlans(transportPlanId),
     ])
       .then(([plan, locationResult, routeResult, routePlanResult]) => {
         const locations = locationResult.items.flatMap((item) => {

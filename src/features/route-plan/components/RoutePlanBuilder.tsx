@@ -1,17 +1,9 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import {
-  ArrowLeft,
-  ArrowRight,
-  MoreVertical,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, MoreVertical, Trash2 } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/shared/components/ui/card";
+import { Card, CardContent } from "@/shared/components/ui/card";
 import {
   MapViewer,
   type MapLocation,
@@ -51,15 +43,6 @@ import { RoutePlanStatusBadge } from "./RoutePlanStatusBadge";
 
 export type { RoutePlanBuilderMetadata } from "./RoutePlanBuilderParts";
 
-const FALLBACK_LOCATION: MapLocation = {
-  id: "unknown-location",
-  name: "Select a route origin",
-  city: "—",
-  country: "—",
-  latitude: 0,
-  longitude: 0,
-};
-
 type TransportPlanSummary = {
   transportPlanId: string;
   planCode: string;
@@ -75,150 +58,7 @@ type TransportPlanSummary = {
 
 type RoutePlanRouteFilter = "ALL" | RouteType;
 
-const MOCK_PLAN: TransportPlanSummary = {
-  transportPlanId: "mock-transport-plan",
-  planCode: "TP-20261001-001",
-  bookingCode: "REQ-20261001-0005",
-  routeType: "PRIMARY",
-  status: "CONFIRMED",
-  scope: "International",
-  departureAt: "2026-10-27T09:30:00Z",
-  arrivalAt: "2026-10-30T09:30:00Z",
-  from: {
-    id: "paris",
-    name: "Paris",
-    city: "Paris",
-    country: "FR",
-    latitude: 48.8566,
-    longitude: 2.3522,
-  },
-  to: {
-    id: "frankfurt",
-    name: "Frankfurt",
-    city: "Frankfurt",
-    country: "DE",
-    latitude: 50.1109,
-    longitude: 8.6821,
-  },
-};
-
-const MOCK_LOCATIONS: MapLocation[] = [
-  MOCK_PLAN.from,
-  {
-    id: "metz",
-    name: "Metz",
-    city: "Metz",
-    country: "FR",
-    latitude: 49.1193,
-    longitude: 6.1757,
-  },
-  {
-    id: "luxembourg",
-    name: "Luxembourg BCP",
-    type: "BORDER_GATE",
-    city: "Luxembourg",
-    country: "LU",
-    latitude: 49.6116,
-    longitude: 6.1319,
-  },
-  {
-    id: "cologne",
-    name: "Cologne Rest Stop",
-    type: "REST_STOP",
-    city: "Cologne",
-    country: "DE",
-    latitude: 50.9375,
-    longitude: 6.9603,
-  },
-  MOCK_PLAN.to,
-];
-
-const MOCK_ROUTES: MapRoute[] = [
-  {
-    id: "route-paris-metz",
-    name: "Paris → Metz",
-    transportMode: "ROAD",
-    fromLocation: MOCK_LOCATIONS[0],
-    toLocation: MOCK_LOCATIONS[1],
-    distanceKm: 315,
-    durationMinutes: 225,
-    geometry: {
-      type: "LineString",
-      coordinates: [
-        [2.3522, 48.8566],
-        [6.1757, 49.1193],
-      ],
-    },
-  },
-  {
-    id: "route-metz-luxembourg",
-    name: "Metz → Luxembourg BCP",
-    transportMode: "ROAD",
-    fromLocation: MOCK_LOCATIONS[1],
-    toLocation: MOCK_LOCATIONS[2],
-    distanceKm: 88,
-    durationMinutes: 75,
-    geometry: {
-      type: "LineString",
-      coordinates: [
-        [6.1757, 49.1193],
-        [6.1319, 49.6116],
-      ],
-    },
-  },
-  {
-    id: "route-luxembourg-cologne",
-    name: "Luxembourg BCP → Cologne Rest Stop",
-    transportMode: "AIR",
-    fromLocation: MOCK_LOCATIONS[2],
-    toLocation: MOCK_LOCATIONS[3],
-    distanceKm: 189,
-    durationMinutes: 140,
-  },
-  {
-    id: "route-cologne-frankfurt",
-    name: "Cologne Rest Stop → Frankfurt",
-    transportMode: "ROAD",
-    fromLocation: MOCK_LOCATIONS[3],
-    toLocation: MOCK_PLAN.to,
-    distanceKm: 102,
-    durationMinutes: 90,
-    geometry: {
-      type: "LineString",
-      coordinates: [
-        [6.9603, 50.9375],
-        [8.6821, 50.1109],
-      ],
-    },
-  },
-];
-
-const MOCK_BACKUP_ROUTES: MapRoute[] = [
-  {
-    id: "backup-route-metz-cologne",
-    name: "Metz → Cologne Rest Stop (Backup)",
-    transportMode: "ROAD",
-    fromLocation: MOCK_LOCATIONS[1],
-    toLocation: MOCK_LOCATIONS[3],
-    distanceKm: 310,
-    durationMinutes: 210,
-  },
-  {
-    id: "backup-route-cologne-frankfurt",
-    name: "Cologne Rest Stop → Frankfurt (Backup)",
-    transportMode: "ROAD",
-    fromLocation: MOCK_LOCATIONS[3],
-    toLocation: MOCK_PLAN.to,
-    distanceKm: 102,
-    durationMinutes: 90,
-  },
-];
-
 const steps = ["Transport Details", "Route Builder", "Save"];
-void MOCK_ROUTES;
-void MOCK_BACKUP_ROUTES;
-void MOCK_PLAN;
-void MOCK_LOCATIONS;
 
 function formatDate(value: string) {
   const date = new Date(value);
@@ -440,9 +280,12 @@ export function RoutePlanBuilder({
   const [updateReason, setUpdateReason] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
   const [routeSearch, setRouteSearch] = useState("");
-  const [routePlanTypeFilter, setRoutePlanTypeFilter] = useState<RoutePlanRouteFilter>("ALL");
+  const [routePlanTypeFilter, setRoutePlanTypeFilter] =
+    useState<RoutePlanRouteFilter>("ALL");
   const [showRouteSearch, setShowRouteSearch] = useState(false);
-  const [sourceLocation, setSourceLocation] = useState<MapLocation | null>(null);
+  const [sourceLocation, setSourceLocation] = useState<MapLocation | null>(
+    null,
+  );
   const [returnOrigin, setReturnOrigin] = useState<MapLocation | null>(
     () => initialRoutes[0]?.fromLocation ?? null,
   );
@@ -456,11 +299,18 @@ export function RoutePlanBuilder({
     (isReturn ? returnOrigin : null) ??
     readonlyPrimaryRoutes[0]?.fromLocation ??
     initialRoutes[0]?.fromLocation ??
-    FALLBACK_LOCATION;
+    metadata?.from;
   const fallbackTo =
     readonlyPrimaryRoutes.at(-1)?.toLocation ??
     initialRoutes.at(-1)?.toLocation ??
+    metadata?.to ??
     fallbackFrom;
+  const planFrom = (
+    isReturn ? fallbackFrom : (metadata?.from ?? fallbackFrom)
+  )!;
+  const planTo = (
+    isReturn ? (metadata?.from ?? fallbackTo) : (metadata?.to ?? fallbackTo)
+  )!;
   const plan = useMemo(
     () => ({
       ...metadata,
@@ -470,12 +320,12 @@ export function RoutePlanBuilder({
       scope: metadata?.scope ?? "Domestic",
       departureAt: metadata?.departureAt ?? "",
       arrivalAt: metadata?.arrivalAt ?? "",
-      from: isReturn ? fallbackFrom : (metadata?.from ?? fallbackFrom),
-      to: isReturn ? (metadata?.from ?? fallbackTo) : (metadata?.to ?? fallbackTo),
+      from: planFrom,
+      to: planTo,
       transportPlanId,
       routeType,
     }),
-    [fallbackFrom, fallbackTo, isReturn, metadata, routeType, transportPlanId],
+    [planFrom, planTo, metadata, routeType, transportPlanId],
   );
   const routeCatalog = useMemo(
     () =>
@@ -491,16 +341,18 @@ export function RoutePlanBuilder({
   );
   const filteredRoutes = useMemo(() => {
     const query = routeSearch.trim().toLowerCase();
-    return routeCatalog.filter((route) =>
-      (routePlanTypeFilter === "ALL" || route.routePlanType === routePlanTypeFilter) &&
-      [
-        route.name,
-        route.fromLocation?.name,
-        route.toLocation?.name,
-        route.transportMode,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(query)),
+    return routeCatalog.filter(
+      (route) =>
+        (routePlanTypeFilter === "ALL" ||
+          route.routePlanType === routePlanTypeFilter) &&
+        [
+          route.name,
+          route.fromLocation?.name,
+          route.toLocation?.name,
+          route.transportMode,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query)),
     );
   }, [routeCatalog, routePlanTypeFilter, routeSearch]);
   const locationOptions = useMemo(() => {
@@ -580,7 +432,9 @@ export function RoutePlanBuilder({
     }
     if (!sourceLocation) {
       setSourceLocation(location);
-      setBuildMessage(`Source selected: ${location.name}. Please choose a Destination.`);
+      setBuildMessage(
+        `Source selected: ${location.name}. Please choose a Destination.`,
+      );
       return;
     }
     if (String(sourceLocation.id) === String(location.id)) {
@@ -695,10 +549,10 @@ export function RoutePlanBuilder({
             isReturn
               ? "CREATE RETURN ROUTE"
               : isBackup
-              ? "CREATE CONTINGENCY ROUTE"
-              : edit
-                ? "EDIT ROUTE PLAN"
-                : "CREATE ROUTE PLAN"
+                ? "CREATE CONTINGENCY ROUTE"
+                : edit
+                  ? "EDIT ROUTE PLAN"
+                  : "CREATE ROUTE PLAN"
           }
           backHref={ROLE_ROUTES.routePlans}
           backLabel="BACK TO ROUTE PLANS"
@@ -753,7 +607,8 @@ export function RoutePlanBuilder({
                 <div className="mb-2 flex items-center justify-between">
                   <h2 className="font-semibold">Route Segments Builder</h2>
                   <span className="text-sm text-muted-foreground">
-                    {segments.length} {isReturn ? "return " : isBackup ? "backup " : ""}segment(s)
+                    {segments.length}{" "}
+                    {isReturn ? "return " : isBackup ? "backup " : ""}segment(s)
                   </span>
                 </div>
                 <div className="grid gap-2">
@@ -775,13 +630,21 @@ export function RoutePlanBuilder({
                           className="rounded border bg-white px-3 py-2 text-left text-sm hover:border-amber-500 hover:bg-amber-50"
                           onClick={() => addSegment(route)}
                         >
-                          <span className="block font-medium">{route.name ?? "Unnamed Route"}</span>
+                          <span className="block font-medium">
+                            {route.name ?? "Unnamed Route"}
+                          </span>
                           <span className="text-xs text-muted-foreground">
-                            {route.fromLocation?.name} → {route.toLocation?.name} · {route.transportMode ?? "ROAD"}
+                            {route.fromLocation?.name} →{" "}
+                            {route.toLocation?.name} ·{" "}
+                            {route.transportMode ?? "ROAD"}
                           </span>
                         </button>
                       ))}
-                      {!filteredRoutes.length && <p className="text-xs text-muted-foreground">No saved Route found.</p>}
+                      {!filteredRoutes.length && (
+                        <p className="text-xs text-muted-foreground">
+                          No saved Route found.
+                        </p>
+                      )}
                     </div>
                   </div>
                   {segments.map((segment, index) => (
@@ -826,13 +689,19 @@ export function RoutePlanBuilder({
                       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                         <input
                           value={routeSearch}
-                          onChange={(event) => setRouteSearch(event.target.value)}
+                          onChange={(event) =>
+                            setRouteSearch(event.target.value)
+                          }
                           placeholder="Search saved Route or Location"
                           className="h-9 w-full rounded border bg-white px-3 text-sm"
                         />
                         <select
                           value={routePlanTypeFilter}
-                          onChange={(event) => setRoutePlanTypeFilter(event.target.value as RoutePlanRouteFilter)}
+                          onChange={(event) =>
+                            setRoutePlanTypeFilter(
+                              event.target.value as RoutePlanRouteFilter,
+                            )
+                          }
                           className="h-9 rounded border bg-white px-3 text-sm"
                           aria-label="Filter route plan type"
                         >
@@ -853,13 +722,21 @@ export function RoutePlanBuilder({
                               setShowRouteSearch(false);
                             }}
                           >
-                            <span className="block font-medium">{route.name ?? "Unnamed Route"}</span>
+                            <span className="block font-medium">
+                              {route.name ?? "Unnamed Route"}
+                            </span>
                             <span className="text-xs text-muted-foreground">
-                              {route.fromLocation?.name} → {route.toLocation?.name} · {route.transportMode ?? "ROAD"}
+                              {route.fromLocation?.name} →{" "}
+                              {route.toLocation?.name} ·{" "}
+                              {route.transportMode ?? "ROAD"}
                             </span>
                           </button>
                         ))}
-                        {!filteredRoutes.length && <p className="text-xs text-muted-foreground">No saved Route found.</p>}
+                        {!filteredRoutes.length && (
+                          <p className="text-xs text-muted-foreground">
+                            No saved Route found.
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -969,11 +846,11 @@ export function RoutePlanBuilder({
           <Button
             disabled={
               step === 2 ||
-                  (step === 1 &&
+              (step === 1 &&
                 (!segments.length ||
                   !continuity.valid ||
-                      (isBackup && !primaryAvailable) ||
-                      (isReturn && !returnOrigin)))
+                  (isBackup && !primaryAvailable) ||
+                  (isReturn && !returnOrigin)))
             }
             onClick={() =>
               setStep((value) => Math.min(2, value + 1) as WizardStep)

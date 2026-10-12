@@ -11,6 +11,8 @@ export type MapLocation = {
   latitude: number;
   longitude: number;
   note?: string | null;
+  /** Raw server concurrency token. Keep fractional-second precision intact. */
+  updatedAt?: string | null;
 };
 
 export type LocationAction = "EDIT" | "DELETE";
@@ -29,6 +31,8 @@ export type MapRoute = {
   transportMode?: "ROAD" | "SEA" | "AIR";
   distanceKm?: number | null;
   durationMinutes?: number | null;
+  /** Raw server concurrency token. Keep fractional-second precision intact. */
+  updatedAt?: string | null;
   source?: "saved" | "preview";
   routePlanType?: "PRIMARY" | "BACKUP" | "RETURN";
   readonly?: boolean;
