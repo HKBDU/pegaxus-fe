@@ -55,8 +55,8 @@ export function DashboardFilters({ filters, onSearchChange, onRouteChange, onSta
   useEffect(() => onSearchChange(debouncedSearch), [debouncedSearch, onSearchChange])
 
   return (
-    <div role="toolbar" className="grid grid-cols-2 gap-2 lg:grid-cols-[minmax(15rem,1fr)_9rem_9.5rem_9.5rem_10.5rem_auto]">
-      <div className="relative col-span-2 lg:col-span-1">
+    <div role="toolbar" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-[minmax(15rem,1fr)_9rem_9.5rem_9.5rem_10.5rem_auto]">
+      <div className="relative col-span-2 md:col-span-3 xl:col-span-1">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
         <Input
           value={localSearch}

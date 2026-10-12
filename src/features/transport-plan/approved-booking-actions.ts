@@ -1,6 +1,6 @@
 import { canAccess } from "@/features/auth/access-control"
 import type { AuthPrincipal } from "@/features/auth/types"
-import { transportPlanDetail, dossierDetail, ROLE_ROUTES } from "@/app/route-config"
+import { transportPlanDetail, dossierDetail, routePlanCreate, ROLE_ROUTES } from "@/app/route-config"
 import { getRouteDetailPath } from "@/features/route-view/navigation"
 import type { ApprovedBookingAction, ApprovedBookingDetail, ApprovedBookingListItem, BookingTransportPlanContext, TransportPlanDetail } from "./types"
 import { actionEntityIdSchema } from "./schemas"
@@ -54,7 +54,7 @@ export function getApprovedBookingActions(principal: AuthPrincipal | null, booki
     const hasTransport = "transport" in booking ? Boolean(transport) : Boolean(booking.transportId)
     const unlocked = !transport || !["IN_TRANSIT", "COMPLETED", "CANCELLED"].includes(transport.status)
     return plan?.status === "APPROVED" && hasTransport && unlocked ? [{ kind: "createRoutePlan", label: "Create Primary Route", targetId: plan.transportPlanId,
-      blockedReason: "Route Builder navigation awaits the route-plan feature and registered route." }] : []
+      href: routePlanCreate(plan.transportPlanId) }] : []
   }
   if (canAccess(principal, { anyRole: ["TRANSPORT_SPECIALIST"] })) {
     const transportId = ("transport" in booking ? booking.transport?.transportId : booking.transportId) ?? undefined
@@ -62,7 +62,7 @@ export function getApprovedBookingActions(principal: AuthPrincipal | null, booki
     const dossierAction: ApprovedBookingAction | undefined = dossier
       ? { kind: "viewComplianceDossier", label: "View Compliance Dossier", targetId: dossier.complianceDossierId, href: dossierDetail(dossier.complianceDossierId, "TRANSPORT_SPECIALIST") }
       : transportId ? { kind: "applyDossierTemplate", label: "Apply Dossier Template", targetId: transportId, bookingId: booking.bookingId, transportId,
-        blockedReason: "Flow 2 Apply Template must use transport-scoped D2 before this integration is enabled." } : undefined
+        href: `${ROLE_ROUTES.complianceDossiers}/new/${encodeURIComponent(booking.bookingId)}` } : undefined
     const requirementsAction: ApprovedBookingAction[] = dossier ? [{ kind: "viewDossierRequirements", label: "View Requirements", targetId: dossier.complianceDossierId,
       href: `${ROLE_ROUTES.complianceDossiers}/${encodeURIComponent(dossier.complianceDossierId)}/requirements` }] : []
     return [...(dossierAction && (dossier || plan?.status === "APPROVED") ? [dossierAction] : []), ...requirementsAction, ...viewRoute]

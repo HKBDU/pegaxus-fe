@@ -43,7 +43,7 @@ export function AuditHistoryPanel({ embedded = false }: { embedded?: boolean }) 
         {overviewQuery.isError ? (
           <ErrorState message={getDossierErrorMessage(overviewQuery.error, "Unable to load this dossier.")} onRetry={() => void overviewQuery.refetch()} />
         ) : (
-          <div className="grid gap-5">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
             {!embedded ? (overview ? <DossierHeaderCard overview={overview} /> : <Skeleton className="h-20 rounded-none bg-[#e9e6de]" />) : null}
             {!embedded && dossierId ? <DossierTabs dossierId={dossierId} active="audit" /> : null}
 

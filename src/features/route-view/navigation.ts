@@ -1,10 +1,8 @@
+import { routePlanDetail } from "@/app/route-config"
 import { actionEntityIdSchema } from "@/features/transport-plan/schemas"
 import type { RouteDetailPath } from "./types"
 
-// Only the existing DEV route is registered in this checkout. No guessed production path.
-export function getRouteDetailPath(env: { DEV?: boolean; PROD?: boolean } = import.meta.env): RouteDetailPath | undefined {
-  if (import.meta.env.PROD) return undefined
-  return env.DEV && !env.PROD
-    ? (id) => `/__dev/flow3/route-plans/${encodeURIComponent(actionEntityIdSchema.parse(id))}`
-    : undefined
+// UC-38 route plan detail: /admin/route-plans/:routePlanId (registered in the app router for LM, RC and TS).
+export function getRouteDetailPath(): RouteDetailPath {
+  return (id) => routePlanDetail(actionEntityIdSchema.parse(id))
 }

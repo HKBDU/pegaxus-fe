@@ -117,7 +117,7 @@ export function AdminSidebar() {
       <div className="relative flex h-20 shrink-0 items-center justify-center bg-[#17191c] px-4 group-data-[collapsible=icon]:px-2">
         <img alt="Pegaxus" src={logo} className="w-full max-w-[170px] group-data-[collapsible=icon]:hidden" />
       </div>
-      <SidebarContent className="overflow-hidden bg-[#17191c]">
+      <SidebarContent className="overflow-y-auto overflow-x-hidden bg-[#17191c]">
         <SidebarGroup className="px-0">
           <SidebarGroupContent>
             <AdminSidebarMenu items={items} compact />

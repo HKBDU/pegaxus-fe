@@ -3,7 +3,7 @@ import { CircleCheck } from "lucide-react"
 import { useMemo, useState, type ReactNode } from "react"
 
 import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
-import type { Booking } from "@/features/booking/types"
+import type { ApplyBooking } from "@/features/compliance-catalog/dossier-types"
 import { CategoryBadge, MandatoryBadge, ScopeBadge } from "@/features/compliance-catalog/components/RequirementBadges"
 import { TruncatedText } from "@/features/compliance-catalog/components/TruncatedText"
 import type { FinalRequirementRow } from "@/features/compliance-catalog/dossier-types"
@@ -34,7 +34,7 @@ function Line({ label, children }: { label: string; children: ReactNode }) {
 }
 
 interface ReviewDossierStepProps {
-  booking: Booking
+  booking: ApplyBooking
   template: DossierTemplate | null
   rows: FinalRequirementRow[]
   counts: { total: number; horse: number; trip: number }
@@ -72,7 +72,7 @@ export function ReviewDossierStep({ booking, template, rows, counts }: ReviewDos
   const table = useReactTable({ data: pageRows, columns, getRowId: (row) => row.key, getCoreRowModel: getCoreRowModel() })
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
       <div className="grid gap-4 lg:grid-cols-3">
         <InfoCard title="Booking Information">
           <Line label="Request ID">{booking.bookingCode}</Line>

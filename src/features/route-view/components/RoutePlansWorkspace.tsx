@@ -14,7 +14,8 @@ import type { RouteDetailPath } from "../types"
 import { beforeDeparture, getPendingRouteCreation } from "../workspace-actions"
 import { RoutePlansTable } from "./RoutePlansTable"
 
-function UnavailableAction({ label, reason }: { label: string; reason: string }) {
+function UnavailableAction({ label, reason, href }: { label: string; reason: string; href?: string }) {
+  if (href) return <Button asChild size="sm" className="rounded-md"><Link to={href}>{label}</Link></Button>
   return <div className="space-y-1"><Button size="sm" disabled title={reason} className="rounded-md">{label}</Button><p className="max-w-sm text-[11px] text-slate-500">{reason}</p></div>
 }
 
@@ -33,7 +34,7 @@ export function RoutePlansWorkspace({ transportPlanId, planStatus, transportStat
   const context = { principal, planStatus, transportStatus, dossierStatus, hasActivePrimary: items.some(route => route.routeType === "PRIMARY" && route.status === "ACTIVE") }
   const primary = items.find(item => item.routeType === "PRIMARY" && item.status !== "CANCELLED")
   const title = specialist ? "Route Legal Review" : manager ? "Route Monitoring" : "Route Plans"
-  const creation = getPendingRouteCreation(items, context)
+  const creation = getPendingRouteCreation(items, context, transportPlanId)
   const error = query.isError ? getRouteViewError(query.error) : null
   return <Section title={title} icon={Route} description="Primary journey, backup alternatives and emergency return routes."
     actions={allowed && validId && query.isSuccess && creation ? <UnavailableAction {...creation} /> : undefined}>

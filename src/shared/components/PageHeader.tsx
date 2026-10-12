@@ -13,8 +13,8 @@ export function PageHeader({ title, backHref, backLabel = "RETURN", showBack = t
         <span aria-hidden="true" className="text-[14px]">←</span>
         {backLabel}
       </NavLink>}
-      <div className="flex items-center justify-between gap-3">
-      <h1 className="!my-[10px] min-w-0 flex-1 font-[var(--heading)] text-[40px] font-bold leading-[48px] tracking-[-1.2px] !text-[hsl(var(--primary))] uppercase sm:text-[48px]">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+      <h1 className="!my-[10px] min-w-0 flex-1 basis-[min(100%,12rem)] font-[var(--heading)] text-[40px] font-bold leading-[48px] tracking-[-1.2px] !text-[hsl(var(--primary))] uppercase sm:text-[48px]">
         {title}
       </h1>
       {action}

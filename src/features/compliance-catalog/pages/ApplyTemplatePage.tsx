@@ -174,7 +174,7 @@ export default function ApplyTemplatePage() {
   if (bookingQuery.isLoading || existingQuery.isLoading) {
     return (
       <PageShell>
-        <div className="grid gap-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
           <Skeleton className="h-16 rounded-none bg-[#e9e6de]" />
           <Skeleton className="h-24 rounded-none bg-[#e9e6de]" />
           <Skeleton className="h-96 rounded-none bg-[#e9e6de]" />
@@ -253,7 +253,7 @@ export default function ApplyTemplatePage() {
 
       {step === 2 ? (
         <>
-          <div className="mb-4 grid gap-4">
+          <div className="mb-4 grid grid-cols-[minmax(0,1fr)] gap-4">
             <section aria-labelledby="booking-information-title">
               <h2 id="booking-information-title" className="sr-only">Booking Information</h2>
               <BookingSummaryCard booking={booking} />
