@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { bookingService } from "@/features/booking/services"
 import { dossierService } from "@/features/compliance-catalog/dossier-services"
 import type { CreateDossierInput } from "@/features/compliance-catalog/dossier-types"
 import { templateService } from "@/features/compliance-catalog/template-services"
@@ -18,7 +17,7 @@ export const applyKeys = {
 export function useBookingForDossier(bookingId: EntityId | undefined) {
   return useQuery({
     queryKey: applyKeys.booking(bookingId ?? ""),
-    queryFn: () => bookingService.getBooking(bookingId as EntityId),
+    queryFn: () => dossierService.getBookingForApply(bookingId as EntityId),
     enabled: bookingId !== undefined && String(bookingId).length > 0,
   })
 }

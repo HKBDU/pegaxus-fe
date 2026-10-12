@@ -3,7 +3,7 @@ import { Info, MoreVertical, Plus, Trash2, X } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
 import { cn } from "@/lib/utils"
-import type { Booking } from "@/features/booking/types"
+import type { ApplyBooking } from "@/features/compliance-catalog/dossier-types"
 import { AddCustomRequirementPanel } from "@/features/compliance-catalog/components/AddCustomRequirementPanel"
 import { CategoryBadge, MandatoryBadge, ScopeBadge } from "@/features/compliance-catalog/components/RequirementBadges"
 import { RequirementCountTiles } from "@/features/compliance-catalog/components/RequirementCountTiles"
@@ -28,7 +28,7 @@ type Row =
 const sectionTitleClass = "m-0! font-heading text-lg! leading-6! font-bold! tracking-[0.02em]! text-[#ef8f00]! uppercase"
 
 interface CustomizeRequirementsStepProps {
-  booking: Booking
+  booking: ApplyBooking
   /** null = custom dossier without a template (ALT-01). */
   template: DossierTemplate | null
   templateLoading: boolean

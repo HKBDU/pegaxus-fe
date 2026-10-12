@@ -1,5 +1,15 @@
+import type { Booking } from "@/features/booking/types"
 import type { EntityId } from "@/shared/types"
 import type { ComplianceCategory } from "@/features/compliance-catalog/types"
+
+/**
+ * What the apply-template wizard reads from a booking (header, route countries, horses). Narrower than the Flow 1
+ * Booking on purpose: the Transport Specialist gets it from AB2, which has no customer or audit data.
+ */
+export type ApplyBooking = Pick<Booking, "bookingId" | "bookingCode" | "status" | "originCountry" | "destinationCountry"> & {
+  customer: { fullName: string }
+  horses: { horseId: EntityId; horseName: string }[]
+}
 
 /** GET /bookings/{id}/compliance-dossier (D1). */
 export interface ComplianceDossierSummary {
