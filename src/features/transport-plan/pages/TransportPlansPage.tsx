@@ -11,7 +11,7 @@ import { getTransportPlanError } from "../services"
 import type { TransportPlansQueryParams } from "../types"
 import { Flow3MockIndicator } from "../components/Flow3MockIndicator"
 
-export default function TransportPlansPage() {
+export default function TransportPlansPage({ onCreateInvoice }: { onCreateInvoice?: (bookingId: string) => void }) {
   const [params, setParams] = useState(initialTransportPlanParams)
   const search = useDebounce(params.search, 300)
   const isSearchPending = search !== params.search
@@ -28,7 +28,7 @@ export default function TransportPlansPage() {
       <div><PageHeader title="Transport Plans" backHref={ROLE_ROUTES.managerHome} showBack={false} /><p className="text-xs text-slate-500 sm:text-sm">View and track transport plans.</p></div>
       {error ? <>{filters}<ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /></> :
         <TransportPlansTable plans={query.data?.data ?? []} params={params} meta={meta} isLoading={query.isFetching || query.isPending || isSearchPending}
-          filters={filters} onChange={changeFilters} onPageChange={(pageIndex) => {
+          filters={filters} onCreateInvoice={onCreateInvoice} onChange={changeFilters} onPageChange={(pageIndex) => {
             if (!isSearchPending && !query.isFetching) setParams((current) => ({ ...current, pageIndex }))
           }} />}
     </div>

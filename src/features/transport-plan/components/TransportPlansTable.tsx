@@ -1,12 +1,16 @@
 import { useMemo, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { Eye } from "lucide-react"
+import { Eye, MoreHorizontal } from "lucide-react"
 import { createTable, getCoreRowModel, type ColumnDef, type SortingState, type VisibilityState } from "@tanstack/react-table"
 import { transportPlanDetail } from "@/app/route-config"
 import type { PaginationMeta } from "@/shared/types"
 import { EmptyState } from "@/shared/components/common"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Button } from "@/shared/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
+import { useAuthStore } from "@/features/auth/store"
+import { canAccess } from "@/features/auth/access-control"
+import { planInvoicesPath } from "@/features/invoice-view/constants"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { formatPlanDate } from "../format"
@@ -15,12 +19,15 @@ import { transportPlanSortSchema } from "../schemas"
 import type { TransportPlanListItem, TransportPlansQueryParams } from "../types"
 import { TransportPlanStatusBadge } from "./TransportPlanStatusBadge"
 
-export function TransportPlansTable({ plans, params, meta, isLoading, onChange, onPageChange, filters }: {
+export function TransportPlansTable({ plans, params, meta, isLoading, onChange, onPageChange, filters, onCreateInvoice }: {
   plans: TransportPlanListItem[]; params: TransportPlansQueryParams; meta: PaginationMeta; isLoading: boolean
   filters?: ReactNode
   onChange: (patch: Partial<Omit<TransportPlansQueryParams, "pageIndex">>) => void
   onPageChange: (page: number) => void
+  onCreateInvoice?: (bookingId: string) => void
 }) {
+  const principal = useAuthStore(state => state.principal)
+  const manager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({ plannedEndAt: false })
   const columns = useMemo<ColumnDef<TransportPlanListItem>[]>(() => [
     { accessorKey: "planCode", header: "Plan", enableHiding: false, cell: ({ row }) => <Link to={transportPlanDetail(row.original.transportPlanId)} className="font-semibold text-primary underline-offset-2 hover:underline">{row.original.planCode}</Link> },
@@ -29,8 +36,14 @@ export function TransportPlansTable({ plans, params, meta, isLoading, onChange, 
     { accessorKey: "plannedStartAt", header: "Planned start", enableSorting: true, cell: ({ row }) => formatPlanDate(row.original.plannedStartAt) },
     { accessorKey: "plannedEndAt", header: "Planned end", cell: ({ row }) => formatPlanDate(row.original.plannedEndAt) },
     { accessorKey: "status", header: "Status", cell: ({ row }) => <TransportPlanStatusBadge status={row.original.status} /> },
-    { id: "actions", header: "Actions", enableHiding: false, cell: ({ row }) => <Button asChild variant="ghost" size="icon" className="size-7 rounded-[2px]"><Link to={transportPlanDetail(row.original.transportPlanId)} aria-label={`View ${row.original.planCode}`}><Eye className="size-3.5" /></Link></Button> },
-  ], [])
+    { id: "actions", header: "Actions", enableHiding: false, cell: ({ row }) => manager ? <DropdownMenu>
+      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-7 rounded-[2px]" aria-label={`Actions for ${row.original.planCode}`}><MoreHorizontal className="size-3.5" /></Button></DropdownMenuTrigger>
+      <DropdownMenuContent align="end"><DropdownMenuItem asChild><Link to={transportPlanDetail(row.original.transportPlanId)}>View TransportPlan</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link to={planInvoicesPath(row.original.transportPlanId)}>View Invoices</Link></DropdownMenuItem>
+        {onCreateInvoice ? <DropdownMenuItem onSelect={() => onCreateInvoice(row.original.bookingId)}>Create Invoice</DropdownMenuItem> : null}
+      </DropdownMenuContent>
+    </DropdownMenu> : <Button asChild variant="ghost" size="icon" className="size-7 rounded-[2px]"><Link to={transportPlanDetail(row.original.transportPlanId)} aria-label={`View ${row.original.planCode}`}><Eye className="size-3.5" /></Link></Button> },
+  ], [manager, onCreateInvoice])
   const [sortId, direction] = params.sortBy.split(":")
   const sorting: SortingState = [{ id: sortId, desc: direction === "desc" }]
   // A fully controlled instance: React owns visibility and the server owns sorting/pagination.
