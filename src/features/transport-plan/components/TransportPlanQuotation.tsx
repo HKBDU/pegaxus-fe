@@ -7,6 +7,8 @@ import { Field, Section } from "./ApprovedBookingDetails"
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
 import { Button } from "@/shared/components/ui/button"
 import { ReceiptText } from "lucide-react"
+import { Link } from "react-router-dom"
+import { transportPlanDetail } from "@/app/route-config"
 
 export function QuotationDetails({ quotation }: { quotation: Quotation }) {
   return <Section title="Quotation & Payment">
@@ -34,9 +36,9 @@ export function QuotationDetails({ quotation }: { quotation: Quotation }) {
 export function TransportPlanQuotation({ transportPlanId, quotation, canManage = false }: { transportPlanId: EntityId; quotation?: Quotation | null; canManage?: boolean }) {
   // Flow 6 can provide verified data here; Flow 3 never guesses an ID or fetches an obsolete endpoint.
   return quotation && quotation.transportPlanId === transportPlanId ? <QuotationDetails quotation={quotation} /> :
-    <section aria-label="Quotation and payment checkpoint" className="flex flex-wrap items-center justify-between gap-4 rounded-[2px] border border-slate-200 bg-linear-to-r from-slate-50 to-white p-4 shadow-xs">
-        <div className="flex min-w-0 flex-1 items-start gap-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-[2px] bg-slate-100 text-slate-600"><ReceiptText aria-hidden="true" className="size-4" /></span><div className="min-w-0"><h2 className="font-heading text-base uppercase">Quotation &amp; Payment</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Quotation acceptance and deposit precede Phase 1 assignment. Financial details are not available here yet.</p></div></div>
-        {canManage && <Button variant="outline" size="sm" disabled title="Quotation management is not available yet." className="rounded-[2px]">Set / Issue Quotation</Button>}
+    <section aria-label="Quotation and payment checkpoint" className="flex flex-wrap items-center justify-between gap-3 rounded-[2px] border border-slate-200 bg-linear-to-r from-slate-50 to-white p-3 shadow-xs">
+        <div className="flex min-w-0 flex-1 items-start gap-3"><span className="flex size-7 shrink-0 items-center justify-center rounded-[2px] bg-slate-100 text-slate-600"><ReceiptText aria-hidden="true" className="size-4" /></span><div className="min-w-0"><h2 className="m-0! font-heading text-base! leading-5! uppercase">Quotation &amp; Payment</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">View quotation, deposit and payment information in Invoices.</p></div></div>
+        {canManage && <Button asChild variant="outline" size="sm" className="rounded-[2px]"><Link to={`${transportPlanDetail(transportPlanId)}?tab=invoices`}>View Invoices</Link></Button>}
     </section>
 }

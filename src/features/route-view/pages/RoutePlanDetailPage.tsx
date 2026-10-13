@@ -46,7 +46,9 @@ export default function RoutePlanDetailPage({ mapViewer, routeDetailPath, emerge
   const hasPlan = Boolean(plan)
   const pageRef = useRef<HTMLDivElement>(null)
   const fullPageMode = mode === "decision" || mode === "activation"
-  const waitingForAction = Boolean(mode && mode !== "overview") && context.loading
+  const staff = ["coordinator", "specialist"].includes(getWorkspaceRole(principal) ?? "")
+  // RP3 alone is not enough to authorize the assigned staff workspace; wait for TP3/AB2.
+  const waitingForAction = (staff || Boolean(mode && mode !== "overview")) && context.loading
   useEffect(() => {
     if (!hasPlan || waitingForAction || mode === "request" || mode === "notice") return
     const heading = pageRef.current?.querySelector<HTMLElement>("h1")
@@ -63,7 +65,7 @@ export default function RoutePlanDetailPage({ mapViewer, routeDetailPath, emerge
     <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-4">
       <Flow3MockIndicator />
       {allowed && valid && !error && !accessFailure && plan ? <>
-        {waitingForAction ? <Skeleton role="status" aria-label="Loading emergency context" className="h-80 w-full" /> : context.error && mode && mode !== "overview" ?
+        {waitingForAction ? <Skeleton role="status" aria-label="Loading authorized route workspace" className="h-80 w-full" /> : context.error && (staff || (mode && mode !== "overview")) ?
           <div className="space-y-3"><ErrorState message={getEmergencyError(context.error).message} /><Button className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" variant="outline" onClick={() => changeMode()}>Back to Route Plan</Button></div> : workspace ?
           <div key={`${routePlanId}-${mode}`}>{workspace}</div> : !fullPageMode ? <>
             {context.error && <ErrorState message={getEmergencyError(context.error).message} />}

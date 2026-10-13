@@ -104,6 +104,8 @@ export const transportPlanIdSchema = entityIdSchema
 export const transportPlanSortSchema = z.enum(["createdAt:asc", "createdAt:desc", "plannedStartAt:asc", "plannedStartAt:desc"])
 export const transportPlanTabSchema = z.enum(["general", "personnel", "invoices"])
 const maxDurationMinutes = 2_147_483_647
+// Backend storage uses NUMERIC(10,2); do not submit a value it cannot persist.
+const maxDistanceKm = 99_999_999.99
 export const transportPlansQuerySchema = z.object({
   pageIndex: z.number().int().positive(), pageSize: z.number().int().positive(),
   search: z.string().trim().optional().transform((value) => value || undefined),
@@ -151,7 +153,7 @@ export const transportPlanDetailSchema = z.object({
 const metadataFields = {
   plannedStartAt: timestamp,
   plannedEndAt: timestamp,
-  estimatedDistanceKm: z.number().finite().nonnegative().optional(),
+  estimatedDistanceKm: z.number().finite().nonnegative().max(maxDistanceKm).optional(),
   estimatedDurationMinutes: z.number().finite().int().min(0).max(maxDurationMinutes).optional(),
   planningNote: z.string().optional(),
 }
@@ -186,7 +188,7 @@ function validLocalDate(value: string) {
   return Number.isFinite(date.getTime()) && toLocalDateTime(date.toISOString()).slice(0, value.length) === value
 }
 const localDate = z.string().refine(validLocalDate, "Enter a valid date and time.")
-const optionalNumber = z.string().refine(value => !value.trim() || (Number.isFinite(Number(value)) && Number(value) >= 0), "Enter a non-negative number.")
+const optionalNumber = z.string().refine(value => !value.trim() || (Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= maxDistanceKm), "Enter a distance between 0 and 99,999,999.99 km.")
 const optionalWholeNumber = z.string().refine(value => !value.trim() || (Number.isInteger(Number(value)) && Number(value) >= 0 && Number(value) <= maxDurationMinutes), "Enter whole minutes between 0 and 2,147,483,647.")
 const formFields = {
   plannedStartAt: localDate, plannedEndAt: localDate,

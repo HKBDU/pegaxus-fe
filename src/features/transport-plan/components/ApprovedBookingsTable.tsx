@@ -70,7 +70,7 @@ export function ApprovedBookingsTable({ bookings, params, meta, isLoading, onCha
     cellClassName="h-11 px-2.5 py-2 text-xs"
     emptyMessage={<EmptyState message={hasApprovedBookingFilters(params) ? "No transports match your filters. Adjust your filters." : "No approved transports are available in your assigned scope."} />}
     footer={<TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={(pageSize) => onChange({ pageSize })} pageSizeAriaLabel="Approved bookings per page" />}>
-    <div className="min-w-0 overflow-x-auto py-1"><div role="group" aria-label="Approved bookings toolbar" className="flex min-w-max items-start gap-2">
+    <div className="min-w-0 overflow-x-auto p-1"><div role="group" aria-label="Approved bookings toolbar" className="flex min-w-max items-start gap-2">
       {filters && <div className="flex-1">{filters}</div>}
       <div className="flex shrink-0 justify-end"><DataTableViewOptions table={table} /></div>
     </div></div>

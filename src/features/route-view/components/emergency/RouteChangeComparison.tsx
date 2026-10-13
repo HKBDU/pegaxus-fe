@@ -41,8 +41,8 @@ export function RouteChangeComparison({ primary, proposed, loading, error }: { p
       </div>
     </Section>
     <Section title="Legal Review Comparison" icon={ShieldCheck}><div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
-      <div className="min-w-0 space-y-2"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current PRIMARY</p>{primary ? <RouteLegalReview review={primary.legalReview} /> : <p className="text-xs text-slate-500">Legal review data unavailable.</p>}</div>
-      <div className="min-w-0 space-y-2"><p className="text-xs font-semibold uppercase tracking-wide text-primary">Proposed {proposed.routeType}</p><RouteLegalReview review={proposed.legalReview} /></div>
+      <div className="min-w-0 space-y-2"><p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current PRIMARY</p>{primary ? <RouteLegalReview embedded review={primary.legalReview} /> : <p className="text-xs text-slate-500">Legal review data unavailable.</p>}</div>
+      <div className="min-w-0 space-y-2"><p className="text-xs font-semibold uppercase tracking-wide text-primary">Proposed {proposed.routeType}</p><RouteLegalReview embedded review={proposed.legalReview} /></div>
     </div></Section>
   </div>
 }

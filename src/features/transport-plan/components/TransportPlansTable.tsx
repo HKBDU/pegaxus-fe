@@ -75,7 +75,7 @@ export function TransportPlansTable({ plans, params, meta, isLoading, onChange, 
     rowClassName="border-slate-200 transition-colors duration-200 hover:bg-primary/5 motion-reduce:transition-none" cellClassName="h-11 px-2.5 py-2 text-xs"
     emptyMessage={<EmptyState message={hasTransportPlanFilters(params) ? "No transport plans match your search or filters. Adjust your selections." : "No transport plans are available yet."} />}
     footer={<TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={(pageSize) => onChange({ pageSize })} pageSizeAriaLabel="Transport plans per page" />}>
-    <div className="min-w-0 overflow-x-auto py-1"><div role="group" aria-label="Transport plans toolbar" className="flex min-w-max items-center gap-2">
+    <div className="min-w-0 overflow-x-auto p-1"><div role="group" aria-label="Transport plans toolbar" className="flex min-w-max items-center gap-2">
       {filters && <div className="flex-1">{filters}</div>}
       <div className="flex shrink-0 justify-end"><DataTableViewOptions table={table} /></div>
     </div></div>

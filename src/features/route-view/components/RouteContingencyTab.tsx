@@ -14,12 +14,12 @@ export function RouteContingencyTab({ plan, routeDetailPath }: { plan: RoutePlan
   if (query.isPending) return <div role="status" aria-label="Loading alternative routes" className="space-y-3"><Skeleton className="h-36 w-full" /><Skeleton className="h-36 w-full" /></div>
   if (query.isError) { const error = getRouteViewError(query.error); return <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> }
   const items = query.data?.items ?? []
-  return <section aria-label="Alternative routes" className="space-y-4">
-    <header className="space-y-1"><h2 className="font-heading text-lg font-medium uppercase text-slate-900">Alternative Routes</h2>
+  return <section aria-label="Alternative routes" className="space-y-3">
+    <header className="space-y-1"><h2 className="m-0! font-heading text-base! leading-5! font-medium uppercase text-slate-900">Alternative Routes</h2>
       <p className="text-xs text-slate-500">View the PRIMARY, BACKUP and RETURN routes for this transport plan. Backup metrics cover only the replacement segments, not the combined journey.</p>
     </header>
     {!items.some((item) => item.routePlanId !== plan.routePlanId) && <EmptyState message="No alternative routes have been prepared for this transport plan." />}
-    <div className="grid items-start gap-4 sm:grid-cols-2">{items.map((item) => <article key={item.routePlanId} data-selected={item.routePlanId === plan.routePlanId} className={`flex min-w-0 flex-col gap-4 rounded-[2px] border bg-white p-4 ${item.routePlanId === plan.routePlanId ? "border-primary/50" : "border-slate-200"}`}>
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] items-start gap-3">{items.map((item) => <article key={item.routePlanId} data-selected={item.routePlanId === plan.routePlanId} className={`flex min-w-0 flex-col gap-3 rounded-[2px] border bg-white p-3 ${item.routePlanId === plan.routePlanId ? "border-primary/50" : "border-slate-200"}`}>
       <div className="flex flex-wrap justify-between gap-2"><ApprovedBookingBadge value={item.routeType} /><ApprovedBookingBadge value={item.status} /></div>
       <h3 className="break-all font-heading text-xl font-medium text-slate-900">{item.routePlanCode}</h3>
       <dl className="grid grid-cols-2 gap-3">

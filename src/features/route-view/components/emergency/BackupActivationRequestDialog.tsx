@@ -45,14 +45,14 @@ export function BackupActivationRequestDialog({ plan, context, onClose }: { plan
   })
   return <Dialog open onOpenChange={open => { if (!open && !busy) onClose() }}>
     <DialogContent showCloseButton={!busy} className="motion-reduce:animate-none motion-reduce:transition-none flex max-h-[90svh] flex-col gap-0 overflow-hidden rounded-[2px] border-slate-200 bg-white p-0 shadow-md sm:max-w-xl" onInteractOutside={event => { if (busy) event.preventDefault() }} onEscapeKeyDown={event => { if (busy) event.preventDefault() }} onCloseAutoFocus={event => { event.preventDefault(); document.getElementById(`emergency-request-${plan.routePlanId}`)?.focus() }}>
-      <DialogHeader className="shrink-0 border-b border-slate-200 px-4 py-4 pr-12 text-left"><div className="mb-2 flex size-8 items-center justify-center rounded-[2px] bg-primary/10 text-primary"><Send aria-hidden="true" className="size-5" /></div><DialogTitle className="font-heading text-2xl uppercase text-slate-900">Request Backup Activation</DialogTitle><DialogDescription>Send this prepared backup to Logistics Manager for approval.</DialogDescription></DialogHeader>
+      <DialogHeader className="shrink-0 border-b border-slate-200 px-4 py-3 pr-12 text-left"><DialogTitle className="m-0! flex items-center gap-2 font-heading text-xl! leading-6! uppercase text-slate-900"><Send aria-hidden="true" className="size-4 shrink-0 text-primary" />Request Backup Activation</DialogTitle><DialogDescription>Send this prepared backup to Logistics Manager for approval.</DialogDescription></DialogHeader>
       <Form {...form}><form noValidate onSubmit={submit} className="flex min-h-0 flex-col">
-        <div className="min-h-0 space-y-4 overflow-y-auto px-4 py-4"><EmergencyChangeSummary plan={plan} title="Selected Backup" compact />
-          <fieldset disabled={busy} className="grid gap-4 sm:grid-cols-2">
-            {controls.map(control => <FormField key={control.name} control={form.control} name={control.name} render={({ field }) => <FormItem className={control.type === "textarea" || control.name === "newEstimatedArrivalAt" ? "sm:col-span-2" : undefined}>
-              <FormLabel>{control.label}{"required" in control && control.required ? " *" : ""}</FormLabel><FormControl>
+        <div className="min-h-0 space-y-3 overflow-y-auto px-4 py-3"><EmergencyChangeSummary plan={plan} title="Selected Backup" compact />
+          <fieldset disabled={busy} className="grid items-start gap-x-4 gap-y-2 sm:grid-cols-2">
+            {controls.map(control => <FormField key={control.name} control={form.control} name={control.name} render={({ field }) => <FormItem className={`min-w-0 content-start gap-1.5 ${control.type === "textarea" || control.name === "newEstimatedArrivalAt" ? "sm:col-span-2" : ""}`}>
+              <FormLabel className="leading-4">{control.label}{"required" in control && control.required ? " *" : ""}</FormLabel><FormControl>
                 {control.type === "textarea" ? <Textarea {...field} className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none min-h-20" /> : <Input {...field} type={control.type} step="any" className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" />}
-              </FormControl><FormMessage /></FormItem>} />)}
+              </FormControl><div className="min-h-5"><FormMessage role="alert" className="text-xs leading-5" /></div></FormItem>} />)}
           </fieldset>
           <p className="text-xs leading-5 text-slate-500">The route stays confirmed until approval. Extra cost is an estimate, not a charge. Enter the new arrival time in your local time zone.</p>
           <EmergencyFeedback error={mutation.error} latestUpdatedAt={plan.updatedAt} />

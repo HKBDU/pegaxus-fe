@@ -96,17 +96,17 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
     } catch (error) { setProblem({ code: "TRANSPORT_PLAN_MODIFIED", message: getTransportPlanError(error).message }) }
     finally { setReloading(false) }
   }
-  return <Form {...form}><form noValidate onSubmit={submit} className="space-y-5">
+  return <Form {...form}><form noValidate onSubmit={submit} className="space-y-3">
     <Flow3MockIndicator />
     <Section title="Transport Plan Metadata">
       <p className="text-xs text-slate-500">Dates use your local time zone and are submitted in UTC. Leave optional numeric fields blank to omit them{baseline ? " and retain existing values" : ""}.</p>
-      <fieldset disabled={isPending || !canWrite} className="grid gap-4 sm:grid-cols-2">
+      <fieldset disabled={isPending || !canWrite} className="grid items-start gap-3 sm:grid-cols-2">
         {[
-          { title: "Schedule", description: "Planned departure and arrival in your local time zone.", items: fields.slice(0, 2) },
-          { title: "Operational estimates", description: "Optional distance and duration for this transport plan.", items: fields.slice(2) },
-        ].map(({ title, description, items }) => <div key={title} className="space-y-3 border-t border-slate-100 pt-4 sm:col-span-2">
-          <div><h3 className="font-heading text-sm uppercase tracking-wide text-slate-800">{title}</h3><p className="mt-1 text-xs leading-5 text-slate-500">{description}</p></div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          { title: "Schedule", items: fields.slice(0, 2) },
+          { title: "Operational estimates", items: fields.slice(2) },
+        ].map(({ title, items }) => <div key={title} className="space-y-2 sm:col-span-2">
+          {title === "Operational estimates" && <h3 className="font-heading text-sm uppercase tracking-wide text-slate-800">{title}</h3>}
+          <div className="grid items-start gap-x-4 gap-y-2 sm:grid-cols-2">
         {items.map(({ name, label, type }) => <FormField key={name} control={form.control} name={name} render={({ field }) => {
           const [date = "", time = ""] = field.value.split("T")
           const [hours = "", minutes = "", seconds] = time.split(":")
@@ -123,8 +123,8 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
             field.onChange(`${date}T${nextHours}:${nextMinutes}${seconds === undefined ? "" : `:${seconds}`}`)
             field.onBlur()
           }
-          return <FormItem className="min-w-0 gap-2"><FormLabel className="text-xs font-medium text-slate-700">{label}{type === "date-time" && !baseline ? " *" : ""}</FormLabel>
-            {type === "date-time" ? <div className="grid min-w-0 gap-2 lg:grid-cols-[minmax(0,1fr)_10rem]">
+          return <FormItem className="@container min-w-0 content-start gap-1.5"><FormLabel className="text-xs leading-4 font-medium text-slate-700">{label}{type === "date-time" && !baseline ? " *" : ""}</FormLabel>
+            {type === "date-time" ? <div className="grid min-w-0 gap-2 @min-[20rem]:grid-cols-[minmax(0,1fr)_9rem]">
               <FormControl><DatePicker ref={field.ref} value={date} onChange={changeDate} onBlur={field.onBlur} disabled={isPending || !canWrite} placeholder="DD / MM / YYYY" className={controlClass} /></FormControl>
               <div className="flex min-w-0 items-center gap-1">
                 {(["hours", "minutes"] as const).map((part, index) => <div key={part} className="flex min-w-0 flex-1 items-center gap-1">
@@ -136,21 +136,21 @@ export function TransportPlanMetadataForm({ bookingId, plan, cancelHref, reloadL
                 </div>)}
               </div>
             </div> : <FormControl><Input {...field} type="number" step={name === "estimatedDurationMinutes" ? "1" : "any"} min="0" className={controlClass} /></FormControl>}
-            <FormMessage /></FormItem>
+            <div className="min-h-5"><FormMessage role="alert" className="text-xs leading-5" /></div></FormItem>
         }} />)}
           </div>
         </div>)}
-        <FormField control={form.control} name="planningNote" render={({ field }) => <FormItem className="sm:col-span-2">
-          <FormLabel className="text-xs font-medium text-slate-700">Planning Note</FormLabel><FormControl><Textarea {...field} className="min-h-24 rounded-[2px] border-slate-300 text-sm shadow-none motion-reduce:transition-none" /></FormControl><FormMessage /></FormItem>} />
-        {baseline ? <FormField control={form.control} name="updateReason" render={({ field }) => <FormItem className="sm:col-span-2">
-          <FormLabel className="text-xs font-medium text-slate-700">Update Reason</FormLabel><FormControl><Input {...field} className={controlClass} /></FormControl><FormMessage /></FormItem>} /> : null}
+        <FormField control={form.control} name="planningNote" render={({ field }) => <FormItem className="min-w-0 content-start gap-1.5 sm:col-span-2">
+          <FormLabel className="text-xs leading-4 font-medium text-slate-700">Planning Note</FormLabel><FormControl><Textarea {...field} className="min-h-20 rounded-[2px] border-slate-300 text-sm shadow-none motion-reduce:transition-none" /></FormControl><div className="min-h-5"><FormMessage role="alert" className="text-xs leading-5" /></div></FormItem>} />
+        {baseline ? <FormField control={form.control} name="updateReason" render={({ field }) => <FormItem className="min-w-0 content-start gap-1.5 sm:col-span-2">
+          <FormLabel className="text-xs leading-4 font-medium text-slate-700">Update Reason</FormLabel><FormControl><Input {...field} className={controlClass} /></FormControl><div className="min-h-5"><FormMessage role="alert" className="text-xs leading-5" /></div></FormItem>} /> : null}
       </fieldset>
     </Section>
     {problem ? <div role="alert" className="space-y-3 rounded-[2px] border border-red-200 bg-red-50 p-4 text-sm text-red-800">
       <p>{problem.message}</p>
       {isTransportPlanConcurrencyCode(problem.code) && reloadLatest ? <><p className="text-xs">Reloading replaces your unsaved changes with the latest server data.</p><Button type="button" variant="outline" className="rounded-[2px]" disabled={isPending} onClick={() => void reload()}>Reload Latest Data</Button></> : null}
     </div> : null}
-    <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-4"><Button type="button" variant="outline" disabled={isPending} className="rounded-[2px] bg-white transition-colors duration-200 motion-reduce:transition-none" onClick={() => onCancel ? onCancel() : navigate(cancelHref)}>Cancel</Button>
+    <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-3"><Button type="button" variant="outline" disabled={isPending} className="rounded-[2px] bg-white transition-colors duration-200 motion-reduce:transition-none" onClick={() => onCancel ? onCancel() : navigate(cancelHref)}>Cancel</Button>
       <Button type="submit" disabled={isPending || blocked || attempt.isBlocked || (Boolean(baseline) && !form.formState.isDirty)} className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none">{isPending ? "Saving..." : baseline ? "Save Changes" : "Save Transport Plan"}</Button></div>
   </form></Form>
 }
