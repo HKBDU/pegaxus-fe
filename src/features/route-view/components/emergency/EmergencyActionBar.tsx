@@ -15,8 +15,8 @@ export function EmergencyActionBar({ plan, context, onAction }: { plan: RoutePla
     <div className="min-w-0 space-y-1.5"><div className="flex flex-wrap items-center gap-2"><p className="text-xs font-semibold text-slate-700">{context.transportCode}</p><ApprovedBookingBadge value="IN_TRANSIT" /></div>
       <p className="text-xs text-slate-500">{coordinator ? "Route coordination" : getWorkspaceRole(context.workspace.principal) === "manager" ? "Management decisions" : "Route monitoring"}{plan.routeType === "RETURN" && plan.status === "DRAFT" && context.workspace.dossierStatus === "DRAFT" ? " · Awaiting document preparation and legal confirmation" : ""}</p>
     </div>
-    <div className="flex flex-wrap gap-2">{actions.map(action => { const Icon = icons[action]; return <Button key={action} id={`emergency-${action}-${plan.routePlanId}`} className="rounded-lg" size="sm" onClick={() => onAction(action)}><Icon aria-hidden="true" className="size-4" />{emergencyActionLabels[action]}</Button> })}
-      {coordinator && plan.routeType === "PRIMARY" && <Button variant="outline" size="sm" disabled title="Return route creation is not available yet." className="rounded-lg"><GitBranch aria-hidden="true" className="size-4" />Create Return</Button>}
+    <div className="flex flex-wrap gap-2">{actions.map(action => { const Icon = icons[action]; return <Button key={action} id={`emergency-${action}-${plan.routePlanId}`} className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" size="sm" onClick={() => onAction(action)}><Icon aria-hidden="true" className="size-4" />{emergencyActionLabels[action]}</Button> })}
+      {coordinator && plan.routeType === "PRIMARY" && <Button variant="outline" size="sm" disabled title="Return route creation is not available yet." className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"><GitBranch aria-hidden="true" className="size-4" />Create Return</Button>}
     </div>
   </section>
 }

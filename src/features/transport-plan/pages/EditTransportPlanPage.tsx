@@ -20,9 +20,9 @@ export default function EditTransportPlanPage() {
   const query = useTransportPlan(transportPlanId, allowed)
   const plan = query.data
   const error = query.isError ? getTransportPlanError(query.error) : null
-  return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
-    <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
-      <PageHeader title="Edit Transport Plan" backHref={transportPlanDetail(transportPlanId)} backLabel="Back to Transport Plan" />
+  return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-4 py-6 font-sans sm:px-6 lg:px-8 lg:py-8">
+    <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
+      <PageHeader className="[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl" title="Edit Transport Plan" backHref={transportPlanDetail(transportPlanId)} backLabel="Back to Transport Plan" />
       {!allowed ? <ErrorState message="Only Logistics Managers can edit transport plans." /> : !actionEntityIdSchema.safeParse(transportPlanId).success ? <ErrorState message="The transport plan identifier is invalid." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> : query.isPending ? <BookingDetailsSkeleton /> : plan ? <>
         <Section title="Plan Summary"><dl className="grid gap-4 sm:grid-cols-3"><Field label="Plan code">{plan.planCode}</Field><Field label="Status"><TransportPlanStatusBadge status={plan.status} /></Field><Field label="Booking">{plan.booking.bookingCode}</Field></dl></Section>
         {!canEditTransportPlan(principal, plan) ? <ErrorState message="This transport plan is locked and cannot be edited." /> :

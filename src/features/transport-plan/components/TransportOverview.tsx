@@ -11,9 +11,9 @@ export function TransportOverview({ journey, plannedStartAt, customerName, trans
     { label: "Planned departure", value: formatPlanDate(plannedStartAt), detail: plannedStartAt ? "Transport plan schedule" : "Planning not scheduled yet", icon: CalendarClock },
     { label: "Current progress", value: transportStatus?.replaceAll("_", " ") ?? "Not available", detail: "Current transport stage", icon: Truck },
   ]
-  return <div aria-label="Transport overview" className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(({ label, value, detail, icon: Icon }) =>
-    <Card key={label} className="min-w-0 gap-0 rounded-xl border-slate-200 bg-white py-0 shadow-sm"><CardContent className="p-5">
-      <dl><dt className="flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{label}<span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon aria-hidden="true" className="size-4" /></span></dt>
-      <dd className="mt-3 space-y-1.5"><p className="break-words font-heading text-xl text-slate-900">{value}</p><p className="break-words text-xs leading-5 text-slate-500">{detail}</p></dd></dl>
+  return <div aria-label="Transport overview" className="grid min-w-0 items-start gap-3 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(({ label, value, detail, icon: Icon }) =>
+    <Card key={label} className="min-w-0 gap-0 rounded-[2px] border-slate-200 border-t-primary/40 bg-linear-to-br from-white to-primary/5 py-0 shadow-xs"><CardContent className="p-4">
+      <dl><dt className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}<span className="flex size-7 shrink-0 items-center justify-center rounded-[2px] bg-primary/10 text-primary"><Icon aria-hidden="true" className="size-3.5" /></span></dt>
+      <dd className="mt-2 space-y-1.5"><p className="break-words font-heading text-xl leading-7 text-slate-900 tabular-nums">{value}</p><p className="break-words text-xs leading-5 text-slate-500">{detail}</p></dd></dl>
     </CardContent></Card>)}</div>
 }

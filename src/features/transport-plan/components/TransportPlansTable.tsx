@@ -38,7 +38,7 @@ export function TransportPlansTable({ plans, params, meta, isLoading, onChange, 
     { accessorKey: "status", header: "Status", cell: ({ row }) => <TransportPlanStatusBadge status={row.original.status} /> },
     { id: "actions", header: "Actions", enableHiding: false, cell: ({ row }) => manager ? <DropdownMenu>
       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-7 rounded-[2px]" aria-label={`Actions for ${row.original.planCode}`}><MoreHorizontal className="size-3.5" /></Button></DropdownMenuTrigger>
-      <DropdownMenuContent align="end"><DropdownMenuItem asChild><Link to={transportPlanDetail(row.original.transportPlanId)}>View TransportPlan</Link></DropdownMenuItem>
+      <DropdownMenuContent align="end" className="motion-reduce:animate-none"><DropdownMenuItem asChild><Link to={transportPlanDetail(row.original.transportPlanId)}>View TransportPlan</Link></DropdownMenuItem>
         <DropdownMenuItem asChild><Link to={planInvoicesPath(row.original.transportPlanId)}>View Invoices</Link></DropdownMenuItem>
         {onCreateInvoice ? <DropdownMenuItem onSelect={() => onCreateInvoice(row.original.bookingId)}>Create Invoice</DropdownMenuItem> : null}
       </DropdownMenuContent>
@@ -69,14 +69,15 @@ export function TransportPlansTable({ plans, params, meta, isLoading, onChange, 
     },
   })
   return <DataTable table={table} isLoading={isLoading} aria-busy={isLoading}
-    containerClassName="booking-panel overflow-x-auto" headerClassName="bg-[#e9e6de]"
+    containerClassName="overflow-x-auto rounded-[2px] border-slate-200 shadow-xs" headerClassName="bg-slate-100/80"
+    tableClassName="[&_[data-column-id=plannedStartAt]]:tabular-nums [&_[data-column-id=plannedEndAt]]:tabular-nums"
     headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
-    rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60" cellClassName="h-11 px-2.5 py-2 text-xs"
+    rowClassName="border-slate-200 transition-colors duration-200 hover:bg-primary/5 motion-reduce:transition-none" cellClassName="h-11 px-2.5 py-2 text-xs"
     emptyMessage={<EmptyState message={hasTransportPlanFilters(params) ? "No transport plans match your search or filters. Adjust your selections." : "No transport plans are available yet."} />}
     footer={<TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={(pageSize) => onChange({ pageSize })} pageSizeAriaLabel="Transport plans per page" />}>
-    <div role="group" aria-label="Transport plans toolbar" className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-start">
-      {filters && <div className="min-w-0 flex-1">{filters}</div>}
+    <div className="min-w-0 overflow-x-auto py-1"><div role="group" aria-label="Transport plans toolbar" className="flex min-w-max items-center gap-2">
+      {filters && <div className="flex-1">{filters}</div>}
       <div className="flex shrink-0 justify-end"><DataTableViewOptions table={table} /></div>
-    </div>
+    </div></div>
   </DataTable>
 }

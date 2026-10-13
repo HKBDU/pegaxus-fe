@@ -63,15 +63,16 @@ export function ApprovedBookingsTable({ bookings, params, meta, isLoading, onCha
     },
   })
   return <DataTable table={table} isLoading={isLoading} aria-busy={isLoading}
-    containerClassName="booking-panel overflow-x-auto" headerClassName="bg-[#e9e6de]"
+    containerClassName="overflow-x-auto rounded-[2px] border-slate-200 shadow-xs" headerClassName="bg-slate-100/80"
+    tableClassName="[&_[data-column-id=totalHorses]]:text-right [&_[data-column-id=totalHorses]]:tabular-nums [&_[data-column-id=requestedDepartureDate]]:tabular-nums [&_[data-column-id=approvedAt]]:tabular-nums"
     headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
-    rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60"
+    rowClassName="border-slate-200 transition-colors duration-200 hover:bg-primary/5 motion-reduce:transition-none"
     cellClassName="h-11 px-2.5 py-2 text-xs"
     emptyMessage={<EmptyState message={hasApprovedBookingFilters(params) ? "No transports match your filters. Adjust your filters." : "No approved transports are available in your assigned scope."} />}
     footer={<TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={(pageSize) => onChange({ pageSize })} pageSizeAriaLabel="Approved bookings per page" />}>
-    <div role="group" aria-label="Approved bookings toolbar" className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-start">
-      {filters && <div className="min-w-0 flex-1">{filters}</div>}
+    <div className="min-w-0 overflow-x-auto py-1"><div role="group" aria-label="Approved bookings toolbar" className="flex min-w-max items-start gap-2">
+      {filters && <div className="flex-1">{filters}</div>}
       <div className="flex shrink-0 justify-end"><DataTableViewOptions table={table} /></div>
-    </div>
+    </div></div>
   </DataTable>
 }

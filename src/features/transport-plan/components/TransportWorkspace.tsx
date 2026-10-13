@@ -29,28 +29,28 @@ export function TransportWorkspace({ booking, principal, showPlanningReference =
       </dl>
       <dl className="border-t pt-3"><Field label="Planning note">{plan.planningNote}</Field></dl>
       {manager && <div className="space-y-3 border-t pt-3">
-        <div className="flex flex-wrap gap-2">{managerActions.filter(action => action.href).map(action => <Button key={action.kind} asChild variant="outline" size="sm" className="rounded-md"><Link to={action.href!}>{action.label}</Link></Button>)}</div>
+        <div className="flex flex-wrap gap-2">{managerActions.filter(action => action.href).map(action => <Button key={action.kind} asChild variant="outline" size="sm" className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"><Link to={action.href!}>{action.label}</Link></Button>)}</div>
       </div>}
     </Section> : <Section title="Planning Summary"><p className="text-sm text-slate-500">No transport plan has been created. A Logistics Manager must create the plan before route planning and legal preparation.</p></Section>)
   return <section aria-label={workspaceLabels[role].workspace} className="min-w-0 space-y-5">
-    <div className="flex items-start gap-3 pt-2"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white"><Compass aria-hidden="true" className="size-5" /></span>
-      <div><h2 className="font-heading text-xl uppercase tracking-wide text-slate-900">{workspaceLabels[role].workspace}</h2><p className="mt-1 text-xs text-slate-500">{coordinator ? "Coordinate routes, review alternatives and manage changes during transit." : manager ? "Monitor compliance, route readiness and operational decisions." : "Prepare compliance and review route legal feasibility."}</p></div>
+    <div className="flex items-start gap-3 border-b border-slate-200 pb-3"><span className="flex size-8 shrink-0 items-center justify-center rounded-[2px] bg-slate-900 text-primary"><Compass aria-hidden="true" className="size-4" /></span>
+      <div className="min-w-0"><h2 className="font-heading text-lg uppercase tracking-wide text-slate-900">{workspaceLabels[role].workspace}</h2><p className="mt-1 text-xs leading-5 text-slate-500">{coordinator ? "Coordinate routes, review alternatives and manage changes during transit." : manager ? "Monitor compliance, route readiness and operational decisions." : "Prepare compliance and review route legal feasibility."}</p></div>
     </div>
     {!coordinator && planningReference}
     {manager && plan && showPlanningReference && <TransportPlanQuotation transportPlanId={plan.transportPlanId} canManage />}
-    {manager && <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+    {manager && <div className="flex flex-wrap items-center justify-between gap-4 rounded-[2px] border border-slate-200 border-l-primary/40 bg-linear-to-r from-white to-primary/5 p-4 shadow-xs">
       <div className="flex items-center gap-3"><ShieldCheck aria-hidden="true" className="size-5 text-slate-500" /><div><h3 className="font-heading text-base uppercase">Compliance Monitoring</h3>{!booking.complianceDossier && <p className="mt-1 text-xs text-slate-500">No compliance dossier has been prepared yet.</p>}</div></div>
-      {booking.complianceDossier && <div className="flex flex-wrap items-center gap-3"><ApprovedBookingBadge value={booking.complianceDossier.status} /><Button asChild variant="outline" size="sm" className="rounded-md"><Link to={dossierDetail(booking.complianceDossier.complianceDossierId, "LOGISTICS_MANAGER")}>View Compliance Dossier</Link></Button></div>}
+      {booking.complianceDossier && <div className="flex flex-wrap items-center gap-3"><ApprovedBookingBadge value={booking.complianceDossier.status} /><Button asChild variant="outline" size="sm" className="rounded-[2px]"><Link to={dossierDetail(booking.complianceDossier.complianceDossierId, "LOGISTICS_MANAGER")}>View Compliance Dossier</Link></Button></div>}
     </div>}
     {specialist && <Section title="Legal Preparation">
       <p className="text-xs text-slate-500">Prepare the dossier and requirements through the existing Flow 2 workspace. Customer document uploads remain customer-only.</p>
       <div className="flex flex-wrap gap-3">{legalActions.map(action => action.href ?
-        <Button key={action.kind} asChild variant="outline" size="sm" className="rounded-md"><Link to={action.href}>{action.label}</Link></Button> :
-        <div key={action.kind} className="space-y-1"><Button disabled title={action.blockedReason} variant="outline" size="sm" className="rounded-md">{action.label}</Button><p className="max-w-sm text-[11px] text-slate-500">{action.blockedReason}</p></div>)}</div>
+        <Button key={action.kind} asChild variant="outline" size="sm" className="rounded-[2px]"><Link to={action.href}>{action.label}</Link></Button> :
+        <div key={action.kind} className="space-y-1"><Button disabled title={action.blockedReason} variant="outline" size="sm" className="rounded-[2px]">{action.label}</Button><p className="max-w-sm text-[11px] text-slate-500">{action.blockedReason}</p></div>)}</div>
       {booking.complianceDossier && <p className="text-xs text-slate-500">Open the dossier to view and manage its requirements using the existing Requirements tab.</p>}
       {!legalActions.length && <p className="text-xs text-slate-500">Legal preparation requires an approved plan, Phase 1 assignment and an available transport.</p>}
     </Section>}
     {plan && <RoutePlansWorkspace transportPlanId={plan.transportPlanId} planStatus={plan.status} transportStatus={booking.transport?.status} dossierStatus={booking.complianceDossier?.status} principal={principal} />}
-    {coordinator && planningReference && <details className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><summary className="cursor-pointer font-heading text-sm uppercase text-slate-600">Planning Reference{plan ? ` · ${plan.planCode}` : ""}</summary><div className="mt-4">{planningReference}</div></details>}
+    {coordinator && planningReference && <details className="min-w-0"><summary className="cursor-pointer rounded-[2px] border border-slate-200 bg-slate-50 px-4 py-3 font-heading text-sm uppercase text-slate-600 outline-none transition-colors duration-200 hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-primary/30 motion-reduce:transition-none">Planning Reference{plan ? ` · ${plan.planCode}` : ""}</summary><div className="mt-3">{planningReference}</div></details>}
   </section>
 }

@@ -45,8 +45,8 @@ export function BookingTransportPlanAction({ bookingId, status, onCreated }: Boo
       {action.blockedReason && <p className="max-w-xs text-xs text-slate-500">{action.blockedReason}</p>}
     </div>}
     <Dialog open={open && action.kind === "createTransportPlan"} onOpenChange={next => { if (!pending) setOpen(next) }}>
-      <DialogContent className="max-h-[85svh] overflow-y-auto sm:max-w-3xl" onEscapeKeyDown={event => { if (pending) event.preventDefault() }} onInteractOutside={event => event.preventDefault()}>
-        <DialogHeader><DialogTitle className="font-heading text-2xl uppercase">Create Transport Plan</DialogTitle><DialogDescription>Plan this approved booking using its existing transport.</DialogDescription></DialogHeader>
+      <DialogContent className="max-h-[85svh] overflow-y-auto rounded-[2px] border-slate-200 p-4 shadow-lg motion-reduce:animate-none sm:max-w-3xl sm:p-5" onEscapeKeyDown={event => { if (pending) event.preventDefault() }} onInteractOutside={event => event.preventDefault()}>
+        <DialogHeader className="border-b border-slate-200 pb-4 pr-6 text-left"><DialogTitle className="font-heading text-2xl uppercase">Create Transport Plan</DialogTitle><DialogDescription>Plan this approved booking using its existing transport.</DialogDescription></DialogHeader>
         <CreateTransportPlanContent booking={booking} onCancel={() => setOpen(false)} onCreated={plan => { setOpen(false); onCreated?.(plan) }}
           onDuplicate={async () => { setDuplicate(true); await query.refetch() }} />
       </DialogContent>

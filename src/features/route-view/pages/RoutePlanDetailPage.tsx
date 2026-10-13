@@ -57,14 +57,14 @@ export default function RoutePlanDetailPage({ mapViewer, routeDetailPath, emerge
   if (context.data && plan) {
     if (activeMode === "decision") workspace = <RouteChangeDecisionPanel plan={plan} context={context.data} onBack={() => changeMode()} />
     if (activeMode === "activation") workspace = <ReturnActivationPanel plan={plan} context={context.data} onBack={() => changeMode()} />
-    if (mode && mode !== "overview" && !activeMode) workspace = <div className="space-y-3"><ErrorState message="This emergency action is unavailable for your role or the current route and transport state." /><Button variant="outline" onClick={() => changeMode()}>Back to Route Plan</Button></div>
+    if (mode && mode !== "overview" && !activeMode) workspace = <div className="space-y-3"><ErrorState message="This emergency action is unavailable for your role or the current route and transport state." /><Button className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" variant="outline" onClick={() => changeMode()}>Back to Route Plan</Button></div>
   }
-  return <div ref={pageRef} className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] scroll-mt-24 px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
-    <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
+  return <div ref={pageRef} className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] scroll-mt-24 px-4 py-5 font-sans sm:px-6 lg:px-8 lg:py-6">
+    <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-4">
       <Flow3MockIndicator />
       {allowed && valid && !error && !accessFailure && plan ? <>
         {waitingForAction ? <Skeleton role="status" aria-label="Loading emergency context" className="h-80 w-full" /> : context.error && mode && mode !== "overview" ?
-          <div className="space-y-3"><ErrorState message={getEmergencyError(context.error).message} /><Button variant="outline" onClick={() => changeMode()}>Back to Route Plan</Button></div> : workspace ?
+          <div className="space-y-3"><ErrorState message={getEmergencyError(context.error).message} /><Button className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" variant="outline" onClick={() => changeMode()}>Back to Route Plan</Button></div> : workspace ?
           <div key={`${routePlanId}-${mode}`}>{workspace}</div> : !fullPageMode ? <>
             {context.error && <ErrorState message={getEmergencyError(context.error).message} />}
             <RoutePlanDetails key={routePlanId} plan={plan} mapViewer={mapViewer} routeDetailPath={routeDetailPath}
@@ -73,10 +73,10 @@ export default function RoutePlanDetailPage({ mapViewer, routeDetailPath, emerge
         {context.data && activeMode === "request" && <BackupActivationRequestDialog key={routePlanId} plan={plan} context={context.data} onClose={() => changeMode()} />}
         {context.data && activeMode === "notice" && <DriverNoticeDialog key={routePlanId} plan={plan} context={context.data} onClose={() => changeMode()} />}
       </> : <>
-        <PageHeader title="Route Plan Details" backHref={ROLE_ROUTES.transportPlans} backLabel="Back to Transport Plans" />
+        <PageHeader className="[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl" title="Route Plan Details" backHref={ROLE_ROUTES.transportPlans} backLabel="Back to Transport Plans" />
         {!allowed ? <ErrorState message="You do not have permission to view route plans." /> : !valid ? <ErrorState message="The route plan identifier is invalid." /> : accessFailure ? <ErrorState message={getEmergencyError(accessFailure).message} /> : error ?
           <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
-          <div role="status" aria-label="Loading route plan" className="space-y-5"><Skeleton className="h-24 w-full" /><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-24 w-full" />)}</div><Skeleton className="h-96 w-full" /></div>}
+          <div role="status" aria-label="Loading route plan" className="space-y-4"><Skeleton className="h-24 w-full" /><div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-24 w-full" />)}</div><Skeleton className="h-96 w-full" /></div>}
       </>}
     </div>
   </div>
