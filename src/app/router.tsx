@@ -11,6 +11,7 @@ import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { APPROVED_BOOKINGS_ACCESS, TRANSPORT_PLANS_ACCESS, ROLE_ROUTES, routePlanDetail } from "./route-config";
+import Test from "@/Test";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
@@ -141,7 +142,6 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    // A separate guarded branch keeps the other admin pages manager-only.
     path: ROLE_ROUTES.approvedBookings,
     element: <ProtectedRoute allowedRoles={APPROVED_BOOKINGS_ACCESS.anyRole}><AdminLayout /></ProtectedRoute>,
     children: [
@@ -676,6 +676,10 @@ export const router = createBrowserRouter([
           path: "/__dev/admin/bookings/:bookingId/history",
           element: <AdminLayout />,
           children: [{ index: true, element: bookingHistoryPage }],
+        },
+        {
+          path: "/__dev/invoice-payment",
+          element: <Test />,
         },
       ]
     : []),
