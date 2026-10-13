@@ -10,7 +10,7 @@ const tones: Record<string, string> = {
   REJECTED: "border-red-200 bg-red-50 text-red-700",
   IN_PROGRESS: "border-blue-200 bg-blue-50 text-blue-700",
   COMPLETED: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  PRIMARY: "border-orange-200 bg-orange-50 text-orange-700",
+  PRIMARY: "border-primary/30 bg-primary/10 text-slate-900",
   BACKUP: "border-slate-200 bg-slate-100 text-slate-700",
   RETURN: "border-violet-200 bg-violet-50 text-violet-700",
 }

@@ -11,13 +11,13 @@ export function RouteSegmentList({ segments, review }: { segments: RouteSegment[
   if (!segments.length) return <EmptyState message="No segments are available for this route plan." />
   const ordered = [...segments].sort((a, b) => a.sequenceNo - b.sequenceNo)
   const Heading = review ? "h3" : "h2"
-  return <section aria-label={review ? `${review.title} segment timeline` : "Segment timeline"} className="min-w-0 space-y-4">
-    <Heading className="font-heading text-lg uppercase text-slate-900">{review?.title ?? "Segment Timeline"}</Heading>
-    <ol className="ml-2 space-y-4 border-l-2 border-slate-200 pl-5 sm:pl-7">
+  return <section aria-label={review ? `${review.title} segment timeline` : "Segment timeline"} className="min-w-0 space-y-3">
+    <Heading className="m-0! font-heading text-base! leading-5! uppercase text-slate-900">{review?.title ?? "Segment Timeline"}</Heading>
+    <ol className="ml-2 space-y-3 border-l-2 border-slate-200 pl-5 sm:pl-7">
       {ordered.map((segment) => {
         const impact = review?.impact(segment)
         const details = <>
-          <dl className={`grid gap-4 text-sm sm:grid-cols-2 ${review ? "" : "lg:grid-cols-3"}`}>
+          <dl className={`grid gap-3 text-sm sm:grid-cols-2 ${review ? "" : "lg:grid-cols-3"}`}>
             <Field label="Planned departure">{segment.plannedDepartureAt ? formatBookingDate(segment.plannedDepartureAt, true) : "Not scheduled"}</Field>
             <Field label="Planned arrival">{segment.plannedArrivalAt ? formatBookingDate(segment.plannedArrivalAt, true) : "Not scheduled"}</Field>
             <Field label="Distance">{distanceLabel(segment.route.distanceKm)}</Field>
@@ -42,7 +42,7 @@ export function RouteSegmentList({ segments, review }: { segments: RouteSegment[
           {review ? <>
             <p className="text-xs leading-5 text-slate-500">{impact?.detail}</p>
             <p className="text-xs text-slate-600">Planned arrival · {segment.plannedArrivalAt ? formatBookingDate(segment.plannedArrivalAt, true) : "Not scheduled"}</p>
-            <details className="border-t border-slate-100 pt-3"><summary className="cursor-pointer text-xs font-semibold text-slate-700">Timing, resources &amp; notes</summary><div className="mt-4 space-y-4">{details}</div></details>
+            <details className="border-t border-slate-100 pt-3"><summary className="cursor-pointer text-xs font-semibold text-slate-700">Timing, resources &amp; notes</summary><div className="mt-3 space-y-3">{details}</div></details>
           </> : details}
         </Section>
       </li>})}

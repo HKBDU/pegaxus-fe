@@ -13,7 +13,7 @@ export function EmergencyFeedback({ error, latestUpdatedAt, onReviewLatest }: { 
       {problem.stale && dismissed && <Button className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" type="button" variant="outline" onClick={() => setDismissed(false)}>Review Latest Version</Button>}
     </div>
     {problem.stale && <Dialog open={!dismissed} onOpenChange={open => { if (!open) setDismissed(true) }}>
-      <DialogContent className="motion-reduce:animate-none motion-reduce:transition-none rounded-[2px]"><DialogHeader><DialogTitle>Route Changed</DialogTitle><DialogDescription>Your form input is retained. The latest route has been fetched; review its status and segments before making another decision. Nothing is automatically resubmitted.</DialogDescription></DialogHeader>
+      <DialogContent className="flow3-ui motion-reduce:animate-none motion-reduce:transition-none rounded-[2px]"><DialogHeader><DialogTitle>Route Changed</DialogTitle><DialogDescription>Your form input is retained. The latest route has been fetched; review its status and segments before making another decision. Nothing is automatically resubmitted.</DialogDescription></DialogHeader>
         <p className="break-all text-xs text-slate-500">Latest route version: {latestUpdatedAt}</p>
         <Button className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" type="button" disabled={!onReviewLatest} onClick={() => { onReviewLatest?.(); setDismissed(true) }}>Review Latest Route</Button>
       </DialogContent>

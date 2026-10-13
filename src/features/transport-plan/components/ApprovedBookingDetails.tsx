@@ -8,10 +8,12 @@ import { EmptyState } from "@/shared/components/common"
 import type { ApprovedBookingDetail } from "../types"
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge"
 
-export function Section({ title, children, description, icon: Icon, actions, className, embedded = false }: { title: string; children: ReactNode; description?: string; icon?: LucideIcon; actions?: ReactNode; className?: string; embedded?: boolean }) {
+export function Section({ title, children, description, icon: Icon, actions, className, embedded = false, unframed = false }: { title: string; children: ReactNode; description?: string; icon?: LucideIcon; actions?: ReactNode; className?: string; embedded?: boolean; unframed?: boolean }) {
   if (embedded) return <div role="group" aria-label={title} className={cn("min-w-0 space-y-3", className)}>{actions && <div className="flex flex-wrap justify-end gap-2">{actions}</div>}{children}</div>
-  return <Card className={cn("min-w-0 gap-0 rounded-[2px] border-slate-200 bg-white py-0 shadow-xs", className)}>
-    <CardContent className="space-y-3 p-3">
+  const Container = unframed ? "section" : Card
+  const Content = unframed ? "div" : CardContent
+  return <Container className={cn("min-w-0", !unframed && "gap-0 rounded-[2px] border-slate-200 bg-white py-0 shadow-xs", className)}>
+    <Content className={cn("space-y-3", !unframed && "p-3")}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           {Icon && <span className="flex size-7 shrink-0 items-center justify-center rounded-[2px] border border-primary/15 bg-primary/5 text-primary"><Icon aria-hidden="true" className="size-3.5" /></span>}
@@ -20,8 +22,8 @@ export function Section({ title, children, description, icon: Icon, actions, cla
         {actions}
       </div>
       {children}
-    </CardContent>
-  </Card>
+    </Content>
+  </Container>
 }
 export function Field({ label, children }: { label: string; children: ReactNode }) {
   return <div className="min-w-0"><dt className="mb-1 text-[11px] font-medium text-slate-500">{label}</dt><dd className="whitespace-pre-wrap break-words text-sm font-medium leading-5 text-slate-800">{children == null || children === "" || children === false ? "—" : children}</dd></div>
@@ -49,9 +51,9 @@ export function ApprovedBookingDetails({ booking, showDossier = false }: { booki
       </dl>
     </Section>
     <Section title={`Horses (${booking.totalHorses})`}>
-      {!booking.horses.length ? <EmptyState message="No horse details are available for this booking." /> : <Table>
-        <TableHeader className="bg-slate-50"><TableRow>
-          {["Name", "Sex", "Breed", "Microchip", "Passport", "Special handling"].map((label) => <TableHead key={label} className="font-heading text-xs uppercase">{label}</TableHead>)}
+      {!booking.horses.length ? <EmptyState message="No horse details are available for this booking." /> : <Table className="text-xs [&_td]:h-11 [&_td]:px-2.5 [&_td]:py-1.5">
+        <TableHeader className="bg-[#e9e6de]"><TableRow>
+          {["Name", "Sex", "Breed", "Microchip", "Passport", "Special handling"].map((label) => <TableHead key={label} className="h-11 px-2.5 font-heading text-[11px] uppercase tracking-[0.06em] text-gray-600">{label}</TableHead>)}
         </TableRow></TableHeader>
         <TableBody>{booking.horses.map((horse) => <TableRow key={horse.horseId}>
           <TableCell className="font-medium">{horse.horseName}</TableCell>

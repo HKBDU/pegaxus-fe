@@ -1,3 +1,4 @@
+import "../ui.css"
 import { Link, useParams } from "react-router-dom"
 import { transportPlanDetail } from "@/app/route-config"
 import { canAccess } from "@/features/auth/access-control"
@@ -21,8 +22,8 @@ export default function CreateTransportPlanPage() {
   const booking = query.data
   const valid = actionEntityIdSchema.safeParse(bookingId).success
   const error = query.isError ? getApprovedBookingError(query.error) : null
-  return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-4 py-6 font-sans sm:px-6 lg:px-8 lg:py-8">
-    <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
+  return <div className="flow3-ui booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-4 py-4 font-sans sm:px-6 lg:py-6">
+    <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-4">
       <PageHeader className="[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl" title="Create Transport Plan" backHref={valid ? managerBookingDetailPath(bookingId) : "/admin/transport-requests"} backLabel="Back to Booking" />
       {!allowed ? <ErrorState message="Only Logistics Managers can create transport plans." /> : !valid ? <ErrorState message="The booking identifier is invalid." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> : query.isPending ? <BookingDetailsSkeleton /> : booking ? <>
         {booking.transportPlan ? <Section title="Transport Plan Already Exists"><p className="text-sm text-slate-600">This booking already has a transport plan. Open it to review or edit its metadata.</p><Button asChild className="rounded-[2px]"><Link to={transportPlanDetail(booking.transportPlan.transportPlanId)}>View Transport Plan</Link></Button></Section> : !booking.transport ? <ErrorState message="The approved booking has no transport. A transport must exist before creating its plan." /> :

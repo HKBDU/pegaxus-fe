@@ -1,3 +1,4 @@
+import "@/features/transport-plan/ui.css"
 import { useEffect, useRef, type ComponentType } from "react"
 import { useParams, useSearchParams } from "react-router-dom"
 import { useMutationState } from "@tanstack/react-query"
@@ -61,7 +62,7 @@ export default function RoutePlanDetailPage({ mapViewer, routeDetailPath, emerge
     if (activeMode === "activation") workspace = <ReturnActivationPanel plan={plan} context={context.data} onBack={() => changeMode()} />
     if (mode && mode !== "overview" && !activeMode) workspace = <div className="space-y-3"><ErrorState message="This emergency action is unavailable for your role or the current route and transport state." /><Button className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" variant="outline" onClick={() => changeMode()}>Back to Route Plan</Button></div>
   }
-  return <div ref={pageRef} className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] scroll-mt-24 px-4 py-5 font-sans sm:px-6 lg:px-8 lg:py-6">
+  return <div ref={pageRef} className="flow3-ui booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] scroll-mt-24 px-4 py-4 font-sans sm:px-6 lg:py-6">
     <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-4">
       <Flow3MockIndicator />
       {allowed && valid && !error && !accessFailure && plan ? <>

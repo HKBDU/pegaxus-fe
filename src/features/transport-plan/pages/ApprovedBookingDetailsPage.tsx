@@ -1,3 +1,4 @@
+import "../ui.css"
 import { useParams } from "react-router-dom"
 import { ROLE_ROUTES } from "@/app/route-config"
 import { useAuthStore } from "@/features/auth/store"
@@ -23,8 +24,8 @@ export default function ApprovedBookingDetailsPage() {
   const booking = query.data
   const error = query.isError ? getApprovedBookingError(query.error) : null
 
-  return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-4 py-6 font-sans sm:px-6 lg:px-8 lg:py-8">
-    <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
+  return <div className="flow3-ui booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-4 py-4 font-sans sm:px-6 lg:py-6">
+    <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-4">
       <Flow3MockIndicator />
       <div>
         <PageHeader className="[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl" title="Transport Detail" backHref={ROLE_ROUTES.approvedBookings} backLabel={`Back to ${role ? workspaceLabels[role].list : "Transports"}`} />
@@ -33,8 +34,8 @@ export default function ApprovedBookingDetailsPage() {
       {!actionEntityIdSchema.safeParse(bookingId).success ? <ErrorState message="The booking identifier is invalid." /> : error ?
         <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
         query.isPending ? <BookingDetailsSkeleton /> : booking ? <>
-          <div className="flex flex-col justify-between gap-4 rounded-[2px] border border-slate-200 border-l-2 border-l-primary bg-linear-to-r from-white to-primary/5 p-4 shadow-xs sm:flex-row sm:items-center">
-            <div className="min-w-0 space-y-2"><h2 className="break-words font-heading text-2xl">{booking.transport?.transportCode ?? "Transport not available"}</h2>
+          <div className="flex flex-col justify-between gap-3 rounded-[2px] border border-slate-200 border-l-2 border-l-primary bg-white p-3 shadow-xs sm:flex-row sm:items-center">
+            <div className="min-w-0 space-y-2"><h2 className="m-0! break-words font-heading text-xl! leading-6!">{booking.transport?.transportCode ?? "Transport not available"}</h2>
               <p className="text-xs text-slate-500">Booking Reference: {booking.bookingCode}</p>
               {booking.transport && <ApprovedBookingBadge value={booking.transport.status} />}</div>
           </div>

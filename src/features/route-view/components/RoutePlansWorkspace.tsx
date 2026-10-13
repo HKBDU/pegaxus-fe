@@ -36,7 +36,7 @@ export function RoutePlansWorkspace({ transportPlanId, planStatus, transportStat
   const title = specialist ? "Route Legal Review" : manager ? "Route Monitoring" : "Route Plans"
   const creation = getPendingRouteCreation(items, context, transportPlanId)
   const error = query.isError ? getRouteViewError(query.error) : null
-  return <Section title={title} icon={Route} description="Primary journey, backup alternatives and emergency return routes."
+  return <Section unframed title={title} icon={Route} description="Primary journey, backup alternatives and emergency return routes."
     actions={allowed && validId && query.isSuccess && creation ? <UnavailableAction {...creation} /> : undefined}>
     {!allowed ? <ErrorState message="You do not have permission to view route plans." /> : !validId ? <ErrorState message="A valid transport plan is required to load route plans." /> : error ?
       <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> : <>

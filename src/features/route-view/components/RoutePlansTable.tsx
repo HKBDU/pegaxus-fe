@@ -17,7 +17,7 @@ export function RoutePlansTable({ routes, context, routeDetailPath, isLoading = 
 }) {
   const columns = useMemo<ColumnDef<RoutePlanSummary>[]>(() => [
     { accessorKey: "routeType", header: "Route Type", cell: ({ row }) => <ApprovedBookingBadge value={row.original.routeType} /> },
-    { accessorKey: "routePlanCode", header: "Route Code", cell: ({ row }) => routeDetailPath ? <Link className="font-semibold text-primary hover:underline" to={routeDetailPath(row.original.routePlanId)}>{row.original.routePlanCode}</Link> : <span className="font-semibold">{row.original.routePlanCode}</span> },
+    { accessorKey: "routePlanCode", header: "Route Code", cell: ({ row }) => routeDetailPath ? <Link className="font-semibold text-slate-900 underline decoration-primary/50 underline-offset-2 hover:decoration-primary" to={routeDetailPath(row.original.routePlanId)}>{row.original.routePlanCode}</Link> : <span className="font-semibold">{row.original.routePlanCode}</span> },
     { accessorKey: "status", header: "Status", cell: ({ row }) => <ApprovedBookingBadge value={row.original.status} /> },
     { accessorKey: "totalDistanceKm", header: "Distance", cell: ({ row }) => <div>{distanceLabel(row.original.totalDistanceKm)}{row.original.routeType === "BACKUP" && <span className="mt-0.5 block text-[10px] text-slate-500">Replacement only</span>}</div> },
     { accessorKey: "estimatedDurationMinutes", header: "Duration", cell: ({ row }) => durationLabel(row.original.estimatedDurationMinutes) },
@@ -39,8 +39,8 @@ export function RoutePlansTable({ routes, context, routeDetailPath, isLoading = 
     onStateChange: () => {}, renderFallbackValue: null,
   })
   return <DataTable table={table} isLoading={isLoading} aria-label="Route plans" aria-busy={isLoading}
-    className="min-w-0" containerClassName="min-w-0 overflow-x-auto rounded-[2px] border-slate-200 shadow-xs" tableClassName="min-w-[980px] [&_[data-column-id=totalDistanceKm]]:text-right [&_[data-column-id=totalDistanceKm]]:tabular-nums [&_[data-column-id=estimatedDurationMinutes]]:text-right [&_[data-column-id=estimatedDurationMinutes]]:tabular-nums [&_[data-column-id=segmentCount]]:text-right [&_[data-column-id=segmentCount]]:tabular-nums [&_[data-column-id=updatedAt]]:tabular-nums"
-    headerClassName="bg-slate-100/80" headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
-    rowClassName="border-slate-200 transition-colors duration-200 hover:bg-primary/5 motion-reduce:transition-none" cellClassName="h-11 px-2.5 py-2 text-xs"
+    className="min-w-0" containerClassName="booking-panel min-w-0 overflow-x-auto" tableClassName="min-w-[980px] [&_[data-column-id=totalDistanceKm]]:text-right [&_[data-column-id=totalDistanceKm]]:tabular-nums [&_[data-column-id=estimatedDurationMinutes]]:text-right [&_[data-column-id=estimatedDurationMinutes]]:tabular-nums [&_[data-column-id=segmentCount]]:text-right [&_[data-column-id=segmentCount]]:tabular-nums [&_[data-column-id=updatedAt]]:tabular-nums"
+    headerClassName="bg-[#e9e6de]" headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
+    rowClassName="booking-table-row border-slate-200 transition-colors duration-200 hover:bg-primary/5 motion-reduce:transition-none" cellClassName="h-11 px-2.5 py-1.5 text-xs"
     emptyMessage="No route plans have been created for this transport plan." />
 }

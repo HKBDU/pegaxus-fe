@@ -1,3 +1,4 @@
+import "../ui.css"
 import { useState } from "react"
 import { useIsMutating } from "@tanstack/react-query"
 import { Link } from "react-router-dom"
@@ -41,12 +42,12 @@ export function BookingTransportPlanAction({ bookingId, status, onCreated }: Boo
   return <>
     {action.href ? <div className="space-y-1"><Button asChild variant="outline" size="sm" className="h-8 rounded-[2px] bg-white font-heading text-[11px] uppercase"><Link to={action.href}>{action.label}</Link></Button>
       {duplicate && <p role="status" className="text-xs text-slate-500">A transport plan already exists. Open it to continue.</p>}</div> : <div className="space-y-1">
-      <Button type="button" size="sm" className="h-8 rounded-[2px] font-heading text-[11px] uppercase" disabled={Boolean(action.blockedReason)} onClick={() => setOpen(true)}>{action.label}</Button>
+      <Button type="button" size="sm" className="flow3-ui h-8 rounded-[2px] font-heading text-[11px] uppercase" disabled={Boolean(action.blockedReason)} onClick={() => setOpen(true)}>{action.label}</Button>
       {action.blockedReason && <p className="max-w-xs text-xs text-slate-500">{action.blockedReason}</p>}
     </div>}
     <Dialog open={open && action.kind === "createTransportPlan"} onOpenChange={next => { if (!pending) setOpen(next) }}>
-      <DialogContent className="max-h-[85svh] overflow-y-auto rounded-[2px] border-slate-200 p-4 shadow-lg motion-reduce:animate-none sm:max-w-3xl sm:p-5" onEscapeKeyDown={event => { if (pending) event.preventDefault() }} onInteractOutside={event => event.preventDefault()}>
-        <DialogHeader className="border-b border-slate-200 pb-4 pr-6 text-left"><DialogTitle className="font-heading text-2xl uppercase">Create Transport Plan</DialogTitle><DialogDescription>Plan this approved booking using its existing transport.</DialogDescription></DialogHeader>
+      <DialogContent className="flow3-ui max-h-[85svh] overflow-y-auto rounded-[2px] border-slate-200 p-3 shadow-lg motion-reduce:animate-none sm:max-w-3xl sm:p-4" onEscapeKeyDown={event => { if (pending) event.preventDefault() }} onInteractOutside={event => event.preventDefault()}>
+        <DialogHeader className="border-b border-slate-200 pb-3 pr-6 text-left"><DialogTitle className="m-0! font-heading text-xl! leading-6! uppercase">Create Transport Plan</DialogTitle><DialogDescription>Plan this approved booking using its existing transport.</DialogDescription></DialogHeader>
         <CreateTransportPlanContent booking={booking} onCancel={() => setOpen(false)} onCreated={plan => { setOpen(false); onCreated?.(plan) }}
           onDuplicate={async () => { setDuplicate(true); await query.refetch() }} />
       </DialogContent>
@@ -60,8 +61,8 @@ export function CreateTransportPlanContent({ booking, onCancel, onCreated, onDup
   onCreated?: (plan: TransportPlanDetail) => void
   onDuplicate?: () => Promise<unknown>
 }) {
-  return <div className="space-y-5">
-    <Section title="Booking Summary"><dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+  return <div className="space-y-4">
+    <Section title="Booking Summary"><dl className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
       <Field label="Booking">{booking.bookingCode}</Field><Field label="Customer">{booking.customer.fullName}</Field><Field label="Horses">{String(booking.totalHorses)}</Field>
       <Field label="Origin">{booking.originAddress} ({booking.originCountry})</Field><Field label="Destination">{booking.destinationAddress} ({booking.destinationCountry})</Field>
       <Field label="Requested dates">{booking.requestedDepartureDate} → {booking.requestedArrivalDate ?? "—"}</Field>

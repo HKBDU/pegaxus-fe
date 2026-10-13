@@ -1,3 +1,4 @@
+import "../ui.css"
 import { useParams } from "react-router-dom"
 import { transportPlanDetail } from "@/app/route-config"
 import { canAccess } from "@/features/auth/access-control"
@@ -21,8 +22,8 @@ export default function EditTransportPlanPage() {
   const query = useTransportPlan(transportPlanId, allowed)
   const plan = query.data
   const error = query.isError ? getTransportPlanError(query.error) : null
-  return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-4 py-6 font-sans sm:px-6 lg:px-8 lg:py-8">
-    <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
+  return <div className="flow3-ui booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-4 py-4 font-sans sm:px-6 lg:py-6">
+    <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-4">
       <PageHeader className="[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl" title="Edit Transport Plan" backHref={transportPlanDetail(transportPlanId)} backLabel="Back to Transport Plan" />
       {!allowed ? <ErrorState message="Only Logistics Managers can edit transport plans." /> : !actionEntityIdSchema.safeParse(transportPlanId).success ? <ErrorState message="The transport plan identifier is invalid." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> : query.isPending ? <BookingDetailsSkeleton /> : plan ? <>
         <Card className="gap-0 rounded-[2px] border-slate-200 py-0 shadow-xs"><CardContent className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center">
