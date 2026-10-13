@@ -31,6 +31,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/components/ui/dialog";
+import { CancelInvoiceDialog } from "@/features/invoice-payment/components/CancelInvoiceDialog";
+import { PayNowButton } from "@/features/invoice-payment/components/PayNowButton";
+import { RecordPaymentDialog } from "@/features/invoice-payment/components/RecordPaymentDialog";
+import {
+  InvoiceItemsTable,
+  InvoiceSummaryCard,
+  QuotationBanner,
+  ReceiptStatusBadge,
+  InvoiceStatusBadge,
+  InvoiceTypeBadge,
+} from "@/shared/components/invoice";
+import { INVOICE_ACTION } from "@/shared/constants/invoice";
+import { INVOICE_MOCKS } from "@/features/invoice-payment/constants/invoice.mock";
 
 type LocationResponse = {
   locationId: string | number;
@@ -349,6 +362,74 @@ export default function Test() {
             )}
           </CardContent>
         </Card>
+
+        <section className="grid gap-4" aria-label="Invoice badges preview">
+          <h2 className="text-xl font-semibold">1. Invoice badges</h2>
+          <Card className="rounded-[2px]">
+            <CardHeader><CardTitle>Type and status badges</CardTitle></CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {INVOICE_MOCKS.map((invoice) => (
+                <div key={invoice.invoiceId} className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{invoice.invoiceNumber}</span>
+                  <InvoiceTypeBadge type={invoice.type} />
+                  <InvoiceStatusBadge status={invoice.status} />
+                  {invoice.receipts.map((receipt) => <ReceiptStatusBadge key={receipt.receiptId} status={receipt.status} />)}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-4" aria-label="Invoice items preview">
+          <h2 className="text-xl font-semibold">2. Invoice item tables</h2>
+          {INVOICE_MOCKS.map((invoice) => (
+            <div key={invoice.invoiceId} className="grid gap-2">
+              <h3 className="font-medium">{invoice.invoiceNumber} items</h3>
+              <InvoiceItemsTable items={invoice.items} currency={invoice.currency} />
+            </div>
+          ))}
+        </section>
+
+        <section className="grid gap-4" aria-label="Invoice summaries preview">
+          <h2 className="text-xl font-semibold">3. Invoice summaries</h2>
+          {INVOICE_MOCKS.map((invoice) => (
+            <div key={invoice.invoiceId} className="grid gap-2">
+              <h3 className="font-medium">{invoice.invoiceNumber} summary</h3>
+              <InvoiceSummaryCard summary={invoice.summary} currency={invoice.currency} />
+            </div>
+          ))}
+        </section>
+
+        <section className="grid gap-4" aria-label="Quotation banner preview">
+          <h2 className="text-xl font-semibold">4. Quotation banner</h2>
+          <QuotationBanner />
+        </section>
+
+        <section className="grid gap-4" aria-label="Record payment preview">
+          <h2 className="text-xl font-semibold">5. Record payment dialog</h2>
+          <Card className="rounded-[2px]">
+            <CardHeader><CardTitle>Manual payment action</CardTitle></CardHeader>
+            <CardContent>
+              <RecordPaymentDialog
+                invoice={{ ...INVOICE_MOCKS[0], availableActions: [INVOICE_ACTION.RECORD_PAYMENT] }}
+                onRecorded={(response) => toast.success(`Payment recorded: ${response.receipt.receiptCode}`)}
+              />
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-4" aria-label="Other invoice actions preview">
+          <h2 className="text-xl font-semibold">6. Other invoice actions</h2>
+          <Card className="rounded-[2px]">
+            <CardContent className="flex flex-wrap gap-3 pt-6">
+              <PayNowButton invoice={{ ...INVOICE_MOCKS[0], availableActions: [INVOICE_ACTION.PAY_NOW] }} />
+              <CancelInvoiceDialog
+                invoice={{ ...INVOICE_MOCKS[0], availableActions: [INVOICE_ACTION.CANCEL] }}
+                onCancelled={(response) => toast.success(`Invoice cancelled: ${response.invoiceNumber}`)}
+              />
+            </CardContent>
+          </Card>
+        </section>
 
         <MapViewer
           locations={locations}
