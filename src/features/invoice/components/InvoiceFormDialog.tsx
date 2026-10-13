@@ -3,28 +3,13 @@ import { AlertTriangle, FileText, Layers, ReceiptText, Truck, Users } from "luci
 import { useEffect, useMemo, useState } from "react"
 import { Controller, FormProvider, useForm, useWatch, type FieldErrors, type Path } from "react-hook-form"
 import { toast } from "sonner"
-
 import { BillingSummaryCard } from "@/features/invoice/components/BillingSummaryCard"
 import { InvoiceLineItemsTable } from "@/features/invoice/components/InvoiceLineItemsTable"
 import { IssueInvoiceDialog } from "@/features/invoice/components/IssueInvoiceDialog"
-import {
-  DEFAULT_INVOICE_CURRENCY,
-  INVOICE_CURRENCIES,
-  INVOICE_CURRENCY_LABELS,
-  INVOICE_TYPES,
-  INVOICE_TYPE_HINTS,
-  INVOICE_TYPE_LABELS,
-  TRANSPORT_STATUS_LABELS,
-} from "@/features/invoice/constants"
+import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_TYPE_HINTS, TRANSPORT_STATUS_LABELS, INVOICE_CURRENCIES, INVOICE_TYPE, INVOICE_TYPE_LABELS } from "@/features/invoice/constants"
 import { getInvoiceErrorCode, getInvoiceErrorMessage, InvoiceApiError } from "@/features/invoice/errors"
-import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/features/invoice/hooks"
-import {
-  invoiceFormSchema,
-  invoiceToFormValues,
-  toCreatePayload,
-  toUpdatePayload,
-  type InvoiceFormValues,
-} from "@/features/invoice/schemas"
+import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/features/invoice/hooks/useInvoiceCompose"
+import { invoiceFormSchema, invoiceToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoiceType } from "@/features/invoice/types"
 import { estimateSummary, parseDecimal, roundMoney, todayIsoDate } from "@/features/invoice/utils"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
@@ -228,7 +213,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                         <Select value={selectedType ?? ""} onValueChange={(value) => pickType(value as InvoiceType)} disabled={isEdit || isSaving}>
                           <SelectTrigger id="invoice-type" className="h-10 w-full rounded-lg text-sm"><SelectValue placeholder="Select invoice type" /></SelectTrigger>
                           <SelectContent>
-                            {INVOICE_TYPES.map((option) => <SelectItem key={option} value={option}>{INVOICE_TYPE_LABELS[option]}</SelectItem>)}
+                            {Object.values(INVOICE_TYPE).map((option) => <SelectItem key={option} value={option}>{INVOICE_TYPE_LABELS[option]}</SelectItem>)}
                           </SelectContent>
                         </Select>
                         <p className="mt-1 text-[11px] text-gray-500">{selectedType ? INVOICE_TYPE_HINTS[selectedType] : "Quotation, Deposit, Final, Supplementary or Credit note."}</p>

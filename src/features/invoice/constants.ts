@@ -1,33 +1,176 @@
-// Enum values are exactly the DB V8 ones (api-contract/flow6.md, section 2.1). Do not add values.
-export const INVOICE_TYPES = ["QUOTATION", "DEPOSIT", "FINAL", "SUPPLEMENTARY", "CREDIT_NOTE"] as const
-export const INVOICE_STATUSES = ["DRAFT", "ISSUED", "PAID", "OVERDUE", "CANCELLED"] as const
-export const INVOICE_ITEM_TYPES = ["TRANSPORT_FEE", "HORSE_SERVICE_FEE", "HANDLING_FEE", "COMPLIANCE_FEE", "EMERGENCY_COST", "OTHER"] as const
-export const PAYMENT_METHODS = ["CASH", "BANK_TRANSFER", "OTHER"] as const
-export const RECEIPT_STATUSES = ["PENDING", "CONFIRMED", "FAILED", "REFUNDED"] as const
+// ---- from shared/constants.ts ----
+export const INVOICE_TYPE = {
+  QUOTATION: 'QUOTATION',
+  DEPOSIT: 'DEPOSIT',
+  FINAL: 'FINAL',
+  SUPPLEMENTARY: 'SUPPLEMENTARY',
+  CREDIT_NOTE: 'CREDIT_NOTE',
+} as const
 
-/** Not a DB enum: the keys of `availableActions` the BE returns (R12). */
-export const INVOICE_ACTIONS = ["EDIT", "ISSUE", "RECORD_PAYMENT", "PAY_NOW", "CANCEL", "CREATE_ANOTHER"] as const
+export const INVOICE_STATUS = {
+  DRAFT: 'DRAFT',
+  ISSUED: 'ISSUED',
+  PAID: 'PAID',
+  OVERDUE: 'OVERDUE',
+  CANCELLED: 'CANCELLED',
+} as const
 
-export const INVOICE_CURRENCIES = ["EUR", "VND"] as const
+export const INVOICE_ITEM_TYPE = {
+  TRANSPORT_FEE: 'TRANSPORT_FEE',
+  HORSE_SERVICE_FEE: 'HORSE_SERVICE_FEE',
+  HANDLING_FEE: 'HANDLING_FEE',
+  COMPLIANCE_FEE: 'COMPLIANCE_FEE',
+  EMERGENCY_COST: 'EMERGENCY_COST',
+  OTHER: 'OTHER',
+} as const
 
-export type InvoiceType = (typeof INVOICE_TYPES)[number]
-export type InvoiceStatus = (typeof INVOICE_STATUSES)[number]
-export type InvoiceItemType = (typeof INVOICE_ITEM_TYPES)[number]
-export type InvoiceCurrency = (typeof INVOICE_CURRENCIES)[number]
-export const DEFAULT_INVOICE_CURRENCY: InvoiceCurrency = "EUR"
+export const INVOICE_HISTORY_TYPE = {
+  CREATE: 'CREATE',
+  ISSUE: 'ISSUE',
+  RECORD_PAYMENT: 'RECORD_PAYMENT',
+  MARK_OVERDUE: 'MARK_OVERDUE',
+  CANCEL: 'CANCEL',
+} as const
 
-/** Fixed 20% tax and no discount (UC-67 BR-006). Only used for the "estimated" total in the draft form. */
+export const PAYMENT_METHOD = {
+  CASH: 'CASH',
+  BANK_TRANSFER: 'BANK_TRANSFER',
+  OTHER: 'OTHER',
+} as const
+
+export const RECEIPT_STATUS = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  FAILED: 'FAILED',
+  REFUNDED: 'REFUNDED',
+} as const
+
+export const INVOICE_ACTION = {
+  EDIT: 'EDIT',
+  ISSUE: 'ISSUE',
+  RECORD_PAYMENT: 'RECORD_PAYMENT',
+  PAY_NOW: 'PAY_NOW',
+  CANCEL: 'CANCEL',
+  CREATE_ANOTHER: 'CREATE_ANOTHER',
+} as const
+
+export const INVOICE_CURRENCIES = ['EUR', 'VND'] as const
+
 export const INVOICE_TAX_RATE_PERCENT = 20
 
-export const DESCRIPTION_MAX_LENGTH = 500
+export const INVOICE_TYPE_LABELS = {
+  QUOTATION: 'Quotation',
+  DEPOSIT: 'Deposit invoice',
+  FINAL: 'Final invoice',
+  SUPPLEMENTARY: 'Supplementary invoice',
+  CREDIT_NOTE: 'Credit note',
+} as const
 
-export const INVOICE_TYPE_LABELS: Record<InvoiceType, string> = {
-  QUOTATION: "Quotation",
-  DEPOSIT: "Deposit",
-  FINAL: "Final",
-  SUPPLEMENTARY: "Supplementary",
-  CREDIT_NOTE: "Credit note",
-}
+export const INVOICE_ITEM_TYPE_LABELS = {
+  TRANSPORT_FEE: 'Transport fee',
+  HORSE_SERVICE_FEE: 'Horse service fee',
+  HANDLING_FEE: 'Handling fee',
+  COMPLIANCE_FEE: 'Compliance fee',
+  EMERGENCY_COST: 'Emergency cost',
+  OTHER: 'Other',
+} as const
+
+export const INVOICE_STATUS_LABELS = {
+  DRAFT: 'Draft',
+  ISSUED: 'Issued',
+  PAID: 'Paid',
+  OVERDUE: 'Overdue',
+  CANCELLED: 'Cancelled',
+} as const
+
+export const RECEIPT_STATUS_LABELS = {
+  PENDING: 'Pending',
+  CONFIRMED: 'Confirmed',
+  FAILED: 'Failed',
+  REFUNDED: 'Refunded',
+} as const
+
+export const INVOICE_STATUS_COLORS = {
+  DRAFT: 'bg-slate-100 text-slate-700',
+  ISSUED: 'bg-blue-100 text-blue-700',
+  PAID: 'bg-green-100 text-green-700',
+  OVERDUE: 'bg-amber-100 text-amber-700',
+  CANCELLED: 'bg-red-100 text-red-700',
+} as const
+
+export const INVOICE_TYPE_COLORS = {
+  QUOTATION: 'bg-slate-100 text-slate-700',
+  DEPOSIT: 'bg-indigo-100 text-indigo-700',
+  FINAL: 'bg-purple-100 text-purple-700',
+  SUPPLEMENTARY: 'bg-cyan-100 text-cyan-700',
+  CREDIT_NOTE: 'bg-orange-100 text-orange-700',
+} as const
+
+export const RECEIPT_STATUS_COLORS = {
+  PENDING: 'bg-amber-100 text-amber-700',
+  CONFIRMED: 'bg-green-100 text-green-700',
+  FAILED: 'bg-red-100 text-red-700',
+  REFUNDED: 'bg-slate-100 text-slate-700',
+} as const
+
+export const QUOTATION_BANNER_TEXT = 'Reference quotation - No payment required'
+
+export type InvoiceType = (typeof INVOICE_TYPE)[keyof typeof INVOICE_TYPE]
+export type InvoiceStatus = (typeof INVOICE_STATUS)[keyof typeof INVOICE_STATUS]
+export type InvoiceItemType = (typeof INVOICE_ITEM_TYPE)[keyof typeof INVOICE_ITEM_TYPE]
+export type InvoiceHistoryType = (typeof INVOICE_HISTORY_TYPE)[keyof typeof INVOICE_HISTORY_TYPE]
+export type PaymentMethod = (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD]
+export type ReceiptStatus = (typeof RECEIPT_STATUS)[keyof typeof RECEIPT_STATUS]
+export type InvoiceAction = (typeof INVOICE_ACTION)[keyof typeof INVOICE_ACTION]
+export type InvoiceCurrency = (typeof INVOICE_CURRENCIES)[number]
+
+// ---- from view/constants.ts ----
+// Enum values come from shared/constants (DB V8); zod needs them as a non-empty tuple.
+const valuesOf = <T extends Record<string, string>>(source: T) => Object.values(source) as [T[keyof T], ...T[keyof T][]]
+export const invoiceTypes = valuesOf(INVOICE_TYPE)
+export const invoiceStatuses = valuesOf(INVOICE_STATUS)
+export const invoiceHistoryTypes = valuesOf(INVOICE_HISTORY_TYPE)
+export const invoiceItemTypes = valuesOf(INVOICE_ITEM_TYPE)
+export const invoiceActions = valuesOf(INVOICE_ACTION)
+export const receiptStatuses = valuesOf(RECEIPT_STATUS)
+export const paymentMethods = valuesOf(PAYMENT_METHOD)
+export const invoiceSorts = ["createdAt:desc", "createdAt:asc", "issuedAt:desc", "issuedAt:asc", "dueDate:asc", "dueDate:desc", "totalAmount:desc", "totalAmount:asc"] as const
+export const controlClass = "h-8 rounded-[2px] border-slate-300 bg-white text-xs shadow-none"
+export const invoiceListPath = "/admin/invoices"
+export const invoiceDetailPath = (id: string) => `${invoiceListPath}/${encodeURIComponent(id)}`
+export const customerInvoicePath = (bookingId: string, id: string) => `/bookings/${encodeURIComponent(bookingId)}/invoices/${encodeURIComponent(id)}`
+export const planInvoicesPath = (id: string) => `${invoiceListPath}?${new URLSearchParams({ transportPlanId: id })}`
+export const humanize = (value: string) => value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
+export const initialInvoiceParams = { pageIndex: 1, pageSize: 20, sortBy: "createdAt:desc" as const }
+
+// ---- from payment/constants/payment.constants.ts ----
+export const PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH = 150
+export const CANCELLATION_REASON_MIN_LENGTH = 10
+
+export const PAYMENT_ERROR_CODES = {
+  PARTIAL_PAYMENT_NOT_SUPPORTED: 'PARTIAL_PAYMENT_NOT_SUPPORTED',
+  CURRENCY_MISMATCH: 'CURRENCY_MISMATCH',
+  UNPAYABLE_INVOICE_TYPE: 'UNPAYABLE_INVOICE_TYPE',
+  INVALID_INVOICE_STATUS: 'INVALID_INVOICE_STATUS',
+  INVOICE_HAS_PAYMENT: 'INVOICE_HAS_PAYMENT',
+  PAYMENT_IN_PROGRESS: 'PAYMENT_IN_PROGRESS',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  PAYMENT_GATEWAY_ERROR: 'PAYMENT_GATEWAY_ERROR',
+} as const
+
+export const PAYMENT_CURRENCY_VALUES = INVOICE_CURRENCIES
+export const PAYMENT_METHOD_VALUES = [
+  PAYMENT_METHOD.CASH,
+  PAYMENT_METHOD.BANK_TRANSFER,
+  PAYMENT_METHOD.OTHER,
+] as const
+
+// ---- from compose/constants.ts ----
+// Enums, labels and colors live in `shared/constants` (DB V8 values). Only what the compose screens add is kept here.
+
+export const DEFAULT_INVOICE_CURRENCY: InvoiceCurrency = "EUR"
+
+export const DESCRIPTION_MAX_LENGTH = 500
 
 export const INVOICE_TYPE_HINTS: Record<InvoiceType, string> = {
   QUOTATION: "Reference quote for the customer. No payment is required.",
@@ -35,31 +178,6 @@ export const INVOICE_TYPE_HINTS: Record<InvoiceType, string> = {
   FINAL: "Final settlement after the trip. Paid deposits are deducted automatically.",
   SUPPLEMENTARY: "Extra fees that appear after the final settlement.",
   CREDIT_NOTE: "Compensation paid to the customer. Needs a PAID final invoice.",
-}
-
-export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
-  DRAFT: "Draft",
-  ISSUED: "Issued",
-  PAID: "Paid",
-  OVERDUE: "Overdue",
-  CANCELLED: "Cancelled",
-}
-
-export const INVOICE_STATUS_CLASSES: Record<InvoiceStatus, string> = {
-  DRAFT: "border-slate-300 bg-slate-100 text-slate-700",
-  ISSUED: "border-sky-300 bg-sky-50 text-sky-800",
-  PAID: "border-emerald-300 bg-emerald-50 text-emerald-800",
-  OVERDUE: "border-amber-300 bg-amber-50 text-amber-800",
-  CANCELLED: "border-red-300 bg-red-50 text-red-700",
-}
-
-export const INVOICE_ITEM_TYPE_LABELS: Record<InvoiceItemType, string> = {
-  TRANSPORT_FEE: "Transport fee",
-  HORSE_SERVICE_FEE: "Horse service fee",
-  HANDLING_FEE: "Handling fee",
-  COMPLIANCE_FEE: "Compliance fee",
-  EMERGENCY_COST: "Emergency cost",
-  OTHER: "Other",
 }
 
 /** Confirmation text of the issue dialog, one per UC-68 step 4. */

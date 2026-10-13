@@ -1,8 +1,7 @@
 import { Check, ChevronDown, ChevronUp, List, Lock, Pencil, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { Controller, useFieldArray, useFormContext } from "react-hook-form"
-
-import { DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPES, INVOICE_ITEM_TYPE_LABELS } from "@/features/invoice/constants"
+import { DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_ITEM_TYPE_LABELS } from "@/features/invoice/constants"
 import { emptyItem, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { InvoiceCurrency, InvoiceItem } from "@/features/invoice/types"
 import { formatMoney, parseDecimal, roundMoney } from "@/features/invoice/utils"
@@ -118,7 +117,7 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
                                   <Select value={typeField.value} onValueChange={typeField.onChange}>
                                     <SelectTrigger id={`items.${index}.itemType`} className="mt-1 h-9 w-full bg-white text-xs"><SelectValue /></SelectTrigger>
                                     <SelectContent>
-                                      {INVOICE_ITEM_TYPES.map((itemType) => (
+                                      {Object.values(INVOICE_ITEM_TYPE).map((itemType) => (
                                         <SelectItem key={itemType} value={itemType}>{INVOICE_ITEM_TYPE_LABELS[itemType]}</SelectItem>
                                       ))}
                                     </SelectContent>

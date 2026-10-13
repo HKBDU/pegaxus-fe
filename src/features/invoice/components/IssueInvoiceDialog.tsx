@@ -4,11 +4,10 @@ import { BadgeCheck, Building2, Calendar, CircleDot, Coins, FileText, Mail, Send
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-
 import { invoiceEdit } from "@/app/route-config"
 import { ISSUE_CONFIRMATION_TEXT } from "@/features/invoice/constants"
 import { getInvoiceErrorCode, getInvoiceErrorMessage } from "@/features/invoice/errors"
-import { invoiceKeys, useIssueInvoice } from "@/features/invoice/hooks"
+import { invoiceKeys, useIssueInvoice } from "@/features/invoice/hooks/useInvoiceCompose"
 import type { Invoice, InvoiceType, IssuedInvoice } from "@/features/invoice/types"
 import { formatMoney } from "@/features/invoice/utils"
 import { Button } from "@/shared/components/ui/button"

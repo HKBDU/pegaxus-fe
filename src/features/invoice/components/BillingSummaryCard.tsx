@@ -1,5 +1,4 @@
 import { Calculator } from "lucide-react"
-
 import type { InvoiceCurrency, InvoiceSummary } from "@/features/invoice/types"
 import { formatMoney } from "@/features/invoice/utils"
 
