@@ -11,7 +11,6 @@ import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { APPROVED_BOOKINGS_ACCESS, TRANSPORT_PLANS_ACCESS, ROLE_ROUTES, routePlanDetail } from "./route-config";
-import Test from "@/Test";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
@@ -108,6 +107,9 @@ const CreateReturnRoutePage = lazy(() => import("@/features/route-plan/pages/Cre
 const EditRoutePlanPage = lazy(() => import("@/features/route-plan/pages/EditRoutePlanPage"));
 const MapAssetsPage = lazy(() => import("@/features/route-plan/pages/MapAssetsPage"));
 const PersonnelAssignmentPage = lazy(() => import("@/features/personnel/pages/PersonnelAssignmentPage"));
+const InvoiceFormPage = lazy(() => import("@/features/invoice/pages/InvoiceFormPage"));
+const InvoiceListPage = lazy(() => import("@/features/invoice/pages/InvoiceListPage"));
+const InvoiceDetailPage = lazy(() => import("@/features/invoice/pages/InvoiceDetailPage"));
 const ApprovedBookingsPage = lazy(
   () => import("@/features/transport-plan/pages/ApprovedBookingsPage"),
 );
@@ -139,6 +141,7 @@ export const router = createBrowserRouter([
     ],
   },
   {
+    // A separate guarded branch keeps the other admin pages manager-only.
     path: ROLE_ROUTES.approvedBookings,
     element: <ProtectedRoute allowedRoles={APPROVED_BOOKINGS_ACCESS.anyRole}><AdminLayout /></ProtectedRoute>,
     children: [
@@ -240,6 +243,15 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            // Customer entry to an invoice: opened from the Invoices block of Booking Details (and notification links).
+            path: "bookings/:bookingId/invoices/:invoiceId",
+            element: (
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}><InvoiceDetailPage /></Suspense>
+              </ProtectedRoute>
+            ),
+          },
+          {
             path: "bookings/:bookingId/edit",
             element: (
               <ProtectedRoute allowedRoles={["CUSTOMER"]}>
@@ -327,6 +339,11 @@ export const router = createBrowserRouter([
         path: "transport-requests/:bookingId",
         element: <BookingDetailsPage audience="manager" />,
       },
+      // Flow 6 invoices (Logistics Manager).
+      { path: "invoices", element: <Suspense fallback={<LoadingState />}><InvoiceListPage /></Suspense> },
+      { path: "invoices/new/:bookingId", element: <Suspense fallback={<LoadingState />}><InvoiceFormPage mode="create" /></Suspense> },
+      { path: "invoices/:invoiceId", element: <Suspense fallback={<LoadingState />}><InvoiceDetailPage /></Suspense> },
+      { path: "invoices/:invoiceId/edit", element: <Suspense fallback={<LoadingState />}><InvoiceFormPage mode="edit" /></Suspense> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
@@ -668,10 +685,6 @@ export const router = createBrowserRouter([
           path: "/__dev/admin/bookings/:bookingId/history",
           element: <AdminLayout />,
           children: [{ index: true, element: bookingHistoryPage }],
-        },
-        {
-          path: "/__dev/invoice-payment",
-          element: <Test />,
         },
       ]
     : []),

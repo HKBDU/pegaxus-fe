@@ -1,7 +1,7 @@
 import type { ComponentType } from "react"
 import { Tabs } from "radix-ui"
-import { Link, useParams, useSearchParams } from "react-router-dom"
-import { ROLE_ROUTES } from "@/app/route-config"
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { invoiceCreate, ROLE_ROUTES } from "@/app/route-config"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { ErrorState } from "@/shared/components/common"
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
@@ -27,9 +27,10 @@ import { workspaceLabels } from "../constants"
 import { useApprovedBooking } from "../hooks/useApprovedBookings"
 import { getApprovedBookingError } from "../services"
 import { PersonnelAssignmentPanel } from "@/features/personnel"
-import { InvoicesPanel } from "@/features/invoice-view/components/InvoicesPanel"
+import { InvoicesPanel } from "@/features/invoice"
 
-export function TransportPlanDetails({ plan, personnelPanel, onCreateInvoice }: { plan: TransportPlanDetail; personnelPanel?: ComponentType<PersonnelPanelProps>; onCreateInvoice?: (bookingId: string) => void }) {
+export function TransportPlanDetails({ plan, personnelPanel }: { plan: TransportPlanDetail; personnelPanel?: ComponentType<PersonnelPanelProps> }) {
+  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const principal = useAuthStore((state) => state.principal)
   const manager = getWorkspaceRole(principal) === "manager"
@@ -43,7 +44,7 @@ export function TransportPlanDetails({ plan, personnelPanel, onCreateInvoice }: 
         <TransportPlanStatusBadge status={plan.status} />
         {personnelAction?.href ? <Button asChild className="rounded-[2px]"><Link to={personnelAction.href}><UsersRound aria-hidden="true" className="size-4" />Manage Personnel</Link></Button> : null}
         {canEditTransportPlan(principal, plan) ? <Button asChild variant="outline" className="rounded-[2px] bg-white"><Link to={editTransportPlanPath(plan.transportPlanId)}>Edit Transport Plan</Link></Button> : null}
-        {manager && onCreateInvoice ? <Button className="rounded-[2px]" onClick={() => onCreateInvoice(plan.booking.bookingId)}>Create Invoice</Button> : null}
+        {manager ? <Button className="rounded-[2px]" onClick={() => navigate(invoiceCreate(plan.booking.bookingId))}>Create Invoice</Button> : null}
       </div>
     </div>
     <TransportOverview journey={plan.booking} customerName={plan.booking.customerName} plannedStartAt={plan.plannedStartAt} transportStatus={plan.transport.status} />
@@ -63,7 +64,7 @@ export function TransportPlanDetails({ plan, personnelPanel, onCreateInvoice }: 
   </div>
 }
 
-function TransportPlanReadPage({ onCreateInvoice }: { onCreateInvoice?: (bookingId: string) => void }) {
+function TransportPlanReadPage() {
   const { transportPlanId = "" } = useParams<{ transportPlanId: string }>()
   const validId = actionEntityIdSchema.safeParse(transportPlanId).success
   const query = useTransportPlan(transportPlanId)
@@ -79,12 +80,12 @@ function TransportPlanReadPage({ onCreateInvoice }: { onCreateInvoice?: (booking
       <Flow3MockIndicator />
       <div><PageHeader className="[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl" title="Transport Plan Details" backHref={role === "manager" ? ROLE_ROUTES.transportPlans : ROLE_ROUTES.approvedBookings} backLabel={role === "manager" ? "Back to Transport Plans" : `Back to ${role ? workspaceLabels[role].list : "Transports"}`} /></div>
       {!validId ? <ErrorState message="The transport plan identifier is invalid." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
-        query.isPending || (staff && access.isPending) ? <BookingDetailsSkeleton /> : accessError ? <ErrorState message={accessError.message} onRetry={accessError.retryable ? () => void access.refetch() : undefined} /> : query.data ? <TransportPlanDetails key={transportPlanId} plan={query.data} personnelPanel={PersonnelAssignmentPanel} onCreateInvoice={onCreateInvoice} /> : null}
+        query.isPending || (staff && access.isPending) ? <BookingDetailsSkeleton /> : accessError ? <ErrorState message={accessError.message} onRetry={accessError.retryable ? () => void access.refetch() : undefined} /> : query.data ? <TransportPlanDetails key={transportPlanId} plan={query.data} personnelPanel={PersonnelAssignmentPanel} /> : null}
     </div>
   </div>
 }
 
-export default function TransportPlanDetailsPage({ onCreateInvoice }: { onCreateInvoice?: (bookingId: string) => void }) {
+export default function TransportPlanDetailsPage() {
   const [params] = useSearchParams()
-  return params.get("action") === "edit" ? <EditTransportPlanPage /> : <TransportPlanReadPage onCreateInvoice={onCreateInvoice} />
+  return params.get("action") === "edit" ? <EditTransportPlanPage /> : <TransportPlanReadPage />
 }
