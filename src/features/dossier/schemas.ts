@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { BOOKING_STATUSES } from "@/features/booking/types";
 import { DOSSIER_REQUIREMENT_STATUSES, UPLOAD_ACCEPTED_MIME_TYPES, UPLOAD_MAX_FILE_BYTES } from "./constants";
-import type { DossierUploadedAssetRef, UploadDocumentError, UploadDocumentMetadata } from "./types";
+type DossierUploadedAssetRef = { publicId: string; fileName: string; mimeType: string; fileSizeBytes: number };
+type UploadDocumentError = { code: string; message: string; field?: "expiryDate"; refresh?: "overview" | "requirements" };
+type UploadDocumentMetadata = { documentNumber?: string | null; issuingAuthority?: string | null; issuedDate?: string | null; expiryDate?: string | null; uploadNote?: string };
 
 // Mock data uses numeric identifiers, while the real API uses UUIDs.
 // Keep the parsed contract compatible with both existing mock helpers and real responses.

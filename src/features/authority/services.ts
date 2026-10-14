@@ -8,7 +8,7 @@ import type {
 } from './types'
 
 export async function recordAuthoritySubmission(
-  dossierId: number,
+  dossierId: string,
   input: RecordAuthoritySubmissionInput,
 ): Promise<RecordAuthoritySubmissionResult> {
   const formData = new FormData()
@@ -23,7 +23,7 @@ export async function recordAuthoritySubmission(
   if (input.decisionNote?.trim()) formData.append('decisionNote', input.decisionNote.trim())
 
   const response = await apiClient.post<unknown, ApiEnvelope<RecordAuthoritySubmissionResult>>(
-    `/compliance-dossiers/${dossierId}/authority-submissions`,
+    `/compliance-dossiers/${encodeURIComponent(dossierId)}/authority-submissions`,
     formData,
   )
 
@@ -32,7 +32,7 @@ export async function recordAuthoritySubmission(
 }
 
 export async function updateAuthorityReview(
-  submissionId: number,
+  submissionId: string,
   input: UpdateAuthorityReviewInput,
 ): Promise<UpdateAuthorityReviewResult> {
   const formData = new FormData()
@@ -46,7 +46,7 @@ export async function updateAuthorityReview(
   if (input.revisionDueDate) formData.append('revisionDueDate', input.revisionDueDate)
 
   const response = await apiClient.patch<unknown, ApiEnvelope<UpdateAuthorityReviewResult>>(
-    `/authority-submissions/${submissionId}/decision`,
+    `/authority-submissions/${encodeURIComponent(submissionId)}/decision`,
     formData,
   )
 
