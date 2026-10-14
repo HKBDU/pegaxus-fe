@@ -20,7 +20,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/shared/components/ui/textarea"
 
 const DEFAULT_VALUES: InvoiceFormValues = { type: "QUOTATION", currency: DEFAULT_INVOICE_CURRENCY, dueDate: "", note: "", items: [] }
-const fieldLabelClass = "mb-1 block text-xs font-semibold text-gray-800"
+const fieldLabelClass = "mb-1 block font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-500"
+const controlClass = "h-9 w-full rounded-none border-[#d8d5cb] bg-white px-3 text-sm shadow-none"
+const panelClass = "border border-[#e5e2d9] bg-white"
+const panelHeaderClass = "m-0! flex items-center gap-2 border-b border-[#e5e2d9] bg-[#f7f6f3] px-4 py-2.5 font-heading text-[13px]! font-bold! uppercase tracking-[0.04em]! text-gray-900!"
 
 type Intent = "draft" | "issue"
 
@@ -47,7 +50,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
   const [selectedType, setSelectedType] = useState<InvoiceType | null>(isEdit && invoice ? invoice.type : null)
   const [formError, setFormError] = useState<string>()
   const [staleOpen, setStaleOpen] = useState(false)
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [focusRow, setFocusRow] = useState<{ index: number; nonce: number } | null>(null)
   const [issueTarget, setIssueTarget] = useState<Invoice | null>(null)
   const [savingIntent, setSavingIntent] = useState<Intent>("draft")
 
@@ -109,7 +112,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
     if (error instanceof InvoiceApiError && error.errors?.length) {
       error.errors.forEach(({ field, message }) => setError(toFormPath(field) as Path<InvoiceFormValues>, { type: "server", message }))
       const row = /^items\[(\d+)\]/.exec(error.errors[0].field)
-      if (row) setEditingIndex(Number(row[1]))
+      if (row) setFocusRow({ index: Number(row[1]), nonce: Date.now() })
     }
     setFormError(getInvoiceErrorMessage(error))
   }
@@ -139,7 +142,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
       },
       (invalid: FieldErrors<InvoiceFormValues>) => {
         const firstBad = invalid.items?.findIndex?.((row) => Boolean(row))
-        if (typeof firstBad === "number" && firstBad >= 0) setEditingIndex(firstBad)
+        if (typeof firstBad === "number" && firstBad >= 0) setFocusRow({ index: firstBad, nonce: Date.now() })
       },
     )
 
@@ -161,14 +164,14 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
   return (
     <>
       <Dialog open={!issueTarget} onOpenChange={(open) => !open && !isSaving && onClose()}>
-        <DialogContent showCloseButton={!isSaving} className="flex max-h-[92dvh] flex-col gap-0 overflow-hidden rounded-2xl border-0 p-0 sm:max-w-[900px]">
-          <header className="flex shrink-0 items-start gap-3 px-6 pt-5 pb-3 pr-12">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+        <DialogContent showCloseButton={!isSaving} className="flex h-[94dvh] max-h-[880px] flex-col gap-0 overflow-hidden rounded-none border-0 bg-[#faf9f6] p-0 sm:max-w-[1120px]">
+          <header className="flex shrink-0 items-center gap-3 border-b border-[#e5e2d9] bg-white px-6 py-4 pr-14">
+            <span className="flex size-10 shrink-0 items-center justify-center bg-orange-600 text-white">
               <ReceiptText className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <DialogTitle className="m-0! text-xl! font-semibold! tracking-normal! text-gray-900!">{isEdit ? "Edit Invoice" : "Create Invoice"}</DialogTitle>
-              <DialogDescription className="m-0 text-sm text-gray-500">
+              <DialogTitle className="m-0! font-heading text-xl! font-bold! uppercase tracking-[0.02em]! text-gray-900!">{isEdit ? "Edit invoice" : "Create invoice"}</DialogTitle>
+              <DialogDescription className="m-0 text-xs text-gray-500">
                 {isEdit ? "Update this draft invoice before it is issued." : "Generate a draft invoice for this transport."}
               </DialogDescription>
             </div>
@@ -183,17 +186,17 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                 submitWith("draft")
               }}
             >
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 pb-4">
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-gray-200 bg-gray-50 p-3 lg:grid-cols-4">
-                  <InfoCell icon={<Truck className="size-4 text-orange-500" />} label="Invoice for Transport" value={booking.transportCode ?? "—"} />
-                  <InfoCell icon={<FileText className="size-4 text-blue-500" />} label="Booking" value={booking.bookingCode} />
-                  <InfoCell icon={<Users className="size-4 text-violet-500" />} label="Customer" value={booking.customerName || "—"} />
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
+                <dl className={`grid grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-[#e5e2d9] ${panelClass}`}>
+                  <InfoCell icon={<Truck className="size-4 text-orange-600" />} label="Invoice for transport" value={booking.transportCode ?? "—"} />
+                  <InfoCell icon={<FileText className="size-4 text-sky-600" />} label="Booking" value={booking.bookingCode} />
+                  <InfoCell icon={<Users className="size-4 text-violet-600" />} label="Customer" value={booking.customerName || "—"} />
                   <InfoCell
-                    icon={<Layers className="size-4 text-orange-500" />}
-                    label="Status"
+                    icon={<Layers className="size-4 text-orange-600" />}
+                    label="Transport status"
                     value={
                       transportStatus ? (
-                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                        <span className="inline-block border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
                           {TRANSPORT_STATUS_LABELS[transportStatus] ?? transportStatus}
                         </span>
                       ) : "—"
@@ -201,31 +204,22 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                   />
                 </dl>
 
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-                  <section className="min-w-0" aria-label="Invoice details">
-                    <h3 className="m-0! mb-3 flex items-center gap-2 text-sm! font-semibold! tracking-normal! text-gray-900!">
-                      <FileText className="size-4 text-orange-500" aria-hidden="true" />
-                      Invoice Details
+                <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+                  <section className={`flex flex-col ${panelClass}`} aria-label="Invoice details">
+                    <h3 className={panelHeaderClass}>
+                      <FileText className="size-4 text-orange-600" aria-hidden="true" />
+                      Invoice details
                     </h3>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="sm:col-span-2">
-                        <label className={fieldLabelClass} htmlFor="invoice-type">Invoice Type <span className="text-red-500">*</span></label>
+                    <div className="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-3">
+                      <div>
+                        <label className={fieldLabelClass} htmlFor="invoice-type">Invoice type <span className="text-red-500">*</span></label>
                         <Select value={selectedType ?? ""} onValueChange={(value) => pickType(value as InvoiceType)} disabled={isEdit || isSaving}>
-                          <SelectTrigger id="invoice-type" className="h-10 w-full rounded-lg text-sm"><SelectValue placeholder="Select invoice type" /></SelectTrigger>
+                          <SelectTrigger id="invoice-type" className={controlClass}><SelectValue placeholder="Select invoice type" /></SelectTrigger>
                           <SelectContent>
                             {Object.values(INVOICE_TYPE).map((option) => <SelectItem key={option} value={option}>{INVOICE_TYPE_LABELS[option]}</SelectItem>)}
                           </SelectContent>
                         </Select>
-                        <p className="mt-1 text-[11px] text-gray-500">{selectedType ? INVOICE_TYPE_HINTS[selectedType] : "Quotation, Deposit, Final, Supplementary or Credit note."}</p>
-                        {suggestionQuery.isFetching && !isEdit ? <p className="mt-1 text-[11px] text-gray-500" role="status">Checking the booking...</p> : null}
-                        {precheckError ? (
-                          <div className="mt-2 flex gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
-                            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                            <p>{getInvoiceErrorMessage(precheckError, "Unable to check this booking. Try another type or reload.")}</p>
-                          </div>
-                        ) : null}
                       </div>
-
                       <div>
                         <label className={fieldLabelClass} htmlFor="invoice-currency">Currency <span className="text-red-500">*</span></label>
                         <Controller
@@ -233,14 +227,13 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                           name="currency"
                           render={({ field }) => (
                             <Select value={field.value} onValueChange={field.onChange} disabled={Boolean(depositCurrency) || isSaving}>
-                              <SelectTrigger id="invoice-currency" className="h-10 w-full rounded-lg text-sm"><SelectValue /></SelectTrigger>
+                              <SelectTrigger id="invoice-currency" className={controlClass}><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 {INVOICE_CURRENCIES.map((option) => <SelectItem key={option} value={option}>{INVOICE_CURRENCY_LABELS[option]}</SelectItem>)}
                               </SelectContent>
                             </Select>
                           )}
                         />
-                        {depositCurrency ? <p className="mt-1 text-[11px] text-gray-500">Locked to the currency of the paid deposit.</p> : null}
                       </div>
                       <div>
                         <label className={fieldLabelClass} htmlFor="invoice-due-date">{dateLabel} <span className="text-red-500">*</span></label>
@@ -256,16 +249,28 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                               minDate={todayIsoDate()}
                               displayFormat="MMM dd, yyyy"
                               placeholder="Pick a date"
-                              className="h-10 w-full rounded-lg text-sm"
+                              className={controlClass}
                             />
                           )}
                         />
                         {errors.dueDate ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.dueDate.message}</p> : null}
                       </div>
 
-                      <div className="sm:col-span-2">
+                      <div className="min-h-4 text-[11px] leading-4 text-gray-500 sm:col-span-3 sm:-mt-2">
+                        {suggestionQuery.isFetching && !isEdit ? <span role="status">Checking the booking...</span> : null}
+                        {!suggestionQuery.isFetching || isEdit ? (selectedType ? INVOICE_TYPE_HINTS[selectedType] : "Quotation, Deposit, Final, Supplementary or Credit note.") : null}
+                        {depositCurrency ? " The currency is locked to the paid deposit." : ""}
+                      </div>
+                      {precheckError ? (
+                        <div className="flex gap-2 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:col-span-3" role="alert">
+                          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                          <p>{getInvoiceErrorMessage(precheckError, "Unable to check this booking. Try another type or reload.")}</p>
+                        </div>
+                      ) : null}
+
+                      <div className="sm:col-span-3">
                         <label className={fieldLabelClass} htmlFor="invoice-note">Notes</label>
-                        <Textarea id="invoice-note" rows={3} placeholder="Add any additional notes for this invoice..." className="rounded-lg text-sm" {...register("note")} />
+                        <Textarea id="invoice-note" rows={2} placeholder="Add any additional notes for this invoice..." className="min-h-[60px] rounded-none border-[#d8d5cb] text-sm shadow-none" {...register("note")} />
                       </div>
                     </div>
                   </section>
@@ -277,28 +282,27 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                   currency={currency}
                   horses={booking.horses}
                   depositDeductionItems={depositDeductionItems}
-                  editingIndex={editingIndex}
-                  onEditingIndexChange={setEditingIndex}
+                  focusRow={focusRow}
                   disabled={isSaving}
                 />
 
-                {formError ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{formError}</div> : null}
+                {formError ? <div className="border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{formError}</div> : null}
               </div>
 
-              <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-gray-100 bg-white px-6 py-3">
-                <Button type="button" variant="outline" className="h-9 px-5 text-sm" disabled={isSaving} onClick={() => onClose()}>Cancel</Button>
+              <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[#e5e2d9] bg-white px-6 py-3">
+                <Button type="button" variant="outline" className="h-9 rounded-none px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em]" disabled={isSaving} onClick={() => onClose()}>Cancel</Button>
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-9 border-orange-300 px-5 text-sm text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                  className="h-9 rounded-none border-orange-400 px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-orange-700 hover:bg-orange-50 hover:text-orange-800"
                   disabled={isSaving || !canSave || (isEdit && !isDirty)}
                   onClick={() => submitWith("draft")}
                 >
-                  {isSaving && savingIntent === "draft" ? "Saving..." : "Save Draft"}
+                  {isSaving && savingIntent === "draft" ? "Saving..." : "Save draft"}
                 </Button>
                 <Button
                   type="button"
-                  className="h-9 bg-orange-600 px-5 text-sm text-white hover:bg-orange-700"
+                  className="h-9 rounded-none bg-orange-600 px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-white hover:bg-orange-700"
                   disabled={isSaving || !canSave}
                   onClick={() => submitWith("issue")}
                 >
@@ -339,10 +343,10 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
 
 function InfoCell({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
-    <div className="flex min-w-0 items-start gap-2">
+    <div className="flex min-w-0 items-start gap-2.5 px-4 py-3">
       <span className="mt-0.5 shrink-0" aria-hidden="true">{icon}</span>
       <div className="min-w-0">
-        <dt className="text-[11px] text-gray-500">{label}</dt>
+        <dt className="font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-500">{label}</dt>
         <dd className="mt-0.5 truncate text-sm font-semibold text-gray-900">{value}</dd>
       </div>
     </div>

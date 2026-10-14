@@ -1,4 +1,5 @@
 import { Calculator } from "lucide-react"
+
 import type { InvoiceCurrency, InvoiceSummary } from "@/features/invoice/types"
 import { formatMoney } from "@/features/invoice/utils"
 
@@ -15,54 +16,55 @@ interface BillingSummaryCardProps {
 }
 
 /**
- * "Billing Summary" panel of the create/edit dialog. `lines` are the fee lines the manager typed; the deposit deduction
- * of a FINAL is its own row. The numbers are a client estimate (contract R8: 20% tax, no discount, deposit deduction
- * after tax); the server recalculates them when the draft is saved.
+ * "Billing summary" panel of the create/edit dialog. `lines` are the fee lines the manager typed; the deposit deduction
+ * of a FINAL is its own row. The numbers are a client estimate (contract R8: 20% tax, deposit deduction after tax); the
+ * server recalculates them when the draft is saved.
  */
 export function BillingSummaryCard({ lines, summary, currency }: BillingSummaryCardProps) {
   return (
-    <section className="rounded-xl border border-gray-200 bg-gray-50 p-4" aria-label="Billing summary">
-      <h3 className="m-0! flex items-center gap-2 text-sm! font-semibold! tracking-normal! text-gray-900!">
-        <Calculator className="size-4 text-gray-500" aria-hidden="true" />
-        Billing Summary
+    <section className="flex h-full flex-col border border-[#e5e2d9] bg-white" aria-label="Billing summary">
+      <h3 className="m-0! flex items-center gap-2 border-b border-[#e5e2d9] bg-[#f7f6f3] px-4 py-2.5 font-heading text-[13px]! font-bold! uppercase tracking-[0.04em]! text-gray-900!">
+        <Calculator className="size-4 text-orange-600" aria-hidden="true" />
+        Billing summary
       </h3>
 
-      <div className="mt-3 rounded-lg bg-white p-3 text-xs text-gray-700">
-        {lines.length ? (
-          <ul className="space-y-2">
-            {lines.map((line) => (
-              <li key={line.key} className="flex items-baseline justify-between gap-3">
-                <span className="min-w-0 break-words">{line.label}</span>
-                <span className="whitespace-nowrap font-medium tabular-nums text-gray-900">{formatMoney(line.amount, currency)}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-400">No fee lines yet.</p>
-        )}
+      <div className="flex min-h-0 flex-1 flex-col p-4 text-xs text-gray-700">
+        <div className="h-28 shrink-0 overflow-y-auto">
+          {lines.length ? (
+            <ul className="space-y-1.5">
+              {lines.map((line) => (
+                <li key={line.key} className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 truncate" title={line.label}>{line.label}</span>
+                  <span className="whitespace-nowrap font-medium tabular-nums text-gray-900">{formatMoney(line.amount, currency)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-400">No fee lines yet.</p>
+          )}
+        </div>
 
-        <dl className="mt-3 space-y-2 border-t border-gray-200 pt-3">
+        <dl className="mt-3 space-y-1.5 border-t border-[#e5e2d9] pt-3">
           <SummaryRow label="Subtotal" value={formatMoney(summary.subtotal, currency)} />
           <SummaryRow label={`Tax (${summary.taxRatePercent}%)`} value={formatMoney(summary.tax, currency)} />
-          <SummaryRow label="Discount" value={formatMoney(summary.discount, currency)} valueClassName="text-emerald-600" />
-          {summary.depositDeduction !== 0 ? <SummaryRow label="Deposit deduction" value={formatMoney(summary.depositDeduction, currency)} valueClassName="text-emerald-600" /> : null}
+          {summary.depositDeduction !== 0 ? <SummaryRow label="Deposit deduction" value={formatMoney(summary.depositDeduction, currency)} /> : null}
         </dl>
-      </div>
 
-      <div className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-orange-50 px-4 py-3 text-orange-600">
-        <span className="text-sm font-semibold">Total Amount</span>
-        <span className="whitespace-nowrap text-lg font-bold tabular-nums">{formatMoney(summary.grandTotal, currency)}</span>
+        <div className="mt-3 flex items-center justify-between gap-3 border border-orange-200 bg-orange-50 px-3 py-2.5 text-orange-700">
+          <span className="font-heading text-xs font-semibold uppercase tracking-[0.05em]">Total amount</span>
+          <span className="whitespace-nowrap text-base font-bold tabular-nums">{formatMoney(summary.grandTotal, currency)}</span>
+        </div>
+        <p className="mt-2 text-[11px] leading-4 text-gray-500">Estimate. The server recalculates the amounts when the draft is saved.</p>
       </div>
-      <p className="mt-2 text-[11px] leading-4 text-gray-500">Estimate only. The server recalculates the amounts when the draft is saved.</p>
     </section>
   )
 }
 
-function SummaryRow({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
+function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt>{label}</dt>
-      <dd className={`whitespace-nowrap font-medium tabular-nums ${valueClassName ?? "text-gray-900"}`}>{value}</dd>
+      <dd className="whitespace-nowrap font-medium tabular-nums text-gray-900">{value}</dd>
     </div>
   )
 }

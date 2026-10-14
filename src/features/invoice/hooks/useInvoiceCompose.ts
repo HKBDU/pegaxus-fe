@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query"
 import { invoiceService } from "@/features/invoice/services"
 import type { CreateInvoicePayload, InvoiceType, UpdateInvoicePayload } from "@/features/invoice/types"
 
@@ -19,6 +19,14 @@ export function useInvoice(invoiceId: string | undefined) {
   })
 }
 
+/**
+ * Refresh the invoice lists, details and histories after a write. The IV1 precheck is left alone: right after a save it
+ * would answer INVOICE_ALREADY_EXISTS about the draft that was just created, and its form is already closing.
+ */
+function refreshInvoices(queryClient: QueryClient) {
+  return queryClient.invalidateQueries({ queryKey: invoiceKeys.all, predicate: (query) => query.queryKey[1] !== "suggestion" })
+}
+
 export function useInvoiceBookingContext(bookingId: string | undefined) {
   return useQuery({
     queryKey: invoiceKeys.booking(bookingId ?? ""),
@@ -36,6 +44,7 @@ export function useInvoiceSuggestion(bookingId: string | undefined, type: Invoic
     staleTime: 0,
     gcTime: 0,
     retry: false,
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -45,7 +54,7 @@ export function useCreateInvoice(bookingId: string) {
     mutationFn: (payload: CreateInvoicePayload) => invoiceService.createInvoice(bookingId, payload),
     onSuccess: (invoice) => {
       queryClient.setQueryData(invoiceKeys.detail(invoice.invoiceId), invoice)
-      void queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+      void refreshInvoices(queryClient)
     },
   })
 }
@@ -56,7 +65,7 @@ export function useUpdateInvoice(invoiceId: string) {
     mutationFn: (payload: UpdateInvoicePayload) => invoiceService.updateInvoice(invoiceId, payload),
     onSuccess: (invoice) => {
       queryClient.setQueryData(invoiceKeys.detail(invoiceId), invoice)
-      void queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+      void refreshInvoices(queryClient)
     },
   })
 }
@@ -66,7 +75,7 @@ export function useIssueInvoice(invoiceId: string) {
   return useMutation({
     mutationFn: (lastUpdatedAt: string) => invoiceService.issueInvoice(invoiceId, lastUpdatedAt),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+      void refreshInvoices(queryClient)
     },
   })
 }

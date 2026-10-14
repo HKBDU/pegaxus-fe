@@ -14,7 +14,6 @@ export function InvoiceSummaryCard({
 }) {
   const rows = [
     ['Subtotal', summary.subtotal],
-    ['Discount', summary.discount],
     [`Tax (${summary.taxRatePercent}%)`, summary.tax],
     ['Deposit deduction', summary.depositDeduction],
   ] as const
