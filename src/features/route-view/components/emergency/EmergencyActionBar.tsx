@@ -1,5 +1,7 @@
 import { ArrowUpRight, BellRing, GitBranch, Play, ShieldCheck } from "lucide-react"
+import { Link } from "react-router-dom"
 import { Button } from "@/shared/components/ui/button"
+import { returnRouteCreate } from "@/app/route-config"
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge"
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role"
 import { emergencyActionLabels, getEmergencyActions } from "../../emergency-policy"
@@ -16,7 +18,7 @@ export function EmergencyActionBar({ plan, context, onAction }: { plan: RoutePla
       <p className="text-xs text-slate-500">{coordinator ? "Route coordination" : getWorkspaceRole(context.workspace.principal) === "manager" ? "Management decisions" : "Route monitoring"}{plan.routeType === "RETURN" && plan.status === "DRAFT" && context.workspace.dossierStatus === "DRAFT" ? " · Awaiting document preparation and legal confirmation" : ""}</p>
     </div>
     <div className="flex flex-wrap gap-2">{actions.map(action => { const Icon = icons[action]; return <Button key={action} id={`emergency-${action}-${plan.routePlanId}`} className="rounded-lg" size="sm" onClick={() => onAction(action)}><Icon aria-hidden="true" className="size-4" />{emergencyActionLabels[action]}</Button> })}
-      {coordinator && plan.routeType === "PRIMARY" && <Button variant="outline" size="sm" disabled title="Return route creation is not available yet." className="rounded-lg"><GitBranch aria-hidden="true" className="size-4" />Create Return</Button>}
+      {coordinator && plan.routeType === "PRIMARY" && <Button asChild variant="outline" size="sm" className="rounded-lg"><Link to={returnRouteCreate(plan.transportPlanId)}><GitBranch aria-hidden="true" className="size-4" />Create Return</Link></Button>}
     </div>
   </section>
 }

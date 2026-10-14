@@ -6,8 +6,9 @@ import { distanceLabel, durationLabel } from "../display"
 import type { RouteSegment } from "../types"
 import type { SegmentImpact } from "../route-comparison"
 import { Badge } from "@/shared/components/ui/badge"
+import { OutsourceSegmentDialog } from "@/features/route-plan/components/OutsourceSegmentDialog"
 
-export function RouteSegmentList({ segments, review }: { segments: RouteSegment[]; review?: { title: string; impact: (segment: RouteSegment) => SegmentImpact } }) {
+export function RouteSegmentList({ segments, review, routePlanId, canManageOutsource }: { segments: RouteSegment[]; review?: { title: string; impact: (segment: RouteSegment) => SegmentImpact }; routePlanId?: string; canManageOutsource?: boolean }) {
   if (!segments.length) return <EmptyState message="No segments are available for this route plan." />
   const ordered = [...segments].sort((a, b) => a.sequenceNo - b.sequenceNo)
   const Heading = review ? "h3" : "h2"
@@ -36,7 +37,7 @@ export function RouteSegmentList({ segments, review }: { segments: RouteSegment[
         <span aria-hidden="true" className={`absolute top-2 -left-[27px] size-3 rounded-full border-2 border-white sm:-left-[35px] ${review && !impact?.highlighted ? "bg-slate-700" : "bg-primary"}`} />
         <p className="mb-2 text-xs font-medium text-slate-500">{segment.fromLocation.locationName}</p>
         <Section title={`Segment ${String(segment.sequenceNo).padStart(2, "0")}`} className={impact?.highlighted ? "border-primary/30 bg-primary/[0.025]" : undefined}
-          actions={impact ? <Badge variant="outline" className={`max-w-full whitespace-normal rounded-md text-[10px] ${impact.highlighted ? "border-primary/30 text-primary" : "border-slate-200 text-slate-600"}`}>{impact.label}</Badge> : undefined}>
+          actions={<div className="flex flex-wrap items-center gap-2">{impact ? <Badge variant="outline" className={`max-w-full whitespace-normal rounded-md text-[10px] ${impact.highlighted ? "border-primary/30 text-primary" : "border-slate-200 text-slate-600"}`}>{impact.label}</Badge> : null}{canManageOutsource && routePlanId && !review ? <OutsourceSegmentDialog routePlanId={routePlanId} routePlanRouteId={segment.routePlanRouteId} transportMode={segment.route.transportMode} isOutsourced={segment.isOutsourced} currentNote={segment.note}><button type="button" className="text-xs font-semibold text-primary underline-offset-2 hover:underline">{segment.isOutsourced ? "Manage outsource" : "Outsource"}</button></OutsourceSegmentDialog> : null}</div>}>
           <div className="flex flex-wrap gap-2"><ApprovedBookingBadge value={segment.route.transportMode} /><ApprovedBookingBadge value={segment.isOutsourced ? "OUTSOURCED" : "INTERNAL"} /><ApprovedBookingBadge value={segment.status} /><ApprovedBookingBadge value={segment.routeType} /></div>
           <p className="break-words text-sm font-semibold">{segment.fromLocation.locationName} → {segment.toLocation.locationName}</p>
           {review ? <>

@@ -1,10 +1,11 @@
+import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { ArrowLeft, ChevronRight } from "lucide-react"
 import { transportPlanDetail } from "@/app/route-config"
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge"
 import type { RoutePlanDetail } from "../types"
 
-export function RoutePlanHeader({ plan }: { plan: RoutePlanDetail }) {
+export function RoutePlanHeader({ plan, actions }: { plan: RoutePlanDetail; actions?: ReactNode }) {
   return <header className="space-y-4 border-b border-slate-200 pb-5">
     <Link to={transportPlanDetail(plan.transportPlanId)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-primary/30">
       <ArrowLeft aria-hidden="true" className="size-3.5" />Back to Transport Plan
@@ -18,5 +19,6 @@ export function RoutePlanHeader({ plan }: { plan: RoutePlanDetail }) {
       </div>
       <p className="text-xs text-slate-500">Booking: <span className="font-medium text-slate-700">{plan.bookingCode}</span> · {plan.isCrossBorder ? "Cross-border" : "Domestic"}</p>
     </div>
+    {actions ? <div className="flex flex-wrap gap-2">{actions}</div> : null}
   </header>
 }
