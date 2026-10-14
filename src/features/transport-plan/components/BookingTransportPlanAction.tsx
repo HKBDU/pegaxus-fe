@@ -1,4 +1,4 @@
-import "../ui.css"
+
 import { useState } from "react"
 import { useIsMutating } from "@tanstack/react-query"
 import { Link } from "react-router-dom"
@@ -20,8 +20,6 @@ export type BookingTransportPlanActionProps = {
   onCreated?: (plan: TransportPlanDetail) => void
 }
 
-// Booking Detail does not return a TransportPlan summary. AB2 supplies it without
-// sending the LM to the dedicated RC/TS Approved Bookings screen.
 export function BookingTransportPlanAction({ bookingId, status, onCreated }: BookingTransportPlanActionProps) {
   const principal = useAuthStore(state => state.principal)
   const allowed = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) && status === "APPROVED" && actionEntityIdSchema.safeParse(bookingId).success
