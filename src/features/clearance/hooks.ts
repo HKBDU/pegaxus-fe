@@ -4,29 +4,29 @@ import type { FinalizeCustomsClearanceProofResponse, SubmitCustomsClearanceProof
 
 export const clearanceKeys = {
   all: ['clearance'] as const,
-  dossier: (id: number) => [...clearanceKeys.all, 'dossier', id] as const,
-  proof: (id: number) => [...clearanceKeys.all, 'proof', id] as const,
+  dossier: (id: string) => [...clearanceKeys.all, 'dossier', id] as const,
+  proof: (id: string) => [...clearanceKeys.all, 'proof', id] as const,
 }
 
-export function useCustomsClearanceProofDetail(proofId: number | null) {
+export function useCustomsClearanceProofDetail(proofId: string | null) {
   return useQuery({
-    queryKey: clearanceKeys.proof(proofId ?? 0),
+    queryKey: clearanceKeys.proof(proofId ?? ''),
     queryFn: () => getCustomsClearanceProof(proofId!),
     enabled: proofId != null,
     staleTime: 30_000,
   })
 }
 
-export function useClearanceDossierContext(dossierId: number | null) {
+export function useClearanceDossierContext(dossierId: string | null) {
   return useQuery({
-    queryKey: clearanceKeys.dossier(dossierId ?? 0),
+    queryKey: clearanceKeys.dossier(dossierId ?? ''),
     queryFn: () => getDossierContext(dossierId!),
     enabled: dossierId != null,
     staleTime: 60_000,
   })
 }
 
-export function useFinalizeCustomsClearanceProof(proofId: number) {
+export function useFinalizeCustomsClearanceProof(proofId: string) {
   const queryClient = useQueryClient()
   return useMutation<
     FinalizeCustomsClearanceProofResponse,
@@ -40,7 +40,7 @@ export function useFinalizeCustomsClearanceProof(proofId: number) {
   })
 }
 
-export function useSubmitCustomsClearanceProof(dossierId: number) {
+export function useSubmitCustomsClearanceProof(dossierId: string) {
   const queryClient = useQueryClient()
   return useMutation<
     SubmitCustomsClearanceProofResponse,
