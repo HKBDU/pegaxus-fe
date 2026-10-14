@@ -2,7 +2,7 @@ import { Button } from "@/shared/components/ui/button"
 import { INVOICE_ACTION } from "@/features/invoice/constants"
 import type { PayNowButtonProps } from "@/features/invoice/types"
 import { useOnlinePayment } from "@/features/invoice/hooks/useOnlinePayment"
-import { mapPaymentError } from "@/features/invoice/utils"
+import { mapPaymentError, submitCheckoutForm } from "@/features/invoice/utils"
 
 export function PayNowButton({ invoice }: PayNowButtonProps) {
   const mutation = useOnlinePayment()
@@ -16,8 +16,8 @@ export function PayNowButton({ invoice }: PayNowButtonProps) {
     mutation.mutate(
       { invoiceId: invoice.invoiceId },
       {
-        onSuccess: ({ paymentUrl }) => {
-          window.location.assign(paymentUrl)
+        onSuccess: ({ paymentUrl, checkoutFields }) => {
+          submitCheckoutForm(paymentUrl, checkoutFields)
         },
       },
     )

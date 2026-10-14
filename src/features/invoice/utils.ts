@@ -105,6 +105,23 @@ export function getPaymentErrorMessage(errorCode?: string, fallback?: string) {
   return (errorCode && PAYMENT_ERROR_MESSAGES[errorCode as PaymentErrorCode]) ?? fallback ?? 'Payment request failed.'
 }
 
+/** Browser form POST to the SePay checkout. Fields go in the order the BE returned them; the page is left on success. */
+export function submitCheckoutForm(paymentUrl: string, checkoutFields: Record<string, string>) {
+  const form = document.createElement("form")
+  form.method = "POST"
+  form.action = paymentUrl
+  form.style.display = "none"
+  for (const [name, value] of Object.entries(checkoutFields)) {
+    const input = document.createElement("input")
+    input.type = "hidden"
+    input.name = name
+    input.value = value
+    form.appendChild(input)
+  }
+  document.body.appendChild(form)
+  form.submit()
+}
+
 export function mapPaymentError(error: unknown): PaymentErrorState {
   const candidate = error as { errorCode?: string; message?: string }
   const errorCode = candidate?.errorCode

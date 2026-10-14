@@ -28,7 +28,7 @@ import { PayNowButton } from '@/features/invoice/components/<ComponentName>'
 <PayNowButton invoice={invoice} />
 ```
 
-The button renders only when `availableActions` contains `PAY_NOW`. It calls IV11 without a request body and redirects to the returned `paymentUrl`. A redirect is not treated as payment success. The host must refetch IV6 after the customer returns from the payment gateway and read the invoice and receipt statuses returned by the backend.
+The button renders only when `availableActions` contains `PAY_NOW`. It calls IV11 without a request body and sends the customer to the gateway with a browser form POST of the returned `checkoutFields` to `paymentUrl` (SePay cannot start a checkout from a GET redirect). A redirect is not treated as payment success. The host must refetch IV6 after the customer returns from the payment gateway and read the invoice and receipt statuses returned by the backend.
 
 ### `CancelInvoiceDialog`
 

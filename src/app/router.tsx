@@ -94,9 +94,6 @@ const DossierDetailsPage = lazy(
 const DossierAuditHistoryPage = lazy(
   () => import("@/features/dossier/pages/DossierAuditHistoryPage"),
 );
-const DossierRequirementsPage = lazy(
-  () => import("@/features/compliance-catalog/pages/DossierRequirementsPage"),
-);
 const VehicleListPage = lazy(() => import("@/features/fleet/pages/VehicleListPage"));
 const VehicleFormPage = lazy(() => import("@/features/fleet/pages/VehicleFormPage"));
 const VehicleDetailPage = lazy(() => import("@/features/fleet/pages/VehicleDetailPage"));
@@ -526,7 +523,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Suspense fallback={<LoadingState />}><DossierDashboardPage /></Suspense> },
       { path: ":dossierId/details", element: <Suspense fallback={<LoadingState />}><DossierDetailsPage /></Suspense> },
-      { path: ":dossierId/requirements", element: <Suspense fallback={<LoadingState />}><DossierRequirementsPage /></Suspense> },
+      // Single dossier page: the requirements panel is embedded in DossierDetailsPage; keep old links working.
+      { path: ":dossierId/requirements", element: <Navigate to="../details" relative="path" replace /> },
       { path: ":dossierId/audit-history", element: <Suspense fallback={<LoadingState />}><DossierAuditHistoryPage /></Suspense> },
     ],
   },

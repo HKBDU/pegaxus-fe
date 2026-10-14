@@ -21,7 +21,10 @@ export type CancelInvoicePayload = {
 }
 
 export type OnlinePaymentResponse = {
+  /** SePay checkout endpoint. A plain GET redirect cannot start the checkout: POST `checkoutFields` to it. */
   paymentUrl: string
+  /** Form fields for the checkout POST, in the order the BE returned them (the order is part of the signature). */
+  checkoutFields: Record<string, string>
   receipt: Receipt
 }
 

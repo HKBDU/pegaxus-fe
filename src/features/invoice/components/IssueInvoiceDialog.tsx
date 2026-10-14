@@ -94,22 +94,22 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent showCloseButton={!issueMutation.isPending} className="flex max-h-[94dvh] flex-col gap-0 overflow-hidden rounded-2xl border-0 p-0 sm:max-w-[620px]">
-        <header className="flex shrink-0 items-start gap-3 px-6 pt-5 pb-3 pr-12">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+      <DialogContent showCloseButton={!issueMutation.isPending} className="flex max-h-[94dvh] flex-col gap-0 overflow-hidden rounded-none border-0 bg-[#faf9f6] p-0 sm:max-w-[640px]">
+        <header className="flex shrink-0 items-center gap-3 border-b border-[#e5e2d9] bg-white px-6 py-4 pr-14">
+          <span className="flex size-10 shrink-0 items-center justify-center bg-orange-600 text-white">
             <Send className="size-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <DialogTitle className="m-0! text-xl! font-semibold! tracking-normal! text-gray-900!">Issue Invoice</DialogTitle>
-            <DialogDescription className="m-0 text-sm text-gray-500">Review the details below before issuing this invoice to the customer.</DialogDescription>
+            <DialogTitle className="m-0! font-heading text-xl! font-bold! uppercase tracking-[0.02em]! text-gray-900!">Issue invoice</DialogTitle>
+            <DialogDescription className="m-0 text-xs text-gray-500">Review the details below before issuing this invoice to the customer.</DialogDescription>
           </div>
         </header>
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 pb-4">
-          <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-6">
+          <div className="rounded-none border border-[#e5e2d9] bg-white px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-lg font-bold text-gray-900">{invoice.invoiceNumber}</p>
-              <span className="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-white px-2 py-0.5 text-[11px] font-medium text-gray-600">
+              <span className="inline-flex items-center gap-1 rounded-none border border-gray-300 bg-white px-2 py-0.5 text-[11px] font-medium text-gray-600">
                 <CircleDot className="size-3" aria-hidden="true" />
                 Draft
               </span>
@@ -119,7 +119,7 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
             </p>
           </div>
 
-          <dl className="grid gap-x-6 gap-y-4 rounded-xl border border-gray-200 p-4 sm:grid-cols-2 sm:[&>div:nth-child(odd)]:border-r sm:[&>div:nth-child(odd)]:pr-4">
+          <dl className="grid gap-x-6 gap-y-4 rounded-none border border-[#e5e2d9] p-4 sm:grid-cols-2 sm:[&>div:nth-child(odd)]:border-r sm:[&>div:nth-child(odd)]:pr-4">
             <div className="space-y-4">
               <Detail icon={<Building2 />} label="Customer" value={invoice.customer.name} sub={invoice.customer.customerCode} />
               <Detail icon={<Mail />} label="Billing Email" value={invoice.customer.email} />
@@ -137,7 +137,7 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
             </div>
           </dl>
 
-          <section className="rounded-xl border border-orange-200 bg-orange-50/70 p-4" aria-label="What happens when you issue this invoice">
+          <section className="rounded-none border border-orange-200 bg-orange-50/70 p-4" aria-label="What happens when you issue this invoice">
             <h3 className="m-0! flex items-center gap-2 text-sm! font-semibold! tracking-normal! text-gray-900!">
               <BadgeCheck className="size-5 text-orange-500" aria-hidden="true" />
               What happens when you issue this invoice?
@@ -152,13 +152,13 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
             </ul>
           </section>
 
-          <section className="rounded-xl border border-gray-200 p-4" aria-label="Line item totals">
+          <section className="rounded-none border border-[#e5e2d9] p-4" aria-label="Line item totals">
             <h3 className="m-0! text-sm! font-semibold! tracking-normal! text-gray-900!">Line Item Totals ({invoice.items.length} {invoice.items.length === 1 ? "item" : "items"})</h3>
             <dl className="mt-3 space-y-2 text-xs text-gray-700">
               <TotalRow label="Subtotal" value={formatMoney(summary.subtotal, currency)} />
               <TotalRow label={`Tax (${summary.taxRatePercent}%)`} value={formatMoney(summary.tax, currency)} />
               {summary.depositDeduction !== 0 ? <TotalRow label="Deposit deduction" value={formatMoney(summary.depositDeduction, currency)} /> : null}
-              <div className="flex items-baseline justify-between gap-3 border-t border-gray-200 pt-2">
+              <div className="flex items-baseline justify-between gap-3 border-t border-[#e5e2d9] pt-2">
                 <dt className="text-sm font-bold text-gray-900">Total Amount</dt>
                 <dd className="text-base font-bold tabular-nums text-orange-600">{formatMoney(summary.grandTotal, currency)}</dd>
               </div>
@@ -166,13 +166,13 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
           </section>
 
           {errorMessage ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
+            <div className="rounded-none border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
               <p>{errorMessage}</p>
               {needsEdit ? <button type="button" className="mt-1 font-semibold underline" onClick={backToEdit}>Open the draft</button> : null}
             </div>
           ) : null}
 
-          <div className="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3" role="note">
+          <div className="flex items-start gap-3 rounded-none border border-orange-200 bg-orange-50 px-4 py-3" role="note">
             <TriangleAlert className="mt-0.5 size-5 shrink-0 text-orange-500" aria-hidden="true" />
             <div className="text-xs text-gray-700">
               <p className="font-semibold text-orange-700">Please review the invoice details carefully before issuing.</p>
@@ -181,14 +181,14 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
           </div>
         </div>
 
-        <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-gray-100 bg-white px-6 py-3">
-          <Button type="button" variant="outline" className="h-10 px-5 text-sm" disabled={issueMutation.isPending} onClick={backToEdit}>
-            Back to Edit
+        <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[#e5e2d9] bg-white px-6 py-3">
+          <Button type="button" variant="outline" className="h-9 rounded-none px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em]" disabled={issueMutation.isPending} onClick={backToEdit}>
+            Back to edit
           </Button>
           {needsReload ? (
-            <Button type="button" className="h-10 bg-orange-600 px-5 text-sm text-white hover:bg-orange-700" onClick={reload}>Reload invoice</Button>
+            <Button type="button" className="h-9 rounded-none bg-orange-600 px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-white hover:bg-orange-700" onClick={reload}>Reload invoice</Button>
           ) : (
-            <Button type="button" className="h-10 bg-orange-600 px-5 text-sm text-white hover:bg-orange-700" disabled={issueMutation.isPending} onClick={issue}>
+            <Button type="button" className="h-9 rounded-none bg-orange-600 px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-white hover:bg-orange-700" disabled={issueMutation.isPending} onClick={issue}>
               <Send className="size-4" aria-hidden="true" />
               {issueMutation.isPending ? "Issuing..." : "Issue Invoice"}
             </Button>
