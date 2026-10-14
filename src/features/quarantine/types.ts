@@ -40,14 +40,14 @@ export interface SubmitQuarantineProofRequest {
 }
 
 export interface SubmitQuarantineProofResponse {
-  quarantineProofId: number
+  quarantineProofId: string
 }
 
 // ─── Q2: Detail ───────────────────────────────────────────────────────────────
 
 export interface QuarantineProof {
-  quarantineProofId: number
-  complianceDossierId: number
+  quarantineProofId: string
+  complianceDossierId: string
   status: QuarantineProofStatus
   bcpName: string
   locationId: number | null
@@ -93,7 +93,7 @@ export interface FinalizeQuarantineProofRequest {
 }
 
 export interface FinalizeQuarantineProofResponse {
-  quarantineProofId: number
+  quarantineProofId: string
   status: QuarantineProofStatus
   isFinalized: boolean
 }
@@ -116,7 +116,7 @@ export interface BookingTripSummary {
 // ─── Compliance Dossier Context ───────────────────────────────────────────────
 
 export interface ComplianceDossierContext {
-  complianceDossierId: number
+  complianceDossierId: string
   dossierCode: string
   status: string
   bookingId: number

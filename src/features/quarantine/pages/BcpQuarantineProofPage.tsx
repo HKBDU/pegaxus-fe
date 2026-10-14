@@ -55,10 +55,10 @@ function formatRoute(dossier?: ReturnType<typeof useDossierContext>['data']): st
 
 export default function BcpQuarantineProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
-  const dossierId = dossierIdParam ? Number(dossierIdParam) : null
+  const dossierId = dossierIdParam ?? null
 
   const { data: dossier, isLoading: dossierLoading } = useDossierContext(dossierId)
-  const { mutateAsync: submitProof, isPending } = useSubmitQuarantineProof(dossierId ?? 0)
+  const { mutateAsync: submitProof, isPending } = useSubmitQuarantineProof(dossierId ?? '')
 
   // ─── Photo state ──────────────────────────────────────────────────────────
   const [photoFile, setPhotoFile] = useState<File | null>(null)
