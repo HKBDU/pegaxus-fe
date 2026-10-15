@@ -5,8 +5,9 @@ import { DossierStatusBadge } from "./DossierStatusBadge";
 import { useDossierRequirement } from "../hooks/useComplianceDocument";
 import { DocumentRequestComments } from "./DocumentRequestComments";
 
-export function DossierRequirementDetailsDialog({ requirement, dossierId, role, onClose }: { requirement: DossierRequirement; dossierId: string; role?: string; onClose: () => void }) {
-  const query = useDossierRequirement(dossierId, String(requirement.dossierRequirementId));
+export function DossierRequirementDetailsDialog({ requirement: initialRequirement, dossierId, role, onClose }: { requirement: DossierRequirement; dossierId: string; role?: string; onClose: () => void }) {
+  const query = useDossierRequirement(dossierId, String(initialRequirement.dossierRequirementId));
+  const requirement = query.data ?? initialRequirement;
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[90svh] overflow-y-auto rounded-[2px] bg-white">

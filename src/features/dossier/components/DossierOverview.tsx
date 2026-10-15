@@ -4,6 +4,7 @@ import { formatBookingDate } from "@/features/booking/utils";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { dossierStatusStyles } from "../constants";
+import { formatDossierProgress } from "../lib/progress";
 import type { DossierOverview as DossierOverviewData } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
 
@@ -77,7 +78,7 @@ export function DossierOverview({ dossier }: {
                 className="h-3 min-w-0 flex-1 overflow-hidden rounded-[2px] bg-slate-200">
                 <div className="h-full rounded-[2px] bg-primary" style={{ width: `${progress}%` }} />
               </div>
-              <strong className="shrink-0 font-heading text-2xl text-primary">{dossier.progressPercent}%</strong>
+              <strong className="shrink-0 font-heading text-2xl text-primary">{formatDossierProgress(dossier.progressPercent)}</strong>
             </div>
             <p className="mt-4 text-xs text-gray-500">Progress is provided by the backend.</p>
             <dl aria-label="Requirement status counts" className="mt-3 flex flex-wrap gap-1.5">

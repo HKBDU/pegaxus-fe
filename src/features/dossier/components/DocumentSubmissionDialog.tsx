@@ -13,7 +13,7 @@ import FileUploader from "@/shared/components/FileUploader";
 import { canUploadInitialDocument, DOSSIER_UPLOAD_ACCEPT, UPLOAD_MAX_FILE_BYTES } from "../constants";
 import { getChangedDocumentMetadata, mapComplianceDocumentError, useComplianceDocument, useSubmitDocumentVersion, useUpdateDocumentMetadata } from "../hooks/useComplianceDocument";
 import { mapUploadDocumentError, useUploadComplianceDocument } from "../hooks/useUploadComplianceDocument";
-import { createDocumentSubmissionSchema, validateUploadedAssets } from "../schemas";
+import { createDocumentSubmissionSchema, getDocumentExpiryPolicy, validateUploadedAssets } from "../schemas";
 import { createDossierUploadedAsset, getUploadedAssetReferences } from "../lib/uploaded-assets";
 import type { EntityId } from "@/shared/types";
 import type { z } from "zod";
@@ -67,12 +67,17 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
   const [fileError, setFileError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [noRetry, setNoRetry] = useState(false);
+  const [serverRequiresExpiry, setServerRequiresExpiry] = useState<true>();
   const [showHistory, setShowHistory] = useState(false);
   const uploadedAssetsRef = useRef(new Map<string, DossierUploadedAssetRef>());
   const uploadSelectionLockedRef = useRef(false);
   const submitGuardRef = useRef(false);
   const hydratedDocumentIdRef = useRef<EntityId | null>(null);
-  const schema = createDocumentSubmissionSchema(requirement?.validUntil ?? null, plannedDepartureDate, mode, detail);
+  const [documentBaseline, setDocumentBaseline] = useState<{ documentId: EntityId; updatedAt: string } | null>(null);
+  const expiryPolicy = getDocumentExpiryPolicy(requirement?.validUntil ?? null, serverRequiresExpiry);
+  const expiryRequired = expiryPolicy === "required";
+  const expiryAriaRequired = expiryRequired ? true : expiryPolicy === "optional" ? false : undefined;
+  const schema = createDocumentSubmissionSchema(requirement?.validUntil ?? null, plannedDepartureDate, mode, detail, serverRequiresExpiry);
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: emptyValues });
   const reset = form.reset;
   const pending = initialMutation.isPending || versionMutation.isPending || metadataMutation.isPending;
@@ -88,6 +93,11 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
       uploadNote: "",
     });
   }, [detail, reset]);
+
+  // Capture once per document; a background refetch must not rebase unsaved input.
+  if (detail && documentBaseline?.documentId !== detail.complianceDocumentId) {
+    setDocumentBaseline({ documentId: detail.complianceDocumentId, updatedAt: detail.updatedAt });
+  }
 
   const rememberUploadedFile = ({ publicId, file }: { publicId: string; file: File }) => {
     if (uploadSelectionLockedRef.current) return;
@@ -118,11 +128,15 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
     setFileError("");
     setSubmitError("");
     setNoRetry(false);
+    setServerRequiresExpiry(undefined);
+    hydratedDocumentIdRef.current = null;
+    setDocumentBaseline(null);
     form.reset(emptyValues);
     onClose();
   };
 
-  const eligible = Boolean(requirement && role === "CUSTOMER" && ["IN_PREPARATION", "REJECTED"].includes(dossier.status) && !dossier.writeLocked && (
+  const documentChanged = Boolean(detail && documentBaseline && detail.updatedAt !== documentBaseline.updatedAt);
+  const eligible = Boolean(!documentChanged && requirement && role === "CUSTOMER" && ["IN_PREPARATION", "REJECTED"].includes(dossier.status) && !dossier.writeLocked && (
     mode === "initial" ? canUploadInitialDocument(role, dossier, requirement) :
       requirement.status !== "SATISFIED" && requirement.status !== "WAIVED" && detail && (
         mode === "edit" ? detail.status === "PROVIDED" && detail.versions[0]?.review?.result !== "APPROVED" : detail.status === "REJECTED"
@@ -170,6 +184,7 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
     } catch (cause) {
       const error = mode === "initial" ? mapUploadDocumentError(cause) : mapComplianceDocumentError(cause);
       setSubmitError(error.message);
+      if (error.field === "expiryDate" && error.message === "Expiry date is required for this requirement.") setServerRequiresExpiry(true);
       if (["DR_ALREADY_HAS_DOCUMENT", "DOSSIER_LOCKED", "DR_NOT_FOUND", "FORBIDDEN", "DOCUMENT_ALREADY_VERIFIED", "DOCUMENT_ALREADY_REVIEWED", "DOCUMENT_NOT_FOUND"].includes(error.code)) setNoRetry(true);
       if (error.field) form.setError(error.field, { message: error.message });
     } finally {
@@ -208,7 +223,8 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
               </section>
               {mode === "update" && detail ? <DocumentRevisionNotice document={detail} /> : null}
               {mode === "edit" ? <p className="rounded-[2px] bg-sky-50 p-3 text-xs text-sky-800">Files replace the current version only when it has never been reviewed. Otherwise, the backend creates a new version. Saving metadata only does not replace files.</p> : null}
-              {!eligible && mode !== "initial" ? <p role="alert" className="rounded-[2px] bg-amber-50 p-3 text-xs text-amber-800">This document is read-only. Refresh the dossier to see its current status.</p> : null}
+              {documentChanged ? <p role="alert" className="rounded-[2px] bg-amber-50 p-3 text-xs text-amber-800">The document changed while this form was open. Close and reopen it to review the latest metadata and files before submitting. Your input has not been saved.</p> : null}
+              {!eligible && !documentChanged && mode !== "initial" ? <p role="alert" className="rounded-[2px] bg-amber-50 p-3 text-xs text-amber-800">This document is read-only. Refresh the dossier to see its current status.</p> : null}
               {showHistory && detail ? <DocumentVersionHistory versions={detail.versions} /> : null}
               <div className={mode === "initial" ? "space-y-3" : "grid gap-3 md:grid-cols-2"}>
                 <section className="rounded-[2px] border border-slate-200 bg-white p-4" aria-label="Document files">
@@ -244,7 +260,7 @@ export function DocumentSubmissionDialog({ dossier, requirement, mode, plannedDe
                       <FormField key={name} control={form.control} name={name} render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">{name === "documentNumber" ? "Document Number" : "Issuing Authority"}{mode === "initial" ? " *" : ""}</FormLabel><FormControl><Input {...field} value={field.value ?? ""} className={inputClass} maxLength={name === "documentNumber" ? 150 : 200} /></FormControl><FormMessage className="text-xs" /></FormItem>} />
                     ))}
                     <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
-                      {(["issuedDate", "expiryDate"] as const).map((name) => <FormField key={name} control={form.control} name={name} render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">{name === "issuedDate" ? "Issued Date" : "Expiry Date"}</FormLabel><FormControl><DatePicker value={field.value ?? ""} onChange={field.onChange} onBlur={field.onBlur} aria-invalid={Boolean(form.formState.errors[name])} minDate={name === "expiryDate" ? [requirement?.validUntil, plannedDepartureDate?.slice(0, 10)].filter((date): date is string => Boolean(date)).sort().at(-1) : undefined} className={inputClass} /></FormControl><FormMessage className="text-xs" /></FormItem>} />)}
+                      {(["issuedDate", "expiryDate"] as const).map((name) => <FormField key={name} control={form.control} name={name} render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">{name === "issuedDate" ? "Issued Date" : "Expiry Date"}{name === "expiryDate" && expiryRequired ? " *" : ""}</FormLabel><FormControl><DatePicker value={field.value ?? ""} onChange={field.onChange} onBlur={field.onBlur} aria-required={name === "expiryDate" ? expiryAriaRequired : mode === "initial"} aria-invalid={Boolean(form.formState.errors[name])} minDate={name === "expiryDate" ? [requirement?.validUntil, plannedDepartureDate?.slice(0, 10)].filter((date): date is string => Boolean(date)).sort().at(-1) : undefined} className={inputClass} /></FormControl><FormMessage className="text-xs" /></FormItem>} />)}
                     </div>
                     <FormField control={form.control} name="uploadNote" render={({ field }) => <FormItem><FormLabel className="text-xs text-slate-700">Upload Note</FormLabel><FormControl><Input {...field} value={field.value ?? ""} maxLength={2000} className={inputClass} /></FormControl><p className="text-[11px] text-slate-500">Optional note for this submission. Metadata-only saves do not change this note.</p><FormMessage className="text-xs" /></FormItem>} />
                   </div>

@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ChessKnight, FileText, Info, Mail, Send, UserRound } from "lucide-react";
+import { ChessKnight, FileText, Info, Mail, Send } from "lucide-react";
 import { toast } from "sonner";
 import { formatBookingDate } from "@/features/booking/utils";
 import { Button } from "@/shared/components/ui/button";
@@ -13,6 +13,7 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { canSendMissingDocumentReminder } from "../constants";
 import { useMissingDocumentReminder, useMissingDossierRequirements } from "../hooks/useMissingDocumentReminder";
 import { groupMissingDossierRequirements, mapMissingDocumentReminderError } from "../lib/missing-document-reminder";
+import { formatDossierProgress } from "../lib/progress";
 import { missingDocumentReminderSchema } from "../schemas";
 import type { DocumentReviewError, DossierOverview, DossierRequirement, MissingDocumentReminderFormValues, MissingDocumentReminderInput } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
@@ -24,15 +25,9 @@ export function MissingReminderPreview({ dossier, selected, dueDate, note }: {
   note?: string;
 }) {
   return (
-    <aside className="min-w-0 space-y-4 lg:border-l lg:pl-5" aria-label="Recipient and reminder summary">
-      <h3 className="flex items-center gap-2 font-heading text-base uppercase"><UserRound className="size-4 text-primary" />Recipient &amp; Summary</h3>
-      <div className="space-y-3 rounded-[2px] border border-border bg-slate-50 p-4 text-sm">
-        <p className="text-xs text-muted-foreground">Recipient</p>
-        <p className="break-words font-semibold">{dossier.bookingSummary.customerName ?? "Booking customer"}</p>
-        <p className="flex items-start gap-2 text-xs leading-relaxed text-muted-foreground"><Mail className="mt-0.5 size-4 shrink-0" />The customer will receive Email and Web Notification.</p>
-      </div>
+    <aside className="min-w-0 space-y-4 lg:border-l lg:pl-5" aria-label="Reminder summary">
+      <h3 className="flex items-center gap-2 font-heading text-base uppercase"><Mail className="size-4 text-primary" />Reminder Summary</h3>
       <section className="space-y-3 rounded-[2px] border border-border p-4 text-sm" aria-label="Reminder preview">
-        <h4 className="font-semibold">Reminder Summary</h4>
         <p className="text-xs leading-relaxed text-muted-foreground">This is a local summary, not the exact backend email template.</p>
         <p>Missing documents for {dossier.bookingCode}</p>
         <ul className="list-inside list-disc space-y-1 text-xs leading-relaxed">
@@ -106,8 +101,8 @@ function ReminderForm({ dossier, role, requirements, initialRequirementId, isRef
         </DialogHeader>
         <Form {...form}>
           <form id={formId} onSubmit={(event) => void form.handleSubmit(submit)(event)} className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 pb-5 sm:px-6">
-            <dl className="grid gap-4 rounded-[2px] border border-border bg-slate-50 p-4 text-xs sm:grid-cols-2 lg:grid-cols-5">
-              {[["Booking", dossier.bookingCode], ["Compliance Dossier", dossier.dossierCode], ["Customer", dossier.bookingSummary.customerName], ["Progress", `${dossier.progressPercent}% · ${dossier.mandatorySatisfiedOrWaived} / ${dossier.mandatoryTotal} mandatory complete`]].map(([label, value]) => (
+            <dl className="grid gap-4 rounded-[2px] border border-border bg-slate-50 p-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
+              {[["Booking", dossier.bookingCode], ["Compliance Dossier", dossier.dossierCode], ["Progress", `${formatDossierProgress(dossier.progressPercent)} · ${dossier.mandatorySatisfiedOrWaived} / ${dossier.mandatoryTotal} mandatory complete`]].map(([label, value]) => (
                 <div key={label} className="min-w-0"><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 break-words font-semibold leading-relaxed">{value}</dd></div>
               ))}
               <div><dt className="text-muted-foreground">Overall Status</dt><dd className="mt-1"><DossierStatusBadge status={dossier.status} /></dd></div>

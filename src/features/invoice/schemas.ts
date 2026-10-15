@@ -38,7 +38,7 @@ export const invoiceQuerySchema = bookingInvoiceQuerySchema.extend({
 export const invoiceListItemSchema = z.object({
   invoiceId: invoiceIdSchema, invoiceNumber: z.string(), type: invoiceTypeSchema, status: invoiceStatusSchema,
   bookingId: invoiceIdSchema, bookingCode: z.string(), transportPlanId: invoiceIdSchema.nullable(), customerName: z.string(),
-  totalAmount: amount, currency, dueDate: date, issuedAt: timestamp.nullable(), paidAt: timestamp.nullable(), createdAt: timestamp, updatedAt: timestamp,
+  totalAmount: amount, currency, dueDate: date.nullable(), issuedAt: timestamp.nullable(), paidAt: timestamp.nullable(), createdAt: timestamp, updatedAt: timestamp,
 })
 export const invoicePageSchema = z.object({
   items: z.array(invoiceListItemSchema), pageIndex: z.number().int().positive(), pageSize: z.number().int().positive(),
@@ -53,7 +53,7 @@ export const invoiceItemSchema = z.object({
 })
 export const invoiceDetailSchema = z.object({
   invoiceId: invoiceIdSchema, invoiceNumber: z.string(), type: invoiceTypeSchema, status: invoiceStatusSchema,
-  isPaymentRequired: z.boolean(), invoiceDate: date, dueDate: date, currency, note: text,
+  isPaymentRequired: z.boolean(), invoiceDate: date, dueDate: date.nullable(), currency, note: text,
   // P-01/P-02 are not usable yet; never substitute Receipt.paymentMethod here.
   payment: z.object({ method: z.string(), qrCodeUrl: z.string().nullable() }).nullable(),
   customer: z.object({ customerId: invoiceIdSchema, customerCode: z.string(), name: z.string(), email: z.string(), phone: text, address: text }),

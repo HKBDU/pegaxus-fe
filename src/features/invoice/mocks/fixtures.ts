@@ -86,7 +86,7 @@ export function createInvoiceHistoryFixtures(invoice: InvoiceDetail): InvoiceSta
   }
   add("CREATE", null, "DRAFT", invoice.createdAt, manager)
   if (invoice.issuedAt) add("ISSUE", "DRAFT", "ISSUED", invoice.issuedAt, manager)
-  if (invoice.status === "OVERDUE" && invoice.type !== "QUOTATION") {
+  if (invoice.status === "OVERDUE" && invoice.type !== "QUOTATION" && invoice.dueDate !== null) {
     // Overdue is the first UTC day after the due date, never before ISSUE.
     const overdueAt = new Date(Date.parse(`${invoice.dueDate}T00:00:00Z`) + 24 * 60 * 60 * 1000 + 5 * 60 * 1000).toISOString()
     add("MARK_OVERDUE", "ISSUED", "OVERDUE", overdueAt, system)
