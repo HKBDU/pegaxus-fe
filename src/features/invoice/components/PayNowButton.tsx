@@ -10,9 +10,11 @@ export function PayNowButton({ invoice }: PayNowButtonProps) {
 
   if (!canPay) return null
 
+  const isVnd = invoice.currency === "VND"
   const mappedError = mutation.error ? mapPaymentError(mutation.error) : null
 
   function handlePayNow() {
+    if (!isVnd) return
     mutation.mutate(
       { invoiceId: invoice.invoiceId },
       {
@@ -25,9 +27,19 @@ export function PayNowButton({ invoice }: PayNowButtonProps) {
 
   return (
     <div className="grid gap-2">
-      <Button type="button" onClick={handlePayNow} disabled={mutation.isPending}>
+      <Button
+        type="button"
+        onClick={handlePayNow}
+        disabled={mutation.isPending || !isVnd}
+        title={!isVnd ? "Online payment via SePay currently supports VND only" : undefined}
+      >
         {mutation.isPending ? 'Opening payment gateway...' : 'Pay now'}
       </Button>
+      {!isVnd ? (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5" role="note">
+          Online payment via SePay currently supports VND only. For {invoice.currency} invoices, please pay via international bank transfer or contact logistics management.
+        </p>
+      ) : null}
       {mappedError ? (
         <p className="text-sm text-destructive" role="alert">
           {mappedError.message}{mappedError.errorCode ? ` (${mappedError.errorCode})` : ''}
