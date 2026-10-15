@@ -1,6 +1,5 @@
 import { useEffect, useRef, type ComponentType } from "react"
 import { useParams, useSearchParams } from "react-router-dom"
-import { useMutationState } from "@tanstack/react-query"
 import { ROLE_ROUTES } from "@/app/route-config"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { ErrorState } from "@/shared/components/common"
@@ -33,8 +32,8 @@ export default function RoutePlanDetailPage({ mapViewer, routeDetailPath, emerge
   const query = useRoutePlanDetail(routePlanId, allowed)
   const error = query.isError ? getRouteViewError(query.error) : null
   const context = useEmergencyContext(query.data, allowed && !error)
-  const mutationErrors = useMutationState({ filters: { mutationKey: ["route-view", "emergency", routePlanId], status: "error" }, select: mutation => mutation.state.error })
-  const accessFailure = [context.error, ...mutationErrors].find(problem => problem && (getEmergencyError(problem).denied || getEmergencyError(problem).unauthorized))
+  // Current scoped reads gate the page; historical action failures stay in their own dialogs.
+  const accessFailure = context.error && (getEmergencyError(context.error).denied || getEmergencyError(context.error).unauthorized) ? context.error : null
   const mode = params.get("emergency") ?? emergencyView
   const actions = query.data && context.data ? getEmergencyActions(query.data, context.data.workspace) : []
   const activeMode = actions.find(action => action === mode)

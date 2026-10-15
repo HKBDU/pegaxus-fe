@@ -50,7 +50,6 @@ export function RoutePlansWorkspace({ transportPlanId, planStatus, transportStat
           {planStatus === "APPROVED" && unlocked && primary?.status === "CONFIRMED" ?
             <Button asChild variant="outline" size="sm" className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"><Link to={`${transportPlanDetail(transportPlanId)}?tab=personnel`}>View Phase 2 Personnel Workspace</Link></Button> :
             <p className="text-xs text-slate-500">Phase 2 is unavailable until the plan is APPROVED and the PRIMARY route is CONFIRMED before departure.</p>}
-          <p className="text-[11px] text-slate-500">Personnel assignment controls are not available yet.</p>
         </div>}
       </>}
   </Section>
