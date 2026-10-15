@@ -44,6 +44,14 @@ function blockNonDigitKeys(event: React.KeyboardEvent<HTMLInputElement>) {
   if ([".", ",", "e", "E", "+", "-"].includes(event.key)) event.preventDefault()
 }
 
+type LineErrors = ({ [key: string]: { message?: string } | undefined } | undefined)[]
+
+/** Row errors travel through the table `meta` so the memoised columns never close over them. */
+function hasLineError(table: { options: { meta?: unknown } }, index: number, field: string) {
+  const lineErrors = (table.options.meta as { lineErrors?: LineErrors } | undefined)?.lineErrors
+  return Boolean(lineErrors?.[index]?.[field])
+}
+
 export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems, focusRow, disabled = false }: InvoiceLineItemsTableProps) {
   const { control, register, watch, formState: { errors } } = useFormContext<InvoiceFormValues>()
   const { fields, append, remove } = useFieldArray({ control, name: "items" })
@@ -72,12 +80,15 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
     setPagination((current) => ({ ...current, pageIndex: Math.floor(total / current.pageSize) }))
   }
 
-  const lineErrors = (errors.items ?? []) as ({ [key: string]: { message?: string } | undefined } | undefined)[]
+  const lineErrors = (errors.items ?? []) as LineErrors
   const errorMessages = lineErrors.flatMap((line, index) =>
     line ? Object.values(line).filter((field) => field?.message).slice(0, 1).map((field) => `Line ${index + 1}: ${field?.message}`) : [],
   )
 
-  const columns: ColumnDef<LineRow>[] = [
+  // The columns must keep the same identity between renders: TanStack renders each `cell` function as a component,
+  // so rebuilding them on every keystroke remounts the inputs and drops the focus after one character.
+  // Anything that changes while typing (the row errors) is read from the table `meta` instead of the closure.
+  const columns = useMemo<ColumnDef<LineRow>[]>(() => [
     {
       id: "no",
       header: "#",
@@ -107,7 +118,7 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
     {
       id: "description",
       header: "DESCRIPTION",
-      cell: ({ row }) => {
+      cell: ({ row, table }) => {
         const line = row.original
         if (line.kind === "deduction") {
           return (
@@ -120,10 +131,10 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
         return (
           <Input
             aria-label={`Description of line ${row.index + 1}`}
-            className={cn(inputClass, "min-w-52", lineErrors[line.index]?.description && "border-red-500")}
+            className={cn(inputClass, "min-w-52", hasLineError(table, line.index, "description") && "border-red-500")}
             maxLength={DESCRIPTION_MAX_LENGTH}
             disabled={disabled}
-            aria-invalid={Boolean(lineErrors[line.index]?.description)}
+            aria-invalid={hasLineError(table, line.index, "description")}
             {...register(`items.${line.index}.description`)}
           />
         )
@@ -152,7 +163,7 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
     {
       id: "quantity",
       header: "QTY",
-      cell: ({ row }) => {
+      cell: ({ row, table }) => {
         const line = row.original
         if (line.kind === "deduction") return <span className="tabular-nums">{line.item.quantity}</span>
         return (
@@ -160,9 +171,9 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
             aria-label={`Quantity of line ${row.index + 1}`}
             inputMode="numeric"
             onKeyDown={blockNonDigitKeys}
-            className={cn(inputClass, "w-16", lineErrors[line.index]?.quantity && "border-red-500")}
+            className={cn(inputClass, "w-16", hasLineError(table, line.index, "quantity") && "border-red-500")}
             disabled={disabled}
-            aria-invalid={Boolean(lineErrors[line.index]?.quantity)}
+            aria-invalid={hasLineError(table, line.index, "quantity")}
             {...register(`items.${line.index}.quantity`)}
           />
         )
@@ -171,7 +182,7 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
     {
       id: "price",
       header: "UNIT PRICE",
-      cell: ({ row }) => {
+      cell: ({ row, table }) => {
         const line = row.original
         if (line.kind === "deduction") return <span className="whitespace-nowrap tabular-nums">{formatMoney(line.item.price, currency)}</span>
         return (
@@ -179,9 +190,9 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
             aria-label={`Unit price of line ${row.index + 1}`}
             inputMode="numeric"
             onKeyDown={blockNonDigitKeys}
-            className={cn(inputClass, "w-28", lineErrors[line.index]?.price && "border-red-500")}
+            className={cn(inputClass, "w-28", hasLineError(table, line.index, "price") && "border-red-500")}
             disabled={disabled}
-            aria-invalid={Boolean(lineErrors[line.index]?.price)}
+            aria-invalid={hasLineError(table, line.index, "price")}
             {...register(`items.${line.index}.price`)}
           />
         )
@@ -226,11 +237,12 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
           </div>
         ),
     },
-  ]
+  ], [control, register, watch, remove, horses, currency, disabled])
 
   const table = useReactTable({
     data: rows,
     columns,
+    meta: { lineErrors },
     state: { pagination: { pageIndex, pageSize: pagination.pageSize } },
     onPaginationChange: (updater) => setPagination((current) => (typeof updater === "function" ? updater({ pageIndex, pageSize: current.pageSize }) : updater)),
     getCoreRowModel: getCoreRowModel(),
