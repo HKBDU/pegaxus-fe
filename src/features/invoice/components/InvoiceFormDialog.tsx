@@ -166,7 +166,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
       <Dialog open={!issueTarget} onOpenChange={(open) => !open && !isSaving && onClose()}>
         <DialogContent showCloseButton={!isSaving} className="flex h-[94dvh] max-h-[880px] flex-col gap-0 overflow-hidden rounded-none border-0 bg-[#faf9f6] p-0 sm:max-w-[1120px]">
           <header className="flex shrink-0 items-center gap-3 border-b border-[#e5e2d9] bg-white px-6 py-4 pr-14">
-            <span className="flex size-10 shrink-0 items-center justify-center bg-orange-600 text-white">
+            <span className="flex size-10 shrink-0 items-center justify-center bg-[#ef8f00] text-slate-950">
               <ReceiptText className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -188,11 +188,11 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
             >
               <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
                 <dl className={`grid grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-[#e5e2d9] ${panelClass}`}>
-                  <InfoCell icon={<Truck className="size-4 text-orange-600" />} label="Invoice for transport" value={booking.transportCode ?? "—"} />
+                  <InfoCell icon={<Truck className="size-4 text-[#ef8f00]" />} label="Invoice for transport" value={booking.transportCode ?? "—"} />
                   <InfoCell icon={<FileText className="size-4 text-sky-600" />} label="Booking" value={booking.bookingCode} />
                   <InfoCell icon={<Users className="size-4 text-violet-600" />} label="Customer" value={booking.customerName || "—"} />
                   <InfoCell
-                    icon={<Layers className="size-4 text-orange-600" />}
+                    icon={<Layers className="size-4 text-[#ef8f00]" />}
                     label="Transport status"
                     value={
                       transportStatus ? (
@@ -207,7 +207,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                 <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
                   <section className={`flex flex-col ${panelClass}`} aria-label="Invoice details">
                     <h3 className={panelHeaderClass}>
-                      <FileText className="size-4 text-orange-600" aria-hidden="true" />
+                      <FileText className="size-4 text-[#ef8f00]" aria-hidden="true" />
                       Invoice details
                     </h3>
                     <div className="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-3">
@@ -294,7 +294,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-9 rounded-none border-orange-400 px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+                  className="h-9 rounded-none border-[#ef8f00] px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-slate-900 hover:bg-amber-50 hover:text-slate-950"
                   disabled={isSaving || !canSave || (isEdit && !isDirty)}
                   onClick={() => submitWith("draft")}
                 >
@@ -302,7 +302,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                 </Button>
                 <Button
                   type="button"
-                  className="h-9 rounded-none bg-orange-600 px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-white hover:bg-orange-700"
+                  className="h-9 rounded-none bg-[#ef8f00] px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-slate-950 hover:bg-[#db8300]"
                   disabled={isSaving || !canSave}
                   onClick={() => submitWith("issue")}
                 >

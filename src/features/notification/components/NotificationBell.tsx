@@ -90,7 +90,7 @@ export function NotificationBell({ className }: { className?: string }) {
                   </span>
                   <span className="flex shrink-0 flex-col items-end gap-1.5">
                     <span className="text-[11px] text-slate-500">{formatNotificationTime(notification.createdAt)}</span>
-                    {isUnread(notification) ? <span aria-label="Unread" className="size-2 rounded-full bg-orange-500" /> : <span className="size-2" />}
+                    {isUnread(notification) ? <span aria-label="Unread" className="size-2 rounded-full bg-amber-500" /> : <span className="size-2" />}
                   </span>
                 </button>
               </li>
@@ -105,7 +105,7 @@ export function NotificationBell({ className }: { className?: string }) {
               setOpen(false)
               navigate(ROLE_ROUTES.notifications)
             }}
-            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-orange-50 px-3 py-2.5 text-sm font-semibold text-orange-600 transition-colors hover:bg-orange-100"
+            className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2.5 text-sm font-semibold text-[#ef8f00] transition-colors hover:bg-amber-100"
           >
             View all notifications
             <ArrowRight aria-hidden="true" className="size-4" />

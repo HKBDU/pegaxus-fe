@@ -1,35 +1,38 @@
-import { Plane, Ship, Truck } from "lucide-react"
+import { Circle, Plane, Ship, Truck } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { PROVIDER_MODE_LABEL, PROVIDER_STATUS_LABEL } from "@/features/fleet/constants/fleet.constants"
 import type { ProviderStatus, TransportMode } from "@/features/fleet/types"
+import { Badge } from "@/shared/components/ui/badge"
 
+/** Same badge shape and palette as the transport request status badge. */
 const statusStyles: Record<ProviderStatus, string> = {
-  ACTIVE: "bg-emerald-100 text-emerald-700",
-  INACTIVE: "bg-slate-200 text-slate-600",
-  SUSPENDED: "bg-red-100 text-red-600",
+  ACTIVE: "border-emerald-300 bg-emerald-50 text-emerald-700",
+  INACTIVE: "border-slate-300 bg-slate-100 text-slate-600",
+  SUSPENDED: "border-red-300 bg-red-50 text-red-700",
 }
 
 export function ProviderStatusBadge({ status }: { status: ProviderStatus }) {
   return (
-    <span className={cn("inline-flex h-5 items-center rounded-[3px] px-2 text-[10px] font-bold uppercase leading-none tracking-[0.04em]", statusStyles[status])}>
+    <Badge variant="outline" className={cn("inline-flex h-5 w-fit items-center gap-1 rounded-full border px-1.5 py-0 text-[0.65rem] font-medium leading-none", statusStyles[status])}>
+      <Circle className="size-1! fill-current" aria-hidden="true" />
       {PROVIDER_STATUS_LABEL[status]}
-    </span>
+    </Badge>
   )
 }
 
 const modeStyles: Record<TransportMode, { className: string; Icon: typeof Truck }> = {
-  AIR: { className: "bg-sky-100 text-sky-700", Icon: Plane },
-  ROAD: { className: "bg-amber-100 text-amber-700", Icon: Truck },
-  SEA: { className: "bg-violet-100 text-violet-700", Icon: Ship },
+  AIR: { className: "border-sky-300 bg-sky-50 text-sky-700", Icon: Plane },
+  ROAD: { className: "border-amber-300 bg-amber-50 text-amber-700", Icon: Truck },
+  SEA: { className: "border-violet-300 bg-violet-50 text-violet-700", Icon: Ship },
 }
 
 export function ProviderModeBadge({ mode }: { mode: TransportMode }) {
   const { className, Icon } = modeStyles[mode]
   return (
-    <span className={cn("inline-flex h-5 items-center gap-1 rounded-full px-2 text-[10px] font-medium leading-none", className)}>
+    <Badge variant="outline" className={cn("inline-flex h-5 w-fit items-center gap-1 rounded-full border px-1.5 py-0 text-[0.65rem] font-medium leading-none", className)}>
       <Icon className="size-3" aria-hidden="true" />
       {PROVIDER_MODE_LABEL[mode]}
-    </span>
+    </Badge>
   )
 }
