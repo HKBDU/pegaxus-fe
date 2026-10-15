@@ -183,7 +183,7 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
         {overviewQuery.isError ? (
           <ErrorState message="Unable to load this dossier." onRetry={() => void overviewQuery.refetch()} />
         ) : (
-          <div className="grid gap-5">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
             {!embedded ? (overview ? <DossierHeaderCard overview={overview} /> : <Skeleton className="h-20 rounded-none bg-[#e9e6de]" />) : null}
             {!embedded && dossierId ? <DossierTabs dossierId={dossierId} active="requirements" /> : null}
 
@@ -217,7 +217,7 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
                   ) : null
                 }
               >
-                <div role="toolbar" className="grid grid-cols-2 gap-2 lg:grid-cols-[10rem_10rem_1fr_auto]">
+                <div role="toolbar" className="grid grid-cols-2 gap-2 md:grid-cols-[10rem_10rem_minmax(0,1fr)_auto]">
                   <DataTableRadioFilter
                     title="Status"
                     value={params.status}
@@ -234,12 +234,13 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
         )}
       </div>
 
-      {overview && dossierId ? (
+      {overview && dossierId && overview.bookingSummary.requestedDepartureDate ? (
         <AddDossierRequirementDialog
           open={addOpen}
           onOpenChange={setAddOpen}
           dossierId={dossierId}
           bookingCode={overview.bookingCode}
+          plannedDepartureDate={overview.bookingSummary.requestedDepartureDate}
           horses={horses}
           requirements={requirementOptions.data ?? []}
           requirementsLoading={requirementOptions.isLoading}

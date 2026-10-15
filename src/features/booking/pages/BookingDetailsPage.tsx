@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react"
-import { useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { useEffect, useRef, useState } from "react"
+import { Link, useParams, useSearchParams } from "react-router-dom"
 
 import { ApproveBookingDialog, RejectBookingDialog } from "@/features/booking/components/BookingDecisionDialogs"
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
@@ -9,6 +9,8 @@ import { CancelBookingDialog } from "@/features/booking/components/CancelBooking
 import { useBooking } from "@/features/booking/hooks"
 import type { BookingAudience } from "@/features/booking/types"
 import { formatBookingDate, formatSex } from "@/features/booking/utils"
+import { CustomerInvoicesTab } from "@/features/invoice"
+import { BookingTransportPlanAction } from "@/features/transport-plan/components/BookingTransportPlanAction"
 import { cn } from "@/lib/utils"
 import { ErrorState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
@@ -83,6 +85,9 @@ function ScheduleBlock({ label, value, className }: { label: string; value: Reac
 
 export default function BookingDetailsPage({ audience = "customer" }: { audience?: BookingAudience }) {
   const { bookingId = "" } = useParams()
+  // Invoice notifications deep-link here as /bookings/:id?invoiceId=...; the Invoices block scrolls into view and marks that row.
+  const invoiceId = useSearchParams()[0].get("invoiceId") ?? undefined
+  const invoicesSection = useRef<HTMLElement>(null)
   const bookingQuery = useBooking(bookingId)
   const booking = bookingQuery.data
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -90,6 +95,10 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
   const [rejectOpen, setRejectOpen] = useState(false)
   const isPending = booking?.status === "PENDING"
   const canEdit = booking?.status === "PENDING" || booking?.status === "DRAFT"
+  const bookingLoaded = Boolean(booking)
+  useEffect(() => {
+    if (invoiceId && bookingLoaded) invoicesSection.current?.scrollIntoView({ block: "start" })
+  }, [invoiceId, bookingLoaded])
   const listPath = audience === "manager" ? "/admin/transport-requests" : "/bookings"
   const hasOutcome = Boolean(
     booking && (booking.assignedEmployee || booking.transport || booking.rejectionReason || booking.cancellationReason),
@@ -120,6 +129,13 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                     Approve
                   </button>
                 </>
+              ) : null}
+              {audience === "manager" && booking.status === "APPROVED" && typeof booking.bookingId === "string" ? (
+                <BookingTransportPlanAction
+                  key={booking.bookingId}
+                  bookingId={booking.bookingId}
+                  status={booking.status}
+                />
               ) : null}
               <Link
                 to={`/bookings/${encodeURIComponent(String(booking.bookingId))}/history`}
@@ -251,6 +267,15 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                 {booking.rejectionReason ? <InfoBlock label="Rejection reason" value={booking.rejectionReason} className="sm:col-span-2" /> : null}
                 {booking.cancellationReason ? <InfoBlock label="Cancellation reason" value={booking.cancellationReason} className="sm:col-span-2" /> : null}
               </dl>
+            ) : null}
+
+            {audience === "customer" ? (
+              <section ref={invoicesSection} id="booking-invoices" aria-label="Invoices" className={cn(panelClass, "scroll-mt-4 p-4")}>
+                <CardTitle>Invoices</CardTitle>
+                <div className="mt-2.5">
+                  <CustomerInvoicesTab bookingId={String(booking.bookingId)} highlightInvoiceId={invoiceId} />
+                </div>
+              </section>
             ) : null}
 
             {audience === "customer" && isPending ? (

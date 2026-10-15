@@ -2,12 +2,12 @@ import { MAX_IMAGE_FILE_SIZE, MAX_PDF_FILE_SIZE } from "@/shared/constants/viewe
 import { getDocumentFileHref } from "./document-review";
 import type { DocumentVersionFile } from "../types";
 
-export function getDossierFilePreview(file: Pick<DocumentVersionFile, "fileUrl" | "mimeType" | "fileSizeBytes">): {
+export function getDossierFilePreview(file: Pick<DocumentVersionFile, "fileUrl" | "mimeType" | "fileSizeBytes">, objectUrl?: string): {
   kind: "pdf" | "image" | "fallback";
   href?: string;
   reason?: string;
 } {
-  const href = getDocumentFileHref(file.fileUrl);
+  const href = objectUrl?.startsWith("blob:") ? objectUrl : getDocumentFileHref(file.fileUrl);
   if (!href) return { kind: "fallback", reason: "File link unavailable" };
   if (file.mimeType === "application/pdf") {
     return file.fileSizeBytes <= MAX_PDF_FILE_SIZE ? { kind: "pdf", href }

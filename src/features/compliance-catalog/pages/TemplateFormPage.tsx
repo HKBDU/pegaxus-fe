@@ -163,8 +163,8 @@ function TemplateForm({ mode, template }: { mode: "create" | "edit"; template?: 
         ) : null}
 
         <Form {...form}>
-          <form onSubmit={onSubmit} noValidate className="grid gap-4">
-            <fieldset disabled={isSaving || locked} className="grid gap-4">
+          <form onSubmit={onSubmit} noValidate className="grid grid-cols-[minmax(0,1fr)] gap-4">
+            <fieldset disabled={isSaving || locked} className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
               <section className="booking-panel border bg-white p-5 sm:p-6">
                 <h2 className={cn(sectionTitleClass, "mb-6!")}>Template Information</h2>
                 <div className="grid gap-x-5 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">

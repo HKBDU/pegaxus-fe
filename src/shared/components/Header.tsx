@@ -141,7 +141,7 @@ export function Header({
           />
         </nav> : null}
 
-        <div className="ml-10 flex items-center gap-5">
+        <div className="ml-auto flex items-center gap-5">
           {rightContent ?? (
             <>
               {notificationButton}

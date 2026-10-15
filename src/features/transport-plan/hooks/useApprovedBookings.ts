@@ -1,0 +1,31 @@
+import { useQuery } from "@tanstack/react-query"
+import type { EntityId } from "@/shared/types"
+import { approvedBookingService, buildApprovedBookingQuery, getApprovedBookingError } from "../services"
+import { actionEntityIdSchema } from "../schemas"
+import type { ApprovedBookingsQueryParams } from "../types"
+
+export const approvedBookingKeys = {
+  all: ["approved-bookings"] as const,
+  list: (params: ApprovedBookingsQueryParams) => ["approved-bookings", "list", buildApprovedBookingQuery(params)] as const,
+  detail: (id: EntityId) => ["approved-bookings", "detail", String(id)] as const,
+}
+
+const retry = (failureCount: number, error: Error) => failureCount < 1 && getApprovedBookingError(error).retryable
+
+export function useApprovedBookings(params: ApprovedBookingsQueryParams, enabled = true) {
+  return useQuery({
+    queryKey: approvedBookingKeys.list(params),
+    queryFn: ({ signal }) => approvedBookingService.getApprovedBookings(params, signal),
+    enabled,
+    retry,
+  })
+}
+
+export function useApprovedBooking(bookingId: EntityId, enabled = true) {
+  return useQuery({
+    queryKey: approvedBookingKeys.detail(bookingId),
+    queryFn: ({ signal }) => approvedBookingService.getApprovedBooking(bookingId, signal),
+    enabled: enabled && actionEntityIdSchema.safeParse(bookingId).success,
+    retry,
+  })
+}

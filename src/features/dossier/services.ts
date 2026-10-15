@@ -1,21 +1,15 @@
 import type { AxiosRequestConfig } from "axios"
 
 import apiClient from "@/lib/axios"
+import { z } from "zod"
+import { mapBackendDossierOverview as mapActualOverview, mapBackendRequirement, mapBackendRequirementDetail, mapBackendDocumentVersions, overviewDtoSchema, protectedPreviewUrl, serializeDocumentMetadata, serializeDocumentSubmission, unwrapBackendValue } from "./lib/backend-contract"
 import {
   dossierIdSchema,
-  dossierOverviewEnvelopeSchema,
-  dossierRequirementsEnvelopeSchema,
   dossierRequirementsParamsSchema,
   createUploadDocumentSchema,
-  uploadDocumentEnvelopeSchema,
-  dossierUploadedAssetsSchema,
-  complianceDocumentEnvelopeSchema,
   createSubmitDocumentVersionSchema,
-  submitDocumentVersionEnvelopeSchema,
   createUpdateDocumentMetadataSchema,
   updateDocumentMetadataEnvelopeSchema,
-  approveDocumentReviewSchema,
-  approveDocumentEnvelopeSchema,
   documentReviewSchema,
   documentReviewEnvelopeSchema,
   readyForSubmissionEnvelopeSchema,
@@ -33,7 +27,6 @@ import type {
   DashboardParams,
   DashboardResponse,
   DossierOverview,
-  ApproveDocumentInput,
   DocumentReviewInput,
   DossierRequirementsParams,
   SendMissingDocumentReminderInput,
@@ -41,11 +34,11 @@ import type {
   UpdateDocumentMetadataInput,
   UploadDocumentInput,
   ExportFormat,
+  RevokeDocumentReviewInput,
 } from "@/features/dossier/types"
 
 const ENDPOINT = "compliance-dossiers"
-// Same switch as the catalog: the BE has no dossier endpoints yet, so the dev build answers from mock data.
-// Keep dashboard/audit API integration enabled by default; mocks are opt-in for UI work.
+// Existing dashboard/audit mode is unchanged; UC20 dossier details always use APIs.
 const useDossierMocks = import.meta.env.VITE_COMPLIANCE_API_MOCKS === "true"
 
 const wait = (delay = 180) => new Promise((resolve) => window.setTimeout(resolve, delay))
@@ -58,6 +51,7 @@ function unwrapValue<T>(payload: unknown): T {
   if (payload && typeof payload === "object" && "value" in payload) return (payload as ApiEnvelope<T>).value
   return payload as T
 }
+
 
 /** Rethrows a BE error response as Error(errorCode) so the UI can react to codes like FORBIDDEN. */
 async function callApi<T>(request: Promise<T>): Promise<T> {
@@ -189,78 +183,8 @@ const dashboardService = {
 
   /** D7. */
   async getOverview(dossierId: EntityId, _signal?: AbortSignal): Promise<DossierOverview> {
-    if (useDossierMocks) {
-      await wait()
-      const item = MOCK_DASHBOARD_ITEMS.find((candidate) => String(candidate.complianceDossierId) === String(dossierId))
-      if (!item && String(dossierId) === "502") {
-        return {
-          complianceDossierId: 502,
-          dossierCode: "CD-20261004-7001",
-          bookingId: 1023,
-          bookingCode: "BK-FLOW2-1023",
-          status: "IN_PREPARATION",
-          openedAt: new Date().toISOString(),
-          progressPercent: 0,
-          mandatoryTotal: 0,
-          mandatorySatisfiedOrWaived: 0,
-          writeLocked: false,
-          writeLockReason: null,
-          readyForSubmissionAt: null,
-          approvedAt: null,
-          rejectedAt: null,
-          closedAt: null,
-          rejectionReason: null,
-          note: null,
-          bookingSummary: {
-            bookingStatus: "APPROVED",
-            originCountry: "",
-            destinationCountry: "",
-            requestedDepartureDate: new Date().toISOString().slice(0, 10),
-            customerName: "",
-            horseCount: 0,
-            horses: [],
-          },
-          requirementSummary: { total: 0, pending: 0, requested: 0, provided: 0, satisfied: 0, rejected: 0, waived: 0 },
-          quarantineStatus: null,
-          customsClearanceStatus: null,
-        }
-      }
-      if (!item) throw new Error("DOSSIER_NOT_FOUND")
-      const mandatoryTotal = 8
-      return {
-        complianceDossierId: Number(item.complianceDossierId),
-        dossierCode: item.dossierCode ?? `CD-${item.complianceDossierId}`,
-        bookingId: 1000 + Number(item.complianceDossierId),
-        bookingCode: item.bookingCode,
-        status: item.status,
-        openedAt: new Date(Date.parse(item.requestedDepartureDate) - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        progressPercent: item.progressPercent,
-        mandatoryTotal,
-        mandatorySatisfiedOrWaived: Math.round((item.progressPercent / 100) * mandatoryTotal),
-        writeLocked: item.status === "CLOSED" || item.status === "SUBMITTED" || item.status === "APPROVED",
-        writeLockReason: item.status === "CLOSED" ? "DOSSIER_CLOSED" : null,
-        readyForSubmissionAt: null,
-        approvedAt: null,
-        rejectedAt: null,
-        closedAt: null,
-        rejectionReason: null,
-        note: null,
-        bookingSummary: {
-          bookingStatus: "APPROVED",
-          originCountry: item.originCountry,
-          destinationCountry: item.destinationCountry,
-          requestedDepartureDate: item.requestedDepartureDate,
-          customerName: item.customerName,
-          horseCount: 0,
-          horses: [],
-        },
-        requirementSummary: { total: mandatoryTotal, pending: 0, requested: 0, provided: 0, satisfied: Math.round((item.progressPercent / 100) * mandatoryTotal), rejected: 0, waived: 0 },
-        quarantineStatus: null,
-        customsClearanceStatus: null,
-      }
-    }
-    const payload = await api.get<unknown>(`${ENDPOINT}/${dossierId}`)
-    return dossierOverviewEnvelopeSchema.parse(payload).value
+    const payload = await apiClient.get<unknown, unknown>(`${ENDPOINT}/${dossierIdSchema.parse(String(dossierId))}`, { signal: _signal })
+    return mapActualOverview(payload)
   },
 
   /** K3. The audit trail is append-only: this service only reads. */
@@ -296,44 +220,38 @@ const dashboardService = {
     return { data: value.items, meta: toMeta(value) }
   },
 }
-// FE transport adapter pending the final U1/U3 backend DTO. Keep asset serialization here.
-function buildDossierDocumentRequest({ files, metadata }: Pick<UploadDocumentInput, "files"> & { metadata: object }) {
-  const fields: Record<string, string> = {};
-  for (const [key, value] of Object.entries(metadata ?? {})) {
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (trimmed) fields[key] = trimmed;
-    }
-  }
-  return { files: dossierUploadedAssetsSchema.parse(files), ...fields };
+function requirementEndpoint(dossierId: string, requirementId: string | number) {
+  return `${ENDPOINT}/${encodeURIComponent(dossierIdSchema.parse(dossierId))}/requirements/${encodeURIComponent(dossierIdSchema.parse(String(requirementId)))}`;
+}
+
+const uploadResult = z.object({ dossierRequirementId: z.string().uuid(), complianceDocumentId: z.string().uuid(), documentVersionId: z.string().uuid(), versionNo: z.number().int().positive(), isNewVersion: z.boolean(), status: z.string(), files: z.array(z.object({ documentAttachmentId: z.string().uuid().nullable(), fileName: z.string(), mimeType: z.string(), fileSizeBytes: z.number().nonnegative() })) });
+
+function mapUploadResult(payload: unknown, dossierId: string, requirementId: string | number) {
+  const result = uploadResult.parse(unwrapBackendValue(payload));
+  return { ...result, files: result.files.map((file, sortOrder) => ({ ...file, sortOrder, fileUrl: protectedPreviewUrl(dossierId, String(requirementId), result.documentVersionId, file.documentAttachmentId) })) };
 }
 
 const documentServiceMethods = {
   async sendMissingRequirementReminder(input: SendMissingDocumentReminderInput) {
     const id = dossierIdSchema.parse(input.dossierId);
     const reminder = missingDocumentReminderSchema.parse(input.reminder);
-    const payload = await apiClient.post<unknown, unknown>(`compliance-dossiers/${id}/requirements/reminders`, reminder);
-    return missingDocumentReminderEnvelopeSchema.parse(payload);
-  },
-
-  async approveDocument(input: ApproveDocumentInput) {
-    approveDocumentReviewSchema.parse(input.review);
-    return approveDocumentEnvelopeSchema.parse(await dossierService.reviewComplianceDocument(input));
+    const payload = await apiClient.post<unknown, unknown>(`${ENDPOINT}/${id}/missing-document-reminders`, reminder);
+    const response = payload as { value: { requirements: unknown[] } };
+    return missingDocumentReminderEnvelopeSchema.parse({ ...response, value: { ...response.value, requirements: response.value.requirements.map(mapBackendRequirement) } });
   },
 
   async reviewComplianceDocument(input: DocumentReviewInput) {
-    const documentId = dossierIdSchema.parse(input.documentId);
     const versionId = dossierIdSchema.parse(String(input.versionId));
-    const review = documentReviewSchema.parse(input.review);
+    const { result, ...review } = documentReviewSchema.parse(input.review);
     const payload = await apiClient.post<unknown, unknown>(
-      `compliance-documents/${documentId}/versions/${versionId}/reviews`, review,
+      `${requirementEndpoint(input.dossierId, input.requirementId)}/versions/${versionId}/${result === "APPROVED" ? "approve" : "reject"}`, review,
     );
     return documentReviewEnvelopeSchema.parse(payload);
   },
 
   async markReadyForSubmission(dossierId: string) {
     const id = dossierIdSchema.parse(dossierId);
-    const payload = await apiClient.patch<unknown, unknown>(`compliance-dossiers/${id}/ready-for-submission`);
+    const payload = await apiClient.post<unknown, unknown>(`${ENDPOINT}/${id}/ready-for-submission`);
     return readyForSubmissionEnvelopeSchema.parse(payload);
   },
 
@@ -345,10 +263,22 @@ const documentServiceMethods = {
     const id = dossierIdSchema.parse(dossierId);
     const query = dossierRequirementsParamsSchema.parse(params);
     const payload = await apiClient.get<unknown, unknown>(
-      `compliance-dossiers/${encodeURIComponent(id)}/requirements`,
-      { params: query, signal },
+      `${ENDPOINT}/${encodeURIComponent(id)}`,
+      { params: { status: query.status, horseId: query.horseId }, signal },
     );
-    return dossierRequirementsEnvelopeSchema.parse(payload).value;
+    const overview = overviewDtoSchema.parse(unwrapBackendValue(payload));
+    const items = [...overview.tripRequirements, ...overview.horseRequirements.flatMap((horse) => horse.requirements)].map(mapBackendRequirement);
+    const [field, direction] = query.sortBy.split(":");
+    if (field !== "createdAt") items.sort((left, right) => {
+      const a = field === "dueDate" ? left.dueDate ?? "9999-12-31" : left.status;
+      const b = field === "dueDate" ? right.dueDate ?? "9999-12-31" : right.status;
+      return (direction === "desc" ? -1 : 1) * (a.localeCompare(b) || String(left.dossierRequirementId).localeCompare(String(right.dossierRequirementId)));
+    });
+    const totalPages = Math.max(1, Math.ceil(items.length / query.pageSize));
+    const pageIndex = Math.min(query.pageIndex, totalPages);
+    const visible = items.slice((pageIndex - 1) * query.pageSize, pageIndex * query.pageSize);
+    const hydrated = await Promise.all(visible.map((item) => dossierService.getRequirement(id, String(item.dossierRequirementId), signal)));
+    return { items: hydrated.map((item) => ({ ...item, document: item.document ? { ...item.document, latestVersionNo: Math.max(1, ...item.document.versions.map((version) => version.versionNo)) } : null })), pageIndex, pageSize: query.pageSize, totalItems: items.length, totalPages };
   },
 
   async uploadComplianceDocument(input: UploadDocumentInput) {
@@ -356,41 +286,63 @@ const documentServiceMethods = {
     const requirementId = dossierIdSchema.parse(String(input.requirementId));
     const metadata = createUploadDocumentSchema(null).parse(input.metadata);
     const payload = await apiClient.post<unknown, unknown>(
-      `compliance-dossiers/${encodeURIComponent(dossierId)}/requirements/${encodeURIComponent(requirementId)}/documents`,
-      buildDossierDocumentRequest({ files: input.files, metadata }),
+      `${requirementEndpoint(dossierId, requirementId)}/document`,
+      serializeDocumentSubmission(input.files, metadata),
       { timeout: 120_000 },
     );
-    return uploadDocumentEnvelopeSchema.parse(payload).value;
+    return mapUploadResult(payload, dossierId, requirementId);
   },
 
-  async getComplianceDocument(documentId: string, signal?: AbortSignal) {
-    const id = dossierIdSchema.parse(documentId);
-    const payload = await apiClient.get<unknown, unknown>(
-      `compliance-documents/${encodeURIComponent(id)}`,
-      { signal },
-    );
-    return complianceDocumentEnvelopeSchema.parse(payload).value;
+  async getComplianceDocument(_documentId: string, signal?: AbortSignal, dossierId?: string, requirementId?: string) {
+    if (!dossierId || !requirementId) throw new Error("DOSSIER_REQUIREMENT_CONTEXT_REQUIRED");
+    const requirement = await dossierService.getRequirement(dossierId, requirementId, signal);
+    if (!requirement.document) throw new Error("DOCUMENT_NOT_FOUND");
+    return requirement.document;
   },
 
   async submitDocumentVersion(input: SubmitDocumentVersionInput) {
-    const id = dossierIdSchema.parse(input.documentId);
     const metadata = createSubmitDocumentVersionSchema(null).parse(input.metadata);
     const payload = await apiClient.post<unknown, unknown>(
-      `compliance-documents/${encodeURIComponent(id)}/versions`,
-      buildDossierDocumentRequest({ files: input.files, metadata }),
+      `${requirementEndpoint(input.dossierId, input.requirementId)}/document/versions`,
+      serializeDocumentSubmission(input.files, metadata),
       { timeout: 120_000 },
     );
-    return submitDocumentVersionEnvelopeSchema.parse(payload).value;
+    const result = mapUploadResult(payload, input.dossierId, input.requirementId);
+    return { ...result, mode: result.isNewVersion ? "NEW_VERSION" as const : "EDIT_IN_PLACE" as const };
   },
 
   async updateComplianceDocumentMetadata(input: UpdateDocumentMetadataInput) {
-    const id = dossierIdSchema.parse(input.documentId);
     const changes = createUpdateDocumentMetadataSchema(null).parse(input.changes);
     const payload = await apiClient.patch<unknown, unknown>(
-      `compliance-documents/${encodeURIComponent(id)}`,
-      changes,
+      `${requirementEndpoint(input.dossierId, input.requirementId)}/document/metadata`,
+      serializeDocumentMetadata(changes),
     );
     return updateDocumentMetadataEnvelopeSchema.parse(payload).value;
+  },
+  async getRequirement(dossierId: string, requirementId: string, signal?: AbortSignal) {
+    return mapBackendRequirementDetail(await apiClient.get<unknown, unknown>(requirementEndpoint(dossierId, requirementId), { signal }));
+  },
+  async getDocumentVersions(dossierId: string, requirementId: string, signal?: AbortSignal) {
+    return mapBackendDocumentVersions(await apiClient.get<unknown, unknown>(`${requirementEndpoint(dossierId, requirementId)}/document/versions`, { signal }), dossierId, requirementId);
+  },
+  async getMissingRequirements(dossierId: string, signal?: AbortSignal) {
+    const payload = await apiClient.get<unknown, unknown>(`${ENDPOINT}/${dossierIdSchema.parse(dossierId)}/missing-requirements`, { signal });
+    return z.array(z.unknown()).parse(unwrapBackendValue(payload)).map(mapBackendRequirement);
+  },
+  async revokeDocumentReview(input: RevokeDocumentReviewInput) {
+    const review = z.object({ status: z.union([z.literal(3), z.literal(5)]), reason: z.string().trim().min(1).max(500) }).parse(input.review);
+    return documentReviewEnvelopeSchema.parse(await apiClient.post<unknown, unknown>(`${requirementEndpoint(input.dossierId, input.requirementId)}/versions/${dossierIdSchema.parse(String(input.versionId))}/reviews/${dossierIdSchema.parse(input.reviewId)}/revoke`, review));
+  },
+  async getDocumentRequestComments(dossierId: string, requirementId: string, requestId: string, signal?: AbortSignal) {
+    const value = unwrapBackendValue(await apiClient.get<unknown, unknown>(`${requirementEndpoint(dossierId, requirementId)}/document-requests/${dossierIdSchema.parse(requestId)}/comments`, { signal }));
+    return z.array(z.object({ documentRequestCommentId: z.string().uuid(), authorAccountId: z.string().uuid(), message: z.string(), createdAt: z.string() })).parse(value);
+  },
+  async addDocumentRequestComment(input: { dossierId: string; requirementId: string; requestId: string; message: string }) {
+    const body = z.object({ message: z.string().trim().min(1).max(2000) }).parse(input);
+    return await apiClient.post<unknown, unknown>(`${requirementEndpoint(input.dossierId, input.requirementId)}/document-requests/${dossierIdSchema.parse(input.requestId)}/comments`, body);
+  },
+  async getDossierByBooking(bookingId: string, signal?: AbortSignal) {
+    return overviewDtoSchema.parse(unwrapBackendValue(await apiClient.get<unknown, unknown>(`bookings/${dossierIdSchema.parse(bookingId)}/compliance-dossier`, { signal })));
   },
 }
 

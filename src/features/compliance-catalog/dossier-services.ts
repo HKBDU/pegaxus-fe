@@ -1,6 +1,7 @@
 import { bookingService } from "@/features/booking/services"
 import { api, ComplianceApiError, useComplianceMocks, useFlow2HttpMocks, wait } from "@/features/compliance-catalog/services"
 import type {
+  ApplyBooking,
   ComplianceDossierSummary,
   CreateDossierInput,
   CreateDossierResult,
@@ -27,7 +28,37 @@ function isNotFound(error: unknown) {
   return (error as { response?: { status?: number } })?.response?.status === 404
 }
 
+interface ApprovedBookingPayload {
+  bookingId: EntityId
+  bookingCode: string
+  status: ApplyBooking["status"]
+  originCountry: string
+  destinationCountry: string
+  customer?: { fullName: string }
+  customerName?: string
+  horses?: { horseId: EntityId; horseName: string }[]
+}
+
 export const dossierService = {
+  /**
+   * Booking of the apply wizard. GET /bookings/{id} (Flow 1) only answers the owner and the manager, so the Transport
+   * Specialist would get a 404; AB2 (GET /bookings/approved/{id}) is scoped to the assigned staff instead.
+   */
+  async getBookingForApply(bookingId: EntityId): Promise<ApplyBooking> {
+    if (useComplianceMocks && !useFlow2HttpMocks) return bookingService.getBooking(bookingId)
+    const payload = await api.get<{ value?: ApprovedBookingPayload } & Partial<ApprovedBookingPayload>>(`bookings/approved/${bookingId}`)
+    const booking = (payload.value ?? payload) as ApprovedBookingPayload
+    return {
+      bookingId: booking.bookingId,
+      bookingCode: booking.bookingCode,
+      status: booking.status,
+      originCountry: booking.originCountry,
+      destinationCountry: booking.destinationCountry,
+      customer: { fullName: booking.customer?.fullName ?? booking.customerName ?? "—" },
+      horses: (booking.horses ?? []).map((horse) => ({ horseId: horse.horseId, horseName: horse.horseName })),
+    }
+  },
+
   /** D1: null when the booking has no dossier yet (the BE answers 404). */
   async getDossierOfBooking(bookingId: EntityId): Promise<ComplianceDossierSummary | null> {
     if (useComplianceMocks && !useFlow2HttpMocks) {
@@ -72,8 +103,10 @@ export const dossierService = {
     const body = fromTemplate
       ? { dossierTemplateId, selectedTemplateItemIds }
       : { manualRequirements: customRequirements.map(toDossierRequirementBody) }
-    const payload = await api.post<{ value?: CreateDossierResult } & Partial<CreateDossierResult>>(`bookings/${bookingId}/compliance-dossier`, body)
-    const created = (payload.value ?? payload) as Omit<CreateDossierResult, "failedCustomCount">
+    const payload = await api.post<unknown>(`bookings/${bookingId}/compliance-dossier`, body)
+    const envelope = payload as { value?: unknown; data?: { value?: unknown } }
+    const created = (envelope.value ?? envelope.data?.value ?? payload) as Partial<CreateDossierResult>
+    if (!created.complianceDossierId) throw new ComplianceApiError("DOSSIER_CREATE_RESPONSE_INVALID")
 
     let failedCustomCount = 0
     let addedCustom = 0
@@ -87,6 +120,10 @@ export const dossierService = {
         }
       }
     }
-    return { ...created, generatedRequirementCount: created.generatedRequirementCount + addedCustom, failedCustomCount }
+    return {
+      ...created,
+      generatedRequirementCount: (created.generatedRequirementCount ?? 0) + addedCustom,
+      failedCustomCount,
+    } as CreateDossierResult
   },
 }

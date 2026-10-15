@@ -124,11 +124,11 @@ async function temporaryRequirements(dossierId: EntityId, params: DossierRequire
     tripRequirements?: DossierRequirementItem[]
     horseRequirements?: DossierRequirementItem[]
   }>(await api.get<unknown>(`bookings/${overview.bookingId}/compliance-dossier`))
-  const rows = [...(value.tripRequirements ?? []), ...(value.horseRequirements ?? [])].map((item) => ({
-    ...item,
-    validUntil: item.validUntil ?? null,
-    note: item.note ?? null,
-    document: item.document ?? null,
+    const rows = [...(value.tripRequirements ?? []), ...(value.horseRequirements ?? [])].map((item) => ({
+      ...item,
+      validUntil: item.validUntil ?? null,
+      note: item.note ?? null,
+      document: item.document ?? null,
   }))
   const filtered = rows.filter(
     (item) => (params.status === "ALL" || item.status === params.status) && (params.horseId === "ALL" || String(item.horseId) === params.horseId),
@@ -210,10 +210,15 @@ export const requirementService = {
       })
       return { dossierRequirementId, status: "PENDING" }
     }
-    return unwrapValue<{ dossierRequirementId: EntityId; status: string }>(await api.post<unknown>(`compliance-dossiers/${dossierId}/requirements`, input))
+    const { dueDate: _dueDate, leadTimeDays, reason, ...requirement } = input
+    return unwrapValue<{ dossierRequirementId: EntityId; status: string }>(await api.post<unknown>(`compliance-dossiers/${dossierId}/requirements`, {
+      ...requirement,
+      leadTimeDays: leadTimeDays ?? 0,
+      reason: reason?.trim() || "Added from dossier detail",
+    }))
   },
 
-  /** D4. Backend exposes PATCH, not PUT. */
+  /** D4. Backend exposes PATCH for partial DossierRequirement updates. */
   async updateRequirement(dossierId: EntityId, dossierRequirementId: EntityId, input: UpdateRequirementInput): Promise<void> {
     if (useComplianceMocks && !useFlow2HttpMocks) {
       await wait(300)
@@ -224,7 +229,7 @@ export const requirementService = {
       item.note = input.instruction ?? item.note
       return
     }
-    await api.put(`compliance-dossiers/${dossierId}/requirements/${dossierRequirementId}`, input)
+    await api.patch(`compliance-dossiers/${dossierId}/requirements/${dossierRequirementId}`, input)
   },
 
   async waiveRequirement(dossierId: EntityId, dossierRequirementId: EntityId, input: WaiveRequirementInput): Promise<void> {
@@ -234,10 +239,12 @@ export const requirementService = {
       const item = storeOf(dossierId).find((candidate) => String(candidate.dossierRequirementId) === String(dossierRequirementId))
       if (!item) throw new ComplianceApiError("NOT_FOUND")
       item.status = "WAIVED"
-      item.note = input.reason
+      item.note = input.waivedReason
       return
     }
-    await api.patch(`compliance-dossiers/${dossierId}/requirements/${dossierRequirementId}/waive`, input)
+    await api.patch(`compliance-dossiers/${dossierId}/requirements/${dossierRequirementId}/waive`, {
+      waivedReason: input.waivedReason.trim(),
+    })
   },
 
   /** D5. */

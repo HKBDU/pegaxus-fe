@@ -28,13 +28,14 @@ function ReviewContent({ dossier, requirement, document, role, onClose, onPendin
 }) {
   const [confirmed, setConfirmed] = useState(false);
   const [reviewComment, setReviewComment] = useState("");
+  const [expiryExceptionReason, setExpiryExceptionReason] = useState("");
   const [confirmationOpen, setConfirmationOpen] = useState(false);
   const [rejectionOpen, setRejectionOpen] = useState(false);
   const confirmationId = useId();
   const commentId = useId();
   const mutation = useDocumentReview(onPendingChange);
   const latest = getLatestDocumentVersion(document);
-  const context = { role, dossier, requirement, document, today: new Date().toISOString().slice(0, 10) };
+  const context = { role, dossier, requirement, document, expiryExceptionReason, today: new Date().toISOString().slice(0, 10) };
   const block = getReviewBlockReason(context);
   const canReject = canReviewDocument({ ...context, result: "REJECTED" });
   const canApprove = confirmed && !block && Boolean(latest);
@@ -48,7 +49,8 @@ function ReviewContent({ dossier, requirement, document, role, onClose, onPendin
         documentId: String(document.complianceDocumentId),
         versionId: latest.documentVersionId,
         dossierId: String(dossier.complianceDossierId),
-        review: { result: "APPROVED", reviewComment },
+        requirementId: requirement.dossierRequirementId,
+        review: { result: "APPROVED", metadataConfirmed: true, versionUploadedAt: latest.uploadedAt, documentUpdatedAt: document.updatedAt, ...(reviewComment.trim() ? { reviewNote: reviewComment.trim() } : {}), ...(expiryExceptionReason.trim() ? { expiryExceptionReason: expiryExceptionReason.trim() } : {}) },
       });
       if (!attempt.started) return;
       toast.success(attempt.value.message);
@@ -71,10 +73,13 @@ function ReviewContent({ dossier, requirement, document, role, onClose, onPendin
         documentId: String(document.complianceDocumentId),
         versionId: latest.documentVersionId,
         dossierId: String(dossier.complianceDossierId),
-        review: { result: "REJECTED", reviewComment, documentRequest: values },
+        requirementId: requirement.dossierRequirementId,
+        review: { result: "REJECTED", ...values, versionUploadedAt: latest.uploadedAt, documentUpdatedAt: document.updatedAt },
       });
       if (!attempt.started) return false;
       toast.success(attempt.value.message);
+      if (attempt.value.value.deliveryWarning) toast.warning(attempt.value.value.deliveryWarning);
+      else if (attempt.value.value.emailSent === false) toast.warning("The revision request is saved, but email delivery failed. Do not submit it again.");
       setRejectionOpen(false);
       onClose();
       return true;
@@ -130,11 +135,17 @@ function ReviewContent({ dossier, requirement, document, role, onClose, onPendin
               <Textarea
                 id={commentId}
                 value={reviewComment}
+                maxLength={2000}
                 onChange={(event) => setReviewComment(event.target.value)}
                 disabled={mutation.isPending}
                 className="min-h-28 rounded-[2px] text-sm"
                 placeholder="Record your review findings…"
               />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor={`${commentId}-expiry`} className="text-xs font-semibold">Expiry Exception Reason (if required)</label>
+              <Textarea id={`${commentId}-expiry`} value={expiryExceptionReason} onChange={(event) => setExpiryExceptionReason(event.target.value)} maxLength={2000} disabled={mutation.isPending} className="rounded-[2px] text-sm" />
+              <p className="text-xs text-slate-500">The backend may require justification when expiry precedes departure. Approval does not mark the dossier ready.</p>
             </div>
             <Button
               className="h-auto min-h-9 w-full whitespace-normal rounded-[2px] py-2"
@@ -176,12 +187,12 @@ export function DocumentReviewDialog({ dossier, requirement, role, onClose }: {
   const [error, setError] = useState<DocumentReviewError | null>(null);
   const client = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
-  const query = useComplianceDocument(requirement.document ? String(requirement.document.complianceDocumentId) : null);
+  const query = useComplianceDocument(requirement.document ? String(requirement.document.complianceDocumentId) : null, String(dossier.complianceDossierId), String(requirement.dossierRequirementId));
   async function refresh() {
     if (!requirement.document || pending || refreshing) return;
     setRefreshing(true);
     try {
-      await invalidateComplianceDocument(client, String(requirement.document.complianceDocumentId), String(dossier.complianceDossierId));
+      await invalidateComplianceDocument(client, String(requirement.document.complianceDocumentId), String(dossier.complianceDossierId), requirement.dossierRequirementId);
     } finally {
       setRefreshing(false);
     }
