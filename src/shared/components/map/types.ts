@@ -35,6 +35,7 @@ export type MapRoute = {
   updatedAt?: string | null;
   source?: "saved" | "preview";
   routePlanType?: "PRIMARY" | "BACKUP" | "RETURN";
+  isOutsourced?: boolean;
   readonly?: boolean;
 };
 

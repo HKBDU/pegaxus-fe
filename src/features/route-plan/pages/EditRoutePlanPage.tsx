@@ -35,6 +35,7 @@ function routeFromSegment(
     routePlanRouteId: segment.routePlanRouteId,
     name: segment.route.routeName,
     transportMode: segment.route.transportMode,
+    isOutsourced: segment.isOutsourced,
     fromLocation,
     toLocation,
     distanceKm: segment.route.distanceKm,

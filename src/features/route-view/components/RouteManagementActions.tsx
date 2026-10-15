@@ -1,5 +1,7 @@
 import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import { Link } from "react-router-dom"
+import { routePlanEdit } from "@/app/route-config"
 import { LegalFeasibilityPanel, type LegalFeasibilityPanelProps } from "@/features/route-plan/components/LegalFeasibilityPanel"
 import { CancelRoutePlanDialog } from "@/features/route-plan/components/CancelRoutePlanDialog"
 import { OutsourceSegmentDialog } from "@/features/route-plan/components/OutsourceSegmentDialog"
@@ -42,6 +44,7 @@ export function RouteManagementActions({ plan, context }: { plan: RoutePlanDetai
   const segments = legalSegments(review ?? plan)
   return <>
     {canReview ? <Button size="sm" variant="outline" disabled={mockMode || refreshing || !segments?.length} onClick={() => setReview(plan)} title={!segments?.length ? "Legal review requires complete measured route data for the existing panel." : undefined}>Review Legal Feasibility</Button> : null}
+    {canCancel ? <Button asChild size="sm" variant="outline"><Link to={routePlanEdit(plan.routePlanId)}>Edit</Link></Button> : null}
     {canCancel && plan.routeType !== "RETURN" ? <CancelRoutePlanDialog routePlanId={plan.routePlanId} status="DRAFT" lastUpdatedAt={cancelVersion} routePlanCode={plan.routePlanCode} onCancelled={() => void refresh()}><Button size="sm" variant="outline" disabled={mockMode || refreshing} onClick={() => setCancelVersion(plan.updatedAt)}>Cancel Draft Route</Button></CancelRoutePlanDialog> : null}
     {canCancel && plan.routeType === "RETURN" ? <span className="text-xs text-slate-500">RETURN cancellation is unavailable until its approval state can be verified.</span> : null}
     {(canReview || canCancel) ? <Button size="sm" variant="ghost" disabled={refreshing} onClick={() => { setReview(null); void refresh() }}>{refreshing ? "Refreshing…" : "Reload Latest Route"}</Button> : null}

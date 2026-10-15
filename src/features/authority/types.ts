@@ -17,8 +17,8 @@ export interface RecordAuthoritySubmissionInput {
 }
 
 export interface RecordAuthoritySubmissionResult {
-  authoritySubmissionId: number
-  submissionNo: number
+  authoritySubmissionId: string
+  submissionNo: string
   status: string
   dossierStatus: string
 }
@@ -37,7 +37,7 @@ export interface UpdateAuthorityReviewInput {
 }
 
 export interface UpdateAuthorityReviewResult {
-  authoritySubmissionId: number
+  authoritySubmissionId: string
   submissionStatus: string
   dossierStatus: string
 }

@@ -37,7 +37,7 @@ type Errors = Partial<
 const DialogDescription = (_props: { children?: unknown }) => null;
 
 interface Props {
-  dossierId: number;
+  dossierId: string;
   dossierStatus?: AuthoritySubmissionStatus | string | null;
   onRecorded?: () => void;
 }

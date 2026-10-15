@@ -45,9 +45,9 @@ function routeLabel(dossier?: ReturnType<typeof useClearanceDossierContext>['dat
 
 export default function CustomsClearanceProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
-  const dossierId = dossierIdParam ? Number(dossierIdParam) : null
+  const dossierId = dossierIdParam ?? null
   const { data: dossier, isLoading } = useClearanceDossierContext(dossierId)
-  const { mutateAsync: submitProof, isPending } = useSubmitCustomsClearanceProof(dossierId ?? 0)
+  const { mutateAsync: submitProof, isPending } = useSubmitCustomsClearanceProof(dossierId ?? '')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)

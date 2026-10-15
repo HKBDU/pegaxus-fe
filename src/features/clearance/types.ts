@@ -11,7 +11,7 @@ export interface SubmitCustomsClearanceProofRequest {
 }
 
 export interface SubmitCustomsClearanceProofResponse {
-  customsClearanceProofId: number
+  customsClearanceProofId: string
 }
 
 export type CustomsClearanceProofStatus = 'PENDING_VERIFICATION' | 'CLEARED' | 'HELD' | 'REJECTED'
@@ -26,8 +26,8 @@ export interface CustomsProofFile {
 }
 
 export interface CustomsClearanceProofDetail {
-  customsClearanceProofId: number
-  complianceDossierId: number
+  customsClearanceProofId: string
+  complianceDossierId: string
   status: CustomsClearanceProofStatus
   customsPortName: string
   locationId: number | null
@@ -59,7 +59,7 @@ export interface FinalizeCustomsClearanceProofRequest {
 }
 
 export interface FinalizeCustomsClearanceProofResponse {
-  customsClearanceProofId: number
+  customsClearanceProofId: string
   status: CustomsClearanceProofStatus
   isFinalized: boolean
 }

@@ -15,10 +15,8 @@ export type ReturnBuilderAvailability =
   | { status: "unavailable"; message: string }
   | { status: "error"; message: string; retry?: () => void }
 
-const currentBuilderAvailability: ReturnBuilderAvailability = {
-  status: "unavailable",
-  message: "The current Return Builder still requires its pagination, Transport Plan mapping and route-detail integration fixes. Creation is unavailable until the provider is integrated; no Location IDs are inferred from addresses or coordinates.",
-}
+// The Return Builder is integrated (paginated lookups, Transport Plan mapping), so creation is open by default.
+const currentBuilderAvailability: ReturnBuilderAvailability = { status: "ready" }
 
 export function CreateReturnEntry({ plan, context, builderAvailability = currentBuilderAvailability }: { plan: RoutePlanDetail; context: EmergencyContext; builderAvailability?: ReturnBuilderAvailability }) {
   const [open, setOpen] = useState(false)

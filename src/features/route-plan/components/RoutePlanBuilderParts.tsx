@@ -45,7 +45,9 @@ export type DraftSegment = {
 export function arrangementForRoute(
   route: MapRoute,
 ): "INTERNAL" | "OUTSOURCED" {
-  return route.transportMode === "ROAD" ? "INTERNAL" : "OUTSOURCED";
+  return route.isOutsourced ?? route.transportMode !== "ROAD"
+    ? "OUTSOURCED"
+    : "INTERNAL";
 }
 
 function formatDate(value: string) {
