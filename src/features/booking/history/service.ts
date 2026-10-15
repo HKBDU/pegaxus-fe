@@ -26,7 +26,7 @@ export const bookingApi = {
     bookingId: string,
     request: BookingStatusUpdateRequest,
   ): Promise<void> {
-    await apiClient.post(
+    await apiClient.patch(
       `/bookings/${encodeURIComponent(bookingId)}/status`,
       bookingStatusUpdateSchema.parse(request),
     );
