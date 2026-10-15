@@ -1,17 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { AlertTriangle, FileText, Layers, ReceiptText, Truck, Users } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Controller, FormProvider, useForm, useWatch, type FieldErrors, type Path } from "react-hook-form"
 import { toast } from "sonner"
 import { BillingSummaryCard } from "@/features/invoice/components/BillingSummaryCard"
 import { InvoiceLineItemsTable } from "@/features/invoice/components/InvoiceLineItemsTable"
 import { IssueInvoiceDialog } from "@/features/invoice/components/IssueInvoiceDialog"
-import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_TYPE_HINTS, TRANSPORT_STATUS_LABELS, INVOICE_CURRENCIES, INVOICE_TYPE, INVOICE_TYPE_LABELS } from "@/features/invoice/constants"
+import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_TYPE_HINTS, TRANSPORT_STATUS_LABELS, INVOICE_TYPE, INVOICE_TYPE_LABELS } from "@/features/invoice/constants"
 import { getInvoiceErrorCode, getInvoiceErrorMessage, InvoiceApiError } from "@/features/invoice/errors"
 import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/features/invoice/hooks/useInvoiceCompose"
 import { invoiceFormSchema, invoiceToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoiceType } from "@/features/invoice/types"
-import { estimateSummary, parseDecimal, roundMoney, todayIsoDate } from "@/features/invoice/utils"
+import { estimateSummary, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
 import { Button } from "@/shared/components/ui/button"
 import { DatePicker } from "@/shared/components/ui/date-picker"
@@ -74,17 +74,11 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
   )
   const transportStatus = isEdit ? invoice?.transport?.status : suggestionQuery.data?.transportStatus
 
-  // A FINAL must use the currency of the paid deposit, otherwise the BE answers CURRENCY_MISMATCH.
-  const depositCurrency = selectedType === "FINAL" ? (suggestionQuery.data?.currency ?? null) : null
-  useEffect(() => {
-    if (depositCurrency) setValue("currency", depositCurrency, { shouldDirty: true })
-  }, [depositCurrency, setValue])
-
   const [type, currency, items] = useWatch({ control, name: ["type", "currency", "items"] })
   const parsedLines = (items ?? []).map((item) => ({
     label: item.description?.trim() || "Untitled line",
-    quantity: parseDecimal(item.quantity ?? ""),
-    price: parseDecimal(item.price ?? ""),
+    quantity: parseWholeNumber(item.quantity ?? ""),
+    price: parseWholeNumber(item.price ?? ""),
     key: item.invoiceItemId ?? "",
   }))
   const estimate = estimateSummary(parsedLines, depositDeductionItems)
@@ -221,19 +215,9 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                         </Select>
                       </div>
                       <div>
-                        <label className={fieldLabelClass} htmlFor="invoice-currency">Currency <span className="text-red-500">*</span></label>
-                        <Controller
-                          control={control}
-                          name="currency"
-                          render={({ field }) => (
-                            <Select value={field.value} onValueChange={field.onChange} disabled={Boolean(depositCurrency) || isSaving}>
-                              <SelectTrigger id="invoice-currency" className={controlClass}><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {INVOICE_CURRENCIES.map((option) => <SelectItem key={option} value={option}>{INVOICE_CURRENCY_LABELS[option]}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
+                        <p className={fieldLabelClass}>Currency</p>
+                        {/* VND is the only supported currency, so there is nothing to choose. */}
+                        <div id="invoice-currency" className={`${controlClass} flex items-center bg-[#f7f6f3] text-gray-700`}>{INVOICE_CURRENCY_LABELS.VND}</div>
                       </div>
                       <div>
                         <label className={fieldLabelClass} htmlFor="invoice-due-date">{dateLabel} <span className="text-red-500">*</span></label>
@@ -259,7 +243,6 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                       <div className="min-h-4 text-[11px] leading-4 text-gray-500 sm:col-span-3 sm:-mt-2">
                         {suggestionQuery.isFetching && !isEdit ? <span role="status">Checking the booking...</span> : null}
                         {!suggestionQuery.isFetching || isEdit ? (selectedType ? INVOICE_TYPE_HINTS[selectedType] : "Quotation, Deposit, Final, Supplementary or Credit note.") : null}
-                        {depositCurrency ? " The currency is locked to the paid deposit." : ""}
                       </div>
                       {precheckError ? (
                         <div className="flex gap-2 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:col-span-3" role="alert">

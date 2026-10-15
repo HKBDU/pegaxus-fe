@@ -6,7 +6,7 @@ import { Controller, useFieldArray, useFormContext } from "react-hook-form"
 import { DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_ITEM_TYPE_LABELS } from "@/features/invoice/constants"
 import { emptyItem, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { InvoiceCurrency, InvoiceItem } from "@/features/invoice/types"
-import { formatMoney, parseDecimal, roundMoney } from "@/features/invoice/utils"
+import { formatMoney, parseWholeNumber, roundMoney } from "@/features/invoice/utils"
 import { cn } from "@/lib/utils"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Button } from "@/shared/components/ui/button"
@@ -39,6 +39,11 @@ interface InvoiceLineItemsTableProps {
  * "Line items" of the create/edit dialog: a data table whose rows are inputs. It is paged like the transport request
  * table (rows per page + page buttons), so a long invoice never makes the dialog grow without limit.
  */
+/** Amounts are whole VND: keep decimal separators, exponents and signs out of the field. */
+function blockNonDigitKeys(event: React.KeyboardEvent<HTMLInputElement>) {
+  if ([".", ",", "e", "E", "+", "-"].includes(event.key)) event.preventDefault()
+}
+
 export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems, focusRow, disabled = false }: InvoiceLineItemsTableProps) {
   const { control, register, watch, formState: { errors } } = useFormContext<InvoiceFormValues>()
   const { fields, append, remove } = useFieldArray({ control, name: "items" })
@@ -153,7 +158,8 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
         return (
           <Input
             aria-label={`Quantity of line ${row.index + 1}`}
-            inputMode="decimal"
+            inputMode="numeric"
+            onKeyDown={blockNonDigitKeys}
             className={cn(inputClass, "w-16", lineErrors[line.index]?.quantity && "border-red-500")}
             disabled={disabled}
             aria-invalid={Boolean(lineErrors[line.index]?.quantity)}
@@ -171,7 +177,8 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
         return (
           <Input
             aria-label={`Unit price of line ${row.index + 1}`}
-            inputMode="decimal"
+            inputMode="numeric"
+            onKeyDown={blockNonDigitKeys}
             className={cn(inputClass, "w-28", lineErrors[line.index]?.price && "border-red-500")}
             disabled={disabled}
             aria-invalid={Boolean(lineErrors[line.index]?.price)}
@@ -186,8 +193,8 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
       cell: ({ row }) => {
         const line = row.original
         if (line.kind === "deduction") return <span className="block whitespace-nowrap text-right font-medium tabular-nums">{formatMoney(line.item.total, currency)}</span>
-        const quantity = parseDecimal(watch(`items.${line.index}.quantity`) ?? "")
-        const price = parseDecimal(watch(`items.${line.index}.price`) ?? "")
+        const quantity = parseWholeNumber(watch(`items.${line.index}.quantity`) ?? "")
+        const price = parseWholeNumber(watch(`items.${line.index}.price`) ?? "")
         const amount = Number.isNaN(quantity) || Number.isNaN(price) ? null : roundMoney(quantity * price)
         return <span className={cn("block whitespace-nowrap text-right font-medium tabular-nums", amount === null && "text-gray-400")}>{amount === null ? "—" : formatMoney(amount, currency)}</span>
       },
