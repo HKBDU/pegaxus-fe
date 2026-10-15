@@ -1,4 +1,3 @@
-import "../ui.css"
 import { useParams } from "react-router-dom"
 import { ROLE_ROUTES } from "@/app/route-config"
 import { useAuthStore } from "@/features/auth/store"

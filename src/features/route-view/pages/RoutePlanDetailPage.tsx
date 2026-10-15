@@ -1,4 +1,3 @@
-import "@/features/transport-plan/ui.css"
 import { useEffect, useRef, type ComponentType } from "react"
 import { useParams, useSearchParams } from "react-router-dom"
 import { useMutationState } from "@tanstack/react-query"
@@ -23,6 +22,7 @@ import { BackupActivationRequestDialog } from "../components/emergency/BackupAct
 import { DriverNoticeDialog } from "../components/emergency/DriverNoticeDialog"
 import { RouteChangeDecisionPanel } from "../components/emergency/RouteChangeDecisionPanel"
 import { ReturnActivationPanel } from "../components/emergency/ReturnActivationPanel"
+import { RouteManagementActions, RouteSegmentOutsourceAction } from "../components/RouteManagementActions"
 
 export default function RoutePlanDetailPage({ mapViewer, routeDetailPath, emergencyView }: { mapViewer?: ComponentType<RouteMapViewerProps>; routeDetailPath?: RouteDetailPath; emergencyView?: "decision" | "activation" } = {}) {
   const { routePlanId = "" } = useParams<{ routePlanId: string }>()
@@ -71,6 +71,8 @@ export default function RoutePlanDetailPage({ mapViewer, routeDetailPath, emerge
           <div key={`${routePlanId}-${mode}`}>{workspace}</div> : !fullPageMode ? <>
             {context.error && <ErrorState message={getEmergencyError(context.error).message} />}
             <RoutePlanDetails key={routePlanId} plan={plan} mapViewer={mapViewer} routeDetailPath={routeDetailPath}
+              actions={context.data ? <RouteManagementActions plan={plan} context={context.data} /> : undefined}
+              segmentActions={context.data ? segment => <RouteSegmentOutsourceAction plan={plan} segment={segment} context={context.data!} /> : undefined}
               emergencyArea={context.data ? <EmergencyActionBar plan={plan} context={context.data} onAction={changeMode} /> : undefined} />
           </> : null}
         {context.data && activeMode === "request" && <BackupActivationRequestDialog key={routePlanId} plan={plan} context={context.data} onClose={() => changeMode()} />}

@@ -1,4 +1,3 @@
-import "../ui.css"
 import { useParams } from "react-router-dom"
 import { transportPlanDetail } from "@/app/route-config"
 import { canAccess } from "@/features/auth/access-control"

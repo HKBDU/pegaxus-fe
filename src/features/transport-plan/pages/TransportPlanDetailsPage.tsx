@@ -1,4 +1,3 @@
-import "../ui.css"
 import type { ComponentType } from "react"
 import { Tabs } from "radix-ui"
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"

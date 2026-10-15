@@ -1,4 +1,3 @@
-import "../ui.css"
 import { useCallback, useState } from "react"
 import { ROLE_ROUTES } from "@/app/route-config"
 import { PageHeader } from "@/shared/components/PageHeader"

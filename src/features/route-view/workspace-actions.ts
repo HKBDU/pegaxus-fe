@@ -9,6 +9,7 @@ export type RouteWorkspaceContext = {
   transportStatus?: string | null
   dossierStatus?: string | null
   hasActivePrimary?: boolean
+  hasOpenReturn?: boolean
 }
 /** `href` set = the page exists and the action is a link; without it the action stays a disabled placeholder. */
 export type PendingRouteAction = { label: string; reason: string; href?: string }

@@ -8,6 +8,12 @@ export function mapUploadDocumentError(error: unknown): UploadDocumentError {
   const status = response.response?.status ?? response.status;
   const data = response.response?.data;
   const code = data?.errorCode ?? data?.value?.errorCode ?? data?.data?.errorCode ?? (typeof data?.code === "string" ? data.code : undefined) ?? response.message ?? "UPLOAD_FAILED";
+  if (status === 400 && data?.message === "ExpiryDate is required for this DossierRequirement.") return { code, message: "Expiry date is required for this requirement.", field: "expiryDate" };
+  if (status === 400 && data?.message && [
+    "The document expiry date must be after the planned transport departure date.",
+    "ExpiryDate must not be before IssuedDate.",
+    "The document expiry date must satisfy the DossierRequirement valid_until date.",
+  ].includes(data.message)) return { code, message: data.message, field: "expiryDate" };
   if (code === "FILE_TOO_LARGE" || status === 413) return { code, message: "Each file must be 5 MiB or smaller." };
   if (code === "INVALID_FILE_TYPE") return { code, message: "Only PDF, JPG, JPEG, and PNG files are accepted." };
   if (code === "DOCUMENT_EXPIRES_BEFORE_DEPARTURE") return { code, message: "Expiry date cannot be before transport departure.", field: "expiryDate" };

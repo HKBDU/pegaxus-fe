@@ -71,6 +71,9 @@ export const approvedBookingListItemSchema = z.object({
   customerName: z.string(),
   customerCode: optionalText,
   transportId: entityIdSchema.nullish(),
+  // Proposed AB1 extension: older responses omit the genuine Transport code.
+  // Nullability is not confirmed for AB1; do not inherit it from transportId.
+  transportCode: z.string().optional(),
   routePlan: routeSummarySchema.nullable(),
   approvedAt: z.iso.datetime({ offset: true }).nullish(),
 })

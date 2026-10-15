@@ -180,7 +180,7 @@ export type InvoiceListItem = {
   customerName: string
   totalAmount: number
   currency: InvoiceCurrency
-  dueDate: string
+  dueDate: string | null
   issuedAt: string | null
   paidAt: string | null
   createdAt: string
@@ -189,7 +189,7 @@ export type InvoiceListItem = {
 
 // ---- from view/types.ts ----
 // Read side (IV4, IV5, IV6, IV10). The zod schemas in schemas.ts validate the responses against these shapes.
-export type InvoiceDetail = Invoice
+export type InvoiceDetail = Omit<Invoice, "dueDate"> & { dueDate: string | null }
 
 export type InvoicePage = {
   items: InvoiceListItem[]
