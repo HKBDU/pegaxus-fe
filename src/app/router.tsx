@@ -261,6 +261,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "invoices/:invoiceId",
+            element: (
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}><InvoiceDetailPage /></Suspense>
+              </ProtectedRoute>
+            ),
+          },
+          {
             path: "bookings/:bookingId/edit",
             element: (
               <ProtectedRoute allowedRoles={["CUSTOMER"]}>
