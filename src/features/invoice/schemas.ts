@@ -1,14 +1,15 @@
 import { z } from "zod"
-import { INVOICE_CURRENCIES, invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts, DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_TYPE } from "@/features/invoice/constants"
+import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCIES, invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts, DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_TYPE } from "@/features/invoice/constants"
 import type { CreateInvoicePayload, Invoice, InvoiceItemPayload, UpdateInvoicePayload } from "@/features/invoice/types"
-import { hasAtMostTwoDecimals, parseDecimal, todayIsoDate } from "@/features/invoice/utils"
+import { parseWholeNumber, todayIsoDate } from "@/features/invoice/utils"
 
 // ---- from view/schemas.ts ----
 export const invoiceIdSchema = z.string().trim().min(1)
 const date = z.iso.date()
 const timestamp = z.iso.datetime({ offset: true })
 const text = z.string().nullable()
-const currency = z.enum(INVOICE_CURRENCIES)
+// The app is VND-only: an older row stored in another currency is still read, and shown as VND.
+const currency = z.string().transform((): "VND" => "VND")
 const amount = z.number().finite()
 export const invoiceTypeSchema = z.enum(invoiceTypes)
 export const invoiceStatusSchema = z.enum(invoiceStatuses)
@@ -83,16 +84,16 @@ export const invoiceItemFormSchema = z.object({
   itemType: z.enum(INVOICE_ITEM_TYPE),
   description: z.string().trim().min(1, "Description is required").max(DESCRIPTION_MAX_LENGTH, `At most ${DESCRIPTION_MAX_LENGTH} characters`),
   quantity: z.string().superRefine((value, ctx) => {
-    const quantity = parseDecimal(value)
-    if (Number.isNaN(quantity)) ctx.addIssue({ code: "custom", message: "Enter a number" })
+    const quantity = parseWholeNumber(value)
+    if (Number.isNaN(quantity)) ctx.addIssue({ code: "custom", message: "Enter a whole number" })
     else if (quantity <= 0) ctx.addIssue({ code: "custom", message: "Must be greater than 0" })
-    else if (!hasAtMostTwoDecimals(quantity)) ctx.addIssue({ code: "custom", message: "At most 2 decimals" })
+    else if (!Number.isSafeInteger(quantity)) ctx.addIssue({ code: "custom", message: "Number is too large" })
   }),
   price: z.string().superRefine((value, ctx) => {
-    const price = parseDecimal(value)
-    if (Number.isNaN(price)) ctx.addIssue({ code: "custom", message: "Enter a number" })
+    const price = parseWholeNumber(value)
+    if (Number.isNaN(price)) ctx.addIssue({ code: "custom", message: "Enter a whole amount in VND (no decimals)" })
     else if (price <= 0) ctx.addIssue({ code: "custom", message: "Must be greater than 0" })
-    else if (!hasAtMostTwoDecimals(price)) ctx.addIssue({ code: "custom", message: "At most 2 decimals" })
+    else if (!Number.isSafeInteger(price)) ctx.addIssue({ code: "custom", message: "Amount is too large" })
   }),
   /** "" means the line covers the whole trip. */
   horseId: z.string(),
@@ -121,7 +122,7 @@ export function emptyItem(): InvoiceItemFormValues {
 export function invoiceToFormValues(invoice: Invoice): InvoiceFormValues {
   return {
     type: invoice.type,
-    currency: invoice.currency,
+    currency: DEFAULT_INVOICE_CURRENCY,
     dueDate: invoice.dueDate,
     note: invoice.note ?? "",
     items: invoice.items
@@ -143,8 +144,8 @@ function toItemPayload(item: InvoiceItemFormValues): InvoiceItemPayload {
     ...(item.invoiceItemId ? { invoiceItemId: item.invoiceItemId } : {}),
     itemType: item.itemType,
     description: item.description.trim(),
-    quantity: parseDecimal(item.quantity),
-    price: parseDecimal(item.price),
+    quantity: parseWholeNumber(item.quantity),
+    price: parseWholeNumber(item.price),
     horseId: item.horseId || null,
     note: item.note.trim() || null,
   }

@@ -8,6 +8,8 @@ import type {
 
 export const VEHICLE_LIST_PATH = "/vehicles"
 export const PROVIDER_LIST_PATH = "/transport-providers"
+export const providerDetailPath = (id: string) => `${PROVIDER_LIST_PATH}/${encodeURIComponent(id)}`
+export const providerEditPath = (id: string) => `${providerDetailPath(id)}/edit`
 
 export const vehicleDetailPath = (id: string) => `${VEHICLE_LIST_PATH}/${encodeURIComponent(id)}`
 export const vehicleEditPath = (id: string) => `${vehicleDetailPath(id)}/edit`
@@ -94,7 +96,6 @@ export const EQUIPMENT_PRESETS = [
   "EMERGENCY RESCUE HOIST",
 ] as const
 
-export const PROVIDER_PAGE_SIZE_OPTIONS = [10, 20, 50]
 export const PROVIDER_NOTE_MAX = 500
 
 /** Country codes offered in the provider form (contract: free text, up to 100 chars). */

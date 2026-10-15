@@ -6,7 +6,7 @@ import {
   History,
   ShieldCheck,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ErrorState, LoadingState } from "@/shared/components/common";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { AuthorityInspectionTab } from "@/features/clearance/components/AuthorityInspectionTab";
@@ -55,7 +55,10 @@ function QueryError({
 export default function DossierDetailsPage() {
   const { dossierId = "" } = useParams<{ dossierId: string }>();
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState<SectionId>("requirements");
+  const [searchParams] = useSearchParams();
+  // `?tab=audit` lets the old /audit-history link open straight on its tab of this single page.
+  const requestedTab = sections.find(({ id }) => id === searchParams.get("tab"))?.id;
+  const [activeSection, setActiveSection] = useState<SectionId>(requestedTab ?? "requirements");
   const role = useDossierRole();
   const visibleSections = role === "CUSTOMER" ? sections.filter(({ id }) => id === "requirements" || id === "documents") : sections;
   const query = useDossierOverview(dossierId);
@@ -127,7 +130,7 @@ export default function DossierDetailsPage() {
               aria-labelledby={`dossier-tab-${activeSection}`}
             >
               {activeSection === "requirements" && role !== "CUSTOMER" ? (
-                <DossierRequirementsPanel embedded />
+                <DossierRequirementsPanel />
               ) : activeSection === "requirements" || activeSection === "documents" ? (
                 <DossierRequirementsPreview
                   dossierId={dossierId}
@@ -139,7 +142,7 @@ export default function DossierDetailsPage() {
               ) : activeSection === "authority" ? (
                 <AuthorityInspectionTab dossier={query.data} />
               ) : (
-                <AuditHistoryPanel embedded />
+                <AuditHistoryPanel />
               )}
             </div>
           </>

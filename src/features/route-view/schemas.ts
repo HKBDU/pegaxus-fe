@@ -54,8 +54,8 @@ const optionalNote = z.string().max(4000).trim().optional().transform(value => v
 const optionalCurrency = optionalNote.refine(value => value === undefined || /^[A-Z]{3}$/.test(value), {
   message: "Enter a three-letter uppercase ISO currency code.",
 })
-const extraCost = z.number().finite().min(0).max(9_999_999_999_999_998).refine(value => Number(value.toFixed(2)) === value, {
-  message: "Enter an amount with no more than two decimal places.",
+const extraCost = z.number().finite().min(0).max(9_999_999_999_999_998).refine(Number.isInteger, {
+  message: "Enter a whole amount in VND (no decimals).",
 })
 export const backupChangeRequestSchema = z.object({
   reason: z.string().max(4000).trim().min(10, "Explain the change in at least 10 characters."),

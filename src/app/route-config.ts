@@ -65,6 +65,8 @@ const adminHeaderRoutes = [
   { path: `${ROLE_ROUTES.vehicles}/new`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "ADD NEW VEHICLE" },
   { path: `${ROLE_ROUTES.vehicles}/:vehicleId/edit`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "EDIT VEHICLE" },
   { path: `${ROLE_ROUTES.vehicles}/:vehicleId`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "VEHICLE DETAILS" },
+  { path: `${ROLE_ROUTES.transportProviders}/:providerId/edit`, label: "TRANSPORT PROVIDERS", href: ROLE_ROUTES.transportProviders, title: "EDIT PROVIDER" },
+  { path: `${ROLE_ROUTES.transportProviders}/:providerId`, label: "TRANSPORT PROVIDERS", href: ROLE_ROUTES.transportProviders, title: "PROVIDER DETAILS" },
   { path: ROLE_ROUTES.vehicles, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "" },
   { path: ROLE_ROUTES.transportProviders, label: "TRANSPORT PROVIDERS", href: ROLE_ROUTES.transportProviders, title: "" },
   { path: `${ROLE_ROUTES.transportPlans}/:transportPlanId`, label: "TRANSPORT PLANS", href: ROLE_ROUTES.transportPlans, title: "TRANSPORT PLAN DETAILS" },

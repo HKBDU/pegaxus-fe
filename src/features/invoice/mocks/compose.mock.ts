@@ -100,11 +100,11 @@ function seedInvoices(): Invoice[] {
     note: "Deposit for REQ-20261001-0005", items: [seedItem("OTHER", "Transport deposit", 1, 25000000)], number: "INV-20261002-0003",
   })
   const claimDeposit = buildInvoice({
-    booking: MOCK_BOOKINGS["mock-booking-claim"], type: "DEPOSIT", status: "PAID", currency: "EUR", dueDate: "2026-10-10",
+    booking: MOCK_BOOKINGS["mock-booking-claim"], type: "DEPOSIT", status: "PAID", currency: "VND", dueDate: "2026-10-10",
     note: null, items: [seedItem("OTHER", "Transport deposit", 1, 2000)], number: "INV-20261002-0004",
   })
   const paidFinal = buildInvoice({
-    booking: MOCK_BOOKINGS["mock-booking-claim"], type: "FINAL", status: "PAID", currency: "EUR", dueDate: "2026-10-20",
+    booking: MOCK_BOOKINGS["mock-booking-claim"], type: "FINAL", status: "PAID", currency: "VND", dueDate: "2026-10-20",
     note: null, items: [seedItem("TRANSPORT_FEE", "Transport fee", 1, 6000)], number: "INV-20261012-0005", depositSource: [claimDeposit],
   })
   return [paidDeposit, claimDeposit, paidFinal]
@@ -247,7 +247,7 @@ function precheck(bookingId: string, type: InvoiceType) {
 
 function validate(payload: { currency: string; dueDate: string; items: InvoiceItemPayload[] }, booking: MockBooking) {
   const errors: { field: string; message: string }[] = []
-  if (!(INVOICE_CURRENCIES as readonly string[]).includes(payload.currency)) errors.push({ field: "currency", message: "Currency must be EUR or VND" })
+  if (!(INVOICE_CURRENCIES as readonly string[]).includes(payload.currency)) errors.push({ field: "currency", message: "Currency must be VND" })
   if (!payload.dueDate || payload.dueDate < todayIsoDate()) errors.push({ field: "dueDate", message: "Due date cannot be in the past" })
   payload.items.forEach((item, index) => {
     if (!(item.quantity > 0) || !(item.price > 0)) {

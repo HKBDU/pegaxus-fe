@@ -24,7 +24,7 @@ export const getTypeMeta = (type: string) => TYPE_META[type] ?? FALLBACK_META
 
 export const PRIORITY_CLASSES: Record<NotificationPriority, string> = {
   URGENT: "border-red-200 bg-red-50 text-red-600",
-  HIGH: "border-orange-200 bg-orange-50 text-orange-600",
+  HIGH: "border-amber-200 bg-amber-50 text-[#ef8f00]",
   NORMAL: "border-blue-200 bg-blue-50 text-blue-700",
   LOW: "border-slate-200 bg-slate-50 text-slate-600",
 }

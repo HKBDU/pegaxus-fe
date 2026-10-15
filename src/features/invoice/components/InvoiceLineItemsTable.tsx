@@ -1,23 +1,29 @@
-import { ChevronLeft, ChevronRight, List, Lock, Plus, Trash2 } from "lucide-react"
-import { useState } from "react"
+import { getCoreRowModel, getPaginationRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
+import { List, Lock, Plus, Trash2 } from "lucide-react"
+import { useMemo, useState } from "react"
 import { Controller, useFieldArray, useFormContext } from "react-hook-form"
 
 import { DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_ITEM_TYPE_LABELS } from "@/features/invoice/constants"
 import { emptyItem, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { InvoiceCurrency, InvoiceItem } from "@/features/invoice/types"
-import { formatMoney, parseDecimal, roundMoney } from "@/features/invoice/utils"
+import { formatMoney, parseWholeNumber, roundMoney } from "@/features/invoice/utils"
 import { cn } from "@/lib/utils"
+import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Button } from "@/shared/components/ui/button"
+import { DataTable } from "@/shared/components/ui/data-table"
 import { Input } from "@/shared/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 
 const NO_HORSE = "__none__"
-export const LINES_PER_PAGE = 5
+const DEFAULT_PAGE_SIZE = 5
 
-const headClass = "h-9 whitespace-nowrap border-b border-[#e5e2d9] bg-[#f7f6f3] px-2 text-left font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-500"
-const cellClass = "border-b border-[#eeece6] px-2 py-1.5 align-middle"
-const inputClass = "h-8 w-full rounded-none border-[#d8d5cb] bg-white px-2 text-xs shadow-none"
-const selectClass = "h-8 w-full rounded-none border-[#d8d5cb] px-2 text-xs shadow-none"
+const inputClass = "h-8 w-full rounded-[2px] border-slate-300 bg-white px-2 text-xs shadow-none focus-visible:border-amber-500 focus-visible:ring-amber-500/20"
+const selectClass = "h-8 w-full rounded-[2px] border-slate-300 bg-white px-2 text-xs shadow-none"
+const selectContentClass = "rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md"
+const selectItemClass = "h-7 rounded-[2px] text-xs"
+
+/** A table row is either a read-only deposit deduction or the n-th editable line of the form array. */
+type LineRow = { kind: "deduction"; item: InvoiceItem } | { kind: "line"; index: number }
 
 interface InvoiceLineItemsTableProps {
   currency: InvoiceCurrency
@@ -30,211 +36,267 @@ interface InvoiceLineItemsTableProps {
 }
 
 /**
- * "Line items" of the create/edit dialog: every field of a line is an input in the table row. The manager lines are
- * paged (LINES_PER_PAGE per page) so a long invoice never makes the dialog grow without limit.
+ * "Line items" of the create/edit dialog: a data table whose rows are inputs. It is paged like the transport request
+ * table (rows per page + page buttons), so a long invoice never makes the dialog grow without limit.
  */
+/** Amounts are whole VND: keep decimal separators, exponents and signs out of the field. */
+function blockNonDigitKeys(event: React.KeyboardEvent<HTMLInputElement>) {
+  if ([".", ",", "e", "E", "+", "-"].includes(event.key)) event.preventDefault()
+}
+
+type LineErrors = ({ [key: string]: { message?: string } | undefined } | undefined)[]
+
+/** Row errors travel through the table `meta` so the memoised columns never close over them. */
+function hasLineError(table: { options: { meta?: unknown } }, index: number, field: string) {
+  const lineErrors = (table.options.meta as { lineErrors?: LineErrors } | undefined)?.lineErrors
+  return Boolean(lineErrors?.[index]?.[field])
+}
+
 export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems, focusRow, disabled = false }: InvoiceLineItemsTableProps) {
   const { control, register, watch, formState: { errors } } = useFormContext<InvoiceFormValues>()
   const { fields, append, remove } = useFieldArray({ control, name: "items" })
-  const [page, setPage] = useState(0)
-  const pageCount = Math.max(1, Math.ceil(fields.length / LINES_PER_PAGE))
-  const currentPage = Math.min(page, pageCount - 1)
-  const start = currentPage * LINES_PER_PAGE
-  const visible = fields.slice(start, start + LINES_PER_PAGE)
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: DEFAULT_PAGE_SIZE })
+
+  const rows = useMemo<LineRow[]>(
+    () => [
+      ...depositDeductionItems.map((item) => ({ kind: "deduction", item }) as const),
+      ...fields.map((_, index) => ({ kind: "line", index }) as const),
+    ],
+    [depositDeductionItems, fields],
+  )
+  const total = rows.length
+  const pageCount = Math.max(1, Math.ceil(total / pagination.pageSize))
+  const pageIndex = Math.min(pagination.pageIndex, pageCount - 1)
 
   // A failed submit points at the first invalid line, which may be on another page (adjusted while rendering, once per request).
   const [handledNonce, setHandledNonce] = useState<number | null>(null)
   if (focusRow && focusRow.nonce !== handledNonce) {
     setHandledNonce(focusRow.nonce)
-    setPage(Math.floor(focusRow.index / LINES_PER_PAGE))
+    setPagination((current) => ({ ...current, pageIndex: Math.floor((depositDeductionItems.length + focusRow.index) / current.pageSize) }))
   }
 
   function addLine() {
     append(emptyItem(), { shouldFocus: false })
-    setPage(Math.floor(fields.length / LINES_PER_PAGE))
+    setPagination((current) => ({ ...current, pageIndex: Math.floor(total / current.pageSize) }))
   }
 
-  const lineErrors = (errors.items ?? []) as ({ [key: string]: { message?: string } | undefined } | undefined)[]
+  const lineErrors = (errors.items ?? []) as LineErrors
   const errorMessages = lineErrors.flatMap((line, index) =>
     line ? Object.values(line).filter((field) => field?.message).slice(0, 1).map((field) => `Line ${index + 1}: ${field?.message}`) : [],
   )
-  const total = depositDeductionItems.length + fields.length
+
+  // The columns must keep the same identity between renders: TanStack renders each `cell` function as a component,
+  // so rebuilding them on every keystroke remounts the inputs and drops the focus after one character.
+  // Anything that changes while typing (the row errors) is read from the table `meta` instead of the closure.
+  const columns = useMemo<ColumnDef<LineRow>[]>(() => [
+    {
+      id: "no",
+      header: "#",
+      cell: ({ row }) => <span className="text-gray-500">{row.index + 1}</span>,
+    },
+    {
+      id: "itemType",
+      header: "FEE TYPE",
+      cell: ({ row }) =>
+        row.original.kind === "deduction" ? (
+          <span className="block min-w-32">{INVOICE_ITEM_TYPE_LABELS[row.original.item.itemType]}</span>
+        ) : (
+          <Controller
+            control={control}
+            name={`items.${row.original.index}.itemType`}
+            render={({ field: typeField }) => (
+              <Select value={typeField.value} onValueChange={typeField.onChange} disabled={disabled}>
+                <SelectTrigger aria-label={`Fee type of line ${row.index + 1}`} className={cn(selectClass, "min-w-32")}><SelectValue /></SelectTrigger>
+                <SelectContent className={selectContentClass}>
+                  {Object.values(INVOICE_ITEM_TYPE).map((itemType) => <SelectItem key={itemType} value={itemType} className={selectItemClass}>{INVOICE_ITEM_TYPE_LABELS[itemType]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        ),
+    },
+    {
+      id: "description",
+      header: "DESCRIPTION",
+      cell: ({ row, table }) => {
+        const line = row.original
+        if (line.kind === "deduction") {
+          return (
+            <div className="min-w-52">
+              <p className="m-0 truncate font-medium text-gray-900" title={line.item.description}>{line.item.description}</p>
+              <p className="m-0 text-[11px] text-gray-500">Added from a paid deposit, read-only</p>
+            </div>
+          )
+        }
+        return (
+          <Input
+            aria-label={`Description of line ${row.index + 1}`}
+            className={cn(inputClass, "min-w-52", hasLineError(table, line.index, "description") && "border-red-500")}
+            maxLength={DESCRIPTION_MAX_LENGTH}
+            disabled={disabled}
+            aria-invalid={hasLineError(table, line.index, "description")}
+            {...register(`items.${line.index}.description`)}
+          />
+        )
+      },
+    },
+    {
+      id: "horse",
+      header: "HORSE",
+      cell: ({ row }) =>
+        row.original.kind === "deduction" ? null : (
+          <Controller
+            control={control}
+            name={`items.${row.original.index}.horseId`}
+            render={({ field: horseField }) => (
+              <Select value={horseField.value || NO_HORSE} onValueChange={(value) => horseField.onChange(value === NO_HORSE ? "" : value)} disabled={disabled}>
+                <SelectTrigger aria-label={`Horse of line ${row.index + 1}`} className={cn(selectClass, "min-w-32")}><SelectValue /></SelectTrigger>
+                <SelectContent className={selectContentClass}>
+                  <SelectItem value={NO_HORSE} className={selectItemClass}>Whole trip</SelectItem>
+                  {horses.map((horse) => <SelectItem key={horse.horseId} value={horse.horseId} className={selectItemClass}>{horse.horseName}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        ),
+    },
+    {
+      id: "quantity",
+      header: "QTY",
+      cell: ({ row, table }) => {
+        const line = row.original
+        if (line.kind === "deduction") return <span className="tabular-nums">{line.item.quantity}</span>
+        return (
+          <Input
+            aria-label={`Quantity of line ${row.index + 1}`}
+            inputMode="numeric"
+            onKeyDown={blockNonDigitKeys}
+            className={cn(inputClass, "w-16", hasLineError(table, line.index, "quantity") && "border-red-500")}
+            disabled={disabled}
+            aria-invalid={hasLineError(table, line.index, "quantity")}
+            {...register(`items.${line.index}.quantity`)}
+          />
+        )
+      },
+    },
+    {
+      id: "price",
+      header: "UNIT PRICE",
+      cell: ({ row, table }) => {
+        const line = row.original
+        if (line.kind === "deduction") return <span className="whitespace-nowrap tabular-nums">{formatMoney(line.item.price, currency)}</span>
+        return (
+          <Input
+            aria-label={`Unit price of line ${row.index + 1}`}
+            inputMode="numeric"
+            onKeyDown={blockNonDigitKeys}
+            className={cn(inputClass, "w-28", hasLineError(table, line.index, "price") && "border-red-500")}
+            disabled={disabled}
+            aria-invalid={hasLineError(table, line.index, "price")}
+            {...register(`items.${line.index}.price`)}
+          />
+        )
+      },
+    },
+    {
+      id: "amount",
+      header: () => <span className="block w-full text-right">AMOUNT</span>,
+      cell: ({ row }) => {
+        const line = row.original
+        if (line.kind === "deduction") return <span className="block whitespace-nowrap text-right font-medium tabular-nums">{formatMoney(line.item.total, currency)}</span>
+        const quantity = parseWholeNumber(watch(`items.${line.index}.quantity`) ?? "")
+        const price = parseWholeNumber(watch(`items.${line.index}.price`) ?? "")
+        const amount = Number.isNaN(quantity) || Number.isNaN(price) ? null : roundMoney(quantity * price)
+        return <span className={cn("block whitespace-nowrap text-right font-medium tabular-nums", amount === null && "text-gray-400")}>{amount === null ? "—" : formatMoney(amount, currency)}</span>
+      },
+    },
+    {
+      id: "note",
+      header: "NOTE",
+      cell: ({ row }) =>
+        row.original.kind === "deduction" ? null : <Input aria-label={`Note of line ${row.index + 1}`} className={cn(inputClass, "min-w-32")} disabled={disabled} {...register(`items.${row.original.index}.note`)} />,
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) =>
+        row.original.kind === "deduction" ? (
+          <div className="flex justify-center text-emerald-700"><Lock className="size-3.5" aria-label="Locked" /></div>
+        ) : (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              disabled={disabled}
+              className="flex size-7 items-center justify-center rounded-[2px] text-red-500 hover:bg-red-50 disabled:opacity-50"
+              aria-label={`Delete line ${row.index + 1}`}
+              onClick={() => remove((row.original as { kind: "line"; index: number }).index)}
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </div>
+        ),
+    },
+  ], [control, register, watch, remove, horses, currency, disabled])
+
+  const table = useReactTable({
+    data: rows,
+    columns,
+    meta: { lineErrors },
+    state: { pagination: { pageIndex, pageSize: pagination.pageSize } },
+    onPaginationChange: (updater) => setPagination((current) => (typeof updater === "function" ? updater({ pageIndex, pageSize: current.pageSize }) : updater)),
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+  })
 
   return (
     <section className="border border-[#e5e2d9] bg-white" aria-label="Line items">
       <div className="flex items-center justify-between gap-2 border-b border-[#e5e2d9] bg-[#f7f6f3] px-4 py-2.5">
         <h3 className="m-0! flex items-center gap-2 font-heading text-[13px]! font-bold! uppercase tracking-[0.04em]! text-gray-900!">
-          <List className="size-4 text-orange-600" aria-hidden="true" />
+          <List className="size-4 text-[#ef8f00]" aria-hidden="true" />
           Line items ({total})
         </h3>
-        <Button type="button" variant="outline" size="sm" disabled={disabled} className="h-8 rounded-none border-gray-900 bg-white text-xs" onClick={addLine}>
+        <Button type="button" variant="outline" size="sm" disabled={disabled} className="h-8 rounded-[2px] border-gray-900 bg-white text-xs" onClick={addLine}>
           <Plus className="size-3.5" aria-hidden="true" />
           Add line
         </Button>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] table-fixed border-collapse text-xs">
-          <colgroup>
-            <col className="w-10" />
-            <col className="w-[150px]" />
-            <col />
-            <col className="w-[150px]" />
-            <col className="w-[72px]" />
-            <col className="w-[120px]" />
-            <col className="w-[120px]" />
-            <col className="w-[160px]" />
-            <col className="w-10" />
-          </colgroup>
-          <thead>
-            <tr>
-              <th className={headClass}>#</th>
-              <th className={headClass}>Fee type</th>
-              <th className={headClass}>Description</th>
-              <th className={headClass}>Horse</th>
-              <th className={headClass}>Qty</th>
-              <th className={headClass}>Unit price</th>
-              <th className={cn(headClass, "text-right")}>Amount</th>
-              <th className={headClass}>Note</th>
-              <th className={headClass}><span className="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            {depositDeductionItems.map((item, index) => (
-              <tr key={item.invoiceItemId ?? item.description} className="bg-emerald-50/60">
-                <td className={cn(cellClass, "text-gray-500")}>{index + 1}</td>
-                <td className={cellClass}>{INVOICE_ITEM_TYPE_LABELS[item.itemType]}</td>
-                <td className={cellClass} colSpan={2}>
-                  <p className="truncate font-medium text-gray-900" title={item.description}>{item.description}</p>
-                  <p className="text-[11px] text-gray-500">Added from a paid deposit, read-only</p>
-                </td>
-                <td className={cn(cellClass, "tabular-nums")}>{item.quantity}</td>
-                <td className={cn(cellClass, "whitespace-nowrap tabular-nums")}>{formatMoney(item.price, currency)}</td>
-                <td className={cn(cellClass, "whitespace-nowrap text-right font-medium tabular-nums")}>{formatMoney(item.total, currency)}</td>
-                <td className={cellClass} />
-                <td className={cn(cellClass, "text-emerald-700")}><Lock className="size-3.5" aria-label="Locked" /></td>
-              </tr>
-            ))}
-
-            {visible.map((field, offset) => {
-              const index = start + offset
-              const row = lineErrors[index]
-              const quantity = parseDecimal(watch(`items.${index}.quantity`) ?? "")
-              const price = parseDecimal(watch(`items.${index}.price`) ?? "")
-              const amount = Number.isNaN(quantity) || Number.isNaN(price) ? null : roundMoney(quantity * price)
-              return (
-                <tr key={field.id} className={cn(focusRow?.index === index && "bg-orange-50/50")}>
-                  <td className={cn(cellClass, "text-gray-500")}>{depositDeductionItems.length + index + 1}</td>
-                  <td className={cellClass}>
-                    <Controller
-                      control={control}
-                      name={`items.${index}.itemType`}
-                      render={({ field: typeField }) => (
-                        <Select value={typeField.value} onValueChange={typeField.onChange} disabled={disabled}>
-                          <SelectTrigger aria-label={`Fee type of line ${index + 1}`} className={selectClass}><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {Object.values(INVOICE_ITEM_TYPE).map((itemType) => <SelectItem key={itemType} value={itemType}>{INVOICE_ITEM_TYPE_LABELS[itemType]}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </td>
-                  <td className={cellClass}>
-                    <Input
-                      aria-label={`Description of line ${index + 1}`}
-                      className={cn(inputClass, row?.description && "border-red-500")}
-                      maxLength={DESCRIPTION_MAX_LENGTH}
-                      disabled={disabled}
-                      aria-invalid={Boolean(row?.description)}
-                      {...register(`items.${index}.description`)}
-                    />
-                  </td>
-                  <td className={cellClass}>
-                    <Controller
-                      control={control}
-                      name={`items.${index}.horseId`}
-                      render={({ field: horseField }) => (
-                        <Select value={horseField.value || NO_HORSE} onValueChange={(value) => horseField.onChange(value === NO_HORSE ? "" : value)} disabled={disabled}>
-                          <SelectTrigger aria-label={`Horse of line ${index + 1}`} className={selectClass}><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={NO_HORSE}>Whole trip</SelectItem>
-                            {horses.map((horse) => <SelectItem key={horse.horseId} value={horse.horseId}>{horse.horseName}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </td>
-                  <td className={cellClass}>
-                    <Input
-                      aria-label={`Quantity of line ${index + 1}`}
-                      inputMode="decimal"
-                      className={cn(inputClass, row?.quantity && "border-red-500")}
-                      disabled={disabled}
-                      aria-invalid={Boolean(row?.quantity)}
-                      {...register(`items.${index}.quantity`)}
-                    />
-                  </td>
-                  <td className={cellClass}>
-                    <Input
-                      aria-label={`Unit price of line ${index + 1}`}
-                      inputMode="decimal"
-                      className={cn(inputClass, row?.price && "border-red-500")}
-                      disabled={disabled}
-                      aria-invalid={Boolean(row?.price)}
-                      {...register(`items.${index}.price`)}
-                    />
-                  </td>
-                  <td className={cn(cellClass, "whitespace-nowrap text-right font-medium tabular-nums", amount === null && "text-gray-400")}>
-                    {amount === null ? "—" : formatMoney(amount, currency)}
-                  </td>
-                  <td className={cellClass}>
-                    <Input aria-label={`Note of line ${index + 1}`} className={inputClass} disabled={disabled} {...register(`items.${index}.note`)} />
-                  </td>
-                  <td className={cellClass}>
-                    <button
-                      type="button"
-                      disabled={disabled}
-                      className="flex size-7 items-center justify-center text-red-500 hover:bg-red-50 disabled:opacity-50"
-                      aria-label={`Delete line ${index + 1}`}
-                      onClick={() => remove(index)}
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </td>
-                </tr>
-              )
-            })}
-
-            {total === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-gray-500">
-                  No fee lines yet. A draft can be saved without lines, but it cannot be issued until it has at least one.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+      <div className="p-3">
+        <DataTable
+          table={table}
+          className="gap-2.5"
+          containerClassName="booking-panel overflow-x-auto"
+          tableClassName="min-w-[900px]"
+          headerClassName="bg-[#e9e6de]"
+          headerCellClassName="h-10 whitespace-nowrap px-2 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
+          rowClassName={cn("border-slate-200 hover:bg-amber-50/60")}
+          cellClassName="px-2 py-1.5 text-xs"
+          emptyMessage="No fee lines yet. A draft can be saved without lines, but it cannot be issued until it has at least one."
+          footer={
+            total > 0 ? (
+              <TablePagination
+                meta={{
+                  totalItems: total,
+                  totalPages: pageCount,
+                  itemsPerPage: pagination.pageSize,
+                  currentPage: pageIndex + 1,
+                  hasPreviousPage: pageIndex > 0,
+                  hasNextPage: pageIndex < pageCount - 1,
+                }}
+                onPageChange={(page) => setPagination((current) => ({ ...current, pageIndex: page - 1 }))}
+                onPageSizeChange={(pageSize) => setPagination({ pageIndex: 0, pageSize })}
+                pageSizeAriaLabel="Lines per page"
+              />
+            ) : null
+          }
+        />
       </div>
 
       {errorMessages.length ? (
         <p className="border-t border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700" role="alert">
           {errorMessages.slice(0, 3).join(" · ")}{errorMessages.length > 3 ? ` · +${errorMessages.length - 3} more` : ""}
         </p>
-      ) : null}
-
-      {pageCount > 1 ? (
-        <div className="flex items-center justify-between gap-3 border-t border-[#e5e2d9] bg-[#f7f6f3] px-4 py-2 text-xs text-gray-600">
-          <span>Lines {start + 1}–{Math.min(start + LINES_PER_PAGE, fields.length)} of {fields.length}</span>
-          <div className="flex items-center gap-1">
-            <Button type="button" variant="outline" size="icon" className="size-7 rounded-none" aria-label="Previous page" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>
-              <ChevronLeft className="size-4" />
-            </Button>
-            <span className="min-w-16 text-center tabular-nums">Page {currentPage + 1} / {pageCount}</span>
-            <Button type="button" variant="outline" size="icon" className="size-7 rounded-none" aria-label="Next page" disabled={currentPage >= pageCount - 1} onClick={() => setPage(currentPage + 1)}>
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        </div>
       ) : null}
     </section>
   )

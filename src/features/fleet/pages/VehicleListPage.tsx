@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react"
-import { Plus } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 
 import { canAccess } from "@/features/auth/access-control"
@@ -11,11 +10,10 @@ import { useVehicles } from "@/features/fleet/hooks"
 import type { VehicleListParams } from "@/features/fleet/types"
 import { ErrorState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
-import { Button } from "@/shared/components/ui/button"
 
 const initialParams: VehicleListParams = {
   pageIndex: 1,
-  pageSize: 8,
+  pageSize: 10,
   search: "",
   // Internal fleet is road-only (task doc, UC-43): the list is always filtered to ROAD.
   transportMode: "ROAD",
@@ -42,24 +40,9 @@ export default function VehicleListPage() {
 
   return (
     <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
-      <div className="booking-page-enter mx-auto w-full max-w-[1280px]">
+      <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         <div className="mb-6">
-          <PageHeader
-            title="SPECIALIZED VEHICLES"
-            backHref={isManager ? "/admin" : "/"}
-            backLabel="RETURN TO FLEET OVERVIEW"
-            action={
-              <Button
-                type="button"
-                size="sm"
-                className="h-10 shrink-0 rounded-[2px] bg-[#ef8f00] px-4 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-slate-950 hover:bg-[#db8300]"
-                onClick={() => navigate(`${VEHICLE_LIST_PATH}/new`)}
-              >
-                <Plus className="size-4" />
-                Add new vehicle
-              </Button>
-            }
-          />
+          <PageHeader title="SPECIALIZED VEHICLES" backHref={isManager ? "/admin" : "/"} backLabel="RETURN TO FLEET OVERVIEW" />
         </div>
 
         {vehiclesQuery.isLoading && !vehiclesQuery.data ? <FleetListSkeleton columns={9} /> : null}
@@ -72,8 +55,9 @@ export default function VehicleListPage() {
             isLoading={vehiclesQuery.isFetching}
             onSearchChange={handleSearchChange}
             onPatch={patchFilters}
-            onReset={() => setParams(initialParams)}
             onPageChange={(pageIndex) => setParams((current) => ({ ...current, pageIndex }))}
+            onPageSizeChange={(pageSize) => setParams((current) => ({ ...current, pageSize, pageIndex: 1 }))}
+            onAdd={() => navigate(`${VEHICLE_LIST_PATH}/new`)}
           />
         ) : null}
       </div>

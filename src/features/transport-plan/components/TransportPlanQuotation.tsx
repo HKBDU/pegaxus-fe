@@ -15,7 +15,7 @@ export function QuotationDetails({ quotation }: { quotation: Quotation }) {
     <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
       <Field label="Quotation status"><ApprovedBookingBadge value={quotation.status} /></Field>
       <Field label="Version">{String(quotation.versionNo)}</Field>
-      <Field label="Currency">{quotation.currency}</Field>
+      <Field label="Currency">VND</Field>
       <Field label="Issued at">{formatPlanDate(quotation.issuedAt)}</Field>
     </dl>
     {quotation.items.length ? <Table className="text-xs [&_td]:h-11 [&_td]:px-2.5 [&_td]:py-1.5">
@@ -23,11 +23,11 @@ export function QuotationDetails({ quotation }: { quotation: Quotation }) {
       <TableBody>{quotation.items.map((item) => <TableRow key={item.quotationItemId}>
         <TableCell className="whitespace-nowrap">{item.category.replaceAll("_", " ")}</TableCell>
         <TableCell className="min-w-44 whitespace-pre-wrap">{item.description}</TableCell>
-        <TableCell className="whitespace-nowrap text-right tabular-nums">{formatPlanMoney(item.amount, quotation.currency)}</TableCell>
+        <TableCell className="whitespace-nowrap text-right tabular-nums">{formatPlanMoney(item.amount)}</TableCell>
       </TableRow>)}</TableBody>
     </Table> : <EmptyState message="No cost breakdown has been added to this quotation." />}
     <dl className="grid gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2">
-      <Field label="Total amount"><span className="font-semibold text-primary">{formatPlanMoney(quotation.totalAmount, quotation.currency)}</span></Field>
+      <Field label="Total amount"><span className="font-semibold text-primary">{formatPlanMoney(quotation.totalAmount)}</span></Field>
       <Field label="Quotation notes">{quotation.note}</Field>
     </dl>
   </Section>
