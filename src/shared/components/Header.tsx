@@ -1,9 +1,9 @@
-import { Bell, House, MapPin, Menu, Truck } from "lucide-react"
+import { House, MapPin, Menu, Truck } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
+import { NotificationBell } from "@/features/notification"
 import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu"
-import { Button } from "@/shared/components/ui/button"
 import { ProfileDropdown } from "@/shared/components/ProfileDropdown"
 import {
   Sidebar,
@@ -76,8 +76,6 @@ export function Header({
   logoAlt = "Pegaxus",
   isLoggedIn = false,
   user = null,
-  notificationCount = 1,
-  onNotificationClick,
   rightContent,
   className,
 }: HeaderProps) {
@@ -89,21 +87,8 @@ export function Header({
   const navItemCount = Math.max(navItems.length, 1)
   const activeBarWidth = 65
 
-  const notificationButton = (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      aria-label={`Notifications${notificationCount > 0 ? ` (${notificationCount} unread)` : ""}`}
-      className="relative text-[#d7d9dc] hover:bg-white/10 hover:text-white"
-      onClick={onNotificationClick}
-    >
-      <Bell className="size-[18px]" />
-      {notificationCount > 0 && (
-        <span className="absolute right-1.5 top-1.5 flex size-2 items-center justify-center rounded-full bg-[#f5ad22]" />
-      )}
-    </Button>
-  )
+  // Live unread count + latest notifications; only for a signed-in user.
+  const notificationButton = isLoggedIn ? <NotificationBell /> : null
 
   return (
     <SidebarProvider defaultOpen={false} className="sticky top-0 z-50 !min-h-0 w-full">
