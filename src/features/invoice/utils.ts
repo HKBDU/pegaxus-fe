@@ -12,7 +12,7 @@ type MockEnvironment = { PROD?: boolean; VITE_INVOICE_API_MOCKS?: string }
  * on by default in development; set VITE_INVOICE_API_MOCKS=false to call the real API. Never on in a production build.
  */
 export function isInvoiceMockMode(env: MockEnvironment = import.meta.env) {
-  return env.PROD !== true && env.VITE_INVOICE_API_MOCKS !== "false"
+  return env.PROD !== true && env.VITE_INVOICE_API_MOCKS === "true"
 }
 
 // ---- from view/format.ts ----
@@ -29,8 +29,7 @@ export function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
-/** Money formatted by the invoice currency (never hard-coded), negative amounts keep their sign. */
-export function formatMoney(amount: number, currency: InvoiceCurrency) {
+export function formatMoney(amount: number, currency: InvoiceCurrency = "VND") {
   const fractionDigits = currency === "VND" ? 0 : 2
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -132,12 +131,13 @@ export function mapPaymentError(error: unknown): PaymentErrorState {
   }
 }
 
-// ---- from payment/utils/payment.format.ts ----
-export function formatPaymentAmount(amount: number, currency: InvoiceCurrency) {
+export function formatPaymentAmount(amount: number, currency: InvoiceCurrency = "VND") {
+  const fractionDigits = currency === "VND" ? 0 : 2
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(amount)
 }
 

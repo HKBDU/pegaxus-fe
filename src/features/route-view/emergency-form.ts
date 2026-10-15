@@ -2,7 +2,7 @@ import { z } from "zod"
 import { transportPlanFormSchema } from "@/features/transport-plan/schemas"
 import { backupChangeRequestSchema } from "./schemas"
 
-export const backupRequestDefaults = { reason: "", newEstimatedArrivalAt: "", estimatedExtraCost: "", currency: "", note: "" }
+export const backupRequestDefaults = { reason: "", newEstimatedArrivalAt: "", estimatedExtraCost: "", currency: "VND", note: "" }
 export type BackupRequestValues = typeof backupRequestDefaults
 const eta = transportPlanFormSchema.shape.plannedStartAt
 const validCost = (value: string) => {

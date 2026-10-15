@@ -54,7 +54,7 @@ export const INVOICE_ACTION = {
   CREATE_ANOTHER: 'CREATE_ANOTHER',
 } as const
 
-export const INVOICE_CURRENCIES = ['EUR', 'VND'] as const
+export const INVOICE_CURRENCIES = ['VND'] as const
 
 export const INVOICE_TAX_RATE_PERCENT = 20
 
@@ -168,7 +168,7 @@ export const PAYMENT_METHOD_VALUES = [
 // ---- from compose/constants.ts ----
 // Enums, labels and colors live in `shared/constants` (DB V8 values). Only what the compose screens add is kept here.
 
-export const DEFAULT_INVOICE_CURRENCY: InvoiceCurrency = "EUR"
+export const DEFAULT_INVOICE_CURRENCY: InvoiceCurrency = "VND"
 
 export const DESCRIPTION_MAX_LENGTH = 500
 
@@ -210,7 +210,6 @@ export const INVOICE_ERROR_MESSAGES: Record<string, string> = {
 }
 
 export const INVOICE_CURRENCY_LABELS: Record<InvoiceCurrency, string> = {
-  EUR: "EUR - Euro",
   VND: "VND - Vietnamese dong",
 }
 
