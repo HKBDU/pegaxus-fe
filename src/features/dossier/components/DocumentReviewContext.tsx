@@ -1,5 +1,6 @@
 import { ShieldCheck } from "lucide-react";
 import { formatBookingDate } from "@/features/booking/utils";
+import { formatDossierProgress } from "../lib/progress";
 import type { ComplianceDocumentDetail, DossierOverview, DossierRequirement } from "../types";
 
 export function DocumentReviewContext({ dossier, requirement, document }: {
@@ -33,7 +34,7 @@ export function DocumentReviewContext({ dossier, requirement, document }: {
           {context.map(([label, value]) => <div key={label} className="flex justify-between gap-4"><dt className="shrink-0 text-slate-500">{label}</dt><dd className="break-words text-right font-medium text-slate-900">{value}</dd></div>)}
         </dl>
         <div className="space-y-2 border-t border-slate-200 pt-3 text-xs">
-          <div className="flex justify-between gap-3"><strong>Dossier Progress</strong><strong className="text-primary">{dossier.progressPercent}%</strong></div>
+          <div className="flex justify-between gap-3"><strong>Dossier Progress</strong><strong className="text-primary">{formatDossierProgress(dossier.progressPercent)}</strong></div>
           <div role="progressbar" aria-label="Mandatory dossier progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={dossier.progressPercent} className="h-2 overflow-hidden rounded-full bg-slate-100">
             <div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, dossier.progressPercent))}%` }} />
           </div>

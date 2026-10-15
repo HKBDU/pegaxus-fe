@@ -126,9 +126,9 @@ export default function DossierDetailsPage() {
               id={`dossier-panel-${activeSection}`}
               aria-labelledby={`dossier-tab-${activeSection}`}
             >
-              {activeSection === "requirements" ? (
+              {activeSection === "requirements" && role !== "CUSTOMER" ? (
                 <DossierRequirementsPanel embedded />
-              ) : activeSection === "documents" ? (
+              ) : activeSection === "requirements" || activeSection === "documents" ? (
                 <DossierRequirementsPreview
                   dossierId={dossierId}
                   horses={query.data.bookingSummary.horses}

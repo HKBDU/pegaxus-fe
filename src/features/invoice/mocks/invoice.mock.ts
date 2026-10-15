@@ -1,6 +1,6 @@
 import { canAccess } from "@/features/auth/access-control"
 import { adoptMockInvoice, listMockInvoices } from "@/features/invoice/mocks/compose.mock"
-import type { Invoice, InvoiceDetail, InvoiceListItem, InvoiceQueryParams, BookingInvoiceQueryParams } from "@/features/invoice/types"
+import type { InvoiceDetail, InvoiceListItem, InvoiceQueryParams, BookingInvoiceQueryParams } from "@/features/invoice/types"
 import { useAuthStore } from "@/features/auth/store"
 import { createInvoiceFixtures, createInvoiceHistoryFixtures, invoiceMockEmptyBookingId } from "@/features/invoice/mocks/fixtures"
 
@@ -34,7 +34,8 @@ function page(invoices: InvoiceDetail[], query: InvoiceQueryParams | BookingInvo
     && (!search || [item.invoiceNumber, item.bookingCode, item.customerName].some(value => value.toLowerCase().includes(search)))
     && (!params.issuedFrom || (item.issuedAt && item.issuedAt.slice(0, 10) >= params.issuedFrom))
     && (!params.issuedTo || (item.issuedAt && item.issuedAt.slice(0, 10) <= params.issuedTo))
-    && (!params.dueFrom || item.dueDate >= params.dueFrom) && (!params.dueTo || item.dueDate <= params.dueTo))
+    && (!params.dueFrom || (item.dueDate !== null && item.dueDate >= params.dueFrom))
+    && (!params.dueTo || (item.dueDate !== null && item.dueDate <= params.dueTo)))
   const [field, direction] = query.sortBy.split(":") as ["createdAt" | "issuedAt" | "dueDate" | "totalAmount", "asc" | "desc"]
   items.sort((a, b) => {
     const left = a[field], right = b[field]
@@ -81,7 +82,7 @@ export const invoiceMock = {
     if (!invoice || (!ctx.manager && invoice.customer.customerId !== ctx.customerId)) return failure(404, "INVOICE_NOT_FOUND", "Invoice not found.")
     if (!ctx.manager && !invoice.issuedAt) return failure(403, "FORBIDDEN", "Customer cannot view draft invoices.")
     if (ctx.manager) {
-      adoptMockInvoice(invoice as unknown as Invoice)
+      if (invoice.dueDate !== null) adoptMockInvoice({ ...invoice, dueDate: invoice.dueDate })
       invoice.availableActions = ["CREATE_ANOTHER"]
       if (invoice.status === "DRAFT") invoice.availableActions.push("EDIT", "ISSUE")
       if (["DRAFT", "ISSUED", "OVERDUE"].includes(invoice.status) && !invoice.receipts.some(receipt => receipt.status === "CONFIRMED")) invoice.availableActions.push("CANCEL")

@@ -34,10 +34,10 @@ export default function ApprovedBookingsPage() {
   }
   const filters = <ApprovedBookingFilters params={params} onChange={changeFilters} />
 
-  return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
-    <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
+  return <div className="flow3-ui booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-4 py-4 font-sans sm:px-6 lg:py-6">
+    <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-4">
       <Flow3MockIndicator />
-      <div><PageHeader title={role ? workspaceLabels[role].list : "Transports"} backHref={ROLE_ROUTES.managerHome} showBack={false} />
+      <div className="space-y-1 border-b border-slate-200 pb-4"><PageHeader className="[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl" title={role ? workspaceLabels[role].list : "Transports"} backHref={ROLE_ROUTES.managerHome} showBack={false} />
         <p className="text-xs text-slate-500 sm:text-sm">{subtitle}</p></div>
       {error ? <>{filters}<ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /></> :
         <ApprovedBookingsTable bookings={query.data?.data ?? []} params={params} meta={meta} isLoading={query.isFetching || isSearchPending}

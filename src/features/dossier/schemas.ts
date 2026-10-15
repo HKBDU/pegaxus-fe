@@ -290,28 +290,43 @@ function validateMetadataDates(
     context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date cannot be before transport departure." });
   }
 }
+// Domain policy input, not a claim that the Customer read DTO exposes a flag.
+export function getDocumentExpiryPolicy(validUntil: string | null, validityRequired?: boolean | null) {
+  if (validUntil || validityRequired === true) return "required";
+  if (validityRequired === false) return "optional";
+  return validityRequired === null ? "unknown" : "not-provided";
+}
+export function isDocumentExpiryRequired(validUntil: string | null, validityRequired?: boolean | null) {
+  return getDocumentExpiryPolicy(validUntil, validityRequired) === "required";
+}
 export const createUploadDocumentSchema = (
   validUntil: string | null,
   plannedDepartureDate?: string | null,
-) => createDocumentSubmissionSchema(validUntil, plannedDepartureDate, "initial");
+  validityRequired?: boolean | null,
+) => createDocumentSubmissionSchema(validUntil, plannedDepartureDate, "initial", undefined, validityRequired);
 
-export const createSubmitDocumentVersionSchema = (validUntil: string | null, plannedDepartureDate?: string | null) =>
-  createDocumentSubmissionSchema(validUntil, plannedDepartureDate, "update");
+export const createSubmitDocumentVersionSchema = (validUntil: string | null, plannedDepartureDate?: string | null, validityRequired?: boolean | null) =>
+  createDocumentSubmissionSchema(validUntil, plannedDepartureDate, "update", undefined, validityRequired);
 
-export const createUpdateDocumentMetadataSchema = (validUntil: string | null, plannedDepartureDate?: string | null) =>
+export const createUpdateDocumentMetadataSchema = (validUntil: string | null, plannedDepartureDate?: string | null, existingMetadata?: UploadDocumentMetadata, validityRequired?: boolean | null) =>
   z.object({ documentNumber: documentMetadataShape.documentNumber.nullable().optional(), issuingAuthority: documentMetadataShape.issuingAuthority.nullable().optional(), issuedDate: optionalDate.nullable().optional(), expiryDate: optionalDate.nullable().optional() })
     .superRefine((value, context) => {
       validateMetadataClears(value, context);
-      validateMetadataDates(value, context, validUntil, plannedDepartureDate);
+      const effectiveMetadata = { ...existingMetadata };
+      for (const field of ["documentNumber", "issuingAuthority", "issuedDate", "expiryDate"] as const) {
+        if (value[field] !== undefined) effectiveMetadata[field] = value[field];
+      }
+      if (isDocumentExpiryRequired(validUntil, validityRequired) && !effectiveMetadata.expiryDate) context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date is required for this requirement." });
+      validateMetadataDates(effectiveMetadata, context, validUntil, plannedDepartureDate);
     });
 
-export const createDocumentSubmissionSchema = (validUntil: string | null, plannedDepartureDate?: string | null, mode: "initial" | "edit" | "update" = "initial", existingMetadata?: UploadDocumentMetadata) =>
+export const createDocumentSubmissionSchema = (validUntil: string | null, plannedDepartureDate?: string | null, mode: "initial" | "edit" | "update" = "initial", existingMetadata?: UploadDocumentMetadata, validityRequired?: boolean | null) =>
   z.object({ ...documentMetadataShape, documentNumber: documentMetadataShape.documentNumber.nullable().optional(), issuingAuthority: documentMetadataShape.issuingAuthority.nullable().optional(), issuedDate: optionalDate.nullable().optional(), expiryDate: optionalDate.nullable().optional(), uploadNote: z.string().max(2000).optional() })
     .superRefine((value, context) => {
       if (mode === "initial") {
         for (const field of ["documentNumber", "issuingAuthority", "issuedDate"] as const) if (!value[field]) context.addIssue({ code: "custom", path: [field], message: "This field is required." });
-        if (validUntil && !value.expiryDate) context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date is required for this requirement." });
       }
+      if (isDocumentExpiryRequired(validUntil, validityRequired) && !value.expiryDate) context.addIssue({ code: "custom", path: ["expiryDate"], message: "Expiry date is required for this requirement." });
       if (mode !== "initial" && existingMetadata) validateMetadataClears(value, context, existingMetadata);
       validateMetadataDates(value, context, validUntil, plannedDepartureDate);
     });
