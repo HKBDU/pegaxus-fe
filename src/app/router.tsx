@@ -56,6 +56,7 @@ const VerifyEmailPage = lazy(
 const ChangePasswordPage = lazy(
   () => import("@/features/auth/pages/ChangePasswordPage"),
 );
+const NotificationsPage = lazy(() => import("@/features/notification/pages/NotificationsPage"));
 const ProfileSettingsPage = lazy(
   () => import("@/features/profile/pages/ProfileSettingsPage"),
 );
@@ -201,6 +202,17 @@ export const router = createBrowserRouter([
               <ProtectedRoute allowedRoles={["CUSTOMER"]}>
                 <Suspense fallback={<LoadingState />}>
                   <HorsesPage />
+                </Suspense>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            // Every signed-in role; MainLayout swaps to the admin shell for employees.
+            path: ROLE_ROUTES.notifications,
+            element: (
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingState />}>
+                  <NotificationsPage />
                 </Suspense>
               </ProtectedRoute>
             ),
