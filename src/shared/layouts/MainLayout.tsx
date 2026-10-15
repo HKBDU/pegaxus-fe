@@ -32,7 +32,6 @@ export function MainLayout() {
   const { data: account } = useUser()
   const accessToken = useAuthStore((state) => state.accessToken)
   const principal = useAuthStore((state) => state.principal)
-  const { pathname } = useLocation()
 
   // Employee-facing routes use the desktop admin shell consistently, including
   // roles whose routes are shared with the customer-facing application.
