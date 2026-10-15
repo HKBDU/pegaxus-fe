@@ -30,7 +30,7 @@ function unwrap<T>(payload: ApiEnvelope<T>): T {
 // multipart/form-data   Role: ESC, DRV
 
 export async function submitQuarantineProof(
-  dossierId: number,
+  dossierId: string,
   params: SubmitQuarantineProofRequest,
 ): Promise<SubmitQuarantineProofResponse> {
   const form = new FormData()
@@ -48,7 +48,7 @@ export async function submitQuarantineProof(
 
   const res = await callApi(
     apiClient.post<unknown, ApiEnvelope<SubmitQuarantineProofResponse>>(
-      `/compliance-dossiers/${dossierId}/quarantine-proofs`,
+      `/compliance-dossiers/${encodeURIComponent(dossierId)}/quarantine-proofs`,
       form,
       { headers: { 'Content-Type': 'multipart/form-data' } },
     ),
@@ -59,22 +59,22 @@ export async function submitQuarantineProof(
 // ─── Q2: Get Quarantine Proof Detail ──────────────────────────────────────────
 // GET /api/v1/quarantine-proofs/{proofId}    Role: TS, LM
 
-export async function getQuarantineProof(proofId: number): Promise<QuarantineProof> {
+export async function getQuarantineProof(proofId: string): Promise<QuarantineProof> {
   const res = await callApi(
     apiClient.get<unknown, ApiEnvelope<QuarantineProof>>(
-      `/quarantine-proofs/${proofId}`,
+      `/quarantine-proofs/${encodeURIComponent(proofId)}`,
     ),
   )
   return unwrap(res)
 }
 
 export async function finalizeQuarantineProof(
-  proofId: number,
+  proofId: string,
   payload: FinalizeQuarantineProofRequest,
 ): Promise<FinalizeQuarantineProofResponse> {
   const res = await callApi(
     apiClient.patch<unknown, ApiEnvelope<FinalizeQuarantineProofResponse>>(
-      `/quarantine-proofs/${proofId}/finalize`,
+      `/quarantine-proofs/${encodeURIComponent(proofId)}/finalize`,
       payload,
     ),
   )
@@ -84,10 +84,10 @@ export async function finalizeQuarantineProof(
 // ─── D7: Get ComplianceDossier context (for trip info header) ─────────────────
 // GET /api/v1/compliance-dossiers/{dossierId}
 
-export async function getDossierContext(dossierId: number): Promise<ComplianceDossierContext> {
+export async function getDossierContext(dossierId: string): Promise<ComplianceDossierContext> {
   const res = await callApi(
     apiClient.get<unknown, ApiEnvelope<ComplianceDossierContext>>(
-      `/compliance-dossiers/${dossierId}`,
+      `/compliance-dossiers/${encodeURIComponent(dossierId)}`,
     ),
   )
   return unwrap(res)

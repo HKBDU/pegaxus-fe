@@ -3,9 +3,9 @@ import { UpdateAuthorityReviewDialog } from '../components'
 
 export default function AuthorityReviewPage() {
   const { submissionId: submissionIdParam } = useParams<{ submissionId: string }>()
-  const submissionId = submissionIdParam ? Number(submissionIdParam) : NaN
+  const submissionId = submissionIdParam
 
-  if (!Number.isFinite(submissionId)) {
+  if (!submissionId) {
     return <main className="p-6 text-sm text-red-700">Invalid authority submission ID.</main>
   }
 

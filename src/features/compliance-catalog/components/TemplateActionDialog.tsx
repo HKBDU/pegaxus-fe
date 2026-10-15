@@ -38,7 +38,7 @@ function StatusPicker({ current, value, onChange }: { current: TemplateStatus; v
   const validNextStatuses: Record<TemplateStatus, TemplateStatus[]> = {
     DRAFT: ["ACTIVE"],
     ACTIVE: ["INACTIVE"],
-    INACTIVE: ["ACTIVE"],
+    INACTIVE: [],
   }
 
   return (
@@ -78,7 +78,7 @@ export function TemplateActionDialog({
   const validNextStatuses: Record<TemplateStatus, TemplateStatus[]> = {
     DRAFT: ["ACTIVE"],
     ACTIVE: ["INACTIVE"],
-    INACTIVE: ["ACTIVE"],
+    INACTIVE: [],
   }
   const nextStatus = target ?? validNextStatuses[currentStatus][0]
 

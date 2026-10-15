@@ -29,9 +29,9 @@ function formatDate(value: string | null) {
 
 export default function QuarantineReviewPage() {
   const { proofId: proofIdParam } = useParams<{ proofId: string }>()
-  const proofId = proofIdParam ? Number(proofIdParam) : null
+  const proofId = proofIdParam ?? null
   const { data: proof, isLoading } = useQuarantineProofDetail(proofId)
-  const { mutateAsync: finalizeProof, isPending } = useFinalizeQuarantineProof(proofId ?? 0)
+  const { mutateAsync: finalizeProof, isPending } = useFinalizeQuarantineProof(proofId ?? '')
   const roles = useAuthStore((state) => state.principal?.roles ?? [])
   const canFinalize = roles.some((role) => normalizeRole(role) === 'TRANSPORT_SPECIALIST')
   const [action, setAction] = useState<'FINALIZE' | 'REJECT_PROOF'>('FINALIZE')

@@ -35,9 +35,9 @@ function laneLabel(lane: CustomsLane | null | undefined) {
 
 export default function CustomsClearanceReviewPage() {
   const { proofId: proofIdParam } = useParams<{ proofId: string }>()
-  const proofId = proofIdParam ? Number(proofIdParam) : null
+  const proofId = proofIdParam ?? null
   const { data: proof, isLoading } = useCustomsClearanceProofDetail(proofId)
-  const { mutateAsync: finalizeProof, isPending } = useFinalizeCustomsClearanceProof(proofId ?? 0)
+  const { mutateAsync: finalizeProof, isPending } = useFinalizeCustomsClearanceProof(proofId ?? '')
   const roles = useAuthStore((state) => state.principal?.roles ?? [])
   const canFinalize = roles.some((role) => normalizeRole(role) === 'TRANSPORT_SPECIALIST')
 

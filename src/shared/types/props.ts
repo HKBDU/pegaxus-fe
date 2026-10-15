@@ -18,8 +18,6 @@ export type HeaderProps = {
   logoAlt?: string
   isLoggedIn?: boolean
   user?: ProfileDropdownUser | null
-  notificationCount?: number
-  onNotificationClick?: () => void
   rightContent?: ReactNode
   className?: string
 }

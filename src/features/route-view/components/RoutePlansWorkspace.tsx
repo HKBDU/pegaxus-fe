@@ -15,8 +15,8 @@ import { beforeDeparture, getPendingRouteCreation } from "../workspace-actions"
 import { RoutePlansTable } from "./RoutePlansTable"
 
 function UnavailableAction({ label, reason, href }: { label: string; reason: string; href?: string }) {
-  if (href) return <Button asChild size="sm" className="rounded-md"><Link to={href}>{label}</Link></Button>
-  return <div className="space-y-1"><Button size="sm" disabled title={reason} className="rounded-md">{label}</Button><p className="max-w-sm text-[11px] text-slate-500">{reason}</p></div>
+  if (href) return <Button asChild size="sm" className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"><Link to={href}>{label}</Link></Button>
+  return <div className="space-y-1"><Button size="sm" disabled title={reason} className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none">{label}</Button><p className="max-w-sm text-[11px] text-slate-500">{reason}</p></div>
 }
 
 // RP2 is scoped to one selected plan, never fetched for each row of the transport list.
@@ -36,7 +36,7 @@ export function RoutePlansWorkspace({ transportPlanId, planStatus, transportStat
   const title = specialist ? "Route Legal Review" : manager ? "Route Monitoring" : "Route Plans"
   const creation = getPendingRouteCreation(items, context, transportPlanId)
   const error = query.isError ? getRouteViewError(query.error) : null
-  return <Section title={title} icon={Route} description="Primary journey, backup alternatives and emergency return routes."
+  return <Section unframed title={title} icon={Route} description="Primary journey, backup alternatives and emergency return routes."
     actions={allowed && validId && query.isSuccess && creation ? <UnavailableAction {...creation} /> : undefined}>
     {!allowed ? <ErrorState message="You do not have permission to view route plans." /> : !validId ? <ErrorState message="A valid transport plan is required to load route plans." /> : error ?
       <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> : <>
@@ -48,9 +48,8 @@ export function RoutePlansWorkspace({ transportPlanId, planStatus, transportStat
         {manager && <div className="space-y-2 border-t pt-3">
           <p className="text-xs text-slate-600">Phase 2 assigns Driver and Escort per internal segment only after the PRIMARY route is CONFIRMED. Outsourced segments use their Provider.</p>
           {planStatus === "APPROVED" && unlocked && primary?.status === "CONFIRMED" ?
-            <Button asChild variant="outline" size="sm" className="rounded-md"><Link to={`${transportPlanDetail(transportPlanId)}?tab=personnel`}>View Phase 2 Personnel Workspace</Link></Button> :
+            <Button asChild variant="outline" size="sm" className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"><Link to={`${transportPlanDetail(transportPlanId)}?tab=personnel`}>View Phase 2 Personnel Workspace</Link></Button> :
             <p className="text-xs text-slate-500">Phase 2 is unavailable until the plan is APPROVED and the PRIMARY route is CONFIRMED before departure.</p>}
-          <p className="text-[11px] text-slate-500">Personnel assignment controls are not available yet.</p>
         </div>}
       </>}
   </Section>

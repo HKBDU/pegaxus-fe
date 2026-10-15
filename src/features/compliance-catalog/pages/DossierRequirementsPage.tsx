@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query"
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
 import { Ban, LockKeyhole, MoreVertical, Pencil, Plus, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
@@ -11,6 +12,7 @@ import { MandatoryBadge, REQUIREMENT_STATUS_OPTIONS, RequirementStatusBadge, Sco
 import { RemoveDossierRequirementDialog } from "@/features/compliance-catalog/components/RemoveDossierRequirementDialog"
 import { DossierRequirementActionDialog, type DossierRequirementAction } from "@/features/compliance-catalog/components/DossierRequirementActionDialog"
 import { TruncatedText } from "@/features/compliance-catalog/components/TruncatedText"
+import { dossierService } from "@/features/compliance-catalog/dossier-services"
 import {
   useActiveRequirementOptions,
   useDossierRequirements,
@@ -57,6 +59,13 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
   const attempt = useRequestAttemptGuard()
 
   const overview = overviewQuery.data
+  // The dossier overview does not carry the booking schedule; read the departure date from the approved booking.
+  const departureQuery = useQuery({
+    queryKey: ["dossier-booking-departure", overview?.bookingId],
+    queryFn: () => dossierService.getRequestedDepartureDate(overview!.bookingId),
+    enabled: Boolean(overview?.bookingId) && !overview?.bookingSummary.requestedDepartureDate,
+    staleTime: 5 * 60_000,
+  })
   const allLines = useMemo(() => allLinesQuery.data?.data ?? [], [allLinesQuery.data])
   const locked = Boolean(overview?.writeLocked)
 
@@ -180,6 +189,22 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
           <p className="m-0 text-sm text-slate-500">Manage the documents this booking has to provide.</p>
         </div> : null}
 
+        {/* The detail page embeds this panel without the page header, so the Add action lives here. */}
+        {embedded && canManage ? (
+          <div className="mb-4 flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              disabled={locked || !overview}
+              className="h-9 shrink-0 rounded-[2px] bg-[#ef8f00] px-4 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-slate-950 hover:bg-[#db8300]"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="size-4" />
+              Add DossierRequirement
+            </Button>
+          </div>
+        ) : null}
+
         {overviewQuery.isError ? (
           <ErrorState message="Unable to load this dossier." onRetry={() => void overviewQuery.refetch()} />
         ) : (
@@ -234,13 +259,13 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
         )}
       </div>
 
-      {overview && dossierId && overview.bookingSummary.requestedDepartureDate ? (
+      {overview && dossierId ? (
         <AddDossierRequirementDialog
           open={addOpen}
           onOpenChange={setAddOpen}
           dossierId={dossierId}
           bookingCode={overview.bookingCode}
-          plannedDepartureDate={overview.bookingSummary.requestedDepartureDate}
+          plannedDepartureDate={overview.bookingSummary.requestedDepartureDate ?? departureQuery.data ?? undefined}
           horses={horses}
           requirements={requirementOptions.data ?? []}
           requirementsLoading={requirementOptions.isLoading}

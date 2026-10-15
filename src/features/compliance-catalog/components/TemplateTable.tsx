@@ -44,7 +44,8 @@ function TemplateRowActions({ template, disabled, onEdit, onChangeStatus, onDele
           <Pencil className="size-3.5 text-amber-600" />
           Edit
         </DropdownMenuItem>
-        <DropdownMenuItem className={menuItemClass} disabled={disabled} onSelect={onChangeStatus}>
+        {/* The BE only allows DRAFT -> ACTIVE and ACTIVE -> INACTIVE (INVALID_TEMPLATE_STATUS_TRANSITION), so an INACTIVE template has no next status. */}
+        <DropdownMenuItem className={menuItemClass} disabled={disabled || template.status === "INACTIVE"} onSelect={onChangeStatus}>
           <ArrowLeftRight className="size-3.5 text-slate-600" />
           Change status
         </DropdownMenuItem>

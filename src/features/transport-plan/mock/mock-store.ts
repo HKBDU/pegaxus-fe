@@ -33,7 +33,7 @@ export function createFlow3MockStore() {
   const routeSummary = (route: typeof routes[number]) => ({ routePlanId: route.routePlanId, routePlanCode: route.routePlanCode, status: route.status, routeType: route.routeType })
   const bookingListRow = (booking: ApprovedBookingDetail) => {
     const plan = planFor(booking), primary = routesFor(plan?.transportPlanId).find((route) => route.routeType === "PRIMARY" && route.status !== "CANCELLED")
-    return { ...booking, customerName: booking.customer.fullName, customerCode: booking.customer.customerCode, transportId: booking.transport?.transportId ?? null,
+    return { ...booking, customerName: booking.customer.fullName, customerCode: booking.customer.customerCode, transportId: booking.transport?.transportId ?? null, transportCode: booking.transport?.transportCode,
       transportPlan: planSummary(plan), routePlan: primary ? routeSummary(primary) : null, approvedAt: "2026-10-01T08:00:00Z", createdAt: `${booking.requestedDepartureDate}T00:00:00Z` }
   }
   return {

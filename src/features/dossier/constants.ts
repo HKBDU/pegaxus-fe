@@ -29,25 +29,25 @@ export function canSendMissingDocumentReminder(
 
 export function canUploadInitialDocument(
   role: string | undefined,
-  dossier: DossierOverview,
-  requirement: DossierRequirement,
+  dossier: Pick<DossierOverview, "status" | "writeLocked">,
+  requirement: Pick<DossierRequirement, "status" | "document" | "openRequest">,
 ) {
   return role === "CUSTOMER" &&
     ["IN_PREPARATION", "REJECTED"].includes(dossier.status) &&
     !dossier.writeLocked &&
     requirement.document === null &&
-    (requirement.status === "PENDING" || requirement.status === "REQUESTED");
+    (requirement.status === "PENDING" ||
+      (requirement.status === "REQUESTED" && requirement.openRequest?.status === "OPEN"));
 }
 
 export function getCustomerDocumentActions(
   dossier: Pick<DossierOverview, "status" | "writeLocked">,
-  requirement: Pick<DossierRequirement, "status" | "document">,
+  requirement: Pick<DossierRequirement, "status" | "document" | "openRequest">,
 ): string[] {
   if (requirement.status === "WAIVED") return ["View Requirement"];
   const document = requirement.document;
   if (!document) {
-    return ["IN_PREPARATION", "REJECTED"].includes(dossier.status) && !dossier.writeLocked &&
-      (requirement.status === "PENDING" || requirement.status === "REQUESTED")
+    return canUploadInitialDocument("CUSTOMER", dossier, requirement)
       ? ["Upload Document"] : ["View Requirement"];
   }
   const actions = ["View Document"];

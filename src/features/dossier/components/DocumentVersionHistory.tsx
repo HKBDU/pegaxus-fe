@@ -42,7 +42,7 @@ export function DocumentVersionHistory({ versions }: { versions: DocumentVersion
               </li>
             ))}
           </ul>
-          {version.files.length ? <VersionFiles files={version.files} /> : null}
+          {version.files.length ? <VersionFiles key={`${version.documentVersionId}-${version.uploadedAt}`} files={version.files} /> : null}
           {version.uploadNote ? <p className="mt-2 text-slate-600"><strong>Upload Note:</strong> {version.uploadNote}</p> : null}
           {version.review ? (
             (version.reviews ?? [version.review]).map((review) => <div key={review.documentReviewId} className="mt-3 border-t border-slate-200 pt-2 text-slate-600">

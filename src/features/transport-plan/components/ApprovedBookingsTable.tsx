@@ -32,8 +32,7 @@ export function ApprovedBookingsTable({ bookings, params, meta, isLoading, onCha
   const role = getWorkspaceRole(principal)
   const showDossier = role === "manager" || role === "specialist"
   const columns = useMemo<ColumnDef<ApprovedBookingListItem>[]>(() => [
-    // AB1 has transportId but no transportCode. Never substitute the booking reference or fetch each row.
-    { id: "transport", header: "Transport Code", enableHiding: false, cell: ({ row }) => <Link className="font-semibold text-primary underline-offset-2 hover:underline" to={approvedBookingDetail(row.original.bookingId)}>Not available</Link> },
+    { id: "transportPlanCode", accessorFn: booking => booking.transportPlan?.planCode, header: "TRANSPORT PLAN CODE", enableHiding: false, enableSorting: false, cell: ({ row }) => <Link className="font-semibold text-slate-900 underline decoration-primary/50 underline-offset-2 hover:decoration-primary" to={approvedBookingDetail(row.original.bookingId)}>{row.original.transportPlan ? row.original.transportPlan.planCode?.trim() || "Chưa có mã Transport Plan" : "Chưa có Transport Plan"}</Link> },
     { accessorKey: "bookingCode", header: "Booking Reference", enableHiding: false, cell: ({ row }) => <Link className="text-slate-600 underline-offset-2 hover:underline" to={approvedBookingDetail(row.original.bookingId)}>{row.original.bookingCode}</Link> },
     { accessorKey: "customerName", header: "Customer", cell: ({ row }) => <div className="min-w-32 whitespace-normal"><p className="font-medium">{row.original.customerName}</p>{row.original.customerCode && <p className="mt-1 text-[10px] text-slate-500">{row.original.customerCode}</p>}</div> },
     { id: "route", header: "Requested route", cell: ({ row: { original: booking } }) => <div className="min-w-44 max-w-64 space-y-1 whitespace-normal"><p><span className="text-slate-500">From:</span> {booking.originAddress} ({booking.originCountry})</p><p><span className="text-slate-500">To:</span> {booking.destinationAddress} ({booking.destinationCountry})</p></div> },
@@ -64,14 +63,15 @@ export function ApprovedBookingsTable({ bookings, params, meta, isLoading, onCha
   })
   return <DataTable table={table} isLoading={isLoading} aria-busy={isLoading}
     containerClassName="booking-panel overflow-x-auto" headerClassName="bg-[#e9e6de]"
+    tableClassName="[&_[data-column-id=totalHorses]]:text-right [&_[data-column-id=totalHorses]]:tabular-nums [&_[data-column-id=requestedDepartureDate]]:tabular-nums [&_[data-column-id=approvedAt]]:tabular-nums"
     headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
-    rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60"
-    cellClassName="h-11 px-2.5 py-2 text-xs"
+    rowClassName="booking-table-row border-slate-200 transition-colors duration-200 hover:bg-primary/5 motion-reduce:transition-none"
+    cellClassName="h-11 px-2.5 py-1.5 text-xs"
     emptyMessage={<EmptyState message={hasApprovedBookingFilters(params) ? "No transports match your filters. Adjust your filters." : "No approved transports are available in your assigned scope."} />}
     footer={<TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={(pageSize) => onChange({ pageSize })} pageSizeAriaLabel="Approved bookings per page" />}>
-    <div role="group" aria-label="Approved bookings toolbar" className="flex min-w-0 flex-col gap-2 xl:flex-row xl:items-start">
-      {filters && <div className="min-w-0 flex-1">{filters}</div>}
-      <div className="flex shrink-0 justify-end"><DataTableViewOptions table={table} /></div>
+    <div role="group" aria-label="Approved bookings toolbar" className="flex min-w-0 flex-wrap items-start gap-2">
+      {filters && <div className="min-w-0 flex-[1_1_40rem]">{filters}</div>}
+      <div className="ml-auto flex shrink-0 justify-end p-1"><DataTableViewOptions table={table} /></div>
     </div>
   </DataTable>
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
@@ -49,6 +50,7 @@ export function OutsourceSegmentDialog({
   children,
   onChanged,
 }: OutsourceSegmentDialogProps) {
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [providerId, setProviderId] = useState(
@@ -116,6 +118,7 @@ export function OutsourceSegmentDialog({
           })
         : undefined;
       onChanged?.(selection, result?.segment);
+      if (routePlanId) await queryClient.invalidateQueries({ queryKey: ["route-view", "detail", routePlanId] });
       setOpen(false);
       toast.success("Outsourcing provider linked to segment.");
     } catch (requestError) {
@@ -137,6 +140,7 @@ export function OutsourceSegmentDialog({
           })
         : undefined;
       onChanged?.(null, result?.segment);
+      if (routePlanId) await queryClient.invalidateQueries({ queryKey: ["route-view", "detail", routePlanId] });
       setOpen(false);
       toast.success("Segment switched to internal fleet.");
     } catch (requestError) {

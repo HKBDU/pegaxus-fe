@@ -192,7 +192,11 @@ const templateBaseService = createBaseService<
       totalPages: number
     }>(payload)
     return {
-      data: value.items,
+      // The BE list returns the lines in `items` and no `itemCount` (contract T1 says itemCount), so derive it.
+      data: value.items.map((item) => ({
+        ...item,
+        itemCount: item.itemCount ?? (item as { items?: unknown[] }).items?.length ?? 0,
+      })),
       meta: {
         totalItems: value.totalItems,
         totalPages: value.totalPages,

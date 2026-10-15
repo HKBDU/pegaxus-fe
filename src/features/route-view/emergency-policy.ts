@@ -18,8 +18,7 @@ export function getEmergencyActions(route: Pick<RoutePlanSummary, "routeType" | 
   const role = getWorkspaceRole(context.principal)
   if (role === "coordinator") {
     if (route.routeType === "BACKUP" && route.status === "CONFIRMED" && context.hasActivePrimary === true) return ["request"]
-    // EC4 also permits CONFIRMED; the chosen UI workflow notifies only after activation.
-    if (route.routeType === "RETURN" && route.status === "ACTIVE") return ["notice"]
+    if (route.routeType === "RETURN" && (route.status === "CONFIRMED" || route.status === "ACTIVE")) return ["notice"]
   }
   if (role === "manager") {
     if (route.routeType === "BACKUP" && route.status === "CONFIRMED") return ["decision"]

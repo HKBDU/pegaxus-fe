@@ -56,6 +56,7 @@ const VerifyEmailPage = lazy(
 const ChangePasswordPage = lazy(
   () => import("@/features/auth/pages/ChangePasswordPage"),
 );
+const NotificationsPage = lazy(() => import("@/features/notification/pages/NotificationsPage"));
 const ProfileSettingsPage = lazy(
   () => import("@/features/profile/pages/ProfileSettingsPage"),
 );
@@ -201,6 +202,17 @@ export const router = createBrowserRouter([
               <ProtectedRoute allowedRoles={["CUSTOMER"]}>
                 <Suspense fallback={<LoadingState />}>
                   <HorsesPage />
+                </Suspense>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            // Every signed-in role; MainLayout swaps to the admin shell for employees.
+            path: ROLE_ROUTES.notifications,
+            element: (
+              <ProtectedRoute>
+                <Suspense fallback={<LoadingState />}>
+                  <NotificationsPage />
                 </Suspense>
               </ProtectedRoute>
             ),
@@ -398,6 +410,8 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
+      // There is no route plan list: plans are reached from a transport plan, so the menu entry opens the approved bookings.
+      { index: true, element: <Navigate to={ROLE_ROUTES.approvedBookings} replace /> },
       { path: "new/:transportPlanId", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateRoutePlanPage /></Suspense></ProtectedRoute> },
       { path: ":routePlanId/edit", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><EditRoutePlanPage /></Suspense></ProtectedRoute> },
       { path: "new/:transportPlanId/contingency", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateContingencyRoutePage /></Suspense></ProtectedRoute> },
