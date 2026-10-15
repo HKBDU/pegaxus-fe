@@ -64,7 +64,7 @@ function EndpointCard({
   iconClassName,
 }: {
   label: string;
-  location: MapLocation;
+  location?: MapLocation | null;
   iconClassName: string;
 }) {
   return (
@@ -76,9 +76,9 @@ function EndpointCard({
         <div className="flex items-start gap-3">
           <MapPin className={`mt-1 ${iconClassName}`} />
           <div>
-            <p className="text-xl font-semibold">{location.name}</p>
+            <p className="text-xl font-semibold">{location?.name ?? "Location not resolved"}</p>
             <p className="text-sm text-muted-foreground">
-              {location.city}, {location.country}
+              {location ? `${location.city ?? ""}, ${location.country ?? ""}` : "No map coordinates found"}
             </p>
           </div>
         </div>

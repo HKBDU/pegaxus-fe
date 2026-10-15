@@ -378,20 +378,30 @@ export function RoutePlanBuilder({
     [isBackup, readonlyPrimaryRoutes, segments],
   );
   const continuity = useMemo(
-    () =>
-      isBackup
+    () => {
+      const fromId = plan.from?.id ?? "";
+      const toId = plan.to?.id ?? "";
+      if (!fromId || !toId) {
+        return {
+          valid: false,
+          message: "Transport Plan origin or destination location is not resolved.",
+          effectiveRoutes: [],
+        };
+      }
+      return isBackup
         ? buildEffectiveBackupRoute(
             readonlyPrimaryRoutes,
             segments.map((segment) => segment.route),
-            plan.from.id,
-            plan.to.id,
+            fromId,
+            toId,
           )
         : validateRoutePlanRoute(
             segments.map((segment) => segment.route),
-            plan.from.id,
-            plan.to.id,
-          ),
-    [isBackup, plan.from.id, plan.to.id, readonlyPrimaryRoutes, segments],
+            fromId,
+            toId,
+          );
+    },
+    [isBackup, plan.from?.id, plan.to?.id, readonlyPrimaryRoutes, segments],
   );
 
   function addSegment(route: MapRoute) {
@@ -415,7 +425,7 @@ export function RoutePlanBuilder({
         route,
         arrangement: arrangementForRoute(route),
         stopType:
-          route.toLocation?.id === plan.to.id
+          route.toLocation?.id === plan.to?.id
             ? "DESTINATION"
             : route.toLocation?.type === "BORDER_GATE"
               ? "BCP"
