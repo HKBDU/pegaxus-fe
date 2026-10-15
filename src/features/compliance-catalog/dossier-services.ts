@@ -59,6 +59,16 @@ export const dossierService = {
     }
   },
 
+  /**
+   * D7 (GET /compliance-dossiers/{id}) has no booking schedule, so the departure date used to compute a requirement's
+   * lead time comes from AB2 (scoped to the assigned staff). null when it is not available.
+   */
+  async getRequestedDepartureDate(bookingId: EntityId): Promise<string | null> {
+    if (useComplianceMocks && !useFlow2HttpMocks) return null
+    const payload = await api.get<{ value?: { requestedDepartureDate?: string | null } } & { requestedDepartureDate?: string | null }>(`bookings/approved/${bookingId}`)
+    return (payload.value ?? payload).requestedDepartureDate?.slice(0, 10) ?? null
+  },
+
   /** D1: null when the booking has no dossier yet (the BE answers 404). */
   async getDossierOfBooking(bookingId: EntityId): Promise<ComplianceDossierSummary | null> {
     if (useComplianceMocks && !useFlow2HttpMocks) {

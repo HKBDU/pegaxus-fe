@@ -14,6 +14,7 @@ const templateErrorMessages: Record<string, string> = {
   TEMPLATE_NEEDS_ONE_ITEM: "A DossierTemplate must contain at least 1 item.",
   TEMPLATE_IN_USE: "This DossierTemplate is linked to existing ComplianceDossiers, so it cannot be edited or deleted. Change its status to INACTIVE instead.",
   DOSSIER_TEMPLATE_IN_USE: "This DossierTemplate is linked to existing ComplianceDossiers, so it cannot be deleted. Change its status to INACTIVE instead.",
+  INVALID_TEMPLATE_STATUS_TRANSITION: "A template can only go from DRAFT to ACTIVE, or from ACTIVE to INACTIVE.",
   TEMPLATE_NOT_ACTIVATABLE: "A template needs at least 1 item and valid effective dates before it can be activated.",
   VALIDATION_ERROR: "Some fields are invalid. Check the form and try again.",
   NOT_FOUND: "This DossierTemplate no longer exists.",

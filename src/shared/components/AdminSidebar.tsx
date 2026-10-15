@@ -1,5 +1,4 @@
 import {
-  BarChart3,
   CarFront,
   ClipboardCheck,
   FileStack,
@@ -8,7 +7,6 @@ import {
   House,
   LogOut,
   MapPin,
-  Settings,
   ThumbsUp,
   Truck,
   UserRound,
@@ -45,7 +43,6 @@ const primaryItems = [
   { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Vehicles", href: ROLE_ROUTES.vehicles, icon: CarFront },
   { label: "Transport Providers", href: ROLE_ROUTES.transportProviders, icon: ThumbsUp },
-  { label: "Reports", href: "/admin/reports", icon: BarChart3 },
 ]
 
 const staffPrimaryItems = [
@@ -68,7 +65,6 @@ const staffSecondaryItems = [
 
 const secondaryItems = [
   { label: "Profile", href: "/admin/profile", icon: UserRound },
-  { label: "Settings", href: "/admin/settings", icon: Settings },
 ]
 
 const logoutItem = { label: "Sign Out", href: "/logout", icon: LogOut }
@@ -130,7 +126,7 @@ export function AdminSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="shrink-0 border-white/10 bg-[#17191c] px-0 py-4">
-        <AdminSidebarMenu items={isManager ? secondaryItems : isRouteCoordinator ? secondaryItems : staffSecondaryItems} compact />
+        <AdminSidebarMenu items={isManager ? secondaryItems : staffSecondaryItems} compact />
         <div className="lg:hidden">
           <AdminSidebarMenu items={[logoutItem]} compact />
         </div>

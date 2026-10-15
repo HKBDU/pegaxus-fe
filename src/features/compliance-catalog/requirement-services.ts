@@ -120,15 +120,30 @@ async function temporaryRequirements(dossierId: EntityId, params: DossierRequire
   void TEMP_DOSSIER_ID
   void TEMP_REQUIREMENTS
   const overview = await dossierReadService.getOverview(dossierId)
-  const value = unwrapValue<{
-    tripRequirements?: DossierRequirementItem[]
-    horseRequirements?: DossierRequirementItem[]
-  }>(await api.get<unknown>(`bookings/${overview.bookingId}/compliance-dossier`))
-    const rows = [...(value.tripRequirements ?? []), ...(value.horseRequirements ?? [])].map((item) => ({
-      ...item,
-      validUntil: item.validUntil ?? null,
-      note: item.note ?? null,
-      document: item.document ?? null,
+  // BE groups per-horse lines: horseRequirements = [{ horseId, horseName, requirements: [...] }]; flatten them into rows.
+  type BookingDossierLine = Omit<DossierRequirementItem, "horseId" | "horseName" | "note"> & {
+    horseId?: EntityId | null
+    horseName?: string | null
+    note?: string | null
+    instruction?: string | null
+  }
+  type HorseGroup = { horseId: EntityId; horseName: string | null; requirements?: BookingDossierLine[] }
+  const value = unwrapValue<{ tripRequirements?: BookingDossierLine[]; horseRequirements?: HorseGroup[] }>(
+    await api.get<unknown>(`bookings/${overview.bookingId}/compliance-dossier`),
+  )
+  const lines: BookingDossierLine[] = [
+    ...(value.tripRequirements ?? []).map((item) => ({ ...item, horseId: null, horseName: null })),
+    ...(value.horseRequirements ?? []).flatMap((group) =>
+      (group.requirements ?? []).map((item) => ({ ...item, horseId: group.horseId, horseName: group.horseName })),
+    ),
+  ]
+  const rows: DossierRequirementItem[] = lines.map((item) => ({
+    ...item,
+    horseId: item.horseId ?? null,
+    horseName: item.horseName ?? null,
+    validUntil: item.validUntil ?? null,
+    note: item.note ?? item.instruction ?? null,
+    document: item.document ?? null,
   }))
   const filtered = rows.filter(
     (item) => (params.status === "ALL" || item.status === params.status) && (params.horseId === "ALL" || String(item.horseId) === params.horseId),

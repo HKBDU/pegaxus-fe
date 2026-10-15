@@ -398,6 +398,8 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
+      // There is no route plan list: plans are reached from a transport plan, so the menu entry opens the approved bookings.
+      { index: true, element: <Navigate to={ROLE_ROUTES.approvedBookings} replace /> },
       { path: "new/:transportPlanId", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateRoutePlanPage /></Suspense></ProtectedRoute> },
       { path: ":routePlanId/edit", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><EditRoutePlanPage /></Suspense></ProtectedRoute> },
       { path: "new/:transportPlanId/contingency", element: <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}><Suspense fallback={<LoadingState />}><CreateContingencyRoutePage /></Suspense></ProtectedRoute> },
