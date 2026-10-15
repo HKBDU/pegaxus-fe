@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 import { BriefcaseBusiness, Info, ShieldCheck } from "lucide-react";
-import { accountDetail } from "@/app/route-config";
+import { accountDetail, ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { LoadingState, ErrorState } from "@/shared/components/common";
 import { Button } from "@/shared/components/ui/button";
@@ -64,7 +64,11 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
       );
       if (!result.started) return;
       toast.success("Employee account updated successfully.");
-      navigate(accountDetail(employee.employeeId));
+      if (changes.accountStatus === "SUSPENDED") {
+        navigate(ROLE_ROUTES.managerUsers);
+      } else {
+        navigate(accountDetail(employee.employeeId));
+      }
     } catch (error) {
       toast.error(getAccountError(error));
     }
