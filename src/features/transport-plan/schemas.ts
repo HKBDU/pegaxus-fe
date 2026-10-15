@@ -68,6 +68,7 @@ const bookingFields = {
 
 export const approvedBookingListItemSchema = z.object({
   ...bookingFields,
+  transportPlan: planSummarySchema.extend({ planCode: z.string().optional() }).nullable(),
   customerName: z.string(),
   customerCode: optionalText,
   transportId: entityIdSchema.nullish(),
