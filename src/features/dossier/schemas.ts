@@ -5,10 +5,10 @@ type DossierUploadedAssetRef = { publicId: string; fileName: string; mimeType: s
 type UploadDocumentError = { code: string; message: string; field?: "expiryDate"; refresh?: "overview" | "requirements" };
 type UploadDocumentMetadata = { documentNumber?: string | null; issuingAuthority?: string | null; issuedDate?: string | null; expiryDate?: string | null; uploadNote?: string };
 
-// Mock data uses numeric identifiers, while the real API uses UUIDs.
+// Mock data uses numeric identifiers; the real API uses opaque string IDs (the BE does not require UUID/GUID format).
 // Keep the parsed contract compatible with both existing mock helpers and real responses.
-const entityId: z.ZodType<any> = z.union([z.number().int().positive(), z.string().uuid()]);
-const typedEntityId = z.union([z.number().int().positive(), z.string().uuid()]);
+const entityId: z.ZodType<any> = z.union([z.number().int().positive(), z.string()]);
+const typedEntityId = z.union([z.number().int().positive(), z.string()]);
 // System.Text.Json also returns DateTime values without an offset and with seven fractional digits.
 const timestamp = z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/);
 const date = z.iso.date();
@@ -331,10 +331,8 @@ export const createDocumentSubmissionSchema = (validUntil: string | null, planne
       validateMetadataDates(value, context, validUntil, plannedDepartureDate);
     });
 
-export const dossierIdSchema = z.union([
-  z.string().regex(/^[1-9]\d*$/),
-  z.string().uuid(),
-]);
+// The BE does not require UUID/GUID format, so any non-empty string is accepted (empty only means "no id in the URL").
+export const dossierIdSchema = z.string().min(1);
 export const dossierRequirementsParamsSchema = z.object({
   status: dossierRequirementStatusSchema.optional(),
   horseId: entityId.optional(),
