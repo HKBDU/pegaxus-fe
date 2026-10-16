@@ -24,7 +24,7 @@ export function BillingSummaryCard({ lines, summary, currency }: BillingSummaryC
   return (
     <section className="flex h-full flex-col border border-[#e5e2d9] bg-white" aria-label="Billing summary">
       <h3 className="m-0! flex items-center gap-2 border-b border-[#e5e2d9] bg-[#f7f6f3] px-4 py-2.5 font-heading text-[13px]! font-bold! uppercase tracking-[0.04em]! text-gray-900!">
-        <Calculator className="size-4 text-orange-600" aria-hidden="true" />
+        <Calculator className="size-4 text-[#ef8f00]" aria-hidden="true" />
         Billing summary
       </h3>
 
@@ -50,7 +50,7 @@ export function BillingSummaryCard({ lines, summary, currency }: BillingSummaryC
           {summary.depositDeduction !== 0 ? <SummaryRow label="Deposit deduction" value={formatMoney(summary.depositDeduction, currency)} /> : null}
         </dl>
 
-        <div className="mt-3 flex items-center justify-between gap-3 border border-orange-200 bg-orange-50 px-3 py-2.5 text-orange-700">
+        <div className="mt-3 flex items-center justify-between gap-3 border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-900">
           <span className="font-heading text-xs font-semibold uppercase tracking-[0.05em]">Total amount</span>
           <span className="whitespace-nowrap text-base font-bold tabular-nums">{formatMoney(summary.grandTotal, currency)}</span>
         </div>

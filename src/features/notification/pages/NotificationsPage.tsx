@@ -95,7 +95,7 @@ export default function NotificationsPage() {
                 onClick={() => changeTab(item.value)}
                 className={cn(
                   "-mb-px border-b-2 pb-3 text-sm font-medium transition-colors",
-                  tab === item.value ? "border-orange-500 font-bold text-orange-600" : "border-transparent text-slate-500 hover:text-slate-900",
+                  tab === item.value ? "border-[#ef8f00] font-bold text-[#ef8f00]" : "border-transparent text-slate-500 hover:text-slate-900",
                 )}
               >
                 {item.label}
@@ -163,7 +163,7 @@ export default function NotificationsPage() {
                       role="link"
                       onClick={() => open(notification)}
                       onKeyDown={(event) => onRowKey(event, notification)}
-                      className={cn("cursor-pointer border-0 focus-visible:bg-slate-100 focus-visible:outline-none", ROW_HEIGHT, unread ? "bg-orange-50/40 hover:bg-orange-50" : "hover:bg-slate-50")}
+                      className={cn("cursor-pointer border-0 focus-visible:bg-slate-100 focus-visible:outline-none", ROW_HEIGHT, unread ? "bg-amber-50/40 hover:bg-amber-50" : "hover:bg-slate-50")}
                     >
                       <TableCell className="px-3"><NotificationTypeIcon type={notification.type} className="rounded-[2px]" /></TableCell>
                       <TableCell className={cn("truncate px-3 text-sm text-slate-900", unread ? "font-bold" : "font-medium")} title={notification.title}>{notification.title}</TableCell>
@@ -177,7 +177,7 @@ export default function NotificationsPage() {
                       </TableCell>
                       <TableCell className="px-3">
                         {unread ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600"><span aria-hidden="true" className="size-2 rounded-full bg-orange-500" />Unread</span>
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ef8f00]"><span aria-hidden="true" className="size-2 rounded-full bg-amber-500" />Unread</span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 text-xs text-slate-400"><CircleCheck aria-hidden="true" className="size-3.5" />Read</span>
                         )}

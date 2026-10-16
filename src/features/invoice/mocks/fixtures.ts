@@ -34,7 +34,7 @@ export function createInvoiceFixtures(customerId = "flow6-demo-customer"): Invoi
     const issuedAt = scenario.issued ? final ? "2026-10-12T10:50:00Z" : `${createdAt.slice(0, 10)}T09:00:00Z` : null
     const total = final ? 3000 : 600
     const paidAt = scenario.status === "PAID" ? index === 12 ? "2026-10-11T10:00:00Z" : "2026-10-12T09:30:00Z" : null
-    const currency = index === 6 ? "VND" : "EUR"
+    const currency = "VND"
     // Fixed server-like totals, not computed by the page or from user input.
     const summary = index === 6 ? { subtotal: 1000000, discount: 0, tax: 200000, taxRatePercent: 20, depositDeduction: 0, grandTotal: 1200000 }
       : final ? { subtotal: 3000, discount: 0, tax: 600, taxRatePercent: 20, depositDeduction: -600, grandTotal: 3000 }
