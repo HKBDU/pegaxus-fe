@@ -30,8 +30,8 @@ export function roundMoney(value: number) {
   return Math.round(value)
 }
 
-export function formatMoney(amount: number, currency: InvoiceCurrency = "VND") {
-  const fractionDigits = currency === "VND" ? 0 : 2
+/** Money in VND, whole amounts; the app has a single currency so an older row in another one is shown as VND too. Negative amounts keep their sign. */
+export function formatMoney(amount: number, _currency?: InvoiceCurrency) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "VND",

@@ -2,7 +2,9 @@ import { z } from "zod"
 import { transportPlanFormSchema } from "@/features/transport-plan/schemas"
 import { backupChangeRequestSchema } from "./schemas"
 
-export const backupRequestDefaults = { reason: "", newEstimatedArrivalAt: "", estimatedExtraCost: "", currency: "VND", note: "" }
+/** Extra cost is entered in VND only, as a whole amount. */
+export const BACKUP_COST_CURRENCY = "VND"
+export const backupRequestDefaults = { reason: "", newEstimatedArrivalAt: "", estimatedExtraCost: "", note: "" }
 export type BackupRequestValues = typeof backupRequestDefaults
 const eta = transportPlanFormSchema.shape.plannedStartAt
 const validCost = (value: string) => {
