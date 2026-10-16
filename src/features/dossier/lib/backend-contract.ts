@@ -8,7 +8,7 @@ import {
   documentVersionSchema,
 } from "../schemas";
 
-const id = z.string().uuid();
+const id = z.string();
 const time = z.string().min(1);
 const actions = z.object({ canUpload: z.boolean(), canReview: z.boolean() });
 const requestDto = z.object({
