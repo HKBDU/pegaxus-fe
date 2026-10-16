@@ -27,7 +27,7 @@ export function getPlaybackRate(velocity: number) {
 }
 
 export const HORSE_CLIPS = {
-  idle: "HorseALL_SlowIdle",
+  idle: "HorseALL_IdleEars",
   walk: "HorseALL_SlowWalk",
   run: "HorseALL_RunLoop",
 } as const satisfies Record<HorseMotion, string>;
@@ -44,6 +44,7 @@ export function transitionHorseAction(
   previous: AnimationAction | undefined,
   reducedMotion: boolean,
   playbackRate: number,
+  fadeDuration = 0.4,
 ) {
   const previousName = previous?.getClip().name;
   const nextName = next.getClip().name;
@@ -62,9 +63,9 @@ export function transitionHorseAction(
   // Fades cannot finish after the mixer pauses. Discard ALL outgoing actions,
   // including an earlier locomotion still fading beneath the current Idle.
   if (reducedMotion) next.getMixer().stopAllAction();
-  else previous?.fadeOut(0.4);
+  else previous?.fadeOut(fadeDuration);
   next.reset().setEffectiveTimeScale(playbackRate).setEffectiveWeight(1);
   next.time = phase;
-  if (!reducedMotion) next.fadeIn(0.4);
+  if (!reducedMotion) next.fadeIn(fadeDuration);
   next.play();
 }

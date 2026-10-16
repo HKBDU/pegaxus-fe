@@ -28,6 +28,10 @@ export type LandingSceneState = HorseShot & {
   visible: boolean;
   playbackRate: number;
   lastScrollAt: number;
+  rawProgress: number;
+  storyProgress: number;
+  introScale: number;
+  introZ: number;
 };
 export type MotionCue = { at: number; motion: HorseMotion };
 
@@ -190,6 +194,10 @@ export function createLandingStory(
     visible: true,
     playbackRate: 1,
     lastScrollAt: 0,
+    rawProgress: 0,
+    storyProgress: 0,
+    introScale: reducedMotion ? 1 : 0.78,
+    introZ: reducedMotion ? 0 : -1.6,
   };
 }
 

@@ -90,8 +90,12 @@ export function useLandingStory(
           let cues: MotionCue[] = [];
           let cueIndex = 0;
           const syncStory = () => {
-            cueIndex = resolveMotionCue(master.time(), cues, cueIndex, 24);
-            if (cues[cueIndex]) scene.current.motion = cues[cueIndex].motion;
+            if ((scene.current.rawProgress ?? 0) <= 0.15) {
+              scene.current.motion = "idle";
+            } else {
+              cueIndex = resolveMotionCue(master.progress(), cues, cueIndex, 0.02);
+              if (cues[cueIndex]) scene.current.motion = cues[cueIndex].motion;
+            }
             syncPresence();
           };
           const master = gsap.timeline({
@@ -100,21 +104,17 @@ export function useLandingStory(
             onUpdate: syncStory,
           });
           const buildStory = () => {
-            const viewport = window.innerHeight;
-            const rootTop =
-              element.getBoundingClientRect().top + window.scrollY;
-            const starts = sections.map(
-              (section) =>
-                section.getBoundingClientRect().top + window.scrollY - rootTop,
-            );
-            const end = Math.max(1, element.scrollHeight - viewport);
-            const at = (value: number) => Math.max(0, Math.min(end, value));
             const frames: { at: number; shot: HorseShot }[] = [
-              { at: 0, shot: shots.home },
-              { at: at(viewport * 0.22), shot: shots.home },
-              { at: at(starts[1] - viewport * 0.5), shot: shots.journey },
+              // Hero composition
+              { at: 0, shot: { ...shots.home, horsePresence: 1 } },
+              // 6. Cinematic handoff: Hero horse softly fades out at Journey entry
+              { at: 0.04, shot: { ...shots.home, horsePresence: 0 } },
+              // Scene/camera handoff to Journey while hidden
+              { at: 0.08, shot: { ...shots.journey, horsePresence: 0 } },
+              // Horse softly fades in at Journey composition
+              { at: 0.13, shot: { ...shots.journey, horsePresence: 1 } },
               {
-                at: at(starts[1] + sections[1].offsetHeight * 0.3),
+                at: 0.25,
                 shot: {
                   ...shots.journey,
                   horseX:
@@ -125,22 +125,22 @@ export function useLandingStory(
                         : -0.15,
                 },
               },
-              { at: at(starts[2] - viewport * 0.45), shot: shots.compliance },
-              { at: at(starts[2] + viewport * 0.1), shot: shots.compliance },
+              { at: 0.40, shot: shots.compliance },
+              { at: 0.50, shot: shots.compliance },
               {
-                at: at(starts[3] - viewport * 0.75),
+                at: 0.60,
                 shot: { ...shots.platform, horsePresence: 1 },
               },
-              { at: at(starts[3] - viewport * 0.5), shot: shots.platform },
+              { at: 0.68, shot: shots.platform },
               {
-                at: at(starts[4] - viewport * 0.95),
+                at: 0.75,
                 shot: { ...shots.care, horsePresence: 0 },
               },
-              { at: at(starts[4] - viewport * 0.5), shot: shots.care },
-              { at: at(starts[4] + viewport * 0.15), shot: shots.care },
-              { at: at(starts[5] - viewport * 0.5), shot: shots.movement },
+              { at: 0.82, shot: shots.care },
+              { at: 0.88, shot: shots.care },
+              { at: 0.92, shot: shots.movement },
               {
-                at: at(starts[5] + sections[5].offsetHeight * 0.35),
+                at: 0.96,
                 shot: {
                   ...shots.movement,
                   horseX:
@@ -152,23 +152,20 @@ export function useLandingStory(
                 },
               },
               {
-                at: at(starts[6] - viewport * 0.35),
+                at: 0.99,
                 shot: { ...shots.about, horsePresence: 0 },
               },
-              { at: end, shot: { ...shots.about, horsePresence: 0 } },
+              { at: 1.0, shot: { ...shots.about, horsePresence: 0 } },
             ];
             cues = [
               { at: 0, motion: "idle" },
-              { at: at(starts[1] - viewport * 0.28), motion: "walk" },
-              { at: at(starts[2] - viewport * 0.55), motion: "idle" },
-              { at: at(starts[5] - viewport * 0.25), motion: "walk" },
-              {
-                at: at(starts[5] + sections[5].offsetHeight * 0.22),
-                motion: "run",
-              },
+              // Cross-fade idle -> walk while hidden during Journey handoff
+              { at: 0.06, motion: "walk" },
+              { at: 0.40, motion: "idle" },
+              { at: 0.88, motion: "walk" },
+              { at: 0.93, motion: "run" },
             ];
             master.clear();
-            // Rebuild only on a ScrollTrigger refresh, never per frame.
             Object.assign(scene.current, shots.home);
             let previous = 0;
             for (const frame of frames.slice(1)) {
@@ -183,20 +180,46 @@ export function useLandingStory(
           };
           if (!reduced) {
             buildStory();
+            const proxy = { progress: 0 };
+            const scrubTween = gsap.to(proxy, {
+              progress: 1,
+              ease: "none",
+              onUpdate: () => {
+                const rawProgress = proxy.progress;
+                scene.current.rawProgress = rawProgress;
+
+                // 4. Scroll Threshold / Deadzone (0% -> 15%) & Post-Hero Locomotion (> 15%)
+                const storyProgress = Math.max(0, (rawProgress - 0.15) / 0.85);
+                scene.current.storyProgress = storyProgress;
+
+                if (rawProgress <= 0.15) {
+                  master.progress(0);
+                  scene.current.motion = "idle";
+                  scene.current.playbackRate = 0.6;
+                } else {
+                  master.progress(storyProgress);
+                }
+                syncPresence();
+              },
+            });
+
             ScrollTrigger.create({
               id: "landing-master",
               trigger: element,
               start: "top top",
               end: "bottom bottom",
-              animation: master,
+              animation: scrubTween,
               scrub: 0.45,
               onRefreshInit: buildStory,
-              // Refresh can render a timeline with onUpdate suppressed.
               onRefresh: syncStory,
               onUpdate: (self) => {
-                scene.current.playbackRate = getPlaybackRate(
-                  self.getVelocity(),
-                );
+                if (self.progress > 0.15) {
+                  scene.current.playbackRate = getPlaybackRate(
+                    self.getVelocity(),
+                  );
+                } else {
+                  scene.current.playbackRate = 0.6;
+                }
                 scene.current.lastScrollAt = performance.now();
                 const next = self.scroll() > 32;
                 if (next !== lastScrolled) {

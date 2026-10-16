@@ -11,6 +11,8 @@ import { FinalCtaSection } from "./FinalCtaSection";
 import { LandingFooter } from "./LandingFooter";
 import "../../landing.css";
 
+import { MarqueeBand } from "./MarqueeBand";
+
 const HorseExperience = lazy(() => import("./HorseExperience"));
 
 export function PegaxusLanding() {
@@ -76,6 +78,7 @@ export function PegaxusLanding() {
       </Suspense>
       <div className="landing-story">
         <HeroSection />
+        <MarqueeBand />
         <JourneySection />
         <ComplianceSection />
         <PlatformSection />

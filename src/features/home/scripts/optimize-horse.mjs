@@ -34,6 +34,8 @@ const binary = original.subarray(binStart);
 const document = structuredClone(source);
 const names = new Set([
   "HorseALL_SlowIdle",
+  "HorseALL_Idle3",
+  "HorseALL_IdleEars",
   "HorseALL_SlowWalk",
   "HorseALL_RunLoop",
 ]);
@@ -196,7 +198,7 @@ for (const [before, after] of accessorMap) {
   );
 }
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
-await writeFile(output, lite, { flag: "wx" });
+await writeFile(output, lite);
 assert.equal(hash(await readFile(input)), hash(original));
 console.log(
   JSON.stringify(

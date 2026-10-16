@@ -1,16 +1,34 @@
 .pegaxus-landing {
-  --landing-ink: #101310;
-  --landing-ivory: #f0ede4;
+  --landing-ink: #111311;
+  --landing-ivory: #F1EADF;
   --landing-muted: #a2a79a;
   --landing-gold: #e8b66b;
+  --landing-champagne: #D7B887;
+  --landing-champagne-light: #E8C79C;
+  --landing-charcoal: #242A24;
+  --landing-olive: #40473C;
   --landing-line: rgb(235 224 204 / 16%);
   position: relative;
   isolation: isolate;
-  background: var(--landing-ink);
+  background:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E") repeat,
+    var(--landing-ink);
   color: var(--landing-ivory);
   font-family: var(--sans);
   line-height: 1.5;
   color-scheme: dark;
+}
+/* Faint grid overlay — fixed, behind all content layers. */
+.pegaxus-landing::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgb(241 234 223 / 1.8%) 1px, transparent 1px),
+    linear-gradient(0deg, rgb(241 234 223 / 1.8%) 1px, transparent 1px);
+  background-size: 120px 120px;
 }
 .pegaxus-landing *,
 .pegaxus-mobile-menu * {
@@ -63,17 +81,24 @@
 }
 .landing-story {
   position: relative;
-  z-index: 2;
+  z-index: 1;
   pointer-events: auto;
 }
 .landing-story a,
 .landing-story button {
   pointer-events: auto;
 }
+.landing-copy,
+.landing-actions,
+.landing-hero-bottom,
+.landing-hero-coordinate {
+  position: relative;
+  z-index: 10;
+}
 .landing-experience {
   position: fixed;
   inset: 0;
-  z-index: 1;
+  z-index: 2;
   pointer-events: none;
 }
 .landing-experience canvas {
@@ -697,6 +722,94 @@
 .landing-mobile-actions .landing-text-link {
   align-self: flex-start;
 }
+/* === Sections are transparent to allow the 3D Canvas (z-index: 1) to be visible === */
+.landing-chapter {
+  background: transparent;
+}
+/* === Oversized chapter numbers (decorative) === */
+#journey::after,
+#compliance::after,
+#platform::after,
+#care::after,
+#movement::after {
+  position: absolute;
+  right: 5vw;
+  top: 50%;
+  transform: translateY(-50%);
+  font: 600 clamp(8rem, 20vw, 18rem)/1 var(--heading);
+  color: rgb(241 234 223 / 2%);
+  pointer-events: none;
+  letter-spacing: -0.04em;
+  z-index: -1;
+}
+#journey::after { content: "01"; }
+#compliance::after { content: "02"; }
+#platform::after { content: "03"; }
+#care::after { content: "04"; }
+#movement::after { content: "05"; }
+/* === PEGAXUS marquee band (Compact 50%, Transparent, Behind Horse) === */
+.landing-marquee-band {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border-top: 1px solid rgba(215, 184, 135, 0.18);
+  border-bottom: 1px solid rgba(215, 184, 135, 0.18);
+  padding: 0.75rem 0;
+  background: transparent;
+  z-index: 1;
+  pointer-events: none;
+}
+.landing-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-ltr 35s linear infinite;
+  will-change: transform;
+}
+.landing-marquee-loop {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.landing-marquee-item {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(1.2rem, 2.5vw, 2.5rem);
+  padding: 0 clamp(1.2rem, 2.5vw, 2.5rem);
+  flex-shrink: 0;
+}
+.landing-marquee-text {
+  font-family: var(--heading);
+  font-size: clamp(1.35rem, 2.4vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--landing-ivory);
+  white-space: nowrap;
+  opacity: 0.75;
+}
+.landing-marquee-logo {
+  height: clamp(1rem, 2vw, 1.65rem);
+  width: auto;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+/* === Section-specific transition polish === */
+.landing-compliance .landing-document-lines > div {
+  transition: border-color 300ms;
+}
+.landing-compliance .landing-document-lines > div:hover {
+  border-color: var(--landing-champagne);
+}
+.landing-platform .landing-pillars article {
+  transition: border-color 300ms, transform 300ms;
+}
+.landing-platform .landing-pillars article:hover {
+  border-color: rgb(215 184 135 / 30%);
+  transform: translateY(-2px);
+}
+.landing-care .landing-copy {
+  border-left: 2px solid rgb(215 184 135 / 12%);
+  padding-left: 2rem;
+}
 @keyframes landing-scroll {
   0%,
   100% {
@@ -707,6 +820,10 @@
     transform: translateY(10px);
     opacity: 1;
   }
+}
+@keyframes marquee-ltr {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
 }
 @media (max-width: 1100px) {
   .landing-desktop-nav,
@@ -798,6 +915,27 @@
   .landing-hero-coordinate,
   .landing-hero-caption,
   .landing-border-stamp {
+    display: none;
+  }
+  .landing-marquee-band {
+    padding: 0.5rem 0;
+  }
+  .landing-marquee-text {
+    font-size: clamp(1.1rem, 4.5vw, 1.6rem);
+  }
+  .landing-marquee-logo {
+    height: clamp(0.85rem, 3.5vw, 1.25rem);
+  }
+  .landing-care .landing-copy {
+    border-left: none;
+    padding-left: 1.5rem;
+  }
+  /* Chapter numbers hidden on compact viewports */
+  #journey::after,
+  #compliance::after,
+  #platform::after,
+  #care::after,
+  #movement::after {
     display: none;
   }
   .landing-hero-bottom {
