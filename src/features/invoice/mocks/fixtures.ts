@@ -32,13 +32,13 @@ export function createInvoiceFixtures(customerId = "flow6-demo-customer"): Invoi
     const planId = `00000003-0000-4000-8000-${String(bookingIndex).padStart(12, "0")}`
     const createdAt = final ? "2026-10-12T10:40:00Z" : index === 12 ? "2026-10-11T08:00:00Z" : `2026-10-${String(index + 1).padStart(2, "0")}T08:00:00Z`
     const issuedAt = scenario.issued ? final ? "2026-10-12T10:50:00Z" : `${createdAt.slice(0, 10)}T09:00:00Z` : null
-    const total = final ? 3000 : 600
+    const total = final ? 75000000 : 15000000
     const paidAt = scenario.status === "PAID" ? index === 12 ? "2026-10-11T10:00:00Z" : "2026-10-12T09:30:00Z" : null
     const currency = "VND"
     // Fixed server-like totals, not computed by the page or from user input.
-    const summary = index === 6 ? { subtotal: 1000000, discount: 0, tax: 200000, taxRatePercent: 20, depositDeduction: 0, grandTotal: 1200000 }
-      : final ? { subtotal: 3000, discount: 0, tax: 600, taxRatePercent: 20, depositDeduction: -600, grandTotal: 3000 }
-      : { subtotal: 500, discount: 0, tax: 100, taxRatePercent: 20, depositDeduction: 0, grandTotal: 600 }
+    const summary = index === 6 ? { subtotal: 10000000, discount: 0, tax: 2000000, taxRatePercent: 20, depositDeduction: 0, grandTotal: 12000000 }
+      : final ? { subtotal: 75000000, discount: 0, tax: 15000000, taxRatePercent: 20, depositDeduction: -15000000, grandTotal: 75000000 }
+      : { subtotal: 12500000, discount: 0, tax: 2500000, taxRatePercent: 20, depositDeduction: 0, grandTotal: 15000000 }
     return {
       invoiceId: mockInvoiceId(index), invoiceNumber: `INV-${createdAt.slice(0, 10).replaceAll("-", "")}-${String(index).padStart(4, "0")}`,
       type: scenario.type, status: scenario.status, isPaymentRequired: scenario.type !== "QUOTATION",
@@ -56,7 +56,7 @@ export function createInvoiceFixtures(customerId = "flow6-demo-customer"): Invoi
         { invoiceItemId: `${mockInvoiceId(index)}-item-1`, itemType: "TRANSPORT_FEE", description: "Demo horse transport service", quantity: 1,
           price: summary.subtotal, total: summary.subtotal, horse: null, itemDate: null, emergencyCostRequestId: null, isDepositDeduction: false, note: null },
         ...(final ? [{ invoiceItemId: `${mockInvoiceId(index)}-item-2`, itemType: "OTHER" as const,
-          description: "Deposit deduction (INV-20261005-0004)", quantity: 1, price: -600, total: -600,
+          description: "Deposit deduction (INV-20261005-0004)", quantity: 1, price: -15000000, total: -15000000,
           horse: null, itemDate: null, emergencyCostRequestId: null, isDepositDeduction: true, note: "Previously paid deposit." }] : []),
       ], summary,
       receipts: scenario.receipt ? [{ receiptId: `${mockInvoiceId(index)}-receipt`, receiptCode: `RCP-${index === 12 ? "20261011" : "20261012"}-${String(index).padStart(4, "0")}`,

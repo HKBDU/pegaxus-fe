@@ -101,11 +101,11 @@ function seedInvoices(): Invoice[] {
   })
   const claimDeposit = buildInvoice({
     booking: MOCK_BOOKINGS["mock-booking-claim"], type: "DEPOSIT", status: "PAID", currency: "VND", dueDate: "2026-10-10",
-    note: null, items: [seedItem("OTHER", "Transport deposit", 1, 2000)], number: "INV-20261002-0004",
+    note: null, items: [seedItem("OTHER", "Transport deposit", 1, 50000000)], number: "INV-20261002-0004",
   })
   const paidFinal = buildInvoice({
     booking: MOCK_BOOKINGS["mock-booking-claim"], type: "FINAL", status: "PAID", currency: "VND", dueDate: "2026-10-20",
-    note: null, items: [seedItem("TRANSPORT_FEE", "Transport fee", 1, 6000)], number: "INV-20261012-0005", depositSource: [claimDeposit],
+    note: null, items: [seedItem("TRANSPORT_FEE", "Transport fee", 1, 150000000)], number: "INV-20261012-0005", depositSource: [claimDeposit],
   })
   return [paidDeposit, claimDeposit, paidFinal]
 }

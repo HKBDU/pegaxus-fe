@@ -260,6 +260,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "invoices/:invoiceId",
+            element: (
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}><InvoiceDetailPage /></Suspense>
+              </ProtectedRoute>
+            ),
+          },
+          {
             path: "bookings/:bookingId/edit",
             element: (
               <ProtectedRoute allowedRoles={["CUSTOMER"]}>
@@ -612,7 +620,7 @@ export const router = createBrowserRouter([
       },
       {
         element: (
-          <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}>
+          <ProtectedRoute allowedRoles={["DRIVER", "ESCORT", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
             <AdminLayout />
           </ProtectedRoute>
         ),
@@ -620,7 +628,7 @@ export const router = createBrowserRouter([
           {
             path: "/compliance-dossiers/:dossierId/bcp-quarantine-proof",
             element: (
-              <ProtectedRoute allowedRoles={["ESCORT"]}>
+              <ProtectedRoute allowedRoles={["ESCORT", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
                 <BcpQuarantineProofPage />
               </ProtectedRoute>
             ),
@@ -628,7 +636,7 @@ export const router = createBrowserRouter([
           {
             path: "/compliance-dossiers/:dossierId/quarantine-proof",
             element: (
-              <ProtectedRoute allowedRoles={["ESCORT"]}>
+              <ProtectedRoute allowedRoles={["ESCORT", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
                 <BcpQuarantineProofPage />
               </ProtectedRoute>
             ),
@@ -636,7 +644,7 @@ export const router = createBrowserRouter([
           {
             path: "/compliance-dossiers/:dossierId/customs-clearance-proof",
             element: (
-              <ProtectedRoute allowedRoles={["DRIVER"]}>
+              <ProtectedRoute allowedRoles={["DRIVER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
                 <CustomsClearanceProofPage />
               </ProtectedRoute>
             ),
