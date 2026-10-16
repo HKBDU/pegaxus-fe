@@ -10,8 +10,15 @@ export function toLocalDateTime(value?: string | null) {
 export function formatPlanDate(value?: string | null) {
   return value ? `${formatBookingDate(value, true)} UTC` : "—"
 }
-/** VND only, whole amounts. */
-export function formatPlanMoney(amount?: number | null) {
+export function formatPlanMoney(amount?: number | null, currency?: string | null) {
   if (amount == null) return "—"
-  return new Intl.NumberFormat("en-GB", { style: "currency", currency: "VND", currencyDisplay: "code", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)
+  const curr = (currency || "VND").toUpperCase()
+  const fractionDigits = curr === "VND" ? 0 : 2
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: curr,
+    currencyDisplay: "code",
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(amount)
 }

@@ -12,7 +12,7 @@ type MockEnvironment = { PROD?: boolean; VITE_INVOICE_API_MOCKS?: string }
  * on by default in development; set VITE_INVOICE_API_MOCKS=false to call the real API. Never on in a production build.
  */
 export function isInvoiceMockMode(env: MockEnvironment = import.meta.env) {
-  return env.PROD !== true && env.VITE_INVOICE_API_MOCKS !== "false"
+  return env.PROD !== true && env.VITE_INVOICE_API_MOCKS === "true"
 }
 
 // ---- from view/format.ts ----
@@ -128,13 +128,13 @@ export function mapPaymentError(error: unknown): PaymentErrorState {
   }
 }
 
-// ---- from payment/utils/payment.format.ts ----
-export function formatPaymentAmount(amount: number, _currency?: InvoiceCurrency) {
+export function formatPaymentAmount(amount: number, currency: InvoiceCurrency = "VND") {
+  const fractionDigits = currency === "VND" ? 0 : 2
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'VND',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    currency,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(amount)
 }
 

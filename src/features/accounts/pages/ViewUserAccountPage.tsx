@@ -100,10 +100,17 @@ export default function ViewUserAccountPage() {
         {query.isPending ? (
           <LoadingState />
         ) : query.isError ? (
-          <ErrorState
-            message={getAccountError(query.error)}
-            onRetry={() => void query.refetch()}
-          />
+          <div className="space-y-4">
+            <ErrorState
+              message={getAccountError(query.error)}
+              onRetry={() => void query.refetch()}
+            />
+            <div className="flex justify-center">
+              <Button asChild variant="outline" className="rounded-[2px]">
+                <Link to={ROLE_ROUTES.managerUsers}>Back to Employee Accounts</Link>
+              </Button>
+            </div>
+          </div>
         ) : employee ? (
           <div className="booking-stagger space-y-3">
             <EmployeeSummaryCard employee={employee} />

@@ -33,7 +33,7 @@ import type {
  * The BE serves PS1/PS2/PS5 but not yet PS3/PS4/PS6, so mocks are on by default in development.
  * Set VITE_PERSONNEL_API_MOCKS=false to call the real Flow 3 API. Never on in a production build.
  */
-export const usePersonnelMocks = !import.meta.env.PROD && import.meta.env.VITE_PERSONNEL_API_MOCKS !== "false"
+export const usePersonnelMocks = !import.meta.env.PROD && import.meta.env.VITE_PERSONNEL_API_MOCKS === "true"
 
 function unwrap<T>(payload: unknown): T {
   if (payload && typeof payload === "object" && "value" in payload) return (payload as ApiEnvelope<T>).value
