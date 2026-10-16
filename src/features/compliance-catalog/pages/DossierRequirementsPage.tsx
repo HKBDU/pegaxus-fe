@@ -20,29 +20,22 @@ import {
 } from "@/features/compliance-catalog/hooks"
 import type { DossierRequirementItem, DossierRequirementParams, RequirementStatus } from "@/features/compliance-catalog/dossier-types"
 import { getRequirementErrorMessage } from "@/features/compliance-catalog/template-utils"
-import { DossierHeaderCard } from "@/features/dossier/components/DossierHeaderCard"
-import { DossierTabs } from "@/features/dossier/components/DossierTabs"
 import { useDossierOverview } from "@/features/dossier/hooks"
 import { formatDossierDate } from "@/features/dossier/utils"
 import { ErrorState } from "@/shared/components/common"
 import { TablePagination } from "@/shared/components/common/TablePagination"
-import { PageHeader } from "@/shared/components/PageHeader"
 import { Button } from "@/shared/components/ui/button"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableRadioFilter, type DataTableRadioOption } from "@/shared/components/ui/data-table-radio-filter"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
-import { Skeleton } from "@/shared/components/ui/skeleton"
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard"
 
 const initialParams: DossierRequirementParams = { pageIndex: 1, pageSize: 10, status: "ALL", horseId: "ALL" }
 const ALL_LINES: DossierRequirementParams = { pageIndex: 1, pageSize: 100, status: "ALL", horseId: "ALL" }
 
-/**
- * "Requirements" tab of a dossier: the list (D8) plus Add (SCR-F2-009) and Remove (SCR-F2-010) for the TS.
- * Temporary host for those two dialogs until the dossier detail page (SCR-F2-008) embeds them.
- */
-export function DossierRequirementsPanel({ embedded = false }: { embedded?: boolean }) {
+/** "Dossier Requirements" tab of the dossier page: the list (D8) plus Add (SCR-F2-009), Edit/Waive and Remove (SCR-F2-010) for the TS. */
+export function DossierRequirementsPanel() {
   const { dossierId } = useParams()
   const principal = useAuthStore((state) => state.principal)
   const canManage = canAccess(principal, { anyRole: ["TRANSPORT_SPECIALIST"] })
@@ -164,33 +157,9 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
   const lockMessage = getRequirementErrorMessage(new Error(overview?.writeLockReason ?? "DOSSIER_LOCKED"), "This dossier cannot be modified.")
 
   return (
-    <div className={embedded ? "grid gap-5" : "booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10"}>
-      <div className="booking-page-enter mx-auto w-full max-w-[1280px]">
-        {!embedded ? <div className="mb-6">
-          <PageHeader
-            title="DOSSIER REQUIREMENTS"
-            backHref="/compliance-dossiers"
-            backLabel="Back to dossier tracking"
-            action={
-              canManage ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={locked || !overview}
-                  className="h-9 shrink-0 rounded-[2px] bg-[#ef8f00] px-4 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-slate-950 hover:bg-[#db8300]"
-                  onClick={() => setAddOpen(true)}
-                >
-                  <Plus className="size-4" />
-                  Add DossierRequirement
-                </Button>
-              ) : undefined
-            }
-          />
-          <p className="m-0 text-sm text-slate-500">Manage the documents this booking has to provide.</p>
-        </div> : null}
-
-        {/* The detail page embeds this panel without the page header, so the Add action lives here. */}
-        {embedded && canManage ? (
+    <div className="grid gap-5">
+      <div className="w-full">
+        {canManage ? (
           <div className="mb-4 flex justify-end">
             <Button
               type="button"
@@ -209,9 +178,6 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
           <ErrorState message="Unable to load this dossier." onRetry={() => void overviewQuery.refetch()} />
         ) : (
           <div className="grid grid-cols-[minmax(0,1fr)] gap-5">
-            {!embedded ? (overview ? <DossierHeaderCard overview={overview} /> : <Skeleton className="h-20 rounded-none bg-[#e9e6de]" />) : null}
-            {!embedded && dossierId ? <DossierTabs dossierId={dossierId} active="requirements" /> : null}
-
             {locked ? (
               <div role="alert" className="flex items-start gap-2 rounded-[2px] border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-900">
                 <LockKeyhole className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
@@ -286,8 +252,4 @@ export function DossierRequirementsPanel({ embedded = false }: { embedded?: bool
       <DossierRequirementActionDialog dossierId={dossierId ?? ""} action={action} onClose={() => setAction(null)} />
     </div>
   )
-}
-
-export default function DossierRequirementsPage() {
-  return <DossierRequirementsPanel />
 }

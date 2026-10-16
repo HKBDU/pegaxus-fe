@@ -6,6 +6,7 @@ import { ProviderStatCards, ProviderTable } from "@/features/fleet/components/Pr
 import { useProviderCounts, useProviders } from "@/features/fleet/hooks"
 import type { ProviderListParams } from "@/features/fleet/types"
 import { ErrorState } from "@/shared/components/common"
+import { PageHeader } from "@/shared/components/PageHeader"
 
 const initialParams: ProviderListParams = {
   pageIndex: 1,
@@ -32,11 +33,11 @@ export default function ProviderListPage() {
 
   return (
     <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
-      <div className="booking-page-enter mx-auto grid w-full max-w-[1280px] gap-5">
-        <header>
-          <h1 className="m-0! font-sans text-2xl! font-bold! leading-8! tracking-normal! text-slate-900!">Transport Providers List</h1>
-          <p className="m-0 mt-1 text-sm text-slate-500">Manage third-party animal transport partners across Europe.</p>
-        </header>
+      <div className="booking-page-enter mx-auto grid w-full max-w-[1152px] gap-5">
+        <div>
+          <PageHeader title="TRANSPORT PROVIDERS" backHref="/admin" backLabel="RETURN TO FLEET OVERVIEW" />
+          <p className="m-0 text-sm text-slate-500">Manage third-party animal transport partners across Europe.</p>
+        </div>
 
         <ProviderStatCards counts={countsQuery.data} />
 
@@ -50,7 +51,6 @@ export default function ProviderListPage() {
             isLoading={providersQuery.isFetching}
             onSearchChange={handleSearchChange}
             onPatch={patchFilters}
-            onReset={() => setParams(initialParams)}
             onPageChange={(pageIndex) => setParams((current) => ({ ...current, pageIndex }))}
             onPageSizeChange={(pageSize) => setParams((current) => ({ ...current, pageSize, pageIndex: 1 }))}
             onAdd={() => setCreateOpen(true)}
@@ -58,7 +58,7 @@ export default function ProviderListPage() {
         ) : null}
       </div>
 
-      <ProviderFormDialog target={createOpen ? "create" : null} onOpenChange={setCreateOpen} />
+      <ProviderFormDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   )
 }

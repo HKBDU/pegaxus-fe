@@ -5,7 +5,8 @@ import { toast } from "sonner"
 
 import { VehicleFormSkeleton } from "@/features/fleet/components/FleetSkeletons"
 import { VehicleForm } from "@/features/fleet/components/VehicleForm"
-import { VEHICLE_LIST_PATH } from "@/features/fleet/constants/fleet.constants"
+import { PAGE_SHELL_CLASS, PAGE_WIDTH_CLASS } from "@/features/fleet/components/DetailParts"
+import { VEHICLE_LIST_PATH, vehicleDetailPath } from "@/features/fleet/constants/fleet.constants"
 import { useCreateVehicle, useUpdateVehicle, useVehicle } from "@/features/fleet/hooks"
 import type { VehicleFormValues } from "@/features/fleet/schemas"
 import { FleetApiError } from "@/features/fleet/services"
@@ -56,7 +57,7 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
       })
       if (!guarded.started) return
       toast.success(isEdit ? "Vehicle information updated successfully." : "Vehicle created successfully.")
-      navigate(VEHICLE_LIST_PATH)
+      navigate(isEdit && vehicleId ? vehicleDetailPath(vehicleId) : VEHICLE_LIST_PATH)
     } catch (error) {
       attempt.reset()
       const code = getFleetErrorCode(error)
@@ -84,13 +85,15 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
   }
 
   return (
-    <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
-      <div className="booking-page-enter mx-auto w-full max-w-[880px]">
-        <PageHeader
-          title={isEdit ? "EDIT VEHICLE INFORMATION" : "ADD NEW VEHICLE"}
-          backHref={VEHICLE_LIST_PATH}
-          backLabel="RETURN TO VEHICLES LIST"
-        />
+    <div className={PAGE_SHELL_CLASS}>
+      <div className={PAGE_WIDTH_CLASS}>
+        <div className="mb-3">
+          <PageHeader
+            title={isEdit ? "EDIT VEHICLE" : "ADD NEW VEHICLE"}
+            backHref={isEdit && vehicleId ? vehicleDetailPath(vehicleId) : VEHICLE_LIST_PATH}
+            backLabel={isEdit ? "BACK TO VEHICLE DETAILS" : "RETURN TO VEHICLES LIST"}
+          />
+        </div>
 
         {isEdit && vehicleQuery.isLoading ? <VehicleFormSkeleton /> : null}
         {isEdit && vehicleQuery.isError ? <ErrorState message="Unable to load this vehicle." onRetry={() => void vehicleQuery.refetch()} /> : null}
@@ -99,7 +102,7 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
             mode={mode}
             vehicle={vehicleQuery.data}
             isSaving={isSaving}
-            cancelHref={VEHICLE_LIST_PATH}
+            cancelHref={isEdit && vehicleId ? vehicleDetailPath(vehicleId) : VEHICLE_LIST_PATH}
             onSubmit={save}
             onFormReady={(form) => {
               formRef.current = form

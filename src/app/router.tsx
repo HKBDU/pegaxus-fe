@@ -92,13 +92,12 @@ const DossierDashboardPage = lazy(
 const DossierDetailsPage = lazy(
   () => import("@/features/dossier/pages/DossierDetailsPage"),
 );
-const DossierAuditHistoryPage = lazy(
-  () => import("@/features/dossier/pages/DossierAuditHistoryPage"),
-);
 const VehicleListPage = lazy(() => import("@/features/fleet/pages/VehicleListPage"));
 const VehicleFormPage = lazy(() => import("@/features/fleet/pages/VehicleFormPage"));
 const VehicleDetailPage = lazy(() => import("@/features/fleet/pages/VehicleDetailPage"));
 const ProviderListPage = lazy(() => import("@/features/fleet/pages/ProviderListPage"));
+const ProviderDetailPage = lazy(() => import("@/features/fleet/pages/ProviderDetailPage"));
+const ProviderEditPage = lazy(() => import("@/features/fleet/pages/ProviderEditPage"));
 const CreateRoutePlanPage = lazy(() => import("@/features/route-plan/pages/CreateRoutePlanPage"));
 const CreateContingencyRoutePage = lazy(() => import("@/features/route-plan/pages/CreateContingencyRoutePage"));
 const CreateReturnRoutePage = lazy(() => import("@/features/route-plan/pages/CreateReturnRoutePage"));
@@ -397,7 +396,11 @@ export const router = createBrowserRouter([
         <AdminLayout />
       </ProtectedRoute>
     ),
-    children: [{ index: true, element: <Suspense fallback={<LoadingState />}><ProviderListPage /></Suspense> }],
+    children: [
+      { index: true, element: <Suspense fallback={<LoadingState />}><ProviderListPage /></Suspense> },
+      { path: ":providerId", element: <Suspense fallback={<LoadingState />}><ProviderDetailPage /></Suspense> },
+      { path: ":providerId/edit", element: <Suspense fallback={<LoadingState />}><ProviderEditPage /></Suspense> },
+    ],
   },
   {
     path: ROLE_ROUTES.mapAssets,
@@ -547,7 +550,7 @@ export const router = createBrowserRouter([
       { path: ":dossierId/details", element: <Suspense fallback={<LoadingState />}><DossierDetailsPage /></Suspense> },
       // Single dossier page: the requirements panel is embedded in DossierDetailsPage; keep old links working.
       { path: ":dossierId/requirements", element: <Navigate to="../details" relative="path" replace /> },
-      { path: ":dossierId/audit-history", element: <Suspense fallback={<LoadingState />}><DossierAuditHistoryPage /></Suspense> },
+      { path: ":dossierId/audit-history", element: <Navigate to="../details?tab=audit" relative="path" replace /> },
     ],
   },
   {

@@ -1,17 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { AlertTriangle, FileText, Layers, ReceiptText, Truck, Users } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Controller, FormProvider, useForm, useWatch, type FieldErrors, type Path } from "react-hook-form"
 import { toast } from "sonner"
 import { BillingSummaryCard } from "@/features/invoice/components/BillingSummaryCard"
 import { InvoiceLineItemsTable } from "@/features/invoice/components/InvoiceLineItemsTable"
 import { IssueInvoiceDialog } from "@/features/invoice/components/IssueInvoiceDialog"
-import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_TYPE_HINTS, TRANSPORT_STATUS_LABELS, INVOICE_CURRENCIES, INVOICE_TYPE, INVOICE_TYPE_LABELS } from "@/features/invoice/constants"
+import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_TYPE_HINTS, TRANSPORT_STATUS_LABELS, INVOICE_TYPE, INVOICE_TYPE_LABELS } from "@/features/invoice/constants"
 import { getInvoiceErrorCode, getInvoiceErrorMessage, InvoiceApiError } from "@/features/invoice/errors"
 import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/features/invoice/hooks/useInvoiceCompose"
 import { invoiceFormSchema, invoiceToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoiceType } from "@/features/invoice/types"
-import { estimateSummary, parseDecimal, roundMoney, todayIsoDate } from "@/features/invoice/utils"
+import { estimateSummary, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
 import { Button } from "@/shared/components/ui/button"
 import { DatePicker } from "@/shared/components/ui/date-picker"
@@ -74,17 +74,11 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
   )
   const transportStatus = isEdit ? invoice?.transport?.status : suggestionQuery.data?.transportStatus
 
-  // A FINAL must use the currency of the paid deposit, otherwise the BE answers CURRENCY_MISMATCH.
-  const depositCurrency = selectedType === "FINAL" ? (suggestionQuery.data?.currency ?? null) : null
-  useEffect(() => {
-    if (depositCurrency) setValue("currency", depositCurrency, { shouldDirty: true })
-  }, [depositCurrency, setValue])
-
   const [type, currency, items] = useWatch({ control, name: ["type", "currency", "items"] })
   const parsedLines = (items ?? []).map((item) => ({
     label: item.description?.trim() || "Untitled line",
-    quantity: parseDecimal(item.quantity ?? ""),
-    price: parseDecimal(item.price ?? ""),
+    quantity: parseWholeNumber(item.quantity ?? ""),
+    price: parseWholeNumber(item.price ?? ""),
     key: item.invoiceItemId ?? "",
   }))
   const estimate = estimateSummary(parsedLines, depositDeductionItems)
@@ -166,7 +160,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
       <Dialog open={!issueTarget} onOpenChange={(open) => !open && !isSaving && onClose()}>
         <DialogContent showCloseButton={!isSaving} className="flex h-[94dvh] max-h-[880px] flex-col gap-0 overflow-hidden rounded-none border-0 bg-[#faf9f6] p-0 sm:max-w-[1120px]">
           <header className="flex shrink-0 items-center gap-3 border-b border-[#e5e2d9] bg-white px-6 py-4 pr-14">
-            <span className="flex size-10 shrink-0 items-center justify-center bg-orange-600 text-white">
+            <span className="flex size-10 shrink-0 items-center justify-center bg-[#ef8f00] text-slate-950">
               <ReceiptText className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -188,11 +182,11 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
             >
               <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
                 <dl className={`grid grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-[#e5e2d9] ${panelClass}`}>
-                  <InfoCell icon={<Truck className="size-4 text-orange-600" />} label="Invoice for transport" value={booking.transportCode ?? "—"} />
+                  <InfoCell icon={<Truck className="size-4 text-[#ef8f00]" />} label="Invoice for transport" value={booking.transportCode ?? "—"} />
                   <InfoCell icon={<FileText className="size-4 text-sky-600" />} label="Booking" value={booking.bookingCode} />
                   <InfoCell icon={<Users className="size-4 text-violet-600" />} label="Customer" value={booking.customerName || "—"} />
                   <InfoCell
-                    icon={<Layers className="size-4 text-orange-600" />}
+                    icon={<Layers className="size-4 text-[#ef8f00]" />}
                     label="Transport status"
                     value={
                       transportStatus ? (
@@ -207,7 +201,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                 <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
                   <section className={`flex flex-col ${panelClass}`} aria-label="Invoice details">
                     <h3 className={panelHeaderClass}>
-                      <FileText className="size-4 text-orange-600" aria-hidden="true" />
+                      <FileText className="size-4 text-[#ef8f00]" aria-hidden="true" />
                       Invoice details
                     </h3>
                     <div className="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-3">
@@ -221,19 +215,9 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                         </Select>
                       </div>
                       <div>
-                        <label className={fieldLabelClass} htmlFor="invoice-currency">Currency <span className="text-red-500">*</span></label>
-                        <Controller
-                          control={control}
-                          name="currency"
-                          render={({ field }) => (
-                            <Select value={field.value} onValueChange={field.onChange} disabled={Boolean(depositCurrency) || isSaving}>
-                              <SelectTrigger id="invoice-currency" className={controlClass}><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                {INVOICE_CURRENCIES.map((option) => <SelectItem key={option} value={option}>{INVOICE_CURRENCY_LABELS[option]}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
+                        <p className={fieldLabelClass}>Currency</p>
+                        {/* VND is the only supported currency, so there is nothing to choose. */}
+                        <div id="invoice-currency" className={`${controlClass} flex items-center bg-[#f7f6f3] text-gray-700`}>{INVOICE_CURRENCY_LABELS.VND}</div>
                       </div>
                       <div>
                         <label className={fieldLabelClass} htmlFor="invoice-due-date">{dateLabel} <span className="text-red-500">*</span></label>
@@ -259,7 +243,6 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                       <div className="min-h-4 text-[11px] leading-4 text-gray-500 sm:col-span-3 sm:-mt-2">
                         {suggestionQuery.isFetching && !isEdit ? <span role="status">Checking the booking...</span> : null}
                         {!suggestionQuery.isFetching || isEdit ? (selectedType ? INVOICE_TYPE_HINTS[selectedType] : "Quotation, Deposit, Final, Supplementary or Credit note.") : null}
-                        {depositCurrency ? " The currency is locked to the paid deposit." : ""}
                       </div>
                       {precheckError ? (
                         <div className="flex gap-2 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:col-span-3" role="alert">
@@ -294,7 +277,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-9 rounded-none border-orange-400 px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+                  className="h-9 rounded-none border-[#ef8f00] px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-slate-900 hover:bg-amber-50 hover:text-slate-950"
                   disabled={isSaving || !canSave || (isEdit && !isDirty)}
                   onClick={() => submitWith("draft")}
                 >
@@ -302,7 +285,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                 </Button>
                 <Button
                   type="button"
-                  className="h-9 rounded-none bg-orange-600 px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-white hover:bg-orange-700"
+                  className="h-9 rounded-none bg-[#ef8f00] px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-slate-950 hover:bg-[#db8300]"
                   disabled={isSaving || !canSave}
                   onClick={() => submitWith("issue")}
                 >

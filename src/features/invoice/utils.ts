@@ -25,17 +25,18 @@ export function invoiceDate(value?: string | null) {
 // ---- from compose/utils.ts ----
 export const EMPTY_VALUE = "—"
 
+/** VND has no minor unit: every amount is a whole number. */
 export function roundMoney(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100
+  return Math.round(value)
 }
 
 export function formatMoney(amount: number, currency: InvoiceCurrency = "VND") {
   const fractionDigits = currency === "VND" ? 0 : 2
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
+    currency: "VND",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount)
 }
 
@@ -56,15 +57,11 @@ export function todayIsoDate() {
   return format(new Date(), "yyyy-MM-dd")
 }
 
-export function parseDecimal(value: string) {
-  const normalized = value.trim().replace(",", ".")
-  if (normalized === "" || !/^-?\d*(\.\d+)?$/.test(normalized)) return Number.NaN
+/** Whole numbers only (no sign, no decimals): SePay does not accept fractional amounts. NaN when invalid. */
+export function parseWholeNumber(value: string) {
+  const normalized = value.trim()
+  if (!/^\d+$/.test(normalized)) return Number.NaN
   return Number(normalized)
-}
-
-/** Max two decimals, the same limit the BE applies to quantity. */
-export function hasAtMostTwoDecimals(value: number) {
-  return Math.abs(value * 100 - Math.round(value * 100)) < 1e-8
 }
 
 /**
@@ -172,7 +169,7 @@ export const cancellationSchema = z.object({
 })
 
 export const recordPaymentSchema = z.object({
-  amount: z.number().finite().nonnegative(),
+  amount: z.number().finite().int('Amount must be a whole number.').nonnegative(),
   currency: z.enum(PAYMENT_CURRENCY_VALUES),
   paymentMethod: z.enum(PAYMENT_METHOD_VALUES),
   transactionReference: optionalText(PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH),

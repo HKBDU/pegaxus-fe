@@ -54,6 +54,7 @@ export const INVOICE_ACTION = {
   CREATE_ANOTHER: 'CREATE_ANOTHER',
 } as const
 
+// VND is the only supported currency (SePay takes whole VND amounts).
 export const INVOICE_CURRENCIES = ['VND'] as const
 
 export const INVOICE_TAX_RATE_PERCENT = 20

@@ -16,8 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/shared/components/ui/textarea"
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard"
 
-const labelClass = "font-heading text-[11px] font-semibold uppercase leading-4 tracking-[0.06em] text-[#181818]"
-const controlClass = "w-full rounded-[2px] border-0 bg-[#f3f3f3] px-3 text-xs text-[#181818] shadow-none focus-visible:ring-2 focus-visible:ring-primary/40"
+const labelClass = "font-heading text-[11px] font-medium uppercase leading-4 tracking-[0.06em] text-slate-700"
+const controlClass = "w-full rounded-[2px] border border-slate-300 bg-white px-3 text-xs text-[#181818] shadow-none placeholder:text-slate-400 focus-visible:border-amber-500 focus-visible:ring-amber-500/20"
 
 function defaultStatus(vehicle: Vehicle): VehicleStatusFormValues["status"] {
   return MANUAL_VEHICLE_STATUSES.find((status) => status !== vehicle.status) ?? "AVAILABLE"
@@ -65,12 +65,9 @@ export function VehicleStatusDialog({ vehicle, onOpenChange, onChanged }: Vehicl
 
   return (
     <Dialog open={vehicle !== null} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className="gap-0 overflow-hidden rounded-[2px] border-0 bg-white p-0 sm:max-w-[500px]">
-        <DialogHeader className="gap-0 bg-[#e9e6de] px-5 py-3 text-left">
-          <DialogTitle className="m-0! flex items-center gap-2 font-heading text-lg! font-bold! uppercase tracking-[0.02em]! text-[#ef8f00]!">
-            <span className="inline-block size-2 bg-[#ef8f00]" aria-hidden="true" />
-            Update vehicle status
-          </DialogTitle>
+      <DialogContent className="gap-0 overflow-hidden rounded-[2px] border-slate-200 bg-white p-0 sm:max-w-[500px]">
+        <DialogHeader className="border-b border-slate-200 px-5 py-4 text-left">
+          <DialogTitle className="m-0! font-heading text-2xl! font-bold! uppercase tracking-[0.02em]! text-[#ef8f00]!">Update vehicle status</DialogTitle>
           <DialogDescription className="sr-only">Change the operational status of the selected vehicle.</DialogDescription>
         </DialogHeader>
 
@@ -79,7 +76,7 @@ export function VehicleStatusDialog({ vehicle, onOpenChange, onChanged }: Vehicl
             <form onSubmit={submit} noValidate>
               <fieldset disabled={changeStatus.isPending} className="grid gap-4 px-5 py-4">
                 <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
-                  <p className="m-0 font-heading text-sm font-bold uppercase text-slate-900">
+                  <p className="m-0 text-xs font-semibold text-slate-900">
                     {vehicle.vehicleCode}
                     {vehicle.vehicleName ? ` — ${vehicle.vehicleName}` : ""}
                   </p>
@@ -106,9 +103,9 @@ export function VehicleStatusDialog({ vehicle, onOpenChange, onChanged }: Vehicl
                             <SelectValue placeholder="Select new status" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="rounded-[2px]">
+                        <SelectContent className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
                           {MANUAL_VEHICLE_STATUSES.map((status) => (
-                            <SelectItem key={status} value={status} className="text-xs">
+                            <SelectItem key={status} value={status} className="h-7 rounded-[2px] text-xs">
                               {MANUAL_STATUS_OPTION_LABEL[status]}
                             </SelectItem>
                           ))}
@@ -134,11 +131,11 @@ export function VehicleStatusDialog({ vehicle, onOpenChange, onChanged }: Vehicl
                 />
               </fieldset>
 
-              <div className="flex justify-end gap-2 bg-[#f5f3ee] px-5 py-3">
-                <Button type="button" variant="outline" className="h-9 rounded-[2px] border-0 bg-[#e0ded8] px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-slate-800 shadow-none hover:bg-[#d5d3cc]" onClick={() => onOpenChange(false)}>
+              <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+                <Button type="button" variant="outline" size="sm" className="h-8 rounded-[2px] border-slate-300 bg-white px-4 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-900 shadow-none" onClick={() => onOpenChange(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={changeStatus.isPending} className="h-9 rounded-[2px] bg-[#ef8f00] px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-slate-950 hover:bg-[#db8300]">
+                <Button type="submit" size="sm" disabled={changeStatus.isPending} className="h-8 rounded-[2px] bg-[#ef8f00] px-4 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-950 shadow-none hover:bg-[#db8300]">
                   {changeStatus.isPending ? "Updating..." : "Confirm status change"}
                 </Button>
               </div>
