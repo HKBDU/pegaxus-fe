@@ -2,7 +2,7 @@ import { Button } from "@/shared/components/ui/button"
 import { INVOICE_ACTION } from "@/features/invoice/constants"
 import type { PayNowButtonProps } from "@/features/invoice/types"
 import { useOnlinePayment } from "@/features/invoice/hooks/useOnlinePayment"
-import { mapPaymentError, submitCheckoutForm } from "@/features/invoice/utils"
+import { formatMoney, isPayableAmount, mapPaymentError, submitCheckoutForm } from "@/features/invoice/utils"
 
 export function PayNowButton({ invoice }: PayNowButtonProps) {
   const mutation = useOnlinePayment()
@@ -10,11 +10,12 @@ export function PayNowButton({ invoice }: PayNowButtonProps) {
 
   if (!canPay) return null
 
-  const isVnd = invoice.currency === "VND"
   const mappedError = mutation.error ? mapPaymentError(mutation.error) : null
+  // The amount charged is the invoice total computed by the BE; a total with decimals (e.g. 20% tax on an odd subtotal) cannot go through SePay.
+  const amountPayable = isPayableAmount(invoice.summary.grandTotal)
 
   function handlePayNow() {
-    if (!isVnd) return
+    if (!amountPayable) return
     mutation.mutate(
       { invoiceId: invoice.invoiceId },
       {
@@ -27,17 +28,12 @@ export function PayNowButton({ invoice }: PayNowButtonProps) {
 
   return (
     <div className="grid gap-2">
-      <Button
-        type="button"
-        onClick={handlePayNow}
-        disabled={mutation.isPending || !isVnd}
-        title={!isVnd ? "Online payment via SePay currently supports VND only" : undefined}
-      >
+      <Button type="button" onClick={handlePayNow} disabled={mutation.isPending || !amountPayable}>
         {mutation.isPending ? 'Opening payment gateway...' : 'Pay now'}
       </Button>
-      {!isVnd ? (
+      {!amountPayable ? (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5" role="note">
-          Online payment via SePay currently supports VND only. For {invoice.currency} invoices, please pay via international bank transfer or contact logistics management.
+          Online payment needs a whole VND amount, but this invoice total is {formatMoney(invoice.summary.grandTotal)} with decimals ({invoice.summary.grandTotal}). Please contact logistics management to correct the invoice.
         </p>
       ) : null}
       {mappedError ? (

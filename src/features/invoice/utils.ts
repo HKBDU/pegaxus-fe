@@ -95,6 +95,8 @@ const PAYMENT_ERROR_MESSAGES: Record<PaymentErrorCode, string> = {
   PAYMENT_IN_PROGRESS: 'A payment for this invoice is being processed.',
   VALIDATION_ERROR: 'Check the payment details and try again.',
   PAYMENT_GATEWAY_ERROR: 'Payment gateway is unavailable. Please try again later.',
+  UNSUPPORTED_PAYMENT_AMOUNT: 'SePay only accepts a whole VND amount. This invoice total has decimals, so ask the Logistics Manager to correct the invoice.',
+  UNSUPPORTED_PAYMENT_CURRENCY: 'SePay only accepts VND payments.',
 }
 
 export function getPaymentErrorMessage(errorCode?: string, fallback?: string) {
@@ -128,14 +130,19 @@ export function mapPaymentError(error: unknown): PaymentErrorState {
   }
 }
 
-export function formatPaymentAmount(amount: number, currency: InvoiceCurrency = "VND") {
-  const fractionDigits = currency === "VND" ? 0 : 2
+// ---- from payment/utils/payment.format.ts ----
+export function formatPaymentAmount(amount: number, _currency?: InvoiceCurrency) {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency,
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits,
+    currency: 'VND',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount)
+}
+
+/** SePay only takes a positive whole VND amount; the BE rejects anything else with UNSUPPORTED_PAYMENT_AMOUNT. */
+export function isPayableAmount(amount: number) {
+  return Number.isInteger(amount) && amount > 0
 }
 
 export function formatPaymentDate(value: string | null | undefined) {
