@@ -3,7 +3,7 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
-
+@source not "./features/home/assets/horse.glb";
 :root {
   --text: #171717;
   --text-h: #181818;

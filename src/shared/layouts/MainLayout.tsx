@@ -27,10 +27,11 @@ function toHeaderUser(profile: AuthAccount): ProfileDropdownUser {
 }
 
 export function MainLayout() {
+  const { pathname } = useLocation()
+  const isLanding = pathname === "/"
   const { data: account } = useUser()
   const accessToken = useAuthStore((state) => state.accessToken)
   const principal = useAuthStore((state) => state.principal)
-  const { pathname } = useLocation()
 
   // Employee-facing routes use the desktop admin shell consistently, including
   // roles whose routes are shared with the customer-facing application.
@@ -49,11 +50,11 @@ export function MainLayout() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />
+      {!isLanding && <Header navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />}
       <main className="min-h-[calc(100svh-3rem)] flex-none">
         <Outlet /> {/* Outlet - React Router render route childs*/}
       </main>
-      <Footer />
+      {!isLanding && <Footer />}
     </div>
   )
 }
