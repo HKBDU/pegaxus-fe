@@ -21,6 +21,8 @@ import AuthoritySubmissionPage from "@/features/authority/pages/AuthoritySubmiss
 import AuthorityReviewPage from "@/features/authority/pages/AuthorityReviewPage";
 import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearanceProofPage";
 import CustomsClearanceReviewPage from "@/features/clearance/pages/CustomsClearanceReviewPage";
+import { horseHealthRoutes } from "@/features/horse-health";
+import TestPage from "@/Test";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const ManageUserAccountsPage = lazy(
@@ -129,6 +131,12 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  ...horseHealthRoutes,
+  {
+    path: "/transport-plans/:transportPlanId",
+    element: <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}><MainLayout /></ProtectedRoute>,
+    children: [{ index: true, element: <Suspense fallback={<LoadingState />}><TransportPlanDetailsPage /></Suspense> }],
+  },
   {
     path: ROLE_ROUTES.transportPlans,
     element: <ProtectedRoute allowedRoles={TRANSPORT_PLANS_ACCESS.anyRole}><AdminLayout /></ProtectedRoute>,
@@ -683,6 +691,10 @@ export const router = createBrowserRouter([
   ...(import.meta.env.DEV
     ? [
         // BEGIN TEMP UC-38 LOCAL PREVIEW — remove only this route object after testing.
+        {
+          path: "/__dev/horse-health/photo-capture",
+          element: <TestPage />,
+        },
         {
           path: "/__dev/flow3/route-plans/:routePlanId",
           element: <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"]}><AdminLayout /></ProtectedRoute>,
