@@ -1,192 +1,171 @@
-# 🐎 Pegaxus Frontend (`pegaxus-fe`)
+# Pegaxus
 
-> **Racehorse Cross-Border Transport & Quarantine Logistics Management System**  
-> *Course Project: SWP391 (Software Development Project)*
+**Racehorse Cross-Border Transport & Quarantine Logistics Management System**
 
 [![Quality CI](https://github.com/HKBDU/pegaxus-fe/actions/workflows/quality.yml/badge.svg)](https://github.com/HKBDU/pegaxus-fe/actions/workflows/quality.yml)
-[![React Version](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![Vite Version](https://img.shields.io/badge/Vite-8.3-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Linter: Oxlint](https://img.shields.io/badge/Linter-Oxlint-F27A1A?logo=rust&logoColor=white)](https://oxc.rs/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![React](https://img.shields.io/badge/React-19-61DAFB)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green)](./LICENSE)
 
----
+Pegaxus brings transport booking, route planning, compliance documentation, and billing into one web application for cross-border racehorse logistics. This repository contains the React frontend, developed for SWP391 (Software Development Project).
 
-## 📖 1. Project Overview
+[Interface Preview](#interface-preview) | [Capabilities](#capabilities) | [Getting Started](#getting-started) | [Configuration](#configuration) | [Development](#development)
 
-**Pegaxus** is a specialized enterprise logistics platform designed to manage the high-stakes international transportation of racehorses across borders. The system solves complex operational, veterinary, and regulatory challenges:
+## Interface Preview
 
-- **Multimodal Route Planning**: Coordination across Road, Air, and Sea transit legs with scheduled stops at certified equine stables, rest stops, and quarantine border gates.
-- **Compliance & Quarantine Dossier Management**: End-to-end verification of strict veterinary health records, CITES certifications, import/export government permits, and customs clearance documents.
-- **Real-Time Monitoring & Escort Tracking**: Live geolocation tracking, in-transit telemetry, and status updates provided by assigned drivers, grooms, and veterinary escorts.
-- **Customer Portal & Transparent Billing**: Intuitive self-service booking for horse owners, trainers, and racing syndicates, with automated quote calculation, invoicing, and milestones tracking.
+### Landing Page
 
-This repository hosts the single-page web application (**Frontend**) for the Pegaxus platform.
+![Pegaxus landing page with the transport introduction and booking action](./sreenshots/pegaxus-landing-page-01.jpg)
 
----
+| International Transport | About Pegaxus |
+| :---: | :---: |
+| ![International transport section of the Pegaxus landing page](./sreenshots/pegaxus-landing-page-02.jpg) | ![About section and transport call to action](./sreenshots/pegaxus-landing-page-03.jpg) |
 
-## 🛠️ 2. Technology Stack
+### Map Workspace
 
-| Category | Technology / Library | Version | Description |
-| :--- | :--- | :--- | :--- |
-| **Core Framework** | [React](https://react.dev/) | `^19.2.8` | Latest React 19 leveraging modern client hooks & concurrent features |
-| **Build Tool & Bundler** | [Vite](https://vite.dev/) | `^8.3.0` | Ultra-fast Hot Module Replacement (HMR) and optimized ESM bundling |
-| **Language** | [TypeScript](https://www.typescriptlang.org/) | `~6.0.2` | Configured with strict type checking enabled (`strict: true`) |
-| **Linter & Code Quality** | [Oxlint](https://oxc.rs/) | `^1.81.0` | High-performance, Rust-based JavaScript/TypeScript linter |
-| **CI / Automation** | [GitHub Actions](https://github.com/features/actions) | Workflow v4 | Automated validation of branch names, PR titles, linting, and build integrity |
-| **Containerization** | [Docker](https://www.docker.com/) & [Nginx Alpine](https://hub.docker.com/_/nginx) | Multi-stage | Production container image with SPA fallback routing, gzip, and asset caching |
+The map assets workspace provides a geographic view of transport locations, with location search and tools for managing locations and routes.
 
----
+![Map assets workspace showing transport locations across Western Europe](./sreenshots/pegaxus-map-01.jpg)
 
-## 📂 3. Repository Structure
+![Selected stable on the map with address, coordinates, and location management actions](./sreenshots/pegaxus-map-02.jpg)
 
-The project follows a **Feature-based Clean Architecture**, keeping domain modules isolated, modular, and maintainable:
+## Capabilities
 
-```text
-pegaxus-fe/
-├── .github/
-│   ├── workflows/
-│   │   └── quality.yml           # CI Pipeline: validates PR metadata, lint, and build
-│   └── PULL_REQUEST_TEMPLATE.md  # Standard Pull Request submission template
-├── public/                       # Static public assets served directly
-├── src/
-│   ├── app/                      # Application root configuration (Router, Providers)
-│   ├── assets/                   # Static media (SVG icons, imagery, custom fonts)
-│   ├── features/                 # Encapsulated business domain modules
-│   │   ├── auth/                 # Authentication, authorization, RBAC (Customer/Employee)
-│   │   ├── booking/              # Racehorse transport booking forms & quotes
-│   │   ├── transport/            # Transport planning, vehicle assignments, and routing
-│   │   ├── dossier/              # Quarantine documents, veterinary health compliance
-│   │   └── tracking/             # Real-time voyage milestones & tracking events
-│   ├── lib/                      # Third-party integrations (Axios client, i18n, etc.)
-│   ├── locales/                  # Multi-language translation dictionaries (en / vi)
-│   ├── shared/                   # Cross-feature reusable codebase
-│   │   ├── components/           # Generic UI component kit (Button, Modal, Table, Form)
-│   │   ├── hooks/                # Global custom hooks (useDebounce, useMediaQuery)
-│   │   ├── types/                # Shared TypeScript definitions & domain interfaces
-│   │   └── utils/                # Utility helpers (currency, datetime, formatting)
-│   ├── styles/                   # Design tokens, CSS variables, reset stylesheets
-│   ├── App.tsx                   # Top-level root component
-│   └── main.tsx                  # Client application entry point
-├── .dockerignore                 # Exclusions for Docker build context
-├── .env.example                  # Environment variables template
-├── .oxlintrc.json                # Oxlint linter configuration rules
-├── CONTRIBUTING.md               # Contribution workflow, commit specs & code standards
-├── Dockerfile                    # Multi-stage production build (Node.js + Nginx)
-├── docker-compose.yml            # Local container runtime definition
-├── nginx.conf                    # Custom Nginx configuration for Vite SPA
-├── package.json                  # Dependencies manifest and script definitions
-├── RULESET.md                    # Branching strategy, PR naming & branch protection rules
-└── tsconfig.json                 # TypeScript compiler configuration
-```
+| Area | Frontend Workflows |
+| :--- | :--- |
+| Customer portal | Horse profiles, transport bookings, booking details, and status history. |
+| Transport planning | Approved bookings, transport plans, primary routes, contingency routes, and return routes. |
+| Maps and fleet | Map assets, location management, route previews, vehicles, and transport providers. |
+| Compliance | Requirement catalogs, dossier templates, document submission and review, authority submissions, quarantine evidence, and customs clearance evidence. |
+| Operations | Personnel assignments, route change decisions, and dossier audit history. |
+| Accounts and billing | Authentication, role-based access, employee account management, invoices, and payment workflows. |
 
----
+Some workflows include mock data for development. Backend connectivity and mock configuration determine which data is shown; see [Configuration](#configuration).
 
-## 🚀 4. Getting Started
+## Technology
 
-### 4.1. Prerequisites
-- **Node.js**: `20.x LTS` or `22.x LTS` recommended.
-- **pnpm**: Version `11.x` or higher.
-- **Docker Desktop** *(Optional)*: If running via containers.
+| Layer | Technologies |
+| :--- | :--- |
+| Application | React 19, TypeScript 6, Vite 8, React Router 7 |
+| Data and state | TanStack Query, TanStack Table, Axios, Zustand |
+| Forms and validation | React Hook Form, Zod |
+| Interface | Tailwind CSS 4, Radix UI, Bootstrap, Lucide |
+| Mapping | MapLibre GL, react-map-gl, Geoapify |
+| Documents | React PDF, PDF.js |
+| Tooling | pnpm, Oxlint, Prettier, GitHub Actions |
 
-### 4.2. Local Development Setup
+Dependency versions are maintained in [package.json](./package.json) and [pnpm-lock.yaml](./pnpm-lock.yaml).
 
-1. **Clone the repository**:
-   ```bash
+## Getting Started
+
+### Requirements
+
+- Node.js 22 LTS, matching the major version used in CI.
+- pnpm 11.22.0, pinned in `package.json`.
+- A running Pegaxus backend for authenticated API workflows.
+- A Geoapify API key for map styles, location search, and route previews.
+
+### Local Setup
+
+1. Clone the repository and install dependencies:
+
+   ```sh
    git clone https://github.com/HKBDU/pegaxus-fe.git
    cd pegaxus-fe
+   pnpm install --frozen-lockfile
    ```
 
-2. **Install project dependencies**:
-   ```bash
-   pnpm install
-   ```
+2. Copy the environment template using the command for your shell.
 
-3. **Configure environment variables**:
-   Create a local `.env` file from the provided template:
-   ```bash
-   # On Windows PowerShell:
+   PowerShell:
+
+   ```powershell
    Copy-Item .env.example .env
+   ```
 
-   # On Linux/macOS:
+   macOS / Linux:
+
+   ```sh
    cp .env.example .env
    ```
 
-4. **Start the local development server**:
-   ```bash
+3. Set `VITE_API_URL` to your backend API URL. Add `VITE_GEOAPIFY_API_KEY` to enable the map integrations. Review the mock flags below before using live backend data.
+
+4. Start the development server:
+
+   ```sh
    pnpm run dev
    ```
-   Open your browser and navigate to: `http://localhost:5173` (or the port specified in terminal output).
 
----
+Open the URL printed by Vite, normally `http://localhost:5173`.
 
-## 📜 5. Available pnpm Scripts
+## Configuration
 
-| Command | Description |
-| :--- | :--- |
-| `pnpm run dev` | Starts Vite local development server with instant Hot Module Replacement (HMR). |
-| `pnpm run lint` | Runs Oxlint across the codebase to check for syntax issues, dead code, and style errors. |
-| `pnpm run build` | Runs TypeScript type checking (`tsc -b`) and produces an optimized production bundle in `dist/`. |
-| `pnpm run preview` | Locally serves the production build in `dist/` for pre-deployment inspection. |
+The main environment settings are listed below. Use [.env.example](./.env.example) as the starting point and restart Vite after changing environment values.
 
----
-
-## 🐳 6. Docker Deployment
-
-The application includes a production-ready **Multi-stage Dockerfile** paired with **Nginx Alpine** (configured with SPA client-side fallback routing, gzip compression, and static asset caching).
-
-### 6.1. Running with Docker Compose (Recommended)
-Launch the application with a single command:
-```bash
-docker compose up --build -d
-```
-The application will be accessible at:  
-👉 **`http://localhost:3000`**
-
-To stop and remove containers:
-```bash
-docker compose down
-```
-
-### 6.2. Running with Docker CLI Manually
-```bash
-# 1. Build the production image
-docker build -t pegaxus-fe:latest .
-
-# 2. Run the container mapping host port 3000 to container port 80
-docker run -d -p 3000:80 --name pegaxus-fe-app pegaxus-fe:latest
-```
-
----
-
-## 🌿 7. Branching Strategy & CI Ruleset
-
-To maintain a clean Git history and ensure stable deployments, all contributors must adhere to the team's branching policy:
-
-- 🛡️ **Branching Model & Ruleset**: Refer to [RULESET.md](./RULESET.md) for full details.
-  - Core branches: **`main`** (production-ready) and **`dev`** (sprint integration).
-  - Feature branches: **`feat/<lowercase-name>`** (use `feat/`, **not** `feature/`).
-  - Strict CI validation on PR creation via [.github/workflows/quality.yml](./.github/workflows/quality.yml):
-    - **Branch regex**: `^(dev|(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)/[a-z0-9]+([._-][a-z0-9]+)*)$`
-    - **PR Title regex**: `^(dev|(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._-]+\))?!?: .+)`
-- 🤝 **Contributing Guidelines**: Refer to [CONTRIBUTING.md](./CONTRIBUTING.md) for Conventional Commits standards and code conventions.
-- 📋 **Pull Request Template**: Use [.github/PULL_REQUEST_TEMPLATE.md](./.github/PULL_REQUEST_TEMPLATE.md) for all PR submissions.
-
----
-
-## 🔐 8. Environment Variables
-
-Vite requires public client environment variables to be prefixed with `VITE_`:
-
-| Variable Name | Default Value | Purpose |
+| Variable | Template Value / Default | Purpose |
 | :--- | :--- | :--- |
-| `VITE_API_BASE_URL` | `http://localhost:8080/api/v1` | Root URL of the Pegaxus Backend REST API |
-| `VITE_APP_TITLE` | `Pegaxus - Racehorse Cross-Border Transport System` | Document `<title>` displayed in browser tab |
-| `VITE_APP_ENV` | `development` | Active environment descriptor (`development`, `staging`, `production`) |
+| `VITE_API_URL` | `http://localhost:5001/api/v1` in the template | Required backend API base URL. |
+| `VITE_GEOAPIFY_API_KEY` | Not set | Geoapify map styles, geocoding, place search, and road route previews. |
+| `VITE_USE_MOCK_PROFILE` | `false` | Enables profile mock data in development when set to `true`. |
+| `VITE_BOOKING_API_MOCKS` | `false` | Enables booking mock data in development when set to `true`. |
+| `VITE_COMPLIANCE_API_MOCKS` | `false` | Enables mock data for compliance catalog and dossier workflows. |
+| `VITE_PERSONNEL_API_MOCKS` | Enabled when unset | Set to `false` to use the personnel backend APIs. |
+| `VITE_INVOICE_API_MOCKS` | `true` in the template; enabled by default outside production | Set to `false` to use the invoice backend APIs. Production builds use the real API. |
+| `VITE_ENABLE_FLOW3_MOCKS` | Disabled when unset | Set to `true` for transport and route planning mocks in development. |
+| `VITE_FLEET_API_MOCKS` | Disabled when unset | Set to `true` for vehicle and transport provider mock data. |
 
----
+For backend integration, set the mock flags to `false`, including the personnel and invoice flags that otherwise default to mock data.
 
-## 👥 9. License & Academic Attribution
+Vite embeds `VITE_` values in the client bundle at build time. Use browser-safe configuration only; keep server credentials outside these variables. For Geoapify, use a key restricted to the application's allowed origins.
 
-Developed as an academic capstone project for **SWP391** (Software Development Project).  
-Licensed under the [Apache-2.0 License](./LICENSE).
+## Development
+
+### Commands
+
+| Command | Purpose |
+| :--- | :--- |
+| `pnpm run dev` | Start the Vite development server. |
+| `pnpm run lint` | Run Oxlint. |
+| `pnpm run check:cycles` | Check source imports for circular dependencies. |
+| `pnpm run build` | Run TypeScript checks and generate the production bundle in `dist/`. |
+| `pnpm run preview` | Serve the production bundle locally for inspection. |
+
+### Repository Layout
+
+```text
+src/
+  app/          Application routing, providers, and root component
+  assets/       Images, icons, and other bundled assets
+  features/     Domain modules: bookings, horses, routes, dossiers, invoices
+  lib/          API client, environment configuration, and integrations
+  locales/      Locale resources
+  shared/       Reusable components, layouts, hooks, types, and utilities
+  styles/       Shared styles
+  main.tsx      Application entry point
+public/         Public assets
+scripts/        Repository checks
+sreenshots/     README interface captures
+.github/        CI workflows and pull request template
+```
+
+### Contribution Workflow
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development conventions and [RULESET.md](./RULESET.md) for branch and pull request naming rules.
+
+The [Quality workflow](./.github/workflows/quality.yml) validates pull request metadata, runs lint, and builds the frontend for `main` and `dev`. Use the [pull request template](./.github/PULL_REQUEST_TEMPLATE.md) when submitting changes.
+
+## Production Build
+
+```sh
+pnpm run build
+pnpm run preview
+```
+
+Deploy the generated `dist/` directory to a static host. Configure a fallback to `index.html` for client-side routes, as shown in [nginx.conf](./nginx.conf). Set production environment values before building; changing container environment variables after the build does not update the client bundle.
+
+The repository also includes a [Dockerfile](./Dockerfile) and [Compose configuration](./docker-compose.yml). The Dockerfile currently expects `package-lock.json`, while this repository tracks `pnpm-lock.yaml`; the container build must be aligned with pnpm before use.
+
+## License
+
+Developed for SWP391 (Software Development Project). Licensed under [Apache License 2.0](./LICENSE).
