@@ -224,7 +224,7 @@ function requirementEndpoint(dossierId: string, requirementId: string | number) 
   return `${ENDPOINT}/${encodeURIComponent(dossierIdSchema.parse(dossierId))}/requirements/${encodeURIComponent(dossierIdSchema.parse(String(requirementId)))}`;
 }
 
-const uploadResult = z.object({ dossierRequirementId: z.string().uuid(), complianceDocumentId: z.string().uuid(), documentVersionId: z.string().uuid(), versionNo: z.number().int().positive(), isNewVersion: z.boolean(), status: z.string(), files: z.array(z.object({ documentAttachmentId: z.string().uuid().nullable(), fileName: z.string(), mimeType: z.string(), fileSizeBytes: z.number().nonnegative() })) });
+const uploadResult = z.object({ dossierRequirementId: z.string(), complianceDocumentId: z.string(), documentVersionId: z.string(), versionNo: z.number().int().positive(), isNewVersion: z.boolean(), status: z.string(), files: z.array(z.object({ documentAttachmentId: z.string().nullable(), fileName: z.string(), mimeType: z.string(), fileSizeBytes: z.number().nonnegative() })) });
 
 function mapUploadResult(payload: unknown, dossierId: string, requirementId: string | number) {
   const result = uploadResult.parse(unwrapBackendValue(payload));
@@ -335,7 +335,7 @@ const documentServiceMethods = {
   },
   async getDocumentRequestComments(dossierId: string, requirementId: string, requestId: string, signal?: AbortSignal) {
     const value = unwrapBackendValue(await apiClient.get<unknown, unknown>(`${requirementEndpoint(dossierId, requirementId)}/document-requests/${dossierIdSchema.parse(requestId)}/comments`, { signal }));
-    return z.array(z.object({ documentRequestCommentId: z.string().uuid(), authorAccountId: z.string().uuid(), message: z.string(), createdAt: z.string() })).parse(value);
+    return z.array(z.object({ documentRequestCommentId: z.string(), authorAccountId: z.string(), message: z.string(), createdAt: z.string() })).parse(value);
   },
   async addDocumentRequestComment(input: { dossierId: string; requirementId: string; requestId: string; message: string }) {
     const body = z.object({ message: z.string().trim().min(1).max(2000) }).parse(input);
