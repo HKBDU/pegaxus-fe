@@ -7,6 +7,7 @@ import CrewHomePage from "./pages/CrewHomePage"
 import AssignedTransportsPage from "./pages/AssignedTransportsPage"
 import HealthTabPage from "./pages/HealthTabPage"
 import HealthLogPage from "./pages/HealthLogPage"
+import HealthHistoryPage from "./pages/HealthHistoryPage"
 
 export const horseHealthRoutes: RouteObject[] = [{
   path: "/crew",
@@ -20,6 +21,18 @@ export const horseHealthRoutes: RouteObject[] = [{
   path: "/crew/transports/:transportId/health",
   element: <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}><MainLayout /></ProtectedRoute>,
   children: [{ index: true, element: <HealthTabPage /> }],
+}, {
+  path: "/crew/transports/:transportId/health/:horseId",
+  element: <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}><MainLayout /></ProtectedRoute>,
+  children: [{ index: true, element: <HealthHistoryPage /> }],
+}, {
+  path: "/admin/ongoing-transports/:transportId/health/:horseId",
+  element: <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"]}><MainLayout /></ProtectedRoute>,
+  children: [{ index: true, element: <HealthHistoryPage /> }],
+}, {
+  path: "/bookings/:bookingId/transports/:transportId/health/:horseId",
+  element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><MainLayout /></ProtectedRoute>,
+  children: [{ index: true, element: <HealthHistoryPage /> }],
 }, {
   path: "/crew/transports/:transportId/health/new",
   element: <ProtectedRoute allowedRoles={["ESCORT"]}><MainLayout /></ProtectedRoute>,
