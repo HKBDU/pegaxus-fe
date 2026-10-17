@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
-import { TriangleAlert } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { Navigation, TriangleAlert } from "lucide-react";
+import { useAuthStore } from "@/features/auth/store";
+import { canAccess } from "@/features/auth/access-control";
+import { driverLocationSharingPath } from "@/features/location-sharing/navigation";
+import { Button } from "@/shared/components/ui/button";
 import { ErrorState } from "@/shared/components/common";
 import { TransportPageHeader } from "../components/TransportPageHeader";
 import { TransportTabs } from "../components/TransportTabs";
@@ -25,6 +29,7 @@ export default function TransportOverviewPage({
 }: {
   audience: TransportAudience;
 }) {
+  const principal = useAuthStore((state) => state.principal);
   const { transportId, bookingId } = useParams<{
     transportId: string;
     bookingId: string;
@@ -83,6 +88,26 @@ export default function TransportOverviewPage({
           scenario={scenario}
           onChange={setScenario}
         />
+        {audience === "crew" &&
+        canAccess(principal, { anyRole: ["DRIVER"] }) &&
+        transportId !== undefined &&
+        overview?.transport.status === "IN_TRANSIT" &&
+        query.online &&
+        !query.isError ? (
+          <Button
+            asChild
+            variant="outline"
+            className="min-h-16 w-full justify-start rounded-xs border-primary/40 bg-white px-4 py-3 text-base whitespace-normal"
+          >
+            <Link to={driverLocationSharingPath(transportId)}>
+              <Navigation aria-hidden="true" className="size-5 text-primary" />
+              Share Journey Location
+              <small className="ml-auto text-base font-normal text-slate-500">
+                Phase 1
+              </small>
+            </Link>
+          </Button>
+        ) : null}
         {cached && overview ? (
           <div
             role="status"
