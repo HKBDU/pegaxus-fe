@@ -29,7 +29,7 @@ export function OngoingTransportStatusBadge({
   return (
     <Badge
       variant="outline"
-      className={`rounded-[2px] px-1.5 py-0.5 text-[10px] font-medium motion-reduce:transition-none ${className}`}
+      className={`rounded-xs px-1.5 py-0.5 text-[10px] font-medium motion-reduce:transition-none ${className}`}
     >
       <Icon aria-hidden="true" />
       {label}

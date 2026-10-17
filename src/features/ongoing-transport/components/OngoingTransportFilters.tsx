@@ -55,7 +55,7 @@ export function OngoingTransportFilters({
           value={params.search ?? ""}
           onChange={(event) => onChange({ search: event.target.value })}
           placeholder="Search transport / booking / customer..."
-          className="h-8 rounded-[2px] border-slate-300 bg-white pr-8 pl-8 text-xs shadow-none motion-reduce:transition-none [&::-webkit-search-cancel-button]:appearance-none"
+          className="h-8 rounded-xs border-slate-300 bg-white pr-8 pl-8 text-xs shadow-none motion-reduce:transition-none [&::-webkit-search-cancel-button]:appearance-none"
         />
         {params.search ? (
           <Button
@@ -64,7 +64,7 @@ export function OngoingTransportFilters({
             size="icon"
             onClick={() => onChange({ search: "" })}
             aria-label="Clear search"
-            className="absolute top-1/2 right-0.5 size-7 -translate-y-1/2 rounded-[2px] text-slate-500 motion-reduce:transition-none"
+            className="absolute top-1/2 right-0.5 size-7 -translate-y-1/2 rounded-xs text-slate-500 motion-reduce:transition-none"
           >
             <X className="size-3.5" />
           </Button>
@@ -77,7 +77,7 @@ export function OngoingTransportFilters({
             variant="outline"
             size="sm"
             aria-label={`Filter transport status: ${statusLabel}`}
-            className="h-8 min-w-40 justify-start rounded-[2px] border-slate-300 bg-white text-xs font-normal shadow-none motion-reduce:transition-none"
+            className="h-8 min-w-40 justify-start rounded-xs border-slate-300 bg-white text-xs font-normal shadow-none motion-reduce:transition-none"
           >
             <Filter aria-hidden="true" className="size-3.5 text-slate-500" />
             <span className="max-w-48 truncate">{statusLabel}</span>
@@ -140,13 +140,13 @@ export function OngoingTransportFilters({
           }
         />
       </div>
-      <label className="flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-[2px] border border-slate-300 bg-white px-2.5 text-xs text-slate-700">
+      <label className="flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-xs border border-slate-300 bg-white px-2.5 text-xs text-slate-700">
         <Checkbox
           checked={params.hasActiveIncident === true}
           onCheckedChange={(checked) =>
             onChange({ hasActiveIncident: checked === true ? true : undefined })
           }
-          className="size-3.5 rounded-[2px] motion-reduce:transition-none"
+          className="size-3.5 rounded-xs motion-reduce:transition-none"
         />
         Has active incidents
       </label>

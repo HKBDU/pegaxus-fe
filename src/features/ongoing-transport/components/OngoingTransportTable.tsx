@@ -96,7 +96,7 @@ const columns: ColumnDef<OngoingTransport>[] = [
     cell: ({ row }) => (
       <Badge
         variant="outline"
-        className="rounded-[2px] border-slate-200 bg-slate-50 px-1.5 text-[10px] text-slate-600 motion-reduce:transition-none"
+        className="rounded-xs border-slate-200 bg-slate-50 px-1.5 text-[10px] text-slate-600 motion-reduce:transition-none"
       >
         <Route aria-hidden="true" />
         {routeLabels[row.original.routeType]}
@@ -125,7 +125,7 @@ const columns: ColumnDef<OngoingTransport>[] = [
     cell: ({ row }) =>
       row.original.activeIncidentCount > 0 ? (
         <span
-          className="inline-flex items-center gap-1 rounded-[2px] bg-orange-50 px-1.5 py-0.5 font-medium tabular-nums text-orange-800"
+          className="inline-flex items-center gap-1 rounded-xs bg-orange-50 px-1.5 py-0.5 font-medium tabular-nums text-orange-800"
           aria-label={`${row.original.activeIncidentCount} active incidents`}
         >
           <TriangleAlert aria-hidden="true" className="size-3" />
@@ -154,7 +154,7 @@ const columns: ColumnDef<OngoingTransport>[] = [
           asChild
           variant="ghost"
           size="icon"
-          className="size-7 rounded-[2px]"
+          className="size-7 rounded-xs"
         >
           <Link
             to={ongoingTransportDetailPath(row.original.transportId)}
@@ -170,7 +170,7 @@ const columns: ColumnDef<OngoingTransport>[] = [
             variant="ghost"
             size="icon"
             disabled
-            className="size-7 rounded-[2px]"
+            className="size-7 rounded-xs"
             aria-label={`View progress for ${row.original.transportCode}: available in the next phase`}
           >
             <ArrowRight className="size-3.5" />
@@ -292,7 +292,7 @@ export function OngoingTransportTable({
             type="button"
             variant="outline"
             size="sm"
-            className="w-fit rounded-[2px] text-xs"
+            className="w-fit rounded-xs text-xs"
             onClick={() => onPageChange(0)}
           >
             Back to first page

@@ -25,7 +25,7 @@ export function OngoingTransportMockControls({
 }) {
   if (import.meta.env.PROD || !isOngoingTransportMockMode()) return null;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-[2px] border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xs border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
       <span className="flex items-center gap-2">
         <FlaskConical aria-hidden="true" className="size-3.5" />
         MOCK DATA · Flow 4 development preview
@@ -39,11 +39,11 @@ export function OngoingTransportMockControls({
       >
         <SelectTrigger
           aria-label="Mock preview scenario"
-          className="h-7 w-48 rounded-[2px] bg-white text-xs data-[size=default]:h-7"
+          className="h-7 w-48 rounded-xs bg-white text-xs data-[size=default]:h-7"
         >
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="rounded-[2px] motion-reduce:animate-none">
+        <SelectContent className="rounded-xs motion-reduce:animate-none">
           {scenarios.map((item) => (
             <SelectItem className="text-xs" key={item.value} value={item.value}>
               {item.label}
