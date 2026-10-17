@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import {
   CircleCheck,
   Clock3,
@@ -138,6 +138,7 @@ export function TransportStaff({
 }: {
   segment: TransportOverview["currentSegment"];
 }) {
+  const headingId = useId();
   const staff = segment
     ? [
         { label: "Vehicle driver", person: segment.driver },
@@ -145,8 +146,8 @@ export function TransportStaff({
       ]
     : [];
   return (
-    <section className="overview-cell" aria-labelledby="transport-staff">
-      <h2 id="transport-staff" className="overview-heading">
+    <section className="overview-cell" aria-labelledby={headingId}>
+      <h2 id={headingId} className="overview-heading">
         <UsersRound aria-hidden="true" />
         Current staff / Provider
       </h2>

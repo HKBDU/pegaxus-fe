@@ -29,3 +29,11 @@ export function readOngoingListReturn(state: unknown) {
   const parsed = ongoingListReturnSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
 }
+
+export function transportSegmentsPath(
+  transportId: string,
+  audience: TransportAudience,
+  bookingId?: string,
+) {
+  return `${transportOverviewPath(transportId, audience, bookingId)}/segments`;
+}

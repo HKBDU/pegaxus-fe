@@ -14,6 +14,9 @@ const OngoingTransportListPage = lazy(
 const TransportOverviewPage = lazy(
   () => import("./pages/TransportOverviewPage"),
 );
+const TransportRouteTrackingPage = lazy(
+  () => import("./pages/TransportRouteTrackingPage"),
+);
 
 export const ongoingTransportRoutes: RouteObject[] = [
   {
@@ -40,6 +43,14 @@ export const ongoingTransportRoutes: RouteObject[] = [
           </Suspense>
         ),
       },
+      {
+        path: ":transportId/segments",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TransportRouteTrackingPage audience="admin" />
+          </Suspense>
+        ),
+      },
     ],
   },
   {
@@ -58,6 +69,14 @@ export const ongoingTransportRoutes: RouteObject[] = [
           </Suspense>
         ),
       },
+      {
+        path: "segments",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TransportRouteTrackingPage audience="crew" />
+          </Suspense>
+        ),
+      },
     ],
   },
   {
@@ -73,6 +92,14 @@ export const ongoingTransportRoutes: RouteObject[] = [
         element: (
           <Suspense fallback={<LoadingState />}>
             <TransportOverviewPage audience="customer" />
+          </Suspense>
+        ),
+      },
+      {
+        path: "segments",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TransportRouteTrackingPage audience="customer" />
           </Suspense>
         ),
       },

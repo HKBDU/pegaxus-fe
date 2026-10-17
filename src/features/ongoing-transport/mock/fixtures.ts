@@ -39,7 +39,7 @@ export const ongoingTransportFixtures: OngoingTransport[] = Array.from(
           ? null
           : {
               routePlanRouteId: `00000063-0000-4000-8000-${suffix}`,
-              displayOrder: (index % 4) + 1,
+              displayOrder: status === "READY" ? 1 : (index % 4) + 1,
               fromLocationName,
               toLocationName,
               status: status === "READY" ? "PLANNED" : status,

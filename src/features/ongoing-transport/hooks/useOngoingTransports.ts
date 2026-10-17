@@ -6,6 +6,7 @@ import {
 } from "../services";
 import { isOngoingTransportMockMode } from "../source";
 import type { MockScenario, OngoingTransportParams } from "../types";
+import { useTransportQueryContext } from "./useTransportQueryContext";
 
 export const ongoingTransportKeys = {
   all: ["ongoing-transports"] as const,
@@ -23,15 +24,21 @@ export function useOngoingTransports(
   enabled: boolean,
   scenario: MockScenario,
 ) {
-  const queryKey = ongoingTransportKeys.list(params, scenario);
+  const context = useTransportQueryContext();
+  const queryKey = [
+    ...ongoingTransportKeys.list(params, scenario),
+    ...context.scope,
+  ];
   return useQuery({
     queryKey,
     queryFn: ({ signal }) =>
       ongoingTransportService.list(params, signal, scenario),
-    enabled,
+    enabled: enabled && context.enabled,
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === queryKey[1] &&
-      previousQuery?.queryKey[2] === queryKey[2]
+      previousQuery?.queryKey[2] === queryKey[2] &&
+      JSON.stringify(previousQuery?.queryKey.slice(4)) ===
+        JSON.stringify(queryKey.slice(4))
         ? previous
         : undefined,
     retry: (failureCount, error) =>

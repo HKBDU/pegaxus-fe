@@ -239,3 +239,33 @@ export const ongoingListReturnSchema = z.object({
   params: ongoingTransportQuerySchema,
   scenario: z.enum(["data", "empty", "api-error", "network-error"]),
 });
+
+export const handoverBoundarySchema = z.object({
+  boundaryNo: z.number().int().positive(),
+  fromRoutePlanRouteId: z.string().nullable(),
+  toRoutePlanRouteId: z.string().nullable(),
+  location: z.object({
+    locationName: z.string(),
+    address: z.string().nullable(),
+    country: z.string(),
+  }),
+  // These are server capabilities. Keep unrecognized values visible, but never turn them into actions.
+  allowedHandoverTypes: z.array(z.string()),
+  existingHandover: z
+    .object({
+      handoverRecordId: z.string(),
+      handoverCode: z.string(),
+      handoverType: z.string(),
+      status: z.enum(["PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]),
+    })
+    .nullable(),
+  canCreate: z.boolean(),
+});
+
+export const transportSegmentsSchema = z.object({
+  serverTime: timestampSchema,
+  transportId: z.string(),
+  transportStatus: ongoingTransportStatusSchema,
+  segments: z.array(trackingSegmentSchema),
+  handoverBoundaries: z.array(handoverBoundarySchema),
+});

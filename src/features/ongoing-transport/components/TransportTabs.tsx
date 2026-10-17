@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import type { TransportAudience } from "../types";
-import { transportOverviewPath } from "../navigation";
+import { transportOverviewPath, transportSegmentsPath } from "../navigation";
 
 export function TransportTabs({
   transportId,
@@ -15,7 +15,6 @@ export function TransportTabs({
 }) {
   const location = useLocation();
   const futureTabs = [
-    "Route Tracking",
     "Horse Health",
     ...(canViewGpsTab && audience !== "crew" ? ["GPS Map"] : []),
   ];
@@ -29,10 +28,21 @@ export function TransportTabs({
           end
           to={transportOverviewPath(transportId, audience, bookingId)}
           state={location.state}
-          aria-current="page"
-          className="inline-flex min-h-11 items-center border-b-2 border-primary px-0.5 text-sm font-semibold whitespace-nowrap text-primary focus-visible:outline-2 focus-visible:outline-primary"
+          className={({ isActive }) =>
+            `inline-flex min-h-11 items-center border-b-2 px-0.5 text-sm font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-primary ${isActive ? "border-primary text-primary" : "border-transparent text-slate-600 hover:text-primary"}`
+          }
         >
           Overview
+        </NavLink>
+        <NavLink
+          end
+          to={transportSegmentsPath(transportId, audience, bookingId)}
+          state={location.state}
+          className={({ isActive }) =>
+            `inline-flex min-h-11 items-center border-b-2 px-0.5 text-sm font-semibold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-primary ${isActive ? "border-primary text-primary" : "border-transparent text-slate-600 hover:text-primary"}`
+          }
+        >
+          Route Tracking
         </NavLink>
         {futureTabs.map((label) => (
           <span

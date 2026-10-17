@@ -6,6 +6,7 @@ import {
   ongoingTransportPageSchema,
   ongoingTransportQuerySchema,
   transportOverviewSchema,
+  transportSegmentsSchema,
 } from "./schemas";
 import { isOngoingTransportMockMode } from "./source";
 import type {
@@ -13,6 +14,7 @@ import type {
   OngoingTransportParams,
   OverviewScenario,
   TransportAudience,
+  SegmentsScenario,
 } from "./types";
 
 export class OngoingTransportApiError extends Error {
@@ -35,6 +37,32 @@ export const buildOngoingTransportQuery = (params: OngoingTransportParams) =>
   ongoingTransportQuerySchema.parse(params);
 
 export const ongoingTransportService = {
+  async segments(
+    transportId: string,
+    audience: TransportAudience,
+    scenario: SegmentsScenario = "data",
+    signal?: AbortSignal,
+  ) {
+    signal?.throwIfAborted();
+    const response =
+      !import.meta.env.PROD && isOngoingTransportMockMode()
+        ? await (
+            await import("./mock/segments")
+          ).getMockTransportSegments(transportId, audience, scenario, signal)
+        : await apiClient.get<unknown, unknown>(
+            `/transports/${encodeURIComponent(transportId)}/segments`,
+            { signal },
+          );
+    signal?.throwIfAborted();
+    const envelope = ongoingTransportEnvelopeSchema.parse(response);
+    if (!envelope.isSuccess)
+      throw new OngoingTransportApiError(
+        envelope.code,
+        envelope.errorCode,
+        envelope.message,
+      );
+    return transportSegmentsSchema.parse(envelope.value);
+  },
   async overview(
     transportId: string,
     audience: TransportAudience,
@@ -91,10 +119,14 @@ export const ongoingTransportService = {
 
 export function getOngoingTransportError(
   error: unknown,
-  context: "list" | "overview" = "list",
+  context: "list" | "overview" | "segments" = "list",
 ) {
   const subject =
-    context === "overview" ? "transport overview" : "ongoing transports";
+    context === "segments"
+      ? "route tracking"
+      : context === "overview"
+        ? "transport overview"
+        : "ongoing transports";
   if (error instanceof z.ZodError)
     return {
       message:
@@ -130,7 +162,7 @@ export function getOngoingTransportError(
   if (code === "FORBIDDEN" || status === 403)
     return {
       message:
-        context === "overview"
+        context !== "list"
           ? "You do not have permission to view this transport. Crew must be assigned to the transport."
           : "You do not have permission to view ongoing transports.",
       retryable: false,

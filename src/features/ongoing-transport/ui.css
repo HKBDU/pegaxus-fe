@@ -12,6 +12,85 @@
   min-width: 0;
   padding: 1rem;
 }
+
+.route-tracking .route-timeline {
+  position: relative;
+  margin-left: 0.75rem;
+  padding-left: 1.5rem;
+  border-left: 1px solid #cbd5e1;
+}
+.route-tracking :is(.route-leg, .route-boundary) {
+  position: relative;
+  min-width: 0;
+}
+.route-tracking .route-timeline-marker {
+  position: absolute;
+  top: 1rem;
+  left: -2.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: white;
+}
+.route-tracking .route-leg[data-status="PLANNED"] {
+  border-color: #fde68a;
+}
+.route-tracking .route-leg[data-status="PLANNED"] .route-leg-trigger {
+  background: #fffbeb;
+}
+.route-tracking
+  .route-leg[data-status="PLANNED"]
+  :is(.route-leg-status, .route-timeline-marker) {
+  color: #92400e;
+  background: #fffbeb;
+}
+.route-tracking .route-leg[data-status="COMPLETED"] .route-leg-trigger {
+  background: #f1f5f9;
+}
+.route-tracking
+  .route-leg[data-status="COMPLETED"]
+  :is(.route-leg-status, .route-timeline-marker) {
+  color: #475569;
+  background: #f1f5f9;
+}
+.route-tracking
+  .route-leg[data-status="IN_TRANSIT"]
+  :is(.route-leg-status, .route-timeline-marker) {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+.route-tracking .route-leg[data-current="true"] {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 1px #bfdbfe;
+}
+.route-tracking .route-leg[data-current="true"] .route-leg-trigger {
+  background: #eff6ff;
+}
+.route-tracking .route-leg-trigger::-webkit-details-marker {
+  display: none;
+}
+.route-tracking .route-leg-trigger:hover {
+  filter: brightness(0.985);
+}
+.route-tracking .route-leg[open] .route-leg-chevron {
+  transform: rotate(180deg);
+}
+.route-tracking .route-boundary {
+  padding: 0.5rem 0.25rem;
+}
+.route-tracking .route-boundary .route-timeline-marker {
+  top: 0.6rem;
+}
+.transport-overview[data-audience="crew"] summary {
+  min-height: 60px;
+}
+.transport-overview[data-audience="crew"] h3 {
+  font-size: 1rem;
+}
 .transport-overview .overview-heading {
   display: flex;
   align-items: center;

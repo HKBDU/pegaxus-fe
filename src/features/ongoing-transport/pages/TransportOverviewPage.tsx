@@ -1,16 +1,8 @@
 import { useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
-import {
-  ArrowLeft,
-  ChevronRight,
-  RefreshCw,
-  TriangleAlert,
-} from "lucide-react";
-import { ROLE_ROUTES } from "@/app/route-config";
-import { PageHeader } from "@/shared/components/PageHeader";
+import { useParams } from "react-router-dom";
+import { TriangleAlert } from "lucide-react";
 import { ErrorState } from "@/shared/components/common";
-import { Button } from "@/shared/components/ui/button";
-import { OngoingTransportStatusBadge } from "../components/OngoingTransportStatusBadge";
+import { TransportPageHeader } from "../components/TransportPageHeader";
 import { TransportTabs } from "../components/TransportTabs";
 import { TransportJourneySummary } from "../components/TransportJourneySummary";
 import {
@@ -23,7 +15,6 @@ import { TransportIncidents } from "../components/TransportIncidents";
 import { TransportOverviewSkeleton } from "../components/TransportOverviewSkeleton";
 import { TransportOverviewMockControls } from "../components/TransportOverviewMockControls";
 import { useTransportOverview } from "../hooks/useTransportOverview";
-import { readOngoingListReturn } from "../navigation";
 import { formatTransportDate, formatTransportTime } from "../format";
 import { getOngoingTransportError } from "../services";
 import type { OverviewScenario, TransportAudience } from "../types";
@@ -38,7 +29,6 @@ export default function TransportOverviewPage({
     transportId: string;
     bookingId: string;
   }>();
-  const location = useLocation();
   const [scenario, setScenario] = useState<OverviewScenario>("data");
   const query = useTransportOverview(
     transportId,
@@ -57,19 +47,6 @@ export default function TransportOverviewPage({
     (!error || error.retryable);
   const fatal = error && !cached ? error : null;
   const overview = fatal ? undefined : query.data;
-  const returnState = readOngoingListReturn(location.state);
-  const backPath =
-    audience === "admin"
-      ? ROLE_ROUTES.ongoingTransports
-      : audience === "customer" && bookingId
-        ? `/bookings/${encodeURIComponent(bookingId)}`
-        : ROLE_ROUTES.home;
-  const backLabel =
-    audience === "admin"
-      ? "Ongoing Transports"
-      : audience === "customer"
-        ? "Booking"
-        : "Home";
   const missingContext =
     transportId === undefined ||
     (audience === "customer" && bookingId === undefined);
@@ -82,70 +59,18 @@ export default function TransportOverviewPage({
       <div
         className={`mx-auto w-full min-w-0 space-y-4 ${audience === "crew" ? "max-w-4xl" : "booking-page-enter max-w-[1440px]"}`}
       >
-        <nav
-          aria-label="Breadcrumb"
-          className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-slate-500"
-        >
-          <Link
-            to={backPath}
-            state={
-              audience === "admin" && returnState
-                ? { ongoingTransportList: returnState }
-                : undefined
-            }
-            className="inline-flex items-center gap-1 rounded-xs hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-          >
-            <ArrowLeft aria-hidden="true" className="size-3.5" />
-            {backLabel}
-          </Link>
-          <ChevronRight aria-hidden="true" className="size-3" />
-          <span aria-current="page" className="font-medium text-slate-700">
-            {overview?.transport.transportCode ?? "Transport Overview"}
-          </span>
-        </nav>
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <PageHeader
-                title={
-                  overview?.transport.transportCode ?? "Transport Overview"
-                }
-                backHref={backPath}
-                showBack={false}
-                className="w-auto [&_h1]:!my-0 [&_h1]:!text-slate-900 [&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl"
-              />
-              {overview ? (
-                <OngoingTransportStatusBadge
-                  status={overview.transport.status}
-                />
-              ) : null}
-            </div>
-            <p className="mt-2 mb-0 text-xs text-slate-500 sm:text-sm">
-              Monitor current leg, horse welfare, staff assignment and active
-              incidents.
-            </p>
-            {overview ? (
-              <p className="mt-1 mb-0 text-[11px] text-slate-500">
-                {overview.booking.bookingCode} · Times shown in your local
-                timezone
-              </p>
-            ) : null}
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={query.isFetching || !query.online || missingContext}
-            onClick={() => void query.refetch()}
-            className="h-8 rounded-xs border-slate-300 bg-white text-xs"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-3.5 ${query.isFetching ? "animate-spin motion-reduce:animate-none" : ""}`}
-            />
-            Refresh
-          </Button>
-        </header>
+        <TransportPageHeader
+          audience={audience}
+          bookingId={bookingId}
+          transportId={transportId}
+          transportCode={overview?.transport.transportCode}
+          bookingCode={overview?.booking.bookingCode}
+          status={overview?.transport.status}
+          view="overview"
+          busy={query.isFetching}
+          online={query.online}
+          onRefresh={() => void query.refetch()}
+        />
         {!missingContext ? (
           <TransportTabs
             transportId={transportId!}
