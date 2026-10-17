@@ -36,6 +36,7 @@ export function PhotoCaptureSection({ files, maxFiles = 1, acceptedTypes = DEFAU
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const uploadGeneration = useRef(0)
   const [uploadStatuses, setUploadStatuses] = useState<("uploading" | "ready" | "error")[]>([])
+  const [, setConfirmedPublicIds] = useState<string[]>([])
   const objectUrls = useMemo(() => files.map((file) => URL.createObjectURL(file)), [files])
 
   useEffect(() => () => objectUrls.forEach((url) => URL.revokeObjectURL(url)), [objectUrls])
@@ -64,7 +65,12 @@ export function PhotoCaptureSection({ files, maxFiles = 1, acceptedTypes = DEFAU
     }))
     if (generation !== uploadGeneration.current) return
     setUploadStatuses((current) => current.map((status, index) => index >= startIndex && index < startIndex + newFiles.length && publicIds[index - startIndex] ? "ready" : status))
-    onUploadedPublicIdsChange?.(publicIds.filter((publicId): publicId is string => Boolean(publicId)))
+    setConfirmedPublicIds((current) => {
+      const next = [...current]
+      publicIds.forEach((publicId, index) => { if (publicId) next[startIndex + index] = publicId })
+      onUploadedPublicIdsChange?.(next.filter((publicId): publicId is string => Boolean(publicId)))
+      return next
+    })
   }
 
   const addFiles = (picked: FileList | null) => {
@@ -91,6 +97,7 @@ export function PhotoCaptureSection({ files, maxFiles = 1, acceptedTypes = DEFAU
     onCapturedAtChange(capturedAt.filter((_, current) => current !== index))
     onCaptionsChange?.(captions.filter((_, current) => current !== index))
     setUploadStatuses((current) => current.filter((_, current) => current !== index))
+    setConfirmedPublicIds([])
     onUploadedPublicIdsChange?.([])
   }
 
