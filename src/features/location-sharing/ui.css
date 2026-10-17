@@ -15,6 +15,9 @@
 }
 .location-sharing-ui .location-sharing-heading {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   align-items: center;
   gap: 0.5rem;
   margin: 0;

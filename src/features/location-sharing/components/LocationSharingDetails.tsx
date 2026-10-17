@@ -36,13 +36,17 @@ export function LocationSharingStatus({
   state: LocationSharingState;
 }) {
   const NetworkIcon = state.networkStatus === "offline" ? WifiOff : Wifi;
+  const paused =
+    state.sharingStatus === "paused" || state.sharingStatus === "offline";
   const rows = [
     {
       label: "Transmission",
       value: state.sending
         ? "Sending current location"
         : state.active
-          ? "Waiting for a fresh send opportunity"
+          ? paused
+            ? "Paused — not sending"
+            : "Waiting for a fresh send opportunity"
           : "Not sending",
       icon: Clock3,
     },
@@ -70,7 +74,7 @@ export function LocationSharingStatus({
       label: "Last successful send",
       value:
         state.lastSuccessfulTransmissionAt === null
-          ? "No location has been sent"
+          ? "No confirmed send yet"
           : new Intl.DateTimeFormat(undefined, {
               dateStyle: "medium",
               timeStyle: "medium",
@@ -89,7 +93,7 @@ export function LocationSharingStatus({
       <dl
         className="mt-4 mb-0 divide-y divide-border"
         aria-live="polite"
-        aria-atomic="true"
+        aria-atomic="false"
       >
         {rows.map(({ label, value, icon: Icon }) => (
           <div

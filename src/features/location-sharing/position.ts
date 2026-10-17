@@ -4,6 +4,15 @@ import type { DriverLocationRequest } from "./types";
 export const SEND_INTERVAL_MS = 15_000;
 export const SAMPLE_MAX_AGE_MS = 15_000;
 
+export function isFreshObservation(timestamp: number, now: number) {
+  return (
+    Number.isFinite(timestamp) &&
+    timestamp > 0 &&
+    timestamp <= now &&
+    now - timestamp <= SAMPLE_MAX_AGE_MS
+  );
+}
+
 // Browser optional metadata must not become fabricated zero values.
 const nonnegative = (value: number | null) =>
   value !== null && Number.isFinite(value) && value >= 0;
@@ -12,13 +21,7 @@ export function locationFromPosition(
   position: GeolocationPosition,
   now: number,
 ): DriverLocationRequest | null {
-  if (
-    !Number.isFinite(position.timestamp) ||
-    position.timestamp <= 0 ||
-    position.timestamp > now ||
-    now - position.timestamp > SAMPLE_MAX_AGE_MS
-  )
-    return null;
+  if (!isFreshObservation(position.timestamp, now)) return null;
   const { latitude, longitude, speed, heading, accuracy } = position.coords;
   const request = {
     latitude,

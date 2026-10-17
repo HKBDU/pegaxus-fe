@@ -1,4 +1,4 @@
-import { isAxiosError } from "axios";
+import { isAxiosError, type AxiosRequestTransformer } from "axios";
 import { z } from "zod";
 import apiClient from "@/lib/axios";
 import {
@@ -8,6 +8,13 @@ import {
   locationPermissionDeniedSchema,
 } from "./schemas";
 import type { DriverLocationRequest } from "./types";
+import { isFreshObservation } from "./position";
+
+class ExpiredLocationSampleError extends Error {
+  constructor() {
+    super("The GPS observation expired before dispatch.");
+  }
+}
 
 class LocationSharingApiError extends Error {
   readonly status: number;
@@ -36,10 +43,30 @@ export const locationSharingService = {
   ) {
     signal.throwIfAborted();
     const body = driverLocationRequestSchema.parse(request);
+    const recordedAt = Date.parse(body.recordedAt);
+    // Axios invokes transforms for initial dispatch AND its authenticated retry.
+    // Leave an already dispatched request alone; only prevent sending an expired body.
+    const freshnessGuard: AxiosRequestTransformer = (data: unknown) => {
+      signal.throwIfAborted();
+      if (!isFreshObservation(recordedAt, Date.now()))
+        throw new ExpiredLocationSampleError();
+      return data;
+    };
+    const transforms = apiClient.defaults.transformRequest;
     const response = await apiClient.post<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/locations`,
       body,
-      { signal },
+      {
+        signal,
+        transformRequest: [
+          freshnessGuard,
+          ...(Array.isArray(transforms)
+            ? transforms
+            : transforms
+              ? [transforms]
+              : []),
+        ],
+      },
     );
     signal.throwIfAborted();
     return driverLocationAcceptedSchema.parse(readValue(response));
@@ -57,6 +84,13 @@ export const locationSharingService = {
 };
 
 export function getLocationSharingError(error: unknown) {
+  if (error instanceof ExpiredLocationSampleError)
+    return {
+      terminal: false,
+      refresh: false,
+      message:
+        "The GPS observation expired before it could be sent. Waiting for a new observation; the old point is not retried.",
+    };
   const payload = isAxiosError(error)
     ? locationEnvelopeSchema.safeParse(error.response?.data)
     : null;

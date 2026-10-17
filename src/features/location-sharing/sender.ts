@@ -3,7 +3,7 @@ import { useAuthStore } from "@/features/auth/store";
 import { getLocationSharingError, locationSharingService } from "./services";
 import {
   locationFromPosition,
-  SAMPLE_MAX_AGE_MS,
+  isFreshObservation,
   SEND_INTERVAL_MS,
 } from "./position";
 import type { DriverLocationRequest, LocationSharingState } from "./types";
@@ -44,7 +44,6 @@ export class LocationSender {
   private generation = 0;
   private watchId: number | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
-  private requestExpiry: ReturnType<typeof setTimeout> | null = null;
   private request: AbortController | null = null;
   private denialRequest: AbortController | null = null;
   private permission: PermissionStatus | null = null;
@@ -129,7 +128,12 @@ export class LocationSender {
       window.removeEventListener("online", this.onEnvironment);
       document.removeEventListener("visibilitychange", this.onEnvironment);
       window.removeEventListener("pagehide", this.onPageHide);
-      this.release();
+      if (this.state.active || this.request || this.denialRequest) {
+        this.stopWith(
+          "stopped",
+          "Sharing stopped when leaving this screen. Choose Start to resume.",
+        );
+      } else this.release();
     };
   }
   private onPageHide = () => {
@@ -189,7 +193,11 @@ export class LocationSender {
       });
       return;
     }
-    if (owner && owner !== this) owner.stop();
+    if (owner && owner !== this)
+      owner.stopWith(
+        "stopped",
+        "Another location sharing screen took over this session.",
+      );
     this.clearResources();
     // oxlint-disable-next-line typescript/no-this-alias -- intentional single-owner lease, not a callback alias
     owner = this;
@@ -230,8 +238,6 @@ export class LocationSender {
     this.watchId = null;
     if (this.timer !== null) clearTimeout(this.timer);
     this.timer = null;
-    if (this.requestExpiry !== null) clearTimeout(this.requestExpiry);
-    this.requestExpiry = null;
     this.request?.abort();
     this.request = null;
     this.denialRequest?.abort();
@@ -255,7 +261,7 @@ export class LocationSender {
       sending: false,
       message: "Waiting for a new GPS observation. Keep this page visible.",
     });
-    this.observePermission(generation);
+    void this.observePermission(generation);
     try {
       this.watchId = navigator.geolocation.watchPosition(
         (position) => this.onPosition(position, generation),
@@ -270,47 +276,47 @@ export class LocationSender {
       );
     }
   }
-  private observePermission(generation: number) {
+  private async observePermission(generation: number) {
     // Only after explicit Start. watchPosition still owns the actual permission prompt.
-    if (!navigator.permissions) return;
-    void navigator.permissions
-      .query({ name: "geolocation" })
-      .then((permission) => {
-        if (!this.current(generation) || !this.state.active) return;
-        this.permission = permission;
-        const update = () => {
-          if (!this.current(generation) || !this.state.active) return;
-          if (permission.state === "denied") this.denied(generation);
-          else {
-            if (
-              permission.state === "prompt" &&
-              this.state.permissionStatus === "granted"
-            ) {
-              this.stopWith(
-                "location_unavailable",
-                "Location permission changed. Choose Start to request access again.",
-              );
-              this.publish({ permissionStatus: "prompt" });
-              return;
-            }
-            this.publish({
-              permissionStatus:
-                permission.state === "granted" ? "granted" : "prompt",
-            });
-            if (
-              permission.state === "granted" &&
-              this.state.sharingStatus === "requesting_permission"
-            ) {
-              this.publish({ sharingStatus: "acquiring_location" });
-            }
-          }
-        };
-        permission.onchange = update;
-        update();
-      })
-      .catch(() => {
-        /* Some browsers do not support this permission descriptor. Use watch callbacks. */
+    try {
+      if (typeof navigator.permissions?.query !== "function") return;
+      const permission = await navigator.permissions.query({
+        name: "geolocation",
       });
+      if (!this.current(generation) || !this.state.active) return;
+      this.permission = permission;
+      const update = () => {
+        if (!this.current(generation) || !this.state.active) return;
+        if (permission.state === "denied") this.denied(generation);
+        else {
+          if (
+            permission.state === "prompt" &&
+            this.state.permissionStatus === "granted"
+          ) {
+            this.stopWith(
+              "location_unavailable",
+              "Location permission changed. Choose Start to request access again.",
+            );
+            this.publish({ permissionStatus: "prompt" });
+            return;
+          }
+          this.publish({
+            permissionStatus:
+              permission.state === "granted" ? "granted" : "prompt",
+          });
+          if (
+            permission.state === "granted" &&
+            this.state.sharingStatus === "requesting_permission"
+          ) {
+            this.publish({ sharingStatus: "acquiring_location" });
+          }
+        }
+      };
+      permission.onchange = update;
+      update();
+    } catch {
+      // Unsupported descriptors and synchronous API failures use actual watch callbacks.
+    }
   }
   private onPosition(position: GeolocationPosition, generation: number) {
     if (!this.current(generation) || !this.state.active || !this.foreground())
@@ -323,7 +329,7 @@ export class LocationSender {
       position.timestamp < this.acquiredAfter ||
       position.timestamp <= this.newestObservation
     ) {
-      if (!this.sample && !this.state.sending)
+      if (!this.sample && !this.state.sending && !this.hasObservationError())
         this.publish({
           sharingStatus: "acquiring_location",
           message: "Waiting for a fresh, valid GPS observation.",
@@ -351,11 +357,21 @@ export class LocationSender {
     this.sample = null;
     this.publish({
       sharingStatus: "location_unavailable",
+      permissionStatus:
+        this.state.permissionStatus === "prompt"
+          ? "unknown"
+          : this.state.permissionStatus,
       message:
         error.code === 3
           ? "GPS acquisition timed out. Waiting for a new observation; check your device location settings."
           : "GPS is unavailable. Check device location settings or Stop and Start again.",
     });
+  }
+  private hasObservationError() {
+    return (
+      this.state.sharingStatus === "location_unavailable" ||
+      this.state.sharingStatus === "send_error"
+    );
   }
   private schedule(generation: number) {
     if (!this.current(generation) || !this.state.active || !this.foreground())
@@ -380,12 +396,11 @@ export class LocationSender {
       return;
     const sample = this.sample;
     this.sample = null; // Consume once even on failure: a failed point is never replayed.
-    if (
-      !sample ||
-      Date.now() - sample.timestamp > SAMPLE_MAX_AGE_MS ||
-      sample.timestamp > Date.now()
-    ) {
-      if (this.state.permissionStatus === "granted")
+    if (!sample || !isFreshObservation(sample.timestamp, Date.now())) {
+      if (
+        this.state.permissionStatus === "granted" &&
+        !this.hasObservationError()
+      )
         this.publish({
           sharingStatus: "acquiring_location",
           message:
@@ -403,22 +418,6 @@ export class LocationSender {
       sharingStatus: "waiting_to_send",
       message: "Sending the latest location update…",
     });
-    // Keep the existing Axios refresh flow, but never replay an expired body after a slow refresh.
-    this.requestExpiry = setTimeout(
-      () => {
-        if (this.request !== request || !this.current(generation)) return;
-        request.abort();
-        this.sample = null;
-        this.acquiredAfter = Date.now();
-        this.publish({
-          sending: false,
-          sharingStatus: "send_error",
-          message:
-            "This send expired before confirmation. Waiting for a new GPS observation; the old point will not be retried.",
-        });
-      },
-      Math.max(0, SAMPLE_MAX_AGE_MS - (Date.now() - sample.timestamp)),
-    );
     try {
       const accepted = await locationSharingService.send(
         this.context.transportId!,
@@ -460,8 +459,6 @@ export class LocationSender {
       gp2InFlight = false; // Also release when an old generation's aborted request finally settles.
       if (this.request === request) {
         this.request = null;
-        if (this.requestExpiry !== null) clearTimeout(this.requestExpiry);
-        this.requestExpiry = null;
       }
       if (this.current(generation)) this.publish({ sending: false });
     }

@@ -38,14 +38,17 @@ export function LocationSharingControl({
           {state.active ? "Sharing session on" : "Not sharing"}
         </Badge>
       </div>
-      <p className="mt-3 mb-0 leading-relaxed text-slate-600">
-        Keep operations informed about your journey, without a separate GPS
-        device.
-      </p>
       <Button
         type="button"
         disabled={!state.active && !canStart}
         onClick={state.active ? onStop : onStart}
+        onClickCapture={(event) => {
+          // Shared Button throttles clicks for 400ms. Stop must never be throttled.
+          if (state.active) {
+            event.stopPropagation();
+            onStop();
+          }
+        }}
         variant={state.active ? "destructive" : "default"}
         aria-describedby="sharing-operation-note"
         className="mt-5 min-h-16 w-full rounded-xs px-4 py-3 text-base whitespace-normal disabled:opacity-70"
