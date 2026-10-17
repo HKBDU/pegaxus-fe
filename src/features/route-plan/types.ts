@@ -197,6 +197,8 @@ export interface RoutePlan {
 
 export interface RouteSegmentInput {
   sequenceNo: number;
+  /** BACKUP plans contain both the copied PRIMARY prefix/suffix and the replacement segments. */
+  routeType?: RouteType;
   routeId?: string;
   fromLocationId?: string;
   toLocationId?: string;

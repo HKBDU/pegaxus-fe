@@ -478,23 +478,32 @@ export function RoutePlanBuilder({
   function toPayload(
     action: CreateRoutePlanRequest["action"],
   ): CreateRoutePlanRequest {
+    const payloadRoutes = isBackup
+      ? [
+          ...readonlyPrimaryRoutes.map((route) => ({ route, routeType: "PRIMARY" as const })),
+          ...segments.map((segment) => ({ route: segment.route, routeType: "BACKUP" as const })),
+        ]
+      : segments.map((segment) => ({ route: segment.route, routeType: routeType }));
+
     return {
       routeType: plan.routeType,
       action,
       ...(isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
-      segments: segments.map((segment, index): RouteSegmentInput => ({
+      segments: payloadRoutes.map(({ route, routeType: segmentRouteType }, index): RouteSegmentInput => ({
         sequenceNo: index + 1,
-        routeId: String(segment.route.id),
-        fromLocationId: String(segment.route.fromLocation?.id),
-        toLocationId: String(segment.route.toLocation?.id),
-        transportMode: segment.route.transportMode,
+        ...(isBackup || isReturn ? { routeType: segmentRouteType } : {}),
+        routeId: String(route.id),
+        fromLocationId: String(route.fromLocation?.id),
+        toLocationId: String(route.toLocation?.id),
+        transportMode: route.transportMode,
         plannedDepartureAt: plan.departureAt,
         plannedArrivalAt: plan.arrivalAt,
-        ...(segment.arrangement === "OUTSOURCED" && segment.provider
+        ...(segments.find((segment) => segment.route.id === route.id)?.arrangement === "OUTSOURCED" &&
+        segments.find((segment) => segment.route.id === route.id)?.provider
           ? {
               outsourcing: {
-                transportProviderId: segment.provider.transportProviderId,
-                note: segment.note,
+                transportProviderId: segments.find((segment) => segment.route.id === route.id)!.provider!.transportProviderId,
+                note: segments.find((segment) => segment.route.id === route.id)!.note,
               },
             }
           : {}),
