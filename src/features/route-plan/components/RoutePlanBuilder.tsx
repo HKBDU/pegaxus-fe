@@ -12,8 +12,16 @@ import {
 } from "@/shared/components/map";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ROLE_ROUTES } from "@/app/route-config";
-import { previewGeoapifyRoute } from "@/shared/utils/map/routing";
-import { createRoutePlan, updateRoutePlan } from "../services";
+import {
+  previewGeoapifyRoute,
+  snapToFeasibleRoadPoint,
+} from "@/shared/utils/map/routing";
+import {
+  createRoutePlan,
+  updateRoutePlan,
+  getLocation,
+  updateLocation,
+} from "../services";
 import { loadAllVehicles } from "../api-adapters";
 import {
   buildEffectiveBackupRoute,
@@ -84,16 +92,71 @@ export function RoutePlanBuilder({
   metadata,
   initialRoutes = [],
   initialRouteNote = "",
-  locations,
+  locations: initialLocations,
   routes,
   vehicles: initialVehicles,
   edit,
 }: RoutePlanBuilderProps) {
   const [step, setStep] = useState<WizardStep>(0);
   const [, setMode] = useState<MapMode>("buildPlan");
+  const [locations, setLocations] = useState<MapLocation[]>(initialLocations);
+
+  useEffect(() => {
+    setLocations(initialLocations);
+  }, [initialLocations]);
+
   const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>(
     initialVehicles ?? [],
   );
+
+  async function persistFeasibleLocation(
+    loc: MapLocation,
+    snapped: { latitude: number; longitude: number },
+  ) {
+    try {
+      const locId = String(loc.id);
+      if (!locId || locId.startsWith("unknown") || locId.startsWith("dynamic")) return;
+      const current = await getLocation(locId);
+      if (!current) return;
+      const latDiff = Math.abs((current.latitude ?? 0) - snapped.latitude);
+      const lonDiff = Math.abs((current.longitude ?? 0) - snapped.longitude);
+      if (latDiff < 0.0001 && lonDiff < 0.0001) return;
+
+      await updateLocation(locId, {
+        locationName: current.locationName,
+        locationType: current.locationType,
+        address: current.address,
+        city: current.city,
+        stateProvince: current.stateProvince,
+        country: current.country,
+        latitude: snapped.latitude,
+        longitude: snapped.longitude,
+        locationNote: current.locationNote,
+        lastUpdatedAt: current.updatedAt,
+      });
+
+      setLocations((currentLocations) =>
+        currentLocations.map((item) =>
+          String(item.id) === locId
+            ? { ...item, latitude: snapped.latitude, longitude: snapped.longitude }
+            : item,
+        ),
+      );
+    } catch (err) {
+      console.warn("Could not persist feasible location coordinate:", err);
+    }
+  }
+
+  async function checkAndPersistLocation(loc: MapLocation) {
+    if (!loc || !loc.latitude || !loc.longitude) return;
+    const snapResult = await snapToFeasibleRoadPoint({
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+    });
+    if (snapResult.isSnapped) {
+      await persistFeasibleLocation(loc, snapResult);
+    }
+  }
 
   const [customFrom, setCustomFrom] = useState<MapLocation | null>(null);
   const [customTo, setCustomTo] = useState<MapLocation | null>(null);
@@ -388,11 +451,21 @@ export function RoutePlanBuilder({
           { latitude: sourceLocation.latitude, longitude: sourceLocation.longitude },
           { latitude: location.latitude, longitude: location.longitude },
         );
+        let actualFrom = sourceLocation;
+        let actualTo = location;
+        if (preview.snappedStart) {
+          actualFrom = { ...sourceLocation, ...preview.snappedStart };
+          void persistFeasibleLocation(sourceLocation, preview.snappedStart);
+        }
+        if (preview.snappedEnd) {
+          actualTo = { ...location, ...preview.snappedEnd };
+          void persistFeasibleLocation(location, preview.snappedEnd);
+        }
         const dynamicRoute: MapRoute = {
           id: `dynamic-${sourceLocation.id}-${location.id}`,
           name: `${sourceLocation.name} → ${location.name} (Calculated)`,
-          fromLocation: sourceLocation,
-          toLocation: location,
+          fromLocation: actualFrom,
+          toLocation: actualTo,
           distanceKm: Math.round(preview.distanceKm * 10) / 10,
           durationMinutes: Math.round(preview.durationMinutes),
           transportMode: "ROAD",
@@ -506,6 +579,16 @@ export function RoutePlanBuilder({
       return;
     }
     try {
+      // Pre-save check: ensure all locations in segments have feasible road coordinates in the backend
+      for (const seg of segments) {
+        if (seg.route.fromLocation) {
+          await checkAndPersistLocation(seg.route.fromLocation);
+        }
+        if (seg.route.toLocation) {
+          await checkAndPersistLocation(seg.route.toLocation);
+        }
+      }
+
       if (edit) {
         await updateRoutePlan(edit.routePlanId, {
           lastUpdatedAt: edit.lastUpdatedAt,
@@ -555,8 +638,14 @@ export function RoutePlanBuilder({
               to={plan.to}
               returnMode={isReturn}
               locations={locations}
-              onFromChange={(loc) => setCustomFrom(loc)}
-              onToChange={(loc) => setCustomTo(loc)}
+              onFromChange={(loc) => {
+                setCustomFrom(loc);
+                void checkAndPersistLocation(loc);
+              }}
+              onToChange={(loc) => {
+                setCustomTo(loc);
+                void checkAndPersistLocation(loc);
+              }}
               isFromResolved={metadata?.isFromResolved ?? true}
               isToResolved={metadata?.isToResolved ?? true}
               unresolvedOriginAddress={metadata?.unresolvedOriginAddress}
@@ -645,11 +734,21 @@ export function RoutePlanBuilder({
                               { latitude: fromLoc.latitude, longitude: fromLoc.longitude },
                               { latitude: stopLoc.latitude, longitude: stopLoc.longitude },
                             );
+                            let actualFrom = fromLoc;
+                            let actualStop = stopLoc;
+                            if (preview.snappedStart) {
+                              actualFrom = { ...fromLoc, ...preview.snappedStart };
+                              void persistFeasibleLocation(fromLoc, preview.snappedStart);
+                            }
+                            if (preview.snappedEnd) {
+                              actualStop = { ...stopLoc, ...preview.snappedEnd };
+                              void persistFeasibleLocation(stopLoc, preview.snappedEnd);
+                            }
                             const newRoute: MapRoute = {
                               id: `dynamic-${fromLoc.id}-${stopLoc.id}`,
                               name: `${fromLoc.name} → ${stopLoc.name} (Inserted)`,
-                              fromLocation: fromLoc,
-                              toLocation: stopLoc,
+                              fromLocation: actualFrom,
+                              toLocation: actualStop,
                               distanceKm: Math.round(preview.distanceKm * 10) / 10,
                               durationMinutes: Math.round(preview.durationMinutes),
                               transportMode: "ROAD",

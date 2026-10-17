@@ -27,6 +27,8 @@ export interface RoutePreviewResult {
   geometry: RouteGeometry;
   distanceKm: number;
   durationMinutes: number;
+  snappedStart?: RoutingPoint;
+  snappedEnd?: RoutingPoint;
 }
 
 function getApiKey() {
@@ -37,6 +39,30 @@ function getApiKey() {
       "Geoapify API key is not configured.",
     );
   return key;
+}
+
+export async function snapToFeasibleRoadPoint(
+  point: RoutingPoint,
+  signal?: AbortSignal,
+): Promise<{ latitude: number; longitude: number; isSnapped: boolean }> {
+  try {
+    const key = getApiKey();
+    const snapped = await snapToNearestRoad(point, key, signal);
+    const isSnapped =
+      Math.abs(snapped.latitude - point.latitude) > 0.0001 ||
+      Math.abs(snapped.longitude - point.longitude) > 0.0001;
+    return {
+      latitude: snapped.latitude,
+      longitude: snapped.longitude,
+      isSnapped,
+    };
+  } catch {
+    return {
+      latitude: point.latitude,
+      longitude: point.longitude,
+      isSnapped: false,
+    };
+  }
 }
 
 /**
@@ -129,6 +155,9 @@ export async function previewGeoapifyRoute(
     const apiKey = getApiKey();
     let response = await fetchRoute(start, end, apiKey, controller.signal);
 
+    let usedStart = start;
+    let usedEnd = end;
+
     // If 400 (e.g. "No suitable edges near location" due to coordinates in forests/parks),
     // attempt to snap the waypoints to the nearest routable road via reverse geocoding.
     if (response.status === 400) {
@@ -142,6 +171,8 @@ export async function previewGeoapifyRoute(
         snappedEnd.latitude !== end.latitude ||
         snappedEnd.longitude !== end.longitude
       ) {
+        usedStart = snappedStart;
+        usedEnd = snappedEnd;
         response = await fetchRoute(
           snappedStart,
           snappedEnd,
@@ -180,6 +211,14 @@ export async function previewGeoapifyRoute(
       geometry,
       distanceKm: distance / 1000,
       durationMinutes: duration / 60,
+      snappedStart:
+        usedStart.latitude !== start.latitude || usedStart.longitude !== start.longitude
+          ? usedStart
+          : undefined,
+      snappedEnd:
+        usedEnd.latitude !== end.latitude || usedEnd.longitude !== end.longitude
+          ? usedEnd
+          : undefined,
     };
   } catch (error) {
     if (error instanceof RoutePreviewError && error.code === "QUOTA") throw error;

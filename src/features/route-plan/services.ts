@@ -69,6 +69,28 @@ export const getLocations = (params?: LocationListParams) =>
   request(apiClient.get(ROUTE_PLAN_ENDPOINTS.locations, { params })) as Promise<
     PaginatedValue<Location>
   >;
+export const getLocation = (locationId: string) =>
+  request<Location>(
+    apiClient.get(`${ROUTE_PLAN_ENDPOINTS.locations}/${locationId}`),
+  );
+export const updateLocation = (
+  locationId: string,
+  payload: {
+    locationName?: string | null;
+    locationType?: string | null;
+    address?: string | null;
+    city?: string | null;
+    stateProvince?: string | null;
+    country?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    locationNote?: string | null;
+    lastUpdatedAt: string;
+  },
+) =>
+  request<{ locationId: string; updatedAt: string }>(
+    apiClient.put(`${ROUTE_PLAN_ENDPOINTS.locations}/${locationId}`, payload),
+  );
 export const getRoutes = (params?: RouteListParams) =>
   request(apiClient.get(ROUTE_PLAN_ENDPOINTS.routes, { params })) as Promise<
     PaginatedValue<RouteMaster>
