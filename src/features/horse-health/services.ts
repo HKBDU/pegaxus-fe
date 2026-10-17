@@ -2,9 +2,9 @@ import apiClient from "@/lib/axios"
 import { useAuthStore } from "@/features/auth/store"
 
 import { getMockAssignedTransports } from "./mock"
-import { getMockHealthLog, getMockHealthLogHistory, getMockHealthOverview, mockCreateHealthLog, mockMarkAllNormal } from "./mock"
+import { getMockHealthLog, getMockHealthLogHistory, getMockHealthOverview, mockAddHealthLogPhotos, mockCreateHealthLog, mockMarkAllNormal } from "./mock"
 import { healthLogHistorySchema, healthLogSchema, horseHealthOverviewSchema } from "./schemas"
-import type { AssignedTransportsResponse, HealthLog, HealthLogHistory, HealthLogInput, HorseHealthOverview, LogType, MarkAllNormalInput } from "./types"
+import type { AssignedTransportsResponse, HealthLog, HealthLogHistory, HealthLogInput, HealthLogPhotoInput, HorseHealthOverview, LogType, MarkAllNormalInput } from "./types"
 
 export const isHorseHealthMockMode = () => import.meta.env.DEV && import.meta.env.VITE_HORSE_HEALTH_MOCK !== "false"
 
@@ -19,7 +19,7 @@ export async function getAssignedTransports(signal?: AbortSignal): Promise<Assig
 
   const response = await apiClient.get<unknown, ApiEnvelope<AssignedTransportsResponse>>(
     "/transports/assigned-to-me",
-    { params: { status: "READY,IN_TRANSIT" }, signal },
+    { params: { Status: "READY,IN_TRANSIT" }, signal },
   )
   return response.value
 }
@@ -45,8 +45,11 @@ export async function getHorseHealthOverview(transportId: string, signal?: Abort
 }
 
 export async function getHealthLogHistory(transportId: string, horseId: string, filters: HealthHistoryFilters = {}, signal?: AbortSignal): Promise<HealthLogHistory> {
-  const query = { pageIndex: filters.pageIndex ?? 0, pageSize: filters.pageSize ?? 20, logType: filters.logType, healthStatus: filters.healthStatus }
-  if (isHorseHealthMockMode()) return healthLogHistorySchema.parse(getMockHealthLogHistory(transportId, horseId, query))
+  const pageIndex = filters.pageIndex ?? 0
+  const pageSize = filters.pageSize ?? 20
+  const mockQuery = { pageIndex, pageSize, logType: filters.logType, healthStatus: filters.healthStatus }
+  if (isHorseHealthMockMode()) return healthLogHistorySchema.parse(getMockHealthLogHistory(transportId, horseId, mockQuery))
+  const query = { PageIndex: pageIndex, PageSize: pageSize, LogType: filters.logType, HealthStatus: filters.healthStatus }
   const response = await apiClient.get<unknown, ApiEnvelope<HealthLogHistory>>(`/transports/${encodeURIComponent(transportId)}/horses/${encodeURIComponent(horseId)}/health-logs`, { params: query, signal })
   return healthLogHistorySchema.parse(response.value)
 }
@@ -63,16 +66,20 @@ function appendOptional(form: FormData, key: string, value: unknown) {
 
 function healthLogForm(input: HealthLogInput) {
   const form = new FormData()
-  appendOptional(form, "horseId", input.horseId)
-  appendOptional(form, "logType", input.logType)
-  appendOptional(form, "healthStatus", input.healthStatus)
-  appendOptional(form, "hydrationStatus", input.hydrationStatus)
-  for (const key of ["checkedAt", "temperatureCelsius", "heartRateBpm", "respiratoryRateBpm", "behaviorNote", "symptomNote", "injuryNote", "feedingNote", "hydrationNote", "treatmentProvided", "medicationGiven", "veterinarianRequired", "veterinarianNote", "locationDescription", "generalNote", "latitude", "longitude"] as const) appendOptional(form, key, input[key])
-  input.files?.forEach((file) => form.append("files", file))
+  appendOptional(form, "HorseId", input.horseId)
+  appendOptional(form, "LogType", input.logType)
+  appendOptional(form, "HealthStatus", input.healthStatus)
+  appendOptional(form, "HydrationStatus", input.hydrationStatus)
+  const fields: Array<[string, keyof HealthLogInput]> = [["CheckedAt", "checkedAt"], ["TemperatureCelsius", "temperatureCelsius"], ["HeartRateBpm", "heartRateBpm"], ["RespiratoryRateBpm", "respiratoryRateBpm"], ["BehaviorNote", "behaviorNote"], ["SymptomNote", "symptomNote"], ["InjuryNote", "injuryNote"], ["FeedingNote", "feedingNote"], ["HydrationNote", "hydrationNote"], ["TreatmentProvided", "treatmentProvided"], ["MedicationGiven", "medicationGiven"], ["VeterinarianRequired", "veterinarianRequired"], ["VeterinarianNote", "veterinarianNote"], ["LocationDescription", "locationDescription"], ["GeneralNote", "generalNote"]]
+  fields.forEach(([formKey, inputKey]) => appendOptional(form, formKey, input[inputKey]))
+  // TODO(BE-INTEGRATION): connect confirmed photoPublicIds through the internal
+  // health-log attachment API. Do not append raw File objects here.
   input.photoCaptions?.forEach((value) => form.append("photoCaptions", value))
   input.photoLatitudes?.forEach((value) => form.append("photoLatitudes", String(value)))
   input.photoLongitudes?.forEach((value) => form.append("photoLongitudes", String(value)))
   input.photoCapturedAts?.forEach((value) => form.append("photoCapturedAts", value))
+  appendOptional(form, "latitude", input.latitude)
+  appendOptional(form, "longitude", input.longitude)
   return form
 }
 
@@ -85,13 +92,25 @@ export async function createHealthLog(transportId: string, input: HealthLogInput
 export async function markAllNormal(transportId: string, input: MarkAllNormalInput): Promise<HealthLog> {
   if (isHorseHealthMockMode()) return healthLogSchema.parse(mockMarkAllNormal(transportId, input))
   const form = new FormData()
-  appendOptional(form, "logType", input.logType)
-  appendOptional(form, "checkedAt", input.checkedAt)
-  appendOptional(form, "locationDescription", input.locationDescription)
-  appendOptional(form, "generalNote", input.generalNote)
-  appendOptional(form, "latitude", input.latitude)
-  appendOptional(form, "longitude", input.longitude)
-  input.files?.forEach((file) => form.append("files", file))
+  appendOptional(form, "LogType", input.logType)
+  appendOptional(form, "CheckedAt", input.checkedAt)
+  appendOptional(form, "LocationDescription", input.locationDescription)
+  appendOptional(form, "GeneralNote", input.generalNote)
+  // TODO(BE-INTEGRATION): connect confirmed photoPublicIds through the internal
+  // mark-all-normal attachment API. Do not append raw File objects here.
   const response = await apiClient.post<unknown, ApiEnvelope<HealthLog>>(`/transports/${encodeURIComponent(transportId)}/horse-health-logs/mark-all-normal`, form, { headers: { "Content-Type": "multipart/form-data" } })
+  return healthLogSchema.parse(response.value)
+}
+
+export async function addHealthLogPhotos(transportId: string, horseHealthLogId: string, input: HealthLogPhotoInput): Promise<HealthLog> {
+  if (isHorseHealthMockMode()) return healthLogSchema.parse(mockAddHealthLogPhotos(transportId, horseHealthLogId, input))
+  const form = new FormData()
+  // TODO(BE-INTEGRATION): connect confirmed photoPublicIds through the internal
+  // append-photo API. Do not append raw File objects here.
+  const response = await apiClient.post<unknown, ApiEnvelope<HealthLog>>(
+    `/transports/${encodeURIComponent(transportId)}/horse-health-logs/${encodeURIComponent(horseHealthLogId)}/photos`,
+    form,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  )
   return healthLogSchema.parse(response.value)
 }

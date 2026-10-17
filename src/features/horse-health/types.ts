@@ -136,6 +136,7 @@ export interface HealthLogInput {
   latitude?: number
   longitude?: number
   files?: File[]
+  photoPublicIds?: string[]
   photoCaptions?: string[]
   photoLatitudes?: number[]
   photoLongitudes?: number[]
@@ -147,9 +148,19 @@ export interface MarkAllNormalInput {
   checkedAt?: string
   locationDescription?: string
   generalNote?: string
+  photoPublicIds?: string[]
   latitude?: number
   longitude?: number
   files?: File[]
+}
+
+export interface HealthLogPhotoInput {
+  files: File[]
+  photoPublicIds?: string[]
+  caption?: string
+  latitude?: number
+  longitude?: number
+  capturedAt?: string
 }
 
 export interface ApiErrorShape {

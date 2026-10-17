@@ -1,4 +1,4 @@
-import type { AssignedTransportsResponse, CrewMember, CrewRole, HealthLog, HealthLogHistory, HealthLogInput, HealthLogSummary, HorseHealthOverview, MarkAllNormalInput } from "./types"
+import type { AssignedTransportsResponse, CrewMember, CrewRole, HealthLog, HealthLogHistory, HealthLogInput, HealthLogPhotoInput, HealthLogSummary, HorseHealthOverview, MarkAllNormalInput } from "./types"
 
 const MOCK_TRANSPORTS = [
   {
@@ -142,4 +142,14 @@ export function mockCreateHealthLog(transportId: string, input: HealthLogInput):
 
 export function mockMarkAllNormal(transportId: string, input: MarkAllNormalInput): HealthLog {
   return mockCreateHealthLog(transportId, { horseId: MOCK_HORSES[0].horseId, logType: input.logType, healthStatus: "NORMAL", hydrationStatus: "NORMAL", checkedAt: input.checkedAt, locationDescription: input.locationDescription, generalNote: input.generalNote, files: input.files })
+}
+
+export function mockAddHealthLogPhotos(transportId: string, horseHealthLogId: string, input: HealthLogPhotoInput): HealthLog {
+  const log = MOCK_LOGS.find((item) => item.horseHealthLogId === horseHealthLogId) ?? MOCK_LOGS[0]
+  if (!log) throw new Error("Health log not found")
+  const capturedAt = input.capturedAt ?? new Date().toISOString()
+  log.photos = input.files.map((file) => ({ photoUrl: URL.createObjectURL(file), latitude: input.latitude ?? null, longitude: input.longitude ?? null, capturedAt, caption: input.caption ?? null }))
+  log.hasPhoto = log.photos.length > 0
+  log.updatedAt = capturedAt
+  return { ...log, transportId }
 }
