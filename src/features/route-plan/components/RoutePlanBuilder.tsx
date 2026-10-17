@@ -782,21 +782,27 @@ export function RoutePlanBuilder({
       action,
       ...(isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
       segments: payloadRoutes.map(
-        ({ route, routeType: segmentRouteType, plannedDepartureAt, plannedArrivalAt, vehicleIds, outsourcing }, index): RouteSegmentInput => ({
-          sequenceNo: index + 1,
-          ...(isBackup || isReturn ? { routeType: segmentRouteType } : {}),
-          routeId: String(route.id).startsWith("dynamic-") ? undefined : String(route.id),
-          fromLocationId: String(route.fromLocation?.id),
-          toLocationId: String(route.toLocation?.id),
-          transportMode: route.transportMode ?? "ROAD",
-          plannedDepartureAt,
-          plannedArrivalAt,
-          ...(outsourcing
-            ? { outsourcing }
-            : vehicleIds?.length
-              ? { vehicleIds }
-              : {}),
-        }),
+        ({ route, routeType: segmentRouteType, plannedDepartureAt, plannedArrivalAt, vehicleIds, outsourcing }, index): RouteSegmentInput => {
+          const isCatalogRoute = Boolean(route.id && !String(route.id).startsWith("dynamic-"));
+          return {
+            sequenceNo: index + 1,
+            ...(isBackup || isReturn ? { routeType: segmentRouteType } : {}),
+            ...(isCatalogRoute
+              ? { routeId: String(route.id) }
+              : {
+                  fromLocationId: String(route.fromLocation?.id ?? ""),
+                  toLocationId: String(route.toLocation?.id ?? ""),
+                  transportMode: route.transportMode ?? "ROAD",
+                }),
+            plannedDepartureAt,
+            plannedArrivalAt,
+            ...(outsourcing
+              ? { outsourcing }
+              : vehicleIds?.length
+                ? { vehicleIds }
+                : {}),
+          };
+        },
       ),
     };
   }

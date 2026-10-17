@@ -27,4 +27,7 @@ dist-ssr
 *.sln
 *.sw?
 
+.docs/
+.docs
+**/.docs/
 **/.docs/*
