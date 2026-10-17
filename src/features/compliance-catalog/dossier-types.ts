@@ -11,11 +11,15 @@ export type ApplyBooking = Pick<Booking, "bookingId" | "bookingCode" | "status" 
   horses: { horseId: EntityId; horseName: string }[]
 }
 
-/** GET /bookings/{id}/compliance-dossier (D1). */
+/** A transport can carry one MAIN dossier and one EXTRA dossier (DB v9: unique per transport and type). */
+export type DossierType = "MAIN" | "EXTRA"
+
+/** GET /bookings/{id}/compliance-dossier (D1): the MAIN dossier, or the first one when the BE sends no type. */
 export interface ComplianceDossierSummary {
   complianceDossierId: EntityId
   dossierCode: string
   status: string
+  dossierType?: DossierType | null
 }
 
 /** A requirement the TS adds on top of (or instead of) a template: same fields as D3. */
@@ -47,6 +51,7 @@ export interface CreateDossierResult {
   complianceDossierId: EntityId
   dossierCode: string
   status: string
+  dossierType?: DossierType | null
   generatedRequirementCount: number
   /** Template + custom: custom lines are added with D3 after D2, so some of them can fail on their own. */
   failedCustomCount: number

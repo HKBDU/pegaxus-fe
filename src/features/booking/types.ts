@@ -79,6 +79,11 @@ export interface Booking extends Omit<BookingSummary, "customerName"> {
   customer: BookingCustomer
   originAddress: string
   destinationAddress: string
+  /** Picked on the map when the booking was made; null on bookings created before that existed. */
+  originLatitude: number | null
+  originLongitude: number | null
+  destinationLatitude: number | null
+  destinationLongitude: number | null
   requestedArrivalDate: string | null
   horses: BookedHorse[]
   specialRequirements: string | null
@@ -125,8 +130,12 @@ export interface BookingHorseInput {
 export interface CreateBookingRequest {
   originAddress: string
   originCountry: string
+  originLatitude: number
+  originLongitude: number
   destinationAddress: string
   destinationCountry: string
+  destinationLatitude: number
+  destinationLongitude: number
   requestedDepartureDate: string
   requestedArrivalDate?: string
   horses?: BookingHorseInput[]
@@ -143,8 +152,13 @@ export interface UpdateBookingRequest {
   lastUpdatedAt: string
   originAddress?: string
   originCountry?: string
+  /** Latitude and longitude of a point always travel together (the BE rejects only one of the pair). */
+  originLatitude?: number
+  originLongitude?: number
   destinationAddress?: string
   destinationCountry?: string
+  destinationLatitude?: number
+  destinationLongitude?: number
   requestedDepartureDate?: string
   requestedArrivalDate?: string
   specialRequirements?: string
@@ -172,13 +186,13 @@ export interface ApproveBookingResult {
 export interface BookingFormValues {
   originAddress: string
   originCountry: string
-  /** UI-only: sent as part of the address. */
-  originState: string
-  originCity: string
+  /** Picked on the map; undefined until the Customer chooses a point. */
+  originLatitude: number | undefined
+  originLongitude: number | undefined
   destinationAddress: string
   destinationCountry: string
-  destinationState: string
-  destinationCity: string
+  destinationLatitude: number | undefined
+  destinationLongitude: number | undefined
   requestedDepartureDate: string
   requestedArrivalDate: string
   specialRequirements: string

@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   complianceDocumentDetailSchema,
   dossierOverviewSchema,
+  dossierTypeSchema,
   dossierRequirementSchema,
   dossierRequirementStatusSchema,
   dossierStatusSchema,
@@ -81,6 +82,17 @@ export const overviewDtoSchema = z.object({
   bookingCode: z.string(),
   complianceDossierId: id.nullable(),
   dossierCode: z.string().nullable(),
+  dossierType: dossierTypeSchema.nullish(),
+  complianceDossiers: z
+    .array(
+      z.object({
+        complianceDossierId: id,
+        dossierCode: z.string(),
+        dossierType: dossierTypeSchema.nullish(),
+        status: z.string(),
+      }),
+    )
+    .nullish(),
   status: dossierStatusSchema.nullable(),
   fulfilledCount: z.number(),
   requirementCount: z.number(),
@@ -153,6 +165,8 @@ export function mapBackendDossierOverview(payload: unknown) {
   return dossierOverviewSchema.parse({
     complianceDossierId: value.complianceDossierId,
     dossierCode: value.dossierCode ?? "",
+    dossierType: value.dossierType ?? null,
+    complianceDossiers: value.complianceDossiers ?? [],
     bookingId: value.bookingId,
     bookingCode: value.bookingCode,
     status: value.status,

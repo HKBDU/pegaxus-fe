@@ -150,7 +150,6 @@ export const CANCELLATION_REASON_MIN_LENGTH = 10
 
 export const PAYMENT_ERROR_CODES = {
   PARTIAL_PAYMENT_NOT_SUPPORTED: 'PARTIAL_PAYMENT_NOT_SUPPORTED',
-  CURRENCY_MISMATCH: 'CURRENCY_MISMATCH',
   UNPAYABLE_INVOICE_TYPE: 'UNPAYABLE_INVOICE_TYPE',
   INVALID_INVOICE_STATUS: 'INVALID_INVOICE_STATUS',
   INVOICE_HAS_PAYMENT: 'INVOICE_HAS_PAYMENT',
@@ -161,7 +160,6 @@ export const PAYMENT_ERROR_CODES = {
   UNSUPPORTED_PAYMENT_CURRENCY: 'UNSUPPORTED_PAYMENT_CURRENCY',
 } as const
 
-export const PAYMENT_CURRENCY_VALUES = INVOICE_CURRENCIES
 export const PAYMENT_METHOD_VALUES = [
   PAYMENT_METHOD.CASH,
   PAYMENT_METHOD.BANK_TRANSFER,
@@ -199,7 +197,6 @@ export const INVOICE_ERROR_MESSAGES: Record<string, string> = {
   INVOICE_ALREADY_EXISTS: "An unresolved invoice of this type already exists. Edit or cancel the existing invoice first.",
   FINAL_INVOICE_ALREADY_EXISTS: "This booking already has a FINAL invoice. A second one is only allowed after the previous one is cancelled.",
   UNPAID_FINAL_INVOICE: "A credit note needs the FINAL invoice of this booking to be PAID first.",
-  CURRENCY_MISMATCH: "The currency must match the currency of the paid deposit.",
   BOOKING_NOT_FOUND: "Booking not found.",
   INVOICE_NOT_FOUND: "Invoice not found.",
   INVOICE_LOCKED: "Only DRAFT invoices can be edited.",

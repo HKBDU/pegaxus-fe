@@ -6,6 +6,7 @@ import { LoaderCircle, Send } from "lucide-react"
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
+import { MoneyInput } from "@/shared/components/ui/money-input"
 import { Textarea } from "@/shared/components/ui/textarea"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
@@ -19,7 +20,7 @@ import { EmergencyFeedback } from "./EmergencyFeedback"
 const controls = [
   { name: "reason", label: "Reason for Change", required: true, type: "textarea" },
   { name: "newEstimatedArrivalAt", label: "New Estimated Arrival", required: true, type: "datetime-local" },
-  { name: "estimatedExtraCost", label: "Estimated Extra Cost (VND)", type: "number" },
+  { name: "estimatedExtraCost", label: "Estimated Extra Cost (VND)", type: "money" },
   { name: "note", label: "Additional Note", type: "textarea" },
 ] as const
 
@@ -50,7 +51,7 @@ export function BackupActivationRequestDialog({ plan, context, onClose }: { plan
           <fieldset disabled={busy} className="grid items-start gap-x-4 gap-y-2 sm:grid-cols-2">
             {controls.map(control => <FormField key={control.name} control={form.control} name={control.name} render={({ field }) => <FormItem className={`min-w-0 content-start gap-1.5 ${control.type === "textarea" || control.name === "newEstimatedArrivalAt" ? "sm:col-span-2" : ""}`}>
               <FormLabel className="leading-4">{control.label}{"required" in control && control.required ? " *" : ""}</FormLabel><FormControl>
-                {control.type === "textarea" ? <Textarea {...field} className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none min-h-20" /> : <Input {...field} type={control.type} {...(control.name === "estimatedExtraCost" ? { step: 1, min: 0, inputMode: "numeric" as const, placeholder: "Whole amount, e.g. 1500000", onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => { if ([".", ",", "e", "E", "+", "-"].includes(event.key)) event.preventDefault() } } : { step: "any" })} className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" />}
+                {control.type === "textarea" ? <Textarea {...field} className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none min-h-20" /> : control.type === "money" ? <MoneyInput {...field} placeholder="Whole amount, e.g. 1,500,000" className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" /> : <Input {...field} type={control.type} step="any" className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none" />}
               </FormControl><div className="min-h-5"><FormMessage role="alert" className="text-xs leading-5" /></div></FormItem>} />)}
           </fieldset>
           <p className="text-xs leading-5 text-slate-500">The route stays confirmed until approval. Extra cost is an estimate, not a charge. Enter the new arrival time in your local time zone.</p>

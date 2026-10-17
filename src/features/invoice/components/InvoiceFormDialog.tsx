@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
 
-const DEFAULT_VALUES: InvoiceFormValues = { type: "QUOTATION", currency: DEFAULT_INVOICE_CURRENCY, dueDate: "", note: "", items: [] }
+const DEFAULT_VALUES: InvoiceFormValues = { type: "QUOTATION", dueDate: "", note: "", items: [] }
 const fieldLabelClass = "mb-1 block font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-500"
 const controlClass = "h-9 w-full rounded-none border-[#d8d5cb] bg-white px-3 text-sm shadow-none"
 const panelClass = "border border-[#e5e2d9] bg-white"
@@ -74,7 +74,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
   )
   const transportStatus = isEdit ? invoice?.transport?.status : suggestionQuery.data?.transportStatus
 
-  const [type, currency, items] = useWatch({ control, name: ["type", "currency", "items"] })
+  const [type, items] = useWatch({ control, name: ["type", "items"] })
   const parsedLines = (items ?? []).map((item) => ({
     label: item.description?.trim() || "Untitled line",
     quantity: parseWholeNumber(item.quantity ?? ""),
@@ -258,11 +258,11 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                     </div>
                   </section>
 
-                  <BillingSummaryCard lines={summaryLines} summary={estimate} currency={currency} />
+                  <BillingSummaryCard lines={summaryLines} summary={estimate} currency={DEFAULT_INVOICE_CURRENCY} />
                 </div>
 
                 <InvoiceLineItemsTable
-                  currency={currency}
+                  currency={DEFAULT_INVOICE_CURRENCY}
                   horses={booking.horses}
                   depositDeductionItems={depositDeductionItems}
                   focusRow={focusRow}
