@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type SortingState } from "@tanstack/react-table"
 import { ArrowRight, ChevronLeft, ChevronRight, Plus, Search, X } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useForm, type UseFormReturn } from "react-hook-form"
 import { useQueryClient } from "@tanstack/react-query"
 import { useNavigate, useParams } from "react-router-dom"
@@ -21,9 +21,8 @@ import { ErrorState } from "@/shared/components/common"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Checkbox } from "@/shared/components/ui/checkbox"
-import { BookingLocationSelector } from "@/features/booking/components/BookingLocationSelector"
-import { findEuCountryByCode, findEuCountryByName } from "@/features/booking/constants/eu-countries"
-import { composeAddress, splitAddress } from "@/features/booking/constants/location-value"
+import { BookingPointCards } from "@/features/booking/components/BookingPointCards"
+import type { BookingPointSide, PickedPoint } from "@/features/booking/lib/place"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableRadioFilter } from "@/shared/components/ui/data-table-radio-filter"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
@@ -35,16 +34,23 @@ import { Textarea } from "@/shared/components/ui/textarea"
 import { useDebounce } from "@/shared/hooks/useDebounce"
 import type { EntityId } from "@/shared/types"
 
+// maplibre-gl is heavy and the booking pages are imported eagerly by the router, so the map loads only on this step.
+const BookingPointMap = lazy(() => import("@/features/booking/components/BookingPointMap"))
+
 const transportFields = [
   "originAddress",
   "originCountry",
+  "originLatitude",
+  "originLongitude",
   "destinationAddress",
   "destinationCountry",
+  "destinationLatitude",
+  "destinationLongitude",
   "requestedDepartureDate",
   "requestedArrivalDate",
 ] as const
 
-type TransportField = (typeof transportFields)[number]
+type DateField = "requestedDepartureDate" | "requestedArrivalDate"
 
 const NOTE_LIMIT = 500
 const SELECTED_HORSE_ROW_HEIGHT = 48
@@ -61,17 +67,16 @@ const fieldControlClass =
   "h-8 rounded-[2px] border-[#f3aa3b] bg-transparent px-3 text-xs text-[#181818] shadow-none md:text-xs placeholder:text-[#6c6963] focus-visible:border-primary focus-visible:ring-primary/20"
 
 function toDefaultValues(booking?: Booking): BookingFormValues {
-  const origin = splitAddress(booking?.originAddress ?? "", booking?.originCountry ?? "")
-  const destination = splitAddress(booking?.destinationAddress ?? "", booking?.destinationCountry ?? "")
   return {
-    originAddress: origin.address,
+    originAddress: booking?.originAddress ?? "",
     originCountry: booking?.originCountry ?? "",
-    originState: origin.state,
-    originCity: origin.city,
-    destinationAddress: destination.address,
+    // Bookings made before the map existed have no coordinates: the Customer must pick the point again.
+    originLatitude: booking?.originLatitude ?? undefined,
+    originLongitude: booking?.originLongitude ?? undefined,
+    destinationAddress: booking?.destinationAddress ?? "",
     destinationCountry: booking?.destinationCountry ?? "",
-    destinationState: destination.state,
-    destinationCity: destination.city,
+    destinationLatitude: booking?.destinationLatitude ?? undefined,
+    destinationLongitude: booking?.destinationLongitude ?? undefined,
     requestedDepartureDate: booking?.requestedDepartureDate ?? "",
     requestedArrivalDate: booking?.requestedArrivalDate ?? "",
     specialRequirements: booking?.specialRequirements ?? "",
@@ -156,7 +161,7 @@ function BookingField({
   max,
 }: {
   control: ReturnType<typeof useForm<BookingFormSchemaValues>>["control"]
-  name: TransportField
+  name: DateField
   label: string
   placeholder?: string
   type?: "text" | "date"
@@ -201,37 +206,34 @@ function ActiveBar() {
   return <span aria-hidden="true" className="active-bar pointer-events-none absolute inset-y-0 left-0 w-1 bg-primary" />
 }
 
-function RouteLocation({ form, side, labelPrefix }: { form: UseFormReturn<BookingFormSchemaValues>; side: "origin" | "destination"; labelPrefix: string }) {
-  const keys = side === "origin"
-    ? ({ country: "originCountry", state: "originState", city: "originCity" } as const)
-    : ({ country: "destinationCountry", state: "destinationState", city: "destinationCity" } as const)
-  // Read once: the selector owns its state after mount, and re-syncs only if this object changes.
-  const [initialData] = useState(() => ({
-    country: findEuCountryByName(form.getValues(keys.country))?.isoCode,
-    state: form.getValues(keys.state),
-    city: form.getValues(keys.city),
-  }))
-  const dirty = { shouldDirty: true, shouldValidate: true }
-
-  return (
-    <BookingLocationSelector
-      idPrefix={`booking-${side}`}
-      labelPrefix={labelPrefix}
-      labelClassName={fieldLabelClass}
-      initialData={initialData}
-      countryError={form.formState.errors[keys.country]?.message}
-      onLocationChange={({ country, state, city }) => {
-        form.setValue(keys.country, findEuCountryByCode(country)?.name ?? "", dirty)
-        form.setValue(keys.state, state, dirty)
-        form.setValue(keys.city, city, dirty)
-      }}
-    />
-  )
+function readPoint(form: UseFormReturn<BookingFormSchemaValues>, side: BookingPointSide): PickedPoint | null {
+  const values = form.watch()
+  const address = side === "origin" ? values.originAddress : values.destinationAddress
+  const country = side === "origin" ? values.originCountry : values.destinationCountry
+  const latitude = side === "origin" ? values.originLatitude : values.destinationLatitude
+  const longitude = side === "origin" ? values.originLongitude : values.destinationLongitude
+  if (!address || !country || typeof latitude !== "number" || typeof longitude !== "number") return null
+  return { address, country, latitude, longitude }
 }
 
-function FormSection({ title, className, offsetTitle = false, children }: { title: string; className?: string; offsetTitle?: boolean; children: React.ReactNode }) {
+function setPoint(form: UseFormReturn<BookingFormSchemaValues>, side: BookingPointSide, point: PickedPoint) {
+  const dirty = { shouldDirty: true, shouldValidate: true }
+  if (side === "origin") {
+    form.setValue("originAddress", point.address, dirty)
+    form.setValue("originCountry", point.country, dirty)
+    form.setValue("originLatitude", point.latitude, dirty)
+    form.setValue("originLongitude", point.longitude, dirty)
+  } else {
+    form.setValue("destinationAddress", point.address, dirty)
+    form.setValue("destinationCountry", point.country, dirty)
+    form.setValue("destinationLatitude", point.latitude, dirty)
+    form.setValue("destinationLongitude", point.longitude, dirty)
+  }
+}
+
+function FormSection({ title, className, offsetTitle = false, stacked = false, children }: { title: string; className?: string; offsetTitle?: boolean; stacked?: boolean; children: React.ReactNode }) {
   return (
-    <section className={cn("grid gap-2 border-b border-[#1f1e1d] py-3 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-4", className)}>
+    <section className={cn("grid gap-2 border-b border-[#1f1e1d] py-3", !stacked && "lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-4", className)}>
       <h2 className={cn("m-0! font-heading text-xl! leading-7! font-bold! tracking-normal! text-black! uppercase", offsetTitle && "lg:pt-1")}>{title}</h2>
       <div>{children}</div>
     </section>
@@ -276,6 +278,8 @@ function FilterSelect({
 function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit"; booking?: Booking; onSaveFailed?: (error: unknown) => void }) {
   const navigate = useNavigate()
   const [step, setStep] = useState<1 | 2>(1)
+  const [pointSide, setPointSide] = useState<BookingPointSide>("origin")
+  const [pointMessage, setPointMessage] = useState<string | null>(null)
   const queryClient = useQueryClient()
   const [addHorseOpen, setAddHorseOpen] = useState(false)
   const [horseSearch, setHorseSearch] = useState("")
@@ -301,6 +305,9 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
     defaultValues: toDefaultValues(booking),
   })
 
+  const originPoint = readPoint(form, "origin")
+  const destinationPoint = readPoint(form, "destination")
+  const pointErrors = form.formState.errors
   const selectedHorses = form.watch("horses")
   const sideColumnHeight = horseTableHeight
   const selectedHorsePanelHeight = (sideColumnHeight - PANEL_GAP_HEIGHT) / 2
@@ -503,20 +510,19 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
   }
 
   const submit = form.handleSubmit(async (formValues) => {
-    // State and city have no API fields, so they are appended to the address.
-    const values = {
-      ...formValues,
-      originAddress: composeAddress(formValues.originAddress, { state: formValues.originState, city: formValues.originCity }, formValues.originCountry),
-      destinationAddress: composeAddress(formValues.destinationAddress, { state: formValues.destinationState, city: formValues.destinationCity }, formValues.destinationCountry),
-    }
+    const values = formValues
     try {
       await saveRequest.run(async () => {
         if (mode === "create") {
           const result = await createBooking.mutateAsync({
             originAddress: values.originAddress,
             originCountry: values.originCountry,
+            originLatitude: values.originLatitude,
+            originLongitude: values.originLongitude,
             destinationAddress: values.destinationAddress,
             destinationCountry: values.destinationCountry,
+            destinationLatitude: values.destinationLatitude,
+            destinationLongitude: values.destinationLongitude,
             requestedDepartureDate: values.requestedDepartureDate,
             requestedArrivalDate: values.requestedArrivalDate || undefined,
             horses: values.horses,
@@ -576,21 +582,35 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
           />
 
           {step === 1 ? (
-            <div className="booking-page-enter mt-2 lg:px-8">
-              <FormSection title="Route information">
-                <div className="grid gap-4">
-                  <div className="grid gap-2">
-                    <RouteLocation form={form} side="origin" labelPrefix="Pickup" />
-                    <BookingField control={form.control} name="originAddress" label="Pickup address *" placeholder="Enter pickup stable or racecourse address..." />
-                  </div>
-                  <div className="grid gap-2">
-                    <RouteLocation form={form} side="destination" labelPrefix="Destination" />
-                    <BookingField control={form.control} name="destinationAddress" label="Destination address *" placeholder="Enter destination stable or racecourse address..." />
-                  </div>
-                </div>
+            <div className="booking-page-enter mt-2 grid gap-x-6 lg:grid-cols-2">
+              <FormSection stacked title="Route information" className="lg:col-start-1 lg:row-start-1">
+                <BookingPointCards
+                  origin={originPoint}
+                  destination={destinationPoint}
+                  side={pointSide}
+                  onSideChange={setPointSide}
+                  message={pointMessage}
+                  errors={{
+                    origin: originPoint ? pointErrors.originCountry?.message : pointErrors.originLatitude?.message ?? pointErrors.originAddress?.message ?? pointErrors.originCountry?.message,
+                    destination: destinationPoint ? pointErrors.destinationCountry?.message : pointErrors.destinationLatitude?.message ?? pointErrors.destinationAddress?.message ?? pointErrors.destinationCountry?.message,
+                  }}
+                />
               </FormSection>
 
-              <FormSection title="Schedule" offsetTitle>
+              <div className="border-b border-[#1f1e1d] py-3 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:border-b-0 lg:pt-3">
+                <Suspense fallback={<Skeleton className="h-[380px] rounded-[2px] bg-[#e9e6de] sm:h-[460px] lg:h-[560px]" />}>
+                  <BookingPointMap
+                    origin={originPoint}
+                    destination={destinationPoint}
+                    side={pointSide}
+                    onPick={(side, point) => setPoint(form, side, point)}
+                    onMessage={setPointMessage}
+                    onPickupDone={() => setPointSide("destination")}
+                  />
+                </Suspense>
+              </div>
+
+              <FormSection stacked title="Schedule" className="lg:col-start-1 lg:row-start-2">
                 <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                   <BookingField
                     control={form.control}
@@ -604,7 +624,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
                 </div>
               </FormSection>
 
-              <FormSection title="Notes" offsetTitle>
+              <FormSection stacked title="Notes" className="lg:col-start-1 lg:row-start-3">
                 <FormField control={form.control} name="specialRequirements" render={({ field }) => (
                   <FormItem className="gap-1">
                     <FormLabel className={fieldLabelClass}>Notes</FormLabel>
@@ -621,7 +641,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
                 )} />
               </FormSection>
 
-              <div className="mt-3 flex justify-end gap-2">
+              <div className="mt-3 flex justify-end gap-2 lg:col-span-2">
                 <button type="button" disabled={isPending || exitRequest.isBlocked} className={cn(largeButton, "border-[#4f4e4d] bg-transparent text-[#181818] hover:bg-black/5")} onClick={() => void cancel()}>
                   {exitRequest.isBlocked ? "Please wait..." : "Cancel"}
                 </button>

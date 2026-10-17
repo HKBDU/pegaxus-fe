@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
 import { Circle, FolderOpen, LockKeyhole } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { dossierDetail } from "@/app/route-config";
 import { formatBookingDate } from "@/features/booking/utils";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { dossierStatusStyles } from "../constants";
+import { useDossierRole } from "../hooks/useDossierRole";
 import { formatDossierProgress } from "../lib/progress";
 import type { DossierOverview as DossierOverviewData } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
@@ -30,6 +33,8 @@ const requirementMetrics = [
 export function DossierOverview({ dossier }: {
   dossier: DossierOverviewData;
 }) {
+  const navigate = useNavigate();
+  const role = useDossierRole();
   const booking = dossier.bookingSummary;
   const milestones = [
     ["Ready for submission", dossier.readyForSubmissionAt],
@@ -44,6 +49,7 @@ export function DossierOverview({ dossier }: {
   ] as const;
   const hasProof = proofs.some(([, proof]) => proof !== null);
   const progress = Math.max(0, Math.min(100, dossier.progressPercent));
+  const siblings = dossier.complianceDossiers ?? [];
   const lockMessage = dossier.writeLockReason === "BOOKING_CHANGE_IN_PROGRESS"
     ? "Booking changes are in progress. Editing is temporarily locked."
     : dossier.writeLockReason === "DOSSIER_CLOSED" || dossier.status === "CLOSED"
@@ -66,6 +72,30 @@ export function DossierOverview({ dossier }: {
             </div>
             <p className="mb-4 break-all font-heading text-xl font-bold text-gray-900">{dossier.dossierCode}</p>
             <dl className="space-y-2">
+              {dossier.dossierType ? (
+                <Detail label="Type">
+                  <Badge variant="outline" className="rounded-[2px] font-heading text-[0.65rem] uppercase tracking-[0.06em]">{dossier.dossierType}</Badge>
+                  {siblings.length > 1 ? (
+                    <span className="ml-2 inline-flex flex-wrap gap-1 align-middle" role="group" aria-label="Dossiers of this transport">
+                      {siblings.map((item) => {
+                        const current = String(item.complianceDossierId) === String(dossier.complianceDossierId);
+                        return (
+                          <button
+                            key={String(item.complianceDossierId)}
+                            type="button"
+                            aria-current={current ? "true" : undefined}
+                            disabled={current}
+                            onClick={() => navigate(dossierDetail(item.complianceDossierId, role))}
+                            className="rounded-[2px] border border-slate-300 px-1.5 py-0.5 font-heading text-[0.65rem] font-semibold uppercase tracking-[0.06em] text-slate-700 transition-colors hover:bg-amber-50 disabled:border-primary disabled:bg-amber-50 disabled:text-slate-900"
+                          >
+                            {item.dossierType ?? item.dossierCode}
+                          </button>
+                        );
+                      })}
+                    </span>
+                  ) : null}
+                </Detail>
+              ) : null}
               {dossier.openedAt ? <Detail label="Opened at">{formatBookingDate(dossier.openedAt, true)} UTC</Detail> : null}
               <Detail label="Status"><DossierStatusBadge status={dossier.status} /></Detail>
             </dl>

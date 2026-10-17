@@ -81,9 +81,22 @@ export const requirementSummarySchema = z.object({
   { message: "Requirement status counts must add up to total.", path: ["total"] },
 );
 
+/** A transport holds at most one MAIN and one EXTRA dossier (DB v9). */
+export const dossierTypeSchema = z.enum(["MAIN", "EXTRA"]);
+/** One entry of the `complianceDossiers[]` list that D1/D7 send next to the dossier being read. */
+export const dossierSiblingSchema = z.object({
+  complianceDossierId: entityId,
+  dossierCode: z.string(),
+  dossierType: dossierTypeSchema.nullish(),
+  status: z.string(),
+});
+
 export const dossierOverviewSchema = z.object({
   complianceDossierId: entityId,
   dossierCode: z.string(),
+  dossierType: dossierTypeSchema.nullish(),
+  /** Every dossier of the same transport (MAIN and EXTRA), so the page can switch between them. */
+  complianceDossiers: z.array(dossierSiblingSchema).optional(),
   bookingId: entityId,
   bookingCode: z.string(),
   status: dossierStatusSchema,

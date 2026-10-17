@@ -156,7 +156,7 @@ export function MapViewer({
           Loading locations...
         </div>
       )}
-      {!loading && !validLocations.length && (
+      {!loading && !validLocations.length && mode !== "pickPoint" && (
         <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded bg-white px-3 py-2 text-sm shadow">
           No valid locations to display.
         </div>
@@ -194,8 +194,8 @@ export function MapViewer({
         <LocationMarkers
           locations={validLocations}
           selectedLocation={state.selectedLocation}
-          startLocation={mode === "buildPlan" ? buildStartLocation : null}
-          endLocation={mode === "buildPlan" ? buildEndLocation : null}
+          startLocation={mode === "buildPlan" || mode === "pickPoint" ? buildStartLocation : null}
+          endLocation={mode === "buildPlan" || mode === "pickPoint" ? buildEndLocation : null}
           onSelect={(location) => selectLocation(location)}
           onHover={handleMarkerHover}
         />
