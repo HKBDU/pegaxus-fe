@@ -137,9 +137,13 @@ export const transportPlansPageSchema = z.object({
 })
 export const transportPlanDetailSchema = z.object({
   transportPlanId: entityIdSchema, planCode: z.string(), status: transportPlanStatusSchema,
+  originLocationId: entityIdSchema.nullish(),
+  destinationLocationId: entityIdSchema.nullish(),
   booking: z.object({
     bookingId: entityIdSchema, bookingCode: z.string(), status: z.string(), isInternational: z.boolean(), customerName: z.string(),
     originAddress: z.string(), originCountry: z.string(), destinationAddress: z.string(), destinationCountry: z.string(),
+    originLocationId: entityIdSchema.nullish(),
+    destinationLocationId: entityIdSchema.nullish(),
     totalHorses: z.number().int().nonnegative(), requestedDepartureDate: z.iso.date(), requestedArrivalDate: z.iso.date().nullish(), specialRequirements: optionalText,
   }),
   transport: z.object({ transportId: entityIdSchema, transportCode: z.string(), status: z.string() }),

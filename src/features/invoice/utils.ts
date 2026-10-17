@@ -12,7 +12,7 @@ type MockEnvironment = { PROD?: boolean; VITE_INVOICE_API_MOCKS?: string }
  * on by default in development; set VITE_INVOICE_API_MOCKS=false to call the real API. Never on in a production build.
  */
 export function isInvoiceMockMode(env: MockEnvironment = import.meta.env) {
-  return env.PROD !== true && env.VITE_INVOICE_API_MOCKS !== "false"
+  return env.PROD !== true && env.VITE_INVOICE_API_MOCKS === "true"
 }
 
 // ---- from view/format.ts ----
@@ -95,6 +95,8 @@ const PAYMENT_ERROR_MESSAGES: Record<PaymentErrorCode, string> = {
   PAYMENT_IN_PROGRESS: 'A payment for this invoice is being processed.',
   VALIDATION_ERROR: 'Check the payment details and try again.',
   PAYMENT_GATEWAY_ERROR: 'Payment gateway is unavailable. Please try again later.',
+  UNSUPPORTED_PAYMENT_AMOUNT: 'SePay only accepts a whole VND amount. This invoice total has decimals, so ask the Logistics Manager to correct the invoice.',
+  UNSUPPORTED_PAYMENT_CURRENCY: 'SePay only accepts VND payments.',
 }
 
 export function getPaymentErrorMessage(errorCode?: string, fallback?: string) {
@@ -136,6 +138,11 @@ export function formatPaymentAmount(amount: number, _currency?: InvoiceCurrency)
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+/** SePay only takes a positive whole VND amount; the BE rejects anything else with UNSUPPORTED_PAYMENT_AMOUNT. */
+export function isPayableAmount(amount: number) {
+  return Number.isInteger(amount) && amount > 0
 }
 
 export function formatPaymentDate(value: string | null | undefined) {

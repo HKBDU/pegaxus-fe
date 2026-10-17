@@ -24,13 +24,14 @@ export default function InvoiceDetailPage() {
   const principal = useAuthStore(state => state.principal)
   const manager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
   const customer = !manager && canAccess(principal, { anyRole: ["CUSTOMER"] })
-  const valid = invoiceIdSchema.safeParse(invoiceId).success && (manager || (customer && invoiceIdSchema.safeParse(bookingId).success))
+  const valid = invoiceIdSchema.safeParse(invoiceId).success && (manager || customer)
   const query = useInvoice(invoiceId, valid)
   const client = useQueryClient(), location = useLocation()
   const [params, setParams] = useSearchParams()
-  const returnSearch = (location.state as { invoiceListSearch?: unknown } | null)?.invoiceListSearch
-  const backHref = manager ? invoiceListPath + (typeof returnSearch === "string" ? `?${new URLSearchParams(returnSearch)}` : "") : `/bookings/${encodeURIComponent(bookingId)}`
   const invoice = query.data, error = query.isError ? getInvoiceError(query.error) : null
+  const effectiveBookingId = bookingId || invoice?.booking.bookingId || ""
+  const returnSearch = (location.state as { invoiceListSearch?: unknown } | null)?.invoiceListSearch
+  const backHref = manager ? invoiceListPath + (typeof returnSearch === "string" ? `?${new URLSearchParams(returnSearch)}` : "") : effectiveBookingId ? `/bookings/${encodeURIComponent(effectiveBookingId)}` : "/bookings"
   const activeTab = params.get("tab") === "history" ? "history" : "overview"
   async function onInvoiceChanged() {
     await client.invalidateQueries({ queryKey: ["invoice"] })
@@ -38,9 +39,9 @@ export default function InvoiceDetailPage() {
   return <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10"><div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
     <InvoiceMockIndicator /><nav aria-label="Breadcrumb" className="flex flex-wrap gap-2 text-xs text-slate-500"><Link to={backHref} className="hover:text-primary">{manager ? "Invoices" : "Booking"}</Link><span aria-hidden="true">/</span><span>Invoice Detail</span></nav>
     <PageHeader title="Invoice Detail" backHref={backHref} backLabel={manager ? "Back to Invoices" : "Back to Booking"} />
-    {!manager && !customer ? <ErrorState message="You do not have permission to view invoices." /> : !valid ? <ErrorState message="The invoice or booking identifier is missing." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
+    {!manager && !customer ? <ErrorState message="You do not have permission to view invoices." /> : !valid ? <ErrorState message="The invoice identifier is missing." /> : error ? <ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /> :
       query.isPending ? <div role="status" aria-label="Loading invoice" className="space-y-5"><Skeleton className="h-28 w-full" /><div className="grid gap-5 md:grid-cols-2"><Skeleton className="h-72 w-full" /><Skeleton className="h-72 w-full" /></div></div> :
-      invoice && customer && invoice.booking.bookingId !== bookingId ? <ErrorState message="This invoice does not belong to the booking in this URL." /> : invoice ? <>
+      invoice && customer && bookingId && invoice.booking.bookingId !== bookingId ? <ErrorState message="This invoice does not belong to the booking in this URL." /> : invoice ? <>
         <section className="space-y-4 rounded-[2px] border border-slate-200 bg-white p-5">
           <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex flex-wrap items-center gap-3"><h2 className="font-heading text-2xl">{invoice.invoiceNumber}</h2><InvoiceTypeBadge type={invoice.type} /><InvoiceStatusBadge status={invoice.status} /></div>
             <div className="flex flex-wrap gap-2"><InvoiceActions invoice={invoice} manager={manager} onInvoiceChanged={onInvoiceChanged} /></div>

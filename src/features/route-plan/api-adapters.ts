@@ -38,7 +38,8 @@ export async function loadAllRoutes(params: Omit<RouteListParams, "pageIndex" | 
 
 type LocationLike = Pick<Location, "locationId" | "locationName"> & { locationType?: string | null; city?: string | null; country?: string | null; address?: string | null; latitude?: number | string | null; longitude?: number | string | null };
 
-export function toMapLocation(item: LocationLike): MapLocation | null {
+export function toMapLocation(item: LocationLike | null | undefined): MapLocation | null {
+  if (!item) return null;
   const latitude = Number(item.latitude);
   const longitude = Number(item.longitude);
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
@@ -64,22 +65,39 @@ export type TransportPlanApiValue = {
 };
 
 function resolveLocation(locations: MapLocation[], id: string | number | undefined, address: string | undefined) {
-  if (id != null) {
+  if (id != null && String(id).trim() !== "") {
     const byId = locations.find((location) => String(location.id) === String(id));
     if (byId) return byId;
   }
   const normalizedAddress = address?.trim().toLowerCase();
-  const byAddress = locations.filter((location) => normalizedAddress && location.address?.trim().toLowerCase() === normalizedAddress);
+  if (!normalizedAddress) return undefined;
+
+  const byAddress = locations.filter((location) => location.address?.trim().toLowerCase() === normalizedAddress);
   if (byAddress.length === 1) return byAddress[0];
-  // Do not guess by country or fuzzy text: a wrong map location is worse than
-  // a controlled error. The API must provide a location ID or matching address.
+
+  const byName = locations.filter((location) => location.name?.trim().toLowerCase() === normalizedAddress);
+  if (byName.length === 1) return byName[0];
+
+  const byNameSub = locations.filter(
+    (location) =>
+      location.name?.trim().toLowerCase().includes(normalizedAddress) ||
+      normalizedAddress.includes(location.name?.trim().toLowerCase()),
+  );
+  if (byNameSub.length === 1) return byNameSub[0];
+
+  if (byAddress.length > 0) return byAddress[0];
+  if (byName.length > 0) return byName[0];
+  if (byNameSub.length > 0) return byNameSub[0];
+
   return undefined;
 }
 
 export function adaptTransportPlan(plan: TransportPlanApiValue, locations: MapLocation[]) {
   const booking = plan.booking ?? {};
-  const from = resolveLocation(locations, booking.originLocationId ?? plan.originLocationId, booking.originAddress);
-  const to = resolveLocation(locations, booking.destinationLocationId ?? plan.destinationLocationId, booking.destinationAddress);
+  const originId = plan.originLocationId ?? booking.originLocationId;
+  const destinationId = plan.destinationLocationId ?? booking.destinationLocationId;
+  const from = resolveLocation(locations, originId, booking.originAddress);
+  const to = resolveLocation(locations, destinationId, booking.destinationAddress);
   if (!from || !to) throw new Error("The Transport Plan origin/destination could not be matched to valid map locations.");
   return { planCode: plan.planCode ?? "—", bookingCode: plan.bookingCode ?? booking.bookingCode ?? "—", status: "DRAFT" as const, scope: (plan.isCrossBorder ?? booking.isInternational) ? "International" as const : "Domestic" as const, departureAt: plan.plannedStartAt ?? "", arrivalAt: plan.plannedEndAt ?? "", from, to };
 }

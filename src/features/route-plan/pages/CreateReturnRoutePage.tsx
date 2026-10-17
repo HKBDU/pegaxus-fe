@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RoutePlanBuilder, type RoutePlanBuilderMetadata } from "../components/RoutePlanBuilder";
-import { getRoutePlans, getTransportPlan } from "../services";
+import { getRoutePlan, getRoutePlans, getTransportPlan } from "../services";
 import { adaptTransportPlan, loadAllLocations, loadAllRoutes, toMapLocation, toMapRoute, type TransportPlanApiValue } from "../api-adapters";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
+import type { RoutePlan, RouteSegment } from "../types";
 
 export default function CreateReturnRoutePage() {
   const { transportPlanId } = useParams<{ transportPlanId: string }>();
@@ -22,28 +23,39 @@ export default function CreateReturnRoutePage() {
       loadAllRoutes(),
       getRoutePlans(transportPlanId),
     ])
-      .then(([plan, locationResult, routeResult, routePlanResult]) => {
+      .then(async ([plan, locationResult, routeResult, routePlanResult]) => {
         const locations = locationResult.flatMap((item) => {
           const location = toMapLocation(item);
           return location ? [location] : [];
         });
         const metadata = adaptTransportPlan(plan as TransportPlanApiValue, locations);
 
-        const routePlanRoutes = routePlanResult.items.flatMap((routePlan) =>
-          routePlan.segments.flatMap((segment) => {
-            const segmentFrom = toMapLocation(segment.fromLocation);
-            const segmentTo = toMapLocation(segment.toLocation);
+        const fullRoutePlans: RoutePlan[] = await Promise.all(
+          (routePlanResult?.items ?? []).map(async (rp) => {
+            if (rp.segments && rp.segments.length > 0) return rp as RoutePlan;
+            try {
+              return (await getRoutePlan(rp.routePlanId)) as RoutePlan;
+            } catch {
+              return rp as RoutePlan;
+            }
+          }),
+        );
+
+        const routePlanRoutes = fullRoutePlans.flatMap((routePlan: RoutePlan) =>
+          (routePlan.segments ?? []).flatMap((segment: RouteSegment) => {
+            const segmentFrom = toMapLocation(segment?.fromLocation);
+            const segmentTo = toMapLocation(segment?.toLocation);
             if (!segmentFrom || !segmentTo) return [];
             return [{
               id: `${routePlan.routePlanId}-${segment.routePlanRouteId}`,
               routePlanRouteId: segment.routePlanRouteId,
               routePlanType: routePlan.routeType,
-              name: `${segment.route.routeName} (${routePlan.routeType})`,
-              transportMode: segment.route.transportMode,
+              name: `${segment.route?.routeName ?? "Route"} (${routePlan.routeType})`,
+              transportMode: segment.route?.transportMode ?? "ROAD",
               fromLocation: segmentFrom,
               toLocation: segmentTo,
-              distanceKm: segment.route.distanceKm,
-              durationMinutes: segment.route.estimatedDurationMinutes,
+              distanceKm: segment.route?.distanceKm ?? 0,
+              durationMinutes: segment.route?.estimatedDurationMinutes ?? 0,
             }];
           }),
         );
