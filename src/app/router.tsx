@@ -24,6 +24,8 @@ import CustomsClearanceReviewPage from "@/features/clearance/pages/CustomsCleara
 import { horseHealthRoutes } from "@/features/horse-health";
 import TestPage from "@/Test";
 
+import LogoutPage from "@/features/auth/pages/LogoutPage";
+
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const ManageUserAccountsPage = lazy(
   () => import("@/features/accounts/pages/ManageUserAccountsPage"),
@@ -42,7 +44,6 @@ const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const GoogleCallbackPage = lazy(
   () => import("@/features/auth/pages/GoogleCallbackPage"),
 );
-const LogoutPage = lazy(() => import("@/features/auth/pages/LogoutPage"));
 const ForgotPasswordPage = lazy(
   () => import("@/features/auth/pages/ForgotPasswordPage"),
 );
@@ -565,9 +566,7 @@ export const router = createBrowserRouter([
     path: "/logout",
     element: (
       <ProtectedRoute>
-        <Suspense fallback={<LoadingState />}>
-          <LogoutPage />
-        </Suspense>
+        <LogoutPage />
       </ProtectedRoute>
     ),
   },
