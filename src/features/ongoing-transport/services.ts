@@ -1,0 +1,117 @@
+import { isAxiosError } from "axios";
+import { z } from "zod";
+import apiClient from "@/lib/axios";
+import {
+  ongoingTransportEnvelopeSchema,
+  ongoingTransportPageSchema,
+  ongoingTransportQuerySchema,
+} from "./schemas";
+import { isOngoingTransportMockMode } from "./source";
+import type { MockScenario, OngoingTransportParams } from "./types";
+
+export class OngoingTransportApiError extends Error {
+  readonly status: number;
+  readonly errorCode?: string | null;
+
+  constructor(
+    status: number,
+    errorCode: string | null | undefined,
+    message: string,
+  ) {
+    super(message);
+    this.name = "OngoingTransportApiError";
+    this.status = status;
+    this.errorCode = errorCode;
+  }
+}
+
+export const buildOngoingTransportQuery = (params: OngoingTransportParams) =>
+  ongoingTransportQuerySchema.parse(params);
+
+export const ongoingTransportService = {
+  async list(
+    params: OngoingTransportParams,
+    signal?: AbortSignal,
+    scenario: MockScenario = "data",
+  ) {
+    const query = buildOngoingTransportQuery(params);
+    signal?.throwIfAborted();
+    const response =
+      !import.meta.env.PROD && isOngoingTransportMockMode()
+        ? await (
+            await import("./mock/service")
+          ).getMockOngoingTransports(query, scenario, signal)
+        : await apiClient.get<unknown, unknown>("/transports/ongoing", {
+            params: query,
+            signal,
+          });
+    signal?.throwIfAborted();
+    const envelope = ongoingTransportEnvelopeSchema.parse(response);
+    if (!envelope.isSuccess)
+      throw new OngoingTransportApiError(
+        envelope.code,
+        envelope.errorCode,
+        envelope.message,
+      );
+    return ongoingTransportPageSchema.parse(envelope.value);
+  },
+};
+
+export function getOngoingTransportError(error: unknown) {
+  if (error instanceof z.ZodError)
+    return {
+      message:
+        "The server returned an unexpected transport response. Please contact your administrator.",
+      retryable: false,
+    };
+  const payload = isAxiosError(error)
+    ? ongoingTransportEnvelopeSchema.safeParse(error.response?.data)
+    : null;
+  const code =
+    error instanceof OngoingTransportApiError
+      ? error.errorCode
+      : payload?.success
+        ? payload.data.errorCode
+        : undefined;
+  const status =
+    error instanceof OngoingTransportApiError
+      ? error.status
+      : isAxiosError(error)
+        ? error.response?.status
+        : undefined;
+  if (code === "FORBIDDEN" || status === 403)
+    return {
+      message: "You do not have permission to view ongoing transports.",
+      retryable: false,
+    };
+  if (code === "UNAUTHORIZED" || status === 401)
+    return {
+      message: "Your session has expired. Please sign in again.",
+      retryable: false,
+    };
+  if (status === 404)
+    return {
+      message:
+        "The ongoing transports API is not available yet. Please contact your administrator.",
+      retryable: false,
+    };
+  if (code === "VALIDATION_ERROR" || status === 400)
+    return {
+      message: payload?.success
+        ? payload.data.message
+        : error instanceof OngoingTransportApiError
+          ? error.message
+          : "The selected filters are invalid.",
+      retryable: false,
+    };
+  if (isAxiosError(error) && !error.response)
+    return {
+      message:
+        "Unable to reach the server. Check your connection and try again.",
+      retryable: true,
+    };
+  return {
+    message: "Unable to load ongoing transports. Please try again.",
+    retryable: true,
+  };
+}

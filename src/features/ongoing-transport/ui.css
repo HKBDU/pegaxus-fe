@@ -1,0 +1,9 @@
+/* Keep list motion local; shared DataTable skeletons also respect reduced motion here. */
+@media (prefers-reduced-motion: reduce) {
+  .ongoing-transport-ui *,
+  .ongoing-transport-ui *::before,
+  .ongoing-transport-ui *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

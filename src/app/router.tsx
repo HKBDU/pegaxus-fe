@@ -8,6 +8,7 @@ import {
 } from "@/shared/components/common";
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
+import { ongoingTransportRoutes } from "@/features/ongoing-transport/routes";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { APPROVED_BOOKINGS_ACCESS, TRANSPORT_PLANS_ACCESS, ROLE_ROUTES, routePlanDetail } from "./route-config";
@@ -129,6 +130,7 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  ...ongoingTransportRoutes,
   {
     path: ROLE_ROUTES.transportPlans,
     element: <ProtectedRoute allowedRoles={TRANSPORT_PLANS_ACCESS.anyRole}><AdminLayout /></ProtectedRoute>,
