@@ -102,9 +102,6 @@ export default function TransportOverviewPage({
             <Link to={driverLocationSharingPath(transportId)}>
               <Navigation aria-hidden="true" className="size-5 text-primary" />
               Share Journey Location
-              <small className="ml-auto text-base font-normal text-slate-500">
-                Phase 1
-              </small>
             </Link>
           </Button>
         ) : null}

@@ -1,8 +1,19 @@
-import { CirclePause, Navigation, ShieldCheck } from "lucide-react";
+import { CirclePause, Navigation, ShieldCheck, Square } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
+import type { LocationSharingState } from "../types";
 
-export function LocationSharingControl() {
+export function LocationSharingControl({
+  state,
+  canStart,
+  onStart,
+  onStop,
+}: {
+  state: LocationSharingState;
+  canStart: boolean;
+  onStart: () => void;
+  onStop: () => void;
+}) {
   return (
     <section
       className="location-sharing-panel"
@@ -24,7 +35,7 @@ export function LocationSharingControl() {
           className="shrink-0 rounded-xs border-slate-300 bg-slate-50 text-slate-700"
         >
           <CirclePause aria-hidden="true" />
-          Inactive
+          {state.active ? "Sharing session on" : "Not sharing"}
         </Badge>
       </div>
       <p className="mt-3 mb-0 leading-relaxed text-slate-600">
@@ -33,20 +44,48 @@ export function LocationSharingControl() {
       </p>
       <Button
         type="button"
-        disabled
-        aria-describedby="phase-one-sharing-note"
+        disabled={!state.active && !canStart}
+        onClick={state.active ? onStop : onStart}
+        variant={state.active ? "destructive" : "default"}
+        aria-describedby="sharing-operation-note"
         className="mt-5 min-h-16 w-full rounded-xs px-4 py-3 text-base whitespace-normal disabled:opacity-70"
       >
-        <Navigation aria-hidden="true" className="size-5" />
-        Share Journey Location
+        {state.active ? (
+          <Square aria-hidden="true" className="size-5" />
+        ) : (
+          <Navigation aria-hidden="true" className="size-5" />
+        )}
+        {state.active ? "Stop Sharing" : "Start Sharing"}
       </Button>
       <p
-        id="phase-one-sharing-note"
+        id="sharing-operation-note"
         className="mt-3 mb-0 leading-relaxed text-slate-700"
       >
-        Location sharing is not available in Phase 1. This page does not request
-        GPS access, collect coordinates or send location updates.
+        {state.active
+          ? "Only fresh GPS observations are sent, at most once per 15-second opportunity. Stop ends collection and sending."
+          : "Choose Start to request browser location access. Sharing never starts automatically after a page reload. A real IN_TRANSIT journey is required."}
       </p>
+      {state.message ? (
+        <div
+          role={
+            state.sharingStatus === "permission_denied" ? "alert" : "status"
+          }
+          className={`location-sharing-notice mt-4 ${state.sharingStatus === "permission_denied" ? "border-red-300 bg-red-50 text-red-900" : "border-slate-200 bg-slate-50 text-slate-800"}`}
+        >
+          {state.message}
+        </div>
+      ) : null}
+      {state.notification !== "none" ? (
+        <p role="status" className="mt-3 mb-0 leading-relaxed text-slate-700">
+          {state.notification === "sending"
+            ? "Reporting the permission denial…"
+            : state.notification === "notified"
+              ? "The coordinator was notified by the server."
+              : state.notification === "not_notified"
+                ? "The server did not send a new notification. A cooldown or unavailable recipient may apply."
+                : "Coordinator notification could not be confirmed. No automatic retry is queued."}
+        </p>
+      ) : null}
       <p className="mt-4 mb-0 flex items-start gap-2 border-t border-border pt-3 text-slate-500">
         <ShieldCheck aria-hidden="true" className="mt-1 size-4 shrink-0" />
         For your safety, only operate this screen while parked.

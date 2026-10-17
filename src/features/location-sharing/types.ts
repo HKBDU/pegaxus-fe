@@ -17,6 +17,8 @@ export type SharingStatus =
   | "stopped"
   | "requesting_permission"
   | "acquiring_location"
+  | "waiting_to_send"
+  | "paused"
   | "sharing"
   | "offline"
   | "permission_denied"
@@ -35,6 +37,11 @@ export type LocationSharingState = {
   permissionStatus: LocationPermissionStatus;
   networkStatus: NetworkStatus;
   lastSuccessfulTransmissionAt: string | null;
+  active: boolean;
+  sending: boolean;
+  restartBlocked: boolean;
+  message: string | null;
+  notification: "none" | "sending" | "notified" | "not_notified" | "failed";
 };
 
 // A UI projection of the already validated OT3 response, supplied only at the route boundary.

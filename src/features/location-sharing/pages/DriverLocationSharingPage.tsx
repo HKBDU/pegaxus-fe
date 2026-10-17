@@ -9,12 +9,9 @@ import {
   LocationSharingStatus,
   LocationPermissionGuidance,
 } from "../components/LocationSharingDetails";
-import { useLocationSharingEnvironment } from "../hooks/useLocationSharingEnvironment";
+import { useLocationSharing } from "../hooks/useLocationSharing";
 import { driverTransportOverviewPath } from "../navigation";
-import type {
-  DriverLocationSharingPageProps,
-  LocationSharingState,
-} from "../types";
+import type { DriverLocationSharingPageProps } from "../types";
 import "../ui.css";
 
 export default function DriverLocationSharingPage({
@@ -24,14 +21,13 @@ export default function DriverLocationSharingPage({
   source,
   onReloadContext,
 }: DriverLocationSharingPageProps) {
-  const environment = useLocationSharingEnvironment();
-  // No start/stop controller in Phase 1: network changes never turn sharing on.
-  const state: LocationSharingState = {
-    sharingStatus: "stopped",
-    permissionStatus: "not_requested",
-    networkStatus: environment.network,
-    lastSuccessfulTransmissionAt: null,
-  };
+  const { environment, state, canStart, start, stop } = useLocationSharing({
+    transportId,
+    context,
+    refreshing,
+    source,
+    onReloadContext,
+  });
   const transport = context.kind === "available" ? context.transport : null;
   const statusLabel =
     transport?.status === "IN_TRANSIT"
@@ -66,15 +62,9 @@ export default function DriverLocationSharingPage({
               </p>
               <h1 className="location-sharing-title">Location Sharing</h1>
             </div>
-            <Badge
-              variant="outline"
-              className="rounded-xs border-primary/30 bg-primary/10 text-slate-800"
-            >
-              Phase 1 · Preview
-            </Badge>
           </div>
           <p className="mt-2 mb-0 leading-relaxed text-slate-600">
-            Review your journey and prepare for browser-based location sharing.
+            Share your journey location while this page is open and visible.
           </p>
         </header>
         {source === "mock" ? (
@@ -83,8 +73,8 @@ export default function DriverLocationSharingPage({
             className="location-sharing-notice border-amber-200 bg-amber-50 text-amber-900"
           >
             MOCK DATA · Journey context uses the existing Flow 4 preview. Driver
-            assignment is not verified against the backend. No GPS data is
-            collected or sent.
+            assignment is not verified against the backend. Real GPS sharing is
+            disabled for mock journeys.
           </div>
         ) : null}
         <section
@@ -209,7 +199,8 @@ export default function DriverLocationSharingPage({
               aria-hidden="true"
               className="mt-1 size-4 shrink-0"
             />
-            You are offline. No location is collected, queued or replayed.
+            You are offline. GPS acquisition and sending are paused. Missed
+            points are discarded, not queued or replayed.
           </div>
         ) : null}
         {environment.capability === "insecure" ||
@@ -223,12 +214,17 @@ export default function DriverLocationSharingPage({
               className="mt-1 size-4 shrink-0"
             />
             {environment.capability === "insecure"
-              ? "This page is not in a secure browser context. Future location sharing requires HTTPS or a browser-trusted localhost context."
-              : "This browser does not expose the Geolocation API. Future sharing requires a supported browser."}
+              ? "This page is not in a secure browser context. Location sharing requires HTTPS or a browser-trusted localhost context."
+              : "This browser does not expose the Geolocation API. Sharing requires a supported browser."}
           </div>
         ) : null}
         <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-          <LocationSharingControl />
+          <LocationSharingControl
+            state={state}
+            canStart={canStart}
+            onStart={start}
+            onStop={stop}
+          />
           <LocationSharingStatus state={state} />
         </div>
         <LocationPermissionGuidance />

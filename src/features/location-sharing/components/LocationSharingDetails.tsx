@@ -12,7 +12,9 @@ const sharingLabels = {
   stopped: "Not sharing",
   requesting_permission: "Requesting permission",
   acquiring_location: "Acquiring location",
-  sharing: "Sharing",
+  waiting_to_send: "Waiting for a successful send",
+  paused: "Paused while page is hidden",
+  sharing: "Last send acknowledged",
   offline: "Sharing interrupted — offline",
   permission_denied: "Location permission denied",
   location_unavailable: "Location unavailable",
@@ -35,6 +37,15 @@ export function LocationSharingStatus({
 }) {
   const NetworkIcon = state.networkStatus === "offline" ? WifiOff : Wifi;
   const rows = [
+    {
+      label: "Transmission",
+      value: state.sending
+        ? "Sending current location"
+        : state.active
+          ? "Waiting for a fresh send opportunity"
+          : "Not sending",
+      icon: Clock3,
+    },
     {
       label: "Sharing status",
       value: sharingLabels[state.sharingStatus],
@@ -62,7 +73,7 @@ export function LocationSharingStatus({
           ? "No location has been sent"
           : new Intl.DateTimeFormat(undefined, {
               dateStyle: "medium",
-              timeStyle: "short",
+              timeStyle: "medium",
             }).format(new Date(state.lastSuccessfulTransmissionAt)),
       icon: Clock3,
     },
@@ -114,22 +125,23 @@ export function LocationPermissionGuidance() {
       </h2>
       <ul className="mt-4 mb-0 list-disc space-y-3 pl-5 leading-relaxed text-slate-700">
         <li>
-          Phase 2 will ask for location permission only after you choose to
-          start. Permission is not checked or requested on this page yet.
+          Location is requested only after you choose Start. If access is
+          blocked, open your browser's site settings and allow Location, then
+          choose Start again.
         </li>
         <li>
           Use a secure HTTPS connection. Localhost can be treated as secure by
           the browser for development.
         </li>
         <li>
-          When sharing becomes available, keep this page open. Switching apps,
-          backgrounding the browser or locking the screen can interrupt GPS
-          access and updates.
+          Keep this page visible. Switching apps, hiding the page or locking the
+          screen pauses collection and sending. Returning online to this page
+          resumes acquisition of a new position within your started session.
         </li>
         <li>
-          There will be no offline queue or replay. Missing updates are
-          discarded; reconnecting requires a fresh position, not an invented
-          path.
+          There is no offline queue or replay. Missing updates are discarded;
+          reconnecting requires a fresh position, not an invented path. Browser
+          suspension can delay updates; background tracking is not guaranteed.
         </li>
       </ul>
     </section>

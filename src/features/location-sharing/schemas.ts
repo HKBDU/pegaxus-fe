@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-// Contract boundary only. Phase 1 does not acquire a position or submit either request.
+export const locationEnvelopeSchema = z.object({
+  isSuccess: z.boolean(),
+  code: z.number().int(),
+  message: z.string(),
+  errorCode: z.string().nullish(),
+  value: z.unknown(),
+});
+
 export const driverLocationRequestSchema = z.object({
   latitude: z.number().min(-90).max(90),
   longitude: z.number().min(-180).max(180),
