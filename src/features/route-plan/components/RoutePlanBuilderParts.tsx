@@ -11,6 +11,12 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 import { canAccess } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
@@ -179,25 +185,52 @@ export function SegmentCard({
 
   return (
     <Card
-      className={`gap-2 rounded-[2px] py-2 shadow-sm transition ${
+      className={`w-full min-w-0 overflow-hidden gap-2 rounded-[2px] py-2 shadow-sm transition ${
         segment.isDisconnected ? "border-red-300 bg-red-50/10" : ""
       }`}
     >
-      <CardContent className="px-3">
-        <div className="flex items-start gap-2">
+      <CardContent className="px-3 min-w-0 w-full overflow-hidden">
+        <div className="flex items-start gap-2 min-w-0 w-full overflow-hidden">
           <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-[2px] bg-slate-600 text-xs font-bold text-white">
             {index + 1}
           </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate font-semibold text-slate-900">
-                  {segment.route.fromLocation?.name}{" "}
-                  <span className="text-slate-400">→</span>{" "}
-                  {segment.route.toLocation?.name}
-                </p>
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <div className="flex items-start justify-between gap-2 min-w-0 w-full">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <TooltipProvider delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p
+                        className="cursor-default truncate font-semibold text-slate-900"
+                        title={`${segment.route.fromLocation?.name ?? "—"} → ${segment.route.toLocation?.name ?? "—"}`}
+                      >
+                        {segment.route.fromLocation?.name}{" "}
+                        <span className="text-slate-400">→</span>{" "}
+                        {segment.route.toLocation?.name}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="top"
+                      className="max-w-sm break-words rounded-[2px] bg-slate-900 px-3 py-2 text-xs text-white shadow-md z-50"
+                    >
+                      <div className="space-y-1.5 text-xs">
+                        <div className="flex items-start gap-1.5">
+                          <span className="font-bold uppercase text-[10px] text-amber-400 shrink-0">From:</span>
+                          <span className="text-slate-100">{segment.route.fromLocation?.name ?? "—"}</span>
+                        </div>
+                        <div className="flex items-start gap-1.5">
+                          <span className="font-bold uppercase text-[10px] text-amber-400 shrink-0">To:</span>
+                          <span className="text-slate-100">{segment.route.toLocation?.name ?? "—"}</span>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 {segment.route.name && (
-                  <p className="text-[11px] text-muted-foreground truncate">
+                  <p
+                    className="truncate text-[11px] text-muted-foreground"
+                    title={segment.route.name}
+                  >
                     {segment.route.name}
                   </p>
                 )}
@@ -360,7 +393,7 @@ export function SegmentCard({
 
             {/* Vehicle selection for internal segments */}
             {segment.arrangement === "INTERNAL" && availableVehicles.length > 0 && (
-              <div className="mt-2 flex items-center gap-2 border-t border-slate-100 pt-2 text-xs">
+              <div className="mt-2 flex items-center gap-2 border-t border-slate-100 pt-2 text-xs min-w-0 w-full">
                 <Truck className="size-3.5 text-muted-foreground shrink-0" />
                 <span className="text-muted-foreground shrink-0">Fleet Vehicle:</span>
                 <select
@@ -369,7 +402,7 @@ export function SegmentCard({
                     const id = e.target.value;
                     onVehicleChange?.(id ? [id] : []);
                   }}
-                  className="h-7 w-full max-w-[280px] rounded-[2px] border border-slate-200 bg-white px-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
+                  className="h-7 min-w-0 flex-1 rounded-[2px] border border-slate-200 bg-white px-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
                   aria-label="Assign vehicle"
                 >
                   <option value="">-- No vehicle assigned --</option>

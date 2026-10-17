@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -19,6 +19,7 @@ import {
 import {
   createRoutePlan,
   updateRoutePlan,
+  createLocation,
   getLocation,
   updateLocation,
 } from "../services";
@@ -352,6 +353,246 @@ export function RoutePlanBuilder({
         );
   }, [isBackup, plan.from?.id, plan.to?.id, readonlyPrimaryRoutes, segments]);
 
+  const isCrossBorder = useMemo(() => {
+    if (plan.scope === "International") return true;
+    const fromCountry = plan.from?.country?.trim().toLowerCase();
+    const toCountry = plan.to?.country?.trim().toLowerCase();
+    if (fromCountry && toCountry && fromCountry !== toCountry) return true;
+    return segments.some((s) => {
+      const fc = s.route.fromLocation?.country?.trim().toLowerCase();
+      const tc = s.route.toLocation?.country?.trim().toLowerCase();
+      return fc && tc && fc !== tc;
+    });
+  }, [plan.scope, plan.from?.country, plan.to?.country, segments]);
+
+  const hasBcp = useMemo(() => {
+    return segments.some(
+      (s) =>
+        s.stopType === "BCP" ||
+        s.route.toLocation?.type === "BORDER_GATE" ||
+        s.route.fromLocation?.type === "BORDER_GATE" ||
+        (s.route.toLocation as { locationType?: string })?.locationType === "BORDER_GATE" ||
+        (s.route.fromLocation as { locationType?: string })?.locationType === "BORDER_GATE",
+    );
+  }, [segments]);
+
+  const bcpLocations = useMemo(() => {
+    return locations.filter(
+      (loc) =>
+        loc.type === "BORDER_GATE" ||
+        (loc as { locationType?: string }).locationType === "BORDER_GATE",
+    );
+  }, [locations]);
+
+  const [isBcpDismissed, setIsBcpDismissed] = useState(false);
+  const [showNewBcpForm, setShowNewBcpForm] = useState(false);
+  const [selectedBcpId, setSelectedBcpId] = useState("");
+  const [splitSegmentIndex, setSplitSegmentIndex] = useState(0);
+
+  // New BCP form fields
+  const [newBcpName, setNewBcpName] = useState("");
+  const [newBcpCountry, setNewBcpCountry] = useState("");
+  const [newBcpCity, setNewBcpCity] = useState("");
+  const [newBcpAddress, setNewBcpAddress] = useState("");
+  const [newBcpLat, setNewBcpLat] = useState("");
+  const [newBcpLon, setNewBcpLon] = useState("");
+  const [creatingBcp, setCreatingBcp] = useState(false);
+
+  async function insertBcpIntoRoute(bcpLoc: MapLocation, targetSegIndex = 0) {
+    if (!segments.length) {
+      const fromLoc = plan.from;
+      if (!fromLoc) return;
+      const toastId = toast.loading(`Routing to BCP: ${bcpLoc.name}...`);
+      try {
+        const preview = await previewGeoapifyRoute(
+          { latitude: fromLoc.latitude, longitude: fromLoc.longitude },
+          { latitude: bcpLoc.latitude, longitude: bcpLoc.longitude },
+        );
+        let actualFrom = fromLoc;
+        let actualBcp = bcpLoc;
+        if (preview.snappedStart) {
+          actualFrom = { ...fromLoc, ...preview.snappedStart };
+          void persistFeasibleLocation(fromLoc, preview.snappedStart);
+        }
+        if (preview.snappedEnd) {
+          actualBcp = { ...bcpLoc, ...preview.snappedEnd };
+          void persistFeasibleLocation(bcpLoc, preview.snappedEnd);
+        }
+        const dynamicRoute: MapRoute = {
+          id: `dynamic-${fromLoc.id}-${bcpLoc.id}`,
+          name: `${fromLoc.name} → ${bcpLoc.name}`,
+          fromLocation: actualFrom,
+          toLocation: actualBcp,
+          distanceKm: Math.round(preview.distanceKm * 10) / 10,
+          durationMinutes: Math.round(preview.durationMinutes),
+          transportMode: "ROAD",
+          geometry: preview.geometry,
+        };
+        addSegment(dynamicRoute);
+        toast.success(`BCP "${bcpLoc.name}" added.`, { id: toastId });
+      } catch (err) {
+        toast.error("Failed to route to BCP", {
+          id: toastId,
+          description: err instanceof Error ? err.message : "Route calculation error",
+        });
+      }
+      return;
+    }
+
+    const safeIndex = Math.min(Math.max(0, targetSegIndex), segments.length - 1);
+    const segToSplit = segments[safeIndex];
+    if (!segToSplit) return;
+
+    const originLoc = segToSplit.route.fromLocation ?? plan.from;
+    const destLoc = segToSplit.route.toLocation ?? plan.to;
+    if (!originLoc || !destLoc) return;
+
+    const toastId = toast.loading(`Routing through BCP: ${bcpLoc.name}...`);
+    try {
+      const preview1 = await previewGeoapifyRoute(
+        { latitude: originLoc.latitude, longitude: originLoc.longitude },
+        { latitude: bcpLoc.latitude, longitude: bcpLoc.longitude },
+      );
+      let actualOrigin = originLoc;
+      let actualBcp1 = bcpLoc;
+      if (preview1.snappedStart) {
+        actualOrigin = { ...originLoc, ...preview1.snappedStart };
+        void persistFeasibleLocation(originLoc, preview1.snappedStart);
+      }
+      if (preview1.snappedEnd) {
+        actualBcp1 = { ...bcpLoc, ...preview1.snappedEnd };
+        void persistFeasibleLocation(bcpLoc, preview1.snappedEnd);
+      }
+
+      const preview2 = await previewGeoapifyRoute(
+        { latitude: actualBcp1.latitude, longitude: actualBcp1.longitude },
+        { latitude: destLoc.latitude, longitude: destLoc.longitude },
+      );
+      let actualDest = destLoc;
+      if (preview2.snappedEnd) {
+        actualDest = { ...destLoc, ...preview2.snappedEnd };
+        void persistFeasibleLocation(destLoc, preview2.snappedEnd);
+      }
+
+      const route1: MapRoute = {
+        id: `dynamic-${originLoc.id}-${bcpLoc.id}-${Date.now()}`,
+        name: `${originLoc.name} → ${bcpLoc.name}`,
+        fromLocation: actualOrigin,
+        toLocation: actualBcp1,
+        distanceKm: Math.round(preview1.distanceKm * 10) / 10,
+        durationMinutes: Math.round(preview1.durationMinutes),
+        transportMode: "ROAD",
+        geometry: preview1.geometry,
+      };
+
+      const route2: MapRoute = {
+        id: `dynamic-${bcpLoc.id}-${destLoc.id}-${Date.now() + 1}`,
+        name: `${bcpLoc.name} → ${destLoc.name}`,
+        fromLocation: actualBcp1,
+        toLocation: actualDest,
+        distanceKm: Math.round(preview2.distanceKm * 10) / 10,
+        durationMinutes: Math.round(preview2.durationMinutes),
+        transportMode: "ROAD",
+        geometry: preview2.geometry,
+      };
+
+      const seg1: DraftSegment = {
+        id: `seg-${Date.now()}-1`,
+        route: route1,
+        arrangement: arrangementForRoute(route1),
+        stopType: "BCP",
+        dwellAfterMinutes: 30,
+      };
+
+      const seg2: DraftSegment = {
+        id: `seg-${Date.now()}-2`,
+        route: route2,
+        arrangement: arrangementForRoute(route2),
+        stopType: segToSplit.stopType === "BCP" ? "REST_STOP" : segToSplit.stopType,
+        dwellAfterMinutes: segToSplit.dwellAfterMinutes ?? 0,
+        vehicleIds: segToSplit.vehicleIds,
+      };
+
+      setSegments((current) => {
+        const updated = [...current];
+        updated.splice(safeIndex, 1, seg1, seg2);
+        return formatDraftSegments(updated, plan.departureAt);
+      });
+
+      toast.success(`BCP "${bcpLoc.name}" inserted into route.`, { id: toastId });
+    } catch (err) {
+      toast.error("Failed to route through BCP", {
+        id: toastId,
+        description: err instanceof Error ? err.message : "Route calculation error",
+      });
+    }
+  }
+
+  async function handleCreateNewBcp() {
+    if (!newBcpName.trim()) {
+      toast.error("Please enter a location name for the BCP.");
+      return;
+    }
+    const lat = parseFloat(newBcpLat);
+    const lon = parseFloat(newBcpLon);
+    if (isNaN(lat) || isNaN(lon)) {
+      toast.error("Please enter valid latitude and longitude coordinates.");
+      return;
+    }
+
+    setCreatingBcp(true);
+    try {
+      const snapResult = await snapToFeasibleRoadPoint({ latitude: lat, longitude: lon });
+      const finalLat = snapResult.isSnapped ? snapResult.latitude : lat;
+      const finalLon = snapResult.isSnapped ? snapResult.longitude : lon;
+
+      const created = await createLocation({
+        locationName: newBcpName.trim(),
+        locationType: "BORDER_GATE",
+        country: newBcpCountry.trim().toUpperCase() || undefined,
+        city: newBcpCity.trim() || undefined,
+        address: newBcpAddress.trim() || undefined,
+        latitude: finalLat,
+        longitude: finalLon,
+        locationNote: "Created via Route Plan Builder",
+      });
+
+      const newId =
+        (created as { locationId?: string | number })?.locationId ??
+        (created as { value?: { locationId?: string | number } })?.value?.locationId ??
+        `bcp-${Date.now()}`;
+
+      const newMapLoc: MapLocation = {
+        id: String(newId),
+        name: newBcpName.trim(),
+        type: "BORDER_GATE",
+        country: newBcpCountry.trim().toUpperCase() || undefined,
+        city: newBcpCity.trim() || undefined,
+        address: newBcpAddress.trim() || undefined,
+        latitude: finalLat,
+        longitude: finalLon,
+      };
+
+      setLocations((prev) => [newMapLoc, ...prev]);
+      toast.success(`BCP "${newBcpName}" added to Master Data.`);
+      setShowNewBcpForm(false);
+      setNewBcpName("");
+      setNewBcpCountry("");
+      setNewBcpCity("");
+      setNewBcpAddress("");
+      setNewBcpLat("");
+      setNewBcpLon("");
+
+      await insertBcpIntoRoute(newMapLoc, splitSegmentIndex);
+    } catch (err) {
+      toast.error("Failed to create BCP in Master Data", {
+        description: err instanceof Error ? err.message : "API error",
+      });
+    } finally {
+      setCreatingBcp(false);
+    }
+  }
+
   function addSegment(route: MapRoute, insertIndex?: number) {
     if (route.readonly) {
       setBuildMessage("Primary segments are view-only. Select a backup route to add it.");
@@ -613,8 +854,8 @@ export function RoutePlanBuilder({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-3 md:p-4">
-      <div className="mx-auto grid max-w-[1440px] gap-3">
+    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 p-3 md:p-4">
+      <div className="mx-auto grid w-full max-w-[1440px] min-w-0 gap-3">
         <PageHeader
           title={
             isReturn
@@ -631,7 +872,7 @@ export function RoutePlanBuilder({
         />
         <BuilderMetadata plan={plan} />
         <BuilderProgress step={step} onChange={setStep} />
-        <section className="rounded-b-[2px] bg-white p-3 md:p-4">
+        <section className="w-full min-w-0 overflow-hidden rounded-b-[2px] bg-white p-3 md:p-4">
           {step === 0 && (
             <RoutePlanEndpointsStep
               from={plan.from}
@@ -654,8 +895,8 @@ export function RoutePlanBuilder({
           )}
 
           {step === 1 && (
-            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.9fr)]">
-              <div className="min-h-[560px]">
+            <div className="grid w-full min-w-0 gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,1fr)]">
+              <div className="w-full min-w-0 min-h-[560px]">
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-semibold text-slate-900">Route Map</h2>
@@ -694,7 +935,7 @@ export function RoutePlanBuilder({
                 />
               </div>
 
-              <div>
+              <div className="w-full min-w-0">
                 <div className="mb-2 flex items-center justify-between">
                   <h2 className="font-semibold text-slate-900">Route Segments Builder</h2>
                   <span className="text-sm text-muted-foreground">
@@ -703,7 +944,226 @@ export function RoutePlanBuilder({
                   </span>
                 </div>
 
-                <div className="grid gap-2">
+                <div className="grid gap-2 min-w-0">
+                  {/* BCP Guidance / Proposal */}
+                  {isCrossBorder && hasBcp && (
+                    <div className="flex items-center gap-2 rounded-[2px] border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-900">
+                      <ShieldCheck className="size-4 shrink-0 text-emerald-600" />
+                      <span>Border Control Point (BCP) configured for cross-border transit compliance.</span>
+                    </div>
+                  )}
+
+                  {isCrossBorder && !hasBcp && isBcpDismissed && (
+                    <div className="flex items-center justify-between rounded-[2px] border border-amber-200 bg-amber-50/60 px-3 py-1.5 text-xs text-amber-900">
+                      <div className="flex items-center gap-1.5">
+                        <ShieldAlert className="size-3.5 shrink-0 text-amber-600" />
+                        <span>BCP notice dismissed. No Border Control Point currently added.</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 rounded-[2px]"
+                        onClick={() => setIsBcpDismissed(false)}
+                      >
+                        Configure BCP
+                      </Button>
+                    </div>
+                  )}
+
+                  {isCrossBorder && !hasBcp && !isBcpDismissed && (
+                    <div className="rounded-[2px] border border-amber-300 bg-amber-50/70 p-3 text-xs text-amber-950 shadow-sm">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2">
+                          <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-amber-950">Cross-Border Transport Notice</span>
+                              <Badge variant="outline" className="border-amber-300 bg-amber-100/50 px-1 py-0 text-[10px] font-semibold text-amber-800">
+                                BCP Recommended
+                              </Badge>
+                            </div>
+                            <p className="mt-1 text-slate-700">
+                              This transport route crosses international borders. EU animal welfare regulations require at least one Border Control Point (BCP) stop.
+                              As Master Data manager, you can select an existing BCP, register a new BCP, or dismiss this proposal.
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-1.5 text-xs text-muted-foreground hover:bg-amber-100 rounded-[2px]"
+                          onClick={() => setIsBcpDismissed(true)}
+                          title="Dismiss proposal"
+                        >
+                          Cancel / Dismiss
+                        </Button>
+                      </div>
+
+                      {!showNewBcpForm ? (
+                        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-amber-200/80 pt-2.5">
+                          <div className="flex flex-1 items-center gap-2 min-w-[220px]">
+                            <select
+                              value={selectedBcpId}
+                              onChange={(e) => setSelectedBcpId(e.target.value)}
+                              className="h-8 flex-1 min-w-0 rounded-[2px] border border-amber-300 bg-white px-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
+                              aria-label="Select existing BCP"
+                            >
+                              <option value="">-- Select existing BCP ({bcpLocations.length} available) --</option>
+                              {bcpLocations.map((bcp) => (
+                                <option key={bcp.id} value={String(bcp.id)}>
+                                  {bcp.name} {bcp.country ? `(${bcp.country})` : ""} {bcp.city ? `• ${bcp.city}` : ""}
+                                </option>
+                              ))}
+                            </select>
+
+                            {segments.length > 1 && (
+                              <select
+                                value={splitSegmentIndex}
+                                onChange={(e) => setSplitSegmentIndex(parseInt(e.target.value, 10) || 0)}
+                                className="h-8 rounded-[2px] border border-amber-300 bg-white px-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
+                                aria-label="Select segment to split"
+                              >
+                                {segments.map((seg, idx) => (
+                                  <option key={seg.id} value={idx}>
+                                    Seg {idx + 1} ({seg.route.fromLocation?.name?.slice(0, 15)}…)
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={!selectedBcpId}
+                              className="h-8 rounded-[2px] bg-amber-600 px-3 text-xs text-white hover:bg-amber-700 shrink-0"
+                              onClick={async () => {
+                                const bcp = bcpLocations.find((l) => String(l.id) === selectedBcpId);
+                                if (bcp) {
+                                  await insertBcpIntoRoute(bcp, splitSegmentIndex);
+                                  setSelectedBcpId("");
+                                }
+                              }}
+                            >
+                              Insert BCP
+                            </Button>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-slate-400">or</span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 rounded-[2px] border-amber-300 bg-white text-xs font-semibold text-amber-900 hover:bg-amber-100"
+                              onClick={() => setShowNewBcpForm(true)}
+                            >
+                              + New BCP Location
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-3 rounded-[2px] border border-amber-200 bg-white p-3">
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="font-bold text-slate-900">Add New Border Control Point to Master Data</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-1.5 text-xs text-muted-foreground hover:bg-slate-100 rounded-[2px]"
+                              onClick={() => setShowNewBcpForm(false)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <div>
+                              <label className="text-[11px] font-semibold text-slate-700">BCP Name *</label>
+                              <input
+                                value={newBcpName}
+                                onChange={(e) => setNewBcpName(e.target.value)}
+                                placeholder="e.g. Eurotunnel Coquelles BCP"
+                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-semibold text-slate-700">Country Code *</label>
+                              <input
+                                value={newBcpCountry}
+                                onChange={(e) => setNewBcpCountry(e.target.value.toUpperCase())}
+                                maxLength={2}
+                                placeholder="e.g. FR, DE, BE, NL, GB"
+                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-semibold text-slate-700">City</label>
+                              <input
+                                value={newBcpCity}
+                                onChange={(e) => setNewBcpCity(e.target.value)}
+                                placeholder="e.g. Coquelles"
+                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-semibold text-slate-700">Address</label>
+                              <input
+                                value={newBcpAddress}
+                                onChange={(e) => setNewBcpAddress(e.target.value)}
+                                placeholder="e.g. Boulevard de l'Europe"
+                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-semibold text-slate-700">Latitude *</label>
+                              <input
+                                type="number"
+                                step="0.0001"
+                                value={newBcpLat}
+                                onChange={(e) => setNewBcpLat(e.target.value)}
+                                placeholder="e.g. 50.925"
+                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-semibold text-slate-700">Longitude *</label>
+                              <input
+                                type="number"
+                                step="0.0001"
+                                value={newBcpLon}
+                                onChange={(e) => setNewBcpLon(e.target.value)}
+                                placeholder="e.g. 1.815"
+                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 rounded-[2px] text-xs"
+                              onClick={() => setShowNewBcpForm(false)}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={creatingBcp}
+                              className="h-8 rounded-[2px] bg-amber-600 px-3 text-xs text-white hover:bg-amber-700"
+                              onClick={() => void handleCreateNewBcp()}
+                            >
+                              {creatingBcp ? "Creating BCP..." : "Save to Master & Insert"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {/* Inline Insert Destination Helper Modal/Dropdown */}
                   {insertTargetIndex !== null && (
                     <div className="rounded-[2px] border border-amber-200 bg-amber-50/70 p-2.5 text-xs text-amber-900">
@@ -876,8 +1336,8 @@ export function RoutePlanBuilder({
           )}
 
           {step === 2 && (
-            <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.9fr)]">
-              <div className="min-h-[560px]">
+            <div className="grid w-full min-w-0 gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,1fr)]">
+              <div className="w-full min-w-0 min-h-[560px]">
                 <div className="mb-2 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-slate-900">Route Map</h2>
                   <Badge variant="outline" className="rounded-[2px]">View mode</Badge>
@@ -889,8 +1349,19 @@ export function RoutePlanBuilder({
                 />
               </div>
 
-              <div className="grid content-start gap-3">
+              <div className="w-full min-w-0 grid content-start gap-3">
                 <h2 className="text-lg font-semibold text-slate-900">Review</h2>
+                {isCrossBorder && !hasBcp && (
+                  <div className="rounded-[2px] border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-950">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <ShieldAlert className="size-4 text-amber-600 shrink-0" />
+                      <span>Cross-Border Notice: No Border Control Point (BCP) Added</span>
+                    </div>
+                    <p className="mt-1 text-slate-700">
+                      You chose not to add a BCP stop. Note that cross-border routes may be rejected by the backend if BCP regulations apply. You can return to Step 1 to insert a BCP if needed.
+                    </p>
+                  </div>
+                )}
                 <Card className="rounded-[2px]">
                   <CardContent className="grid gap-3 py-3 text-sm">
                     <div className="flex justify-between">

@@ -73,6 +73,20 @@ export const getLocation = (locationId: string) =>
   request<Location>(
     apiClient.get(`${ROUTE_PLAN_ENDPOINTS.locations}/${locationId}`),
   );
+export const createLocation = (payload: {
+  locationName: string;
+  locationType: string;
+  address?: string | null;
+  city?: string | null;
+  stateProvince?: string | null;
+  country?: string | null;
+  latitude: number;
+  longitude: number;
+  locationNote?: string | null;
+}) =>
+  request<Location>(
+    apiClient.post(ROUTE_PLAN_ENDPOINTS.locations, payload),
+  );
 export const updateLocation = (
   locationId: string,
   payload: {
