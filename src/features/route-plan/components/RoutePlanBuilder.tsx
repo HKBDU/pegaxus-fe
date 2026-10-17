@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, MoreVertical, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -12,23 +12,21 @@ import {
 } from "@/shared/components/map";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ROLE_ROUTES } from "@/app/route-config";
-import { canAccess } from "@/features/auth/access-control";
-import { useAuthStore } from "@/features/auth/store";
+import { previewGeoapifyRoute } from "@/shared/utils/map/routing";
 import { createRoutePlan, updateRoutePlan } from "../services";
+import { loadAllVehicles } from "../api-adapters";
 import {
   buildEffectiveBackupRoute,
   validateRoutePlanRoute,
 } from "../route-continuity";
+import { calculateRouteTimeline } from "../timeline-calculator";
 import type {
   CreateRoutePlanRequest,
   RouteSegmentInput,
   RoutePlanStatus,
   RouteType,
+  Vehicle,
 } from "../types";
-import {
-  OutsourceSegmentDialog,
-  type OutsourceSegmentSelection,
-} from "./OutsourceSegmentDialog";
 import {
   arrangementForRoute,
   type DraftSegment,
@@ -58,175 +56,6 @@ type TransportPlanSummary = {
 
 type RoutePlanRouteFilter = "ALL" | RouteType;
 
-const steps = ["Transport Details", "Route Builder", "Save"];
-
-function formatDate(value: string) {
-  const date = new Date(value);
-  if (!value || Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(date);
-}
-
-function Metadata({ plan }: { plan: TransportPlanSummary }) {
-  const items = [
-    ["TRANSPORT PLAN", plan.planCode],
-    ["BOOKING", plan.bookingCode],
-    ["SCOPE", plan.scope],
-    ["PLANNED DEPARTURE", formatDate(plan.departureAt)],
-    ["PLANNED ARRIVAL", formatDate(plan.arrivalAt)],
-  ];
-  return (
-    <div className="grid grid-cols-2 gap-0 overflow-hidden rounded-[2px] bg-card sm:grid-cols-3 lg:grid-cols-5">
-      {items.map(([label, value]) => (
-        <div key={label} className="min-h-16 p-0">
-          <p className="text-[10px] font-semibold tracking-[0.12em] text-muted-foreground">
-            {label}
-          </p>
-          <p className="mt-2 text-sm font-semibold text-slate-900">{value}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Progress({
-  step,
-  onChange,
-}: {
-  step: WizardStep;
-  onChange: (step: WizardStep) => void;
-}) {
-  return (
-    <div className="grid overflow-hidden rounded-t-[2px] bg-card sm:grid-cols-3">
-      {steps.map((label, index) => (
-        <button
-          key={label}
-          type="button"
-          onClick={() => onChange(index as WizardStep)}
-          className={`border-b-2 px-2 py-1 text-center transition ${step === index ? "border-amber-500 text-slate-900" : "border-transparent text-muted-foreground"}`}
-        >
-          <span className="block font-[var(--heading)] text-lg font-bold uppercase">
-            {label}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function SegmentCard({
-  segment,
-  index,
-  onDelete,
-  onOutsource,
-  routePlanId,
-}: {
-  segment: DraftSegment;
-  index: number;
-  onDelete: () => void;
-  onOutsource: (selection: OutsourceSegmentSelection | null) => void;
-  routePlanId?: string;
-}) {
-  const principal = useAuthStore((state) => state.principal);
-  const canManageOutsource = canAccess(principal, {
-    anyRole: ["LOGISTICS_MANAGER"],
-  });
-  return (
-    <Card className="gap-2 rounded-[2px] py-2 shadow-sm">
-      <CardContent className="px-3">
-        <div className="flex items-start gap-2">
-          <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-[2px] bg-slate-600 text-xs font-bold text-white">
-            {index + 1}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <p className="font-semibold text-slate-900">
-                {segment.route.fromLocation?.name}{" "}
-                <span className="text-slate-400">→</span>{" "}
-                {segment.route.toLocation?.name}
-              </p>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <button
-                  type="button"
-                  onClick={onDelete}
-                  aria-label="Delete segment"
-                >
-                  <Trash2 className="size-4" />
-                </button>
-                <MoreVertical className="size-4" />
-              </div>
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-              <div>
-                <p className="text-muted-foreground">Distance</p>
-                <p className="font-semibold">
-                  {segment.route.distanceKm ?? "—"} km
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Estimated time</p>
-                <p className="font-semibold">
-                  {segment.route.durationMinutes
-                    ? `${Math.round(segment.route.durationMinutes / 60)}h ${segment.route.durationMinutes % 60}m`
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Stop type</p>
-                <Badge variant="outline" className="mt-1 border-0 px-0">
-                  {segment.stopType.replace("_", " ")}
-                </Badge>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Arrangement</span>
-                <div className="mt-1">
-                  {canManageOutsource ? (
-                    <OutsourceSegmentDialog
-                      routePlanId={routePlanId}
-                      routePlanRouteId={
-                        segment.route.routePlanRouteId ??
-                        String(segment.route.id)
-                      }
-                      transportMode={segment.route.transportMode ?? "ROAD"}
-                      isOutsourced={segment.arrangement === "OUTSOURCED"}
-                      currentProvider={segment.provider}
-                      currentNote={segment.note}
-                      onChanged={onOutsource}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="h-auto p-0 font-semibold hover:bg-transparent"
-                      >
-                        {segment.arrangement === "OUTSOURCED"
-                          ? "Outsource"
-                          : "Internal"}
-                      </Button>
-                    </OutsourceSegmentDialog>
-                  ) : (
-                    <span className="font-semibold">
-                      {segment.arrangement === "OUTSOURCED"
-                        ? "Outsource"
-                        : "Internal"}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-void Metadata;
-void Progress;
-void SegmentCard;
-
 export type RoutePlanBuilderProps = {
   transportPlanId: string;
   routeType?: RouteType;
@@ -240,6 +69,7 @@ export type RoutePlanBuilderProps = {
   initialRouteNote?: string;
   locations: MapLocation[];
   routes: MapRoute[];
+  vehicles?: Vehicle[];
   edit?: { routePlanId: string; lastUpdatedAt: string };
 };
 
@@ -256,62 +86,45 @@ export function RoutePlanBuilder({
   initialRouteNote = "",
   locations,
   routes,
+  vehicles: initialVehicles,
   edit,
 }: RoutePlanBuilderProps) {
   const [step, setStep] = useState<WizardStep>(0);
   const [, setMode] = useState<MapMode>("buildPlan");
-  const [segments, setSegments] = useState<DraftSegment[]>(() =>
-    initialRoutes.map((route, index) => ({
-      id: `${route.id}-${index}`,
-      route,
-      arrangement: arrangementForRoute(route),
-      stopType:
-        route.toLocation?.id === metadata?.to?.id
-          ? "DESTINATION"
-          : route.toLocation?.type === "BORDER_GATE"
-            ? "BCP"
-            : "REST_STOP",
-    })),
+  const [availableVehicles, setAvailableVehicles] = useState<Vehicle[]>(
+    initialVehicles ?? [],
   );
-  const [buildMessage, setBuildMessage] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveNotice, setSaveNotice] = useState<string | null>(null);
-  const [routeNote, setRouteNote] = useState(initialRouteNote);
-  const [updateReason, setUpdateReason] = useState("");
-  const [locationSearch, setLocationSearch] = useState("");
-  const [routeSearch, setRouteSearch] = useState("");
-  const [routePlanTypeFilter, setRoutePlanTypeFilter] =
-    useState<RoutePlanRouteFilter>("ALL");
-  const [showRouteSearch, setShowRouteSearch] = useState(false);
-  const [sourceLocation, setSourceLocation] = useState<MapLocation | null>(
-    null,
-  );
-  const [returnOrigin, setReturnOrigin] = useState<MapLocation | null>(
-    () => initialRoutes[0]?.fromLocation ?? null,
-  );
+
+  const [customFrom, setCustomFrom] = useState<MapLocation | null>(null);
+  const [customTo, setCustomTo] = useState<MapLocation | null>(null);
+
   const isBackup = routeType === "BACKUP";
   const isReturn = routeType === "RETURN";
   const readonlyPrimaryRoutes = useMemo(
     () => primaryRoutes ?? [],
     [primaryRoutes],
   );
+
+  const [returnOrigin, setReturnOrigin] = useState<MapLocation | null>(
+    () => initialRoutes[0]?.fromLocation ?? null,
+  );
+
   const fallbackFrom =
+    customFrom ??
     (isReturn ? returnOrigin : null) ??
     readonlyPrimaryRoutes[0]?.fromLocation ??
     initialRoutes[0]?.fromLocation ??
     metadata?.from;
   const fallbackTo =
+    customTo ??
     readonlyPrimaryRoutes.at(-1)?.toLocation ??
     initialRoutes.at(-1)?.toLocation ??
     metadata?.to ??
     fallbackFrom;
-  const planFrom = (
-    isReturn ? fallbackFrom : (metadata?.from ?? fallbackFrom)
-  )!;
-  const planTo = (
-    isReturn ? (metadata?.from ?? fallbackTo) : (metadata?.to ?? fallbackTo)
-  )!;
-  const plan = useMemo(
+  const planFrom = (isReturn ? fallbackFrom : (metadata?.from ?? fallbackFrom))!;
+  const planTo = (isReturn ? (metadata?.from ?? fallbackTo) : (metadata?.to ?? fallbackTo))!;
+
+  const plan: TransportPlanSummary = useMemo(
     () => ({
       ...metadata,
       planCode: metadata?.planCode ?? "—",
@@ -327,6 +140,77 @@ export function RoutePlanBuilder({
     }),
     [planFrom, planTo, metadata, routeType, transportPlanId],
   );
+
+  // Helper to recompute timeline & check segment continuity
+  function formatDraftSegments(
+    rawSegments: DraftSegment[],
+    baseStart?: string,
+  ): DraftSegment[] {
+    const startTime = baseStart || plan.departureAt || new Date().toISOString();
+    let timedSegments: DraftSegment[];
+    try {
+      timedSegments = calculateRouteTimeline(startTime, rawSegments);
+    } catch {
+      timedSegments = rawSegments;
+    }
+
+    return timedSegments.map((seg, index) => {
+      const isDisconnected =
+        index > 0 &&
+        String(seg.route.fromLocation?.id) !==
+          String(timedSegments[index - 1]?.route.toLocation?.id);
+      return {
+        ...seg,
+        sequenceNo: index + 1,
+        isDisconnected,
+      };
+    });
+  }
+
+  const [segments, setSegments] = useState<DraftSegment[]>(() =>
+    formatDraftSegments(
+      initialRoutes.map((route, index) => ({
+        id: `${route.id}-${index}`,
+        route,
+        arrangement: arrangementForRoute(route),
+        stopType:
+          route.toLocation?.id === metadata?.to?.id
+            ? "DESTINATION"
+            : route.toLocation?.type === "BORDER_GATE"
+              ? "BCP"
+              : "REST_STOP",
+        dwellAfterMinutes: 0,
+      })),
+      metadata?.departureAt,
+    ),
+  );
+
+  const [buildMessage, setBuildMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const [routeNote, setRouteNote] = useState(initialRouteNote);
+  const [updateReason, setUpdateReason] = useState("");
+  const [locationSearch, setLocationSearch] = useState("");
+  const [routeSearch, setRouteSearch] = useState("");
+  const [routePlanTypeFilter, setRoutePlanTypeFilter] =
+    useState<RoutePlanRouteFilter>("ALL");
+  const [showRouteSearch, setShowRouteSearch] = useState(false);
+  const [sourceLocation, setSourceLocation] = useState<MapLocation | null>(null);
+  const [insertTargetIndex, setInsertTargetIndex] = useState<number | null>(null);
+
+  // Load available vehicles if not passed from props
+  useEffect(() => {
+    if (initialVehicles?.length) {
+      setAvailableVehicles(initialVehicles);
+      return;
+    }
+    void loadAllVehicles()
+      .then((items) => {
+        setAvailableVehicles(items.filter((v) => v.status === "AVAILABLE"));
+      })
+      .catch(() => {});
+  }, [initialVehicles]);
+
   const routeCatalog = useMemo(
     () =>
       [
@@ -339,6 +223,7 @@ export function RoutePlanBuilder({
       ),
     [backupRoutes, initialRoutes, isBackup, isReturn, routePlanRoutes, routes],
   );
+
   const filteredRoutes = useMemo(() => {
     const query = routeSearch.trim().toLowerCase();
     return routeCatalog.filter(
@@ -355,6 +240,7 @@ export function RoutePlanBuilder({
           .some((value) => String(value).toLowerCase().includes(query)),
     );
   }, [routeCatalog, routePlanTypeFilter, routeSearch]);
+
   const locationOptions = useMemo(() => {
     const query = locationSearch.trim().toLowerCase();
     if (!query) return locations;
@@ -364,6 +250,7 @@ export function RoutePlanBuilder({
         .some((value) => String(value).toLowerCase().includes(query)),
     );
   }, [locationSearch, locations]);
+
   const selectedRoutes = useMemo(
     () =>
       isBackup
@@ -377,64 +264,94 @@ export function RoutePlanBuilder({
         : segments.map((segment) => segment.route),
     [isBackup, readonlyPrimaryRoutes, segments],
   );
-  const continuity = useMemo(
-    () => {
-      const fromId = plan.from?.id ?? "";
-      const toId = plan.to?.id ?? "";
-      if (!fromId || !toId) {
-        return {
-          valid: false,
-          message: "Transport Plan origin or destination location is not resolved.",
-          effectiveRoutes: [],
-        };
-      }
-      return isBackup
-        ? buildEffectiveBackupRoute(
-            readonlyPrimaryRoutes,
-            segments.map((segment) => segment.route),
-            fromId,
-            toId,
-          )
-        : validateRoutePlanRoute(
-            segments.map((segment) => segment.route),
-            fromId,
-            toId,
-          );
-    },
-    [isBackup, plan.from?.id, plan.to?.id, readonlyPrimaryRoutes, segments],
-  );
 
-  function addSegment(route: MapRoute) {
-    if (route.readonly) {
-      setBuildMessage(
-        "Primary segments are view-only. Select a backup route to add it.",
-      );
-      return;
+  const continuity = useMemo(() => {
+    const fromId = plan.from?.id ?? "";
+    const toId = plan.to?.id ?? "";
+    if (!fromId || !toId) {
+      return {
+        valid: false,
+        message: "Transport Plan origin or destination location is not resolved.",
+        effectiveRoutes: [],
+      };
     }
-    if (segments.some((segment) => segment.route.id === route.id)) return;
-    const previous = segments.at(-1)?.route.toLocation?.id;
-    if (previous != null && route.fromLocation?.id !== previous) {
-      setBuildMessage("Select a route connected to the last segment.");
+    return isBackup
+      ? buildEffectiveBackupRoute(
+          readonlyPrimaryRoutes,
+          segments.map((segment) => segment.route),
+          fromId,
+          toId,
+        )
+      : validateRoutePlanRoute(
+          segments.map((segment) => segment.route),
+          fromId,
+          toId,
+        );
+  }, [isBackup, plan.from?.id, plan.to?.id, readonlyPrimaryRoutes, segments]);
+
+  function addSegment(route: MapRoute, insertIndex?: number) {
+    if (route.readonly) {
+      setBuildMessage("Primary segments are view-only. Select a backup route to add it.");
       return;
     }
     setBuildMessage(null);
-    setSegments((current) => [
-      ...current,
-      {
-        id: `${route.id}-${Date.now()}`,
-        route,
-        arrangement: arrangementForRoute(route),
-        stopType:
-          route.toLocation?.id === plan.to?.id
-            ? "DESTINATION"
-            : route.toLocation?.type === "BORDER_GATE"
-              ? "BCP"
-              : "REST_STOP",
-      },
-    ]);
+    const newSegment: DraftSegment = {
+      id: `${route.id}-${Date.now()}`,
+      route,
+      arrangement: arrangementForRoute(route),
+      stopType:
+        route.toLocation?.id === plan.to?.id
+          ? "DESTINATION"
+          : route.toLocation?.type === "BORDER_GATE"
+            ? "BCP"
+            : "REST_STOP",
+      dwellAfterMinutes: 0,
+    };
+
+    setSegments((current) => {
+      const updated = [...current];
+      if (insertIndex !== undefined && insertIndex >= 0 && insertIndex < updated.length) {
+        updated.splice(insertIndex + 1, 0, newSegment);
+      } else {
+        updated.push(newSegment);
+      }
+      return formatDraftSegments(updated, plan.departureAt);
+    });
   }
 
-  function selectMapLocation(location: MapLocation) {
+  function moveSegment(fromIndex: number, toIndex: number) {
+    if (toIndex < 0 || toIndex >= segments.length) return;
+    setSegments((current) => {
+      const updated = [...current];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return formatDraftSegments(updated, plan.departureAt);
+    });
+  }
+
+  function deleteSegment(index: number) {
+    setSegments((current) => {
+      const updated = current.filter((_, idx) => idx !== index);
+      return formatDraftSegments(updated, plan.departureAt);
+    });
+  }
+
+  function handleDwellChange(index: number, minutes: number) {
+    setSegments((current) => {
+      const updated = current.map((seg, idx) =>
+        idx === index ? { ...seg, dwellAfterMinutes: minutes } : seg,
+      );
+      return formatDraftSegments(updated, plan.departureAt);
+    });
+  }
+
+  function handleVehicleChange(index: number, vehicleIds: string[]) {
+    setSegments((current) =>
+      current.map((seg, idx) => (idx === index ? { ...seg, vehicleIds } : seg)),
+    );
+  }
+
+  async function selectMapLocation(location: MapLocation) {
     if (isReturn) {
       setReturnOrigin(location);
       setBuildMessage(`Return origin selected: ${location.name}.`);
@@ -442,35 +359,56 @@ export function RoutePlanBuilder({
     }
     if (!sourceLocation) {
       setSourceLocation(location);
-      setBuildMessage(
-        `Source selected: ${location.name}. Please choose a Destination.`,
-      );
+      setBuildMessage(`Source selected: ${location.name}. Please choose a destination.`);
       return;
     }
     if (String(sourceLocation.id) === String(location.id)) {
-      setBuildMessage("Source and Destination must be different.");
+      setBuildMessage("Source and destination must be different.");
       return;
     }
+
     const found = routeCatalog.find(
       (route) =>
         String(route.fromLocation?.id) === String(sourceLocation.id) &&
         String(route.toLocation?.id) === String(location.id),
     );
+
     if (found) {
-      toast(`${sourceLocation.name} → ${location.name}`, {
-        description: "Saved Route found.",
-        duration: 3000,
-        action: {
-          label: "Add",
-          onClick: () => {
-            addSegment(found);
-          },
-        },
+      addSegment(found);
+      toast.success(`${sourceLocation.name} → ${location.name}`, {
+        description: "Saved route added.",
       });
     } else {
-      toast.error(`${sourceLocation.name} → ${location.name}`, {
-        description: "No saved Route exists between these Locations.",
-      });
+      // Dynamic Geoapify route calculation
+      const loadingToast = toast.loading(
+        `Calculating route: ${sourceLocation.name} → ${location.name}...`,
+      );
+      try {
+        const preview = await previewGeoapifyRoute(
+          { latitude: sourceLocation.latitude, longitude: sourceLocation.longitude },
+          { latitude: location.latitude, longitude: location.longitude },
+        );
+        const dynamicRoute: MapRoute = {
+          id: `dynamic-${sourceLocation.id}-${location.id}`,
+          name: `${sourceLocation.name} → ${location.name} (Calculated)`,
+          fromLocation: sourceLocation,
+          toLocation: location,
+          distanceKm: Math.round(preview.distanceKm * 10) / 10,
+          durationMinutes: Math.round(preview.durationMinutes),
+          transportMode: "ROAD",
+          geometry: preview.geometry,
+        };
+        addSegment(dynamicRoute);
+        toast.success(`${sourceLocation.name} → ${location.name}`, {
+          id: loadingToast,
+          description: `Route calculated: ${dynamicRoute.distanceKm} km (${Math.round(dynamicRoute.durationMinutes ?? 0)} mins).`,
+        });
+      } catch (err) {
+        toast.error(`Unable to calculate route: ${sourceLocation.name} → ${location.name}`, {
+          id: loadingToast,
+          description: err instanceof Error ? err.message : "Route calculation failed.",
+        });
+      }
     }
     setSourceLocation(null);
   }
@@ -480,34 +418,65 @@ export function RoutePlanBuilder({
   ): CreateRoutePlanRequest {
     const payloadRoutes = isBackup
       ? [
-          ...readonlyPrimaryRoutes.map((route) => ({ route, routeType: "PRIMARY" as const })),
-          ...segments.map((segment) => ({ route: segment.route, routeType: "BACKUP" as const })),
+          ...readonlyPrimaryRoutes.map((route) => ({
+            route,
+            routeType: "PRIMARY" as const,
+            plannedDepartureAt: plan.departureAt,
+            plannedArrivalAt: plan.arrivalAt,
+            vehicleIds: undefined,
+            outsourcing: undefined,
+          })),
+          ...segments.map((segment) => ({
+            route: segment.route,
+            routeType: "BACKUP" as const,
+            plannedDepartureAt: segment.plannedDepartureAt || plan.departureAt,
+            plannedArrivalAt: segment.plannedArrivalAt || plan.arrivalAt,
+            vehicleIds: segment.vehicleIds,
+            outsourcing:
+              segment.arrangement === "OUTSOURCED" && segment.provider
+                ? {
+                    transportProviderId: segment.provider.transportProviderId,
+                    note: segment.note,
+                  }
+                : undefined,
+          })),
         ]
-      : segments.map((segment) => ({ route: segment.route, routeType: routeType }));
+      : segments.map((segment) => ({
+          route: segment.route,
+          routeType,
+          plannedDepartureAt: segment.plannedDepartureAt || plan.departureAt,
+          plannedArrivalAt: segment.plannedArrivalAt || plan.arrivalAt,
+          vehicleIds: segment.vehicleIds,
+          outsourcing:
+            segment.arrangement === "OUTSOURCED" && segment.provider
+              ? {
+                  transportProviderId: segment.provider.transportProviderId,
+                  note: segment.note,
+                }
+              : undefined,
+        }));
 
     return {
       routeType: plan.routeType,
       action,
       ...(isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
-      segments: payloadRoutes.map(({ route, routeType: segmentRouteType }, index): RouteSegmentInput => ({
-        sequenceNo: index + 1,
-        ...(isBackup || isReturn ? { routeType: segmentRouteType } : {}),
-        routeId: String(route.id),
-        fromLocationId: String(route.fromLocation?.id),
-        toLocationId: String(route.toLocation?.id),
-        transportMode: route.transportMode,
-        plannedDepartureAt: plan.departureAt,
-        plannedArrivalAt: plan.arrivalAt,
-        ...(segments.find((segment) => segment.route.id === route.id)?.arrangement === "OUTSOURCED" &&
-        segments.find((segment) => segment.route.id === route.id)?.provider
-          ? {
-              outsourcing: {
-                transportProviderId: segments.find((segment) => segment.route.id === route.id)!.provider!.transportProviderId,
-                note: segments.find((segment) => segment.route.id === route.id)!.note,
-              },
-            }
-          : {}),
-      })),
+      segments: payloadRoutes.map(
+        ({ route, routeType: segmentRouteType, plannedDepartureAt, plannedArrivalAt, vehicleIds, outsourcing }, index): RouteSegmentInput => ({
+          sequenceNo: index + 1,
+          ...(isBackup || isReturn ? { routeType: segmentRouteType } : {}),
+          routeId: String(route.id).startsWith("dynamic-") ? undefined : String(route.id),
+          fromLocationId: String(route.fromLocation?.id),
+          toLocationId: String(route.toLocation?.id),
+          transportMode: route.transportMode ?? "ROAD",
+          plannedDepartureAt,
+          plannedArrivalAt,
+          ...(outsourcing
+            ? { outsourcing }
+            : vehicleIds?.length
+              ? { vehicleIds }
+              : {}),
+        }),
+      ),
     };
   }
 
@@ -550,7 +519,7 @@ export function RoutePlanBuilder({
       }
       setSaveNotice(
         action === "SAVE_DRAFT"
-          ? "Draft saved."
+          ? "Draft saved successfully."
           : "Submitted for legal review.",
       );
     } catch (error) {
@@ -586,15 +555,28 @@ export function RoutePlanBuilder({
               to={plan.to}
               returnMode={isReturn}
               locations={locations}
-              onFromChange={setReturnOrigin}
+              onFromChange={(loc) => setCustomFrom(loc)}
+              onToChange={(loc) => setCustomTo(loc)}
+              isFromResolved={metadata?.isFromResolved ?? true}
+              isToResolved={metadata?.isToResolved ?? true}
+              unresolvedOriginAddress={metadata?.unresolvedOriginAddress}
+              unresolvedDestinationAddress={metadata?.unresolvedDestinationAddress}
             />
           )}
+
           {step === 1 && (
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.9fr)]">
               <div className="min-h-[560px]">
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Route Map</h2>
-                  <Badge variant="outline">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold text-slate-900">Route Map</h2>
+                    {sourceLocation && (
+                      <Badge className="rounded-[2px] bg-amber-500 text-white">
+                        From: {sourceLocation.name}
+                      </Badge>
+                    )}
+                  </div>
+                  <Badge variant="outline" className="rounded-[2px]">
                     {isReturn
                       ? "Build return mode"
                       : isBackup
@@ -622,60 +604,87 @@ export function RoutePlanBuilder({
                   buildEndLocation={plan.to}
                 />
               </div>
+
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="font-semibold">Route Segments Builder</h2>
+                  <h2 className="font-semibold text-slate-900">Route Segments Builder</h2>
                   <span className="text-sm text-muted-foreground">
                     {segments.length}{" "}
                     {isReturn ? "return " : isBackup ? "backup " : ""}segment(s)
                   </span>
                 </div>
+
                 <div className="grid gap-2">
-                  <div className="hidden">
-                    <label className="grid gap-2 text-sm font-medium">
-                      Search saved Route
-                      <input
-                        value={routeSearch}
-                        onChange={(event) => setRouteSearch(event.target.value)}
-                        placeholder="Search by route or Location"
-                        className="h-9 rounded border bg-white px-3 font-normal"
-                      />
-                    </label>
-                    <div className="mt-2 grid max-h-48 gap-1 overflow-y-auto">
-                      {filteredRoutes.map((route) => (
-                        <button
-                          key={route.id}
+                  {/* Inline Insert Destination Helper Modal/Dropdown */}
+                  {insertTargetIndex !== null && (
+                    <div className="rounded-[2px] border border-amber-200 bg-amber-50/70 p-2.5 text-xs text-amber-900">
+                      <div className="flex items-center justify-between font-semibold">
+                        <span>Insert Intermediate Stop after Segment {insertTargetIndex + 1}:</span>
+                        <Button
                           type="button"
-                          className="rounded border bg-white px-3 py-2 text-left text-sm hover:border-amber-500 hover:bg-amber-50"
-                          onClick={() => addSegment(route)}
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-1.5 text-xs text-muted-foreground hover:bg-amber-100/60 rounded-[2px]"
+                          onClick={() => setInsertTargetIndex(null)}
                         >
-                          <span className="block font-medium">
-                            {route.name ?? "Unnamed Route"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {route.fromLocation?.name} →{" "}
-                            {route.toLocation?.name} ·{" "}
-                            {route.transportMode ?? "ROAD"}
-                          </span>
-                        </button>
-                      ))}
-                      {!filteredRoutes.length && (
-                        <p className="text-xs text-muted-foreground">
-                          No saved Route found.
-                        </p>
-                      )}
+                          Cancel
+                        </Button>
+                      </div>
+                      <select
+                        className="mt-1.5 h-8 w-full rounded-[2px] border border-slate-200 bg-white px-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
+                        onChange={async (e) => {
+                          const stopLoc = locations.find((l) => String(l.id) === e.target.value);
+                          if (!stopLoc || insertTargetIndex === null) return;
+                          const currentSeg = segments[insertTargetIndex];
+                          if (!currentSeg) return;
+
+                          const fromLoc = currentSeg.route.fromLocation;
+                          if (!fromLoc) return;
+                          try {
+                            const preview = await previewGeoapifyRoute(
+                              { latitude: fromLoc.latitude, longitude: fromLoc.longitude },
+                              { latitude: stopLoc.latitude, longitude: stopLoc.longitude },
+                            );
+                            const newRoute: MapRoute = {
+                              id: `dynamic-${fromLoc.id}-${stopLoc.id}`,
+                              name: `${fromLoc.name} → ${stopLoc.name} (Inserted)`,
+                              fromLocation: fromLoc,
+                              toLocation: stopLoc,
+                              distanceKm: Math.round(preview.distanceKm * 10) / 10,
+                              durationMinutes: Math.round(preview.durationMinutes),
+                              transportMode: "ROAD",
+                              geometry: preview.geometry,
+                            };
+                            addSegment(newRoute, insertTargetIndex);
+                            setInsertTargetIndex(null);
+                          } catch {
+                            toast.error("Unable to calculate route for inserted stop.");
+                          }
+                        }}
+                      >
+                        <option value="">Select location to insert...</option>
+                        {locations.map((loc) => (
+                          <option key={loc.id} value={String(loc.id)}>
+                            {loc.name} — {loc.city}, {loc.country}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  </div>
+                  )}
+
                   {segments.map((segment, index) => (
                     <BuilderSegmentCard
                       key={segment.id}
                       segment={segment}
                       index={index}
-                      onDelete={() =>
-                        setSegments((items) =>
-                          items.filter((item) => item.id !== segment.id),
-                        )
-                      }
+                      totalSegments={segments.length}
+                      onDelete={() => deleteSegment(index)}
+                      onMoveUp={() => moveSegment(index, index - 1)}
+                      onMoveDown={() => moveSegment(index, index + 1)}
+                      onInsertStop={() => setInsertTargetIndex(index)}
+                      onDwellChange={(mins) => handleDwellChange(index, mins)}
+                      onVehicleChange={(vIds) => handleVehicleChange(index, vIds)}
+                      availableVehicles={availableVehicles}
                       routePlanId={edit?.routePlanId}
                       onOutsource={(selection) =>
                         setSegments((items) =>
@@ -683,11 +692,10 @@ export function RoutePlanBuilder({
                             item.id === segment.id
                               ? {
                                   ...item,
-                                  arrangement: selection
-                                    ? "OUTSOURCED"
-                                    : "INTERNAL",
+                                  arrangement: selection ? "OUTSOURCED" : "INTERNAL",
                                   provider: selection?.provider,
                                   note: selection?.note,
+                                  vehicleIds: selection ? undefined : item.vehicleIds,
                                 }
                               : item,
                           ),
@@ -695,24 +703,24 @@ export function RoutePlanBuilder({
                       }
                     />
                   ))}
+
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-fit"
+                    className="w-fit rounded-[2px] text-xs font-medium"
                     onClick={() => setShowRouteSearch((value) => !value)}
                   >
                     {showRouteSearch ? "Close Route Search" : "+ Add Segment"}
                   </Button>
+
                   {showRouteSearch && (
-                    <div className="rounded border bg-slate-50 p-3">
+                    <div className="rounded-[2px] border border-slate-200 bg-slate-50 p-3">
                       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                         <input
                           value={routeSearch}
-                          onChange={(event) =>
-                            setRouteSearch(event.target.value)
-                          }
-                          placeholder="Search saved Route or Location"
-                          className="h-9 w-full rounded border bg-white px-3 text-sm"
+                          onChange={(event) => setRouteSearch(event.target.value)}
+                          placeholder="Search saved route or location..."
+                          className="h-9 w-full rounded-[2px] border border-slate-200 bg-white px-3 text-xs font-normal"
                         />
                         <select
                           value={routePlanTypeFilter}
@@ -721,7 +729,7 @@ export function RoutePlanBuilder({
                               event.target.value as RoutePlanRouteFilter,
                             )
                           }
-                          className="h-9 rounded border bg-white px-3 text-sm"
+                          className="h-9 rounded-[2px] border border-slate-200 bg-white px-3 text-xs font-normal"
                           aria-label="Filter route plan type"
                         >
                           <option value="ALL">All Route Plan Types</option>
@@ -730,48 +738,50 @@ export function RoutePlanBuilder({
                           <option value="RETURN">RETURN</option>
                         </select>
                       </div>
+
                       <div className="mt-2 grid max-h-48 gap-1 overflow-y-auto">
                         {filteredRoutes.map((route) => (
                           <button
                             key={route.id}
                             type="button"
-                            className="rounded border bg-white px-3 py-2 text-left text-sm hover:border-amber-500 hover:bg-amber-50"
+                            className="rounded-[2px] border border-slate-200 bg-white px-3 py-2 text-left text-xs hover:border-amber-500 hover:bg-amber-50/50"
                             onClick={() => {
                               addSegment(route);
                               setShowRouteSearch(false);
                             }}
                           >
-                            <span className="block font-medium">
+                            <span className="block font-semibold text-slate-900">
                               {route.name ?? "Unnamed Route"}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {route.fromLocation?.name} →{" "}
-                              {route.toLocation?.name} ·{" "}
+                              {route.fromLocation?.name} → {route.toLocation?.name} ·{" "}
                               {route.transportMode ?? "ROAD"}
                             </span>
                           </button>
                         ))}
                         {!filteredRoutes.length && (
                           <p className="text-xs text-muted-foreground">
-                            No saved Route found.
+                            No saved route found. You can also click 2 locations directly on the map.
                           </p>
                         )}
                       </div>
                     </div>
                   )}
+
                   {buildMessage && (
-                    <p className="text-sm text-amber-700">{buildMessage}</p>
+                    <p className="text-xs text-amber-700 font-medium">{buildMessage}</p>
                   )}
                 </div>
               </div>
             </div>
           )}
+
           {step === 2 && (
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1.25fr)_minmax(420px,0.9fr)]">
               <div className="min-h-[560px]">
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Route Map</h2>
-                  <Badge variant="outline">View mode</Badge>
+                  <h2 className="text-lg font-semibold text-slate-900">Route Map</h2>
+                  <Badge variant="outline" className="rounded-[2px]">View mode</Badge>
                 </div>
                 <MapViewer
                   locations={locations}
@@ -779,12 +789,13 @@ export function RoutePlanBuilder({
                   mode="view"
                 />
               </div>
+
               <div className="grid content-start gap-3">
-                <h2 className="text-lg font-semibold">Review</h2>
+                <h2 className="text-lg font-semibold text-slate-900">Review</h2>
                 <Card className="rounded-[2px]">
-                  <CardContent className="grid gap-3 text-sm">
+                  <CardContent className="grid gap-3 py-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Segments</span>
+                      <span className="text-muted-foreground">Total segments</span>
                       <b>{segments.length}</b>
                     </div>
                     <div className="flex justify-between">
@@ -795,7 +806,13 @@ export function RoutePlanBuilder({
                             (segment) => segment.arrangement === "OUTSOURCED",
                           ).length
                         }{" "}
-                        outsourced
+                        outsourced,{" "}
+                        {
+                          segments.filter(
+                            (segment) => segment.arrangement === "INTERNAL",
+                          ).length
+                        }{" "}
+                        internal
                       </b>
                     </div>
                     <div className="flex justify-between">
@@ -804,44 +821,57 @@ export function RoutePlanBuilder({
                     </div>
                   </CardContent>
                 </Card>
+
                 {(isBackup || isReturn) && (
-                  <label className="grid gap-2 text-sm font-medium">
+                  <label className="grid gap-2 text-sm font-medium text-slate-900">
                     {isReturn ? "Return reason" : "Backup reason"}
-                    <span className="font-normal text-muted-foreground">
+                    <span className="font-normal text-muted-foreground text-xs">
                       Minimum 10 characters
                     </span>
                     <textarea
-                      className="min-h-20 rounded-[2px] border px-2 py-1.5 font-normal"
+                      className="min-h-20 rounded-[2px] border border-slate-200 p-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
                       value={routeNote}
                       onChange={(event) => setRouteNote(event.target.value)}
-                      placeholder="Why is this backup route needed?"
+                      placeholder="Why is this route needed?"
                     />
                   </label>
                 )}
+
                 {edit && (
-                  <label className="grid gap-2 text-sm font-medium">
+                  <label className="grid gap-2 text-sm font-medium text-slate-900">
+                    Update reason
                     <textarea
                       aria-label="Update reason"
-                      className="min-h-20 rounded-[2px] border px-2 py-1.5 font-normal"
+                      className="min-h-20 rounded-[2px] border border-slate-200 p-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
                       value={updateReason}
                       onChange={(event) => setUpdateReason(event.target.value)}
                       placeholder="Why is this route plan being updated?"
                     />
                   </label>
                 )}
+
                 {saveError && (
-                  <p className="text-sm text-red-700">{saveError}</p>
+                  <p className="text-xs text-red-700 bg-red-50 border border-red-200 p-2 rounded-[2px]">
+                    {saveError}
+                  </p>
                 )}
                 {saveNotice && (
-                  <p className="text-sm text-emerald-700">{saveNotice}</p>
+                  <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 p-2 rounded-[2px]">
+                    {saveNotice}
+                  </p>
                 )}
+
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={() => void save("SAVE_DRAFT")}>
+                  <Button
+                    className="rounded-[2px]"
+                    onClick={() => void save("SAVE_DRAFT")}
+                  >
                     Save Draft
                   </Button>
                   {!isReturn && (
                     <Button
                       variant="outline"
+                      className="rounded-[2px]"
                       onClick={() => void save("SUBMIT_FOR_LEGAL_REVIEW")}
                     >
                       Submit for legal review
@@ -852,17 +882,20 @@ export function RoutePlanBuilder({
             </div>
           )}
         </section>
+
         <div className="flex justify-between">
           <Button
             variant="outline"
+            className="rounded-[2px]"
             disabled={step === 0}
             onClick={() =>
               setStep((value) => Math.max(0, value - 1) as WizardStep)
             }
           >
-            <ArrowLeft /> Back
+            <ArrowLeft className="mr-1 size-4" /> Back
           </Button>
           <Button
+            className="rounded-[2px]"
             disabled={
               step === 2 ||
               (step === 1 &&
@@ -875,7 +908,7 @@ export function RoutePlanBuilder({
               setStep((value) => Math.min(2, value + 1) as WizardStep)
             }
           >
-            Next <ArrowRight />
+            Next <ArrowRight className="ml-1 size-4" />
           </Button>
         </div>
       </div>
