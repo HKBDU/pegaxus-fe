@@ -140,6 +140,8 @@ export interface DashboardKpi {
 export interface DashboardItem {
   complianceDossierId: EntityId
   dossierCode?: string
+  /** K1 lists MAIN and EXTRA dossiers as separate rows. */
+  dossierType?: "MAIN" | "EXTRA" | null
   bookingCode: string
   customerName: string
   originCountry: string

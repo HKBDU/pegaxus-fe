@@ -29,6 +29,7 @@ const row = (
   requestedDepartureDate: inDays(departureInDays),
   progressPercent,
   status,
+  dossierType: "MAIN",
   isUrgentRisk: departureInDays <= 7 && progressPercent < 100 && status !== "CLOSED" && status !== "APPROVED",
 })
 

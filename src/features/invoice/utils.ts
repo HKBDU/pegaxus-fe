@@ -1,5 +1,5 @@
 import { format, parseISO, isValid } from "date-fns"
-import { INVOICE_TAX_RATE_PERCENT, PAYMENT_ERROR_CODES, CANCELLATION_REASON_MIN_LENGTH, PAYMENT_CURRENCY_VALUES, PAYMENT_METHOD_VALUES, PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH } from "@/features/invoice/constants"
+import { INVOICE_TAX_RATE_PERCENT, PAYMENT_ERROR_CODES, CANCELLATION_REASON_MIN_LENGTH, PAYMENT_METHOD_VALUES, PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH } from "@/features/invoice/constants"
 import type { InvoiceItem, InvoiceSummary, PaymentErrorCode, PaymentErrorState, Invoice, RecordPaymentPayload } from "@/features/invoice/types"
 import type { InvoiceCurrency } from "@/features/invoice/constants"
 import { z } from "zod"
@@ -88,7 +88,6 @@ export function estimateSummary(
 // ---- from payment/utils/payment.error.ts ----
 const PAYMENT_ERROR_MESSAGES: Record<PaymentErrorCode, string> = {
   PARTIAL_PAYMENT_NOT_SUPPORTED: 'Only full payment of the invoice total is accepted.',
-  CURRENCY_MISMATCH: 'Payment currency must match the invoice currency.',
   UNPAYABLE_INVOICE_TYPE: 'This invoice type cannot be paid.',
   INVALID_INVOICE_STATUS: 'This invoice cannot be paid in its current status.',
   INVOICE_HAS_PAYMENT: 'This invoice has a confirmed payment. Contact accounting for a refund process.',
@@ -177,14 +176,13 @@ export const cancellationSchema = z.object({
 
 export const recordPaymentSchema = z.object({
   amount: z.number().finite().int('Amount must be a whole number.').nonnegative(),
-  currency: z.enum(PAYMENT_CURRENCY_VALUES),
   paymentMethod: z.enum(PAYMENT_METHOD_VALUES),
   transactionReference: optionalText(PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH),
   paidAt: paidAt.optional(),
   note: z.string().trim().optional(),
 })
 
-export function createRecordPaymentSchema(grandTotal: number, currency: InvoiceCurrency) {
+export function createRecordPaymentSchema(grandTotal: number) {
   return recordPaymentSchema.superRefine((payload, context) => {
     if (payload.amount !== grandTotal) {
       context.addIssue({
@@ -193,18 +191,11 @@ export function createRecordPaymentSchema(grandTotal: number, currency: InvoiceC
         message: 'Amount must equal the invoice grand total.',
       })
     }
-    if (payload.currency !== currency) {
-      context.addIssue({
-        code: 'custom',
-        path: ['currency'],
-        message: 'Payment currency must match the invoice currency.',
-      })
-    }
   })
 }
 
 export function validateRecordPayment(payload: RecordPaymentPayload, invoice: Invoice) {
-  return createRecordPaymentSchema(invoice.summary.grandTotal, invoice.currency).safeParse(payload)
+  return createRecordPaymentSchema(invoice.summary.grandTotal).safeParse(payload)
 }
 
 export function validateCancellation(cancellationReason: string) {

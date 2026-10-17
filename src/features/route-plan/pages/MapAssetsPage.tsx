@@ -778,7 +778,7 @@ export default function MapAssetsPage() {
               }}
               mode={mapMode}
               onModeChange={(mode) => {
-                setMapMode(mode === "buildPlan" ? "view" : mode);
+                setMapMode(mode === "buildPlan" || mode === "pickPoint" ? "view" : mode);
                 searchAbort.current?.abort();
                 setSearchLoading(false);
                 setSearchOptions(mode === "addLocation" ? [] : locations);

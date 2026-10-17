@@ -16,7 +16,11 @@ export type MapLocation = {
 };
 
 export type LocationAction = "EDIT" | "DELETE";
-export type MapMode = "view" | "addLocation" | "addRoute" | "buildPlan";
+/**
+ * `pickPoint`: a user picks a start/end point by click or search (Booking form). It never reads or writes saved
+ * locations; the start/end markers come from `buildStartLocation` / `buildEndLocation`.
+ */
+export type MapMode = "view" | "addLocation" | "addRoute" | "buildPlan" | "pickPoint";
 /** @deprecated Use MapMode. Kept as a source-compatible alias for consumers. */
 export type SelectionMode = MapMode;
 

@@ -9,7 +9,6 @@ export type { InvoiceAction, InvoiceCurrency, InvoiceHistoryType, InvoiceItemTyp
 // ---- from shared/types.ts ----
 export type RecordPaymentPayload = {
   amount: number
-  currency: InvoiceCurrency
   paymentMethod: PaymentMethod
   paidAt?: string
   transactionReference?: string
@@ -326,7 +325,6 @@ export interface InvoiceItemPayload {
 
 export interface CreateInvoicePayload {
   type: InvoiceType
-  currency: InvoiceCurrency
   dueDate: string
   note?: string
   items: InvoiceItemPayload[]
@@ -334,7 +332,6 @@ export interface CreateInvoicePayload {
 
 export interface UpdateInvoicePayload {
   lastUpdatedAt: string
-  currency: InvoiceCurrency
   dueDate: string
   note?: string
   items: InvoiceItemPayload[]
