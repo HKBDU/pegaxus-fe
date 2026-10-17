@@ -1,5 +1,12 @@
 import { AlertCircle, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import type { MapLocation } from "@/shared/components/map";
 
 type RoutePlanEndpointsStepProps = {
@@ -33,23 +40,24 @@ export function RoutePlanEndpointsStep({
         <div className="rounded-[2px] border bg-card p-4">
           <label className="grid gap-2 text-sm font-semibold">
             Current location / return origin
-            <select
-              className="h-10 rounded-[2px] border bg-white px-3 font-normal"
+            <Select
               value={String(from.id) === "unknown-location" ? "" : String(from.id)}
-              onChange={(event) => {
-                const location = locations.find(
-                  (item) => String(item.id) === event.target.value,
-                );
+              onValueChange={(val) => {
+                const location = locations.find((item) => String(item.id) === val);
                 if (location) onFromChange?.(location);
               }}
             >
-              <option value="">Select current location</option>
-              {locations.map((location) => (
-                <option key={location.id} value={String(location.id)}>
-                  {location.name} — {location.city}, {location.country}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="h-10 w-full rounded-[2px] border bg-white px-3 font-normal *:data-[slot=select-value]:truncate">
+                <SelectValue placeholder="Select current location" />
+              </SelectTrigger>
+              <SelectContent className="max-w-[420px] max-h-60 text-sm">
+                {locations.map((location) => (
+                  <SelectItem key={location.id} value={String(location.id)}>
+                    {location.name} — {location.city}, {location.country}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <span className="font-normal text-muted-foreground">
               RC selects the location where the transport currently is.
             </span>
@@ -130,21 +138,24 @@ function EndpointCard({
             )}
             <label className="mt-2 block">
               <span className="font-semibold text-slate-800">Select matching system location:</span>
-              <select
-                className="mt-1 h-9 w-full rounded-[2px] border border-slate-200 bg-white px-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
+              <Select
                 value={location?.id ? String(location.id) : ""}
-                onChange={(e) => {
-                  const found = locations.find((item) => String(item.id) === e.target.value);
+                onValueChange={(val) => {
+                  const found = locations.find((item) => String(item.id) === val);
                   if (found) onSelect?.(found);
                 }}
               >
-                <option value="">Select location from system</option>
-                {locations.map((item) => (
-                  <option key={item.id} value={String(item.id)}>
-                    {item.name} — {item.city}, {item.country}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="mt-1 h-9 w-full rounded-[2px] border border-slate-200 bg-white px-2 text-xs font-normal text-slate-900 *:data-[slot=select-value]:truncate">
+                  <SelectValue placeholder="Select location from system" />
+                </SelectTrigger>
+                <SelectContent className="max-w-[420px] max-h-60 text-xs">
+                  {locations.map((item) => (
+                    <SelectItem key={item.id} value={String(item.id)} className="text-xs">
+                      {item.name} — {item.city}, {item.country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
           </div>
         )}

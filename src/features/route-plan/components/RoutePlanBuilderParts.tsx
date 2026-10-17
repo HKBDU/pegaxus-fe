@@ -12,6 +12,13 @@ import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -396,22 +403,24 @@ export function SegmentCard({
               <div className="mt-2 flex items-center gap-2 border-t border-slate-100 pt-2 text-xs min-w-0 w-full">
                 <Truck className="size-3.5 text-muted-foreground shrink-0" />
                 <span className="text-muted-foreground shrink-0">Fleet Vehicle:</span>
-                <select
-                  value={segment.vehicleIds?.[0] ?? ""}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    onVehicleChange?.(id ? [id] : []);
-                  }}
-                  className="h-7 min-w-0 flex-1 rounded-[2px] border border-slate-200 bg-white px-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
-                  aria-label="Assign vehicle"
-                >
-                  <option value="">-- No vehicle assigned --</option>
-                  {availableVehicles.map((v) => (
-                    <option key={v.vehicleId} value={v.vehicleId}>
-                      {v.vehicleName} ({v.capacityHorses} horses){v.licensePlate ? ` • ${v.licensePlate}` : ""}
-                    </option>
-                  ))}
-                </select>
+                <div className="min-w-0 flex-1">
+                  <Select
+                    value={segment.vehicleIds?.[0] ?? "NONE"}
+                    onValueChange={(val) => onVehicleChange?.(val === "NONE" ? [] : [val])}
+                  >
+                    <SelectTrigger className="h-7 w-full min-w-0 rounded-[2px] border border-slate-200 bg-white px-2 text-xs font-normal text-slate-900 *:data-[slot=select-value]:truncate" aria-label="Assign vehicle">
+                      <SelectValue placeholder="-- No vehicle assigned --" />
+                    </SelectTrigger>
+                    <SelectContent className="max-w-[360px] max-h-60 text-xs">
+                      <SelectItem value="NONE" className="text-xs">-- No vehicle assigned --</SelectItem>
+                      {availableVehicles.map((v) => (
+                        <SelectItem key={v.vehicleId} value={v.vehicleId} className="text-xs">
+                          {v.vehicleName} ({v.capacityHorses} horses){v.licensePlate ? ` • ${v.licensePlate}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             )}
           </div>
