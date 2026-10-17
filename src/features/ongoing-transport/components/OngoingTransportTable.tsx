@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, CircleDot, Route, TriangleAlert } from "lucide-react";
 import {
   createTable,
@@ -7,44 +7,43 @@ import {
   type ColumnDef,
   type SortingState,
 } from "@tanstack/react-table";
-import { TablePagination } from "@/shared/components/common/TablePagination";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { DataTable } from "@/shared/components/ui/data-table";
-import { DEFAULT_STATUS_FILTER } from "../constants";
-import { formatTransportDate } from "../format";
 import {
-  ongoingTransportDetailAvailable,
-  ongoingTransportDetailPath,
-} from "../navigation";
+  DEFAULT_STATUS_FILTER,
+  routeLabels,
+  segmentLabels,
+} from "../constants";
+import { formatTransportDate } from "../format";
+import { ongoingTransportDetailPath } from "../navigation";
 import { ongoingTransportSortSchema } from "../schemas";
 import type {
   OngoingTransport,
   OngoingTransportFilterPatch,
   OngoingTransportPage,
   OngoingTransportParams,
+  OngoingListReturnState,
 } from "../types";
 import { OngoingTransportStatusBadge } from "./OngoingTransportStatusBadge";
+import { OngoingTransportPagination } from "./OngoingTransportPagination";
 
-const segmentLabels = {
-  PLANNED: "Planned",
-  IN_TRANSIT: "In transit",
-  COMPLETED: "Completed",
-} as const;
-const routeLabels = {
-  PRIMARY: "Primary",
-  BACKUP: "Backup",
-  RETURN: "Return",
-} as const;
-const columns: ColumnDef<OngoingTransport>[] = [
+const createColumns = (
+  listState: OngoingListReturnState,
+): ColumnDef<OngoingTransport>[] => [
   {
     accessorKey: "transportCode",
     header: "Transport",
     enableSorting: true,
     cell: ({ row }) => (
-      <span className="font-semibold tracking-wide text-slate-900">
+      <Link
+        data-progress-link
+        to={ongoingTransportDetailPath(row.original.transportId)}
+        state={{ ongoingTransportList: listState }}
+        className="rounded-xs font-semibold tracking-wide text-slate-900 underline decoration-primary/40 underline-offset-2 hover:decoration-primary focus-visible:outline-2 focus-visible:outline-primary"
+      >
         {row.original.transportCode}
-      </span>
+      </Link>
     ),
   },
   {
@@ -99,7 +98,7 @@ const columns: ColumnDef<OngoingTransport>[] = [
         className="rounded-xs border-slate-200 bg-slate-50 px-1.5 text-[10px] text-slate-600 motion-reduce:transition-none"
       >
         <Route aria-hidden="true" />
-        {routeLabels[row.original.routeType]}
+        {row.original.routeType ? routeLabels[row.original.routeType] : "—"}
       </Badge>
     ),
   },
@@ -148,35 +147,17 @@ const columns: ColumnDef<OngoingTransport>[] = [
   {
     id: "actions",
     header: "Actions",
-    cell: ({ row }) =>
-      ongoingTransportDetailAvailable ? (
-        <Button
-          asChild
-          variant="ghost"
-          size="icon"
-          className="size-7 rounded-xs"
+    cell: ({ row }) => (
+      <Button asChild variant="ghost" size="icon" className="size-7 rounded-xs">
+        <Link
+          to={ongoingTransportDetailPath(row.original.transportId)}
+          state={{ ongoingTransportList: listState }}
+          aria-label={`View progress for ${row.original.transportCode}`}
         >
-          <Link
-            to={ongoingTransportDetailPath(row.original.transportId)}
-            aria-label={`View progress for ${row.original.transportCode}`}
-          >
-            <ArrowRight className="size-3.5" />
-          </Link>
-        </Button>
-      ) : (
-        <span title="Transport Overview is not available in Phase 1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            disabled
-            className="size-7 rounded-xs"
-            aria-label={`View progress for ${row.original.transportCode}: available in the next phase`}
-          >
-            <ArrowRight className="size-3.5" />
-          </Button>
-        </span>
-      ),
+          <ArrowRight className="size-3.5" />
+        </Link>
+      </Button>
+    ),
   },
 ];
 
@@ -188,6 +169,7 @@ export function OngoingTransportTable({
   filters,
   onChange,
   onPageChange,
+  listState,
 }: {
   page?: OngoingTransportPage;
   params: OngoingTransportParams;
@@ -196,12 +178,14 @@ export function OngoingTransportTable({
   filters: ReactNode;
   onChange: (patch: OngoingTransportFilterPatch) => void;
   onPageChange: (pageIndex: number) => void;
+  listState: OngoingListReturnState;
 }) {
+  const navigate = useNavigate();
   const [sortId, direction] = params.sortBy.split(":");
   const sorting: SortingState = [{ id: sortId, desc: direction === "desc" }];
   const table = createTable<OngoingTransport>({
     data: page?.items ?? [],
-    columns,
+    columns: createColumns(listState),
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.transportId,
     defaultColumn: { enableSorting: false, enableHiding: false },
@@ -258,11 +242,36 @@ export function OngoingTransportTable({
       table={table}
       isLoading={initialLoading}
       aria-busy={busy}
+      onClick={(event) => {
+        if (
+          event.defaultPrevented ||
+          event.button !== 0 ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.shiftKey ||
+          event.altKey
+        )
+          return;
+        const target = event.target;
+        // Shared DataTable has no row-click API. Leave controls/links native to avoid duplicate navigation.
+        if (
+          !(target instanceof Element) ||
+          target.closest("a, button, input, select, textarea, [role=button]")
+        )
+          return;
+        if (window.getSelection()?.toString()) return;
+        const href = target
+          .closest("tbody tr")
+          ?.querySelector<HTMLAnchorElement>("a[data-progress-link]")
+          ?.getAttribute("href");
+        if (href)
+          void navigate(href, { state: { ongoingTransportList: listState } });
+      }}
       containerClassName="booking-panel overflow-x-auto"
       headerClassName="bg-[#e9e6de]"
       tableClassName="min-w-[1100px]"
       headerCellClassName="h-10 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-slate-600"
-      rowClassName="booking-table-row border-slate-200 hover:bg-primary/5 motion-reduce:transition-none"
+      rowClassName="booking-table-row cursor-pointer border-slate-200 hover:bg-primary/5 motion-reduce:transition-none"
       cellClassName="h-12 px-2.5 py-2 text-xs"
       emptyMessage={
         <div role="status" className="px-4 py-10">
@@ -298,30 +307,24 @@ export function OngoingTransportTable({
             Back to first page
           </Button>
         ) : (
-          <fieldset
-            disabled={busy}
-            aria-label="Transport pagination"
-            className="m-0 min-w-0 border-0 p-0"
-          >
-            <TablePagination
-              meta={{
-                currentPage: pageIndex + 1,
-                itemsPerPage: page?.pageSize ?? params.pageSize,
-                totalItems: page?.totalItems ?? 0,
-                totalPages,
-                hasPreviousPage: pageIndex > 0,
-                hasNextPage: pageIndex + 1 < totalPages,
-              }}
-              onPageChange={(pageNumber) => {
-                if (!busy && pageNumber > 0 && pageNumber <= totalPages)
-                  onPageChange(pageNumber - 1);
-              }}
-              onPageSizeChange={(pageSize) => {
-                if (!busy) onChange({ pageSize });
-              }}
-              pageSizeAriaLabel="Ongoing transports per page"
-            />
-          </fieldset>
+          <OngoingTransportPagination
+            busy={busy}
+            meta={{
+              currentPage: pageIndex + 1,
+              itemsPerPage: page?.pageSize ?? params.pageSize,
+              totalItems: page?.totalItems ?? 0,
+              totalPages,
+              hasPreviousPage: pageIndex > 0,
+              hasNextPage: pageIndex + 1 < totalPages,
+            }}
+            onPageChange={(pageNumber) => {
+              if (!busy && pageNumber > 0 && pageNumber <= totalPages)
+                onPageChange(pageNumber - 1);
+            }}
+            onPageSizeChange={(pageSize) => {
+              if (!busy) onChange({ pageSize });
+            }}
+          />
         )
       }
     >

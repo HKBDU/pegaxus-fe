@@ -8,6 +8,33 @@ export const SEGMENT_STATUSES = ["PLANNED", "IN_TRANSIT", "COMPLETED"] as const;
 export const DEFAULT_STATUS_FILTER = "READY,IN_TRANSIT";
 export const DEFAULT_SORT = "departureAt:asc";
 export const DEFAULT_PAGE_SIZE = 20;
+export const ONGOING_PAGE_SIZE_OPTIONS = [1, 5, 10, 20, 50, 100];
+export const INCIDENT_CATEGORIES = [
+  "HORSE_HEALTH",
+  "ROUTE_CHANGE",
+  "VEHICLE",
+  "BOTH",
+] as const;
+export const DOSSIER_STATUSES = [
+  "DRAFT",
+  "IN_PREPARATION",
+  "READY_FOR_SUBMISSION",
+  "SUBMITTED",
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "CLOSED",
+] as const;
+export const segmentLabels = {
+  PLANNED: "Planned",
+  IN_TRANSIT: "In transit",
+  COMPLETED: "Completed",
+} as const;
+export const routeLabels = {
+  PRIMARY: "Primary",
+  BACKUP: "Backup",
+  RETURN: "Return",
+} as const;
 
 export const statusOptions = [
   { value: "READY", label: "Ready" },

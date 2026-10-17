@@ -63,6 +63,7 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
 }
 
 const adminHeaderRoutes = [
+  { path: `${ROLE_ROUTES.ongoingTransports}/:transportId`, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "TRANSPORT OVERVIEW" },
   { path: ROLE_ROUTES.ongoingTransports, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "" },
   { path: `${ROLE_ROUTES.vehicles}/new`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "ADD NEW VEHICLE" },
   { path: `${ROLE_ROUTES.vehicles}/:vehicleId/edit`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "EDIT VEHICLE" },

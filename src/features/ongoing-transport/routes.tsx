@@ -5,9 +5,14 @@ import { ONGOING_TRANSPORT_ACCESS, ROLE_ROUTES } from "@/app/route-config";
 import { LoadingState } from "@/shared/components/common";
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
+import { MainLayout } from "@/shared/layouts/MainLayout";
+import { CrewShell } from "./components/CrewShell";
 
 const OngoingTransportListPage = lazy(
   () => import("./pages/OngoingTransportListPage"),
+);
+const TransportOverviewPage = lazy(
+  () => import("./pages/TransportOverviewPage"),
 );
 
 export const ongoingTransportRoutes: RouteObject[] = [
@@ -24,6 +29,50 @@ export const ongoingTransportRoutes: RouteObject[] = [
         element: (
           <Suspense fallback={<LoadingState />}>
             <OngoingTransportListPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: ":transportId",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TransportOverviewPage audience="admin" />
+          </Suspense>
+        ),
+      },
+    ],
+  },
+  {
+    path: "/crew/transports/:transportId",
+    element: (
+      <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}>
+        <CrewShell />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TransportOverviewPage audience="crew" />
+          </Suspense>
+        ),
+      },
+    ],
+  },
+  {
+    path: "/bookings/:bookingId/transports/:transportId",
+    element: (
+      <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+        <MainLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TransportOverviewPage audience="customer" />
           </Suspense>
         ),
       },

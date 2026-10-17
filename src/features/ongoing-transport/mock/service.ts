@@ -2,7 +2,7 @@ import { AxiosError } from "axios";
 import type { MockScenario, OngoingTransportParams } from "../types";
 import { ongoingTransportFixtures } from "./fixtures";
 
-function delay(signal?: AbortSignal) {
+export function waitForMockRequest(signal?: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
     signal?.throwIfAborted();
     const abort = () => {
@@ -22,7 +22,7 @@ export async function getMockOngoingTransports(
   scenario: MockScenario,
   signal?: AbortSignal,
 ) {
-  await delay(signal);
+  await waitForMockRequest(signal);
   signal?.throwIfAborted();
   if (scenario === "network-error")
     throw new AxiosError(
@@ -49,13 +49,19 @@ export async function getMockOngoingTransports(
         )),
   );
   items.sort((a, b) => {
+    if (params.sortBy !== "transportCode:asc") {
+      if (a.departureAt === null && b.departureAt !== null) return 1;
+      if (b.departureAt === null && a.departureAt !== null) return -1;
+    }
     const comparison =
       params.sortBy === "transportCode:asc"
         ? a.transportCode.localeCompare(b.transportCode)
-        : Date.parse(a.departureAt) - Date.parse(b.departureAt);
+        : a.departureAt !== null && b.departureAt !== null
+          ? Date.parse(a.departureAt) - Date.parse(b.departureAt)
+          : 0;
     return (
       (params.sortBy === "departureAt:desc" ? -comparison : comparison) ||
-      a.transportCode.localeCompare(b.transportCode)
+      a.transportId.localeCompare(b.transportId)
     );
   });
   return {

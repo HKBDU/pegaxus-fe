@@ -5,9 +5,15 @@ import {
   ongoingTransportEnvelopeSchema,
   ongoingTransportPageSchema,
   ongoingTransportQuerySchema,
+  transportOverviewSchema,
 } from "./schemas";
 import { isOngoingTransportMockMode } from "./source";
-import type { MockScenario, OngoingTransportParams } from "./types";
+import type {
+  MockScenario,
+  OngoingTransportParams,
+  OverviewScenario,
+  TransportAudience,
+} from "./types";
 
 export class OngoingTransportApiError extends Error {
   readonly status: number;
@@ -29,6 +35,32 @@ export const buildOngoingTransportQuery = (params: OngoingTransportParams) =>
   ongoingTransportQuerySchema.parse(params);
 
 export const ongoingTransportService = {
+  async overview(
+    transportId: string,
+    audience: TransportAudience,
+    scenario: OverviewScenario = "data",
+    signal?: AbortSignal,
+  ) {
+    signal?.throwIfAborted();
+    const response =
+      !import.meta.env.PROD && isOngoingTransportMockMode()
+        ? await (
+            await import("./mock/overview")
+          ).getMockTransportOverview(transportId, audience, scenario, signal)
+        : await apiClient.get<unknown, unknown>(
+            `/transports/${encodeURIComponent(transportId)}/overview`,
+            { signal },
+          );
+    signal?.throwIfAborted();
+    const envelope = ongoingTransportEnvelopeSchema.parse(response);
+    if (!envelope.isSuccess)
+      throw new OngoingTransportApiError(
+        envelope.code,
+        envelope.errorCode,
+        envelope.message,
+      );
+    return transportOverviewSchema.parse(envelope.value);
+  },
   async list(
     params: OngoingTransportParams,
     signal?: AbortSignal,
@@ -57,7 +89,12 @@ export const ongoingTransportService = {
   },
 };
 
-export function getOngoingTransportError(error: unknown) {
+export function getOngoingTransportError(
+  error: unknown,
+  context: "list" | "overview" = "list",
+) {
+  const subject =
+    context === "overview" ? "transport overview" : "ongoing transports";
   if (error instanceof z.ZodError)
     return {
       message:
@@ -79,9 +116,23 @@ export function getOngoingTransportError(error: unknown) {
       : isAxiosError(error)
         ? error.response?.status
         : undefined;
+  if (code === "TRANSPORT_NOT_FOUND")
+    return {
+      message: "Transport not found or unavailable to your account.",
+      retryable: false,
+    };
+  if (code === "INVALID_TRANSPORT_STATUS")
+    return {
+      message:
+        "This journey is not available for tracking yet, or has been cancelled.",
+      retryable: false,
+    };
   if (code === "FORBIDDEN" || status === 403)
     return {
-      message: "You do not have permission to view ongoing transports.",
+      message:
+        context === "overview"
+          ? "You do not have permission to view this transport. Crew must be assigned to the transport."
+          : "You do not have permission to view ongoing transports.",
       retryable: false,
     };
   if (code === "UNAUTHORIZED" || status === 401)
@@ -92,7 +143,7 @@ export function getOngoingTransportError(error: unknown) {
   if (status === 404)
     return {
       message:
-        "The ongoing transports API is not available yet. Please contact your administrator.",
+        "The API resource was not found. Check the backend URL and deployed API version.",
       retryable: false,
     };
   if (code === "VALIDATION_ERROR" || status === 400)
@@ -110,8 +161,14 @@ export function getOngoingTransportError(error: unknown) {
         "Unable to reach the server. Check your connection and try again.",
       retryable: true,
     };
+  if (status === 503)
+    return {
+      message:
+        "The transport service is temporarily unavailable. Please try again.",
+      retryable: true,
+    };
   return {
-    message: "Unable to load ongoing transports. Please try again.",
+    message: `Unable to load ${subject}. Please try again.`,
     retryable: true,
   };
 }

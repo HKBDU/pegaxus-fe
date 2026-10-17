@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ChevronRight, LoaderCircle, Truck } from "lucide-react";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
@@ -18,12 +18,20 @@ import type {
   OngoingTransportParams,
 } from "../types";
 import "../ui.css";
+import { readOngoingListReturn } from "../navigation";
+import { ongoingListReturnSchema } from "../schemas";
 
 export default function OngoingTransportListPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [params, setParams] = useState<OngoingTransportParams>(
-    initialOngoingTransportParams,
+    () =>
+      readOngoingListReturn(location.state)?.params ??
+      initialOngoingTransportParams,
   );
-  const [scenario, setScenario] = useState<MockScenario>("data");
+  const [scenario, setScenario] = useState<MockScenario>(
+    () => readOngoingListReturn(location.state)?.scenario ?? "data",
+  );
   const search = useDebounce(params.search ?? "", 300);
   const searchPending = search !== (params.search ?? "");
   const query = useOngoingTransports(
@@ -39,6 +47,34 @@ export default function OngoingTransportListPage() {
   const changeFilters = useCallback((patch: OngoingTransportFilterPatch) => {
     setParams((current) => ({ ...current, ...patch, pageIndex: 0 }));
   }, []);
+
+  // Keep the current history entry so both browser Back and the Overview backlink restore the list.
+  useEffect(() => {
+    const snapshot = ongoingListReturnSchema.parse({ params, scenario });
+    if (
+      JSON.stringify(readOngoingListReturn(location.state)) ===
+      JSON.stringify(snapshot)
+    )
+      return;
+    const previousState =
+      location.state && typeof location.state === "object"
+        ? location.state
+        : {};
+    void navigate(
+      { pathname: location.pathname, search: location.search },
+      {
+        replace: true,
+        state: { ...previousState, ongoingTransportList: snapshot },
+      },
+    );
+  }, [
+    params,
+    scenario,
+    location.pathname,
+    location.search,
+    location.state,
+    navigate,
+  ]);
 
   const filters = (
     <OngoingTransportFilters params={params} onChange={changeFilters} />
@@ -125,6 +161,7 @@ export default function OngoingTransportListPage() {
           </>
         ) : (
           <OngoingTransportTable
+            listState={{ params, scenario }}
             page={query.data}
             params={params}
             initialLoading={!query.data && query.isPending}
@@ -136,10 +173,6 @@ export default function OngoingTransportListPage() {
             }}
           />
         )}
-        <p className="m-0 px-1 text-[11px] text-slate-500">
-          Transport Overview will be available in the next phase. View progress
-          actions are currently disabled.
-        </p>
       </div>
     </div>
   );

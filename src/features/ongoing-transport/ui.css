@@ -1,4 +1,60 @@
-/* Keep list motion local; shared DataTable skeletons also respect reduced motion here. */
+.transport-overview .overview-panel {
+  min-width: 0;
+  border: 1px solid rgb(203 196 184 / 0.65);
+  border-radius: 2px;
+  background: white;
+  box-shadow:
+    0 1px 2px rgb(23 25 28 / 0.035),
+    0 5px 18px rgb(63 49 27 / 0.025);
+}
+
+.transport-overview .overview-cell {
+  min-width: 0;
+  padding: 1rem;
+}
+.transport-overview .overview-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: #1e293b;
+}
+.transport-overview .overview-heading > svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: hsl(var(--primary));
+}
+.transport-overview table th {
+  height: 2.25rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.6875rem;
+  color: #64748b;
+}
+.transport-overview table td {
+  padding: 0.75rem 1rem;
+}
+.transport-overview[data-audience="crew"] :is(a, button) {
+  min-height: 60px;
+  min-width: 60px;
+}
+.transport-overview[data-audience="crew"]
+  :is(h2, p, dt, dd, span, a, button, th, td) {
+  font-size: max(1rem, 1em);
+}
+.transport-overview[data-audience="crew"] *,
+.transport-overview[data-audience="crew"] *::before,
+.transport-overview[data-audience="crew"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Shared skeletons and local motion respect reduced motion on every audience. */
 @media (prefers-reduced-motion: reduce) {
   .ongoing-transport-ui *,
   .ongoing-transport-ui *::before,

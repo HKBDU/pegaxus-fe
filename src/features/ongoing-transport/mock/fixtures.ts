@@ -28,9 +28,12 @@ export const ongoingTransportFixtures: OngoingTransport[] = Array.from(
       bookingCode: `REQ-20261017-${String(number).padStart(4, "0")}`,
       customerName: customers[index % customers.length],
       status,
-      routeType: (["PRIMARY", "BACKUP", "RETURN"] as const)[
-        Math.floor(index / 3) % 3
-      ],
+      routeType:
+        number === 3
+          ? null
+          : (["PRIMARY", "BACKUP", "RETURN"] as const)[
+              Math.floor(index / 3) % 3
+            ],
       currentSegment:
         number === 3
           ? null
@@ -44,9 +47,11 @@ export const ongoingTransportFixtures: OngoingTransport[] = Array.from(
       horseCount: (index % 6) + 1,
       activeIncidentCount:
         status !== "COMPLETED" && index % 4 === 1 ? (index % 2) + 1 : 0,
-      departureAt: new Date(
-        Date.UTC(2026, 9, 17, 5 + Math.floor(index / 6), (index % 6) * 10),
-      ).toISOString(),
+      departureAt: [1, 3, 4].includes(number)
+        ? null
+        : new Date(
+            Date.UTC(2026, 9, 17, 5 + Math.floor(index / 6), (index % 6) * 10),
+          ).toISOString(),
     };
   },
 );
