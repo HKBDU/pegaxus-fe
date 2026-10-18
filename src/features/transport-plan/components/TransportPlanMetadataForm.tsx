@@ -52,6 +52,7 @@ import { emptyPlanForm } from "../constants";
 import type { TransportPlanDetail, TransportPlanFormValues } from "../types";
 import { Section } from "./ApprovedBookingDetails";
 import { Flow3MockIndicator } from "./Flow3MockIndicator";
+import { TransportPlanLocationSelect } from "./TransportPlanLocationSelect";
 
 const controlClass =
   "h-9 rounded-[2px] border-slate-300 bg-white text-sm shadow-none focus-visible:border-primary focus-visible:ring-primary/20 motion-reduce:transition-none";
@@ -220,6 +221,56 @@ export function TransportPlanMetadataForm({
             disabled={isPending || !canWrite}
             className="grid items-start gap-3 sm:grid-cols-2"
           >
+            {(["origin", "destination"] as const).map((side) => (
+              <FormField
+                key={side}
+                control={form.control}
+                name={`${side}LocationId`}
+                render={({ field, fieldState }) => (
+                  <FormItem className="min-w-0 content-start gap-1.5">
+                    <FormLabel
+                      htmlFor={`${scheduleId}-${side}-location`}
+                      className="text-xs"
+                    >
+                      {side === "origin"
+                        ? "Origin Location"
+                        : "Destination Location"}{" "}
+                      (optional)
+                    </FormLabel>
+                    <TransportPlanLocationSelect
+                      value={field.value}
+                      current={baseline?.[`${side}Location`]}
+                      disabled={isPending || blocked}
+                      editing={Boolean(baseline)}
+                      label={`${side === "origin" ? "Origin" : "Destination"} Location`}
+                      id={`${scheduleId}-${side}-location`}
+                      invalid={fieldState.invalid}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                    <p
+                      id={`${scheduleId}-${side}-location-hint`}
+                      className="text-xs text-slate-500"
+                    >
+                      {baseline
+                        ? "An empty selection retains the saved location; it does not remove it."
+                        : "Leave empty for the backend to resolve the booking coordinates. Older bookings may have no location."}
+                    </p>
+                    <div className="min-h-5">
+                      {fieldState.error && (
+                        <p
+                          id={`${scheduleId}-${side}-location-error`}
+                          role="alert"
+                          className="text-xs text-destructive"
+                        >
+                          {fieldState.error.message}
+                        </p>
+                      )}
+                    </div>
+                  </FormItem>
+                )}
+              />
+            ))}
             {[
               { title: "Schedule", items: fields.slice(0, 2) },
               { title: "Operational estimates", items: fields.slice(2) },

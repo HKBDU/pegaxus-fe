@@ -71,6 +71,14 @@ const backupLocations = [
   },
   locations[3],
 ];
+export const flow3MockLocations = [
+  ...new Map(
+    [...locations, ...backupLocations].map((location) => [
+      location.locationId,
+      location,
+    ]),
+  ).values(),
+];
 function routeFixture(
   index: number,
   plan: TransportPlanDetail,
@@ -250,6 +258,7 @@ export function createFlow3Fixtures() {
       },
       transportPlan: null,
       routePlans: [],
+      complianceDossiers: [],
       complianceDossier:
         index % 2
           ? null
@@ -258,6 +267,14 @@ export function createFlow3Fixtures() {
   });
   // Dates span a month boundary without invalid date strings.
   bookings.forEach((booking, offset) => {
+    if (booking.complianceDossier) {
+      booking.complianceDossier = {
+        ...booking.complianceDossier,
+        dossierType: "MAIN",
+        dossierCode: `CD-DEMO-${offset + 1}`,
+      };
+      booking.complianceDossiers = [booking.complianceDossier];
+    }
     booking.requestedDepartureDate = new Date(Date.UTC(2026, 9, 27 + offset))
       .toISOString()
       .slice(0, 10);
@@ -271,6 +288,8 @@ export function createFlow3Fixtures() {
             status: statuses[offset]!,
             booking: { ...booking, customerName: booking.customer.fullName },
             transport: booking.transport,
+            complianceDossier: booking.complianceDossier,
+            complianceDossiers: booking.complianceDossiers,
             plannedStartAt: `${booking.requestedDepartureDate}T06:00:00Z`,
             plannedEndAt: "2026-11-05T20:00:00Z",
             estimatedDistanceKm: offset === 1 ? null : 612.4,
@@ -380,9 +399,12 @@ export function createFlow3Fixtures() {
       },
       complianceDossier: {
         complianceDossierId: mockId(7, index),
+        dossierType: "MAIN",
+        dossierCode: `CD-DEMO-${index}`,
         status: "APPROVED",
       },
     });
+    booking.complianceDossiers = [booking.complianceDossier!];
     const plan: TransportPlanDetail = {
       ...structuredClone(
         plans.find((item) => item.transportPlanId === mockId(3, 6))!,
@@ -392,6 +414,8 @@ export function createFlow3Fixtures() {
       status: "APPROVED",
       booking: { ...booking, customerName: booking.customer.fullName },
       transport: booking.transport!,
+      complianceDossier: booking.complianceDossier,
+      complianceDossiers: booking.complianceDossiers,
       planningNote: "Development-only UC48 in-transit scenario.",
     };
     bookings.push(booking);

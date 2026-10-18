@@ -1,4 +1,8 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { useAuthStore } from "@/features/auth/store";
+import { canAccess } from "@/features/auth/access-control";
+import { dossierDetail } from "@/app/route-config";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatBookingDate } from "@/features/booking/utils";
@@ -14,6 +18,72 @@ import {
 import { EmptyState } from "@/shared/components/common";
 import type { ApprovedBookingDetail } from "../types";
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge";
+
+export function DossierSummaries({
+  dossiers,
+}: {
+  dossiers: ApprovedBookingDetail["complianceDossiers"];
+}) {
+  const principal = useAuthStore((state) => state.principal);
+  const role = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
+    ? "LOGISTICS_MANAGER"
+    : canAccess(principal, { anyRole: ["TRANSPORT_SPECIALIST"] })
+      ? "TRANSPORT_SPECIALIST"
+      : null;
+  return dossiers.length ? (
+    <div className="flex flex-wrap gap-2">
+      {dossiers.map((dossier) => (
+        <div
+          key={dossier.complianceDossierId}
+          className="flex min-w-0 flex-wrap items-center gap-2 rounded-[2px] border border-slate-200 px-2 py-1.5 text-xs"
+        >
+          <span>{dossier.dossierType ?? "Type unavailable"}</span>
+          {role ? (
+            <Link
+              to={dossierDetail(dossier.complianceDossierId, role)}
+              className="break-all font-medium text-primary hover:underline"
+            >
+              {dossier.dossierCode || "View dossier"}
+            </Link>
+          ) : dossier.dossierCode ? (
+            <span className="break-all">{dossier.dossierCode}</span>
+          ) : null}
+          <ApprovedBookingBadge value={dossier.status} />
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="text-xs text-slate-500">
+      No compliance dossier has been prepared yet.
+    </p>
+  );
+}
+
+export function LocationReference({
+  location,
+}: {
+  location: NonNullable<
+    ApprovedBookingDetail["transportPlan"]
+  >["originLocation"];
+}) {
+  return location ? (
+    <span className="space-y-1">
+      <span className="block">{location.locationName}</span>
+      <span className="block text-xs text-slate-500">
+        {[location.locationType, location.city, location.country]
+          .filter(Boolean)
+          .join(" · ")}
+      </span>
+      {location.latitude != null && location.longitude != null && (
+        <span className="block text-xs text-slate-500">
+          {location.latitude}, {location.longitude}
+        </span>
+      )}
+    </span>
+  ) : (
+    <span>Not assigned</span>
+  );
+}
 
 export function Section({
   title,
@@ -123,6 +193,17 @@ export function ApprovedBookingDetails({
           <Field label="Destination">
             {booking.destinationAddress} ({booking.destinationCountry})
           </Field>
+          <Field label="Booking origin coordinates">
+            {booking.originLatitude != null && booking.originLongitude != null
+              ? `${booking.originLatitude}, ${booking.originLongitude}`
+              : null}
+          </Field>
+          <Field label="Booking destination coordinates">
+            {booking.destinationLatitude != null &&
+            booking.destinationLongitude != null
+              ? `${booking.destinationLatitude}, ${booking.destinationLongitude}`
+              : null}
+          </Field>
           <Field label="Transport scope">
             <ApprovedBookingBadge
               value={booking.isInternational ? "INTERNATIONAL" : "DOMESTIC"}
@@ -221,15 +302,14 @@ export function ApprovedBookingDetails({
             )}
           </Field>
           {showDossier && (
-            <Field label="Compliance dossier">
-              {booking.complianceDossier ? (
-                <ApprovedBookingBadge
-                  value={booking.complianceDossier.status}
-                />
-              ) : (
-                "Not created"
-              )}
-            </Field>
+            <div className="sm:col-span-2">
+              <dt className="mb-1 text-[11px] font-medium text-slate-500">
+                Compliance dossiers
+              </dt>
+              <dd>
+                <DossierSummaries dossiers={booking.complianceDossiers} />
+              </dd>
+            </div>
           )}
         </dl>
       </Section>

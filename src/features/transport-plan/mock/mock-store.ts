@@ -19,7 +19,11 @@ import type {
   TransportPlansQueryParams,
   UpdateTransportPlanInput,
 } from "../types";
-import { createFlow3Fixtures, emergencyMockIds } from "./fixtures";
+import {
+  createFlow3Fixtures,
+  emergencyMockIds,
+  flow3MockLocations,
+} from "./fixtures";
 import type { AuthPrincipal } from "@/features/auth/types";
 import { canUseEmergencyAction } from "@/features/route-view/emergency-policy";
 import {
@@ -70,6 +74,9 @@ function sortRows<T>(
 
 export function createFlow3MockStore() {
   const { bookings, plans, routes } = createFlow3Fixtures();
+  const locations = structuredClone(flow3MockLocations);
+  const findLocation = (id?: string | null) =>
+    locations.find((location) => location.locationId === id) ?? null;
   let lastTimestamp = Date.now();
   const now = () =>
     new Date(
@@ -94,6 +101,8 @@ export function createFlow3MockStore() {
           estimatedDistanceKm: plan.estimatedDistanceKm,
           estimatedDurationMinutes: plan.estimatedDurationMinutes,
           planningNote: plan.planningNote,
+          originLocation: plan.originLocation,
+          destinationLocation: plan.destinationLocation,
         }
       : null;
   const routeSummary = (route: (typeof routes)[number]) => ({
@@ -121,6 +130,20 @@ export function createFlow3MockStore() {
     };
   };
   return {
+    getLocations(search: string, pageIndex: number) {
+      return success(
+        paginate(
+          locations.filter((location) =>
+            contains(
+              [location.locationName, location.city ?? "", location.country],
+              search,
+            ),
+          ),
+          pageIndex,
+          20,
+        ),
+      );
+    },
     getApprovedBookings(params: ApprovedBookingsQueryParams) {
       const query = approvedBookingsQuerySchema.parse(params);
       const items = bookings
@@ -244,6 +267,16 @@ export function createFlow3MockStore() {
           "VALIDATION_ERROR",
           "Check the transport plan metadata.",
         );
+      if (
+        [parsed.data.originLocationId, parsed.data.destinationLocationId].some(
+          (id) => id && !findLocation(id),
+        )
+      )
+        return failure(
+          404,
+          "LOCATION_NOT_FOUND",
+          "A selected location does not exist.",
+        );
       const timestamp = now();
       const plan: TransportPlanDetail = {
         transportPlanId: crypto.randomUUID(),
@@ -252,6 +285,10 @@ export function createFlow3MockStore() {
         booking: { ...booking, customerName: booking.customer.fullName },
         transport: booking.transport,
         ...parsed.data,
+        complianceDossier: booking.complianceDossier,
+        complianceDossiers: booking.complianceDossiers,
+        originLocation: findLocation(parsed.data.originLocationId),
+        destinationLocation: findLocation(parsed.data.destinationLocationId),
         planningNote: parsed.data.planningNote ?? null,
         estimatedDistanceKm: parsed.data.estimatedDistanceKm ?? null,
         estimatedDurationMinutes: parsed.data.estimatedDurationMinutes ?? null,
@@ -294,6 +331,16 @@ export function createFlow3MockStore() {
           "VALIDATION_ERROR",
           "Check the transport plan metadata.",
         );
+      if (
+        [parsed.data.originLocationId, parsed.data.destinationLocationId].some(
+          (id) => id && !findLocation(id),
+        )
+      )
+        return failure(
+          404,
+          "LOCATION_NOT_FOUND",
+          "A selected location does not exist.",
+        );
       const start = parsed.data.plannedStartAt ?? plan.plannedStartAt,
         end = parsed.data.plannedEndAt ?? plan.plannedEndAt;
       if (start && end && Date.parse(end) <= Date.parse(start))
@@ -303,6 +350,8 @@ export function createFlow3MockStore() {
           "Planned end must be after planned start.",
         );
       for (const key of [
+        "originLocationId",
+        "destinationLocationId",
         "plannedStartAt",
         "plannedEndAt",
         "planningNote",
@@ -312,6 +361,12 @@ export function createFlow3MockStore() {
         const value = parsed.data[key];
         if (value !== undefined) Object.assign(plan, { [key]: value });
       }
+      if (parsed.data.originLocationId)
+        plan.originLocation = findLocation(parsed.data.originLocationId);
+      if (parsed.data.destinationLocationId)
+        plan.destinationLocation = findLocation(
+          parsed.data.destinationLocationId,
+        );
       plan.updatedAt = now();
       return success(transportPlanDetailSchema.parse(plan));
     },

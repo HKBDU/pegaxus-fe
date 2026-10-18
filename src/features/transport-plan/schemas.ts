@@ -98,6 +98,21 @@ const transportSchema = z.object({
   transportId: entityIdSchema,
   transportCode: z.string(),
 });
+export const locationBriefSchema = z.object({
+  locationId: entityIdSchema,
+  locationName: z.string(),
+  locationType: z.string().nullable(),
+  city: z.string().nullable(),
+  country: z.string(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
+});
+const bookingCoordinates = {
+  originLatitude: z.number().min(-90).max(90).nullish(),
+  originLongitude: z.number().min(-180).max(180).nullish(),
+  destinationLatitude: z.number().min(-90).max(90).nullish(),
+  destinationLongitude: z.number().min(-180).max(180).nullish(),
+};
 export const planSummarySchema = z.object({
   transportPlanId: entityIdSchema,
   planCode: z.string(),
@@ -161,19 +176,48 @@ export const approvedBookingsPageSchema = z.object({
   totalPages: z.number().int().nonnegative(),
 });
 
-// AB2 lists every dossier of the transport (MAIN and EXTRA) in `complianceDossiers[]`; AB1 still sends the single MAIN one.
-// Screens read `complianceDossier`, so the MAIN dossier (the first one when no type is sent) is derived from the list.
 const dossierItemSchema = z.object({
   complianceDossierId: entityIdSchema,
   dossierCode: z.string().optional(),
   dossierType: z.enum(["MAIN", "EXTRA"]).nullish(),
   status: dossierStatusSchema,
 });
+const dossierFields = {
+  complianceDossier: dossierItemSchema.nullish(),
+  complianceDossiers: z.array(dossierItemSchema).optional(),
+};
+function normalizeDossiers<T extends z.infer<typeof dossierItemSchema>>({
+  complianceDossier,
+  complianceDossiers,
+}: {
+  complianceDossier?: T | null;
+  complianceDossiers?: T[];
+}) {
+  const items = [
+    ...(complianceDossiers ?? (complianceDossier ? [complianceDossier] : [])),
+  ].sort(
+    (a, b) =>
+      Number(a.dossierType === "EXTRA") - Number(b.dossierType === "EXTRA"),
+  );
+  return {
+    complianceDossiers: items,
+    complianceDossier:
+      items.find((item) => item.dossierType === "MAIN") ??
+      items.find((item) => item.dossierType == null) ??
+      null,
+  };
+}
 export const approvedBookingDetailSchema = z
   .object({
     ...bookingFields,
-    complianceDossier: dossierSummarySchema.nullish(),
-    complianceDossiers: z.array(dossierItemSchema).default([]),
+    ...bookingCoordinates,
+    ...dossierFields,
+    transportPlan: planSummarySchema
+      .extend({
+        originLocation: locationBriefSchema.nullish(),
+        destinationLocation: locationBriefSchema.nullish(),
+      })
+      .nullable(),
     customer: customerSchema.extend({ phone: optionalText }),
     customerNote: optionalText,
     horses: z.array(
@@ -195,22 +239,7 @@ export const approvedBookingDetailSchema = z
       }),
     ),
   })
-  .transform(({ complianceDossier, complianceDossiers, ...booking }) => {
-    const main =
-      complianceDossiers.find((item) => item.dossierType === "MAIN") ??
-      complianceDossiers[0];
-    return {
-      ...booking,
-      complianceDossier:
-        complianceDossier ??
-        (main
-          ? {
-              complianceDossierId: main.complianceDossierId,
-              status: main.status,
-            }
-          : null),
-    };
-  });
+  .transform((booking) => ({ ...booking, ...normalizeDossiers(booking) }));
 
 export const transportPlanIdSchema = entityIdSchema;
 export const transportPlanSortSchema = z.enum([
@@ -267,70 +296,78 @@ export const transportPlansPageSchema = z.object({
   totalItems: z.number().int().nonnegative(),
   totalPages: z.number().int().nonnegative(),
 });
-export const transportPlanDetailSchema = z.object({
-  transportPlanId: entityIdSchema,
-  planCode: z.string(),
-  status: transportPlanStatusSchema,
-  originLocationId: entityIdSchema.nullish(),
-  destinationLocationId: entityIdSchema.nullish(),
-  booking: z.object({
-    bookingId: entityIdSchema,
-    bookingCode: z.string(),
-    status: z.string(),
-    isInternational: z.boolean(),
-    customerName: z.string(),
-    originAddress: z.string(),
-    originCountry: z.string(),
-    destinationAddress: z.string(),
-    destinationCountry: z.string(),
+export const transportPlanDetailSchema = z
+  .object({
+    transportPlanId: entityIdSchema,
+    planCode: z.string(),
+    status: transportPlanStatusSchema,
     originLocationId: entityIdSchema.nullish(),
     destinationLocationId: entityIdSchema.nullish(),
-    totalHorses: z.number().int().nonnegative(),
-    requestedDepartureDate: z.iso.date(),
-    requestedArrivalDate: z.iso.date().nullish(),
-    specialRequirements: optionalText,
-  }),
-  transport: z.object({
-    transportId: entityIdSchema,
-    transportCode: z.string(),
-    status: z.string(),
-  }),
-  plannedStartAt: optionalTimestamp,
-  plannedEndAt: optionalTimestamp,
-  planningNote: optionalText,
-  estimatedDistanceKm: z.number().nonnegative().nullish(),
-  estimatedDurationMinutes: z
-    .number()
-    .int()
-    .min(0)
-    .max(maxDurationMinutes)
-    .nullish(),
-  // BE assignments use employeeName; route/fixture briefs use fullName. Map at the DTO boundary.
-  assignedEmployees: z.array(
-    employeeBriefSchema
-      .extend({
-        fullName: z.string().optional(),
-        employeeName: z.string().optional(),
-        responsibility: optionalText,
-        isPrimary: z.boolean(),
-        assignedAt: timestamp,
-      })
-      .refine((item) => Boolean(item.fullName || item.employeeName), {
-        message: "An assigned employee name is required.",
-      })
-      .transform(({ employeeName, ...item }) => ({
-        ...item,
-        fullName: item.fullName || employeeName!,
-      })),
-  ),
-  approvedBy: z
-    .object({ employeeId: entityIdSchema, fullName: z.string() })
-    .nullish(),
-  approvedAt: optionalTimestamp,
-  createdAt: timestamp,
-  updatedAt: timestamp,
-});
+    originLocation: locationBriefSchema.nullish(),
+    destinationLocation: locationBriefSchema.nullish(),
+    ...dossierFields,
+    booking: z.object({
+      ...bookingCoordinates,
+      bookingId: entityIdSchema,
+      bookingCode: z.string(),
+      status: z.string(),
+      isInternational: z.boolean(),
+      customerName: z.string(),
+      originAddress: z.string(),
+      originCountry: z.string(),
+      destinationAddress: z.string(),
+      destinationCountry: z.string(),
+      originLocationId: entityIdSchema.nullish(),
+      destinationLocationId: entityIdSchema.nullish(),
+      totalHorses: z.number().int().nonnegative(),
+      requestedDepartureDate: z.iso.date(),
+      requestedArrivalDate: z.iso.date().nullish(),
+      specialRequirements: optionalText,
+    }),
+    transport: z.object({
+      transportId: entityIdSchema,
+      transportCode: z.string(),
+      status: z.string(),
+    }),
+    plannedStartAt: optionalTimestamp,
+    plannedEndAt: optionalTimestamp,
+    planningNote: optionalText,
+    estimatedDistanceKm: z.number().nonnegative().nullish(),
+    estimatedDurationMinutes: z
+      .number()
+      .int()
+      .min(0)
+      .max(maxDurationMinutes)
+      .nullish(),
+    // BE assignments use employeeName; route/fixture briefs use fullName. Map at the DTO boundary.
+    assignedEmployees: z.array(
+      employeeBriefSchema
+        .extend({
+          fullName: z.string().optional(),
+          employeeName: z.string().optional(),
+          responsibility: optionalText,
+          isPrimary: z.boolean(),
+          assignedAt: timestamp,
+        })
+        .refine((item) => Boolean(item.fullName || item.employeeName), {
+          message: "An assigned employee name is required.",
+        })
+        .transform(({ employeeName, ...item }) => ({
+          ...item,
+          fullName: item.fullName || employeeName!,
+        })),
+    ),
+    approvedBy: z
+      .object({ employeeId: entityIdSchema, fullName: z.string() })
+      .nullish(),
+    approvedAt: optionalTimestamp,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  })
+  .transform((plan) => ({ ...plan, ...normalizeDossiers(plan) }));
 const metadataFields = {
+  originLocationId: actionEntityIdSchema.optional(),
+  destinationLocationId: actionEntityIdSchema.optional(),
   plannedStartAt: timestamp,
   plannedEndAt: timestamp,
   estimatedDistanceKm: z
@@ -365,6 +402,8 @@ export const updateTransportPlanSchema = z
     estimatedDistanceKm: metadataFields.estimatedDistanceKm,
     estimatedDurationMinutes: metadataFields.estimatedDurationMinutes,
     planningNote: metadataFields.planningNote,
+    originLocationId: metadataFields.originLocationId,
+    destinationLocationId: metadataFields.destinationLocationId,
     lastUpdatedAt: timestamp,
     updateReason: z.string().optional(),
   })
@@ -442,6 +481,8 @@ const optionalWholeNumber = z
     "Enter whole minutes between 0 and 2,147,483,647.",
   );
 const formFields = {
+  originLocationId: z.string(),
+  destinationLocationId: z.string(),
   plannedStartAt: localDate,
   plannedEndAt: localDate,
   estimatedDistanceKm: optionalNumber,

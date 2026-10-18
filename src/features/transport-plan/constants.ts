@@ -91,6 +91,8 @@ export const initialTransportPlanParams: TransportPlansQueryParams = {
   sortBy: "createdAt:desc",
 };
 export const emptyPlanForm = {
+  originLocationId: "",
+  destinationLocationId: "",
   plannedStartAt: "",
   plannedEndAt: "",
   estimatedDistanceKm: "",

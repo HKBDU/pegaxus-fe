@@ -1,13 +1,17 @@
 import { Link } from "react-router-dom";
 import { Compass, ShieldCheck } from "lucide-react";
 import type { AuthPrincipal } from "@/features/auth/types";
-import { dossierDetail } from "@/app/route-config";
 import { Button } from "@/shared/components/ui/button";
 import { RoutePlansWorkspace } from "@/features/route-view/components/RoutePlansWorkspace";
 import { getApprovedBookingActions } from "../approved-booking-actions";
 import { formatPlanDate } from "../format";
 import type { ApprovedBookingDetail } from "../types";
-import { Section, Field } from "./ApprovedBookingDetails";
+import {
+  Section,
+  Field,
+  LocationReference,
+  DossierSummaries,
+} from "./ApprovedBookingDetails";
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge";
 import { TransportPlanQuotation } from "./TransportPlanQuotation";
 import { getWorkspaceRole } from "../workspace-role";
@@ -46,6 +50,12 @@ export function TransportWorkspace({
       <Section title={manager ? "Planning Summary" : "Planning Reference"}>
         <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Transport plan">{plan.planCode}</Field>
+          <Field label="Origin Location">
+            <LocationReference location={plan.originLocation} />
+          </Field>
+          <Field label="Destination Location">
+            <LocationReference location={plan.destinationLocation} />
+          </Field>
           <Field label="Plan status">
             <ApprovedBookingBadge value={plan.status} />
           </Field>
@@ -139,30 +149,14 @@ export function TransportWorkspace({
               )}
             </div>
           </div>
-          {booking.complianceDossier && (
-            <div className="flex flex-wrap items-center gap-3">
-              <ApprovedBookingBadge value={booking.complianceDossier.status} />
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="rounded-[2px]"
-              >
-                <Link
-                  to={dossierDetail(
-                    booking.complianceDossier.complianceDossierId,
-                    "LOGISTICS_MANAGER",
-                  )}
-                >
-                  View Compliance Dossier
-                </Link>
-              </Button>
-            </div>
+          {booking.complianceDossiers.length > 0 && (
+            <DossierSummaries dossiers={booking.complianceDossiers} />
           )}
         </div>
       )}
       {specialist && (
         <Section title="Legal Preparation">
+          <DossierSummaries dossiers={booking.complianceDossiers} />
           <p className="text-xs text-slate-500">
             Prepare the dossier and requirements through the existing Flow 2
             workspace. Customer document uploads remain customer-only.

@@ -1,6 +1,11 @@
 import { formatPlanDate } from "../format";
 import type { TransportPlanDetail } from "../types";
-import { Field, Section } from "./ApprovedBookingDetails";
+import {
+  DossierSummaries,
+  Field,
+  LocationReference,
+  Section,
+} from "./ApprovedBookingDetails";
 import { ApprovedBookingBadge } from "./ApprovedBookingBadge";
 
 export function TransportPlanGeneral({ plan }: { plan: TransportPlanDetail }) {
@@ -16,6 +21,12 @@ export function TransportPlanGeneral({ plan }: { plan: TransportPlanDetail }) {
           </h3>
           <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
             <Field label="Transport code">{plan.transport.transportCode}</Field>
+            <Field label="Origin Location">
+              <LocationReference location={plan.originLocation} />
+            </Field>
+            <Field label="Destination Location">
+              <LocationReference location={plan.destinationLocation} />
+            </Field>
             <Field label="Transport status">
               <ApprovedBookingBadge value={plan.transport.status} />
             </Field>
@@ -69,6 +80,18 @@ export function TransportPlanGeneral({ plan }: { plan: TransportPlanDetail }) {
             <Field label="Total horses">
               {String(plan.booking.totalHorses)}
             </Field>
+            <Field label="Booking origin coordinates">
+              {plan.booking.originLatitude != null &&
+              plan.booking.originLongitude != null
+                ? `${plan.booking.originLatitude}, ${plan.booking.originLongitude}`
+                : null}
+            </Field>
+            <Field label="Booking destination coordinates">
+              {plan.booking.destinationLatitude != null &&
+              plan.booking.destinationLongitude != null
+                ? `${plan.booking.destinationLatitude}, ${plan.booking.destinationLongitude}`
+                : null}
+            </Field>
             <Field label="Requested departure">
               {plan.booking.requestedDepartureDate}
             </Field>
@@ -81,6 +104,15 @@ export function TransportPlanGeneral({ plan }: { plan: TransportPlanDetail }) {
           </dl>
         </section>
       </div>
+      <section
+        aria-label="Compliance dossiers"
+        className="space-y-2 border-t border-slate-200 pt-3"
+      >
+        <h3 className="font-heading text-sm uppercase text-slate-600">
+          Compliance dossiers
+        </h3>
+        <DossierSummaries dossiers={plan.complianceDossiers} />
+      </section>
       <section
         aria-label="Record information"
         className="min-w-0 border-t border-slate-200 pt-3"

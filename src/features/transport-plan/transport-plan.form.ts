@@ -26,6 +26,10 @@ export type { TransportPlanFormValues } from "./types";
 
 export function planToForm(plan: TransportPlanDetail): TransportPlanFormValues {
   return {
+    originLocationId:
+      plan.originLocation?.locationId ?? plan.originLocationId ?? "",
+    destinationLocationId:
+      plan.destinationLocation?.locationId ?? plan.destinationLocationId ?? "",
     plannedStartAt: toLocalDateTime(plan.plannedStartAt),
     plannedEndAt: toLocalDateTime(plan.plannedEndAt),
     estimatedDistanceKm:
@@ -41,6 +45,8 @@ export function planToForm(plan: TransportPlanDetail): TransportPlanFormValues {
 export function buildCreatePlanInput(values: TransportPlanFormValues) {
   const valid = transportPlanFormSchema.parse(values);
   return createTransportPlanSchema.parse({
+    originLocationId: valid.originLocationId || undefined,
+    destinationLocationId: valid.destinationLocationId || undefined,
     plannedStartAt: new Date(valid.plannedStartAt).toISOString(),
     plannedEndAt: new Date(valid.plannedEndAt).toISOString(),
     ...(valid.estimatedDistanceKm.trim()
@@ -61,6 +67,10 @@ export function buildUpdatePlanInput(
   const valid = editTransportPlanFormSchema.parse(values);
   const original = planToForm(plan);
   const input: UpdateTransportPlanInput = { lastUpdatedAt: plan.updatedAt };
+  for (const name of ["originLocationId", "destinationLocationId"] as const) {
+    if (valid[name] && valid[name] !== original[name])
+      input[name] = valid[name];
+  }
   if (valid.plannedStartAt && valid.plannedStartAt !== original.plannedStartAt)
     input.plannedStartAt = new Date(valid.plannedStartAt).toISOString();
   if (valid.plannedEndAt && valid.plannedEndAt !== original.plannedEndAt)
