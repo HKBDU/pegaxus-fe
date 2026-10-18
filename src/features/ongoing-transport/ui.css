@@ -133,7 +133,6 @@
   transition: none !important;
 }
 
-/* Shared skeletons and local motion respect reduced motion on every audience. */
 @media (prefers-reduced-motion: reduce) {
   .ongoing-transport-ui *,
   .ongoing-transport-ui *::before,

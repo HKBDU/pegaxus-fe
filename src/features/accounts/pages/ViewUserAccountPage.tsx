@@ -107,7 +107,9 @@ export default function ViewUserAccountPage() {
             />
             <div className="flex justify-center">
               <Button asChild variant="outline" className="rounded-[2px]">
-                <Link to={ROLE_ROUTES.managerUsers}>Back to Employee Accounts</Link>
+                <Link to={ROLE_ROUTES.managerUsers}>
+                  Back to Employee Accounts
+                </Link>
               </Button>
             </div>
           </div>

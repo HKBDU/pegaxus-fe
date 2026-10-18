@@ -1,5 +1,5 @@
-import RoutePlanDetailPage from "./RoutePlanDetailPage"
+import RoutePlanDetailPage from "./RoutePlanDetailPage";
 
 export default function ReturnActivationPage() {
-  return <RoutePlanDetailPage emergencyView="activation" />
+  return <RoutePlanDetailPage emergencyView="activation" />;
 }

@@ -1,4 +1,4 @@
-import { Badge } from "@/shared/components/ui/badge"
+import { Badge } from "@/shared/components/ui/badge";
 
 const tones: Record<string, string> = {
   PENDING: "border-amber-200 bg-amber-50 text-amber-700",
@@ -13,10 +13,18 @@ const tones: Record<string, string> = {
   PRIMARY: "border-primary/30 bg-primary/10 text-slate-900",
   BACKUP: "border-slate-200 bg-slate-100 text-slate-700",
   RETURN: "border-violet-200 bg-violet-50 text-violet-700",
-}
+};
 
 export function ApprovedBookingBadge({ value }: { value: string }) {
-  return <Badge variant="outline" className={`h-5 whitespace-nowrap rounded-full px-2 py-0 text-[10px] font-medium leading-none ${tones[value] ?? "border-slate-200 bg-slate-50 text-slate-600"}`}>
-    {value.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase())}
-  </Badge>
+  return (
+    <Badge
+      variant="outline"
+      className={`h-5 whitespace-nowrap rounded-full px-2 py-0 text-[10px] font-medium leading-none ${tones[value] ?? "border-slate-200 bg-slate-50 text-slate-600"}`}
+    >
+      {value
+        .replaceAll("_", " ")
+        .toLowerCase()
+        .replace(/^./, (letter) => letter.toUpperCase())}
+    </Badge>
+  );
 }
