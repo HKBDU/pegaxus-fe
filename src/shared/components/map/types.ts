@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { RouteGeometry } from "@/shared/utils/map";
 
 export type MapLocation = {
@@ -103,6 +104,8 @@ export type MapViewerProps = {
   onRouteSelect?: (route: MapRoute) => void;
   buildStartLocation?: MapLocation | null;
   buildEndLocation?: MapLocation | null;
+  /** Extra react-map-gl layers/markers drawn on top of the built-in ones (for example a moving vehicle). */
+  children?: ReactNode;
 };
 
 export type ValidatedRouteGeometry = RouteGeometry | null;

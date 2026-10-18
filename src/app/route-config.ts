@@ -100,6 +100,7 @@ const adminHeaderRoutes = [
   { path: `${ROLE_ROUTES.invoices}/:invoiceId/edit`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "EDIT INVOICE" },
   { path: `${ROLE_ROUTES.invoices}/:invoiceId`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "INVOICE DETAILS" },
   { path: ROLE_ROUTES.invoices, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "" },
+  { path: "/admin/ongoing-transports/:transportId/gps", label: "ONGOING TRANSPORTS", href: "/admin/ongoing-transports", title: "LIVE GPS TRACKING" },
   { path: `${ROLE_ROUTES.personnelAssignment}/:transportPlanId`, label: "TRANSPORT PLANS", href: "/admin/transport-plans", title: "PERSONNEL ASSIGNMENT" },
   ...["profile", "staff", "transport-plans", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
 ]

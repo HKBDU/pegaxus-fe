@@ -16,6 +16,7 @@ import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
+import { liveTrackingRoutes } from "@/features/live-tracking";
 import BcpQuarantineProofPage from "@/features/quarantine/pages/BcpQuarantineProofPage";
 import QuarantineReviewPage from "@/features/quarantine/pages/QuarantineReviewPage";
 import AuthoritySubmissionPage from "@/features/authority/pages/AuthoritySubmissionPage";
@@ -135,6 +136,7 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  ...liveTrackingRoutes,
   {
     path: ROLE_ROUTES.ongoingTransports,
     element: (
