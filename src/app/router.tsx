@@ -11,6 +11,7 @@ import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { CrewShell } from "@/features/ongoing-transport/components/CrewShell";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
+import { handoverRoutes } from "@/features/handover";
 import { APPROVED_BOOKINGS_ACCESS, TRANSPORT_PLANS_ACCESS, ONGOING_TRANSPORT_ACCESS, ROLE_ROUTES, routePlanDetail } from "./route-config";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
@@ -136,6 +137,7 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  ...handoverRoutes,
   ...liveTrackingRoutes,
   {
     path: ROLE_ROUTES.ongoingTransports,
