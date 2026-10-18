@@ -51,6 +51,8 @@ export default function CustomsClearanceProofPage() {
   const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null)
   const [photoCoordinates, setPhotoCoordinates] = useState<({ latitude: number; longitude: number } | null)[]>([])
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [uploadedPublicIds, setUploadedPublicIds] = useState<string[]>([])
+  const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'ready' | 'error'>('idle')
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -72,14 +74,25 @@ export default function CustomsClearanceProofPage() {
 
   const onSubmit = async (values: FormValues) => {
     if (!photoFile) return setPhotoError('Please attach a customs release note / SAD document image.')
+    if (uploadState === 'uploading') {
+      toast.info('Photo is still uploading. Please wait a moment...')
+      return
+    }
+    if (uploadedPublicIds.length === 0) {
+      return setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
+    }
     if (dossierId == null) return
     try {
-      await submitProof({ ...values, files: [photoFile] })
+      await submitProof({
+        ...values,
+        files: uploadedPublicIds.map((publicId) => ({ publicId })),
+      })
       toast.success('Customs proof submitted successfully. Awaiting TS Verification.')
       form.reset()
       setPhotoFile(null)
       setPhotoTakenAt(null)
       setPhotoCoordinates([])
+      setUploadedPublicIds([])
     } catch (error) {
       const code = error instanceof Error ? error.message : 'UNKNOWN'
       const messages: Record<string, string> = {
@@ -161,9 +174,13 @@ export default function CustomsClearanceProofPage() {
                   documentLabel="Customs Release Note / SAD Document Image"
                   statusLabel="Pending Verification"
                   error={photoError}
+                  presignedEntity="attachment"
+                  onUploadedPublicIdsChange={setUploadedPublicIds}
+                  onUploadStateChange={setUploadState}
                   onFilesChange={(files) => {
                     setPhotoFile(files[0] ?? null)
                     setPhotoTakenAt(files[0] ? new Date() : null)
+                    if (!files[0]) setUploadedPublicIds([])
                   }}
                   onCapturedAtChange={(values) => setPhotoTakenAt(values[0] ?? null)}
                   onCoordinatesChange={setPhotoCoordinates}
@@ -178,8 +195,8 @@ export default function CustomsClearanceProofPage() {
                   <dl className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <dt className="text-slate-500 font-medium">SAD Document</dt>
-                      <dd className={cn("font-semibold", photoFile ? "text-emerald-700" : "text-amber-600")}>
-                        {photoFile ? "Attached ✓" : "Pending photo"}
+                      <dd className={cn("font-semibold", photoFile && (uploadedPublicIds.length > 0 || uploadState === 'ready') ? "text-emerald-700" : uploadState === 'uploading' ? "text-blue-600" : "text-amber-600")}>
+                        {uploadState === 'uploading' ? "Uploading…" : photoFile && (uploadedPublicIds.length > 0 || uploadState === 'ready') ? "Uploaded ✓" : photoFile ? "Attached" : "Pending photo"}
                       </dd>
                     </div>
                     <div>
@@ -212,14 +229,14 @@ export default function CustomsClearanceProofPage() {
 
                   <Button
                     type="submit"
-                    disabled={isPending}
+                    disabled={isPending || uploadState === 'uploading'}
                     className={cn(
                       'w-full rounded-[2px] py-3.5 font-heading text-sm font-black uppercase tracking-widest',
                       'bg-[#f39200] text-white hover:bg-[#e08600] active:bg-[#c97800]',
                       'transition-colors disabled:opacity-50 cursor-pointer',
                     )}
                   >
-                    {isPending ? 'Submitting…' : 'Submit Proof ✓'}
+                    {isPending ? 'Submitting…' : uploadState === 'uploading' ? 'Uploading Photo…' : 'Submit Proof ✓'}
                   </Button>
                   <p className="text-[11px] text-slate-500 text-center">
                     Submitted customs release will be verified by Transport Specialist.
@@ -237,7 +254,7 @@ export default function CustomsClearanceProofPage() {
           {photoError && <p className="text-[11px] text-red-600" role="alert">{photoError}</p>}
           <Button
             type="button"
-            disabled={isPending}
+            disabled={isPending || uploadState === 'uploading'}
             onClick={form.handleSubmit(onSubmit)}
             className={cn(
               'w-full rounded-[2px] py-3.5 font-heading text-sm font-black uppercase tracking-widest',
@@ -245,7 +262,7 @@ export default function CustomsClearanceProofPage() {
               'disabled:opacity-50',
             )}
           >
-            {isPending ? 'Submitting…' : 'Submit Proof ✓'}
+            {isPending ? 'Submitting…' : uploadState === 'uploading' ? 'Uploading Photo…' : 'Submit Proof ✓'}
           </Button>
         </div>
       </div>
