@@ -20,6 +20,21 @@ export interface AppNotification {
   readAt?: string | null
 }
 
+/**
+ * Event `LocationUpdated` of the transport tracking hub (`/hubs/transport-tracking`, API contract 7.3): one GPS sample
+ * of the vehicle. It has no server time, so the viewer judges freshness with the `serverTime` of the GP1 snapshot.
+ */
+export interface TransportLocationUpdate {
+  transportId: string
+  routePlanRouteId: string | null
+  latitude: number
+  longitude: number
+  headingDegrees: number | null
+  speedKmh: number | null
+  accuracyMeters: number | null
+  recordedAt: string
+}
+
 export type RealtimeConnectionState = "idle" | "connecting" | "connected" | "reconnecting" | "disconnected"
 
 /** Ephemeral (not stored) hub events: add the payload type here when the BE starts emitting one. */
