@@ -65,7 +65,8 @@ export function LocationFormFields({
         Latitude *
         <Input
           type="number"
-          step="any"
+          step="0.0001"
+          placeholder="1,000.01"
           {...register("latitude", { valueAsNumber: true })}
         />
         {errors.latitude && (
@@ -76,7 +77,8 @@ export function LocationFormFields({
         Longitude *
         <Input
           type="number"
-          step="any"
+          step="0.0001"
+          placeholder="1,000.01"
           {...register("longitude", { valueAsNumber: true })}
         />
         {errors.longitude && (

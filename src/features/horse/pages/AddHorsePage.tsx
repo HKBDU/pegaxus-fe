@@ -250,7 +250,7 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
                           type="number"
                           min="0"
                           step="0.1"
-                          placeholder="e.g. 520"
+                          placeholder="1,000.01"
                         />
                       </FormControl>
                       <FormMessage className="text-xs" />
@@ -273,7 +273,7 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
                           type="number"
                           min="0"
                           step="0.1"
-                          placeholder="e.g. 165"
+                          placeholder="1,000.01"
                         />
                       </FormControl>
                       <FormMessage className="text-xs" />

@@ -1141,7 +1141,7 @@ export function RoutePlanBuilder({
                                 step="0.0001"
                                 value={newBcpLat}
                                 onChange={(e) => setNewBcpLat(e.target.value)}
-                                placeholder="e.g. 50.925"
+                                placeholder="1,000.01"
                                 className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
                               />
                             </div>
@@ -1152,7 +1152,7 @@ export function RoutePlanBuilder({
                                 step="0.0001"
                                 value={newBcpLon}
                                 onChange={(e) => setNewBcpLon(e.target.value)}
-                                placeholder="e.g. 1.815"
+                                placeholder="1,000.01"
                                 className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
                               />
                             </div>

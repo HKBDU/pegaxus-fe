@@ -351,6 +351,11 @@ export function TransportPlanMetadataForm({
                                       : "any"
                                   }
                                   min="0"
+                                  placeholder={
+                                    name === "estimatedDurationMinutes"
+                                      ? undefined
+                                      : "1,000.01"
+                                  }
                                   className={controlClass}
                                 />
                               </FormControl>

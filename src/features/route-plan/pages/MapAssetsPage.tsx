@@ -456,8 +456,8 @@ export default function MapAssetsPage() {
         : {
             id: `local-${Date.now()}`,
             name: "New location",
-            latitude: pickedPoint.latitude,
-            longitude: pickedPoint.longitude,
+            latitude: Number(pickedPoint.latitude.toFixed(4)),
+            longitude: Number(pickedPoint.longitude.toFixed(4)),
           };
       setLocationEditor({ mode: "add", location });
       setNearbyOpen(false);
@@ -967,7 +967,7 @@ export default function MapAssetsPage() {
                       ` · ${Math.round(place.distanceMeters)} m`}
                   </span>
                   <span className="block text-xs text-slate-500">
-                    {place.latitude.toFixed(6)}, {place.longitude.toFixed(6)}
+                    {place.latitude.toFixed(4)}, {place.longitude.toFixed(4)}
                   </span>
                 </button>
               ))}

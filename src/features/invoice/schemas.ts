@@ -205,6 +205,7 @@ export const invoiceItemFormSchema = z.object({
     const quantity = parseWholeNumber(value)
     if (Number.isNaN(quantity)) ctx.addIssue({ code: "custom", message: "Enter a whole number" })
     else if (quantity <= 0) ctx.addIssue({ code: "custom", message: "Must be greater than 0" })
+    else if (quantity > 5000) ctx.addIssue({ code: "custom", message: "Quantity must be at most 5,000" })
     else if (!Number.isSafeInteger(quantity)) ctx.addIssue({ code: "custom", message: "Number is too large" })
   }),
   price: z.string().superRefine((value, ctx) => {
