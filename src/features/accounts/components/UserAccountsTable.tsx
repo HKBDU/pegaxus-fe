@@ -12,17 +12,19 @@ import { Circle, Eye, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { formatBookingDate, formatBookingTime } from "@/features/booking/utils";
 import { accountDetail, accountEdit } from "@/app/route-config";
 import type { PaginationMeta } from "@/shared/types";
-import {
-  EmptyState,
-  TablePagination,
-} from "@/shared/components/common";
+import { EmptyState, TablePagination } from "@/shared/components/common";
 import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { DataTable } from "@/shared/components/ui/data-table";
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/shared/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -119,7 +121,11 @@ export function UserAccountsTable({
           </div>
         ),
       },
-      { accessorKey: "employeeCode", header: "EMPLOYEE CODE", enableHiding: false },
+      {
+        accessorKey: "employeeCode",
+        header: "EMPLOYEE CODE",
+        enableHiding: false,
+      },
       {
         accessorKey: "email",
         header: "EMAIL",
@@ -217,7 +223,9 @@ export function UserAccountsTable({
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
-                <TooltipContent className="rounded-[2px] px-2 py-1 shadow-md">Account actions</TooltipContent>
+                <TooltipContent className="rounded-[2px] px-2 py-1 shadow-md">
+                  Account actions
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
             <DropdownMenuContent

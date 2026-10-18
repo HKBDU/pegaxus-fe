@@ -7,6 +7,7 @@ export const ROLE_ROUTES = {
   managerHome: "/admin",
   approvedBookings: "/admin/approved-bookings",
   transportPlans: "/admin/transport-plans",
+  ongoingTransports: "/admin/ongoing-transports",
   managerUsers: "/admin/users",
   managerCreateUser: "/admin/users/new",
   customerHorses: "/my-horses",
@@ -66,6 +67,9 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
 }
 
 const adminHeaderRoutes = [
+  { path: `${ROLE_ROUTES.ongoingTransports}/:transportId/segments`, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "ROUTE TRACKING" },
+  { path: `${ROLE_ROUTES.ongoingTransports}/:transportId`, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "TRANSPORT OVERVIEW" },
+  { path: ROLE_ROUTES.ongoingTransports, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "" },
   { path: `${ROLE_ROUTES.vehicles}/new`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "ADD NEW VEHICLE" },
   { path: `${ROLE_ROUTES.vehicles}/:vehicleId/edit`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "EDIT VEHICLE" },
   { path: `${ROLE_ROUTES.vehicles}/:vehicleId`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "VEHICLE DETAILS" },
@@ -77,6 +81,9 @@ const adminHeaderRoutes = [
   { path: ROLE_ROUTES.transportPlans, label: "TRANSPORT PLANS", href: ROLE_ROUTES.transportPlans, title: "" },
   { path: `${ROLE_ROUTES.approvedBookings}/:bookingId`, label: "APPROVED BOOKINGS", href: ROLE_ROUTES.approvedBookings, title: "APPROVED BOOKING DETAILS" },
   { path: ROLE_ROUTES.approvedBookings, label: "APPROVED BOOKINGS", href: ROLE_ROUTES.approvedBookings, title: "" },
+  { path: "/admin/ongoing-transports/:transportId/handovers/new", label: "HANDOVER RECORDS", href: "/admin/ongoing-transports", title: "START HANDOVER" },
+  { path: "/admin/ongoing-transports/:transportId/handovers/:handoverId", label: "HANDOVER RECORDS", href: "/admin/ongoing-transports", title: "HANDOVER RECORD" },
+  { path: "/admin/ongoing-transports/:transportId/handovers", label: "HANDOVER RECORDS", href: "/admin/ongoing-transports", title: "" },
   { path: `${ROLE_ROUTES.managerDossiers}/:dossierId`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "COMPLIANCE DOSSIER" },
   { path: `${ROLE_ROUTES.complianceDossiers}/:dossierId/details`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "COMPLIANCE DOSSIER" },
   { path: ROLE_ROUTES.managerCreateUser, label: "USERS", href: ROLE_ROUTES.managerUsers, title: "CREATE EMPLOYEE ACCOUNT" },
@@ -100,6 +107,7 @@ const adminHeaderRoutes = [
   { path: `${ROLE_ROUTES.invoices}/:invoiceId/edit`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "EDIT INVOICE" },
   { path: `${ROLE_ROUTES.invoices}/:invoiceId`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "INVOICE DETAILS" },
   { path: ROLE_ROUTES.invoices, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "" },
+  { path: "/admin/ongoing-transports/:transportId/gps", label: "ONGOING TRANSPORTS", href: "/admin/ongoing-transports", title: "LIVE GPS TRACKING" },
   { path: `${ROLE_ROUTES.personnelAssignment}/:transportPlanId`, label: "TRANSPORT PLANS", href: "/admin/transport-plans", title: "PERSONNEL ASSIGNMENT" },
   ...["profile", "staff", "transport-plans", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
 ]
@@ -111,5 +119,6 @@ export function getAdminHeaderContext(pathname: string) {
 export const CUSTOMER_ONLY: AccessPolicy = { anyRole: ["CUSTOMER"] }
 export const APPROVED_BOOKINGS_ACCESS: AccessPolicy = { anyRole: ["FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
 export const TRANSPORT_PLANS_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
+export const ONGOING_TRANSPORT_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
 export const LOGISTICS_MANAGER_READ: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER"] }
 export const PROFILE_ROLES: AccessPolicy = { anyRole: ["CUSTOMER", "LOGISTICS_MANAGER", "TRANSPORT_SPECIALIST", "FLEET_ROUTE_COORDINATOR", "DRIVER", "ESCORT"] }

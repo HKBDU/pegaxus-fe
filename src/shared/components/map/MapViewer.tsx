@@ -46,6 +46,7 @@ export function MapViewer({
   onRouteSelect,
   buildStartLocation,
   buildEndLocation,
+  children,
 }: MapViewerProps) {
   const viewport = useRef<MapViewportHandle>(null);
   const popupHideTimer = useRef<number | null>(null);
@@ -75,7 +76,16 @@ export function MapViewer({
   );
 
   useEffect(() => {
-    if (allBounds) viewport.current?.fitBounds(allBounds);
+    if (!allBounds) return;
+    // Locations present at the first render are fitted before the map instance exists: retry for a moment.
+    let frame = 0;
+    let attempts = 0;
+    const fit = () => {
+      if (viewport.current?.fitBounds(allBounds) || attempts++ > 120) return;
+      frame = requestAnimationFrame(fit);
+    };
+    fit();
+    return () => cancelAnimationFrame(frame);
   }, [allBounds]);
 
   useEffect(() => {
@@ -205,6 +215,7 @@ export function MapViewer({
           geoJson={routeGeoJson}
         />
         {preview && <RoutePreviewLayer geometry={preview.geometry} />}
+        {children}
       </MapViewport>
       {popupLocation && (
         <LocationPopup

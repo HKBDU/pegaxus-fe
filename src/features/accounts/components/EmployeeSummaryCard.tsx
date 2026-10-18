@@ -47,38 +47,39 @@ export function EmployeeSummaryCard({
               {employee.fullName || "—"}
             </p>
             <p className="text-xs text-gray-500">{employee.email}</p>
-            <Badge variant="secondary" className="mt-2 w-fit rounded-[2px] text-[10px]">
+            <Badge
+              variant="secondary"
+              className="mt-2 w-fit rounded-[2px] text-[10px]"
+            >
               {formatAccountLabel(employee.role)}
             </Badge>
           </div>
           <dl className="grid grid-cols-1 gap-4">
-            {(
-              [
-                ["Working Status", employee.workingStatus],
-              ] as const
-            ).map(([label, status]) => (
-              <div key={label}>
-                <dt className="font-heading text-[11px] uppercase text-gray-500">
-                  {label}
-                </dt>
-                <dd className="mt-1">
-                  <Badge
-                    variant="outline"
-                    className={
-                      employeeStatusBadgeClass +
-                      " " +
-                      getEmployeeStatusBadgeClass(status)
-                    }
-                  >
-                    <Circle
-                      aria-hidden="true"
-                      className="size-1! fill-current"
-                    />
-                    {formatAccountLabel(status)}
-                  </Badge>
-                </dd>
-              </div>
-            ))}
+            {([["Working Status", employee.workingStatus]] as const).map(
+              ([label, status]) => (
+                <div key={label}>
+                  <dt className="font-heading text-[11px] uppercase text-gray-500">
+                    {label}
+                  </dt>
+                  <dd className="mt-1">
+                    <Badge
+                      variant="outline"
+                      className={
+                        employeeStatusBadgeClass +
+                        " " +
+                        getEmployeeStatusBadgeClass(status)
+                      }
+                    >
+                      <Circle
+                        aria-hidden="true"
+                        className="size-1! fill-current"
+                      />
+                      {formatAccountLabel(status)}
+                    </Badge>
+                  </dd>
+                </div>
+              ),
+            )}
           </dl>
         </div>
       </CardContent>

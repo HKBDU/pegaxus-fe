@@ -8,13 +8,16 @@ import {
 } from "@/shared/components/common";
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
+import { CrewShell } from "@/features/ongoing-transport/components/CrewShell";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
-import { APPROVED_BOOKINGS_ACCESS, TRANSPORT_PLANS_ACCESS, ROLE_ROUTES, routePlanDetail } from "./route-config";
+import { handoverRoutes } from "@/features/handover";
+import { APPROVED_BOOKINGS_ACCESS, TRANSPORT_PLANS_ACCESS, ONGOING_TRANSPORT_ACCESS, ROLE_ROUTES, routePlanDetail } from "./route-config";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
+import { liveTrackingRoutes } from "@/features/live-tracking";
 import BcpQuarantineProofPage from "@/features/quarantine/pages/BcpQuarantineProofPage";
 import QuarantineReviewPage from "@/features/quarantine/pages/QuarantineReviewPage";
 import AuthoritySubmissionPage from "@/features/authority/pages/AuthoritySubmissionPage";
@@ -125,6 +128,11 @@ const TransportPlanDetailsPage = lazy(
 const RoutePlanDetailPage = lazy(
   () => import("@/features/route-view/pages/RoutePlanDetailPage"),
 );
+const OngoingTransportListPage = lazy(() => import("@/features/ongoing-transport/pages/OngoingTransportListPage"));
+const TransportOverviewPage = lazy(() => import("@/features/ongoing-transport/pages/TransportOverviewPage"));
+const TransportRouteTrackingPage = lazy(() => import("@/features/ongoing-transport/pages/TransportRouteTrackingPage"));
+const DriverLocationSharingPage = lazy(() => import("@/features/location-sharing/pages/DriverLocationSharingPage"));
+
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />
@@ -137,6 +145,74 @@ export const router = createBrowserRouter([
     path: "/transport-plans/:transportPlanId",
     element: <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}><MainLayout /></ProtectedRoute>,
     children: [{ index: true, element: <Suspense fallback={<LoadingState />}><TransportPlanDetailsPage /></Suspense> }],
+  },
+  ...handoverRoutes,
+  ...liveTrackingRoutes,
+  {
+    path: ROLE_ROUTES.ongoingTransports,
+    element: (
+      <ProtectedRoute allowedRoles={ONGOING_TRANSPORT_ACCESS.anyRole}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Suspense fallback={<LoadingState />}><OngoingTransportListPage /></Suspense>,
+      },
+      {
+        path: ":transportId",
+        element: <Suspense fallback={<LoadingState />}><TransportOverviewPage audience="admin" /></Suspense>,
+      },
+      {
+        path: ":transportId/segments",
+        element: <Suspense fallback={<LoadingState />}><TransportRouteTrackingPage audience="admin" /></Suspense>,
+      },
+    ],
+  },
+  {
+    path: "/crew/transports/:transportId",
+    element: (
+      <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}>
+        <CrewShell />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Suspense fallback={<LoadingState />}><TransportOverviewPage audience="crew" /></Suspense>,
+      },
+      {
+        path: "segments",
+        element: <Suspense fallback={<LoadingState />}><TransportRouteTrackingPage audience="crew" /></Suspense>,
+      },
+      {
+        path: "location",
+        element: (
+          <ProtectedRoute allowedRoles={["DRIVER"]}>
+            <Suspense fallback={<LoadingState />}><DriverLocationSharingPage /></Suspense>
+          </ProtectedRoute>
+        ),
+      },
+    ],
+  },
+  {
+    path: "/bookings/:bookingId/transports/:transportId",
+    element: (
+      <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+        <MainLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Suspense fallback={<LoadingState />}><TransportOverviewPage audience="customer" /></Suspense>,
+      },
+      {
+        path: "segments",
+        element: <Suspense fallback={<LoadingState />}><TransportRouteTrackingPage audience="customer" /></Suspense>,
+      },
+    ],
   },
   {
     path: ROLE_ROUTES.transportPlans,

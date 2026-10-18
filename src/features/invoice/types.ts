@@ -186,45 +186,50 @@ export type InvoiceListItem = {
   updatedAt: string
 }
 
-// ---- from view/types.ts ----
 // Read side (IV4, IV5, IV6, IV10). The zod schemas in schemas.ts validate the responses against these shapes.
-export type InvoiceDetail = Omit<Invoice, "dueDate"> & { dueDate: string | null }
+export type InvoiceDetail = Omit<Invoice, "dueDate"> & {
+  dueDate: string | null;
+};
 
 export type InvoicePage = {
-  items: InvoiceListItem[]
-  pageIndex: number
-  pageSize: number
-  totalItems: number
-  totalPages: number
-}
+  items: InvoiceListItem[];
+  pageIndex: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+};
 
 export type BookingInvoiceQueryParams = {
-  pageIndex: number
-  pageSize: number
-  type?: InvoiceType
-  status?: InvoiceStatus
-  sortBy: (typeof invoiceSorts)[number]
-}
+  pageIndex: number;
+  pageSize: number;
+  type?: InvoiceType;
+  status?: InvoiceStatus;
+  sortBy: (typeof invoiceSorts)[number];
+};
 
 export type InvoiceQueryParams = BookingInvoiceQueryParams & {
-  search?: string
-  bookingId?: string
-  transportPlanId?: string
-  issuedFrom?: string
-  issuedTo?: string
-  dueFrom?: string
-  dueTo?: string
-}
+  search?: string;
+  bookingId?: string;
+  transportPlanId?: string;
+  issuedFrom?: string;
+  issuedTo?: string;
+  dueFrom?: string;
+  dueTo?: string;
+};
 
 export type InvoiceStatusHistoryEvent = {
-  historyId: string
-  type: InvoiceHistoryType
-  previousStatus: InvoiceStatus | null
-  newStatus: InvoiceStatus
-  reason: string | null
-  changedBy: { accountId: string | null; fullName: string; role: string | null }
-  changedAt: string
-}
+  historyId: string;
+  type: InvoiceHistoryType;
+  previousStatus: InvoiceStatus | null;
+  newStatus: InvoiceStatus;
+  reason: string | null;
+  changedBy: {
+    accountId: string | null;
+    fullName: string;
+    role: string | null;
+  };
+  changedAt: string;
+};
 
 // ---- from payment/types.ts ----
 export type CancelInvoiceInput = {
