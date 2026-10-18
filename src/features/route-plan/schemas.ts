@@ -24,6 +24,9 @@ export const routeSegmentSchema = z.object({
   if (!hasRoute && !hasManualRoute) {
     context.addIssue({ code: 'custom', path: ['routeId'], message: 'Select a route or provide origin, destination and mode.' })
   }
+  if (hasRoute && (segment.fromLocationId || segment.toLocationId || segment.transportMode)) {
+    context.addIssue({ code: 'custom', path: ['routeId'], message: 'Use either routeId or the route location/mode fields, not both' })
+  }
   if (new Date(segment.plannedArrivalAt) <= new Date(segment.plannedDepartureAt)) {
     context.addIssue({ code: 'custom', path: ['plannedArrivalAt'], message: 'Arrival must be after departure.' })
   }

@@ -3,9 +3,31 @@ import { ArrowLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { Button } from "@/shared/components/ui/button";
-import { readOngoingListReturn, transportOverviewPath } from "../navigation";
+import {
+  readOngoingListReturn,
+  transportOverviewPath,
+  type TransportView,
+} from "../navigation";
 import type { OngoingTransportStatus, TransportAudience } from "../types";
 import { OngoingTransportStatusBadge } from "./OngoingTransportStatusBadge";
+
+const viewLabel: Record<TransportView, string> = {
+  overview: "Transport Overview",
+  segments: "Route Tracking",
+  health: "Horse Health",
+  gps: "GPS Map",
+  handovers: "Handovers",
+};
+
+const viewDescription: Record<TransportView, string> = {
+  overview:
+    "Monitor current leg, horse welfare, staff assignment and active incidents.",
+  segments:
+    "Follow the effective itinerary, leg resources and handover boundaries.",
+  health: "Review the latest health check of every horse on this transport.",
+  gps: "Follow the vehicle on the planned route in real time.",
+  handovers: "Track the handover records of every leg of this transport.",
+};
 
 export function TransportPageHeader({
   audience,
@@ -25,7 +47,7 @@ export function TransportPageHeader({
   transportCode?: string;
   bookingCode?: string;
   status?: OngoingTransportStatus;
-  view: "overview" | "segments";
+  view: TransportView;
   busy: boolean;
   online: boolean;
   onRefresh: () => void;
@@ -47,9 +69,7 @@ export function TransportPageHeader({
   const missingContext =
     transportId === undefined ||
     (audience === "customer" && bookingId === undefined);
-  const title =
-    transportCode ??
-    (view === "segments" ? "Route Tracking" : "Transport Overview");
+  const title = transportCode ?? viewLabel[view];
   return (
     <>
       <nav
@@ -69,7 +89,7 @@ export function TransportPageHeader({
           {backLabel}
         </Link>
         <ChevronRight aria-hidden="true" className="size-3" />
-        {view === "segments" && !missingContext ? (
+        {view !== "overview" && !missingContext ? (
           <>
             <Link
               to={transportOverviewPath(transportId!, audience, bookingId)}
@@ -82,7 +102,7 @@ export function TransportPageHeader({
           </>
         ) : null}
         <span aria-current="page" className="font-medium text-slate-700">
-          {view === "segments" ? "Route Tracking" : title}
+          {view === "overview" ? title : viewLabel[view]}
         </span>
       </nav>
       <header className="flex flex-wrap items-start justify-between gap-3">
@@ -97,9 +117,7 @@ export function TransportPageHeader({
             {status ? <OngoingTransportStatusBadge status={status} /> : null}
           </div>
           <p className="mt-2 mb-0 text-xs text-slate-500 sm:text-sm">
-            {view === "segments"
-              ? "Follow the effective itinerary, leg resources and handover boundaries."
-              : "Monitor current leg, horse welfare, staff assignment and active incidents."}
+            {viewDescription[view]}
           </p>
           {bookingCode ? (
             <p className="mt-1 mb-0 text-[11px] text-slate-500">

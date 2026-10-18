@@ -17,6 +17,10 @@ const customerNavItems: HeaderNavItem[] = [
   { label: "BOOKING", href: "/bookings" },
 ]
 
+const crewNavItems: HeaderNavItem[] = [
+  { label: "ASSIGNED TRANSPORTS", href: "/crew/transports" },
+]
+
 function toHeaderUser(profile: AuthAccount): ProfileDropdownUser {
   const name = profile.fullName || profile.email
   return {
@@ -35,11 +39,12 @@ export function MainLayout() {
 
   // Employee-facing routes use the desktop admin shell consistently, including
   // roles whose routes are shared with the customer-facing application.
-  if (pathname !== "/" && accessToken && principal && !canAccess(principal, { anyRole: ["CUSTOMER"] })) {
+  const isCrewRoute = pathname === "/crew" || pathname.startsWith("/crew/") || pathname.startsWith("/transport-plans/")
+  if (pathname !== "/" && !isCrewRoute && accessToken && principal && !canAccess(principal, { anyRole: ["CUSTOMER"] })) {
     return <AdminLayout />
   }
 
-  const navItems = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] }) ? customerNavItems : []
+  const navItems = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] }) ? customerNavItems : isCrewRoute ? crewNavItems : []
   const user: ProfileDropdownUser | null = accessToken && account
     ? toHeaderUser(account)
     : accessToken && principal
@@ -54,7 +59,7 @@ export function MainLayout() {
       <main className="min-h-[calc(100svh-3rem)] flex-none">
         <Outlet /> {/* Outlet - React Router render route childs*/}
       </main>
-      {!isLanding && <Footer />}
+      {!isLanding && !isCrewRoute && <Footer />}
     </div>
   )
 }

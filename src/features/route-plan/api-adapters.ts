@@ -1,5 +1,5 @@
-import { getLocations, getRoutes } from "./services";
-import type { Location, LocationListParams, RouteListParams, RouteMaster } from "./types";
+import { getLocations, getRoutes, getVehicles } from "./services";
+import type { Location, LocationListParams, RouteListParams, RouteMaster, Vehicle, VehicleListParams } from "./types";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 
 const PAGE_SIZE = 100;
@@ -34,6 +34,15 @@ export async function loadAllLocations(params: Omit<LocationListParams, "pageInd
 export async function loadAllRoutes(params: Omit<RouteListParams, "pageIndex" | "pageSize"> = {}) {
   const items = await loadPages((pageIndex) => getRoutes({ ...params, pageIndex, pageSize: PAGE_SIZE }));
   return uniqueById(items, "routeId");
+}
+
+export async function loadAllVehicles(params: Omit<VehicleListParams, "pageIndex" | "pageSize"> = {}) {
+  try {
+    const items = await loadPages((pageIndex) => getVehicles({ ...params, pageIndex, pageSize: PAGE_SIZE }));
+    return items;
+  } catch {
+    return [] as Vehicle[];
+  }
 }
 
 type LocationLike = Pick<Location, "locationId" | "locationName"> & { locationType?: string | null; city?: string | null; country?: string | null; address?: string | null; latitude?: number | string | null; longitude?: number | string | null };
@@ -98,6 +107,37 @@ export function adaptTransportPlan(plan: TransportPlanApiValue, locations: MapLo
   const destinationId = plan.destinationLocationId ?? booking.destinationLocationId;
   const from = resolveLocation(locations, originId, booking.originAddress);
   const to = resolveLocation(locations, destinationId, booking.destinationAddress);
-  if (!from || !to) throw new Error("The Transport Plan origin/destination could not be matched to valid map locations.");
-  return { planCode: plan.planCode ?? "—", bookingCode: plan.bookingCode ?? booking.bookingCode ?? "—", status: "DRAFT" as const, scope: (plan.isCrossBorder ?? booking.isInternational) ? "International" as const : "Domestic" as const, departureAt: plan.plannedStartAt ?? "", arrivalAt: plan.plannedEndAt ?? "", from, to };
+
+  const fallbackFrom = locations[0] ?? {
+    id: "unknown-origin",
+    name: booking.originAddress || "Origin",
+    city: booking.originCountry ?? "",
+    country: booking.originCountry ?? "",
+    latitude: 48.8566,
+    longitude: 2.3522,
+  };
+  const fallbackTo = locations.length > 1 ? locations[locations.length - 1] : {
+    id: "unknown-dest",
+    name: booking.destinationAddress || "Destination",
+    city: booking.destinationCountry ?? "",
+    country: booking.destinationCountry ?? "",
+    latitude: 45.764,
+    longitude: 4.8357,
+  };
+
+  return {
+    planCode: plan.planCode ?? "—",
+    bookingCode: plan.bookingCode ?? booking.bookingCode ?? "—",
+    status: "DRAFT" as const,
+    scope: (plan.isCrossBorder ?? booking.isInternational) ? "International" as const : "Domestic" as const,
+    departureAt: plan.plannedStartAt ?? "",
+    arrivalAt: plan.plannedEndAt ?? "",
+    from: from ?? fallbackFrom,
+    to: to ?? fallbackTo,
+    isFromResolved: Boolean(from),
+    isToResolved: Boolean(to),
+    unresolvedOriginAddress: !from ? booking.originAddress : undefined,
+    unresolvedDestinationAddress: !to ? booking.destinationAddress : undefined,
+  };
 }
+

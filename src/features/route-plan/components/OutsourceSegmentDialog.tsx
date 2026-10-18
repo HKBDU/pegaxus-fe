@@ -13,6 +13,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/shared/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
   getTransportProviders,
@@ -197,24 +204,25 @@ export function OutsourceSegmentDialog({
           <div className="grid gap-4">
             <label className="grid gap-2 text-sm font-medium">
               Transport Provider <span className="text-destructive">*</span>
-              <select
-                className="h-9 rounded border bg-background px-3 font-normal"
+              <Select
                 value={providerId}
                 disabled={isLoading || isSaving}
-                onChange={(event) => setProviderId(event.target.value)}
+                onValueChange={setProviderId}
               >
-                <option value="">
-                  {isLoading ? "Loading active providers…" : "Select provider"}
-                </option>
-                {providers.map((provider) => (
-                  <option
-                    key={provider.transportProviderId}
-                    value={provider.transportProviderId}
-                  >
-                    {provider.providerName} · {provider.providerCode}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-9 w-full rounded border bg-background px-3 font-normal *:data-[slot=select-value]:truncate">
+                  <SelectValue placeholder={isLoading ? "Loading active providers…" : "Select provider"} />
+                </SelectTrigger>
+                <SelectContent className="max-w-[420px] max-h-60 text-sm">
+                  {providers.map((provider) => (
+                    <SelectItem
+                      key={provider.transportProviderId}
+                      value={provider.transportProviderId}
+                    >
+                      {provider.providerName} · {provider.providerCode}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </label>
             {selectedProvider && (
               <Badge variant="outline">

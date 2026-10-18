@@ -8,20 +8,26 @@ import {
 } from "@/shared/components/common";
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
-import { CrewShell } from "@/features/ongoing-transport/components/CrewShell";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
-import { APPROVED_BOOKINGS_ACCESS, TRANSPORT_PLANS_ACCESS, ONGOING_TRANSPORT_ACCESS, ROLE_ROUTES, routePlanDetail } from "./route-config";
+import { handoverTabRoutes } from "@/features/handover";
+import { APPROVED_BOOKINGS_ACCESS, TRANSPORT_PLANS_ACCESS, ROLE_ROUTES, routePlanDetail } from "./route-config";
 import BookingListPage from "@/features/booking/pages/BookingListPage";
 import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
 import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
+import { liveTrackingTabRoutes } from "@/features/live-tracking";
 import BcpQuarantineProofPage from "@/features/quarantine/pages/BcpQuarantineProofPage";
 import QuarantineReviewPage from "@/features/quarantine/pages/QuarantineReviewPage";
 import AuthoritySubmissionPage from "@/features/authority/pages/AuthoritySubmissionPage";
 import AuthorityReviewPage from "@/features/authority/pages/AuthorityReviewPage";
 import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearanceProofPage";
 import CustomsClearanceReviewPage from "@/features/clearance/pages/CustomsClearanceReviewPage";
+import { horseHealthCrewFormRoutes, horseHealthRoutes, horseHealthTabRoutes } from "@/features/horse-health";
+import { ongoingTransportRoutes } from "@/features/ongoing-transport";
+import TestPage from "@/Test";
+
+import LogoutPage from "@/features/auth/pages/LogoutPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const ManageUserAccountsPage = lazy(
@@ -41,7 +47,6 @@ const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const GoogleCallbackPage = lazy(
   () => import("@/features/auth/pages/GoogleCallbackPage"),
 );
-const LogoutPage = lazy(() => import("@/features/auth/pages/LogoutPage"));
 const ForgotPasswordPage = lazy(
   () => import("@/features/auth/pages/ForgotPasswordPage"),
 );
@@ -123,10 +128,6 @@ const TransportPlanDetailsPage = lazy(
 const RoutePlanDetailPage = lazy(
   () => import("@/features/route-view/pages/RoutePlanDetailPage"),
 );
-const OngoingTransportListPage = lazy(() => import("@/features/ongoing-transport/pages/OngoingTransportListPage"));
-const TransportOverviewPage = lazy(() => import("@/features/ongoing-transport/pages/TransportOverviewPage"));
-const TransportRouteTrackingPage = lazy(() => import("@/features/ongoing-transport/pages/TransportRouteTrackingPage"));
-const DriverLocationSharingPage = lazy(() => import("@/features/location-sharing/pages/DriverLocationSharingPage"));
 
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
@@ -135,72 +136,14 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
-  {
-    path: ROLE_ROUTES.ongoingTransports,
-    element: (
-      <ProtectedRoute allowedRoles={ONGOING_TRANSPORT_ACCESS.anyRole}>
-        <AdminLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      {
-        index: true,
-        element: <Suspense fallback={<LoadingState />}><OngoingTransportListPage /></Suspense>,
-      },
-      {
-        path: ":transportId",
-        element: <Suspense fallback={<LoadingState />}><TransportOverviewPage audience="admin" /></Suspense>,
-      },
-      {
-        path: ":transportId/segments",
-        element: <Suspense fallback={<LoadingState />}><TransportRouteTrackingPage audience="admin" /></Suspense>,
-      },
-    ],
-  },
-  {
-    path: "/crew/transports/:transportId",
-    element: (
-      <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}>
-        <CrewShell />
-      </ProtectedRoute>
-    ),
-    children: [
-      {
-        index: true,
-        element: <Suspense fallback={<LoadingState />}><TransportOverviewPage audience="crew" /></Suspense>,
-      },
-      {
-        path: "segments",
-        element: <Suspense fallback={<LoadingState />}><TransportRouteTrackingPage audience="crew" /></Suspense>,
-      },
-      {
-        path: "location",
-        element: (
-          <ProtectedRoute allowedRoles={["DRIVER"]}>
-            <Suspense fallback={<LoadingState />}><DriverLocationSharingPage /></Suspense>
-          </ProtectedRoute>
-        ),
-      },
-    ],
-  },
-  {
-    path: "/bookings/:bookingId/transports/:transportId",
-    element: (
-      <ProtectedRoute allowedRoles={["CUSTOMER"]}>
-        <MainLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      {
-        index: true,
-        element: <Suspense fallback={<LoadingState />}><TransportOverviewPage audience="customer" /></Suspense>,
-      },
-      {
-        path: "segments",
-        element: <Suspense fallback={<LoadingState />}><TransportRouteTrackingPage audience="customer" /></Suspense>,
-      },
-    ],
-  },
+  ...horseHealthRoutes,
+  // Transport shell (Overview, Route Tracking) with the tabs of the other features mounted inside it.
+  ...ongoingTransportRoutes({
+    admin: [...horseHealthTabRoutes, ...liveTrackingTabRoutes("admin"), ...handoverTabRoutes("admin")],
+    crew: [...horseHealthTabRoutes, ...handoverTabRoutes("crew")],
+    customer: [...horseHealthTabRoutes, ...liveTrackingTabRoutes("customer"), ...handoverTabRoutes("customer")],
+    crewStandalone: horseHealthCrewFormRoutes,
+  }),
   {
     path: ROLE_ROUTES.transportPlans,
     element: <ProtectedRoute allowedRoles={TRANSPORT_PLANS_ACCESS.anyRole}><AdminLayout /></ProtectedRoute>,
@@ -629,9 +572,7 @@ export const router = createBrowserRouter([
     path: "/logout",
     element: (
       <ProtectedRoute>
-        <Suspense fallback={<LoadingState />}>
-          <LogoutPage />
-        </Suspense>
+        <LogoutPage />
       </ProtectedRoute>
     ),
   },
@@ -763,6 +704,10 @@ export const router = createBrowserRouter([
   ...(import.meta.env.DEV
     ? [
         // BEGIN TEMP UC-38 LOCAL PREVIEW — remove only this route object after testing.
+        {
+          path: "/__dev/horse-health/photo-capture",
+          element: <TestPage />,
+        },
         {
           path: "/__dev/flow3/route-plans/:routePlanId",
           element: <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"]}><AdminLayout /></ProtectedRoute>,

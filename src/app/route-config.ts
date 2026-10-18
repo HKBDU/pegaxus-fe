@@ -23,6 +23,7 @@ export const ROLE_ROUTES = {
   personnelAssignment: "/admin/personnel-assignment",
   invoices: "/admin/invoices",
   notifications: "/notifications",
+  crew: "/crew",
 } as const
 
 export const routePlanDetail = (routePlanId: string) => `${ROLE_ROUTES.routePlans}/${encodeURIComponent(routePlanId)}`
@@ -59,6 +60,9 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
   if (normalizeRole(role) === "FLEET_ROUTE_COORDINATOR" && safePath === ROLE_ROUTES.home) {
     return ROLE_ROUTES.vehicles
   }
+  if (["DRIVER", "ESCORT"].includes(normalizeRole(role)) && safePath === ROLE_ROUTES.home) {
+    return ROLE_ROUTES.crew
+  }
   return safePath
 }
 
@@ -77,6 +81,9 @@ const adminHeaderRoutes = [
   { path: ROLE_ROUTES.transportPlans, label: "TRANSPORT PLANS", href: ROLE_ROUTES.transportPlans, title: "" },
   { path: `${ROLE_ROUTES.approvedBookings}/:bookingId`, label: "APPROVED BOOKINGS", href: ROLE_ROUTES.approvedBookings, title: "APPROVED BOOKING DETAILS" },
   { path: ROLE_ROUTES.approvedBookings, label: "APPROVED BOOKINGS", href: ROLE_ROUTES.approvedBookings, title: "" },
+  { path: "/admin/ongoing-transports/:transportId/handovers/new", label: "HANDOVER RECORDS", href: "/admin/ongoing-transports", title: "START HANDOVER" },
+  { path: "/admin/ongoing-transports/:transportId/handovers/:handoverId", label: "HANDOVER RECORDS", href: "/admin/ongoing-transports", title: "HANDOVER RECORD" },
+  { path: "/admin/ongoing-transports/:transportId/handovers", label: "HANDOVER RECORDS", href: "/admin/ongoing-transports", title: "" },
   { path: `${ROLE_ROUTES.managerDossiers}/:dossierId`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "COMPLIANCE DOSSIER" },
   { path: `${ROLE_ROUTES.complianceDossiers}/:dossierId/details`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "COMPLIANCE DOSSIER" },
   { path: ROLE_ROUTES.managerCreateUser, label: "USERS", href: ROLE_ROUTES.managerUsers, title: "CREATE EMPLOYEE ACCOUNT" },
@@ -100,6 +107,7 @@ const adminHeaderRoutes = [
   { path: `${ROLE_ROUTES.invoices}/:invoiceId/edit`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "EDIT INVOICE" },
   { path: `${ROLE_ROUTES.invoices}/:invoiceId`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "INVOICE DETAILS" },
   { path: ROLE_ROUTES.invoices, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "" },
+  { path: "/admin/ongoing-transports/:transportId/gps", label: "ONGOING TRANSPORTS", href: "/admin/ongoing-transports", title: "LIVE GPS TRACKING" },
   { path: `${ROLE_ROUTES.personnelAssignment}/:transportPlanId`, label: "TRANSPORT PLANS", href: "/admin/transport-plans", title: "PERSONNEL ASSIGNMENT" },
   ...["profile", "staff", "transport-plans", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
 ]
