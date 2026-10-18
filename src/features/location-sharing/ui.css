@@ -1,0 +1,26 @@
+.location-sharing-ui {
+  min-width: 0;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  font-family: var(--sans);
+  font-size: 1rem;
+  color: hsl(var(--foreground));
+}
+.location-sharing-ui :is(a, button) {
+  min-height: 48px;
+  font-size: 1rem;
+}
+.location-sharing-ui .location-sharing-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.location-sharing-ui .location-sharing-toggle {
+  min-width: 0;
+  min-height: 64px;
+  overflow-wrap: anywhere;
+}
+.location-sharing-ui *,
+.location-sharing-ui *::before,
+.location-sharing-ui *::after {
+  animation: none !important;
+  transition: none !important;
+}

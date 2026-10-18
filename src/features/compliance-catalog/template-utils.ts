@@ -38,7 +38,7 @@ export function formatTemplateDate(value: string | null | undefined) {
 // Messages for the errorCode values of the dossier endpoints D2/D3 (API contract, flow 2, section 5-6).
 const dossierErrorMessages: Record<string, string> = {
   BOOKING_NOT_APPROVED: "ComplianceDossier can only be initialized for APPROVED transport bookings.",
-  DOSSIER_ALREADY_EXISTS: "A ComplianceDossier already exists for this booking. Please manage individual DossierRequirements instead.",
+  DOSSIER_ALREADY_EXISTS: "A MAIN ComplianceDossier already exists for this transport. Open it and manage its individual DossierRequirements instead.",
   TEMPLATE_OR_MANUAL_REQUIRED: "Select a template with at least one item, or add at least one custom requirement.",
   TEMPLATE_ITEM_INVALID: "A selected template item no longer belongs to this template, or the template is not ACTIVE. Go back and reselect the template.",
   REQUIREMENT_INACTIVE: "A selected ComplianceRequirement is no longer ACTIVE.",

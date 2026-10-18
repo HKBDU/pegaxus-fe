@@ -5,7 +5,11 @@ import { ChevronRight, LoaderCircle } from "lucide-react";
 import { OtpResend } from "../components/OtpResend";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { emailRouteStateSchema, verifyEmailSchema, type VerifyEmailFormValues } from "../schema";
+import {
+  emailRouteStateSchema,
+  verifyEmailSchema,
+  type VerifyEmailFormValues,
+} from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
   AuthOtpFormField,
@@ -75,13 +79,17 @@ function VerifyEmailForm({ email }: { email: string }) {
   async function resendCode() {
     if (resend.isPending || secondsLeft > 0) return;
     try {
-      const result = await resendAttempt.run(() => resend.mutateAsync({ email, purpose: "EMAIL_VERIFICATION" }));
+      const result = await resendAttempt.run(() =>
+        resend.mutateAsync({ email, purpose: "EMAIL_VERIFICATION" }),
+      );
       if (result.started) {
         restartCooldown();
         form.reset({ otp: "" });
       }
     } catch (error) {
-      restartCooldown(getAuthApiError(error)?.errorCode === "OTP_RESEND_TOO_SOON" ? 60 : 10);
+      restartCooldown(
+        getAuthApiError(error)?.errorCode === "OTP_RESEND_TOO_SOON" ? 60 : 10,
+      );
     }
   }
 
@@ -106,12 +114,18 @@ function VerifyEmailForm({ email }: { email: string }) {
 
       form.setError("root.server", {
         message:
-          message ?? apiError?.message ?? "Unable to verify your email. Please try again.",
+          message ??
+          apiError?.message ??
+          "Unable to verify your email. Please try again.",
       });
     }
   }
 
-  const isPending = verifyEmail.isPending || resend.isPending || verifyAttempt.isRunning || form.formState.isSubmitting;
+  const isPending =
+    verifyEmail.isPending ||
+    resend.isPending ||
+    verifyAttempt.isRunning ||
+    form.formState.isSubmitting;
 
   return (
     <AuthFlowLayout
@@ -161,12 +175,21 @@ function VerifyEmailForm({ email }: { email: string }) {
                 className="size-5 animate-spin"
               />
             )}
-            {verifyEmail.isPending ? "Verifying..." : verifyAttempt.isBlocked ? "Please wait..." : "Verify code"}
+            {verifyEmail.isPending
+              ? "Verifying..."
+              : verifyAttempt.isBlocked
+                ? "Please wait..."
+                : "Verify code"}
             <ChevronRight aria-hidden="true" className="auth-otp-arrow" />
           </Button>
         </form>
       </Form>
-      <OtpResend secondsLeft={secondsLeft} isPending={resend.isPending} disabled={isPending || resendAttempt.isBlocked} onResend={() => void resendCode()} />
+      <OtpResend
+        secondsLeft={secondsLeft}
+        isPending={resend.isPending}
+        disabled={isPending || resendAttempt.isBlocked}
+        onResend={() => void resendCode()}
+      />
     </AuthFlowLayout>
   );
 }

@@ -55,7 +55,8 @@ export default function CreateEmployeeAccountPage() {
     defaultValues: { fullName: "", email: "", phone: "", role: undefined },
   });
   const attempt = useFormRequestAttemptGuard(form);
-  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
+  const isPending =
+    mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
 
   const submit = form.handleSubmit(async (values) => {
     try {
@@ -275,7 +276,11 @@ export default function CreateEmployeeAccountPage() {
                 disabled={isPending || attempt.isBlocked}
                 className="rounded-[2px]"
               >
-                {isPending ? "Creating..." : attempt.isBlocked ? "Please wait..." : "Create Account"}
+                {isPending
+                  ? "Creating..."
+                  : attempt.isBlocked
+                    ? "Please wait..."
+                    : "Create Account"}
               </Button>
             </div>
           </form>

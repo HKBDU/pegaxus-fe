@@ -8,14 +8,29 @@ interface OtpResendProps {
   onResend: () => void;
 }
 
-export function OtpResend({ secondsLeft, isPending, disabled, onResend }: OtpResendProps) {
+export function OtpResend({
+  secondsLeft,
+  isPending,
+  disabled,
+  onResend,
+}: OtpResendProps) {
   return (
     <div className="auth-otp-resend">
       {secondsLeft > 0 && !isPending ? (
-        <p>Resend code in <span className="auth-otp-seconds">{secondsLeft}s</span></p>
+        <p>
+          Resend code in{" "}
+          <span className="auth-otp-seconds">{secondsLeft}s</span>
+        </p>
       ) : (
-        <Button type="button" variant="link" onClick={onResend} disabled={disabled || isPending}>
-          {isPending && <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />}
+        <Button
+          type="button"
+          variant="link"
+          onClick={onResend}
+          disabled={disabled || isPending}
+        >
+          {isPending && (
+            <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+          )}
           {isPending ? "Sending..." : "Resend code"}
         </Button>
       )}

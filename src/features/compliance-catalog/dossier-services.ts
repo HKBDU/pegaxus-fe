@@ -12,7 +12,7 @@ import type { EntityId } from "@/shared/types"
 
 /** Mock state: booking 1017 already has a dossier, so EXC-02 can be tried. */
 const mockDossiers = new Map<string, ComplianceDossierSummary>([
-  ["1017", { complianceDossierId: 500, dossierCode: "CD-20260910-1204", status: "IN_PREPARATION" }],
+  ["1017", { complianceDossierId: 500, dossierCode: "CD-20260910-1204", status: "IN_PREPARATION", dossierType: "MAIN" }],
 ])
 
 const toDossierRequirementBody = (draft: CustomRequirementDraft) => ({
@@ -26,6 +26,32 @@ const toDossierRequirementBody = (draft: CustomRequirementDraft) => ({
 function isNotFound(error: unknown) {
   if (error instanceof ComplianceApiError) return error.message === "NOT_FOUND"
   return (error as { response?: { status?: number } })?.response?.status === 404
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
+
+function toSummary(value: unknown): ComplianceDossierSummary | null {
+  if (!isRecord(value) || value.complianceDossierId === null || value.complianceDossierId === undefined || value.complianceDossierId === "") return null
+  return {
+    complianceDossierId: value.complianceDossierId as EntityId,
+    dossierCode: String(value.dossierCode ?? ""),
+    status: String(value.status ?? ""),
+    dossierType: value.dossierType === "MAIN" || value.dossierType === "EXTRA" ? value.dossierType : null,
+  }
+}
+
+/**
+ * D1 for a booking whose transport can hold a MAIN and an EXTRA dossier. The BE answers the MAIN overview plus a
+ * `complianceDossiers[]` summary list; the contract (flow4.md X10) shows `{ items: [] }`. Both are read, and the MAIN
+ * dossier wins (the first one when no type is sent). null = nothing initialised yet (complianceDossierId: null).
+ */
+export function pickMainDossier(payload: unknown): ComplianceDossierSummary | null {
+  const body = isRecord(payload) && isRecord(payload.value) ? payload.value : payload
+  if (!isRecord(body)) return null
+
+  const list = [body.complianceDossiers, body.items].find(Array.isArray) as unknown[] | undefined
+  const candidates = [toSummary(body), ...(list ?? []).map(toSummary)].filter((item): item is ComplianceDossierSummary => item !== null)
+  return candidates.find((item) => item.dossierType === "MAIN") ?? candidates[0] ?? null
 }
 
 interface ApprovedBookingPayload {
@@ -69,15 +95,15 @@ export const dossierService = {
     return (payload.value ?? payload).requestedDepartureDate?.slice(0, 10) ?? null
   },
 
-  /** D1: null when the booking has no dossier yet (the BE answers 404). */
+  /** D1: null when the booking has no dossier yet (404, or 200 with complianceDossierId: null). */
   async getDossierOfBooking(bookingId: EntityId): Promise<ComplianceDossierSummary | null> {
     if (useComplianceMocks && !useFlow2HttpMocks) {
       await wait(120)
       return mockDossiers.get(String(bookingId)) ?? null
     }
     try {
-      const payload = await api.get<{ value?: ComplianceDossierSummary } & Partial<ComplianceDossierSummary>>(`bookings/${bookingId}/compliance-dossier`)
-      return (payload.value ?? payload) as ComplianceDossierSummary
+      const payload = await api.get<unknown>(`bookings/${bookingId}/compliance-dossier`)
+      return pickMainDossier(payload)
     } catch (error) {
       if (isNotFound(error)) return null
       throw error
@@ -105,7 +131,7 @@ export const dossierService = {
       }
 
       const complianceDossierId = 501 + mockDossiers.size
-      const dossier = { complianceDossierId, dossierCode: `CD-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${7000 + mockDossiers.size}`, status: "IN_PREPARATION" }
+      const dossier: ComplianceDossierSummary = { complianceDossierId, dossierCode: `CD-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${7000 + mockDossiers.size}`, status: "IN_PREPARATION", dossierType: "MAIN" }
       mockDossiers.set(String(bookingId), dossier)
       return { ...dossier, generatedRequirementCount: generated, failedCustomCount: 0 }
     }

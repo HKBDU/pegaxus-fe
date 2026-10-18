@@ -125,24 +125,45 @@ export type ReceiptStatus = (typeof RECEIPT_STATUS)[keyof typeof RECEIPT_STATUS]
 export type InvoiceAction = (typeof INVOICE_ACTION)[keyof typeof INVOICE_ACTION]
 export type InvoiceCurrency = (typeof INVOICE_CURRENCIES)[number]
 
-// ---- from view/constants.ts ----
 // Enum values come from shared/constants (DB V8); zod needs them as a non-empty tuple.
-const valuesOf = <T extends Record<string, string>>(source: T) => Object.values(source) as [T[keyof T], ...T[keyof T][]]
-export const invoiceTypes = valuesOf(INVOICE_TYPE)
-export const invoiceStatuses = valuesOf(INVOICE_STATUS)
-export const invoiceHistoryTypes = valuesOf(INVOICE_HISTORY_TYPE)
-export const invoiceItemTypes = valuesOf(INVOICE_ITEM_TYPE)
-export const invoiceActions = valuesOf(INVOICE_ACTION)
-export const receiptStatuses = valuesOf(RECEIPT_STATUS)
-export const paymentMethods = valuesOf(PAYMENT_METHOD)
-export const invoiceSorts = ["createdAt:desc", "createdAt:asc", "issuedAt:desc", "issuedAt:asc", "dueDate:asc", "dueDate:desc", "totalAmount:desc", "totalAmount:asc"] as const
-export const controlClass = "h-8 rounded-[2px] border-slate-300 bg-white text-xs shadow-none"
-export const invoiceListPath = "/admin/invoices"
-export const invoiceDetailPath = (id: string) => `${invoiceListPath}/${encodeURIComponent(id)}`
-export const customerInvoicePath = (bookingId: string, id: string) => `/bookings/${encodeURIComponent(bookingId)}/invoices/${encodeURIComponent(id)}`
-export const planInvoicesPath = (id: string) => `${invoiceListPath}?${new URLSearchParams({ transportPlanId: id })}`
-export const humanize = (value: string) => value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
-export const initialInvoiceParams = { pageIndex: 1, pageSize: 20, sortBy: "createdAt:desc" as const }
+const valuesOf = <T extends Record<string, string>>(source: T) =>
+  Object.values(source) as [T[keyof T], ...T[keyof T][]];
+export const invoiceTypes = valuesOf(INVOICE_TYPE);
+export const invoiceStatuses = valuesOf(INVOICE_STATUS);
+export const invoiceHistoryTypes = valuesOf(INVOICE_HISTORY_TYPE);
+export const invoiceItemTypes = valuesOf(INVOICE_ITEM_TYPE);
+export const invoiceActions = valuesOf(INVOICE_ACTION);
+export const receiptStatuses = valuesOf(RECEIPT_STATUS);
+export const paymentMethods = valuesOf(PAYMENT_METHOD);
+export const invoiceSorts = [
+  "createdAt:desc",
+  "createdAt:asc",
+  "issuedAt:desc",
+  "issuedAt:asc",
+  "dueDate:asc",
+  "dueDate:desc",
+  "totalAmount:desc",
+  "totalAmount:asc",
+] as const;
+export const controlClass =
+  "h-8 rounded-[2px] border-slate-300 bg-white text-xs shadow-none";
+export const invoiceListPath = "/admin/invoices";
+export const invoiceDetailPath = (id: string) =>
+  `${invoiceListPath}/${encodeURIComponent(id)}`;
+export const customerInvoicePath = (bookingId: string, id: string) =>
+  `/bookings/${encodeURIComponent(bookingId)}/invoices/${encodeURIComponent(id)}`;
+export const planInvoicesPath = (id: string) =>
+  `${invoiceListPath}?${new URLSearchParams({ transportPlanId: id })}`;
+export const humanize = (value: string) =>
+  value
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+export const initialInvoiceParams = {
+  pageIndex: 1,
+  pageSize: 20,
+  sortBy: "createdAt:desc" as const,
+};
 
 // ---- from payment/constants/payment.constants.ts ----
 export const PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH = 150
@@ -150,7 +171,6 @@ export const CANCELLATION_REASON_MIN_LENGTH = 10
 
 export const PAYMENT_ERROR_CODES = {
   PARTIAL_PAYMENT_NOT_SUPPORTED: 'PARTIAL_PAYMENT_NOT_SUPPORTED',
-  CURRENCY_MISMATCH: 'CURRENCY_MISMATCH',
   UNPAYABLE_INVOICE_TYPE: 'UNPAYABLE_INVOICE_TYPE',
   INVALID_INVOICE_STATUS: 'INVALID_INVOICE_STATUS',
   INVOICE_HAS_PAYMENT: 'INVOICE_HAS_PAYMENT',
@@ -161,7 +181,6 @@ export const PAYMENT_ERROR_CODES = {
   UNSUPPORTED_PAYMENT_CURRENCY: 'UNSUPPORTED_PAYMENT_CURRENCY',
 } as const
 
-export const PAYMENT_CURRENCY_VALUES = INVOICE_CURRENCIES
 export const PAYMENT_METHOD_VALUES = [
   PAYMENT_METHOD.CASH,
   PAYMENT_METHOD.BANK_TRANSFER,
@@ -199,7 +218,6 @@ export const INVOICE_ERROR_MESSAGES: Record<string, string> = {
   INVOICE_ALREADY_EXISTS: "An unresolved invoice of this type already exists. Edit or cancel the existing invoice first.",
   FINAL_INVOICE_ALREADY_EXISTS: "This booking already has a FINAL invoice. A second one is only allowed after the previous one is cancelled.",
   UNPAID_FINAL_INVOICE: "A credit note needs the FINAL invoice of this booking to be PAID first.",
-  CURRENCY_MISMATCH: "The currency must match the currency of the paid deposit.",
   BOOKING_NOT_FOUND: "Booking not found.",
   INVOICE_NOT_FOUND: "Invoice not found.",
   INVOICE_LOCKED: "Only DRAFT invoices can be edited.",

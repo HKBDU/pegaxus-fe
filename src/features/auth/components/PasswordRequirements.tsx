@@ -12,7 +12,12 @@ export function PasswordRequirements({ value }: { value: string }) {
             aria-live="polite"
             className={`transition-colors duration-300 motion-reduce:transition-none ${strength === "strong" ? "text-emerald-700" : "text-neutral-500"}`}
           >
-            {strength === "strong" ? "Strong" : strength === "fair" ? "Fair" : "Weak"} password
+            {strength === "strong"
+              ? "Strong"
+              : strength === "fair"
+                ? "Fair"
+                : "Weak"}{" "}
+            password
           </span>
         )}
       </div>
@@ -56,7 +61,10 @@ export function PasswordMatchHint({
   if (!password || !confirmation || password !== confirmation) return null;
 
   return (
-    <p className="flex items-center gap-1 text-xs text-emerald-700" role="status">
+    <p
+      className="flex items-center gap-1 text-xs text-emerald-700"
+      role="status"
+    >
       <CheckCircle2 aria-hidden="true" className="size-3" /> Passwords match
     </p>
   );

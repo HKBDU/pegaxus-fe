@@ -8,7 +8,8 @@ import { maplibregl } from "./maplibre-worker";
 
 export type MapViewportHandle = {
   flyTo: (longitude: number, latitude: number) => void;
-  fitBounds: (bounds: LngLatBoundsLike) => void;
+  /** Returns false when the map instance does not exist yet, so the caller can try again. */
+  fitBounds: (bounds: LngLatBoundsLike) => boolean;
   zoomIn: () => void;
   zoomOut: () => void;
   reset: () => void;
@@ -44,8 +45,11 @@ export const MapViewport = forwardRef<MapViewportHandle, MapViewportProps>(
       () => ({
         flyTo: (longitude, latitude) =>
           mapRef.current?.flyTo({ center: [longitude, latitude], zoom: 10 }),
-        fitBounds: (bounds) =>
-          mapRef.current?.fitBounds(bounds, { padding: 48, maxZoom: 12 }),
+        fitBounds: (bounds) => {
+          if (!mapRef.current) return false;
+          mapRef.current.fitBounds(bounds, { padding: 48, maxZoom: 12 });
+          return true;
+        },
         zoomIn: () => mapRef.current?.zoomIn(),
         zoomOut: () => mapRef.current?.zoomOut(),
         reset: () =>
