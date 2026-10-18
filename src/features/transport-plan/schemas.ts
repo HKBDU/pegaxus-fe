@@ -306,6 +306,13 @@ export const transportPlanDetailSchema = z
     originLocation: locationBriefSchema.nullish(),
     destinationLocation: locationBriefSchema.nullish(),
     ...dossierFields,
+    routePlans: z
+      .array(
+        routeSummarySchema.extend({
+          routeType: z.enum(["PRIMARY", "BACKUP", "RETURN"]),
+        }),
+      )
+      .optional(),
     booking: z.object({
       ...bookingCoordinates,
       bookingId: entityIdSchema,
