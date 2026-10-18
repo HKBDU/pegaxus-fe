@@ -12,6 +12,7 @@ export interface PickedPoint {
   country: string
   latitude: number
   longitude: number
+  
 }
 
 export function isBookingCountry(name: string): boolean {

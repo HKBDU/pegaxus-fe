@@ -1,10 +1,19 @@
-import { cn } from "@/lib/utils"
-import type { DossierRequirementStatus, DossierStatus } from "@/features/dossier/types"
-import { dossierStatusLabels, dossierStatusStyles } from "../constants"
+import { cn } from "@/lib/utils";
+import type {
+  DossierRequirementStatus,
+  DossierStatus,
+} from "@/features/dossier/types";
+import { dossierStatusLabels, dossierStatusStyles } from "../constants";
 
-type BadgeStatus = DossierStatus | DossierRequirementStatus | "EXPIRED"
+type BadgeStatus = DossierStatus | DossierRequirementStatus | "EXPIRED";
 
-export function DossierStatusBadge({ status, className }: { status: BadgeStatus; className?: string }) {
+export function DossierStatusBadge({
+  status,
+  className,
+}: {
+  status: BadgeStatus;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
@@ -15,5 +24,5 @@ export function DossierStatusBadge({ status, className }: { status: BadgeStatus;
     >
       {dossierStatusLabels[status]}
     </span>
-  )
+  );
 }

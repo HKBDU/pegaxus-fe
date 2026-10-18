@@ -20,7 +20,8 @@ export default function ForgotPasswordPage() {
     defaultValues: { email: "" },
   });
   const attempt = useFormRequestAttemptGuard(form);
-  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
+  const isPending =
+    mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
 
   async function submit(values: ForgotPasswordFormValues) {
     if (attempt.isBlocked) return;
@@ -74,7 +75,11 @@ export default function ForgotPasswordPage() {
                 className="size-5 animate-spin"
               />
             )}
-            {isPending ? "Sending..." : attempt.isBlocked ? "Please wait..." : "Send email"}
+            {isPending
+              ? "Sending..."
+              : attempt.isBlocked
+                ? "Please wait..."
+                : "Send email"}
           </Button>
         </form>
       </Form>

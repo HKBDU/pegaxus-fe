@@ -125,24 +125,45 @@ export type ReceiptStatus = (typeof RECEIPT_STATUS)[keyof typeof RECEIPT_STATUS]
 export type InvoiceAction = (typeof INVOICE_ACTION)[keyof typeof INVOICE_ACTION]
 export type InvoiceCurrency = (typeof INVOICE_CURRENCIES)[number]
 
-// ---- from view/constants.ts ----
 // Enum values come from shared/constants (DB V8); zod needs them as a non-empty tuple.
-const valuesOf = <T extends Record<string, string>>(source: T) => Object.values(source) as [T[keyof T], ...T[keyof T][]]
-export const invoiceTypes = valuesOf(INVOICE_TYPE)
-export const invoiceStatuses = valuesOf(INVOICE_STATUS)
-export const invoiceHistoryTypes = valuesOf(INVOICE_HISTORY_TYPE)
-export const invoiceItemTypes = valuesOf(INVOICE_ITEM_TYPE)
-export const invoiceActions = valuesOf(INVOICE_ACTION)
-export const receiptStatuses = valuesOf(RECEIPT_STATUS)
-export const paymentMethods = valuesOf(PAYMENT_METHOD)
-export const invoiceSorts = ["createdAt:desc", "createdAt:asc", "issuedAt:desc", "issuedAt:asc", "dueDate:asc", "dueDate:desc", "totalAmount:desc", "totalAmount:asc"] as const
-export const controlClass = "h-8 rounded-[2px] border-slate-300 bg-white text-xs shadow-none"
-export const invoiceListPath = "/admin/invoices"
-export const invoiceDetailPath = (id: string) => `${invoiceListPath}/${encodeURIComponent(id)}`
-export const customerInvoicePath = (bookingId: string, id: string) => `/bookings/${encodeURIComponent(bookingId)}/invoices/${encodeURIComponent(id)}`
-export const planInvoicesPath = (id: string) => `${invoiceListPath}?${new URLSearchParams({ transportPlanId: id })}`
-export const humanize = (value: string) => value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase())
-export const initialInvoiceParams = { pageIndex: 1, pageSize: 20, sortBy: "createdAt:desc" as const }
+const valuesOf = <T extends Record<string, string>>(source: T) =>
+  Object.values(source) as [T[keyof T], ...T[keyof T][]];
+export const invoiceTypes = valuesOf(INVOICE_TYPE);
+export const invoiceStatuses = valuesOf(INVOICE_STATUS);
+export const invoiceHistoryTypes = valuesOf(INVOICE_HISTORY_TYPE);
+export const invoiceItemTypes = valuesOf(INVOICE_ITEM_TYPE);
+export const invoiceActions = valuesOf(INVOICE_ACTION);
+export const receiptStatuses = valuesOf(RECEIPT_STATUS);
+export const paymentMethods = valuesOf(PAYMENT_METHOD);
+export const invoiceSorts = [
+  "createdAt:desc",
+  "createdAt:asc",
+  "issuedAt:desc",
+  "issuedAt:asc",
+  "dueDate:asc",
+  "dueDate:desc",
+  "totalAmount:desc",
+  "totalAmount:asc",
+] as const;
+export const controlClass =
+  "h-8 rounded-[2px] border-slate-300 bg-white text-xs shadow-none";
+export const invoiceListPath = "/admin/invoices";
+export const invoiceDetailPath = (id: string) =>
+  `${invoiceListPath}/${encodeURIComponent(id)}`;
+export const customerInvoicePath = (bookingId: string, id: string) =>
+  `/bookings/${encodeURIComponent(bookingId)}/invoices/${encodeURIComponent(id)}`;
+export const planInvoicesPath = (id: string) =>
+  `${invoiceListPath}?${new URLSearchParams({ transportPlanId: id })}`;
+export const humanize = (value: string) =>
+  value
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+export const initialInvoiceParams = {
+  pageIndex: 1,
+  pageSize: 20,
+  sortBy: "createdAt:desc" as const,
+};
 
 // ---- from payment/constants/payment.constants.ts ----
 export const PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH = 150

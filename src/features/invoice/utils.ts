@@ -15,11 +15,12 @@ export function isInvoiceMockMode(env: MockEnvironment = import.meta.env) {
   return env.PROD !== true && env.VITE_INVOICE_API_MOCKS === "true"
 }
 
-// ---- from view/format.ts ----
 export function invoiceDate(value?: string | null) {
-  if (!value) return "—"
-  const parsed = parseISO(value)
-  return isValid(parsed) ? format(parsed, value.length === 10 ? "dd MMM yyyy" : "dd MMM yyyy, HH:mm") : "—"
+  if (!value) return "—";
+  const parsed = parseISO(value);
+  return isValid(parsed)
+    ? format(parsed, value.length === 10 ? "dd MMM yyyy" : "dd MMM yyyy, HH:mm")
+    : "—";
 }
 
 // ---- from compose/utils.ts ----

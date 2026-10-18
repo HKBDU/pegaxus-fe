@@ -220,38 +220,86 @@ const dashboardService = {
     return { data: value.items, meta: toMeta(value) }
   },
 }
-function requirementEndpoint(dossierId: string, requirementId: string | number) {
+function requirementEndpoint(
+  dossierId: string,
+  requirementId: string | number,
+) {
   return `${ENDPOINT}/${encodeURIComponent(dossierIdSchema.parse(dossierId))}/requirements/${encodeURIComponent(dossierIdSchema.parse(String(requirementId)))}`;
 }
 
-const uploadResult = z.object({ dossierRequirementId: z.string(), complianceDocumentId: z.string(), documentVersionId: z.string(), versionNo: z.number().int().positive(), isNewVersion: z.boolean(), status: z.string(), files: z.array(z.object({ documentAttachmentId: z.string().nullable(), fileName: z.string(), mimeType: z.string(), fileSizeBytes: z.number().nonnegative() })) });
+const uploadResult = z.object({
+  dossierRequirementId: z.string(),
+  complianceDocumentId: z.string(),
+  documentVersionId: z.string(),
+  versionNo: z.number().int().positive(),
+  isNewVersion: z.boolean(),
+  status: z.string(),
+  files: z.array(
+    z.object({
+      documentAttachmentId: z.string().nullable(),
+      fileName: z.string(),
+      mimeType: z.string(),
+      fileSizeBytes: z.number().nonnegative(),
+    }),
+  ),
+});
 
-function mapUploadResult(payload: unknown, dossierId: string, requirementId: string | number) {
+function mapUploadResult(
+  payload: unknown,
+  dossierId: string,
+  requirementId: string | number,
+) {
   const result = uploadResult.parse(unwrapBackendValue(payload));
-  return { ...result, files: result.files.map((file, sortOrder) => ({ ...file, sortOrder, fileUrl: protectedPreviewUrl(dossierId, String(requirementId), result.documentVersionId, file.documentAttachmentId) })) };
+  return {
+    ...result,
+    files: result.files.map((file, sortOrder) => ({
+      ...file,
+      sortOrder,
+      fileUrl: protectedPreviewUrl(
+        dossierId,
+        String(requirementId),
+        result.documentVersionId,
+        file.documentAttachmentId,
+      ),
+    })),
+  };
 }
 
 const documentServiceMethods = {
-  async sendMissingRequirementReminder(input: SendMissingDocumentReminderInput) {
+  async sendMissingRequirementReminder(
+    input: SendMissingDocumentReminderInput,
+  ) {
     const id = dossierIdSchema.parse(input.dossierId);
     const reminder = missingDocumentReminderSchema.parse(input.reminder);
-    const payload = await apiClient.post<unknown, unknown>(`${ENDPOINT}/${id}/missing-document-reminders`, reminder);
+    const payload = await apiClient.post<unknown, unknown>(
+      `${ENDPOINT}/${id}/missing-document-reminders`,
+      reminder,
+    );
     const response = payload as { value: { requirements: unknown[] } };
-    return missingDocumentReminderEnvelopeSchema.parse({ ...response, value: { ...response.value, requirements: response.value.requirements.map(mapBackendRequirement) } });
+    return missingDocumentReminderEnvelopeSchema.parse({
+      ...response,
+      value: {
+        ...response.value,
+        requirements: response.value.requirements.map(mapBackendRequirement),
+      },
+    });
   },
 
   async reviewComplianceDocument(input: DocumentReviewInput) {
     const versionId = dossierIdSchema.parse(String(input.versionId));
     const { result, ...review } = documentReviewSchema.parse(input.review);
     const payload = await apiClient.post<unknown, unknown>(
-      `${requirementEndpoint(input.dossierId, input.requirementId)}/versions/${versionId}/${result === "APPROVED" ? "approve" : "reject"}`, review,
+      `${requirementEndpoint(input.dossierId, input.requirementId)}/versions/${versionId}/${result === "APPROVED" ? "approve" : "reject"}`,
+      review,
     );
     return documentReviewEnvelopeSchema.parse(payload);
   },
 
   async markReadyForSubmission(dossierId: string) {
     const id = dossierIdSchema.parse(dossierId);
-    const payload = await apiClient.post<unknown, unknown>(`${ENDPOINT}/${id}/ready-for-submission`);
+    const payload = await apiClient.post<unknown, unknown>(
+      `${ENDPOINT}/${id}/ready-for-submission`,
+    );
     return readyForSubmissionEnvelopeSchema.parse(payload);
   },
 
@@ -267,18 +315,58 @@ const documentServiceMethods = {
       { params: { status: query.status, horseId: query.horseId }, signal },
     );
     const overview = overviewDtoSchema.parse(unwrapBackendValue(payload));
-    const items = [...overview.tripRequirements, ...overview.horseRequirements.flatMap((horse) => horse.requirements)].map(mapBackendRequirement);
+    const items = [
+      ...overview.tripRequirements,
+      ...overview.horseRequirements.flatMap((horse) => horse.requirements),
+    ].map(mapBackendRequirement);
     const [field, direction] = query.sortBy.split(":");
-    if (field !== "createdAt") items.sort((left, right) => {
-      const a = field === "dueDate" ? left.dueDate ?? "9999-12-31" : left.status;
-      const b = field === "dueDate" ? right.dueDate ?? "9999-12-31" : right.status;
-      return (direction === "desc" ? -1 : 1) * (a.localeCompare(b) || String(left.dossierRequirementId).localeCompare(String(right.dossierRequirementId)));
-    });
+    if (field !== "createdAt")
+      items.sort((left, right) => {
+        const a =
+          field === "dueDate" ? (left.dueDate ?? "9999-12-31") : left.status;
+        const b =
+          field === "dueDate" ? (right.dueDate ?? "9999-12-31") : right.status;
+        return (
+          (direction === "desc" ? -1 : 1) *
+          (a.localeCompare(b) ||
+            String(left.dossierRequirementId).localeCompare(
+              String(right.dossierRequirementId),
+            ))
+        );
+      });
     const totalPages = Math.max(1, Math.ceil(items.length / query.pageSize));
     const pageIndex = Math.min(query.pageIndex, totalPages);
-    const visible = items.slice((pageIndex - 1) * query.pageSize, pageIndex * query.pageSize);
-    const hydrated = await Promise.all(visible.map((item) => dossierService.getRequirement(id, String(item.dossierRequirementId), signal)));
-    return { items: hydrated.map((item) => ({ ...item, document: item.document ? { ...item.document, latestVersionNo: Math.max(1, ...item.document.versions.map((version) => version.versionNo)) } : null })), pageIndex, pageSize: query.pageSize, totalItems: items.length, totalPages };
+    const visible = items.slice(
+      (pageIndex - 1) * query.pageSize,
+      pageIndex * query.pageSize,
+    );
+    const hydrated = await Promise.all(
+      visible.map((item) =>
+        dossierService.getRequirement(
+          id,
+          String(item.dossierRequirementId),
+          signal,
+        ),
+      ),
+    );
+    return {
+      items: hydrated.map((item) => ({
+        ...item,
+        document: item.document
+          ? {
+              ...item.document,
+              latestVersionNo: Math.max(
+                1,
+                ...item.document.versions.map((version) => version.versionNo),
+              ),
+            }
+          : null,
+      })),
+      pageIndex,
+      pageSize: query.pageSize,
+      totalItems: items.length,
+      totalPages,
+    };
   },
 
   async uploadComplianceDocument(input: UploadDocumentInput) {
@@ -293,57 +381,155 @@ const documentServiceMethods = {
     return mapUploadResult(payload, dossierId, requirementId);
   },
 
-  async getComplianceDocument(_documentId: string, signal?: AbortSignal, dossierId?: string, requirementId?: string) {
-    if (!dossierId || !requirementId) throw new Error("DOSSIER_REQUIREMENT_CONTEXT_REQUIRED");
-    const requirement = await dossierService.getRequirement(dossierId, requirementId, signal);
+  async getComplianceDocument(
+    _documentId: string,
+    signal?: AbortSignal,
+    dossierId?: string,
+    requirementId?: string,
+  ) {
+    if (!dossierId || !requirementId)
+      throw new Error("DOSSIER_REQUIREMENT_CONTEXT_REQUIRED");
+    const requirement = await dossierService.getRequirement(
+      dossierId,
+      requirementId,
+      signal,
+    );
     if (!requirement.document) throw new Error("DOCUMENT_NOT_FOUND");
     return requirement.document;
   },
 
   async submitDocumentVersion(input: SubmitDocumentVersionInput) {
-    const metadata = createSubmitDocumentVersionSchema(null).parse(input.metadata);
+    const metadata = createSubmitDocumentVersionSchema(null).parse(
+      input.metadata,
+    );
     const payload = await apiClient.post<unknown, unknown>(
       `${requirementEndpoint(input.dossierId, input.requirementId)}/document/versions`,
       serializeDocumentSubmission(input.files, metadata),
       { timeout: 120_000 },
     );
-    const result = mapUploadResult(payload, input.dossierId, input.requirementId);
-    return { ...result, mode: result.isNewVersion ? "NEW_VERSION" as const : "EDIT_IN_PLACE" as const };
+    const result = mapUploadResult(
+      payload,
+      input.dossierId,
+      input.requirementId,
+    );
+    return {
+      ...result,
+      mode: result.isNewVersion
+        ? ("NEW_VERSION" as const)
+        : ("EDIT_IN_PLACE" as const),
+    };
   },
 
   async updateComplianceDocumentMetadata(input: UpdateDocumentMetadataInput) {
-    const changes = createUpdateDocumentMetadataSchema(null).parse(input.changes);
+    const changes = createUpdateDocumentMetadataSchema(null).parse(
+      input.changes,
+    );
     const payload = await apiClient.patch<unknown, unknown>(
       `${requirementEndpoint(input.dossierId, input.requirementId)}/document/metadata`,
       serializeDocumentMetadata(changes),
     );
     return updateDocumentMetadataEnvelopeSchema.parse(payload).value;
   },
-  async getRequirement(dossierId: string, requirementId: string, signal?: AbortSignal) {
-    return mapBackendRequirementDetail(await apiClient.get<unknown, unknown>(requirementEndpoint(dossierId, requirementId), { signal }));
+  async getRequirement(
+    dossierId: string,
+    requirementId: string,
+    signal?: AbortSignal,
+  ) {
+    return mapBackendRequirementDetail(
+      await apiClient.get<unknown, unknown>(
+        requirementEndpoint(dossierId, requirementId),
+        { signal },
+      ),
+    );
   },
-  async getDocumentVersions(dossierId: string, requirementId: string, signal?: AbortSignal) {
-    return mapBackendDocumentVersions(await apiClient.get<unknown, unknown>(`${requirementEndpoint(dossierId, requirementId)}/document/versions`, { signal }), dossierId, requirementId);
+  async getDocumentVersions(
+    dossierId: string,
+    requirementId: string,
+    signal?: AbortSignal,
+  ) {
+    return mapBackendDocumentVersions(
+      await apiClient.get<unknown, unknown>(
+        `${requirementEndpoint(dossierId, requirementId)}/document/versions`,
+        { signal },
+      ),
+      dossierId,
+      requirementId,
+    );
   },
   async getMissingRequirements(dossierId: string, signal?: AbortSignal) {
-    const payload = await apiClient.get<unknown, unknown>(`${ENDPOINT}/${dossierIdSchema.parse(dossierId)}/missing-requirements`, { signal });
-    return z.array(z.unknown()).parse(unwrapBackendValue(payload)).map(mapBackendRequirement);
+    const payload = await apiClient.get<unknown, unknown>(
+      `${ENDPOINT}/${dossierIdSchema.parse(dossierId)}/missing-requirements`,
+      { signal },
+    );
+    return z
+      .array(z.unknown())
+      .parse(unwrapBackendValue(payload))
+      .map(mapBackendRequirement);
   },
   async revokeDocumentReview(input: RevokeDocumentReviewInput) {
-    const review = z.object({ status: z.union([z.literal(3), z.literal(5)]), reason: z.string().trim().min(1).max(500) }).parse(input.review);
-    return documentReviewEnvelopeSchema.parse(await apiClient.post<unknown, unknown>(`${requirementEndpoint(input.dossierId, input.requirementId)}/versions/${dossierIdSchema.parse(String(input.versionId))}/reviews/${dossierIdSchema.parse(input.reviewId)}/revoke`, review));
+    const review = z
+      .object({
+        status: z.union([z.literal(3), z.literal(5)]),
+        reason: z.string().trim().min(1).max(500),
+      })
+      .parse(input.review);
+    return documentReviewEnvelopeSchema.parse(
+      await apiClient.post<unknown, unknown>(
+        `${requirementEndpoint(input.dossierId, input.requirementId)}/versions/${dossierIdSchema.parse(String(input.versionId))}/reviews/${dossierIdSchema.parse(input.reviewId)}/revoke`,
+        review,
+      ),
+    );
   },
-  async getDocumentRequestComments(dossierId: string, requirementId: string, requestId: string, signal?: AbortSignal) {
-    const value = unwrapBackendValue(await apiClient.get<unknown, unknown>(`${requirementEndpoint(dossierId, requirementId)}/document-requests/${dossierIdSchema.parse(requestId)}/comments`, { signal }));
-    return z.array(z.object({ documentRequestCommentId: z.string(), authorAccountId: z.string(), message: z.string(), createdAt: z.string() })).parse(value);
+  async getDocumentRequestComments(
+    dossierId: string,
+    requirementId: string,
+    requestId: string,
+    signal?: AbortSignal,
+  ) {
+    const value = unwrapBackendValue(
+      await apiClient.get<unknown, unknown>(
+        `${requirementEndpoint(dossierId, requirementId)}/document-requests/${dossierIdSchema.parse(requestId)}/comments`,
+        { signal },
+      ),
+    );
+    return z
+      .array(
+        z.object({
+          documentRequestCommentId: z.string(),
+          authorAccountId: z.string(),
+          message: z.string(),
+          createdAt: z.string(),
+        }),
+      )
+      .parse(value);
   },
-  async addDocumentRequestComment(input: { dossierId: string; requirementId: string; requestId: string; message: string }) {
-    const body = z.object({ message: z.string().trim().min(1).max(2000) }).parse(input);
-    return await apiClient.post<unknown, unknown>(`${requirementEndpoint(input.dossierId, input.requirementId)}/document-requests/${dossierIdSchema.parse(input.requestId)}/comments`, body);
+  async addDocumentRequestComment(input: {
+    dossierId: string;
+    requirementId: string;
+    requestId: string;
+    message: string;
+  }) {
+    const body = z
+      .object({ message: z.string().trim().min(1).max(2000) })
+      .parse(input);
+    return await apiClient.post<unknown, unknown>(
+      `${requirementEndpoint(input.dossierId, input.requirementId)}/document-requests/${dossierIdSchema.parse(input.requestId)}/comments`,
+      body,
+    );
   },
   async getDossierByBooking(bookingId: string, signal?: AbortSignal) {
-    return overviewDtoSchema.parse(unwrapBackendValue(await apiClient.get<unknown, unknown>(`bookings/${dossierIdSchema.parse(bookingId)}/compliance-dossier`, { signal })));
+    return overviewDtoSchema.parse(
+      unwrapBackendValue(
+        await apiClient.get<unknown, unknown>(
+          `bookings/${dossierIdSchema.parse(bookingId)}/compliance-dossier`,
+          { signal },
+        ),
+      ),
+    );
   },
-}
+};
 
-export const dossierService = Object.assign(dashboardService, documentServiceMethods)
+export const dossierService = Object.assign(
+  dashboardService,
+  documentServiceMethods,
+);

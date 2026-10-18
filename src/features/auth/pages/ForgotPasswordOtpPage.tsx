@@ -5,7 +5,11 @@ import { ChevronRight } from "lucide-react";
 import { OtpResend } from "../components/OtpResend";
 import { useForm } from "react-hook-form";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { emailRouteStateSchema, forgotPasswordOtpSchema, type ForgotPasswordOtpFormValues } from "../schema";
+import {
+  emailRouteStateSchema,
+  forgotPasswordOtpSchema,
+  type ForgotPasswordOtpFormValues,
+} from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
   AuthOtpFormField,
@@ -63,13 +67,17 @@ function PasswordResetOtpForm({ email }: { email: string }) {
   async function resendCode() {
     if (resend.isPending || secondsLeft > 0) return;
     try {
-      const result = await resendAttempt.run(() => resend.mutateAsync({ email, purpose: "PASSWORD_RESET" }));
+      const result = await resendAttempt.run(() =>
+        resend.mutateAsync({ email, purpose: "PASSWORD_RESET" }),
+      );
       if (result.started) {
         restartCooldown();
         form.reset({ otp: "" });
       }
     } catch (error) {
-      restartCooldown(getAuthApiError(error)?.errorCode === "OTP_RESEND_TOO_SOON" ? 60 : 10);
+      restartCooldown(
+        getAuthApiError(error)?.errorCode === "OTP_RESEND_TOO_SOON" ? 60 : 10,
+      );
     }
   }
 
@@ -119,7 +127,12 @@ function PasswordResetOtpForm({ email }: { email: string }) {
           </Button>
         </form>
       </Form>
-      <OtpResend secondsLeft={secondsLeft} isPending={resend.isPending} disabled={resend.isPending || resendAttempt.isBlocked} onResend={() => void resendCode()} />
+      <OtpResend
+        secondsLeft={secondsLeft}
+        isPending={resend.isPending}
+        disabled={resend.isPending || resendAttempt.isBlocked}
+        onResend={() => void resendCode()}
+      />
     </AuthFlowLayout>
   );
 }
