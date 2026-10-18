@@ -62,6 +62,8 @@ export default function BcpQuarantineProofPage() {
   const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null)
   const [photoCoordinates, setPhotoCoordinates] = useState<({ latitude: number; longitude: number } | null)[]>([])
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [uploadedPublicIds, setUploadedPublicIds] = useState<string[]>([])
+  const [uploadState, setUploadState] = useState<'idle' | 'uploading' | 'ready' | 'error'>('idle')
 
   // ─── Form ──────────────────────────────────────────────────────────────────
   const form = useForm<FormValues>({
@@ -91,6 +93,14 @@ export default function BcpQuarantineProofPage() {
       setPhotoError('Please attach a photo of the quarantine clearance sheet.')
       return
     }
+    if (uploadState === 'uploading') {
+      toast.info('Photo is still uploading. Please wait a moment...')
+      return
+    }
+    if (uploadedPublicIds.length === 0) {
+      setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
+      return
+    }
     if (dossierId == null) return
 
     try {
@@ -98,16 +108,17 @@ export default function BcpQuarantineProofPage() {
         bcpName: values.bcpName,
         officialVetName: values.officialVetName || undefined,
         bcpReceiptNumber: values.bcpReceiptNumber || undefined,
-        // Send the holdback flag immediately; the detailed report can be completed later.
+        inspectionAt: new Date().toISOString(),
         isHoldback: values.isHoldback,
         quickNote: values.quickNote || undefined,
-        files: [photoFile],
+        files: uploadedPublicIds.map((publicId) => ({ publicId })),
       })
       toast.success('Quarantine proof submitted successfully. Awaiting TS Verification.')
       form.reset()
       setPhotoFile(null)
       setPhotoTakenAt(null)
       setPhotoCoordinates([])
+      setUploadedPublicIds([])
     } catch (err) {
       const code = err instanceof Error ? err.message : 'UNKNOWN'
       const messages: Record<string, string> = {
@@ -193,9 +204,13 @@ export default function BcpQuarantineProofPage() {
                   capturedAt={photoTakenAt ? [photoTakenAt] : []}
                   coordinates={photoCoordinates}
                   error={photoError}
+                  presignedEntity="attachment"
+                  onUploadedPublicIdsChange={setUploadedPublicIds}
+                  onUploadStateChange={setUploadState}
                   onFilesChange={(files) => {
                     setPhotoFile(files[0] ?? null)
                     setPhotoTakenAt(files[0] ? new Date() : null)
+                    if (!files[0]) setUploadedPublicIds([])
                   }}
                   onCapturedAtChange={(values) => setPhotoTakenAt(values[0] ?? null)}
                   onCoordinatesChange={setPhotoCoordinates}
@@ -210,8 +225,8 @@ export default function BcpQuarantineProofPage() {
                   <dl className="grid grid-cols-2 gap-2 text-xs">
                     <div>
                       <dt className="text-slate-500 font-medium">Photo Proof</dt>
-                      <dd className={cn("font-semibold", photoFile ? "text-emerald-700" : "text-amber-600")}>
-                        {photoFile ? "Attached ✓" : "Pending photo"}
+                      <dd className={cn("font-semibold", photoFile && (uploadedPublicIds.length > 0 || uploadState === 'ready') ? "text-emerald-700" : uploadState === 'uploading' ? "text-blue-600" : "text-amber-600")}>
+                        {uploadState === 'uploading' ? "Uploading…" : photoFile && (uploadedPublicIds.length > 0 || uploadState === 'ready') ? "Uploaded ✓" : photoFile ? "Attached" : "Pending photo"}
                       </dd>
                     </div>
                     <div>
@@ -244,14 +259,14 @@ export default function BcpQuarantineProofPage() {
 
                   <Button
                     type="submit"
-                    disabled={isPending}
+                    disabled={isPending || uploadState === 'uploading'}
                     className={cn(
                       'w-full rounded-[2px] py-3.5 font-heading text-sm font-black uppercase tracking-widest',
                       'bg-[#f39200] text-white hover:bg-[#e08600] active:bg-[#c97800]',
                       'transition-colors disabled:opacity-50 cursor-pointer',
                     )}
                   >
-                    {isPending ? 'Submitting…' : 'Submit Proof ✓'}
+                    {isPending ? 'Submitting…' : uploadState === 'uploading' ? 'Uploading Photo…' : 'Submit Proof ✓'}
                   </Button>
                   <p className="text-[11px] text-slate-500 text-center">
                     Submitted evidence will be queued for Transport Specialist verification.
@@ -272,7 +287,7 @@ export default function BcpQuarantineProofPage() {
           <Button
             type="button"
             id="submit-proof-btn"
-            disabled={isPending}
+            disabled={isPending || uploadState === 'uploading'}
             onClick={form.handleSubmit(onSubmit)}
             className={cn(
               'w-full rounded-[2px] py-3.5 font-heading text-sm font-black uppercase tracking-widest',
@@ -280,7 +295,7 @@ export default function BcpQuarantineProofPage() {
               'transition-colors disabled:opacity-50',
             )}
           >
-            {isPending ? 'Submitting…' : 'Submit Proof ✓'}
+            {isPending ? 'Submitting…' : uploadState === 'uploading' ? 'Uploading Photo…' : 'Submit Proof ✓'}
           </Button>
         </div>
       </div>
