@@ -39,11 +39,8 @@ export const PARTY_LABEL: Record<HandoverPartyType, string> = {
 export const TYPE_OPTIONS = HANDOVER_TYPES.map((value) => ({ value, label: TYPE_LABEL[value] }))
 export const STATUS_OPTIONS = HANDOVER_STATUSES.map((value) => ({ value, label: STATUS_LABEL[value] }))
 
-/** Who may open which group of routes. Crew has no sidebar and gets its own mobile shell. */
+/** Which group of users a page is drawn for: staff (admin), the crew on a phone, or the Customer (read only). */
 export type HandoverAudience = "admin" | "crew" | "customer"
-export const ADMIN_ROLES = ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"]
-export const CREW_ROLES = ["DRIVER", "ESCORT"]
-export const CUSTOMER_ROLES = ["CUSTOMER"]
 
 /** HO5 signature images: PNG, at most 200 KB each. */
 export const SIGNATURE_MAX_BYTES = 200 * 1024
@@ -68,9 +65,6 @@ const base = {
 
 /** Shared URL contract with the owners of `ongoing-transport` (links to `.../handovers/new?...` and `.../handovers/:id`). */
 export const handoverPaths = {
-  adminPattern: "/admin/ongoing-transports/:transportId/handovers",
-  crewPattern: "/crew/transports/:transportId/handovers",
-  customerPattern: "/bookings/:bookingId/transports/:transportId/handovers",
   list: (audience: HandoverAudience, transportId: string, bookingId?: string) =>
     audience === "customer" && bookingId ? base.customer(bookingId, transportId) : audience === "crew" ? base.crew(transportId) : base.admin(transportId),
   record: (audience: HandoverAudience, transportId: string, handoverRecordId: string, bookingId?: string) =>
@@ -83,11 +77,4 @@ export const handoverPaths = {
     const text = query.toString()
     return `${handoverPaths.list(audience, transportId)}/new${text ? `?${text}` : ""}`
   },
-  /** The page the "return" link of the list goes to (owned by the ongoing-transport feature). */
-  transport: (audience: HandoverAudience, transportId: string, bookingId?: string) =>
-    audience === "customer" && bookingId
-      ? `/bookings/${encodeURIComponent(bookingId)}/transports/${encodeURIComponent(transportId)}`
-      : audience === "crew"
-        ? `/crew/transports/${encodeURIComponent(transportId)}`
-        : `/admin/ongoing-transports/${encodeURIComponent(transportId)}`,
 } as const

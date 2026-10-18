@@ -37,3 +37,36 @@ export function transportSegmentsPath(
 ) {
   return `${transportOverviewPath(transportId, audience, bookingId)}/segments`;
 }
+
+export function transportHealthPath(
+  transportId: string,
+  audience: TransportAudience,
+  bookingId?: string,
+) {
+  return `${transportOverviewPath(transportId, audience, bookingId)}/health`;
+}
+
+export function transportGpsPath(
+  transportId: string,
+  audience: TransportAudience,
+  bookingId?: string,
+) {
+  return `${transportOverviewPath(transportId, audience, bookingId)}/gps`;
+}
+
+export function transportHandoversPath(
+  transportId: string,
+  audience: TransportAudience,
+  bookingId?: string,
+) {
+  return `${transportOverviewPath(transportId, audience, bookingId)}/handovers`;
+}
+
+/** Tab the current URL belongs to; the sub pages (a horse's history, a handover record) stay on their tab. */
+export type TransportView =
+  "overview" | "segments" | "health" | "gps" | "handovers";
+
+export function transportViewFromPath(pathname: string): TransportView {
+  const match = /\/(segments|health|gps|handovers)(\/|$)/.exec(pathname);
+  return (match?.[1] as TransportView | undefined) ?? "overview";
+}

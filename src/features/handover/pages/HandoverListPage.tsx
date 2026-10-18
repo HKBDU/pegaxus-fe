@@ -48,7 +48,7 @@ export default function HandoverListPage({ audience }: { audience: HandoverAudie
   const hasFilters = search.trim() !== "" || handoverType !== "ALL" || status !== "ALL"
 
   return (
-    <PageFrame audience={audience} title="Handover records" backHref={handoverPaths.transport(audience, transportId, bookingId)} backLabel="Return to ongoing transports" action={create}>
+    <PageFrame audience={audience} title="Handover records" action={create}>
       {query.isPending ? (
         <LoadingState />
       ) : query.isError ? (

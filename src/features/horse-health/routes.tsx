@@ -9,6 +9,7 @@ import HealthTabPage from "./pages/HealthTabPage"
 import HealthLogPage from "./pages/HealthLogPage"
 import HealthHistoryPage from "./pages/HealthHistoryPage"
 
+/** Crew entry pages: the mobile Home with the big buttons and the list of assigned transports. */
 export const horseHealthRoutes: RouteObject[] = [{
   path: "/crew",
   element: <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}><MainLayout /></ProtectedRoute>,
@@ -17,32 +18,16 @@ export const horseHealthRoutes: RouteObject[] = [{
   path: "/crew/transports",
   element: <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}><MainLayout /></ProtectedRoute>,
   children: [{ index: true, element: <AssignedTransportsPage /> }],
-}, {
-  path: "/crew/transports/:transportId/health",
-  element: <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}><MainLayout /></ProtectedRoute>,
-  children: [{ index: true, element: <HealthTabPage /> }],
-}, {
-  path: "/crew/transports/:transportId/health/:horseId",
-  element: <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}><MainLayout /></ProtectedRoute>,
-  children: [{ index: true, element: <HealthHistoryPage /> }],
-}, {
-  path: "/admin/ongoing-transports/:transportId/health/:horseId",
-  element: <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"]}><MainLayout /></ProtectedRoute>,
-  children: [{ index: true, element: <HealthHistoryPage /> }],
-}, {
-  path: "/bookings/:bookingId/transports/:transportId/health/:horseId",
-  element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><MainLayout /></ProtectedRoute>,
-  children: [{ index: true, element: <HealthHistoryPage /> }],
-}, {
-  path: "/crew/transports/:transportId/health/new",
-  element: <ProtectedRoute allowedRoles={["ESCORT"]}><MainLayout /></ProtectedRoute>,
-  children: [{ index: true, element: <HealthLogPage /> }],
-}, {
-  path: "/admin/ongoing-transports/:transportId/health",
-  element: <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"]}><MainLayout /></ProtectedRoute>,
-  children: [{ index: true, element: <HealthTabPage /> }],
-}, {
-  path: "/bookings/:bookingId/transports/:transportId/health",
-  element: <ProtectedRoute allowedRoles={["CUSTOMER"]}><MainLayout /></ProtectedRoute>,
-  children: [{ index: true, element: <HealthTabPage /> }],
+}]
+
+/** Horse Health tab, relative to the transport URL; it renders inside the transport shell and works for every audience. */
+export const horseHealthTabRoutes: RouteObject[] = [
+  { path: "health", element: <HealthTabPage /> },
+  { path: "health/:horseId", element: <HealthHistoryPage /> },
+]
+
+/** Escort-only form to record a health check: a full page under the crew transport URL, outside the tab shell. */
+export const horseHealthCrewFormRoutes: RouteObject[] = [{
+  path: "health/new",
+  element: <ProtectedRoute allowedRoles={["ESCORT"]}><HealthLogPage /></ProtectedRoute>,
 }]

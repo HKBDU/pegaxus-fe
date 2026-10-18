@@ -1,2 +1,2 @@
-export { liveTrackingRoutes } from "./routes"
+export { liveTrackingTabRoutes } from "./routes"
 export { trackingPaths } from "./constants"

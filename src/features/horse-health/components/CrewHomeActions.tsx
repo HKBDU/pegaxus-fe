@@ -31,8 +31,8 @@ export function CrewHomeActions({ transport }: { transport: AssignedTransport })
       ? <ActionButton icon={FileText} label={CREW_ACTION_LABELS.clearance} to={transport.complianceDossierId ? HORSE_HEALTH_ROUTES.clearance(transport.complianceDossierId) : undefined} disabled={!transport.complianceDossierId} />
       : <ActionButton icon={FileText} label={CREW_ACTION_LABELS.quarantine} to={transport.complianceDossierId ? HORSE_HEALTH_ROUTES.quarantine(transport.complianceDossierId) : undefined} disabled={!transport.complianceDossierId} />}
     <ActionButton icon={Siren} label={CREW_ACTION_LABELS.incident} disabled tone="danger" />
-    <ActionButton icon={Truck} label={CREW_ACTION_LABELS.viewTransport} to={HORSE_HEALTH_ROUTES.transportPlan(transport.transportId)} />
+    <ActionButton icon={Truck} label={CREW_ACTION_LABELS.viewTransport} to={HORSE_HEALTH_ROUTES.transportDetail(transport.transportId)} />
     <ActionButton icon={Flag} label="Report" disabled />
-    <ActionButton icon={ArrowLeftRight} label={CREW_ACTION_LABELS.handover} disabled />
+    <ActionButton icon={ArrowLeftRight} label={CREW_ACTION_LABELS.handover} to={HORSE_HEALTH_ROUTES.handovers(transport.transportId)} />
   </div>
 }

@@ -1,1 +1,1 @@
-export { horseHealthRoutes } from "./routes"
+export { horseHealthRoutes, horseHealthTabRoutes, horseHealthCrewFormRoutes } from "./routes"
