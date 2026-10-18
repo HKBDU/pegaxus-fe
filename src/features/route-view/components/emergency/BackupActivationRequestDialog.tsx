@@ -6,6 +6,7 @@ import { LoaderCircle, Send } from "lucide-react";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import { MoneyInput } from "@/shared/components/ui/money-input";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
   Form,
@@ -54,7 +55,7 @@ const controls = [
   {
     name: "estimatedExtraCost",
     label: "Estimated Extra Cost (VND)",
-    type: "number",
+    type: "money",
   },
   { name: "note", label: "Additional Note", type: "textarea" },
 ] as const;
@@ -171,28 +172,17 @@ export function BackupActivationRequestDialog({
                               {...field}
                               className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none min-h-20"
                             />
+                          ) : control.type === "money" ? (
+                            <MoneyInput
+                              {...field}
+                              placeholder="Whole amount, e.g. 1,500,000"
+                              className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
+                            />
                           ) : (
                             <Input
                               {...field}
                               type={control.type}
-                              {...(control.name === "estimatedExtraCost"
-                                ? {
-                                    step: 1,
-                                    min: 0,
-                                    inputMode: "numeric" as const,
-                                    placeholder: "Whole amount, e.g. 1500000",
-                                    onKeyDown: (
-                                      event: React.KeyboardEvent<HTMLInputElement>,
-                                    ) => {
-                                      if (
-                                        [".", ",", "e", "E", "+", "-"].includes(
-                                          event.key,
-                                        )
-                                      )
-                                        event.preventDefault();
-                                    },
-                                  }
-                                : { step: "any" })}
+                              step="any"
                               className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
                             />
                           )}

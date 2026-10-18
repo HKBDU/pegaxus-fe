@@ -2,8 +2,7 @@ import { z } from "zod";
 import { transportPlanFormSchema } from "@/features/transport-plan/schemas";
 import { backupChangeRequestSchema } from "./schemas";
 
-/** Extra cost is entered in VND only, as a whole amount. */
-export const BACKUP_COST_CURRENCY = "VND";
+/** Extra cost is entered in VND only, as a whole amount; the request carries no currency. */
 export const backupRequestDefaults = {
   reason: "",
   newEstimatedArrivalAt: "",
@@ -41,6 +40,5 @@ export function buildBackupRequest(values: BackupRequestValues) {
     ...valid,
     newEstimatedArrivalAt: new Date(valid.newEstimatedArrivalAt).toISOString(),
     estimatedExtraCost: hasCost ? Number(valid.estimatedExtraCost) : undefined,
-    currency: hasCost ? BACKUP_COST_CURRENCY : undefined,
   });
 }

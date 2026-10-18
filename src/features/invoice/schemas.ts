@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCIES, invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts, DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_TYPE } from "@/features/invoice/constants"
+import { invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts, DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_TYPE } from "@/features/invoice/constants"
 import type { CreateInvoicePayload, Invoice, InvoiceItemPayload, UpdateInvoicePayload } from "@/features/invoice/types"
 import { parseWholeNumber, todayIsoDate } from "@/features/invoice/utils"
 
@@ -220,7 +220,6 @@ export const invoiceItemFormSchema = z.object({
 
 export const invoiceFormSchema = z.object({
   type: z.enum(INVOICE_TYPE),
-  currency: z.enum(INVOICE_CURRENCIES),
   dueDate: z
     .string()
     .min(1, "Due date is required")
@@ -240,7 +239,6 @@ export function emptyItem(): InvoiceItemFormValues {
 export function invoiceToFormValues(invoice: Invoice): InvoiceFormValues {
   return {
     type: invoice.type,
-    currency: DEFAULT_INVOICE_CURRENCY,
     dueDate: invoice.dueDate,
     note: invoice.note ?? "",
     items: invoice.items
@@ -273,7 +271,6 @@ function toItemPayload(item: InvoiceItemFormValues): InvoiceItemPayload {
 export function toCreatePayload(values: InvoiceFormValues): CreateInvoicePayload {
   return {
     type: values.type,
-    currency: values.currency,
     dueDate: values.dueDate,
     ...(values.note.trim() ? { note: values.note.trim() } : {}),
     items: values.items.map(toItemPayload),
@@ -283,7 +280,6 @@ export function toCreatePayload(values: InvoiceFormValues): CreateInvoicePayload
 export function toUpdatePayload(values: InvoiceFormValues, lastUpdatedAt: string): UpdateInvoicePayload {
   return {
     lastUpdatedAt,
-    currency: values.currency,
     dueDate: values.dueDate,
     ...(values.note.trim() ? { note: values.note.trim() } : {}),
     items: values.items.map(toItemPayload),

@@ -12,6 +12,7 @@ import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Button } from "@/shared/components/ui/button"
 import { DataTable } from "@/shared/components/ui/data-table"
 import { Input } from "@/shared/components/ui/input"
+import { MoneyInput } from "@/shared/components/ui/money-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 
 const NO_HORSE = "__none__"
@@ -186,14 +187,24 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
         const line = row.original
         if (line.kind === "deduction") return <span className="whitespace-nowrap tabular-nums">{formatMoney(line.item.price, currency)}</span>
         return (
-          <Input
-            aria-label={`Unit price of line ${row.index + 1}`}
-            inputMode="numeric"
-            onKeyDown={blockNonDigitKeys}
-            className={cn(inputClass, "w-28", hasLineError(table, line.index, "price") && "border-red-500")}
-            disabled={disabled}
-            aria-invalid={hasLineError(table, line.index, "price")}
-            {...register(`items.${line.index}.price`)}
+          // The form keeps plain digits; the box shows them with thousand separators ("1,500,000").
+          <Controller
+            control={control}
+            name={`items.${line.index}.price`}
+            render={({ field }) => (
+              <MoneyInput
+                aria-label={`Unit price of line ${row.index + 1}`}
+                placeholder="e.g. 1,500,000"
+                className={cn(inputClass, "w-32", hasLineError(table, line.index, "price") && "border-red-500")}
+                disabled={disabled}
+                aria-invalid={hasLineError(table, line.index, "price")}
+                name={field.name}
+                ref={field.ref}
+                value={field.value ?? ""}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+              />
+            )}
           />
         )
       },

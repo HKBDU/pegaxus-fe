@@ -161,29 +161,56 @@ export const approvedBookingsPageSchema = z.object({
   totalPages: z.number().int().nonnegative(),
 });
 
-export const approvedBookingDetailSchema = z.object({
-  ...bookingFields,
-  customer: customerSchema.extend({ phone: optionalText }),
-  customerNote: optionalText,
-  horses: z.array(
-    z.object({
-      horseId: entityIdSchema,
-      horseName: z.string(),
-      sex: optionalText,
-      breed: optionalText,
-      microchipNumber: optionalText,
-      passportNumber: optionalText,
-      specialHandlingNotes: optionalText,
-    }),
-  ),
-  transport: transportSchema.extend({ status: z.string().min(1) }).nullable(),
-  // Display the API statuses without introducing another RoutePlan state machine.
-  routePlans: z.array(
-    routeSummarySchema.extend({
-      routeType: z.enum(["PRIMARY", "BACKUP", "RETURN"]),
-    }),
-  ),
+// AB2 lists every dossier of the transport (MAIN and EXTRA) in `complianceDossiers[]`; AB1 still sends the single MAIN one.
+// Screens read `complianceDossier`, so the MAIN dossier (the first one when no type is sent) is derived from the list.
+const dossierItemSchema = z.object({
+  complianceDossierId: entityIdSchema,
+  dossierCode: z.string().optional(),
+  dossierType: z.enum(["MAIN", "EXTRA"]).nullish(),
+  status: dossierStatusSchema,
 });
+export const approvedBookingDetailSchema = z
+  .object({
+    ...bookingFields,
+    complianceDossier: dossierSummarySchema.nullish(),
+    complianceDossiers: z.array(dossierItemSchema).default([]),
+    customer: customerSchema.extend({ phone: optionalText }),
+    customerNote: optionalText,
+    horses: z.array(
+      z.object({
+        horseId: entityIdSchema,
+        horseName: z.string(),
+        sex: optionalText,
+        breed: optionalText,
+        microchipNumber: optionalText,
+        passportNumber: optionalText,
+        specialHandlingNotes: optionalText,
+      }),
+    ),
+    transport: transportSchema.extend({ status: z.string().min(1) }).nullable(),
+    // Display the API statuses without introducing another RoutePlan state machine.
+    routePlans: z.array(
+      routeSummarySchema.extend({
+        routeType: z.enum(["PRIMARY", "BACKUP", "RETURN"]),
+      }),
+    ),
+  })
+  .transform(({ complianceDossier, complianceDossiers, ...booking }) => {
+    const main =
+      complianceDossiers.find((item) => item.dossierType === "MAIN") ??
+      complianceDossiers[0];
+    return {
+      ...booking,
+      complianceDossier:
+        complianceDossier ??
+        (main
+          ? {
+              complianceDossierId: main.complianceDossierId,
+              status: main.status,
+            }
+          : null),
+    };
+  });
 
 export const transportPlanIdSchema = entityIdSchema;
 export const transportPlanSortSchema = z.enum([

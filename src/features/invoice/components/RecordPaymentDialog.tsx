@@ -47,7 +47,6 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
     event.preventDefault()
     const payload = {
       amount: invoice.summary.grandTotal,
-      currency: invoice.currency,
       paymentMethod,
       paidAt: paidAt ? toPaymentTimestamp(paidAt) : undefined,
       transactionReference: transactionReference || undefined,
@@ -92,10 +91,6 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
           <div className="grid gap-2">
             <Label htmlFor="record-payment-amount">Amount</Label>
             <Input id="record-payment-amount" value={formatPaymentAmount(invoice.summary.grandTotal, invoice.currency)} readOnly />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="record-payment-currency">Currency</Label>
-            <Input id="record-payment-currency" value={invoice.currency} readOnly />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="record-payment-method">Payment method</Label>

@@ -1,4 +1,4 @@
-import { INVOICE_CURRENCIES, INVOICE_TAX_RATE_PERCENT } from "@/features/invoice/constants"
+import { INVOICE_TAX_RATE_PERCENT } from "@/features/invoice/constants"
 import { InvoiceApiError } from "@/features/invoice/errors"
 import type { CreateInvoicePayload, Invoice, InvoiceBookingContext, InvoiceItem, InvoiceItemPayload, InvoiceSuggestion, InvoiceType, IssuedInvoice, UpdateInvoicePayload } from "@/features/invoice/types"
 import { roundMoney, todayIsoDate } from "@/features/invoice/utils"
@@ -245,9 +245,8 @@ function precheck(bookingId: string, type: InvoiceType) {
   return { booking, deposits }
 }
 
-function validate(payload: { currency: string; dueDate: string; items: InvoiceItemPayload[] }, booking: MockBooking) {
+function validate(payload: { dueDate: string; items: InvoiceItemPayload[] }, booking: MockBooking) {
   const errors: { field: string; message: string }[] = []
-  if (!(INVOICE_CURRENCIES as readonly string[]).includes(payload.currency)) errors.push({ field: "currency", message: "Currency must be VND" })
   if (!payload.dueDate || payload.dueDate < todayIsoDate()) errors.push({ field: "dueDate", message: "Due date cannot be in the past" })
   payload.items.forEach((item, index) => {
     if (!(item.quantity > 0) || !(item.price > 0)) {
@@ -316,9 +315,8 @@ export async function mockCreateInvoice(bookingId: string, payload: CreateInvoic
   await delay()
   const { booking, deposits } = precheck(bookingId, payload.type)
   validate(payload, booking)
-  if (deposits.length && deposits[0].currency !== payload.currency) throw new InvoiceApiError("CURRENCY_MISMATCH")
   const invoice = buildInvoice({
-    booking, type: payload.type, status: "DRAFT", currency: payload.currency, dueDate: payload.dueDate, note: payload.note ?? null,
+    booking, type: payload.type, status: "DRAFT", currency: "VND", dueDate: payload.dueDate, note: payload.note ?? null,
     items: toItems(payload.items, booking), number: nextNumber(), depositSource: deposits,
   })
   invoices().push(invoice)
@@ -339,9 +337,8 @@ export async function mockUpdateInvoice(invoiceId: string, payload: UpdateInvoic
   const deposits = current.type === "FINAL"
     ? invoices().filter((invoice) => invoice.booking.bookingId === booking.bookingId && invoice.type === "DEPOSIT" && invoice.status === "PAID")
     : []
-  if (deposits.length && deposits[0].currency !== payload.currency) throw new InvoiceApiError("CURRENCY_MISMATCH")
   const updated = buildInvoice({
-    booking, type: current.type, status: "DRAFT", currency: payload.currency, dueDate: payload.dueDate, note: payload.note ?? null,
+    booking, type: current.type, status: "DRAFT", currency: "VND", dueDate: payload.dueDate, note: payload.note ?? null,
     items: toItems(payload.items, booking, current.items), number: current.invoiceNumber, depositSource: deposits, base: current,
   })
   invoices()[index] = updated

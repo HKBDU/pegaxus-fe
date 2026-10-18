@@ -143,40 +143,25 @@ const optionalNote = z
   .trim()
   .optional()
   .transform((value) => value || undefined);
-const optionalCurrency = optionalNote.refine(
-  (value) => value === undefined || /^[A-Z]{3}$/.test(value),
-  {
-    message: "Enter a three-letter uppercase ISO currency code.",
-  },
-);
 const extraCost = z
   .number()
   .finite()
   .min(0)
-  .max(9_999_999_999_999_998)
-  .refine(Number.isInteger, {
+  .max(Number.MAX_SAFE_INTEGER)
+  .refine(Number.isSafeInteger, {
     message: "Enter a whole amount in VND (no decimals).",
   });
-export const backupChangeRequestSchema = z
-  .object({
-    reason: z
-      .string()
-      .max(4000)
-      .trim()
-      .min(10, "Explain the change in at least 10 characters."),
-    newEstimatedArrivalAt: timestamp,
-    estimatedExtraCost: extraCost.optional(),
-    currency: optionalCurrency,
-    note: optionalNote,
-  })
-  .refine(
-    (input) =>
-      input.estimatedExtraCost === undefined || Boolean(input.currency),
-    {
-      path: ["currency"],
-      message: "Currency is required when an extra cost is supplied.",
-    },
-  );
+export const backupChangeRequestSchema = z.object({
+  reason: z
+    .string()
+    .max(4000)
+    .trim()
+    .min(10, "Explain the change in at least 10 characters."),
+  newEstimatedArrivalAt: timestamp,
+  // EC1 takes a whole VND amount; the BE has no currency field in the request.
+  estimatedExtraCost: extraCost.optional(),
+  note: optionalNote,
+});
 export const routeChangeDecisionSchema = z
   .object({
     lastUpdatedAt: timestamp,

@@ -48,6 +48,18 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
           </span>
         ),
       },
+      {
+        accessorKey: "dossierType",
+        header: "TYPE",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span
+            className={`inline-block whitespace-nowrap rounded-[2px] border px-1.5 py-0.5 font-heading text-[0.6rem] font-semibold uppercase leading-none tracking-[0.06em] ${row.original.dossierType === "EXTRA" ? "border-violet-300 bg-violet-50 text-violet-700" : "border-slate-300 bg-white text-slate-700"}`}
+          >
+            {row.original.dossierType === "EXTRA" ? "Extra" : "Main"}
+          </span>
+        ),
+      },
       { accessorKey: "bookingCode", header: "BOOKING REF", cell: ({ row }) => <span className="whitespace-nowrap text-slate-600">{row.original.bookingCode}</span> },
       { accessorKey: "customerName", header: "CLIENT", cell: ({ row }) => <span className="block min-w-32 max-w-48 whitespace-normal font-semibold leading-snug text-slate-900">{row.original.customerName}</span> },
       {

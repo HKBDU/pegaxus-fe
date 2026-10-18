@@ -14,6 +14,12 @@ import type {
   HorseListParams,
 } from "@/features/booking/types"
 
+/** B5 takes a point's latitude and longitude together or not at all, so a half-filled pair is never sent. */
+function pairOf<Side extends "origin" | "destination">(side: Side, latitude: number | undefined, longitude: number | undefined) {
+  if (typeof latitude !== "number" || typeof longitude !== "number") return {}
+  return { [`${side}Latitude`]: latitude, [`${side}Longitude`]: longitude } as Record<`${Side}Latitude` | `${Side}Longitude`, number>
+}
+
 export const bookingKeys = {
   all: ["bookings"] as const,
   lists: () => [...bookingKeys.all, "list"] as const,
@@ -80,8 +86,10 @@ export function useUpdateBooking() {
         lastUpdatedAt: booking.updatedAt,
         originAddress: values.originAddress,
         originCountry: values.originCountry,
+        ...pairOf("origin", values.originLatitude, values.originLongitude),
         destinationAddress: values.destinationAddress,
         destinationCountry: values.destinationCountry,
+        ...pairOf("destination", values.destinationLatitude, values.destinationLongitude),
         requestedDepartureDate: values.requestedDepartureDate,
         requestedArrivalDate: values.requestedArrivalDate || undefined,
         specialRequirements: values.specialRequirements || undefined,
