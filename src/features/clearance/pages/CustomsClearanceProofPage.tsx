@@ -49,14 +49,26 @@ export default function CustomsClearanceProofPage() {
   const { mutateAsync: submitProof, isPending } = useSubmitCustomsClearanceProof(dossierId ?? '')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null)
+  const [photoCoordinates, setPhotoCoordinates] = useState<({ latitude: number; longitude: number } | null)[]>([])
   const [photoError, setPhotoError] = useState<string | null>(null)
+
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { customsPortName: 'Dover Western Docks Customs Point (GB DOV)', mrnNumber: '', customsLane: undefined, isHeld: false, quickNote: '' },
+    defaultValues: {
+      customsPortName: 'Dover Western Docks Customs Point (GB DOV)',
+      mrnNumber: '',
+      customsLane: undefined,
+      isHeld: false,
+      quickNote: '',
+    },
   })
+
   useEffect(() => {
     if (dossier?.bookingSummary?.destinationPort) form.setValue('customsPortName', dossier.bookingSummary.destinationPort)
   }, [dossier, form])
+
+  const isHeld = form.watch('isHeld')
+  const selectedLane = form.watch('customsLane')
 
   const onSubmit = async (values: FormValues) => {
     if (!photoFile) return setPhotoError('Please attach a customs release note / SAD document image.')
@@ -64,7 +76,10 @@ export default function CustomsClearanceProofPage() {
     try {
       await submitProof({ ...values, files: [photoFile] })
       toast.success('Customs proof submitted successfully. Awaiting TS Verification.')
-      form.reset(); setPhotoFile(null); setPhotoTakenAt(null)
+      form.reset()
+      setPhotoFile(null)
+      setPhotoTakenAt(null)
+      setPhotoCoordinates([])
     } catch (error) {
       const code = error instanceof Error ? error.message : 'UNKNOWN'
       const messages: Record<string, string> = {
@@ -80,15 +95,160 @@ export default function CustomsClearanceProofPage() {
     }
   }
 
-  if (isLoading) return <div className="mx-auto max-w-2xl space-y-5 p-6"><Skeleton className="h-10 w-64" /><Skeleton className="h-72 w-full" /><Skeleton className="h-44 w-full" /></div>
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-5 p-6">
+        <Skeleton className="h-10 w-64 rounded-[2px]" />
+        <Skeleton className="h-20 w-full rounded-[2px]" />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7 space-y-4">
+            <Skeleton className="h-72 w-full rounded-[2px]" />
+            <Skeleton className="h-44 w-full rounded-[2px]" />
+          </div>
+          <div className="lg:col-span-5 space-y-4">
+            <Skeleton className="h-64 w-full rounded-[2px]" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const tripCode = dossier?.bookingCode ?? ''
-  return <div className="min-h-screen bg-[#faf9f7] p-4 pb-32 sm:p-6 sm:pb-32"><div className="mx-auto max-w-2xl space-y-4">
-    <PageHeader title="CUSTOMS CLEARANCE PROOF" backHref="/compliance-dossiers" backLabel="Compliance Dossiers" />
-    <div className="space-y-1 pb-1"><p className="font-heading text-[11px] font-bold uppercase tracking-wider text-[#6c6963]">TRIP CODE: <span className="text-[#181818]">{tripCode}</span></p><div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide"><Navigation className="size-3.5 rotate-45 fill-[#f39200] text-[#f39200]" aria-hidden /><span className="truncate">{routeLabel(dossier)}</span></div></div>
-    <Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-      <CustomsEntrySection form={form} />
-      <PhotoCaptureSection files={photoFile ? [photoFile] : []} capturedAt={photoTakenAt ? [photoTakenAt] : []} documentLabel="Customs Release Note / SAD Document Image" statusLabel="Pending Verification" error={photoError} onFilesChange={(files) => { setPhotoFile(files[0] ?? null); setPhotoTakenAt(files[0] ? new Date() : null) }} onCapturedAtChange={(values) => setPhotoTakenAt(values[0] ?? null)} onError={setPhotoError} />
-      <QuickNotesSection form={form} title="Driver Quick Notes" label="Additional Notes" placeholder="Note any customs delay, seal check remarks, or inspection notes…" />
-    </form></Form>
-  </div><div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#e5e2d9] bg-white px-4 pb-4 pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] md:left-[var(--sidebar-width)]"><div className="mx-auto max-w-2xl space-y-2">{photoError && <p className="text-[11px] text-red-600" role="alert">{photoError}</p>}<Button type="button" disabled={isPending} onClick={form.handleSubmit(onSubmit)} className={cn('w-full rounded-[2px] py-3.5 font-heading text-sm font-black uppercase tracking-widest', 'bg-[#f39200] text-white hover:bg-[#e08600]', 'disabled:opacity-50')}>{isPending ? 'Submitting…' : 'Submit Proof ✓'}</Button></div></div></div>
+
+  return (
+    <div className="min-h-screen bg-[#faf9f7] p-4 pb-32 sm:p-6 lg:pb-16">
+      <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl space-y-4">
+        <PageHeader title="CUSTOMS CLEARANCE PROOF" backHref="/compliance-dossiers" backLabel="Compliance Dossiers" />
+
+        {/* Trip Code & Route Card */}
+        <div className="border border-[#e5e2d9] bg-white p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="space-y-0.5">
+            <p className="font-heading text-[11px] font-bold uppercase tracking-wider text-[#6c6963]">
+              TRIP CODE: <span className="font-bold text-[#181818]">{tripCode}</span>
+            </p>
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#181818]">
+              <Navigation className="size-3.5 rotate-45 fill-[#f39200] text-[#f39200]" aria-hidden />
+              <span className="truncate">{routeLabel(dossier)}</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <span className="inline-flex items-center rounded-none bg-blue-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-800">
+              Customs Clearance Flow
+            </span>
+          </div>
+        </div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)}>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column: Customs Entry & Quick Notes */}
+              <div className="lg:col-span-7 space-y-4">
+                <CustomsEntrySection form={form} />
+                <QuickNotesSection
+                  form={form}
+                  title="Driver Quick Notes"
+                  label="Additional Notes"
+                  placeholder="Note any customs delay, seal check remarks, or inspection notes…"
+                />
+              </div>
+
+              {/* Right Column: Photo Proof & Desktop Actions */}
+              <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-6">
+                <PhotoCaptureSection
+                  files={photoFile ? [photoFile] : []}
+                  capturedAt={photoTakenAt ? [photoTakenAt] : []}
+                  coordinates={photoCoordinates}
+                  documentLabel="Customs Release Note / SAD Document Image"
+                  statusLabel="Pending Verification"
+                  error={photoError}
+                  onFilesChange={(files) => {
+                    setPhotoFile(files[0] ?? null)
+                    setPhotoTakenAt(files[0] ? new Date() : null)
+                  }}
+                  onCapturedAtChange={(values) => setPhotoTakenAt(values[0] ?? null)}
+                  onCoordinatesChange={setPhotoCoordinates}
+                  onError={setPhotoError}
+                />
+
+                {/* Desktop Summary & Action Card */}
+                <div className="hidden lg:block border border-[#e5e2d9] bg-white p-5 space-y-4 shadow-sm">
+                  <h3 className="font-heading text-xs font-bold uppercase tracking-wider text-[#181818] border-b border-[#e5e2d9] pb-2">
+                    Clearance Summary
+                  </h3>
+                  <dl className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <dt className="text-slate-500 font-medium">SAD Document</dt>
+                      <dd className={cn("font-semibold", photoFile ? "text-emerald-700" : "text-amber-600")}>
+                        {photoFile ? "Attached ✓" : "Pending photo"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-500 font-medium">GPS Coordinates</dt>
+                      <dd className="font-semibold text-slate-800 font-mono text-[11px]">
+                        {photoCoordinates[0]
+                          ? `${photoCoordinates[0].latitude.toFixed(4)}, ${photoCoordinates[0].longitude.toFixed(4)}`
+                          : "Auto on capture"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-500 font-medium">Routing Channel</dt>
+                      <dd className="font-semibold text-slate-800">
+                        {selectedLane ? selectedLane.replace('_LANE', '') : 'Not selected'}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-slate-500 font-medium">Inspection Status</dt>
+                      <dd className={cn("font-semibold", isHeld ? "text-red-600" : "text-emerald-700")}>
+                        {isHeld ? "Held / Detained" : "Cleared to Proceed"}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  {photoError && (
+                    <p className="text-xs font-medium text-red-600 bg-red-50 border border-red-200 p-2.5" role="alert">
+                      {photoError}
+                    </p>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={isPending}
+                    className={cn(
+                      'w-full rounded-[2px] py-3.5 font-heading text-sm font-black uppercase tracking-widest',
+                      'bg-[#f39200] text-white hover:bg-[#e08600] active:bg-[#c97800]',
+                      'transition-colors disabled:opacity-50 cursor-pointer',
+                    )}
+                  >
+                    {isPending ? 'Submitting…' : 'Submit Proof ✓'}
+                  </Button>
+                  <p className="text-[11px] text-slate-500 text-center">
+                    Submitted customs release will be verified by Transport Specialist.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </form>
+        </Form>
+      </div>
+
+      {/* Fixed Submit Bar on Mobile / Tablet */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#e5e2d9] bg-white px-4 pb-4 pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] md:left-[var(--sidebar-width)] lg:hidden">
+        <div className="mx-auto max-w-2xl space-y-2">
+          {photoError && <p className="text-[11px] text-red-600" role="alert">{photoError}</p>}
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={form.handleSubmit(onSubmit)}
+            className={cn(
+              'w-full rounded-[2px] py-3.5 font-heading text-sm font-black uppercase tracking-widest',
+              'bg-[#f39200] text-white hover:bg-[#e08600]',
+              'disabled:opacity-50',
+            )}
+          >
+            {isPending ? 'Submitting…' : 'Submit Proof ✓'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
 }
