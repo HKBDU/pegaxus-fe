@@ -53,7 +53,7 @@ export function TransportTabs({
             <button
               type="button"
               disabled
-              className="min-h-11 cursor-not-allowed border-b-2 border-transparent px-0.5 text-sm whitespace-nowrap text-slate-400"
+              className="relative min-h-11 cursor-not-allowed border-b-2 border-transparent px-0.5 text-sm whitespace-nowrap text-slate-400"
             >
               {label}
               <span className="sr-only"> — Coming soon</span>

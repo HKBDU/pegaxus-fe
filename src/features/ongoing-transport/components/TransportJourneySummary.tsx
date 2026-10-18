@@ -40,7 +40,7 @@ export function TransportJourneySummary({
       aria-label="Current journey and schedule"
       className="overview-panel"
     >
-      <div className="grid divide-y divide-slate-100 md:grid-cols-2 xl:grid-cols-4 xl:divide-x xl:divide-y-0">
+      <div className="grid divide-y divide-slate-100 md:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))] xl:divide-x xl:divide-y-0">
         <div className="overview-cell">
           <h2 className="overview-heading">
             <MapPin aria-hidden="true" />
@@ -48,7 +48,7 @@ export function TransportJourneySummary({
           </h2>
           {segment ? (
             <>
-              <div className="mt-3 flex items-center gap-3 text-base font-semibold leading-snug text-slate-900">
+              <div className="mt-2 flex items-center gap-2 text-base font-semibold leading-snug text-slate-900">
                 <span className="min-w-0 flex-1 break-words">
                   {segment.fromLocation.locationName}
                 </span>
@@ -61,7 +61,7 @@ export function TransportJourneySummary({
                   {segment.toLocation.locationName}
                 </span>
               </div>
-              <p className="mt-3 mb-0 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+              <p className="mt-2 mb-0 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                 <Route aria-hidden="true" className="size-3.5" />
                 Leg {segment.displayOrder} / {overview.totalSegments}
                 <span aria-hidden="true">·</span>
@@ -76,7 +76,7 @@ export function TransportJourneySummary({
               No current segment
             </p>
           )}
-          <p className="mt-3 mb-0 text-xs text-slate-500">
+          <p className="mt-2 mb-0 text-xs text-slate-500">
             {overview.completedSegments} / {overview.totalSegments} legs
             completed
           </p>
@@ -86,7 +86,7 @@ export function TransportJourneySummary({
             <Truck aria-hidden="true" />
             Transport / Route
           </h2>
-          <dl className="mt-3 mb-0 space-y-3">
+          <dl className="mt-2 mb-0 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <dt className="text-xs text-slate-500">Transport status</dt>
               <dd className="m-0">
@@ -123,7 +123,7 @@ export function TransportJourneySummary({
             <CalendarDays aria-hidden="true" />
             Journey schedule
           </h2>
-          <dl className="mt-3 mb-0 space-y-3">
+          <dl className="mt-2 mb-0 space-y-2">
             <ScheduleValue
               label="Journey departure"
               value={overview.departureAt}
@@ -139,13 +139,13 @@ export function TransportJourneySummary({
             <Clock3 aria-hidden="true" />
             Planned arrival
           </h2>
-          <p className="mt-3 mb-0 text-base font-semibold tabular-nums text-slate-900">
+          <p className="mt-2 mb-0 text-base font-semibold tabular-nums text-slate-900">
             {formatTransportDate(overview.etaAt)}
           </p>
           <p className="mt-1 mb-3 text-[11px] text-slate-500">
             Overall journey plan · not GPS live ETA
           </p>
-          <dl className="mb-0 space-y-3">
+          <dl className="mb-0 space-y-2">
             <ScheduleValue
               label="Actual journey arrival"
               value={overview.transport.actualArrivalAt}
@@ -162,7 +162,7 @@ export function TransportJourneySummary({
       {segment ? (
         <dl
           aria-label="Current leg schedule"
-          className="m-0 grid grid-cols-2 gap-4 border-t border-slate-100 bg-slate-50/60 px-4 py-3 md:grid-cols-4"
+          className="m-0 grid grid-cols-2 gap-3 border-t border-slate-100 bg-slate-50/60 px-3 py-2 md:grid-cols-4"
         >
           <ScheduleValue
             label="Leg planned departure"

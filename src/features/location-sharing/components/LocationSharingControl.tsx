@@ -51,7 +51,7 @@ export function LocationSharingControl({
         }}
         variant={state.active ? "destructive" : "default"}
         aria-describedby="sharing-operation-note"
-        className="mt-5 min-h-16 w-full rounded-xs px-4 py-3 text-base whitespace-normal disabled:opacity-70"
+        className="location-sharing-toggle mt-5 min-h-16 w-full rounded-xs px-4 py-3 text-base whitespace-normal disabled:opacity-70"
       >
         {state.active ? (
           <Square aria-hidden="true" className="size-5" />

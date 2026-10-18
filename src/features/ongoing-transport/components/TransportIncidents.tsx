@@ -1,10 +1,4 @@
-import {
-  CircleCheck,
-  HeartPulse,
-  Route,
-  TriangleAlert,
-  Truck,
-} from "lucide-react";
+import { HeartPulse, Route, TriangleAlert, Truck } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import {
   Table,
@@ -53,17 +47,7 @@ export function TransportIncidents({ incidents }: { incidents: Incident[] }) {
   const showSeverity = incidents.some(
     (incident) => incident.severity !== undefined,
   );
-  if (incidents.length === 0)
-    return (
-      <section
-        aria-label="Active incidents"
-        role="status"
-        className="flex items-start gap-2 rounded-xs border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
-      >
-        <CircleCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-        Hành trình an toàn, không có sự cố ghi nhận.
-      </section>
-    );
+  if (incidents.length === 0) return null;
   return (
     <section
       aria-labelledby="active-incidents"

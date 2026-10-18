@@ -47,6 +47,9 @@
   min-height: 48px;
   font-size: 1rem;
 }
+.location-sharing-ui .location-sharing-toggle {
+  min-height: 64px;
+}
 .location-sharing-ui :is(p, dt, dd, li) {
   overflow-wrap: anywhere;
   font-size: 1rem;

@@ -58,11 +58,11 @@ export default function TransportOverviewPage({
 
   return (
     <div
-      className="ongoing-transport-ui transport-overview booking-page-shell min-h-[calc(100svh-5rem)] min-w-0 px-4 py-4 font-sans sm:px-6 lg:py-6"
+      className="ongoing-transport-ui transport-overview booking-page-shell min-h-[calc(100svh-5rem)] min-w-0 px-4 py-4 font-sans sm:px-6"
       data-audience={audience}
     >
       <div
-        className={`mx-auto w-full min-w-0 space-y-4 ${audience === "crew" ? "max-w-4xl" : "booking-page-enter max-w-[1440px]"}`}
+        className={`mx-auto w-full min-w-0 space-y-3 ${audience === "crew" ? "max-w-4xl" : "booking-page-enter max-w-[1440px]"}`}
       >
         <TransportPageHeader
           audience={audience}
@@ -163,7 +163,7 @@ export default function TransportOverviewPage({
               </span>
             </div>
             <TransportJourneySummary overview={overview} />
-            <div className="overview-panel grid divide-y divide-slate-100 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+            <div className="grid items-start gap-3 lg:grid-cols-3">
               <TransportJourneyInformation overview={overview} />
               <TransportHorseHealthSummary
                 summary={overview.horseHealthSummary}
