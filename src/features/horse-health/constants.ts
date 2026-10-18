@@ -1,7 +1,8 @@
 export const HORSE_HEALTH_ROUTES = {
   home: "/crew",
   transports: "/crew/transports",
-  transportPlan: (transportId: string) => `/transport-plans/${encodeURIComponent(transportId)}`,
+  transportDetail: (transportId: string) => `/crew/transports/${encodeURIComponent(transportId)}`,
+  handovers: (transportId: string) => `/crew/transports/${encodeURIComponent(transportId)}/handovers`,
   quarantine: (dossierId: string) => `/compliance-dossiers/${encodeURIComponent(dossierId)}/bcp-quarantine-proof`,
   clearance: (dossierId: string) => `/compliance-dossiers/${encodeURIComponent(dossierId)}/customs-clearance-proof`,
   health: (transportId: string) => `/crew/transports/${encodeURIComponent(transportId)}/health`,

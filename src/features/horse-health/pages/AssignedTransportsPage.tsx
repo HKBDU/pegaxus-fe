@@ -27,7 +27,7 @@ function TransportListItem({ transport }: { transport: AssignedTransport }) {
       <div><p className="text-xs text-slate-400">Current leg</p><p className="mt-1 font-semibold text-slate-800">{transport.currentSegment ? `${transport.currentSegment.fromLocationName} → ${transport.currentSegment.toLocationName}` : "Not started"}</p></div>
       <div><p className="text-xs text-slate-400">Departure</p><p className="mt-1 font-semibold text-slate-800">{formatDate(transport.departureAt)}</p></div>
     </div>
-    <Link to={HORSE_HEALTH_ROUTES.transportPlan(transport.transportId)} className="mt-4 inline-flex min-h-10 items-center gap-2 border border-slate-200 px-3 text-sm font-semibold text-slate-800 hover:border-orange-300">
+    <Link to={HORSE_HEALTH_ROUTES.transportDetail(transport.transportId)} className="mt-4 inline-flex min-h-10 items-center gap-2 border border-slate-200 px-3 text-sm font-semibold text-slate-800 hover:border-orange-300">
       View Transport Plan <ArrowRight className="size-4" aria-hidden="true" />
     </Link>
   </article>

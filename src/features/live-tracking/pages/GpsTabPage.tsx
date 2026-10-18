@@ -2,12 +2,10 @@ import { lazy, Suspense, useMemo } from "react"
 import { useParams } from "react-router-dom"
 import { ErrorState, LoadingState } from "@/shared/components/common"
 import { FEATURES, isDemoMode, type TrackingAudience } from "../constants"
-import { StatusBadge } from "../components/StatusBadge"
 import { CollapseAdminSidebar } from "../components/CollapseAdminSidebar"
 import { JourneySection } from "../components/JourneySection"
 import { LiveSummaryCard } from "../components/LiveSummaryCard"
 import { SignalNotices } from "../components/SignalNotices"
-import { TransportTabs } from "../components/TransportTabs"
 import { useLiveTruck } from "../hooks/useLiveTruck"
 import { useTransportOverview, useTransportSegments } from "../hooks/useJourneyDetails"
 import { useRouteEstimate } from "../hooks/useRouteEstimate"
@@ -23,10 +21,9 @@ const DemoPanel = import.meta.env.DEV ? lazy(() => import("../mock/DemoPanel")) 
 interface GpsTabContentProps {
   audience: TrackingAudience
   transportId: string
-  bookingId?: string
 }
 
-function GpsTabContent({ audience, transportId, bookingId }: GpsTabContentProps) {
+function GpsTabContent({ audience, transportId }: GpsTabContentProps) {
   const { query, snapshot, truck, trail, signal, now, skewMs, streamState, streamError } = useLiveTruck(transportId)
   const completed = snapshot?.transportStatus === "COMPLETED"
   const stops = useMemo(
@@ -44,23 +41,8 @@ function GpsTabContent({ audience, transportId, bookingId }: GpsTabContentProps)
   )
 
   return (
-    <section className="mx-auto grid w-full max-w-[1600px] gap-5 px-4 py-5 sm:px-6 lg:px-8" aria-labelledby="gps-tab-title">
-      <header className="grid gap-1">
-        <h1 id="gps-tab-title" className="font-heading text-2xl font-medium uppercase tracking-[0.04em]">
-          Live GPS Tracking
-        </h1>
-        {snapshot ? (
-          <p className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-            {overview ? <span className="font-semibold text-gray-800">{overview.transport.transportCode}</span> : null}
-            <StatusBadge status={snapshot.transportStatus} />
-            {overview ? <span>Booking {overview.booking.bookingCode}</span> : null}
-          </p>
-        ) : null}
-      </header>
-
+    <section className="grid gap-4" aria-label="Live GPS tracking">
       {audience === "admin" ? <CollapseAdminSidebar /> : null}
-      <TransportTabs audience={audience} transportId={transportId} bookingId={bookingId} />
-
       {DemoPanel && isDemoMode() ? (
         <Suspense fallback={null}>
           <DemoPanel />
@@ -102,7 +84,7 @@ function GpsTabContent({ audience, transportId, bookingId }: GpsTabContentProps)
 
 /** Tab 4 of a transport (SCR-F4-007): the planned route and the vehicle on one map, for staff and for the booking's Customer. */
 export default function GpsTabPage({ audience }: { audience: TrackingAudience }) {
-  const { transportId = "", bookingId } = useParams()
+  const { transportId = "" } = useParams()
   // A new transport id starts with an empty trail and a fresh stream.
-  return <GpsTabContent key={transportId} audience={audience} transportId={transportId} bookingId={bookingId} />
+  return <GpsTabContent key={transportId} audience={audience} transportId={transportId} />
 }

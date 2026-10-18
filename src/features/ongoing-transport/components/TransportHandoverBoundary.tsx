@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { ClipboardCheck, MapPin } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
 import { Badge } from "@/shared/components/ui/badge";
@@ -11,6 +12,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { formatTransportLabel } from "../format";
+import { transportHandoversPath } from "../navigation";
 import type { HandoverBoundary, TransportAudience } from "../types";
 
 const supportedTypes = [
@@ -38,6 +40,10 @@ export function TransportHandoverBoundary({
   position: "pickup" | "transfer" | "delivery" | "unmatched";
 }) {
   const roles = useAuthStore((state) => state.principal?.roles);
+  const { transportId, bookingId } = useParams<{
+    transportId: string;
+    bookingId: string;
+  }>();
   const [selection, setSelection] = useState("");
   const availableTypes = boundary.allowedHandoverTypes.filter((value) =>
     supportedTypes.includes(value),
@@ -54,6 +60,22 @@ export function TransportHandoverBoundary({
     !boundary.existingHandover &&
     availableTypes.length > 0;
   const record = boundary.existingHandover;
+  const handoversPath = transportId
+    ? transportHandoversPath(transportId, audience, bookingId)
+    : undefined;
+  // The handover page reads the boundary and the type from the query and asks for a last confirmation.
+  const createPath =
+    handoversPath && selected
+      ? `${handoversPath}/new?${new URLSearchParams({
+          handoverType: selected,
+          ...(boundary.fromRoutePlanRouteId
+            ? { fromRoutePlanRouteId: boundary.fromRoutePlanRouteId }
+            : {}),
+          ...(boundary.toRoutePlanRouteId
+            ? { toRoutePlanRouteId: boundary.toRoutePlanRouteId }
+            : {}),
+        })}`
+      : undefined;
   const label =
     position === "pickup"
       ? "Pickup boundary"
@@ -118,16 +140,19 @@ export function TransportHandoverBoundary({
             </p>
           )}
         </div>
-        {record ? (
+        {record && handoversPath ? (
           <Button
-            type="button"
+            asChild
             size="sm"
             variant="outline"
-            disabled
             className="rounded-xs text-xs"
-            aria-label={`View handover ${record.handoverCode} — route integration pending`}
           >
-            View Handover Record
+            <Link
+              to={`${handoversPath}/${encodeURIComponent(record.handoverRecordId)}`}
+              aria-label={`View handover ${record.handoverCode}`}
+            >
+              View Handover Record
+            </Link>
           </Button>
         ) : canCreate ? (
           <div className="flex max-w-full flex-wrap items-center gap-2">
@@ -155,23 +180,22 @@ export function TransportHandoverBoundary({
               </Select>
             ) : null}
             <Button
+              asChild={Boolean(createPath)}
               type="button"
               size="sm"
               variant="outline"
-              disabled
+              disabled={!createPath}
               className="rounded-xs text-xs"
             >
-              Create Handover Record
+              {createPath ? (
+                <Link to={createPath}>Create Handover Record</Link>
+              ) : (
+                "Create Handover Record"
+              )}
             </Button>
           </div>
         ) : null}
       </div>
-      {record || canCreate ? (
-        <p className="mt-2 mb-0 text-[11px] text-slate-500">
-          Handover page integration pending. No action is submitted from this
-          view.
-        </p>
-      ) : null}
     </section>
   );
 }
