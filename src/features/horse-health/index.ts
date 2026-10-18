@@ -1,0 +1,1 @@
+export { horseHealthRoutes } from "./routes"

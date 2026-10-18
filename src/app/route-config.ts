@@ -23,6 +23,7 @@ export const ROLE_ROUTES = {
   personnelAssignment: "/admin/personnel-assignment",
   invoices: "/admin/invoices",
   notifications: "/notifications",
+  crew: "/crew",
 } as const
 
 export const routePlanDetail = (routePlanId: string) => `${ROLE_ROUTES.routePlans}/${encodeURIComponent(routePlanId)}`
@@ -58,6 +59,9 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
   }
   if (normalizeRole(role) === "FLEET_ROUTE_COORDINATOR" && safePath === ROLE_ROUTES.home) {
     return ROLE_ROUTES.vehicles
+  }
+  if (["DRIVER", "ESCORT"].includes(normalizeRole(role)) && safePath === ROLE_ROUTES.home) {
+    return ROLE_ROUTES.crew
   }
   return safePath
 }

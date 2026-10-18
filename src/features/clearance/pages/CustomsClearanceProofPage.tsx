@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -12,10 +12,9 @@ import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Form } from '@/shared/components/ui/form'
-import { PhotographicProofSection, QuickNotesSection } from '@/features/quarantine/components'
+import { QuickNotesSection } from '@/features/quarantine/components'
+import { PhotoCaptureSection } from '@/shared/components/PhotoCaptureSection'
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024
-const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png']
 const schema = z.object({
   customsPortName: z.string().min(1, 'Customs office / border post is required'),
   mrnNumber: z.string().optional(),
@@ -59,13 +58,6 @@ export default function CustomsClearanceProofPage() {
     if (dossier?.bookingSummary?.destinationPort) form.setValue('customsPortName', dossier.bookingSummary.destinationPort)
   }, [dossier, form])
 
-  const handleFilePicked = useCallback((file: File | undefined) => {
-    if (!file) return
-    if (!ACCEPTED_TYPES.includes(file.type)) return toast.error('Only JPG or PNG images are accepted.')
-    if (file.size > MAX_FILE_SIZE) return toast.error('Image must be ≤ 5 MB.')
-    setPhotoFile(file); setPhotoTakenAt(new Date()); setPhotoError(null)
-  }, [])
-
   const onSubmit = async (values: FormValues) => {
     if (!photoFile) return setPhotoError('Please attach a customs release note / SAD document image.')
     if (dossierId == null) return
@@ -95,7 +87,7 @@ export default function CustomsClearanceProofPage() {
     <div className="space-y-1 pb-1"><p className="font-heading text-[11px] font-bold uppercase tracking-wider text-[#6c6963]">TRIP CODE: <span className="text-[#181818]">{tripCode}</span></p><div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide"><Navigation className="size-3.5 rotate-45 fill-[#f39200] text-[#f39200]" aria-hidden /><span className="truncate">{routeLabel(dossier)}</span></div></div>
     <Form {...form}><form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       <CustomsEntrySection form={form} />
-      <PhotographicProofSection photoFile={photoFile} photoTakenAt={photoTakenAt} documentLabel="Customs Release Note / SAD Document Image" statusLabel="Pending Verification" onFilePicked={handleFilePicked} onRemovePhoto={() => { setPhotoFile(null); setPhotoTakenAt(null) }} error={photoError} />
+      <PhotoCaptureSection files={photoFile ? [photoFile] : []} capturedAt={photoTakenAt ? [photoTakenAt] : []} documentLabel="Customs Release Note / SAD Document Image" statusLabel="Pending Verification" error={photoError} onFilesChange={(files) => { setPhotoFile(files[0] ?? null); setPhotoTakenAt(files[0] ? new Date() : null) }} onCapturedAtChange={(values) => setPhotoTakenAt(values[0] ?? null)} onError={setPhotoError} />
       <QuickNotesSection form={form} title="Driver Quick Notes" label="Additional Notes" placeholder="Note any customs delay, seal check remarks, or inspection notes…" />
     </form></Form>
   </div><div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#e5e2d9] bg-white px-4 pb-4 pt-3 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] md:left-[var(--sidebar-width)]"><div className="mx-auto max-w-2xl space-y-2">{photoError && <p className="text-[11px] text-red-600" role="alert">{photoError}</p>}<Button type="button" disabled={isPending} onClick={form.handleSubmit(onSubmit)} className={cn('w-full rounded-[2px] py-3.5 font-heading text-sm font-black uppercase tracking-widest', 'bg-[#f39200] text-white hover:bg-[#e08600]', 'disabled:opacity-50')}>{isPending ? 'Submitting…' : 'Submit Proof ✓'}</Button></div></div></div>

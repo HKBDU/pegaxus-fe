@@ -24,6 +24,10 @@ import AuthoritySubmissionPage from "@/features/authority/pages/AuthoritySubmiss
 import AuthorityReviewPage from "@/features/authority/pages/AuthorityReviewPage";
 import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearanceProofPage";
 import CustomsClearanceReviewPage from "@/features/clearance/pages/CustomsClearanceReviewPage";
+import { horseHealthRoutes } from "@/features/horse-health";
+import TestPage from "@/Test";
+
+import LogoutPage from "@/features/auth/pages/LogoutPage";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const ManageUserAccountsPage = lazy(
@@ -43,7 +47,6 @@ const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
 const GoogleCallbackPage = lazy(
   () => import("@/features/auth/pages/GoogleCallbackPage"),
 );
-const LogoutPage = lazy(() => import("@/features/auth/pages/LogoutPage"));
 const ForgotPasswordPage = lazy(
   () => import("@/features/auth/pages/ForgotPasswordPage"),
 );
@@ -137,6 +140,12 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  ...horseHealthRoutes,
+  {
+    path: "/transport-plans/:transportPlanId",
+    element: <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}><MainLayout /></ProtectedRoute>,
+    children: [{ index: true, element: <Suspense fallback={<LoadingState />}><TransportPlanDetailsPage /></Suspense> }],
+  },
   ...handoverRoutes,
   ...liveTrackingRoutes,
   {
@@ -633,9 +642,7 @@ export const router = createBrowserRouter([
     path: "/logout",
     element: (
       <ProtectedRoute>
-        <Suspense fallback={<LoadingState />}>
-          <LogoutPage />
-        </Suspense>
+        <LogoutPage />
       </ProtectedRoute>
     ),
   },
@@ -767,6 +774,10 @@ export const router = createBrowserRouter([
   ...(import.meta.env.DEV
     ? [
         // BEGIN TEMP UC-38 LOCAL PREVIEW — remove only this route object after testing.
+        {
+          path: "/__dev/horse-health/photo-capture",
+          element: <TestPage />,
+        },
         {
           path: "/__dev/flow3/route-plans/:routePlanId",
           element: <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"]}><AdminLayout /></ProtectedRoute>,
