@@ -1,67 +1,22 @@
 .location-sharing-ui {
   min-width: 0;
-  min-height: calc(100svh - 3.5rem);
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
   font-family: var(--sans);
   font-size: 1rem;
   color: hsl(var(--foreground));
 }
-.location-sharing-ui .location-sharing-panel {
-  min-width: 0;
-  padding: 1rem;
-  border: 1px solid hsl(var(--border));
-  border-radius: 2px;
-  background: hsl(var(--background));
-}
-.location-sharing-ui .location-sharing-heading {
-  display: flex;
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-family: var(--sans);
-  font-size: 1.125rem;
-  font-weight: 600;
-  line-height: 1.4;
-}
-.location-sharing-ui .location-sharing-title {
-  margin: 0;
-  font-family: var(--heading);
-  font-size: 1.875rem;
-  line-height: 1.25;
-}
-.location-sharing-ui .location-sharing-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  min-width: 0;
-  padding: 0.75rem 1rem;
-  border-width: 1px;
-  border-style: solid;
-  border-radius: 2px;
-  line-height: 1.6;
-}
 .location-sharing-ui :is(a, button) {
   min-height: 48px;
   font-size: 1rem;
 }
-.location-sharing-ui .location-sharing-toggle {
-  min-height: 64px;
-}
-.location-sharing-ui :is(p, dt, dd, li) {
+.location-sharing-ui .location-sharing-panel {
+  min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 1rem;
 }
-.location-sharing-ui [data-slot="badge"] {
-  max-width: 100%;
-  white-space: normal;
-  font-size: 0.875rem;
-}
-.location-sharing-ui [role="alert"] {
-  padding: 1rem;
-  border-radius: 2px;
+.location-sharing-ui .location-sharing-toggle {
+  min-width: 0;
+  min-height: 64px;
+  overflow-wrap: anywhere;
 }
 .location-sharing-ui *,
 .location-sharing-ui *::before,

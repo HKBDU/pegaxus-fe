@@ -1,233 +1,144 @@
-import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowRight, RefreshCw, TriangleAlert } from "lucide-react";
-import { Badge } from "@/shared/components/ui/badge";
+import { Link, useParams } from "react-router-dom";
+import { useTransportOverview } from "@/features/ongoing-transport/hooks/useTransportOverview";
+import { getOngoingTransportError } from "@/features/ongoing-transport/services";
+import { isOngoingTransportMockMode } from "@/features/ongoing-transport/source";
+import { ArrowLeft, MapPin } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import { ErrorState } from "@/shared/components/common";
+import { Card } from "@/shared/components/ui/card";
 import { LocationSharingControl } from "../components/LocationSharingControl";
-import {
-  LocationSharingStatus,
-  LocationPermissionGuidance,
-} from "../components/LocationSharingDetails";
+import { LocationSharingSummary } from "../components/LocationSharingDetails";
 import { useLocationSharing } from "../hooks/useLocationSharing";
 import { driverTransportOverviewPath } from "../navigation";
-import type { DriverLocationSharingPageProps } from "../types";
+import type { DriverTransportReadState } from "../types";
 import "../ui.css";
 
-export default function DriverLocationSharingPage({
-  transportId,
-  context,
-  refreshing,
-  source,
-  onReloadContext,
-}: DriverLocationSharingPageProps) {
+export default function DriverLocationSharingPage() {
+  const { transportId } = useParams<{ transportId: string }>();
+  const query = useTransportOverview(
+    transportId,
+    undefined,
+    "crew",
+    "data",
+    false,
+  );
+  let context: DriverTransportReadState;
+  if (transportId === undefined) {
+    context = {
+      kind: "error",
+      message: "Transport route information is missing.",
+      retryable: false,
+    };
+  } else if (query.isError) {
+    const error = getOngoingTransportError(query.error, "overview");
+    context = { kind: "error", ...error };
+  } else if (query.data) {
+    const { transport, currentSegment, serverTime } = query.data;
+    context = {
+      kind: "available",
+      stale: !query.online,
+      transport: {
+        transportId: transport.transportId,
+        transportCode: transport.transportCode,
+        status: transport.status,
+        serverTime,
+        currentLeg: currentSegment
+          ? {
+              displayOrder: currentSegment.displayOrder,
+              from: currentSegment.fromLocation.locationName,
+              to: currentSegment.toLocation.locationName,
+            }
+          : null,
+      },
+    };
+  } else if (!query.online) {
+    context = {
+      kind: "unavailable",
+      message:
+        "You are offline and no journey context is cached. Reconnect to load this transport.",
+    };
+  } else {
+    context = { kind: "loading" };
+  }
+  const source = isOngoingTransportMockMode() ? "mock" : "real";
   const { environment, state, canStart, start, stop } = useLocationSharing({
     transportId,
     context,
-    refreshing,
+    refreshing: query.isFetching,
     source,
-    onReloadContext,
+    onReloadContext: () => void query.refetch(),
   });
-  const transport = context.kind === "available" ? context.transport : null;
-  const statusLabel =
-    transport?.status === "IN_TRANSIT"
-      ? "In transit"
-      : transport?.status === "READY"
-        ? "Ready"
-        : "Completed";
-  const retryable =
-    context.kind === "error"
-      ? context.retryable
-      : context.kind === "unavailable";
+  const unavailableReason =
+    context.kind === "loading"
+      ? "Loading journey"
+      : source === "mock"
+        ? "Mock journey"
+        : context.kind !== "available"
+          ? "Journey unavailable"
+          : context.transport.status !== "IN_TRANSIT"
+            ? "Journey not in transit"
+            : environment.network === "offline"
+              ? "Offline"
+              : environment.capability === "insecure"
+                ? "HTTPS required"
+                : environment.capability === "unsupported"
+                  ? "GPS unsupported"
+                  : environment.network === "unknown" ||
+                      environment.capability === "unknown"
+                    ? "Checking GPS"
+                    : undefined;
+
   return (
     <main className="location-sharing-ui px-4 py-4 sm:px-6 sm:py-6">
-      <div className="mx-auto w-full min-w-0 max-w-4xl space-y-4">
-        <header>
-          {transportId !== undefined ? (
-            <Button
-              asChild
-              variant="ghost"
-              className="mb-2 -ml-2 min-h-12 rounded-xs px-2 text-base"
-            >
-              <Link to={driverTransportOverviewPath(transportId)}>
-                <ArrowLeft aria-hidden="true" className="size-4" />
-                Transport Overview
-              </Link>
-            </Button>
-          ) : null}
-          <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="mx-auto w-full min-w-0 max-w-lg space-y-3">
+        {transportId !== undefined ? (
+          <Button
+            asChild
+            variant="ghost"
+            className="-ml-2 min-h-12 rounded-xs px-2 text-base"
+          >
+            <Link to={driverTransportOverviewPath(transportId)}>
+              <ArrowLeft aria-hidden="true" className="size-4" />
+              Back to overview
+            </Link>
+          </Button>
+        ) : null}
+        <Card className="location-sharing-panel gap-5 rounded-xs border-border bg-card p-4 shadow-none sm:p-5">
+          <header className="flex min-w-0 items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xs bg-primary/10 text-primary">
+              <MapPin aria-hidden="true" className="size-5" />
+            </span>
             <div className="min-w-0">
-              <p className="mt-0 mb-1 font-medium text-slate-500">
-                Driver workspace
+              <h1 className="m-0 text-lg leading-snug font-semibold text-foreground">
+                Journey Location Sharing
+              </h1>
+              <p className="mt-1 mb-0 text-sm leading-relaxed text-muted-foreground">
+                Share your location during this journey.
               </p>
-              <h1 className="location-sharing-title">Location Sharing</h1>
             </div>
-          </div>
-          <p className="mt-2 mb-0 leading-relaxed text-slate-600">
-            Share your journey location while this page is open and visible.
-          </p>
-        </header>
-        {source === "mock" ? (
-          <div
-            role="status"
-            className="location-sharing-notice border-amber-200 bg-amber-50 text-amber-900"
-          >
-            MOCK DATA · Journey context uses the existing Flow 4 preview. Driver
-            assignment is not verified against the backend. Real GPS sharing is
-            disabled for mock journeys.
-          </div>
-        ) : null}
-        <section
-          className="location-sharing-panel min-h-36"
-          aria-label="Transport context"
-          aria-busy={refreshing}
-        >
-          {context.kind === "loading" ? (
-            <div
-              aria-label="Loading transport information"
-              className="space-y-3"
-            >
-              <Skeleton className="h-6 w-44 animate-none rounded-xs" />
-              <Skeleton className="h-5 w-full animate-none rounded-xs" />
-              <Skeleton className="h-5 w-3/4 animate-none rounded-xs" />
-            </div>
-          ) : transport ? (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="location-sharing-heading break-words">
-                  {transport.transportCode}
-                </h2>
-                <Badge
-                  variant="outline"
-                  className={`rounded-xs ${transport.status === "IN_TRANSIT" ? "border-blue-200 bg-blue-50 text-blue-800" : "border-slate-300 bg-slate-50 text-slate-700"}`}
-                >
-                  {statusLabel}
-                </Badge>
-              </div>
-              {transport.currentLeg ? (
-                <p className="mt-3 mb-0 flex flex-wrap items-center gap-2 font-medium text-slate-800">
-                  <span>
-                    Leg {transport.currentLeg.displayOrder}:{" "}
-                    {transport.currentLeg.from}
-                  </span>
-                  <ArrowRight aria-hidden="true" className="size-4 shrink-0" />
-                  <span className="sr-only">to</span>
-                  <span>{transport.currentLeg.to}</span>
-                </p>
-              ) : (
-                <p className="mt-3 mb-0 text-slate-600">
-                  No current segment available.
-                </p>
-              )}
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2">
-                <span className="text-slate-500">
-                  {context.kind === "available" && context.stale
-                    ? "Cached journey context"
-                    : "Journey context loaded"}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={refreshing || environment.network === "offline"}
-                  onClick={onReloadContext}
-                  className="min-h-12 rounded-xs text-base"
-                >
-                  <RefreshCw aria-hidden="true" className="size-4" />
-                  {refreshing ? "Refreshing…" : "Refresh journey"}
-                </Button>
-              </div>
-            </>
-          ) : context.kind === "error" ? (
-            <ErrorState
-              message={context.message}
-              onRetry={
-                retryable && environment.network !== "offline"
-                  ? onReloadContext
-                  : undefined
-              }
-            />
-          ) : (
-            <div role="status">
-              <p className="mt-0 mb-3 text-slate-700">
-                {context.kind === "unavailable"
-                  ? context.message
-                  : "Transport information is missing."}
-              </p>
-              {retryable ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="min-h-12 rounded-xs text-base"
-                  disabled={refreshing || environment.network === "offline"}
-                  onClick={onReloadContext}
-                >
-                  Reload journey
-                </Button>
-              ) : null}
-            </div>
-          )}
-        </section>
-        {context.kind === "available" && context.stale ? (
-          <div
-            role="status"
-            className="location-sharing-notice border-amber-200 bg-amber-50 text-amber-900"
-          >
-            Journey information was last loaded at{" "}
-            {new Intl.DateTimeFormat(undefined, {
-              hour: "2-digit",
-              minute: "2-digit",
-            }).format(new Date(context.transport.serverTime))}
-            . It is not live location data.
-          </div>
-        ) : null}
-        {transport && transport.status !== "IN_TRANSIT" ? (
-          <div
-            role="status"
-            className="location-sharing-notice border-amber-200 bg-amber-50 text-amber-900"
-          >
-            Location updates are only allowed while the transport is IN_TRANSIT.
-            This journey is {statusLabel.toLowerCase()}; sharing remains
-            unavailable.
-          </div>
-        ) : null}
-        {environment.network === "offline" ? (
-          <div
-            role="status"
-            className="location-sharing-notice border-amber-200 bg-amber-50 text-amber-900"
-          >
-            <TriangleAlert
-              aria-hidden="true"
-              className="mt-1 size-4 shrink-0"
-            />
-            You are offline. GPS acquisition and sending are paused. Missed
-            points are discarded, not queued or replayed.
-          </div>
-        ) : null}
-        {environment.capability === "insecure" ||
-        environment.capability === "unsupported" ? (
-          <div
-            role="status"
-            className="location-sharing-notice border-amber-200 bg-amber-50 text-amber-900"
-          >
-            <TriangleAlert
-              aria-hidden="true"
-              className="mt-1 size-4 shrink-0"
-            />
-            {environment.capability === "insecure"
-              ? "This page is not in a secure browser context. Location sharing requires HTTPS or a browser-trusted localhost context."
-              : "This browser does not expose the Geolocation API. Sharing requires a supported browser."}
-          </div>
-        ) : null}
-        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+          </header>
           <LocationSharingControl
             state={state}
             canStart={canStart}
+            unavailableReason={unavailableReason}
+            contextMessage={
+              context.kind === "error" || context.kind === "unavailable"
+                ? context.message
+                : undefined
+            }
             onStart={start}
             onStop={stop}
           />
-          <LocationSharingStatus state={state} />
-        </div>
-        <LocationPermissionGuidance />
+          <LocationSharingSummary
+            state={state}
+            journeyStatus={
+              source === "real" &&
+              context.kind === "available" &&
+              context.transport.transportId === transportId
+                ? context.transport.status
+                : null
+            }
+          />
+        </Card>
       </div>
     </main>
   );

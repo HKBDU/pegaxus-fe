@@ -1,6 +1,6 @@
 // oxlint-disable react/only-export-components -- router modules intentionally export configuration
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate, useParams } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import {
   ErrorState,
   LoadingState,
@@ -9,10 +9,6 @@ import {
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { CrewShell } from "@/features/ongoing-transport/components/CrewShell";
-import { useTransportOverview } from "@/features/ongoing-transport/hooks/useTransportOverview";
-import { getOngoingTransportError } from "@/features/ongoing-transport/services";
-import { isOngoingTransportMockMode } from "@/features/ongoing-transport/source";
-import type { DriverTransportReadState } from "@/features/location-sharing/types";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { APPROVED_BOOKINGS_ACCESS, TRANSPORT_PLANS_ACCESS, ONGOING_TRANSPORT_ACCESS, ROLE_ROUTES, routePlanDetail } from "./route-config";
@@ -127,72 +123,11 @@ const TransportPlanDetailsPage = lazy(
 const RoutePlanDetailPage = lazy(
   () => import("@/features/route-view/pages/RoutePlanDetailPage"),
 );
-const OngoingTransportListPage = lazy(
-  () => import("@/features/ongoing-transport/pages/OngoingTransportListPage"),
-);
-const TransportOverviewPage = lazy(
-  () => import("@/features/ongoing-transport/pages/TransportOverviewPage"),
-);
-const TransportRouteTrackingPage = lazy(
-  () => import("@/features/ongoing-transport/pages/TransportRouteTrackingPage"),
-);
-const DriverLocationSharingPage = lazy(
-  () => import("@/features/location-sharing/pages/DriverLocationSharingPage"),
-);
+const OngoingTransportListPage = lazy(() => import("@/features/ongoing-transport/pages/OngoingTransportListPage"));
+const TransportOverviewPage = lazy(() => import("@/features/ongoing-transport/pages/TransportOverviewPage"));
+const TransportRouteTrackingPage = lazy(() => import("@/features/ongoing-transport/pages/TransportRouteTrackingPage"));
+const DriverLocationSharingPage = lazy(() => import("@/features/location-sharing/pages/DriverLocationSharingPage"));
 
-// Route-only adapter: reuse the authorized OT3 query/cache, not internal UC-49 imports inside the sender feature.
-function DriverLocationSharingRoute() {
-  const { transportId } = useParams<{ transportId: string }>();
-  const query = useTransportOverview(transportId, undefined, "crew", "data", false);
-  let context: DriverTransportReadState;
-  if (transportId === undefined) {
-    context = {
-      kind: "error",
-      message: "Transport route information is missing.",
-      retryable: false,
-    };
-  } else if (query.isError) {
-    const error = getOngoingTransportError(query.error, "overview");
-    context = { kind: "error", ...error };
-  } else if (query.data) {
-    const { transport, currentSegment, serverTime } = query.data;
-    context = {
-      kind: "available",
-      stale: !query.online,
-      transport: {
-        transportId: transport.transportId,
-        transportCode: transport.transportCode,
-        status: transport.status,
-        serverTime,
-        currentLeg: currentSegment
-          ? {
-              displayOrder: currentSegment.displayOrder,
-              from: currentSegment.fromLocation.locationName,
-              to: currentSegment.toLocation.locationName,
-            }
-          : null,
-      },
-    };
-  } else if (!query.online) {
-    context = {
-      kind: "unavailable",
-      message: "You are offline and no journey context is cached. Reconnect to load this transport.",
-    };
-  } else {
-    context = { kind: "loading" };
-  }
-  return (
-    <Suspense fallback={<LoadingState />}>
-      <DriverLocationSharingPage
-        transportId={transportId}
-        context={context}
-        refreshing={query.isFetching}
-        source={isOngoingTransportMockMode() ? "mock" : "real"}
-        onReloadContext={() => void query.refetch()}
-      />
-    </Suspense>
-  );
-}
 const bookingHistoryPage = (
   <Suspense fallback={<LoadingState />}>
     <BookingStatusHistoryPage />
@@ -242,7 +177,7 @@ export const router = createBrowserRouter([
         path: "location",
         element: (
           <ProtectedRoute allowedRoles={["DRIVER"]}>
-            <DriverLocationSharingRoute />
+            <Suspense fallback={<LoadingState />}><DriverLocationSharingPage /></Suspense>
           </ProtectedRoute>
         ),
       },
