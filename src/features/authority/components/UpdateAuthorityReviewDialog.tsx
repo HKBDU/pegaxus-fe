@@ -40,6 +40,7 @@ import {
 } from "@/shared/components/ui/tooltip";
 import { formatFileSize, matchesAcceptedType } from "@/shared/components/file-uploader/utils";
 import { cn } from "@/lib/utils";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 import { useAuthoritySubmissionDetail, useUpdateAuthorityReview } from "../hooks";
 import type { AuthorityDecision } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
@@ -161,32 +162,61 @@ export function UpdateAuthorityReviewDialog({
     if (decision === "APPROVED") {
       if (!permitNumber.trim()) {
         next.permitNumber = "Permit / Approval Code is required.";
+      } else if (permitNumber.trim().length > 100) {
+        next.permitNumber = "Permit / Approval Code cannot exceed 100 characters.";
       }
+
       if (!permitIssuedDate) {
         next.permitIssuedDate = "Issue Date is required.";
+      } else {
+        const issued = new Date(permitIssuedDate);
+        const now = new Date();
+        const diffYears = Math.abs(issued.getFullYear() - now.getFullYear());
+        if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
+          next.permitIssuedDate = `Issue date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
+        }
       }
+
       if (!permitExpiryDate) {
         next.permitExpiryDate = "Expiry Date is required.";
-      } else if (permitIssuedDate && permitExpiryDate < permitIssuedDate) {
-        next.permitExpiryDate = "Expiry Date must be on or after Issue Date.";
+      } else {
+        const expiry = new Date(permitExpiryDate);
+        const now = new Date();
+        const diffYears = Math.abs(expiry.getFullYear() - now.getFullYear());
+        if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
+          next.permitExpiryDate = `Expiry date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
+        } else if (permitIssuedDate && permitExpiryDate < permitIssuedDate) {
+          next.permitExpiryDate = "Expiry Date must be on or after Issue Date.";
+        }
       }
     } else if (decision === "REJECTED") {
       if (!rejectionReason.trim()) {
         next.rejectionReason = "Official Rejection Reason is required.";
+      } else if (rejectionReason.length > VALIDATION_LIMITS.noteMaxLength) {
+        next.rejectionReason = `Rejection reason cannot exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
       }
     } else if (decision === "RETURNED") {
       if (!rejectionReason.trim()) {
         next.rejectionReason = "Information Requested description is required.";
+      } else if (rejectionReason.length > VALIDATION_LIMITS.noteMaxLength) {
+        next.rejectionReason = `Information Requested description cannot exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
       }
       if (!revisionDueDate) {
         next.revisionDueDate = "Revision Due Date is required.";
+      } else {
+        const revision = new Date(revisionDueDate);
+        const now = new Date();
+        const diffYears = Math.abs(revision.getFullYear() - now.getFullYear());
+        if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
+          next.revisionDueDate = `Revision due date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
+        }
       }
     }
 
     if (!decisionNote.trim()) {
       next.decisionNote = "Authority Note / Reason is required.";
-    } else if (decisionNote.length > 500) {
-      next.decisionNote = "Authority Note / Reason cannot exceed 500 characters.";
+    } else if (decisionNote.length > VALIDATION_LIMITS.noteMaxLength) {
+      next.decisionNote = `Authority Note / Reason cannot exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
     }
 
     if (Object.keys(next).length > 0) {

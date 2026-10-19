@@ -22,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 import { useRecordAuthoritySubmission } from "../hooks";
 import type { AuthoritySubmissionStatus } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
@@ -30,7 +31,11 @@ const ACCEPTED_PROOF_TYPES = "application/pdf,image/jpeg,image/png";
 const MAX_PROOF_SIZE = 5 * 1024 * 1024;
 type Errors = Partial<
   Record<
-    "authorityName" | "submissionReference" | "submissionDate" | "proofFiles",
+    | "authorityName"
+    | "submissionReference"
+    | "submissionDate"
+    | "decisionNote"
+    | "proofFiles",
     string
   >
 >;
@@ -100,11 +105,40 @@ export function RecordAuthoritySubmissionDialog({
         "This ComplianceDossier is not ready for an authority submission.",
       );
     const next: Errors = {};
-    if (!authorityName.trim())
+    if (!authorityName.trim()) {
       next.authorityName = "Authority Portal is required.";
-    if (!submissionReference.trim())
+    } else if (authorityName.trim().length > 200) {
+      next.authorityName = "Authority Portal must not exceed 200 characters.";
+    }
+
+    if (!submissionReference.trim()) {
       next.submissionReference = "Submission Reference is required.";
-    if (!submissionDate) next.submissionDate = "Submission Date is required.";
+    } else if (submissionReference.trim().length > 150) {
+      next.submissionReference = "Submission Reference must not exceed 150 characters.";
+    }
+
+    if (!submissionDate) {
+      next.submissionDate = "Submission Date is required.";
+    } else {
+      const date = new Date(submissionDate);
+      const now = new Date();
+      now.setHours(23, 59, 59, 999);
+      if (date > now) {
+        next.submissionDate = "Submission date must not be in the future.";
+      } else {
+        const minDate = new Date();
+        minDate.setFullYear(minDate.getFullYear() - VALIDATION_LIMITS.dateWindowYears);
+        minDate.setHours(0, 0, 0, 0);
+        if (date < minDate) {
+          next.submissionDate = `Submission date must be within the last ${VALIDATION_LIMITS.dateWindowYears} years.`;
+        }
+      }
+    }
+
+    if (decisionNote.trim().length > VALIDATION_LIMITS.noteMaxLength) {
+      next.decisionNote = `Decision note must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
+    }
+
     if (!proofFiles.length)
       next.proofFiles = "At least one proof file is required.";
     if (Object.keys(next).length) return setErrors(next);
