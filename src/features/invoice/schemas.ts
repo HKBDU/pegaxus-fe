@@ -2,6 +2,7 @@ import { z } from "zod"
 import { invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts, DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_TYPE } from "@/features/invoice/constants"
 import type { CreateInvoicePayload, Invoice, InvoiceItemPayload, UpdateInvoicePayload } from "@/features/invoice/types"
 import { parseWholeNumber, todayIsoDate } from "@/features/invoice/utils"
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits"
 
 export const invoiceIdSchema = z.string();
 const date = z.iso.date();
@@ -219,13 +220,20 @@ export const invoiceItemFormSchema = z.object({
   note: z.string(),
 })
 
+function maxFutureDateIso(years = VALIDATION_LIMITS.dateWindowYears): string {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() + years)
+  return d.toISOString().slice(0, 10)
+}
+
 export const invoiceFormSchema = z.object({
   type: z.enum(INVOICE_TYPE),
   dueDate: z
     .string()
     .min(1, "Due date is required")
-    .refine((value) => value >= todayIsoDate(), "Due date cannot be before today"),
-  note: z.string(),
+    .refine((value) => value >= todayIsoDate(), "Due date cannot be before today")
+    .refine((value) => value <= maxFutureDateIso(), `Due date must be within ${VALIDATION_LIMITS.dateWindowYears} years from today`),
+  note: z.string().max(VALIDATION_LIMITS.noteMaxLength, `Note must be at most ${VALIDATION_LIMITS.noteMaxLength} characters`),
   items: z.array(invoiceItemFormSchema),
 })
 
