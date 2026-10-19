@@ -49,9 +49,6 @@ export function LocationSearch({
           onChange={(event) => setInputValue(event.target.value)}
         />
       </div>
-      {loading && (
-        <p className="px-2 py-2 text-sm text-muted-foreground">Loading...</p>
-      )}
       {!loading && inputValue.trim() && (
         <div className="mt-1 max-h-48 overflow-y-auto rounded border border-slate-200 bg-white p-1 shadow-md">
           {options.length ? (
