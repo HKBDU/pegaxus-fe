@@ -3,32 +3,32 @@ import type { BookingHistoryMockScenario } from "../source";
 export const bookingHistoryMock = bookingHistoryListSchema.parse([
   {
     historyId: "00000000-0000-4000-8000-000000005001", action: "CREATED", previousStatus: null, newStatus: "DRAFT", reason: null,
-    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Nguyễn Minh Khang", role: "CUSTOMER" },
+    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Khang Nguyen", role: "CUSTOMER" },
     changedAt: "2026-09-10T08:30:00Z",
   },
   {
     historyId: "00000000-0000-4000-8000-000000005002", action: "UPDATED", previousStatus: "DRAFT", newStatus: "DRAFT", reason: "Added veterinary documents for Silver Arrow.",
-    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Nguyễn Minh Khang", role: "CUSTOMER" },
+    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Khang Nguyen", role: "CUSTOMER" },
     changedAt: "2026-09-11T09:15:00Z",
   },
   {
     historyId: "00000000-0000-4000-8000-000000005003", action: "SUBMITTED", previousStatus: "DRAFT", newStatus: "PENDING", reason: null,
-    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Nguyễn Minh Khang", role: "CUSTOMER" },
+    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Khang Nguyen", role: "CUSTOMER" },
     changedAt: "2026-09-12T11:30:15Z",
   },
   {
     historyId: "00000000-0000-4000-8000-000000005004", action: "UPDATED", previousStatus: "PENDING", newStatus: "PENDING", reason: "Updated the airport arrival window.",
-    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Nguyễn Minh Khang", role: "CUSTOMER" },
+    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Khang Nguyen", role: "CUSTOMER" },
     changedAt: "2026-09-12T13:15:00Z",
   },
   {
     historyId: "00000000-0000-4000-8000-000000005005", action: "CANCELLED", previousStatus: "PENDING", newStatus: "CANCELLED", reason: null,
-    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Nguyễn Minh Khang", role: "CUSTOMER" },
+    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Khang Nguyen", role: "CUSTOMER" },
     changedAt: "2026-09-13T10:00:00Z",
   },
   {
     historyId: "00000000-0000-4000-8000-000000005006", action: "SUBMITTED", previousStatus: "CANCELLED", newStatus: "PENDING", reason: null,
-    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Nguyễn Minh Khang", role: "CUSTOMER" },
+    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Khang Nguyen", role: "CUSTOMER" },
     changedAt: "2026-09-14T08:45:00Z",
   },
   {
@@ -39,12 +39,12 @@ export const bookingHistoryMock = bookingHistoryListSchema.parse([
   },
   {
     historyId: "00000000-0000-4000-8000-000000005008", action: "UPDATED", previousStatus: "REJECTED", newStatus: "REJECTED", reason: "Uploaded corrected veterinary certificate.",
-    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Nguyễn Minh Khang", role: "CUSTOMER" },
+    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Khang Nguyen", role: "CUSTOMER" },
     changedAt: "2026-09-15T14:20:00Z",
   },
   {
     historyId: "00000000-0000-4000-8000-000000005009", action: "SUBMITTED", previousStatus: "REJECTED", newStatus: "PENDING", reason: null,
-    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Nguyễn Minh Khang", role: "CUSTOMER" },
+    changedBy: { accountId: "00000000-0000-4000-8000-000000000501", fullName: "Khang Nguyen", role: "CUSTOMER" },
     changedAt: "2026-09-16T10:45:00Z",
   },
   {

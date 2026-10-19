@@ -64,8 +64,8 @@ export function ApprovedBookingsTable({
           >
             {row.original.transportPlan
               ? row.original.transportPlan.planCode?.trim() ||
-                "Chưa có mã Transport Plan"
-              : "Chưa có Transport Plan"}
+                "No Transport Plan Code"
+              : "No Transport Plan"}
           </Link>
         ),
       },
