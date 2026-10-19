@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-const id = z.string().min(1)
+const id = z.string()
 const timestamp = z.iso.datetime({ offset: true })
 
 /** Enums stay plain text: a value the BE adds later must not break a whole screen. */

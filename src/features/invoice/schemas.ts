@@ -3,7 +3,7 @@ import { invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, i
 import type { CreateInvoicePayload, Invoice, InvoiceItemPayload, UpdateInvoicePayload } from "@/features/invoice/types"
 import { parseWholeNumber, todayIsoDate } from "@/features/invoice/utils"
 
-export const invoiceIdSchema = z.string().trim().min(1);
+export const invoiceIdSchema = z.string();
 const date = z.iso.date();
 const timestamp = z.iso.datetime({ offset: true });
 const text = z.string().nullable();

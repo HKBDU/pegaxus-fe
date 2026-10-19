@@ -34,10 +34,53 @@ export interface UpdateAuthorityReviewInput {
   decisionNote?: string
   rejectionReason?: string
   revisionDueDate?: string
+  notifyStakeholders?: boolean
 }
 
 export interface UpdateAuthorityReviewResult {
   authoritySubmissionId: string
   submissionStatus: string
   dossierStatus: string
+}
+
+export interface AuthoritySubmissionDetail {
+  authoritySubmissionId: string
+  submissionNo: string
+  dossierId: string
+  authorityName: string
+  submissionReference: string
+  submittedAt: string
+  submittedBy?: string
+  status: string
+  dossierStatus: string
+  evidenceFile?: {
+    fileName: string
+    fileUrl: string
+    fileSize: number
+  }
+  notes?: string
+  dossierSummary?: {
+    cdosCode: string
+    bookingNo: string
+    originCountry: string
+    destinationCountry: string
+    departureDate: string
+    horsesCount: number
+    customerName: string
+    status: string
+  }
+  reviewHistory?: Array<{
+    id: string
+    title: string
+    timestamp: string
+    actor: string
+    referenceOrPermit?: string
+    expiryDate?: string
+    outcome?: AuthorityDecision
+    file?: {
+      fileName: string
+      fileSize: number
+      fileUrl?: string
+    }
+  }>
 }

@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  actionEntityIdSchema,
   dossierStatusSchema,
   entityIdSchema,
   routePlanStatusSchema,
@@ -204,15 +203,9 @@ export const routeChangeDecisionSchema = z
   );
 export const returnSegmentOverrideSchema = z
   .object({
-    routePlanRouteId: actionEntityIdSchema.refine(
-      (id) => id !== "00000000-0000-0000-0000-000000000000",
-    ),
+    routePlanRouteId: z.string(),
     vehicleIds: z
-      .array(
-        actionEntityIdSchema.refine(
-          (id) => id !== "00000000-0000-0000-0000-000000000000",
-        ),
-      )
+      .array(z.string())
       .max(100)
       .refine((ids) => new Set(ids).size === ids.length, {
         message: "Submit each vehicle only once.",
@@ -220,9 +213,7 @@ export const returnSegmentOverrideSchema = z
       .optional(),
     outsourcing: z
       .object({
-        transportProviderId: actionEntityIdSchema.refine(
-          (id) => id !== "00000000-0000-0000-0000-000000000000",
-        ),
+        transportProviderId: z.string(),
         note: optionalNote,
       })
       .optional(),

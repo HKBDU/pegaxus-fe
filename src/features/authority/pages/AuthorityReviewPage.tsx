@@ -11,7 +11,8 @@ export default function AuthorityReviewPage() {
 
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center p-4 sm:p-8">
-      <UpdateAuthorityReviewDialog submissionId={submissionId} />
+      <UpdateAuthorityReviewDialog submissionId={submissionId} defaultOpen />
     </main>
   )
 }
+

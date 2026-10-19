@@ -1,5 +1,5 @@
-import { useMutation } from '@tanstack/react-query'
-import { recordAuthoritySubmission, updateAuthorityReview } from './services'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { getAuthoritySubmissionDetail, recordAuthoritySubmission, updateAuthorityReview } from './services'
 import type { RecordAuthoritySubmissionInput, UpdateAuthorityReviewInput } from './types'
 
 export function useRecordAuthoritySubmission(dossierId: string) {
@@ -13,3 +13,12 @@ export function useUpdateAuthorityReview(submissionId: string) {
     mutationFn: (input: UpdateAuthorityReviewInput) => updateAuthorityReview(submissionId, input),
   })
 }
+
+export function useAuthoritySubmissionDetail(submissionId: string) {
+  return useQuery({
+    queryKey: ['authoritySubmission', submissionId],
+    queryFn: () => getAuthoritySubmissionDetail(submissionId),
+    enabled: Boolean(submissionId),
+  })
+}
+

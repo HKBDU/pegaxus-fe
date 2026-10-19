@@ -18,10 +18,7 @@ export const apiErrorSchema = apiEnvelopeSchema
 
 // Backend identifiers are opaque strings. Require a usable ID only at action/query boundaries.
 export const entityIdSchema = z.string();
-export const actionEntityIdSchema = entityIdSchema.refine(
-  (id) => id.trim().length > 0,
-  "An identifier is required.",
-);
+export const actionEntityIdSchema = z.string();
 export const transportPlanStatusSchema = z.enum([
   "DRAFT",
   "PENDING",

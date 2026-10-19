@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { RouteSegmentInput } from './types'
 
-const entityId = z.string().min(1, 'Must be a valid identifier.')
+const entityId = z.string()
 const dateTime = z.string().datetime({ offset: true, message: 'Must be a valid ISO date-time.' })
 
 export const routeSegmentSchema = z.object({
