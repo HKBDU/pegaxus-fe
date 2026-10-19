@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { toLocalDateTime } from "./format";
+import {
+  VALIDATION_LIMITS,
+  countDecimalPlaces,
+} from "@/shared/constants/validation-limits";
 
 export const apiEnvelopeSchema = z.object({
   isSuccess: z.boolean(),
@@ -222,9 +226,7 @@ export const transportPlanTabSchema = z.enum([
   "personnel",
   "invoices",
 ]);
-const maxDurationMinutes = 2_147_483_647;
-// Backend storage uses NUMERIC(10,2); do not submit a value it cannot persist.
-const maxDistanceKm = 99_999_999.99;
+const maxDurationMinutes = VALIDATION_LIMITS.planDurationMinutesMax;
 export const transportPlansQuerySchema = z.object({
   pageIndex: z.number().int().positive(),
   pageSize: z.number().int().positive(),
@@ -334,17 +336,40 @@ const metadataFields = {
   estimatedDistanceKm: z
     .number()
     .finite()
-    .nonnegative()
-    .max(maxDistanceKm)
+    .min(
+      VALIDATION_LIMITS.planDistanceKm.min,
+      `Distance must be between ${VALIDATION_LIMITS.planDistanceKm.min} and ${VALIDATION_LIMITS.planDistanceKm.max} km.`,
+    )
+    .max(
+      VALIDATION_LIMITS.planDistanceKm.max,
+      `Distance must be between ${VALIDATION_LIMITS.planDistanceKm.min} and ${VALIDATION_LIMITS.planDistanceKm.max} km.`,
+    )
+    .refine(
+      (val) => countDecimalPlaces(val) <= VALIDATION_LIMITS.planDistanceKm.scale,
+      "Distance can have up to 2 decimal places.",
+    )
     .optional(),
   estimatedDurationMinutes: z
     .number()
     .finite()
-    .int()
-    .min(0)
-    .max(maxDurationMinutes)
+    .int("Duration must be a whole number of minutes.")
+    .min(
+      1,
+      `Duration must be between 1 and ${VALIDATION_LIMITS.planDurationMinutesMax} minutes.`,
+    )
+    .max(
+      VALIDATION_LIMITS.planDurationMinutesMax,
+      `Duration must be between 1 and ${VALIDATION_LIMITS.planDurationMinutesMax} minutes.`,
+    )
     .optional(),
-  planningNote: z.string().optional(),
+  planningNote: z
+    .string()
+    .trim()
+    .max(
+      VALIDATION_LIMITS.noteMaxLength,
+      `Planning note must be at most ${VALIDATION_LIMITS.noteMaxLength} characters.`,
+    )
+    .optional(),
 };
 export const createTransportPlanSchema = z
   .object(metadataFields)
@@ -422,22 +447,31 @@ const localDate = z
 const optionalNumber = z
   .string()
   .refine(
-    (value) =>
-      !value.trim() ||
-      (Number.isFinite(Number(value)) &&
-        Number(value) >= 0 &&
-        Number(value) <= maxDistanceKm),
-    "Enter a distance between 0 and 99,999,999.99 km.",
+    (value) => {
+      if (!value.trim()) return true;
+      const num = Number(value);
+      return (
+        Number.isFinite(num) &&
+        num >= VALIDATION_LIMITS.planDistanceKm.min &&
+        num <= VALIDATION_LIMITS.planDistanceKm.max &&
+        countDecimalPlaces(num) <= VALIDATION_LIMITS.planDistanceKm.scale
+      );
+    },
+    `Enter a distance between ${VALIDATION_LIMITS.planDistanceKm.min} and ${VALIDATION_LIMITS.planDistanceKm.max.toLocaleString()} km (up to 2 decimal places).`,
   );
 const optionalWholeNumber = z
   .string()
   .refine(
-    (value) =>
-      !value.trim() ||
-      (Number.isInteger(Number(value)) &&
-        Number(value) >= 0 &&
-        Number(value) <= maxDurationMinutes),
-    "Enter whole minutes between 0 and 2,147,483,647.",
+    (value) => {
+      if (!value.trim()) return true;
+      const num = Number(value);
+      return (
+        Number.isInteger(num) &&
+        num >= 1 &&
+        num <= VALIDATION_LIMITS.planDurationMinutesMax
+      );
+    },
+    `Enter whole minutes between 1 and ${VALIDATION_LIMITS.planDurationMinutesMax.toLocaleString()} (up to 60 days).`,
   );
 const formFields = {
   plannedStartAt: localDate,
