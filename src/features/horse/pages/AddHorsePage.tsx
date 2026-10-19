@@ -17,11 +17,83 @@ import { getHorseApiErrorMessage } from "../utils/horse-api-error"
 import { toHorseDateInput } from "../utils/format-horse-date"
 import type { CreateHorseRequest, Horse, HorseFormValues, HorseSex } from "../types"
 
+import {
+  VALIDATION_LIMITS,
+  countDecimalPlaces,
+} from "@/shared/constants/validation-limits"
+
 const inputClass = "profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1"
 const selectOptions = HORSE_SEX_OPTIONS.filter((option) => option.value !== "ALL")
 const breedOptions = HORSE_BREED_OPTIONS.filter((option) => option.value !== "ALL")
-const requiredText = (label: string) => ({ required: `${label} is required.`, validate: (value: string) => value.trim().length > 0 || `${label} is required.` })
-const requiredNumber = (label: string) => ({ required: `${label} is required.`, validate: (value: string) => { const number = Number(value); return value.trim() !== "" && Number.isFinite(number) && number >= 0 || `${label} must be a valid non-negative number.` } })
+const requiredText = (label: string, maxLength?: number) => ({
+  required: `${label} is required.`,
+  validate: (value: string) => {
+    if (value.trim().length === 0) return `${label} is required.`
+    if (maxLength && value.trim().length > maxLength) return `${label} must not exceed ${maxLength} characters.`
+    return true
+  },
+})
+
+const dateOfBirthRules = {
+  required: "Date of birth is required.",
+  validate: (value: string) => {
+    if (!value || !value.trim()) return "Date of birth is required."
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return "Invalid date of birth."
+    const today = new Date()
+    today.setHours(23, 59, 59, 999)
+    if (date > today) return "Date of birth cannot be in the future."
+    const minDate = new Date()
+    minDate.setFullYear(minDate.getFullYear() - VALIDATION_LIMITS.horseMaxAgeYears)
+    minDate.setHours(0, 0, 0, 0)
+    if (date < minDate) return `Date of birth cannot be more than ${VALIDATION_LIMITS.horseMaxAgeYears} years ago.`
+    return true
+  },
+}
+
+const weightKgRules = {
+  required: "Weight is required.",
+  validate: (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return "Weight is required."
+    const num = Number(trimmed)
+    if (!Number.isFinite(num)) return "Weight must be a valid number."
+    if (num < VALIDATION_LIMITS.horseWeightKg.min || num > VALIDATION_LIMITS.horseWeightKg.max) {
+      return `Weight must be between ${VALIDATION_LIMITS.horseWeightKg.min} and ${VALIDATION_LIMITS.horseWeightKg.max} kg.`
+    }
+    if (countDecimalPlaces(num) > VALIDATION_LIMITS.horseWeightKg.scale) {
+      return "Weight can have at most 1 decimal place."
+    }
+    return true
+  },
+}
+
+const heightCmRules = {
+  required: "Height is required.",
+  validate: (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return "Height is required."
+    const num = Number(trimmed)
+    if (!Number.isFinite(num)) return "Height must be a valid number."
+    if (num < VALIDATION_LIMITS.horseHeightCm.min || num > VALIDATION_LIMITS.horseHeightCm.max) {
+      return `Height must be between ${VALIDATION_LIMITS.horseHeightCm.min} and ${VALIDATION_LIMITS.horseHeightCm.max} cm.`
+    }
+    if (countDecimalPlaces(num) > VALIDATION_LIMITS.horseHeightCm.scale) {
+      return "Height can have at most 1 decimal place."
+    }
+    return true
+  },
+}
+
+const identificationNotesRules = {
+  required: "Identification notes are required.",
+  validate: (value: string) => {
+    if (!value.trim()) return "Identification notes are required."
+    if (value.trim().length > 1000) return "Identification notes must not exceed 1000 characters."
+    return true
+  },
+}
+
 const passportNumberRules = { required: "Passport number is required.", validate: (value: string) => /^[A-Z0-9]{15}$/.test(value) || "Passport number must be exactly 15 uppercase letters or numbers (A-Z, 0-9)." }
 const microchipNumberRules = { required: "Microchip number is required.", validate: (value: string) => /^\d{15}$/.test(value) || "Microchip number must be exactly 15 digits." }
 
@@ -104,7 +176,7 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
               <FormField
                 control={form.control}
                 name="horseName"
-                rules={requiredText("Horse name")}
+                rules={requiredText("Horse name", 150)}
                 render={({ field }) => (
                   <Field label="HORSE NAME">
                     <FormItem>
@@ -179,7 +251,7 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
               <FormField
                 control={form.control}
                 name="dateOfBirth"
-                rules={requiredText("Date of birth")}
+                rules={dateOfBirthRules}
                 render={({ field }) => (
                   <Field label="DATE OF BIRTH">
                     <FormItem>
@@ -239,7 +311,7 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
               <FormField
                 control={form.control}
                 name="weightKg"
-                rules={requiredNumber("Weight")}
+                rules={weightKgRules}
                 render={({ field }) => (
                   <Field label="WEIGHT (KG)">
                     <FormItem>
@@ -262,7 +334,7 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
               <FormField
                 control={form.control}
                 name="heightCm"
-                rules={requiredNumber("Height")}
+                rules={heightCmRules}
                 render={({ field }) => (
                   <Field label="HEIGHT (CM)">
                     <FormItem>
@@ -334,7 +406,7 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
               <FormField
                 control={form.control}
                 name="identificationNotes"
-                rules={requiredText("Identification notes")}
+                rules={identificationNotesRules}
                 render={({ field }) => (
                   <Field
                     label="IDENTIFICATION NOTES"
