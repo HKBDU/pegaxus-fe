@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -60,7 +59,6 @@ import {
   findBestBcpAlongRoute,
   isCrossBorder as checkIsCrossBorder,
   isBcpLocation,
-  isMandatoryBcpCrossing,
 } from "../bcp-detector";
 
 export type { RoutePlanBuilderMetadata } from "./RoutePlanBuilderParts";
@@ -381,28 +379,38 @@ export function RoutePlanBuilder({
     const fromCountry = plan.from?.country?.trim().toLowerCase();
     const toCountry = plan.to?.country?.trim().toLowerCase();
     if (fromCountry && toCountry && fromCountry !== toCountry) return true;
-    return segments.some((s) => {
-      const fc = s.route.fromLocation?.country?.trim().toLowerCase();
-      const tc = s.route.toLocation?.country?.trim().toLowerCase();
+    const routesToCheck = isBackup
+      ? (continuity.effectiveRoutes.length > 0
+          ? continuity.effectiveRoutes
+          : [...readonlyPrimaryRoutes, ...segments.map((s) => s.route)])
+      : segments.map((s) => s.route);
+    return routesToCheck.some((s) => {
+      const fc = s.fromLocation?.country?.trim().toLowerCase();
+      const tc = s.toLocation?.country?.trim().toLowerCase();
       return fc && tc && fc !== tc;
     });
-  }, [plan.scope, plan.from?.country, plan.to?.country, segments]);
-
-  const isBcpMandatory = useMemo(() => {
-    if (isMandatoryBcpCrossing(plan.from?.country, plan.to?.country)) return true;
-    return segments.some((s) =>
-      isMandatoryBcpCrossing(s.route.fromLocation?.country, s.route.toLocation?.country),
-    );
-  }, [plan.from?.country, plan.to?.country, segments]);
+  }, [plan.scope, plan.from?.country, plan.to?.country, isBackup, continuity.effectiveRoutes, readonlyPrimaryRoutes, segments]);
 
   const hasBcp = useMemo(() => {
-    return segments.some(
+    const hasInSegments = segments.some(
       (s) =>
         s.stopType === "BCP" ||
         isBcpLocation(s.route.toLocation) ||
         isBcpLocation(s.route.fromLocation),
     );
-  }, [segments]);
+    if (hasInSegments) return true;
+    if (isBackup) {
+      if (continuity.effectiveRoutes.length > 0) {
+        return continuity.effectiveRoutes.some(
+          (r) => isBcpLocation(r.fromLocation) || isBcpLocation(r.toLocation),
+        );
+      }
+      return readonlyPrimaryRoutes.some(
+        (r) => isBcpLocation(r.fromLocation) || isBcpLocation(r.toLocation),
+      );
+    }
+    return false;
+  }, [segments, isBackup, continuity.effectiveRoutes, readonlyPrimaryRoutes]);
 
   const bcpLocations = useMemo(() => {
     return locations.filter(isBcpLocation);
@@ -1130,7 +1138,7 @@ export function RoutePlanBuilder({
                   {isCrossBorder && hasBcp && (
                     <div className="flex items-center gap-2 rounded-[2px] border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-900">
                       <ShieldCheck className="size-4 shrink-0 text-emerald-600" />
-                      <span>Border Control Point (BCP) configured for cross-border transit compliance.</span>
+                      <span>Border Control Point (BCP) added for this cross-border route.</span>
                     </div>
                   )}
 
@@ -1138,7 +1146,7 @@ export function RoutePlanBuilder({
                     <div className="flex items-center justify-between rounded-[2px] border border-amber-200 bg-amber-50/60 px-3 py-1.5 text-xs text-amber-900">
                       <div className="flex items-center gap-1.5">
                         <ShieldAlert className="size-3.5 shrink-0 text-amber-600" />
-                        <span>BCP notice dismissed. No Border Control Point currently added.</span>
+                        <span>Cross-border route: No Border Control Point (BCP) added yet.</span>
                       </div>
                       <Button
                         type="button"
@@ -1147,7 +1155,7 @@ export function RoutePlanBuilder({
                         className="h-6 px-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 rounded-[2px]"
                         onClick={() => setIsBcpDismissed(false)}
                       >
-                        Configure BCP
+                        Add BCP
                       </Button>
                     </div>
                   )}
@@ -1159,23 +1167,16 @@ export function RoutePlanBuilder({
                           <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
                           <div className="min-w-0 flex-1 overflow-hidden">
                             <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                              <span className="font-bold text-amber-950 text-xs">Cross-Border Transport Notice</span>
+                              <span className="font-bold text-amber-950 text-xs">Cross-Border Route</span>
                               <Badge
                                 variant="outline"
-                                className={cn(
-                                  "px-1 py-0 text-[10px] font-semibold shrink-0",
-                                  isBcpMandatory
-                                    ? "border-red-300 bg-red-100/60 text-red-800"
-                                    : "border-blue-300 bg-blue-100/60 text-blue-800",
-                                )}
+                                className="border-amber-300 bg-amber-100/60 text-amber-900 px-1 py-0 text-[10px] font-semibold shrink-0"
                               >
-                                {isBcpMandatory ? "BCP Mandatory (EU ↔ UK / Ireland)" : "BCP Optional (Intra-EU)"}
+                                BCP Required
                               </Badge>
                             </div>
                             <p className="mt-1 text-slate-700 break-words text-xs leading-relaxed">
-                              {isBcpMandatory
-                                ? "This transport route crosses between EU and UK / Ireland borders. BCP clearance and quarantine checks are mandatory. Please select or register a BCP stop."
-                                : "Intra-EU transport: Registered horses move under internal EU animal welfare regulations with minimal restrictions. Adding a BCP stop, clearance, and quarantine is optional for this route."}
+                              This route crosses an international border. Please add a Border Control Point (BCP).
                             </p>
                           </div>
                         </div>
@@ -1187,7 +1188,7 @@ export function RoutePlanBuilder({
                           onClick={() => setIsBcpDismissed(true)}
                           title="Dismiss proposal"
                         >
-                          Cancel / Dismiss
+                          Dismiss
                         </Button>
                       </div>
 
@@ -1631,16 +1632,10 @@ export function RoutePlanBuilder({
                   <div className="rounded-[2px] border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-950">
                     <div className="flex items-center gap-2 font-semibold">
                       <ShieldAlert className="size-4 text-amber-600 shrink-0" />
-                      <span>
-                        {isBcpMandatory
-                          ? "Cross-Border Notice: BCP is Mandatory for EU ↔ UK / Ireland"
-                          : "Intra-EU Notice: BCP Stop is Optional"}
-                      </span>
+                      <span>Cross-Border Route</span>
                     </div>
                     <p className="mt-1 text-slate-700">
-                      {isBcpMandatory
-                        ? "You have not included a BCP stop. Cross-border routes between EU and UK / Ireland require BCP clearance. You can return to Step 1 to insert a BCP if needed."
-                        : "No BCP stop is added. Since this is an internal EU transport for registered horses, BCP clearance and quarantine are optional."}
+                      This route crosses an international border. A Border Control Point (BCP) is required. You can return to Step 1 to add a BCP.
                     </p>
                   </div>
                 )}
@@ -1777,7 +1772,8 @@ export function RoutePlanBuilder({
         isFinalDestination={
           bcpSplitProposal
             ? bcpSplitProposal.targetSegmentIndex !== undefined
-              ? bcpSplitProposal.targetSegmentIndex === segments.length - 1
+              ? segments[bcpSplitProposal.targetSegmentIndex]?.stopType === "DESTINATION" ||
+                bcpSplitProposal.routeToSplit.toLocation?.id === plan.to?.id
               : bcpSplitProposal.routeToSplit.toLocation?.id === plan.to?.id
             : false
         }

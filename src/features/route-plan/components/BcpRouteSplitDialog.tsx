@@ -31,7 +31,7 @@ export function BcpRouteSplitDialog({
   routeToSplit,
   detectedBcp,
   distanceKmToRoute = 0,
-  isMandatory,
+  isMandatory: _isMandatory,
   isFinalDestination = false,
   dwellMinutes = 30,
   isSplitting,
@@ -55,10 +55,10 @@ export function BcpRouteSplitDialog({
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-slate-900">
-                Border Crossing Detected: Split Route at BCP?
+                Cross-Border Route Detected
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                This long route crosses an international border. Would you like to automatically insert the Border Control Point (BCP) and split into 2 continuous segments?
+                This route crosses an international border. Would you like to insert a Border Control Point (BCP) and split into 2 continuous segments?
               </DialogDescription>
             </div>
           </div>
@@ -68,7 +68,7 @@ export function BcpRouteSplitDialog({
           {/* Original Route Header */}
           <div className="rounded-[2px] border border-slate-200 bg-slate-50 p-2.5">
             <div className="flex items-center justify-between text-muted-foreground">
-              <span>Original Long Route</span>
+              <span>Original Route</span>
               <span className="font-semibold text-slate-700">
                 {routeToSplit.distanceKm != null
                   ? `${Math.round(routeToSplit.distanceKm * 10) / 10} km`
@@ -98,15 +98,9 @@ export function BcpRouteSplitDialog({
                     </span>
                     <Badge
                       variant="outline"
-                      className={`px-1.5 py-0 text-[10px] font-semibold ${
-                        isMandatory
-                          ? "border-red-300 bg-red-100/70 text-red-800"
-                          : "border-blue-300 bg-blue-100/70 text-blue-800"
-                      }`}
+                      className="border-amber-300 bg-amber-100/70 text-amber-900 px-1.5 py-0 text-[10px] font-semibold"
                     >
-                      {isMandatory
-                        ? "Mandatory: EU ↔ UK / Ireland"
-                        : "Optional: Intra-EU Route"}
+                      BCP Required
                     </Badge>
                   </div>
                   <p className="mt-0.5 text-slate-600">
@@ -117,7 +111,7 @@ export function BcpRouteSplitDialog({
                   </p>
                   <p className="mt-1 text-[11px] text-amber-900 font-medium">
                     {distanceKmToRoute <= 2
-                      ? "📍 BCP post is directly located on this transit corridor."
+                      ? "📍 BCP post is located on this transit corridor."
                       : `📍 Located approx. ~${distanceKmToRoute} km from transit path.`}
                   </p>
                 </div>
@@ -142,7 +136,7 @@ export function BcpRouteSplitDialog({
                   <Badge variant="secondary" className="px-1 py-0 text-[10px]">
                     Stop Type: BCP
                   </Badge>
-                  <span>Dwell: {dwellMinutes} mins quarantine/customs check</span>
+                  <span>Dwell: {dwellMinutes} mins</span>
                 </div>
               </div>
 
