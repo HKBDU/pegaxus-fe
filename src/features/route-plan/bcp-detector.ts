@@ -151,6 +151,11 @@ export type DetectedBcpMatch = {
   isFromPreset: boolean;
 };
 
+// A BCP must be on the route corridor, not merely the closest BCP anywhere in
+// Europe. This also prevents a UK preset (for example Dover) being injected
+// into an unrelated route when the route geometry is far away.
+const MAX_BCP_DISTANCE_TO_ROUTE_KM = 50;
+
 /**
  * Finds the most suitable BCP location along a route's corridor.
  * Analyzes the route geometry LineString against available BCPs.
@@ -164,6 +169,10 @@ export function findBestBcpAlongRoute(
   if (!isCrossBorder(fromCountry, toCountry)) return null;
 
   const isMandatory = isMandatoryBcpCrossing(fromCountry, toCountry);
+
+  // Only UK/Ireland crossings require this automatic split. In particular, a
+  // normal intra-EU route must never be split just because a BCP preset exists.
+  if (!isMandatory) return null;
 
   // Extract coordinates from LineString / MultiLineString geometry
   const coords: [number, number][] = [];
@@ -181,13 +190,22 @@ export function findBestBcpAlongRoute(
     }
   }
 
+  // Without route geometry we cannot establish that the route actually passes
+  // a BCP. Endpoint/midpoint proximity is not sufficient for an automatic DB
+  // location/route mutation.
+  if (coords.length < 2) return null;
+
   // Filter master BCP locations strictly by location type (supported by API & models)
-  const masterBcps = masterLocations.filter(isBcpLocation);
+  const masterBcps = masterLocations.filter(
+    (location) => isBcpLocation(location) && isUkOrIreland(location.country),
+  );
 
   // Combine master with presets if master doesn't have sufficient coverage
   const allCandidates: Array<{ loc: MapLocation; isPreset: boolean }> = [
     ...masterBcps.map((loc) => ({ loc, isPreset: false })),
-    ...PRESET_BCP_LOCATIONS.map((loc) => ({ loc, isPreset: true })),
+    ...PRESET_BCP_LOCATIONS
+      .filter((loc) => isUkOrIreland(loc.country))
+      .map((loc) => ({ loc, isPreset: true })),
   ];
 
   if (!allCandidates.length) return null;
@@ -200,24 +218,6 @@ export function findBestBcpAlongRoute(
       sampledPoints.push(coords[i]);
     }
     sampledPoints.push(coords[coords.length - 1]);
-  } else {
-    // If no geometry, sample endpoints and midpoint
-    if (route.fromLocation)
-      sampledPoints.push([
-        route.fromLocation.longitude,
-        route.fromLocation.latitude,
-      ]);
-    if (route.fromLocation && route.toLocation) {
-      sampledPoints.push([
-        (route.fromLocation.longitude + route.toLocation.longitude) / 2,
-        (route.fromLocation.latitude + route.toLocation.latitude) / 2,
-      ]);
-    }
-    if (route.toLocation)
-      sampledPoints.push([
-        route.toLocation.longitude,
-        route.toLocation.latitude,
-      ]);
   }
 
   let bestMatch: { loc: MapLocation; isPreset: boolean } | null = null;
@@ -259,6 +259,8 @@ export function findBestBcpAlongRoute(
     );
     if (d < actualMinDist) actualMinDist = d;
   }
+
+  if (actualMinDist > MAX_BCP_DISTANCE_TO_ROUTE_KM) return null;
 
   return {
     bcp: bestMatch.loc,
