@@ -22,15 +22,15 @@ export function DocumentRequestAlert({
     <section
       role="alert"
       aria-label={heading}
-      className="dossier-revision-notice rounded-[2px] border border-destructive/20 bg-destructive/5 p-4 text-sm"
+      className="dossier-revision-notice min-w-0 rounded-[2px] border border-destructive/20 bg-destructive/5 p-4 text-sm [overflow-wrap:anywhere]"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-2 text-destructive">
+        <div className="flex min-w-0 items-start gap-2 text-destructive">
           <TriangleAlert
             aria-hidden="true"
             className="mt-0.5 size-4 shrink-0"
           />
-          <div>
+          <div className="min-w-0">
             <h3 className="font-heading text-base font-bold uppercase">
               {heading}
             </h3>

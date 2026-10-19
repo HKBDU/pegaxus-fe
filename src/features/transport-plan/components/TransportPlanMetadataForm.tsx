@@ -19,13 +19,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { DatePicker } from "@/shared/components/ui/date-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
+import { TimePicker } from "@/shared/components/ui/time-picker";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
   useCreateTransportPlan,
@@ -52,6 +46,7 @@ import { emptyPlanForm } from "../constants";
 import type { TransportPlanDetail, TransportPlanFormValues } from "../types";
 import { Section } from "./ApprovedBookingDetails";
 import { Flow3MockIndicator } from "./Flow3MockIndicator";
+import { TransportPlanLocationSelect } from "./TransportPlanLocationSelect";
 
 const controlClass =
   "h-9 rounded-[2px] border-slate-300 bg-white text-sm shadow-none focus-visible:border-primary focus-visible:ring-primary/20 motion-reduce:transition-none";
@@ -69,14 +64,6 @@ const fields = [
     type: "number",
   },
 ] as const;
-const timeOptions = {
-  hours: Array.from({ length: 24 }, (_, index) =>
-    String(index).padStart(2, "0"),
-  ),
-  minutes: Array.from({ length: 60 }, (_, index) =>
-    String(index).padStart(2, "0"),
-  ),
-};
 
 export function TransportPlanMetadataForm({
   bookingId,
@@ -220,6 +207,56 @@ export function TransportPlanMetadataForm({
             disabled={isPending || !canWrite}
             className="grid items-start gap-3 sm:grid-cols-2"
           >
+            {(["origin", "destination"] as const).map((side) => (
+              <FormField
+                key={side}
+                control={form.control}
+                name={`${side}LocationId`}
+                render={({ field, fieldState }) => (
+                  <FormItem className="min-w-0 content-start gap-1.5">
+                    <FormLabel
+                      htmlFor={`${scheduleId}-${side}-location`}
+                      className="text-xs"
+                    >
+                      {side === "origin"
+                        ? "Origin Location"
+                        : "Destination Location"}{" "}
+                      (optional)
+                    </FormLabel>
+                    <TransportPlanLocationSelect
+                      value={field.value}
+                      current={baseline?.[`${side}Location`]}
+                      disabled={isPending || blocked}
+                      editing={Boolean(baseline)}
+                      label={`${side === "origin" ? "Origin" : "Destination"} Location`}
+                      id={`${scheduleId}-${side}-location`}
+                      invalid={fieldState.invalid}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                    <p
+                      id={`${scheduleId}-${side}-location-hint`}
+                      className="text-xs text-slate-500"
+                    >
+                      {baseline
+                        ? "An empty selection retains the saved location; it does not remove it."
+                        : "Leave empty for the backend to resolve the booking coordinates. Older bookings may have no location."}
+                    </p>
+                    <div className="min-h-5">
+                      {fieldState.error && (
+                        <p
+                          id={`${scheduleId}-${side}-location-error`}
+                          role="alert"
+                          className="text-xs text-destructive"
+                        >
+                          {fieldState.error.message}
+                        </p>
+                      )}
+                    </div>
+                  </FormItem>
+                )}
+              />
+            ))}
             {[
               { title: "Schedule", items: fields.slice(0, 2) },
               { title: "Operational estimates", items: fields.slice(2) },
@@ -238,8 +275,7 @@ export function TransportPlanMetadataForm({
                       name={name}
                       render={({ field }) => {
                         const [date = "", time = ""] = field.value.split("T");
-                        const [hours = "", minutes = "", seconds] =
-                          time.split(":");
+                        const seconds = time.split(":")[2];
                         const changeDate = (value: string) => {
                           if (isPending || !canWrite) return;
                           field.onChange(
@@ -247,18 +283,15 @@ export function TransportPlanMetadataForm({
                           );
                           field.onBlur();
                         };
-                        const changeTime = (
-                          part: "hours" | "minutes",
-                          value: string,
-                        ) => {
+                        const changeTime = (value: string) => {
                           if (isPending || !canWrite) return;
                           // Keep the local date and existing seconds/milliseconds; UTC conversion stays in the submit mapping.
-                          const nextHours =
-                            part === "hours" ? value : hours || "00";
-                          const nextMinutes =
-                            part === "minutes" ? value : minutes || "00";
                           field.onChange(
-                            `${date}T${nextHours}:${nextMinutes}${seconds === undefined ? "" : `:${seconds}`}`,
+                            value
+                              ? `${date}T${value}${seconds === undefined ? "" : `:${seconds}`}`
+                              : date
+                                ? `${date}T`
+                                : "",
                           );
                           field.onBlur();
                         };
@@ -281,64 +314,17 @@ export function TransportPlanMetadataForm({
                                     className={controlClass}
                                   />
                                 </FormControl>
-                                <div className="flex min-w-0 items-center gap-1">
-                                  {(["hours", "minutes"] as const).map(
-                                    (part, index) => (
-                                      <div
-                                        key={part}
-                                        className="flex min-w-0 flex-1 items-center gap-1"
-                                      >
-                                        {index ? (
-                                          <span
-                                            aria-hidden="true"
-                                            className="text-xs text-slate-500"
-                                          >
-                                            :
-                                          </span>
-                                        ) : null}
-                                        <Select
-                                          value={
-                                            part === "hours" ? hours : minutes
-                                          }
-                                          onValueChange={(value) =>
-                                            changeTime(part, value)
-                                          }
-                                          onOpenChange={(open) => {
-                                            if (!open) field.onBlur();
-                                          }}
-                                          disabled={isPending || !canWrite}
-                                        >
-                                          <FormControl
-                                            id={`${scheduleId}-${name}-${part}`}
-                                          >
-                                            <SelectTrigger
-                                              size="sm"
-                                              aria-label={`${label} ${part}`}
-                                              className={`${controlClass} w-full min-w-0 data-[size=sm]:h-9`}
-                                            >
-                                              <SelectValue
-                                                placeholder={
-                                                  part === "hours" ? "HH" : "MM"
-                                                }
-                                              />
-                                            </SelectTrigger>
-                                          </FormControl>
-                                          <SelectContent className="z-[60] max-h-60 min-w-0 motion-reduce:animate-none">
-                                            {timeOptions[part].map((value) => (
-                                              <SelectItem
-                                                key={value}
-                                                value={value}
-                                                className="text-xs"
-                                              >
-                                                {value}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                    ),
-                                  )}
-                                </div>
+                                <FormControl id={`${scheduleId}-${name}-time`}>
+                                  <TimePicker
+                                    value={time.slice(0, 5)}
+                                    onChange={changeTime}
+                                    onBlur={field.onBlur}
+                                    disabled={isPending || !canWrite}
+                                    label={`${label} time`}
+                                    labelClassName="sr-only"
+                                    className={controlClass}
+                                  />
+                                </FormControl>
                               </div>
                             ) : (
                               <FormControl>

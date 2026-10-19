@@ -43,7 +43,7 @@ export function TransportDetailLayout({
       data-audience={audience}
     >
       <div
-        className={`mx-auto w-full min-w-0 ${view === "segments" ? "space-y-4" : "space-y-3"} ${audience === "crew" ? "max-w-4xl" : "booking-page-enter max-w-[1440px]"}`}
+        className={`mx-auto w-full min-w-0 ${view === "segments" && audience !== "crew" ? "space-y-4" : "space-y-3"} ${audience === "crew" ? "max-w-4xl" : "booking-page-enter max-w-[1440px]"}`}
       >
         <TransportPageHeader
           audience={audience}

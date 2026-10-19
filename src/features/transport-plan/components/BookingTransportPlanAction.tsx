@@ -179,6 +179,17 @@ export function CreateTransportPlanContent({
             {booking.requestedDepartureDate} →{" "}
             {booking.requestedArrivalDate ?? "—"}
           </Field>
+          <Field label="Origin coordinates">
+            {booking.originLatitude != null && booking.originLongitude != null
+              ? `${booking.originLatitude}, ${booking.originLongitude}`
+              : null}
+          </Field>
+          <Field label="Destination coordinates">
+            {booking.destinationLatitude != null &&
+            booking.destinationLongitude != null
+              ? `${booking.destinationLatitude}, ${booking.destinationLongitude}`
+              : null}
+          </Field>
         </dl>
       </Section>
       <TransportPlanMetadataForm

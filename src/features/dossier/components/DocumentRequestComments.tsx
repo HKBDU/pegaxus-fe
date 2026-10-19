@@ -17,12 +17,14 @@ export function DocumentRequestComments({
   request,
   canComment,
   canReadComments,
+  showRequestSummary = true,
 }: {
   dossierId: string;
   requirementId: string;
   request: DocumentRequestSummary;
   canComment: boolean;
   canReadComments: boolean;
+  showRequestSummary?: boolean;
 }) {
   const query = useDocumentRequestComments(
     dossierId,
@@ -53,10 +55,16 @@ export function DocumentRequestComments({
   }
   return (
     <section
-      className="space-y-3 rounded-[2px] border border-border bg-white p-4"
+      className="min-w-0 space-y-3 rounded-[2px] border border-border bg-white p-4 [overflow-wrap:anywhere]"
       aria-label={`Request ${request.requestCode}`}
     >
-      <DocumentRequestAlert request={request} />
+      {showRequestSummary ? (
+        <DocumentRequestAlert request={request} />
+      ) : (
+        <h3 className="text-sm font-semibold">
+          Comments · {request.requestCode}
+        </h3>
+      )}
       <p className="text-xs text-muted-foreground">
         Request status: {request.status ?? "—"}
       </p>

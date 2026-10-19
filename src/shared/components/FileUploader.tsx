@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, KeyboardEvent } from 'react'
 import { AlertCircle, CheckCircle2, FileIcon, RotateCw, UploadCloud, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -9,9 +9,10 @@ import { useFileUploader } from './file-uploader/useFileUploader'
 import { formatFileSize } from './file-uploader/utils'
 import type { FileUploaderProps } from './file-uploader/types'
 
-export type { FileUploaderProps, UploadItem, UploadStatus } from './file-uploader/types'
+export type { FileUploaderHandle, FileUploaderSnapshot, FileUploaderProps, UploadItem, UploadStatus } from './file-uploader/types'
 
 export default function FileUploader({
+  ref,
   entity = 'attachment',
   accept,
   maxSize,
@@ -21,6 +22,7 @@ export default function FileUploader({
   concurrency = 3,
   onUploaded,
   onChange,
+  onStateChange,
   onError,
   onReject,
   title = 'Drag and drop files here, or click to browse',
@@ -28,10 +30,11 @@ export default function FileUploader({
   errorMessages,
   className,
 }: FileUploaderProps) {
-  const { items, rejections, addFiles, remove, retry } = useFileUploader({
+  const { items, rejections, addFiles, remove, retry, getSnapshot, lockCompletedSelection } = useFileUploader({
     entity, accept, maxSize, maxFiles, multiple, disabled, concurrency,
-    onUploaded, onChange, onError, onReject, errorMessages,
+    onUploaded, onChange, onStateChange, onError, onReject, errorMessages,
   })
+  useImperativeHandle(ref, () => ({ getSnapshot, lockCompletedSelection }), [getSnapshot, lockCompletedSelection])
   const [dragging, setDragging] = useState(false)
   const [hiddenProgressIds, setHiddenProgressIds] = useState<Set<string>>(new Set())
   const [collapsingIds, setCollapsingIds] = useState<Set<string>>(new Set())

@@ -19,7 +19,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/shared/components/ui/form";
 import {
   Select,
@@ -45,6 +44,7 @@ import type {
   DossierRequirement,
 } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
+import { DossierFormMessage } from "./DossierFormMessage";
 
 export function RejectDocumentDialog({
   requirement,
@@ -181,7 +181,7 @@ export function RejectDocumentDialog({
                       <FormDescription className="text-xs">
                         Select the correction the customer needs to provide.
                       </FormDescription>
-                      <FormMessage className="text-xs" />
+                      <DossierFormMessage />
                     </div>
                   </FormItem>
                 )}
@@ -208,7 +208,7 @@ export function RejectDocumentDialog({
                         Provide at least 15 characters of detailed
                         customer-facing instructions.
                       </FormDescription>
-                      <FormMessage className="text-xs" />
+                      <DossierFormMessage />
                     </div>
                   </FormItem>
                 )}
@@ -245,7 +245,7 @@ export function RejectDocumentDialog({
                       <FormDescription className="text-xs">
                         Required deadline, today or later (UTC).
                       </FormDescription>
-                      <FormMessage className="text-xs" />
+                      <DossierFormMessage />
                     </div>
                   </FormItem>
                 )}
@@ -288,7 +288,7 @@ export function RejectDocumentDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage />
+                      <DossierFormMessage />
                     </FormItem>
                   )}
                 />

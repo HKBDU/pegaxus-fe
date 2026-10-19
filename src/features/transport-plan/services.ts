@@ -14,6 +14,7 @@ import {
   transportPlansQuerySchema,
   apiEnvelopeSchema,
   apiErrorSchema,
+  locationBriefSchema,
 } from "./schemas";
 import type {
   ApprovedBookingListItem,
@@ -202,6 +203,25 @@ export function isTransportPlanLockedCode(code?: string | null) {
 }
 
 export const transportPlanService = {
+  async getLocations(search: string, pageIndex: number, signal?: AbortSignal) {
+    signal?.throwIfAborted();
+    const payload =
+      !import.meta.env.PROD && isFlow3MockMode()
+        ? (await import("./mock/mock-service")).flow3MockService.getLocations(
+            search,
+            pageIndex,
+          )
+        : await apiClient.get<unknown, unknown>("/locations", {
+            params: { search: search || undefined, pageIndex, pageSize: 20 },
+            signal,
+          });
+    return z
+      .object({
+        items: z.array(locationBriefSchema),
+        totalPages: z.number().int().nonnegative(),
+      })
+      .parse(readEnvelope(payload));
+  },
   async getPlans(
     params: TransportPlansQueryParams,
     signal?: AbortSignal,
@@ -273,6 +293,12 @@ export function getTransportPlanError(
   context: "list" | "detail" | "quotation" | "personnel" = "detail",
 ) {
   const { code, status, message } = getApiErrorInfo(error);
+  if (code === "LOCATION_NOT_FOUND")
+    return {
+      message:
+        "A selected location no longer exists. Choose an available location and save again.",
+      retryable: false,
+    };
   if (isTransportPlanLockedCode(code))
     return {
       message:
