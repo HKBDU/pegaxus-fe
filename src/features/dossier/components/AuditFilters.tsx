@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react"
-import { FilterX, Search, X } from "lucide-react"
+import { Search, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { AUDIT_ACTION_TYPES, type AuditActionType, type AuditParams } from "@/features/dossier/types"
 import { humanizeAction } from "@/features/dossier/utils"
 import { useDebounce } from "@/shared/hooks"
-import { Button } from "@/shared/components/ui/button"
 import { DataTableRadioFilter, type DataTableRadioOption } from "@/shared/components/ui/data-table-radio-filter"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Input } from "@/shared/components/ui/input"
@@ -22,20 +21,18 @@ interface AuditFiltersProps {
   onSearchChange: (value: string) => void
   onActionChange: (value: AuditActionType | "ALL") => void
   onRangeChange: (range: { from: string; to: string }) => void
-  onReset: () => void
 }
 
 /** Filters of K3: actor/note search, action type and the occurredAt range. */
-export function AuditFilters({ filters, onSearchChange, onActionChange, onRangeChange, onReset }: AuditFiltersProps) {
+export function AuditFilters({ filters, onSearchChange, onActionChange, onRangeChange }: AuditFiltersProps) {
   const [localSearch, setLocalSearch] = useState(filters.search)
   const debouncedSearch = useDebounce(localSearch, 300)
-  const hasActiveFilters = Boolean(localSearch) || filters.actionType !== "ALL" || Boolean(filters.from) || Boolean(filters.to)
 
   useEffect(() => onSearchChange(debouncedSearch), [debouncedSearch, onSearchChange])
 
   return (
-    <div role="toolbar" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-[minmax(15rem,1fr)_11rem_9.5rem_9.5rem_auto]">
-      <div className="relative col-span-2 md:col-span-3 xl:col-span-1">
+    <div role="toolbar" aria-label="Audit history filters" className="flex min-w-0 items-center gap-2 overflow-x-auto py-1">
+      <div className="relative min-w-60 flex-1">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
         <Input
           value={localSearch}
@@ -52,26 +49,11 @@ export function AuditFilters({ filters, onSearchChange, onActionChange, onRangeC
         ) : null}
       </div>
 
-      <DataTableRadioFilter title="Action type" value={filters.actionType} options={ACTION_OPTIONS} onValueChange={(value) => onActionChange(value as AuditActionType | "ALL")} />
-      <DatePicker value={filters.from} maxDate={filters.to || undefined} onChange={(from) => onRangeChange({ from, to: filters.to })} placeholder="From date" displayFormat="dd MMM yyyy" aria-label="From date" className={cn(dateClass)} />
-      <DatePicker value={filters.to} minDate={filters.from || undefined} onChange={(to) => onRangeChange({ from: filters.from, to })} placeholder="To date" displayFormat="dd MMM yyyy" aria-label="To date" className={cn(dateClass)} />
-
-      <div className="flex items-center justify-end">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-label="Reset filters"
-          disabled={!hasActiveFilters}
-          className="size-8 rounded-[2px] border-slate-300 bg-white p-0 shadow-none"
-          onClick={() => {
-            setLocalSearch("")
-            onReset()
-          }}
-        >
-          <FilterX className="size-3.5 text-slate-600" />
-        </Button>
+      <div className="grid w-44 shrink-0">
+        <DataTableRadioFilter title="Action type" value={filters.actionType} options={ACTION_OPTIONS} onValueChange={(value) => onActionChange(value as AuditActionType | "ALL")} />
       </div>
+      <DatePicker value={filters.from} maxDate={filters.to || undefined} onChange={(from) => onRangeChange({ from, to: filters.to })} placeholder="From date" displayFormat="dd MMM yyyy" aria-label="From date" className={cn(dateClass, "w-38 shrink-0")} />
+      <DatePicker value={filters.to} minDate={filters.from || undefined} onChange={(to) => onRangeChange({ from: filters.from, to })} placeholder="To date" displayFormat="dd MMM yyyy" aria-label="To date" className={cn(dateClass, "w-38 shrink-0")} />
     </div>
   )
 }

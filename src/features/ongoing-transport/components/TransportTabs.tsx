@@ -70,6 +70,7 @@ export function TransportTabs({
             end={tab.end}
             to={tab.to}
             state={location.state}
+            preventScrollReset={audience === "crew"}
             className={tabClass}
           >
             {tab.label}
