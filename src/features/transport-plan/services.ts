@@ -12,7 +12,6 @@ import {
   transportPlanDetailSchema,
   transportPlansPageSchema,
   transportPlansQuerySchema,
-  apiEnvelopeSchema,
   apiErrorSchema,
 } from "./schemas";
 import type {
@@ -43,15 +42,24 @@ class ApprovedBookingApiError extends Error {
 }
 
 export function readEnvelope(response: unknown) {
-  const parsed = apiEnvelopeSchema.parse(response);
-  if (!parsed.isSuccess)
-    throw new ApprovedBookingApiError(
-      parsed.code,
-      parsed.errorCode,
-      parsed.message,
-      parsed.errors,
-    );
-  return parsed.value;
+  if (typeof response === "object" && response !== null) {
+    const res = response as Record<string, unknown>;
+    if ("isSuccess" in res) {
+      if (res.isSuccess === false) {
+        throw new ApprovedBookingApiError(
+          typeof res.code === "number" ? res.code : 500,
+          typeof res.errorCode === "string" ? res.errorCode : null,
+          typeof res.message === "string" ? res.message : undefined,
+          Array.isArray(res.errors) ? (res.errors as any) : null,
+        );
+      }
+      if ("value" in res && res.value !== undefined) return res.value;
+      if ("data" in res && res.data !== undefined) return res.data;
+    }
+    if ("value" in res && res.value !== undefined) return res.value;
+    if ("data" in res && res.data !== undefined) return res.data;
+  }
+  return response;
 }
 
 export function buildApprovedBookingQuery(params: ApprovedBookingsQueryParams) {

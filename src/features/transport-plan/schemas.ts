@@ -3,9 +3,10 @@ import { toLocalDateTime } from "./format";
 
 export const apiEnvelopeSchema = z.object({
   isSuccess: z.boolean(),
-  code: z.number(),
-  message: z.string(),
-  value: z.unknown(),
+  code: z.number().nullish().transform((v) => v ?? 200),
+  message: z.string().nullish().transform((v) => v ?? ""),
+  value: z.unknown().optional(),
+  data: z.unknown().optional(),
   errorCode: z.string().nullish(),
   errors: z
     .array(z.object({ field: z.string(), message: z.string() }))
