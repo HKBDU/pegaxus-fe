@@ -4,6 +4,7 @@ import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits"
 import { TYPE_LABEL, type HandoverAudience, type HandoverType } from "../constants"
 import type { CreateHandoverInput, HandoverBoundary, OverviewSegment } from "../types"
 import { describeError, typeLabel } from "../utils"
@@ -52,9 +53,22 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
   const submit = async () => {
     setFormError(null)
     if (!selected || !type) return
-    if (scheduled && !plannedAt) {
-      setFormError("Choose the planned date and time.")
-      return
+    if (scheduled) {
+      if (!plannedAt) {
+        setFormError("Choose the planned date and time.")
+        return
+      }
+      const plannedDate = new Date(plannedAt)
+      if (Number.isNaN(plannedDate.getTime())) {
+        setFormError("Invalid date and time.")
+        return
+      }
+      const now = new Date()
+      const diffYears = Math.abs(plannedDate.getFullYear() - now.getFullYear())
+      if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
+        setFormError(`Planned handover must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`)
+        return
+      }
     }
     try {
       await onSubmit({

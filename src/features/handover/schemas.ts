@@ -1,4 +1,9 @@
 import { z } from "zod"
+import {
+  PHONE_MESSAGE,
+  VALIDATION_LIMITS,
+  isPhoneValid,
+} from "@/shared/constants/validation-limits"
 
 const id = z.string()
 const timestamp = z.iso.datetime({ offset: true })
@@ -131,13 +136,18 @@ export const apiEnvelopeSchema = z.object({
   value: z.unknown().optional(),
 })
 
+
 const noteSchema = (label: string) =>
-  z.string().trim().min(1, `${label} is required.`).max(2000, `${label} must be at most 2000 characters.`)
+  z.string().trim().min(1, `${label} is required.`).max(VALIDATION_LIMITS.noteMaxLength, `${label} must be at most ${VALIDATION_LIMITS.noteMaxLength} characters.`)
 
 const partyDraftSchema = z.object({
   partyName: z.string().trim().max(200, "Name must be at most 200 characters."),
   contactName: z.string().trim().max(150, "Contact must be at most 150 characters."),
-  contactPhone: z.string().trim().max(30, "Phone must be at most 30 characters."),
+  contactPhone: z
+    .string()
+    .trim()
+    .max(30, "Phone must be at most 30 characters.")
+    .refine(isPhoneValid, PHONE_MESSAGE),
 })
 
 /** Shape checks only (required, length). Business rules (who may sign, status, signatures on the server) stay with the BE. */
@@ -145,7 +155,7 @@ export const completeFormSchema = z.object({
   horseConditionNote: noteSchema("Horse condition"),
   documentHandoverNote: noteSchema("Compliance document notes"),
   equipmentHandoverNote: noteSchema("Equipment notes"),
-  discrepancyNote: z.string().trim().max(2000, "Discrepancy notes must be at most 2000 characters."),
+  discrepancyNote: z.string().trim().max(VALIDATION_LIMITS.noteMaxLength, `Discrepancy notes must be at most ${VALIDATION_LIMITS.noteMaxLength} characters.`),
   from: partyDraftSchema,
   to: partyDraftSchema,
   location: z.object({
@@ -154,3 +164,12 @@ export const completeFormSchema = z.object({
     country: z.string().trim().max(100, "Country must be at most 100 characters."),
   }),
 })
+
+export const cancelHandoverFormSchema = z.object({
+  cancellationReason: z
+    .string()
+    .trim()
+    .min(10, "Cancellation reason must contain at least 10 characters after trimming.")
+    .max(VALIDATION_LIMITS.noteMaxLength, `Cancellation reason must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`),
+})
+
