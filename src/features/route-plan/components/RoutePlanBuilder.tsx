@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -54,8 +55,23 @@ import {
 } from "./RoutePlanBuilderParts";
 import { RoutePlanEndpointsStep } from "./RoutePlanEndpointsStep";
 import { RoutePlanStatusBadge } from "./RoutePlanStatusBadge";
+import { BcpRouteSplitDialog } from "./BcpRouteSplitDialog";
+import {
+  findBestBcpAlongRoute,
+  isCrossBorder as checkIsCrossBorder,
+  isBcpLocation,
+  isMandatoryBcpCrossing,
+} from "../bcp-detector";
 
 export type { RoutePlanBuilderMetadata } from "./RoutePlanBuilderParts";
+
+export type BcpSplitProposal = {
+  routeToSplit: MapRoute;
+  targetSegmentIndex?: number;
+  detectedBcp: MapLocation;
+  distanceKmToRoute: number;
+  isMandatory: boolean;
+};
 
 type TransportPlanSummary = {
   transportPlanId: string;
@@ -247,7 +263,7 @@ export function RoutePlanBuilder({
         stopType:
           route.toLocation?.id === metadata?.to?.id
             ? "DESTINATION"
-            : route.toLocation?.type === "BORDER_GATE"
+            : isBcpLocation(route.toLocation)
               ? "BCP"
               : "REST_STOP",
         dwellAfterMinutes: 0,
@@ -372,23 +388,24 @@ export function RoutePlanBuilder({
     });
   }, [plan.scope, plan.from?.country, plan.to?.country, segments]);
 
+  const isBcpMandatory = useMemo(() => {
+    if (isMandatoryBcpCrossing(plan.from?.country, plan.to?.country)) return true;
+    return segments.some((s) =>
+      isMandatoryBcpCrossing(s.route.fromLocation?.country, s.route.toLocation?.country),
+    );
+  }, [plan.from?.country, plan.to?.country, segments]);
+
   const hasBcp = useMemo(() => {
     return segments.some(
       (s) =>
         s.stopType === "BCP" ||
-        s.route.toLocation?.type === "BORDER_GATE" ||
-        s.route.fromLocation?.type === "BORDER_GATE" ||
-        (s.route.toLocation as { locationType?: string })?.locationType === "BORDER_GATE" ||
-        (s.route.fromLocation as { locationType?: string })?.locationType === "BORDER_GATE",
+        isBcpLocation(s.route.toLocation) ||
+        isBcpLocation(s.route.fromLocation),
     );
   }, [segments]);
 
   const bcpLocations = useMemo(() => {
-    return locations.filter(
-      (loc) =>
-        loc.type === "BORDER_GATE" ||
-        (loc as { locationType?: string }).locationType === "BORDER_GATE",
-    );
+    return locations.filter(isBcpLocation);
   }, [locations]);
 
   const [isBcpDismissed, setIsBcpDismissed] = useState(false);
@@ -404,6 +421,15 @@ export function RoutePlanBuilder({
   const [newBcpLat, setNewBcpLat] = useState("");
   const [newBcpLon, setNewBcpLon] = useState("");
   const [creatingBcp, setCreatingBcp] = useState(false);
+
+  const [bcpSplitProposal, setBcpSplitProposal] = useState<BcpSplitProposal | null>(null);
+  const [isSplitting, setIsSplitting] = useState(false);
+
+  const reversedSegments = useMemo(() => {
+    return segments
+      .map((segment, index) => ({ segment, index }))
+      .reverse();
+  }, [segments]);
 
   async function insertBcpIntoRoute(bcpLoc: MapLocation, targetSegIndex = 0) {
     if (!segments.length) {
@@ -535,6 +561,126 @@ export function RoutePlanBuilder({
     }
   }
 
+  async function handleConfirmSplitBcp() {
+    if (!bcpSplitProposal) return;
+    const { routeToSplit, targetSegmentIndex, detectedBcp } = bcpSplitProposal;
+    setIsSplitting(true);
+    try {
+      let effectiveBcp = detectedBcp;
+      if (String(detectedBcp.id).startsWith("preset-")) {
+        try {
+          const res = await createLocation({
+            locationName: detectedBcp.name,
+            locationType: "BORDER_GATE",
+            address: detectedBcp.address || detectedBcp.name,
+            city: detectedBcp.city || "Border",
+            country: detectedBcp.country || "FR",
+            latitude: detectedBcp.latitude,
+            longitude: detectedBcp.longitude,
+          });
+          const createdId = (res as { locationId?: string | number })?.locationId;
+          if (createdId) {
+            effectiveBcp = { ...detectedBcp, id: String(createdId) };
+            setLocations((prev) => [...prev, effectiveBcp]);
+          }
+        } catch {
+          // ignore error if master creation fails, use preset directly
+        }
+      }
+
+      if (targetSegmentIndex !== undefined && targetSegmentIndex >= 0 && targetSegmentIndex < segments.length) {
+        await insertBcpIntoRoute(effectiveBcp, targetSegmentIndex);
+      } else {
+        const fromLoc = routeToSplit.fromLocation ?? plan.from;
+        const toLoc = routeToSplit.toLocation ?? plan.to;
+        if (!fromLoc || !toLoc) throw new Error("Missing endpoints");
+
+        const toastId = toast.loading(`Routing through BCP: ${effectiveBcp.name}...`);
+        const preview1 = await previewGeoapifyRoute(
+          { latitude: fromLoc.latitude, longitude: fromLoc.longitude },
+          { latitude: effectiveBcp.latitude, longitude: effectiveBcp.longitude },
+        );
+        let actualOrigin = fromLoc;
+        let actualBcp1 = effectiveBcp;
+        if (preview1.snappedStart) {
+          actualOrigin = { ...fromLoc, ...preview1.snappedStart };
+          void persistFeasibleLocation(fromLoc, preview1.snappedStart);
+        }
+        if (preview1.snappedEnd) {
+          actualBcp1 = { ...effectiveBcp, ...preview1.snappedEnd };
+          void persistFeasibleLocation(effectiveBcp, preview1.snappedEnd);
+        }
+
+        const preview2 = await previewGeoapifyRoute(
+          { latitude: actualBcp1.latitude, longitude: actualBcp1.longitude },
+          { latitude: toLoc.latitude, longitude: toLoc.longitude },
+        );
+        let actualDest = toLoc;
+        if (preview2.snappedEnd) {
+          actualDest = { ...toLoc, ...preview2.snappedEnd };
+          void persistFeasibleLocation(toLoc, preview2.snappedEnd);
+        }
+
+        const route1: MapRoute = {
+          id: `dynamic-${fromLoc.id}-${effectiveBcp.id}-${Date.now()}`,
+          name: `${fromLoc.name} → ${effectiveBcp.name} (BCP)`,
+          fromLocation: actualOrigin,
+          toLocation: actualBcp1,
+          distanceKm: Math.round(preview1.distanceKm * 10) / 10,
+          durationMinutes: Math.round(preview1.durationMinutes),
+          transportMode: "ROAD",
+          geometry: preview1.geometry,
+        };
+
+        const route2: MapRoute = {
+          id: `dynamic-${effectiveBcp.id}-${toLoc.id}-${Date.now() + 1}`,
+          name: `${effectiveBcp.name} → ${toLoc.name}`,
+          fromLocation: actualBcp1,
+          toLocation: actualDest,
+          distanceKm: Math.round(preview2.distanceKm * 10) / 10,
+          durationMinutes: Math.round(preview2.durationMinutes),
+          transportMode: "ROAD",
+          geometry: preview2.geometry,
+        };
+
+        const seg1: DraftSegment = {
+          id: `seg-${Date.now()}-1`,
+          route: route1,
+          arrangement: arrangementForRoute(route1),
+          stopType: "BCP",
+          dwellAfterMinutes: 30,
+        };
+
+        const seg2: DraftSegment = {
+          id: `seg-${Date.now()}-2`,
+          route: route2,
+          arrangement: arrangementForRoute(route2),
+          stopType: toLoc.id === plan.to?.id ? "DESTINATION" : "REST_STOP",
+          dwellAfterMinutes: 0,
+        };
+
+        setSegments((current) => formatDraftSegments([...current, seg1, seg2], plan.departureAt));
+        toast.success(`BCP "${effectiveBcp.name}" inserted into route.`, { id: toastId });
+      }
+      setBcpSplitProposal(null);
+    } catch (err) {
+      toast.error("Failed to split route through BCP", {
+        description: err instanceof Error ? err.message : "Route calculation error",
+      });
+    } finally {
+      setIsSplitting(false);
+    }
+  }
+
+  function handleDismissSplitBcp() {
+    if (!bcpSplitProposal) return;
+    if (bcpSplitProposal.targetSegmentIndex === undefined) {
+      addSegment(bcpSplitProposal.routeToSplit);
+      toast.info("Added as single route without BCP.");
+    }
+    setBcpSplitProposal(null);
+  }
+
   async function handleCreateNewBcp() {
     if (!newBcpName.trim()) {
       toast.error("Please enter a location name for the BCP.");
@@ -613,7 +759,7 @@ export function RoutePlanBuilder({
       stopType:
         route.toLocation?.id === plan.to?.id
           ? "DESTINATION"
-          : route.toLocation?.type === "BORDER_GATE"
+          : isBcpLocation(route.toLocation)
             ? "BCP"
             : "REST_STOP",
       dwellAfterMinutes: 0,
@@ -685,10 +831,20 @@ export function RoutePlanBuilder({
     );
 
     if (found) {
-      addSegment(found);
-      toast.success(`${sourceLocation.name} → ${location.name}`, {
-        description: "Saved route added.",
-      });
+      const match = findBestBcpAlongRoute(found, locations);
+      if (match && !hasBcp) {
+        setBcpSplitProposal({
+          routeToSplit: found,
+          detectedBcp: match.bcp,
+          distanceKmToRoute: match.distanceKmToRoute,
+          isMandatory: match.isMandatory,
+        });
+      } else {
+        addSegment(found);
+        toast.success(`${sourceLocation.name} → ${location.name}`, {
+          description: "Saved route added.",
+        });
+      }
     } else {
       // Dynamic Geoapify route calculation
       const loadingToast = toast.loading(
@@ -719,11 +875,23 @@ export function RoutePlanBuilder({
           transportMode: "ROAD",
           geometry: preview.geometry,
         };
-        addSegment(dynamicRoute);
-        toast.success(`${sourceLocation.name} → ${location.name}`, {
-          id: loadingToast,
-          description: `Route calculated: ${dynamicRoute.distanceKm} km (${Math.round(dynamicRoute.durationMinutes ?? 0)} mins).`,
-        });
+
+        const match = findBestBcpAlongRoute(dynamicRoute, locations);
+        if (match && !hasBcp) {
+          toast.dismiss(loadingToast);
+          setBcpSplitProposal({
+            routeToSplit: dynamicRoute,
+            detectedBcp: match.bcp,
+            distanceKmToRoute: match.distanceKmToRoute,
+            isMandatory: match.isMandatory,
+          });
+        } else {
+          addSegment(dynamicRoute);
+          toast.success(`${sourceLocation.name} → ${location.name}`, {
+            id: loadingToast,
+            description: `Route calculated: ${dynamicRoute.distanceKm} km (${Math.round(dynamicRoute.durationMinutes ?? 0)} mins).`,
+          });
+        }
       } catch (err) {
         toast.error(`Unable to calculate route: ${sourceLocation.name} → ${location.name}`, {
           id: loadingToast,
@@ -992,13 +1160,22 @@ export function RoutePlanBuilder({
                           <div className="min-w-0 flex-1 overflow-hidden">
                             <div className="flex flex-wrap items-center gap-1.5 min-w-0">
                               <span className="font-bold text-amber-950 text-xs">Cross-Border Transport Notice</span>
-                              <Badge variant="outline" className="border-amber-300 bg-amber-100/50 px-1 py-0 text-[10px] font-semibold text-amber-800 shrink-0">
-                                BCP Recommended
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "px-1 py-0 text-[10px] font-semibold shrink-0",
+                                  isBcpMandatory
+                                    ? "border-red-300 bg-red-100/60 text-red-800"
+                                    : "border-blue-300 bg-blue-100/60 text-blue-800",
+                                )}
+                              >
+                                {isBcpMandatory ? "BCP Mandatory (EU ↔ UK / Ireland)" : "BCP Optional (Intra-EU)"}
                               </Badge>
                             </div>
                             <p className="mt-1 text-slate-700 break-words text-xs leading-relaxed">
-                              This transport route crosses international borders. EU animal welfare regulations require at least one Border Control Point (BCP) stop.
-                              As Master Data manager, you can select an existing BCP, register a new BCP, or dismiss this proposal.
+                              {isBcpMandatory
+                                ? "This transport route crosses between EU and UK / Ireland borders. BCP clearance and quarantine checks are mandatory. Please select or register a BCP stop."
+                                : "Intra-EU transport: Registered horses move under internal EU animal welfare regulations with minimal restrictions. Adding a BCP stop, clearance, and quarantine is optional for this route."}
                             </p>
                           </div>
                         </div>
@@ -1252,15 +1429,80 @@ export function RoutePlanBuilder({
                     </div>
                   )}
 
-                  {segments.map((segment, index) => (
+                  {/* Continuation bar for next segment */}
+                  {segments.length > 0 && segments[segments.length - 1]?.route?.toLocation && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-[2px] border border-blue-200 bg-blue-50/70 p-2.5 text-xs text-blue-950">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="shrink-0 font-bold uppercase text-[10px] text-blue-700">Next segment starts from:</span>
+                        <span className="truncate font-semibold text-blue-900">
+                          {segments[segments.length - 1].route.toLocation?.name}
+                        </span>
+                        <span className="text-[11px] text-blue-700">
+                          ({segments[segments.length - 1].route.toLocation?.city ? `${segments[segments.length - 1].route.toLocation?.city}, ` : ""}{segments[segments.length - 1].route.toLocation?.country})
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-6 rounded-[2px] border-blue-300 bg-white px-2 text-[11px] font-semibold text-blue-900 hover:bg-blue-100 shrink-0"
+                        onClick={() => {
+                          const lastLoc = segments[segments.length - 1].route.toLocation;
+                          if (lastLoc) {
+                            setSourceLocation(lastLoc);
+                            setBuildMessage(`Source selected: ${lastLoc.name}. Choose destination on map.`);
+                          }
+                        }}
+                      >
+                        Continue from here →
+                      </Button>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-fit rounded-[2px] text-xs font-medium"
+                      onClick={() => setShowRouteSearch((value) => !value)}
+                    >
+                      {showRouteSearch ? "Close Route Search" : "+ Add Segment"}
+                    </Button>
+                    {segments.length > 1 && (
+                      <span className="text-[11px] text-muted-foreground italic">
+                        * Most recent segments displayed first
+                      </span>
+                    )}
+                  </div>
+
+                  {reversedSegments.map(({ segment, index }) => (
                     <BuilderSegmentCard
                       key={segment.id}
                       segment={segment}
                       index={index}
                       totalSegments={segments.length}
+                      isLatest={index === segments.length - 1}
+                      isReversedOrder={true}
+                      onSplitAtBcp={
+                        checkIsCrossBorder(segment.route.fromLocation?.country, segment.route.toLocation?.country) &&
+                        segment.stopType !== "BCP"
+                          ? () => {
+                              const match = findBestBcpAlongRoute(segment.route, locations);
+                              if (match) {
+                                setBcpSplitProposal({
+                                  routeToSplit: segment.route,
+                                  targetSegmentIndex: index,
+                                  detectedBcp: match.bcp,
+                                  distanceKmToRoute: match.distanceKmToRoute,
+                                  isMandatory: match.isMandatory,
+                                });
+                              }
+                            }
+                          : undefined
+                      }
                       onDelete={() => deleteSegment(index)}
-                      onMoveUp={() => moveSegment(index, index - 1)}
-                      onMoveDown={() => moveSegment(index, index + 1)}
+                      onMoveUp={() => moveSegment(index, index + 1)}
+                      onMoveDown={() => moveSegment(index, index - 1)}
                       onInsertStop={() => setInsertTargetIndex(index)}
                       onDwellChange={(mins) => handleDwellChange(index, mins)}
                       onVehicleChange={(vIds) => handleVehicleChange(index, vIds)}
@@ -1284,14 +1526,16 @@ export function RoutePlanBuilder({
                     />
                   ))}
 
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-fit rounded-[2px] text-xs font-medium"
-                    onClick={() => setShowRouteSearch((value) => !value)}
-                  >
-                    {showRouteSearch ? "Close Route Search" : "+ Add Segment"}
-                  </Button>
+                  {segments.length > 3 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-fit rounded-[2px] text-xs font-medium mt-1"
+                      onClick={() => setShowRouteSearch((value) => !value)}
+                    >
+                      {showRouteSearch ? "Close Route Search" : "+ Add Segment"}
+                    </Button>
+                  )}
 
                   {showRouteSearch && (
                     <div className="rounded-[2px] border border-slate-200 bg-slate-50 p-3">
@@ -1327,7 +1571,17 @@ export function RoutePlanBuilder({
                             type="button"
                             className="rounded-[2px] border border-slate-200 bg-white px-3 py-2 text-left text-xs hover:border-amber-500 hover:bg-amber-50/50"
                             onClick={() => {
-                              addSegment(route);
+                              const match = findBestBcpAlongRoute(route, locations);
+                              if (match && !hasBcp) {
+                                setBcpSplitProposal({
+                                  routeToSplit: route,
+                                  detectedBcp: match.bcp,
+                                  distanceKmToRoute: match.distanceKmToRoute,
+                                  isMandatory: match.isMandatory,
+                                });
+                              } else {
+                                addSegment(route);
+                              }
                               setShowRouteSearch(false);
                             }}
                           >
@@ -1377,10 +1631,16 @@ export function RoutePlanBuilder({
                   <div className="rounded-[2px] border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-950">
                     <div className="flex items-center gap-2 font-semibold">
                       <ShieldAlert className="size-4 text-amber-600 shrink-0" />
-                      <span>Cross-Border Notice: No Border Control Point (BCP) Added</span>
+                      <span>
+                        {isBcpMandatory
+                          ? "Cross-Border Notice: BCP is Mandatory for EU ↔ UK / Ireland"
+                          : "Intra-EU Notice: BCP Stop is Optional"}
+                      </span>
                     </div>
                     <p className="mt-1 text-slate-700">
-                      You chose not to add a BCP stop. Note that cross-border routes may be rejected by the backend if BCP regulations apply. You can return to Step 1 to insert a BCP if needed.
+                      {isBcpMandatory
+                        ? "You have not included a BCP stop. Cross-border routes between EU and UK / Ireland require BCP clearance. You can return to Step 1 to insert a BCP if needed."
+                        : "No BCP stop is added. Since this is an internal EU transport for registered horses, BCP clearance and quarantine are optional."}
                     </p>
                   </div>
                 )}
@@ -1504,6 +1764,27 @@ export function RoutePlanBuilder({
           </Button>
         </div>
       </div>
+
+      <BcpRouteSplitDialog
+        open={Boolean(bcpSplitProposal)}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) handleDismissSplitBcp();
+        }}
+        routeToSplit={bcpSplitProposal?.routeToSplit ?? null}
+        detectedBcp={bcpSplitProposal?.detectedBcp ?? null}
+        distanceKmToRoute={bcpSplitProposal?.distanceKmToRoute ?? 0}
+        isMandatory={bcpSplitProposal?.isMandatory ?? false}
+        isFinalDestination={
+          bcpSplitProposal
+            ? bcpSplitProposal.targetSegmentIndex !== undefined
+              ? bcpSplitProposal.targetSegmentIndex === segments.length - 1
+              : bcpSplitProposal.routeToSplit.toLocation?.id === plan.to?.id
+            : false
+        }
+        isSplitting={isSplitting}
+        onConfirmSplit={handleConfirmSplitBcp}
+        onDismiss={handleDismissSplitBcp}
+      />
     </main>
   );
 }

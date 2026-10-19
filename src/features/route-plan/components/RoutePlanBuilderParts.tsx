@@ -5,6 +5,7 @@ import {
   ChevronUp,
   Clock,
   PlusCircle,
+  ShieldAlert,
   Trash2,
   Truck,
 } from "lucide-react";
@@ -159,6 +160,9 @@ export function SegmentCard({
   segment,
   index,
   totalSegments = 1,
+  isLatest = false,
+  isReversedOrder = false,
+  onSplitAtBcp,
   onDelete,
   onMoveUp,
   onMoveDown,
@@ -172,6 +176,9 @@ export function SegmentCard({
   segment: DraftSegment;
   index: number;
   totalSegments?: number;
+  isLatest?: boolean;
+  isReversedOrder?: boolean;
+  onSplitAtBcp?: () => void;
   onDelete: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -198,9 +205,16 @@ export function SegmentCard({
     >
       <CardContent className="px-3 min-w-0 w-full overflow-hidden">
         <div className="flex items-start gap-2 min-w-0 w-full overflow-hidden">
-          <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-[2px] bg-slate-600 text-xs font-bold text-white">
-            {index + 1}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-[2px] bg-slate-700 text-xs font-bold text-white">
+              {index + 1}
+            </span>
+            {isLatest && totalSegments > 1 && (
+              <Badge className="rounded-[2px] bg-amber-500 text-white text-[10px] px-1.5 py-0 font-semibold shrink-0">
+                Latest
+              </Badge>
+            )}
+          </div>
           <div className="min-w-0 flex-1 overflow-hidden">
             <div className="flex items-start justify-between gap-2 min-w-0 w-full">
               <div className="min-w-0 flex-1 overflow-hidden">
@@ -242,13 +256,27 @@ export function SegmentCard({
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-0.5 text-muted-foreground">
+              <div className="flex items-center gap-1 text-muted-foreground">
+                {onSplitAtBcp && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-1.5 text-[10px] font-semibold text-amber-900 border-amber-300 bg-amber-50 hover:bg-amber-100 rounded-[2px] shrink-0"
+                    onClick={onSplitAtBcp}
+                    title="Split this cross-border route at a Border Control Point (BCP)"
+                  >
+                    <ShieldAlert className="mr-1 size-3 text-amber-600" />
+                    Split at BCP
+                  </Button>
+                )}
+                {/* When displayed in reversed order (newest on top), visually moving UP means increasing index in route, while visually moving DOWN means decreasing index */}
                 {onMoveUp && (
                   <button
                     type="button"
-                    disabled={index === 0}
+                    disabled={isReversedOrder ? index === totalSegments - 1 : index === 0}
                     onClick={onMoveUp}
-                    title="Move up"
+                    title={isReversedOrder ? "Move later in route (Move up visually)" : "Move earlier in route"}
                     aria-label="Move segment up"
                     className="rounded-[2px] p-1 text-muted-foreground hover:bg-muted hover:text-slate-900 disabled:opacity-30 disabled:pointer-events-none"
                   >
@@ -258,9 +286,9 @@ export function SegmentCard({
                 {onMoveDown && (
                   <button
                     type="button"
-                    disabled={index === totalSegments - 1}
+                    disabled={isReversedOrder ? index === 0 : index === totalSegments - 1}
                     onClick={onMoveDown}
-                    title="Move down"
+                    title={isReversedOrder ? "Move earlier in route (Move down visually)" : "Move later in route"}
                     aria-label="Move segment down"
                     className="rounded-[2px] p-1 text-muted-foreground hover:bg-muted hover:text-slate-900 disabled:opacity-30 disabled:pointer-events-none"
                   >
