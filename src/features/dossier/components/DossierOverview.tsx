@@ -70,7 +70,7 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
         </div>
       ) : null}
       <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
-        <CardContent className="grid gap-0 p-0 lg:grid-cols-[1fr_1.2fr_0.85fr]">
+        <CardContent className="grid gap-0 p-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)_minmax(0,1fr)]">
           <section className="min-w-0 p-4 sm:p-5">
             <div className="mb-4 flex items-center gap-2">
               <FolderOpen aria-hidden="true" className="size-5 text-primary" />
@@ -131,51 +131,93 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
               </Detail>
             </dl>
           </section>
-          <section className="min-w-0 border-t p-4 sm:p-5 lg:border-t-0 lg:border-l">
+          <section className="@container min-w-0 border-t p-4 sm:p-5 lg:border-t-0 lg:border-l">
             <h2 className="m-0! font-heading text-base! font-bold! uppercase text-gray-900!">
               Overall progress
             </h2>
-            <p className="mt-3 text-sm text-gray-600">
-              {dossier.mandatorySatisfiedOrWaived} / {dossier.mandatoryTotal}{" "}
-              mandatory completed
-            </p>
-            <div className="mt-3 flex items-center gap-4">
-              <div
-                role="progressbar"
-                aria-label="Mandatory dossier requirements completed"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={progress}
-                className="h-3 min-w-0 flex-1 overflow-hidden rounded-[2px] bg-slate-200"
-              >
+            <div className="mt-4 grid grid-cols-[minmax(0,0.6fr)_minmax(0,1fr)] items-center gap-3">
+              <div className="flex w-full min-w-0 max-w-36 flex-col items-center gap-2 justify-self-center">
                 <div
-                  className="h-full rounded-[2px] bg-primary"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <strong className="shrink-0 font-heading text-2xl text-primary">
-                {formatDossierProgress(dossier.progressPercent)}
-              </strong>
-            </div>
-            <p className="mt-4 text-xs text-gray-500">
-              Progress is provided by the backend.
-            </p>
-            <dl
-              aria-label="Requirement status counts"
-              className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3"
-            >
-              {requirementMetrics.map(({ key, label, status }) => (
-                <div
-                  key={key}
-                  className={`flex min-h-7 min-w-0 items-center justify-between gap-2 rounded-[2px] border px-2 py-1 text-[11px] leading-4 ${status ? dossierStatusStyles[status] : "border-slate-300 bg-slate-50 text-slate-700"}`}
+                  role="progressbar"
+                  aria-label="Mandatory dossier requirements completed"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={progress}
+                  aria-valuetext={`${formatDossierProgress(dossier.progressPercent)}, ${dossier.mandatorySatisfiedOrWaived} of ${dossier.mandatoryTotal} mandatory requirements completed`}
+                  className="relative aspect-square w-full max-w-32"
                 >
-                  <dt className="min-w-0 [overflow-wrap:anywhere]">{label}</dt>
-                  <dd className="m-0 shrink-0 font-semibold tabular-nums">
-                    {dossier.requirementSummary[key]}
-                  </dd>
+                  <svg
+                    viewBox="0 0 120 120"
+                    fill="none"
+                    aria-hidden="true"
+                    className="size-full -rotate-90"
+                  >
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="51"
+                      stroke="currentColor"
+                      strokeWidth="10"
+                      className="text-slate-100"
+                    />
+                    {progress > 0 ? (
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="51"
+                        pathLength="100"
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        strokeLinecap="round"
+                        strokeDasharray="100"
+                        strokeDashoffset={100 - progress}
+                        className="text-primary"
+                      />
+                    ) : null}
+                  </svg>
+                  <div className="absolute inset-[16%] flex items-center justify-center rounded-full bg-slate-50/70">
+                    <strong className="font-heading text-[clamp(1.25rem,7cqi,1.875rem)] leading-none text-primary tabular-nums">
+                      {formatDossierProgress(dossier.progressPercent)}
+                    </strong>
+                  </div>
                 </div>
-              ))}
-            </dl>
+                <p className="m-0 text-center text-xs leading-5 text-slate-500">
+                  <span className="font-semibold text-slate-800 tabular-nums">
+                    {dossier.mandatorySatisfiedOrWaived} /{" "}
+                    {dossier.mandatoryTotal}
+                  </span>{" "}
+                  mandatory completed
+                </p>
+              </div>
+              <dl
+                aria-label="Requirement status counts"
+                className="grid min-w-0 grid-cols-2 gap-x-2 gap-y-2 @[22rem]:gap-x-4"
+              >
+                {requirementMetrics.map(({ key, label, status }) => (
+                  <div
+                    key={key}
+                    className={`flex min-w-0 items-center justify-between gap-1 ${status ? "py-0.5" : "col-span-2 mb-1 border-b border-slate-100 pb-2"}`}
+                  >
+                    <dt className="flex min-w-0 items-center gap-1 text-[11px] text-slate-600 @[22rem]:text-xs">
+                      {status ? (
+                        <span
+                          aria-hidden="true"
+                          className={`flex size-2.5 shrink-0 items-center justify-center rounded-full ${dossierStatusStyles[status]}`}
+                        >
+                          <Circle className="size-1 fill-current" />
+                        </span>
+                      ) : null}
+                      <span className="[overflow-wrap:anywhere]">{label}</span>
+                    </dt>
+                    <dd
+                      className={`m-0 shrink-0 font-semibold text-slate-900 tabular-nums ${status ? "text-sm" : "text-xl"}`}
+                    >
+                      {dossier.requirementSummary[key]}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           </section>
           <section className="min-w-0 border-t p-4 sm:p-5 lg:border-t-0 lg:border-l">
             <h2 className="m-0! font-heading text-base! font-bold! uppercase text-gray-900!">
