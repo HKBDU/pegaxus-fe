@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileText, History, Info, Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { formatBookingDate } from "@/features/booking/utils";
@@ -22,7 +22,10 @@ import {
   FormLabel,
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
-import FileUploader from "@/shared/components/FileUploader";
+import FileUploader, {
+  type FileUploaderHandle,
+  type FileUploaderSnapshot,
+} from "@/shared/components/FileUploader";
 import {
   canUploadInitialDocument,
   DOSSIER_UPLOAD_ACCEPT,
@@ -44,10 +47,7 @@ import {
   getDocumentExpiryPolicy,
   validateUploadedAssets,
 } from "../schemas";
-import {
-  createDossierUploadedAsset,
-  getUploadedAssetReferences,
-} from "../lib/uploaded-assets";
+import { createDossierUploadedAsset } from "../lib/uploaded-assets";
 import type { EntityId } from "@/shared/types";
 import type { z } from "zod";
 import type {
@@ -73,6 +73,21 @@ const emptyValues: FormValues = {
 };
 const inputClass =
   "h-9 rounded-[2px] border-slate-300 bg-white text-xs transition-[border-color,box-shadow] focus-visible:border-primary focus-visible:ring-primary/20";
+
+function getCompletedUploadFiles(snapshot: FileUploaderSnapshot | null) {
+  if (!snapshot?.items.length) return null;
+  try {
+    const files = snapshot.items.map((item) => {
+      if (item.status !== "success" || !item.publicId) {
+        throw new Error("Every selected file must finish uploading.");
+      }
+      return createDossierUploadedAsset(item.publicId, item.file);
+    });
+    return validateUploadedAssets(files) ? null : files;
+  } catch {
+    return null;
+  }
+}
 
 export function DocumentRevisionNotice({
   document,
@@ -131,15 +146,36 @@ export function DocumentSubmissionDialog({
   const initialMutation = useUploadComplianceDocument();
   const versionMutation = useSubmitDocumentVersion();
   const metadataMutation = useUpdateDocumentMetadata();
-  const [files, setFiles] = useState<DossierUploadedAssetRef[]>([]);
-  const [filesLocked, setFilesLocked] = useState(false);
+  const [uploadSession, setUploadSession] = useState(0);
+  const uploadScope = `${dossier.complianceDossierId}:${requirement?.dossierRequirementId ?? ""}:${mode}:${uploadSession}`;
+  const activeUploadScope = useRef(uploadScope);
+  useLayoutEffect(() => {
+    activeUploadScope.current = uploadScope;
+    return () => {
+      activeUploadScope.current = "";
+    };
+  }, [uploadScope]);
+  const uploaderRef = useRef<FileUploaderHandle>(null);
+  const [uploadState, setUploadState] = useState<{
+    scope: string;
+    snapshot: FileUploaderSnapshot;
+  } | null>(null);
+  const [frozenSelection, setFrozenSelection] = useState<{
+    scope: string;
+    files: DossierUploadedAssetRef[];
+  } | null>(null);
+  const snapshot =
+    uploadState?.scope === uploadScope ? uploadState.snapshot : null;
+  const filesLocked = frozenSelection?.scope === uploadScope;
+  const files = filesLocked
+    ? frozenSelection.files
+    : getCompletedUploadFiles(snapshot);
   const [fileError, setFileError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [noRetry, setNoRetry] = useState(false);
   const [serverRequiresExpiry, setServerRequiresExpiry] = useState<true>();
   const [showHistory, setShowHistory] = useState(false);
-  const uploadedAssetsRef = useRef(new Map<string, DossierUploadedAssetRef>());
-  const uploadSelectionLockedRef = useRef(false);
+  const lockedUploadScope = useRef<string | null>(null);
   const submitGuardRef = useRef(false);
   const hydratedDocumentIdRef = useRef<EntityId | null>(null);
   const [documentBaseline, setDocumentBaseline] = useState<{
@@ -165,6 +201,7 @@ export function DocumentSubmissionDialog({
   );
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: "onChange",
     defaultValues: emptyValues,
   });
   const reset = form.reset;
@@ -197,47 +234,27 @@ export function DocumentSubmissionDialog({
     });
   }
 
-  const rememberUploadedFile = ({
-    publicId,
-    file,
-  }: {
-    publicId: string;
-    file: File;
-  }) => {
-    if (uploadSelectionLockedRef.current) return;
-    try {
-      uploadedAssetsRef.current.set(
-        publicId,
-        createDossierUploadedAsset(publicId, file),
-      );
-    } catch {
-      setFileError(
-        "An uploaded file has an invalid reference, type, or size. Remove it before continuing.",
-      );
-    }
+  const changeUploadState = (next: FileUploaderSnapshot) => {
+    if (
+      activeUploadScope.current !== uploadScope ||
+      lockedUploadScope.current === uploadScope
+    )
+      return;
+    setUploadState({ scope: uploadScope, snapshot: next });
+    setFileError("");
   };
-  const changeUploadedFiles = (publicIds: string[]) => {
-    if (uploadSelectionLockedRef.current) return;
-    try {
-      setFiles(
-        getUploadedAssetReferences(publicIds, uploadedAssetsRef.current),
-      );
-      setFileError("");
-    } catch {
-      setFiles([]);
-      setFileError(
-        "Could not read all confirmed upload references. Remove the invalid file and try again.",
-      );
-    }
+  const resetUploads = () => {
+    activeUploadScope.current = "";
+    lockedUploadScope.current = null;
+    setUploadSession((value) => value + 1);
+    setUploadState(null);
+    setFrozenSelection(null);
+    setFileError("");
   };
 
   const close = () => {
     if (pending || submitGuardRef.current) return;
-    setFiles([]);
-    setFilesLocked(false);
-    uploadedAssetsRef.current.clear();
-    uploadSelectionLockedRef.current = false;
-    setFileError("");
+    resetUploads();
     setSubmitError("");
     setNoRetry(false);
     setServerRequiresExpiry(undefined);
@@ -268,30 +285,52 @@ export function DocumentSubmissionDialog({
             detail.versions[0]?.review?.result !== "APPROVED"
           : detail.status === "REJECTED")),
   );
+  const canSubmit = Boolean(
+    eligible &&
+    !pending &&
+    !noRetry &&
+    files?.length &&
+    form.formState.isValid &&
+    !form.formState.isValidating &&
+    !form.formState.isSubmitting,
+  );
 
   const submitValid = async (values: FormValues, metadataOnly = false) => {
     if (
       !requirement ||
+      activeUploadScope.current !== uploadScope ||
       !eligible ||
       submitGuardRef.current ||
       pending ||
       noRetry
     )
       return;
-    if (!metadataOnly) {
-      const error = validateUploadedAssets(files);
-      if (error) {
-        setFileError(error.message);
+    let submittedFiles = files ?? [];
+    if (!metadataOnly && !filesLocked) {
+      const current = uploaderRef.current?.getSnapshot() ?? null;
+      const completedFiles = getCompletedUploadFiles(current);
+      if (!completedFiles || !current) {
+        setFileError(
+          "Every selected file must upload successfully. Retry or remove failed files before submitting.",
+        );
         return;
       }
+      if (!uploaderRef.current?.lockCompletedSelection(current.revision)) {
+        setFileError(
+          "The selected files changed. Review all uploads before submitting again.",
+        );
+        return;
+      }
+      submittedFiles = completedFiles;
     }
+    if (!metadataOnly && validateUploadedAssets(submittedFiles)) return;
     if (metadataOnly && (mode !== "edit" || !detail)) return;
     const changedMetadata = detail
       ? getChangedDocumentMetadata(values, detail)
       : {};
     if (!metadataOnly) {
-      uploadSelectionLockedRef.current = true;
-      setFilesLocked(true);
+      lockedUploadScope.current = uploadScope;
+      setFrozenSelection({ scope: uploadScope, files: submittedFiles });
       setFileError("");
     }
     submitGuardRef.current = true;
@@ -302,7 +341,7 @@ export function DocumentSubmissionDialog({
         await initialMutation.mutateAsync({
           dossierId: String(dossier.complianceDossierId),
           requirementId: requirement.dossierRequirementId,
-          files,
+          files: submittedFiles,
           metadata: values,
         });
         toast.success("Compliance document uploaded successfully.");
@@ -323,7 +362,7 @@ export function DocumentSubmissionDialog({
           documentId: String(detail!.complianceDocumentId),
           dossierId: String(dossier.complianceDossierId),
           requirementId: requirement.dossierRequirementId,
-          files,
+          files: submittedFiles,
           metadata: {
             documentNumber: values.documentNumber,
             issuingAuthority: values.issuingAuthority,
@@ -542,32 +581,33 @@ export function DocumentSubmissionDialog({
                   {!filesLocked ? (
                     <>
                       <FileUploader
+                        key={uploadScope}
+                        ref={uploaderRef}
                         entity="attachment"
                         accept={DOSSIER_UPLOAD_ACCEPT}
                         maxSize={UPLOAD_MAX_FILE_BYTES}
                         maxFiles={10}
                         multiple
                         disabled={pending || noRetry || !eligible}
-                        onUploaded={rememberUploadedFile}
-                        onChange={changeUploadedFiles}
+                        onStateChange={changeUploadState}
                         title="Upload document files"
                         hint="PDF, JPG, JPEG, PNG · Max 5 MiB per file"
-                        onError={() =>
-                          setFileError(
-                            "A file failed to upload. Retry it or remove it before submitting.",
+                        onReject={() => {
+                          if (
+                            activeUploadScope.current !== uploadScope ||
+                            lockedUploadScope.current === uploadScope
                           )
-                        }
-                        onReject={() =>
+                            return;
                           setFileError(
                             "Some files were rejected. Use PDF, JPG, JPEG, or PNG files of 5 MiB or smaller.",
-                          )
-                        }
+                          );
+                        }}
                       />
                       <p className="mt-3 text-xs leading-relaxed text-slate-600">
-                        Files upload automatically when selected. Wait until
-                        every file you want is marked Uploaded. Submitting
-                        includes only completed files and cancels remaining
-                        uploads; it does not submit or approve the dossier.
+                        Files upload automatically when selected. Submit is
+                        available only after every remaining file is uploaded
+                        and the document information is valid. Uploading files
+                        does not submit or approve the dossier.
                       </p>
                     </>
                   ) : (
@@ -579,7 +619,7 @@ export function DocumentSubmissionDialog({
                         Files included in this submission
                       </p>
                       <ol className="space-y-1.5">
-                        {files.map((file, index) => (
+                        {files?.map((file, index) => (
                           <li
                             key={`${file.publicId}-${index}`}
                             className="dossier-upload-file-row break-all rounded-[2px] border border-slate-200 bg-slate-50 px-3 py-2"
@@ -596,18 +636,41 @@ export function DocumentSubmissionDialog({
                         variant="outline"
                         size="sm"
                         disabled={pending}
-                        onClick={() => {
-                          uploadSelectionLockedRef.current = false;
-                          setFiles([]);
-                          setFilesLocked(false);
-                          setFileError("");
-                          uploadedAssetsRef.current.clear();
-                        }}
+                        onClick={resetUploads}
                       >
                         Choose files again
                       </Button>
                     </div>
                   )}
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className="mt-2 min-h-10 text-xs leading-5 text-slate-600"
+                  >
+                    {filesLocked
+                      ? "All files uploaded — File selection locked for this attempt."
+                      : !snapshot?.items.length
+                        ? "Select files to begin uploading."
+                        : `${snapshot.items.filter((item) => item.status === "success").length} of ${snapshot.items.length} files uploaded · ${
+                            snapshot.items.some(
+                              (item) => item.status === "error",
+                            )
+                              ? `${snapshot.items.filter((item) => item.status === "error").length} failed — Retry or Remove`
+                              : snapshot.items.some(
+                                    (item) =>
+                                      item.status === "queued" ||
+                                      item.status === "uploading",
+                                  )
+                                ? "Waiting for all uploads to finish"
+                                : !files
+                                  ? "Invalid upload result — Remove the affected file"
+                                  : !form.formState.isValid
+                                    ? "Complete valid document information to submit"
+                                    : canSubmit
+                                      ? "All files uploaded — Ready to submit"
+                                      : "All files uploaded — Submission unavailable"
+                          }`}
+                  </p>
                   {fileError ? (
                     <p role="alert" className="mt-2 text-xs text-red-700">
                       {fileError}
@@ -796,7 +859,7 @@ export function DocumentSubmissionDialog({
           <Button
             type="submit"
             form="dossier-document-form"
-            disabled={pending || noRetry || !eligible || !files.length}
+            disabled={!canSubmit}
             className="min-w-40 rounded-[2px] font-heading uppercase transition-transform active:scale-[0.98] motion-reduce:transform-none"
           >
             {pending
