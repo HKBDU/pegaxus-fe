@@ -2,9 +2,12 @@
 import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import {
-  ErrorState,
   LoadingState,
   NotFoundPage,
+  UnauthorizedPage,
+  ForbiddenPage,
+  NetworkErrorPage,
+  ServerErrorPage,
 } from "@/shared/components/common";
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
@@ -291,16 +294,6 @@ export const router = createBrowserRouter([
             ),
           },
         ],
-      },
-      {
-        path: "unauthorized",
-        element: (
-          <ErrorState message="You do not have permission to view this page." />
-        ),
-      },
-      {
-        path: "*",
-        element: <NotFoundPage />,
       },
     ],
   },
@@ -728,4 +721,24 @@ export const router = createBrowserRouter([
         },
       ]
     : []),
+  {
+    path: "/unauthorized",
+    element: <UnauthorizedPage />,
+  },
+  {
+    path: "/forbidden",
+    element: <ForbiddenPage />,
+  },
+  {
+    path: "/server-error",
+    element: <ServerErrorPage />,
+  },
+  {
+    path: "/network-error",
+    element: <NetworkErrorPage />,
+  },
+  {
+    path: "*",
+    element: <NotFoundPage />,
+  },
 ]);

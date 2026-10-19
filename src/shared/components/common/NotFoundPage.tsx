@@ -1,13 +1,5 @@
-import { Link } from 'react-router-dom'
+import { StatusPage } from './StatusPage'
 
 export function NotFoundPage() {
-  return (
-    <main className="grid min-h-screen place-items-center p-6 text-center">
-      <div>
-        <p>404</p>
-        <h1>Page not found</h1>
-        <Link to="/">Return home</Link>
-      </div>
-    </main>
-  )
+  return <StatusPage image="/404NotFound.png" imageAlt="Horse and transport route across a global landscape" eyebrow="404 / Destination unavailable" title="Page not found" description="This route has wandered off the map. Return to the Pegaxus stable and continue your journey." />
 }
