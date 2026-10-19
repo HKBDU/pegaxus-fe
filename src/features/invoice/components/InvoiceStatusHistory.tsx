@@ -59,7 +59,7 @@ export function InvoiceStatusHistory({ invoiceId }: { invoiceId: string }) {
   const error = query.isError ? getInvoiceError(query.error) : null;
   const history = query.data ?? [];
   return (
-    <Card className="gap-5 rounded-[2px] border-slate-200 shadow-none">
+    <Card className="min-w-0 gap-5 rounded-[2px] border-slate-200 shadow-none">
       <CardHeader className="gap-2 px-5 sm:px-6">
         <h2 className="font-heading text-xl uppercase text-slate-900">
           Status History
@@ -69,7 +69,7 @@ export function InvoiceStatusHistory({ invoiceId }: { invoiceId: string }) {
           local time zone.
         </p>
       </CardHeader>
-      <CardContent className="px-5 sm:px-6">
+      <CardContent className="min-w-0 px-5 sm:px-6">
         {!allowed ? (
           <ErrorState message="You do not have permission to view invoice history." />
         ) : !invoiceIdSchema.safeParse(invoiceId).success ? (
@@ -110,7 +110,7 @@ export function InvoiceStatusHistory({ invoiceId }: { invoiceId: string }) {
               return (
                 <li
                   key={event.historyId}
-                  className="relative flex gap-4 pb-7 last:pb-0 sm:gap-5"
+                  className="relative flex min-w-0 gap-4 pb-7 last:pb-0 sm:gap-5"
                 >
                   {index < history.length - 1 ? (
                     <span
@@ -124,7 +124,7 @@ export function InvoiceStatusHistory({ invoiceId }: { invoiceId: string }) {
                   >
                     <Icon className="size-4" />
                   </span>
-                  <div className="min-w-0 flex-1 space-y-3 pt-1">
+                  <div className="min-w-0 flex-1 space-y-3 pt-1 [overflow-wrap:anywhere]">
                     <h3 className="text-sm font-semibold text-slate-900">
                       {presentation.label}
                     </h3>
@@ -143,14 +143,14 @@ export function InvoiceStatusHistory({ invoiceId }: { invoiceId: string }) {
                       />
                       <InvoiceStatusBadge status={event.newStatus} />
                     </div>
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                    <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
                       <time dateTime={event.changedAt} className="tabular-nums">
                         {format(
                           parseISO(event.changedAt),
                           "dd MMM yyyy, HH:mm:ss",
                         )}
                       </time>
-                      <span className="break-words">
+                      <span className="min-w-0 [overflow-wrap:anywhere]">
                         {event.changedBy.fullName}
                         {event.changedBy.role
                           ? ` · ${humanize(event.changedBy.role)}`
@@ -166,7 +166,7 @@ export function InvoiceStatusHistory({ invoiceId }: { invoiceId: string }) {
                             ? "Cancellation reason"
                             : "Reason"}
                         </p>
-                        <p className="break-words whitespace-pre-wrap text-sm text-slate-800">
+                        <p className="whitespace-pre-wrap text-sm text-slate-800 [overflow-wrap:anywhere]">
                           {event.reason ?? "—"}
                         </p>
                       </div>

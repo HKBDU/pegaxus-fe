@@ -20,7 +20,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/shared/components/ui/form";
 import { Input } from "@/shared/components/ui/input";
 import FileUploader from "@/shared/components/FileUploader";
@@ -60,6 +59,7 @@ import type {
 import { DossierStatusBadge } from "./DossierStatusBadge";
 import { DocumentVersionHistory } from "./DocumentVersionHistory";
 import { DocumentRequestAlert } from "./DocumentRequestAlert";
+import { DossierFormMessage } from "./DossierFormMessage";
 import "./DocumentSubmissionDialog.css";
 
 type Mode = "initial" | "edit" | "update";
@@ -84,13 +84,17 @@ export function DocumentRevisionNotice({
   return (
     <div className="space-y-2">
       {request ? <DocumentRequestAlert request={request} /> : null}
-      {latestReview?.reviewComment ? (
+      {latestReview?.reviewComment &&
+      !(
+        latestReview.result === "REJECTED" &&
+        latestReview.reviewComment.trim() === request?.message.trim()
+      ) ? (
         <section
           className="rounded-[2px] border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700"
           aria-label="Previous Review Comment"
         >
           <strong>Previous Review Comment</strong>
-          <p className="mt-1 whitespace-pre-wrap">
+          <p className="mt-1 whitespace-pre-wrap [overflow-wrap:anywhere]">
             {latestReview.reviewComment}
           </p>
         </section>
@@ -128,7 +132,7 @@ export function DocumentSubmissionDialog({
   const versionMutation = useSubmitDocumentVersion();
   const metadataMutation = useUpdateDocumentMetadata();
   const [files, setFiles] = useState<DossierUploadedAssetRef[]>([]);
-  const [filesConfirmed, setFilesConfirmed] = useState(false);
+  const [filesLocked, setFilesLocked] = useState(false);
   const [fileError, setFileError] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [noRetry, setNoRetry] = useState(false);
@@ -214,7 +218,6 @@ export function DocumentSubmissionDialog({
   };
   const changeUploadedFiles = (publicIds: string[]) => {
     if (uploadSelectionLockedRef.current) return;
-    setFilesConfirmed(false);
     try {
       setFiles(
         getUploadedAssetReferences(publicIds, uploadedAssetsRef.current),
@@ -231,7 +234,7 @@ export function DocumentSubmissionDialog({
   const close = () => {
     if (pending || submitGuardRef.current) return;
     setFiles([]);
-    setFilesConfirmed(false);
+    setFilesLocked(false);
     uploadedAssetsRef.current.clear();
     uploadSelectionLockedRef.current = false;
     setFileError("");
@@ -276,12 +279,6 @@ export function DocumentSubmissionDialog({
     )
       return;
     if (!metadataOnly) {
-      if (!filesConfirmed) {
-        setFileError(
-          "Confirm your successfully uploaded files before submitting.",
-        );
-        return;
-      }
       const error = validateUploadedAssets(files);
       if (error) {
         setFileError(error.message);
@@ -292,6 +289,11 @@ export function DocumentSubmissionDialog({
     const changedMetadata = detail
       ? getChangedDocumentMetadata(values, detail)
       : {};
+    if (!metadataOnly) {
+      uploadSelectionLockedRef.current = true;
+      setFilesLocked(true);
+      setFileError("");
+    }
     submitGuardRef.current = true;
     setSubmitError("");
     let succeeded = false;
@@ -537,7 +539,7 @@ export function DocumentSubmissionDialog({
                       </ul>
                     </div>
                   ) : null}
-                  {!filesConfirmed ? (
+                  {!filesLocked ? (
                     <>
                       <FileUploader
                         entity="attachment"
@@ -552,7 +554,7 @@ export function DocumentSubmissionDialog({
                         hint="PDF, JPG, JPEG, PNG · Max 5 MiB per file"
                         onError={() =>
                           setFileError(
-                            "A file failed to upload. Retry it or remove it before confirming the file list.",
+                            "A file failed to upload. Retry it or remove it before submitting.",
                           )
                         }
                         onReject={() =>
@@ -562,27 +564,11 @@ export function DocumentSubmissionDialog({
                         }
                       />
                       <p className="mt-3 text-xs leading-relaxed text-slate-600">
-                        Wait until every file you want is marked Uploaded.
-                        Confirming locks the successful file list and cancels
-                        any remaining uploads. Files still waiting, uploading,
-                        or failed are not submitted.
+                        Files upload automatically when selected. Wait until
+                        every file you want is marked Uploaded. Submitting
+                        includes only completed files and cancels remaining
+                        uploads; it does not submit or approve the dossier.
                       </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="mt-2 rounded-[2px]"
-                        disabled={
-                          pending || noRetry || !eligible || !files.length
-                        }
-                        onClick={() => {
-                          uploadSelectionLockedRef.current = true;
-                          setFileError("");
-                          setFilesConfirmed(true);
-                        }}
-                      >
-                        Confirm {files.length} uploaded{" "}
-                        {files.length === 1 ? "file" : "files"}
-                      </Button>
                     </>
                   ) : (
                     <div className="space-y-2 text-xs">
@@ -590,7 +576,7 @@ export function DocumentSubmissionDialog({
                         role="status"
                         className="font-semibold text-emerald-700"
                       >
-                        Uploaded file list confirmed
+                        Files included in this submission
                       </p>
                       <ol className="space-y-1.5">
                         {files.map((file, index) => (
@@ -613,7 +599,7 @@ export function DocumentSubmissionDialog({
                         onClick={() => {
                           uploadSelectionLockedRef.current = false;
                           setFiles([]);
-                          setFilesConfirmed(false);
+                          setFilesLocked(false);
                           setFileError("");
                           uploadedAssetsRef.current.clear();
                         }}
@@ -679,7 +665,7 @@ export function DocumentSubmissionDialog({
                                   }
                                 />
                               </FormControl>
-                              <FormMessage className="text-xs" />
+                              <DossierFormMessage />
                             </FormItem>
                           )}
                         />
@@ -730,7 +716,7 @@ export function DocumentSubmissionDialog({
                                   className={inputClass}
                                 />
                               </FormControl>
-                              <FormMessage className="text-xs" />
+                              <DossierFormMessage />
                             </FormItem>
                           )}
                         />
@@ -756,7 +742,7 @@ export function DocumentSubmissionDialog({
                             Optional note for this submission. Metadata-only
                             saves do not change this note.
                           </p>
-                          <FormMessage className="text-xs" />
+                          <DossierFormMessage />
                         </FormItem>
                       )}
                     />
@@ -810,13 +796,7 @@ export function DocumentSubmissionDialog({
           <Button
             type="submit"
             form="dossier-document-form"
-            disabled={
-              pending ||
-              noRetry ||
-              !eligible ||
-              !files.length ||
-              !filesConfirmed
-            }
+            disabled={pending || noRetry || !eligible || !files.length}
             className="min-w-40 rounded-[2px] font-heading uppercase transition-transform active:scale-[0.98] motion-reduce:transform-none"
           >
             {pending

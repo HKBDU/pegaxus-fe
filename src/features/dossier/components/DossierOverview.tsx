@@ -162,15 +162,15 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
             </p>
             <dl
               aria-label="Requirement status counts"
-              className="mt-3 flex flex-wrap gap-1.5"
+              className="mt-3 grid grid-cols-2 gap-1.5 sm:grid-cols-3"
             >
               {requirementMetrics.map(({ key, label, status }) => (
                 <div
                   key={key}
-                  className={`inline-flex items-center gap-2 rounded-[2px] border px-2 py-1 text-[11px] ${status ? dossierStatusStyles[status] : "border-slate-300 bg-slate-50 text-slate-700"}`}
+                  className={`flex min-h-7 min-w-0 items-center justify-between gap-2 rounded-[2px] border px-2 py-1 text-[11px] leading-4 ${status ? dossierStatusStyles[status] : "border-slate-300 bg-slate-50 text-slate-700"}`}
                 >
-                  <dt>{label}</dt>
-                  <dd className="font-semibold tabular-nums">
+                  <dt className="min-w-0 [overflow-wrap:anywhere]">{label}</dt>
+                  <dd className="m-0 shrink-0 font-semibold tabular-nums">
                     {dossier.requirementSummary[key]}
                   </dd>
                 </div>

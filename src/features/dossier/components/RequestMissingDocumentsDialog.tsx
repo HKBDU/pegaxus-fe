@@ -21,7 +21,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/shared/components/ui/form";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { canSendMissingDocumentReminder } from "../constants";
@@ -43,6 +42,7 @@ import type {
   MissingDocumentReminderInput,
 } from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
+import { DossierFormMessage } from "./DossierFormMessage";
 
 export function MissingReminderPreview({
   dossier,
@@ -392,7 +392,7 @@ function ReminderForm({
                           </p>
                         ) : null}
                       </div>
-                      <FormMessage className="text-xs" />
+                      <DossierFormMessage />
                     </FormItem>
                   )}
                 />
@@ -427,7 +427,7 @@ function ReminderForm({
                             Clear date
                           </Button>
                         ) : null}
-                        <FormMessage className="text-xs" />
+                        <DossierFormMessage />
                       </FormItem>
                     )}
                   />
@@ -450,7 +450,7 @@ function ReminderForm({
                             placeholder="Add instructions for the customer…"
                           />
                         </FormControl>
-                        <FormMessage className="text-xs" />
+                        <DossierFormMessage />
                       </FormItem>
                     )}
                   />

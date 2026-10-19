@@ -113,11 +113,13 @@ function InvoiceDateRange({
           onChange={(to) => setDraft((current) => ({ ...current, to }))}
           className={controlClass}
         />
-        {error ? (
-          <p role="alert" className="text-xs text-destructive">
-            {error}
-          </p>
-        ) : null}
+        <div className="min-h-10">
+          {error ? (
+            <p role="alert" className="text-xs leading-5 text-destructive">
+              {error}
+            </p>
+          ) : null}
+        </div>
         <div className="flex justify-between gap-2">
           <Button
             type="button"

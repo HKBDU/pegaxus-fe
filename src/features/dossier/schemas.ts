@@ -80,7 +80,7 @@ export const dossierUploadedAssetSchema = z.object({
 });
 export const dossierUploadedAssetsSchema = z
   .array(dossierUploadedAssetSchema)
-  .min(1, "Confirm at least one successfully uploaded file.")
+  .min(1, "Upload at least one file successfully.")
   .max(10, "Submit at most 10 files.")
   .refine(
     (files) =>

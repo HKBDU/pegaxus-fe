@@ -41,11 +41,16 @@ function VersionFiles({ files }: { files: DocumentVersion["files"] }) {
 
 export function DocumentVersionHistory({
   versions,
+  expandLatestReview = false,
 }: {
   versions: DocumentVersion[];
+  expandLatestReview?: boolean;
 }) {
   return (
-    <section aria-label="Document version history" className="space-y-3">
+    <section
+      aria-label="Document version history"
+      className="min-w-0 space-y-3"
+    >
       <h3 className="flex items-center gap-2 font-heading text-sm font-bold uppercase text-slate-900">
         <History className="size-4 text-primary" /> Version History
       </h3>
@@ -55,7 +60,7 @@ export function DocumentVersionHistory({
       {versions.map((version) => (
         <article
           key={version.documentVersionId}
-          className="rounded-[2px] border border-slate-200 bg-white p-3 text-xs"
+          className="min-w-0 rounded-[2px] border border-slate-200 bg-white p-3 text-xs [overflow-wrap:anywhere]"
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <strong className="font-heading text-sm uppercase text-slate-900">
@@ -73,10 +78,12 @@ export function DocumentVersionHistory({
             {version.files.map((file) => (
               <li
                 key={`${file.sortOrder}-${file.fileName}`}
-                className="flex items-center gap-2 break-all text-slate-700"
+                className="flex min-w-0 items-start gap-2 text-slate-700"
               >
-                <FileText className="size-3.5 shrink-0 text-primary" />
-                {file.fileName}
+                <FileText className="mt-0.5 size-3.5 shrink-0 text-primary" />
+                <span className="min-w-0 [overflow-wrap:anywhere]">
+                  {file.fileName}
+                </span>
               </li>
             ))}
           </ul>
@@ -92,29 +99,37 @@ export function DocumentVersionHistory({
             </p>
           ) : null}
           {version.review ? (
-            (version.reviews ?? [version.review]).map((review) => (
-              <div
-                key={review.documentReviewId}
-                className="mt-3 border-t border-slate-200 pt-2 text-slate-600"
-              >
-                <p>
-                  <strong>Review Result:</strong> {review.result}
-                </p>
-                <p>
-                  <strong>Reviewer:</strong>{" "}
-                  {review.reviewedBy.fullName || "Transport Specialist"}
-                </p>
-                <p>
-                  <strong>Reviewed At:</strong>{" "}
-                  {formatBookingDate(review.reviewedAt)}
-                </p>
-                {review.reviewComment ? (
+            <details
+              open={expandLatestReview && version === versions[0]}
+              className="mt-3 min-w-0 border-t border-slate-200 pt-2"
+            >
+              <summary className="cursor-pointer rounded-[2px] font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-ring">
+                Review history · {version.review.result}
+              </summary>
+              {(version.reviews ?? [version.review]).map((review) => (
+                <div
+                  key={review.documentReviewId}
+                  className="mt-3 border-t border-slate-200 pt-2 text-slate-600"
+                >
                   <p>
-                    <strong>Review Comment:</strong> {review.reviewComment}
+                    <strong>Review Result:</strong> {review.result}
                   </p>
-                ) : null}
-              </div>
-            ))
+                  <p>
+                    <strong>Reviewer:</strong>{" "}
+                    {review.reviewedBy.fullName || "Transport Specialist"}
+                  </p>
+                  <p>
+                    <strong>Reviewed At:</strong>{" "}
+                    {formatBookingDate(review.reviewedAt)}
+                  </p>
+                  {review.reviewComment ? (
+                    <p>
+                      <strong>Review Comment:</strong> {review.reviewComment}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </details>
           ) : (
             <p className="mt-2 text-sky-700">Pending review</p>
           )}
@@ -164,7 +179,7 @@ export function DocumentDetailsDialog({
       open={Boolean(documentId)}
       onOpenChange={(open) => !open && close()}
     >
-      <DialogContent className="max-h-[90svh] w-[min(100%-1.5rem,720px)] max-w-none overflow-y-auto rounded-[2px] border-slate-200 bg-[#f8f7f4] sm:max-w-none">
+      <DialogContent className="max-h-[90svh] w-[min(100%-1.5rem,720px)] min-w-0 max-w-none overflow-y-auto rounded-[2px] border-slate-200 bg-[#f8f7f4] [overflow-wrap:anywhere] sm:max-w-none">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl uppercase text-primary">
             {view === "request"
@@ -184,7 +199,7 @@ export function DocumentDetailsDialog({
             Could not load document details.
           </p>
         ) : (
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             {document.openRequest ? (
               <DocumentRequestAlert
                 request={document.openRequest}
@@ -257,6 +272,9 @@ export function DocumentDetailsDialog({
             ) : (
               <DocumentVersionHistory
                 versions={history.data ?? document.versions}
+                expandLatestReview={
+                  document.status === "REJECTED" && !document.openRequest
+                }
               />
             )}
             {(document.documentRequests ?? []).map((request) => (
@@ -265,6 +283,10 @@ export function DocumentDetailsDialog({
                 dossierId={dossierId}
                 requirementId={requirementId}
                 request={request}
+                showRequestSummary={
+                  String(request.documentRequestId) !==
+                  String(document.openRequest?.documentRequestId)
+                }
                 canReadComments={
                   role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST"
                 }
