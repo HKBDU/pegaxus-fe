@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -87,9 +87,17 @@ export default function BcpQuarantineProofPage() {
 
   const isHoldback = form.watch('isHoldback')
 
+  const isMandatoryRoute = useMemo(() => {
+    const origin = dossier?.bookingSummary?.originCountry?.trim().toLowerCase()
+    const destination = dossier?.bookingSummary?.destinationCountry?.trim().toLowerCase()
+    if (!origin || !destination) return true
+    const ukIe = new Set(["united kingdom", "uk", "gb", "great britain", "ireland", "ie"])
+    return ukIe.has(origin) || ukIe.has(destination)
+  }, [dossier?.bookingSummary?.destinationCountry, dossier?.bookingSummary?.originCountry])
+
   // ─── Submit Handler ────────────────────────────────────────────────────────
   const onSubmit = async (values: FormValues) => {
-    if (!photoFile) {
+    if (isMandatoryRoute && !photoFile) {
       setPhotoError('Please attach a photo of the quarantine clearance sheet.')
       return
     }
@@ -176,12 +184,34 @@ export default function BcpQuarantineProofPage() {
               <span className="truncate">{routeLabel}</span>
             </div>
           </div>
-          <div className="text-right">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                "inline-flex items-center px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider",
+                isMandatoryRoute
+                  ? "bg-red-100 text-red-800"
+                  : "bg-blue-100 text-blue-800",
+              )}
+            >
+              {isMandatoryRoute ? "Mandatory: EU ↔ UK/Ireland" : "Optional: Intra-EU Route"}
+            </span>
             <span className="inline-flex items-center rounded-none bg-orange-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-orange-800">
               BCP Quarantine Flow
             </span>
           </div>
         </div>
+
+        {!isMandatoryRoute && (
+          <div className="border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-950 flex items-start gap-2">
+            <Navigation className="mt-0.5 size-4 shrink-0 text-blue-600" />
+            <div>
+              <p className="font-semibold">Intra-EU Route: Quarantine Document Submission is Optional</p>
+              <p className="mt-0.5 text-blue-800">
+                Registered horses move under internal EU regulations with minimal restrictions. Submitting quarantine clearance proof is optional for this route, and is only mandatory for transports crossing to/from the UK or Ireland.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Form sections */}
         <Form {...form}>

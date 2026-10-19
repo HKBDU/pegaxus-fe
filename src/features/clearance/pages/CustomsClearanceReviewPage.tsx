@@ -18,8 +18,8 @@ const LANE_OPTIONS: CustomsLane[] = ['GREEN_LANE', 'ORANGE_LANE', 'RED_LANE']
 const FINAL_STATUSES = ['CLEARED', 'HELD', 'REJECTED'] as const
 
 const finalizeSchema = z.object({
-  mrnNumber: z.string().trim().min(1, 'Official MRN is required.'),
-  customsLane: z.enum(['GREEN_LANE', 'ORANGE_LANE', 'RED_LANE']),
+  mrnNumber: z.string().trim().optional(),
+  customsLane: z.enum(['GREEN_LANE', 'ORANGE_LANE', 'RED_LANE']).optional(),
   ataCarnetExpiryDate: z.string().optional(),
   status: z.enum(FINAL_STATUSES),
   verificationNote: z.string().optional(),

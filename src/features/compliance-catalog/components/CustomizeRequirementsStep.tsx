@@ -82,10 +82,17 @@ export function CustomizeRequirementsStep({
   )
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize))
   const currentPage = Math.min(pageIndex, totalPages)
-  // useReactTable needs a stable `data`: a fresh array on every render makes it reset its state in a loop.
   const pageRows = useMemo(() => rows.slice((currentPage - 1) * pageSize, currentPage * pageSize), [currentPage, pageSize, rows])
 
-  const counts = countRows(buildFinalRows(templateItems, selectedItemIds, customs, booking.horses, categoryOf))
+  const isMandatoryRoute = useMemo(() => {
+    const origin = booking?.originCountry?.trim().toLowerCase()
+    const destination = booking?.destinationCountry?.trim().toLowerCase()
+    if (!origin || !destination) return true
+    const ukIe = new Set(["united kingdom", "uk", "gb", "great britain", "ireland", "ie"])
+    return ukIe.has(origin) || ukIe.has(destination)
+  }, [booking?.destinationCountry, booking?.originCountry])
+
+  const counts = countRows(buildFinalRows(templateItems, selectedItemIds, customs, booking.horses, categoryOf, isMandatoryRoute))
   const allChecked = templateItems.length > 0 && templateItems.every((item) => selectedItemIds.has(templateItemKey(item)))
   const someChecked = templateItems.some((item) => selectedItemIds.has(templateItemKey(item)))
 
@@ -155,7 +162,15 @@ export function CustomizeRequirementsStep({
     {
       id: "mandatory",
       header: "MANDATORY",
-      cell: ({ row }) => <MandatoryBadge mandatory={row.original.kind === "template" ? row.original.item.isMandatory : row.original.custom.isMandatory} />,
+      cell: ({ row }) => {
+        const cat = row.original.kind === "template" ? categoryOf(row.original.item.complianceRequirementId) : row.original.custom.category
+        const isMandatory = !isMandatoryRoute && (cat === "QUARANTINE" || cat === "CUSTOMS")
+          ? false
+          : row.original.kind === "template"
+            ? row.original.item.isMandatory
+            : row.original.custom.isMandatory
+        return <MandatoryBadge mandatory={isMandatory} />
+      },
     },
     {
       id: "notes",
@@ -213,6 +228,15 @@ export function CustomizeRequirementsStep({
           </button>
         </div>
       ) : null}
+
+      {!isMandatoryRoute && (
+        <div className="flex items-center gap-2 rounded-[2px] border border-blue-200 bg-blue-50/80 px-3 py-2 text-xs text-blue-950">
+          <Info className="size-4 shrink-0 text-blue-600" />
+          <span>
+            <b>Intra-EU Route Notice:</b> Clearance and Quarantine requirements are <b>Optional</b> for internal EU transport of registered equines. They are only mandatory for routes crossing to/from the UK or Ireland.
+          </span>
+        </div>
+      )}
 
       <div className={cn("grid items-start gap-6", showSummary ? "lg:grid-cols-[minmax(0,1fr)_340px]" : "grid-cols-1")}>
         <section aria-labelledby="selected-title" className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-3">

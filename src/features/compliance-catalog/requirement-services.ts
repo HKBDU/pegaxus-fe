@@ -71,7 +71,7 @@ function buildMeta(totalItems: number, pageIndex: number, pageSize: number): Pag
   return { totalItems, totalPages, itemsPerPage: pageSize, currentPage, hasPreviousPage: currentPage > 1, hasNextPage: currentPage < totalPages }
 }
 
-// Temporary bridge until Dương's D8 list endpoint is merged. The IDs are from the real dossier
+// Temporary bridge until Duong's D8 list endpoint is merged. The IDs are from the real dossier
 // created for booking 6a8a8d20-0755-4611-83c1-d6f275a69810, so mutations still call the real API.
 const TEMP_DOSSIER_ID = "2d9a91e0-22aa-4a0d-bdc4-1127aa5bd252"
 const TEMP_REQUIREMENTS: DossierRequirementItem[] = [

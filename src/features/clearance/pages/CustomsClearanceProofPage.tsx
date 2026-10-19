@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -72,13 +72,21 @@ export default function CustomsClearanceProofPage() {
   const isHeld = form.watch('isHeld')
   const selectedLane = form.watch('customsLane')
 
+  const isMandatoryRoute = useMemo(() => {
+    const origin = dossier?.bookingSummary?.originCountry?.trim().toLowerCase()
+    const destination = dossier?.bookingSummary?.destinationCountry?.trim().toLowerCase()
+    if (!origin || !destination) return true
+    const ukIe = new Set(["united kingdom", "uk", "gb", "great britain", "ireland", "ie"])
+    return ukIe.has(origin) || ukIe.has(destination)
+  }, [dossier?.bookingSummary?.destinationCountry, dossier?.bookingSummary?.originCountry])
+
   const onSubmit = async (values: FormValues) => {
-    if (!photoFile) return setPhotoError('Please attach a customs release note / SAD document image.')
+    if (isMandatoryRoute && !photoFile) return setPhotoError('Please attach a customs release note / SAD document image.')
     if (uploadState === 'uploading') {
       toast.info('Photo is still uploading. Please wait a moment...')
       return
     }
-    if (uploadedPublicIds.length === 0) {
+    if (isMandatoryRoute && uploadedPublicIds.length === 0) {
       return setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
     }
     if (dossierId == null) return
@@ -144,12 +152,34 @@ export default function CustomsClearanceProofPage() {
               <span className="truncate">{routeLabel(dossier)}</span>
             </div>
           </div>
-          <div className="text-right">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={cn(
+                "inline-flex items-center px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider",
+                isMandatoryRoute
+                  ? "bg-red-100 text-red-800"
+                  : "bg-blue-100 text-blue-800",
+              )}
+            >
+              {isMandatoryRoute ? "Mandatory: EU ↔ UK/Ireland" : "Optional: Intra-EU Route"}
+            </span>
             <span className="inline-flex items-center rounded-none bg-blue-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-800">
               Customs Clearance Flow
             </span>
           </div>
         </div>
+
+        {!isMandatoryRoute && (
+          <div className="border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-950 flex items-start gap-2">
+            <Navigation className="mt-0.5 size-4 shrink-0 text-blue-600" />
+            <div>
+              <p className="font-semibold">Intra-EU Route: Customs Clearance Submission is Optional</p>
+              <p className="mt-0.5 text-blue-800">
+                Transport within EU borders does not require customs clearance for registered equidae. Submitting customs release proof is optional for this route, and is only mandatory for transports crossing to/from the UK or Ireland.
+              </p>
+            </div>
+          </div>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>

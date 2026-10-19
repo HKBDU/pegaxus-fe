@@ -11,13 +11,28 @@ function statusLabel(status: StatusValue) {
   return value ? value.replaceAll("_", " ") : "NOT STARTED"
 }
 
-function StatusCard({ label, status, icon: Icon }: { label: string; status: StatusValue; icon: typeof ShieldCheck }) {
+function StatusCard({
+  label,
+  status,
+  subtitle,
+  icon: Icon,
+}: {
+  label: string
+  status: StatusValue
+  subtitle?: string
+  icon: typeof ShieldCheck
+}) {
   return (
     <Card className="rounded-[2px] border-slate-200 shadow-none">
       <CardContent className="flex items-center justify-between gap-4 p-4">
         <div className="flex items-center gap-3">
           <Icon className="size-5 text-primary" aria-hidden="true" />
-          <span className="text-xs font-bold uppercase tracking-wide text-slate-700">{label}</span>
+          <div>
+            <span className="block text-xs font-bold uppercase tracking-wide text-slate-700">{label}</span>
+            {subtitle && (
+              <span className="text-[10px] font-medium text-slate-500">{subtitle}</span>
+            )}
+          </div>
         </div>
         <span className="text-right text-[11px] font-bold uppercase tracking-wide text-slate-500">{statusLabel(status)}</span>
       </CardContent>
@@ -30,12 +45,18 @@ export function AuthorityInspectionTab({ dossier }: { dossier: DossierOverview }
   const dossierId = dossier.complianceDossierId
   const authorityStatus = ["SUBMITTED", "PENDING", "APPROVED"].includes(dossier.status) ? dossier.status : null
 
+  const origin = dossier.bookingSummary?.originCountry?.trim().toLowerCase()
+  const destination = dossier.bookingSummary?.destinationCountry?.trim().toLowerCase()
+  const ukIe = new Set(["united kingdom", "uk", "gb", "great britain", "ireland", "ie"])
+  const isMandatoryRoute = Boolean((origin && ukIe.has(origin)) || (destination && ukIe.has(destination)))
+  const routePolicyTag = isMandatoryRoute ? "Mandatory (EU ↔ UK/IE)" : "Optional (Intra-EU)"
+
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-3">
         <StatusCard label="Authority submission" status={authorityStatus} icon={ClipboardCheck} />
-        <StatusCard label="BCP quarantine" status={dossier.quarantineStatus} icon={ShieldCheck} />
-        <StatusCard label="Customs clearance" status={dossier.customsClearanceStatus} icon={ShieldCheck} />
+        <StatusCard label="BCP quarantine" status={dossier.quarantineStatus} subtitle={routePolicyTag} icon={ShieldCheck} />
+        <StatusCard label="Customs clearance" status={dossier.customsClearanceStatus} subtitle={routePolicyTag} icon={ShieldCheck} />
       </div>
 
       <Card className="rounded-[2px] border-slate-200 shadow-none">
