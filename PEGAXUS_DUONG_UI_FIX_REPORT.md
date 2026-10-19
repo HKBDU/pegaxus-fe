@@ -465,3 +465,103 @@ Chưa thực hiện các bước runtime sau:
 6. Audit panel desktop có sidebar và mobile 320/360/390px: Note nhiều đoạn/chuỗi không dấu cách, action/actor/target dài phải đọc đầy đủ. Kiểm chuyển stack/grid theo panel, không spill/clipping, không mất history action/filter/pagination.
 
 **NEXT SESSION:** D02/D06 đã có source fix và TypeScript/lint evidence, không còn owner blocker như mục 10. D01 vẫn thiếu registry mapping. Giữ 6 modified files và lịch sử báo cáo, không format hàng loạt/shared/teammate files để né 4 baseline Prettier failures. Phối hợp Khuyên review optional API và Uyên review class-only AuditTimeline trước merge; chưa khẳng định không conflict với remote hoặc có runtime/visual PASS. Không tự chạy real upload mutations/tests nếu chưa được phép.
+
+## 12. Huy TimePicker shared và kiểm tra progress upload
+
+Ngày: **19/10/2026**. Trạng thái mới nhất của D01/D02 nằm ở mục này; không xóa nội dung audit lịch sử. Chỉ sửa D01, kiểm tra source D02; không làm lại D03–D06.
+
+### 12.1. Git và shared location
+
+| Nội dung                  | Bằng chứng                                                                                                                       |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Branch                    | `feat/119-fix-ui/ux-issues`, không đổi                                                                                           |
+| HEAD                      | `55edea508e7dd8dc2427bf2f00db27f15f34036c` — `fix: :lipstick: Prevent partial uploads and refine audit layout (#119)`            |
+| Working tree trước sửa    | Sạch; các thay đổi D02/D06 và báo cáo trước đã có trong HEAD                                                                     |
+| Working tree cuối         | 2 tracked files modified: báo cáo và TransportPlanMetadataForm; 1 untracked file mới: shared time-picker.tsx; không staged files |
+| Shared component bắt buộc | **`src/shared/components/ui/time-picker.tsx`**, named exports `TimePicker`, `TimePickerProps`                                    |
+
+Đã đọc components.json: alias ui là `@/shared/components/ui`. Input/Label đã tồn tại với named exports; lucide-react đã được cài và có Clock8Icon. Không cài dependency, không chạy lại registry command hoặc đoán URL. Source demo được người dùng cung cấp thủ công nên blocker registry cũ **không còn chặn D01**.
+
+Không tạo TimePicker trong transport-plan, src/components hoặc components/shadcn-studio. Không overwrite/sửa `src/shared/components/ui/date-picker.tsx`, Input, Label hoặc shared CSS. Component mới không import Transport Plan types, auth, service hoặc business validation.
+
+### 12.2. D01 — SOURCE FIXED, controlled component
+
+TimePicker được chuyển từ demo date-picker-09.tsx sang API controlled:
+
+- Bắt buộc `value: string` và `onChange(value: string)`; không defaultValue/demo time hoặc hardcoded id.
+- Hỗ trợ id, disabled, className, ref/onBlur/name/ARIA và các HTML input props còn lại. className áp dụng vào Input, không vào wrapper.
+- Reuse Input/Label từ shared UI; optional label và labelClassName phục vụ form thường hoặc nhãn screen reader. Label htmlFor dùng đúng input id; nếu không truyền id thì useId tạo id ổn định.
+- Clock8Icon trang trí, aria-hidden và pointer-events-none. Radius 2px, height h-9, padding cho icon, token background/muted/focus/error dùng lại Input/project; không palette hoặc CSS global mới.
+- Native `type="time"`, mặc định step 60 giây. Consumer khác có thể truyền step khác khi cần seconds. Không có Radix time dropdown mới.
+
+**Giới hạn native UI:** ẩn WebKit picker indicator theo mẫu không bảo đảm mọi browser/OS không mở popup hoặc hiển thị 24 giờ. Giá trị controlled dùng HH:mm; cách hiển thị AM/PM, keyboard segments và popup do browser/locale quyết định. Không khẳng định native time popup đã được style hoàn toàn bằng Tailwind.
+
+### 12.3. Create/Edit, React Hook Form và timezone
+
+`src/features/transport-plan/components/TransportPlanMetadataForm.tsx` import trực tiếp shared TimePicker cho cả plannedStartAt/plannedEndAt, thay hai Radix Select giờ/phút. Xóa timeOptions và imports Select không còn dùng; Calendar date selection giữ nguyên.
+
+`BookingTransportPlanAction.tsx` và `pages/EditTransportPlanPage.tsx` đều dùng form này nên Create/Edit dùng cùng picker. Không sửa hai caller hoặc route của chúng.
+
+RHF field vẫn giữ chuỗi local datetime đầy đủ. DatePicker tiếp tục nhận date part; TimePicker nhận `time.slice(0, 5)` để chỉnh HH:mm. Khi đổi giờ/phút, ghép lại với ngày hiện tại và giữ phần seconds/milliseconds đã tải nếu có, giống chính sách cũ; khi đổi ngày giữ nguyên time. Không tạo giờ UTC hoặc ngày hiện tại ngầm trong picker.
+
+Clear time giữ date part với thời gian chưa hoàn chỉnh để schema hiện có yêu cầu sửa trước khi submit, không âm thầm dùng giờ cũ. onBlur/touched, FormControl id riêng cho time, aria-describedby/aria-invalid, disabled/loading/permission guards và vùng FormMessage giữ nguyên. Ref/ARIA props đi qua component tới Input thực tế; nhãn TimePicker ẩn với screen-reader label đúng field.
+
+Không sửa schemas, plannedStart-before-end rule, concurrency hoặc DTO/endpoints. `planToForm` vẫn dùng toLocalDateTime; buildCreatePlanInput/buildUpdatePlanInput vẫn chuyển sang ISO bằng new Date(localValue).toISOString() tại submit. Đây là kết luận source, **chưa phải runtime xác minh timezone/DST/midnight**.
+
+### 12.4. D02 — progress hiện tại được giữ, không rewrite
+
+Đã đọc lại FileUploader, useFileUploader, types và DocumentSubmissionDialog tại HEAD mới, không dựa riêng vào report cũ. Không phát hiện source regression khiến status callback optional làm mất progress UI; không sửa các file D02.
+
+| Điểm kiểm tra              | Kết quả source                                                                                                                                                       |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FileUploader.tsx`         | Mỗi item uploading vẫn render stage/percent và `<Progress value={item.progress.percent}>`; không chỉ render tại completion                                           |
+| `useFileUploader.ts`       | onProgress gọi patchItem → publishItems → **setItems(next)** cho mỗi progress update. notify=false chỉ bỏ callback aggregate, không bỏ local render của FileUploader |
+| Success/error/retry/remove | Presentation và actions từng file giữ nguyên. Auto-hide timer chỉ áp dụng success items, không ẩn item đang uploading                                                |
+| All-files gate             | getCompletedUploadFiles vẫn yêu cầu toàn bộ remaining items success + publicId hợp lệ; pending/failed làm files chưa ready                                           |
+| Submit                     | canSubmit vẫn đòi form valid, không validating/submitting/pending và đủ quyền. Handler đọc snapshot đồng bộ + lock đúng revision, không submit subset                |
+| Add/Remove/Retry           | Các transitions publish remaining snapshot để form reevaluate. Retry không upload lại successful items; freeze/session guards không đổi                              |
+
+**Phân biệt progress thực tế:** nguồn `src/shared/utils/presigned/uploader.ts` hiện phát mốc signing=0, uploading=25, confirming=75, completed=100 theo các giai đoạn request. Transport dùng fetch, **không có byte-level upload progress**; trong một transfer dài phần trăm có thể giữ 25 đến khi chuyển sang confirming. Vì vậy không gọi đây là số đo % byte hoặc khẳng định phần trăm tăng liên tục trong lúc truyền.
+
+Không thêm timer/simulated percentage, không thay progress hiện có bằng count tổng và không viết lại shared upload transport. Nếu QA yêu cầu % byte liên tục, cần Khuyên duyệt thay đổi presigned uploader/transport riêng; việc giữ UI progress và all-files gate ở đây không chứng minh yêu cầu đo byte đã được triển khai.
+
+Không Confirm button hoặc auto-submit DocumentVersion/dossier được thêm lại. Authority consumers không bị sửa. Không thực hiện upload/API mutations để kiểm chứng runtime.
+
+### 12.5. Browser attempt và validation
+
+Đã đọc hướng dẫn browser và thử kết nối một lần để kiểm tra native time input. Công cụ thất bại trước khi mở trang với lỗi môi trường `codex/sandbox-state-meta: missing field sandboxPolicy`. Không có DOM/screenshot hoặc tương tác input nào được ghi nhận. Không fallback sang standalone automated tests hoặc gọi API thật. **NOT VISUALLY VERIFIED — RUNTIME NOT VERIFIED**.
+
+| Lệnh / kiểm tra trong lượt này                                                                           | Kết quả                                                       |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `& ./node_modules/.bin/tsc.cmd --project tsconfig.app.json --noEmit --incremental false --pretty false`  | PASS exit 0 sau source changes                                |
+| `& ./node_modules/.bin/tsc.cmd --project tsconfig.node.json --noEmit --incremental false --pretty false` | PASS exit 0                                                   |
+| Scoped Oxlint theo lệnh bên dưới                                                                         | PASS exit 0, 0 diagnostics                                    |
+| Prettier write/check cho TimePicker và TransportPlanMetadataForm                                         | PASS; không format source upload/Audit hoặc shared DatePicker |
+| Prettier check báo cáo và git diff --check                                                               | PASS exit 0 sau khi hoàn thiện mục 12                         |
+| Automated tests / build / API mutations                                                                  | Không chạy                                                    |
+
+```powershell
+& ./node_modules/.bin/oxlint.cmd src/shared/components/ui/time-picker.tsx src/features/transport-plan/components/TransportPlanMetadataForm.tsx src/shared/components/FileUploader.tsx src/shared/components/file-uploader/useFileUploader.ts src/shared/components/file-uploader/types.ts src/features/dossier/components/DocumentSubmissionDialog.tsx
+& ./node_modules/.bin/prettier.cmd --check src/shared/components/ui/time-picker.tsx src/features/transport-plan/components/TransportPlanMetadataForm.tsx PEGAXUS_DUONG_UI_FIX_REPORT.md
+git -c core.safecrlf=false diff --check
+git status --short
+```
+
+### 12.6. Files, diff review và manual QA
+
+| File mới/sửa trong lượt này                                            | Thay đổi                                                                                                   |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `src/shared/components/ui/time-picker.tsx`                             | **Mới**, shared controlled TimePicker theo mẫu Huy, chỉ Input/Label/icon và input props                    |
+| `src/features/transport-plan/components/TransportPlanMetadataForm.tsx` | Import shared TimePicker cho Create/Edit, bỏ Radix hour/minute Select, giữ local datetime/RHF/range guards |
+| `PEGAXUS_DUONG_UI_FIX_REPORT.md`                                       | Append mục 12, giữ nguyên lịch sử mục 1–11                                                                 |
+
+Đã đọc cả diff tracked và toàn bộ shared file mới (git diff thông thường chưa chứa untracked file). Không sửa D02/D03–D06, shared DatePicker, utilities datetime, schemas, router/sidebar, Backend, Booking/RoutePlan, package/lockfile hoặc env. Không stage/commit/push/switch/fetch/merge/reset/stash.
+
+Manual QA còn lại, chưa thực hiện:
+
+1. Create/Edit: Planned Start/End dùng Calendar hiện có + một time input, không Radix hour/minute menu. Kiểm thao tác keyboard, chọn segment giờ/phút, xóa/nhập lại, label/focus/disabled/error; cả desktop và mobile 320/360/390px.
+2. Chọn ngày trước/giờ trước, 00:00/23:59, chuyển ngày/tháng; mở lại Edit và so sánh local display với response/payload ISO đúng timezone. Kiểm dữ liệu có seconds/ms không bị mất khi chỉ đổi ngày/phút, start/end ordering và server/concurrency errors không đổi.
+3. Kiểm native input trên browser/OS đích: popup/AM-PM/step behavior và focus ring không clip. Không dùng screenshot của source demo làm nghiệm thu component thực tế.
+4. D02: development fixtures được phép, file lớn/multiple để quan sát stage/progress; failed Retry/Remove, thêm file mới khóa Submit, metadata invalid vẫn disabled. Đối chiếu all-files snapshot + manual DocumentVersion submit; không diễn giải mốc stage thành % byte.
+
+**NEXT SESSION:** Shared path chính thức là `src/shared/components/ui/time-picker.tsx`; không tạo bản feature-local hoặc generate registry để làm lại. D01 đã SOURCE FIXED bằng manual source, không còn registry blocker cho cách triển khai này; cần browser QA. D02 giữ source đã có, progress stage-based và all-files gate đã trace, không có upload runtime PASS. Giữ 3 files thay đổi của lượt này (2 modified + 1 untracked), không chạm D03–D06 hoặc mở rộng upload transport khi chưa owner xác nhận.

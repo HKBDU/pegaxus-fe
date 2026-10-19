@@ -19,13 +19,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { DatePicker } from "@/shared/components/ui/date-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
+import { TimePicker } from "@/shared/components/ui/time-picker";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
   useCreateTransportPlan,
@@ -70,14 +64,6 @@ const fields = [
     type: "number",
   },
 ] as const;
-const timeOptions = {
-  hours: Array.from({ length: 24 }, (_, index) =>
-    String(index).padStart(2, "0"),
-  ),
-  minutes: Array.from({ length: 60 }, (_, index) =>
-    String(index).padStart(2, "0"),
-  ),
-};
 
 export function TransportPlanMetadataForm({
   bookingId,
@@ -289,8 +275,7 @@ export function TransportPlanMetadataForm({
                       name={name}
                       render={({ field }) => {
                         const [date = "", time = ""] = field.value.split("T");
-                        const [hours = "", minutes = "", seconds] =
-                          time.split(":");
+                        const seconds = time.split(":")[2];
                         const changeDate = (value: string) => {
                           if (isPending || !canWrite) return;
                           field.onChange(
@@ -298,18 +283,15 @@ export function TransportPlanMetadataForm({
                           );
                           field.onBlur();
                         };
-                        const changeTime = (
-                          part: "hours" | "minutes",
-                          value: string,
-                        ) => {
+                        const changeTime = (value: string) => {
                           if (isPending || !canWrite) return;
                           // Keep the local date and existing seconds/milliseconds; UTC conversion stays in the submit mapping.
-                          const nextHours =
-                            part === "hours" ? value : hours || "00";
-                          const nextMinutes =
-                            part === "minutes" ? value : minutes || "00";
                           field.onChange(
-                            `${date}T${nextHours}:${nextMinutes}${seconds === undefined ? "" : `:${seconds}`}`,
+                            value
+                              ? `${date}T${value}${seconds === undefined ? "" : `:${seconds}`}`
+                              : date
+                                ? `${date}T`
+                                : "",
                           );
                           field.onBlur();
                         };
@@ -332,64 +314,17 @@ export function TransportPlanMetadataForm({
                                     className={controlClass}
                                   />
                                 </FormControl>
-                                <div className="flex min-w-0 items-center gap-1">
-                                  {(["hours", "minutes"] as const).map(
-                                    (part, index) => (
-                                      <div
-                                        key={part}
-                                        className="flex min-w-0 flex-1 items-center gap-1"
-                                      >
-                                        {index ? (
-                                          <span
-                                            aria-hidden="true"
-                                            className="text-xs text-slate-500"
-                                          >
-                                            :
-                                          </span>
-                                        ) : null}
-                                        <Select
-                                          value={
-                                            part === "hours" ? hours : minutes
-                                          }
-                                          onValueChange={(value) =>
-                                            changeTime(part, value)
-                                          }
-                                          onOpenChange={(open) => {
-                                            if (!open) field.onBlur();
-                                          }}
-                                          disabled={isPending || !canWrite}
-                                        >
-                                          <FormControl
-                                            id={`${scheduleId}-${name}-${part}`}
-                                          >
-                                            <SelectTrigger
-                                              size="sm"
-                                              aria-label={`${label} ${part}`}
-                                              className={`${controlClass} w-full min-w-0 data-[size=sm]:h-9`}
-                                            >
-                                              <SelectValue
-                                                placeholder={
-                                                  part === "hours" ? "HH" : "MM"
-                                                }
-                                              />
-                                            </SelectTrigger>
-                                          </FormControl>
-                                          <SelectContent className="z-[60] max-h-60 min-w-0 motion-reduce:animate-none">
-                                            {timeOptions[part].map((value) => (
-                                              <SelectItem
-                                                key={value}
-                                                value={value}
-                                                className="text-xs"
-                                              >
-                                                {value}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                    ),
-                                  )}
-                                </div>
+                                <FormControl id={`${scheduleId}-${name}-time`}>
+                                  <TimePicker
+                                    value={time.slice(0, 5)}
+                                    onChange={changeTime}
+                                    onBlur={field.onBlur}
+                                    disabled={isPending || !canWrite}
+                                    label={`${label} time`}
+                                    labelClassName="sr-only"
+                                    className={controlClass}
+                                  />
+                                </FormControl>
                               </div>
                             ) : (
                               <FormControl>
