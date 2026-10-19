@@ -25,7 +25,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton"
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard"
 import type { EntityId } from "@/shared/types"
 
-const AFTER_CREATE_PATH = (dossierId: EntityId) => `/compliance-dossiers/${dossierId}/requirements`
+const AFTER_CREATE_PATH = (dossierId: EntityId) => `/compliance-dossiers/${dossierId}/details`
 
 const outlineButtonClass =
   "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[2px] border border-slate-300 bg-white px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-60"
@@ -94,7 +94,7 @@ export default function ApplyTemplatePage() {
 
   useEffect(() => {
     if (existingQuery.data) {
-      navigate(`/compliance-dossiers/${existingQuery.data.complianceDossierId}/requirements`, { replace: true })
+      navigate(`/compliance-dossiers/${existingQuery.data.complianceDossierId}/details`, { replace: true })
     }
   }, [existingQuery.data, navigate])
 
@@ -174,7 +174,7 @@ export default function ApplyTemplatePage() {
   if (bookingQuery.isLoading || existingQuery.isLoading) {
     return (
       <PageShell>
-        <div className="grid gap-4">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
           <Skeleton className="h-16 rounded-none bg-[#e9e6de]" />
           <Skeleton className="h-24 rounded-none bg-[#e9e6de]" />
           <Skeleton className="h-96 rounded-none bg-[#e9e6de]" />
@@ -253,7 +253,7 @@ export default function ApplyTemplatePage() {
 
       {step === 2 ? (
         <>
-          <div className="mb-4 grid gap-4">
+          <div className="mb-4 grid grid-cols-[minmax(0,1fr)] gap-4">
             <section aria-labelledby="booking-information-title">
               <h2 id="booking-information-title" className="sr-only">Booking Information</h2>
               <BookingSummaryCard booking={booking} />

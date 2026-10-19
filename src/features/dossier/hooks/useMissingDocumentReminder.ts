@@ -3,7 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createRequestAttemptGuard } from "@/shared/hooks/request-attempt-guard";
 import { mapMissingDocumentReminderError } from "../lib/missing-document-reminder";
 import { dossierIdSchema } from "../schemas";
-import { loadMissingDossierRequirements, loadMissingRequirementReminder } from "../source";
+import {
+  loadMissingDossierRequirements,
+  loadMissingRequirementReminder,
+} from "../source";
 import type { SendMissingDocumentReminderInput } from "../types";
 import { dossierKeys } from "./useDossier";
 import { invalidateDossierAfterUpload } from "./useUploadComplianceDocument";
@@ -21,11 +24,14 @@ export function useMissingDocumentReminder() {
   const client = useQueryClient();
   const guard = useRef(createRequestAttemptGuard());
   const mutation = useMutation({
-    mutationFn: (input: SendMissingDocumentReminderInput) => loadMissingRequirementReminder(input),
+    mutationFn: (input: SendMissingDocumentReminderInput) =>
+      loadMissingRequirementReminder(input),
     retry: false,
-    onSuccess: (_response, input) => invalidateDossierAfterUpload(client, input.dossierId),
+    onSuccess: (_response, input) =>
+      invalidateDossierAfterUpload(client, input.dossierId),
     onError: (error, input) => {
-      if (mapMissingDocumentReminderError(error).refresh) return invalidateDossierAfterUpload(client, input.dossierId);
+      if (mapMissingDocumentReminderError(error).refresh)
+        return invalidateDossierAfterUpload(client, input.dossierId);
     },
   });
   return {

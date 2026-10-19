@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { acquireEditLock, forgetEditLock, scheduleEditRelease } from "@/features/booking/editLock"
 import { bookingService } from "@/features/booking/services"
 import { bookingIdSchema } from "@/features/booking/schemas"
+import { approvedBookingKeys } from "@/features/transport-plan/hooks/useApprovedBookings"
 import type { EntityId } from "@/shared/types"
 import type {
   Booking,
@@ -12,6 +13,12 @@ import type {
   CreateBookingRequest,
   HorseListParams,
 } from "@/features/booking/types"
+
+/** B5 takes a point's latitude and longitude together or not at all, so a half-filled pair is never sent. */
+function pairOf<Side extends "origin" | "destination">(side: Side, latitude: number | undefined, longitude: number | undefined) {
+  if (typeof latitude !== "number" || typeof longitude !== "number") return {}
+  return { [`${side}Latitude`]: latitude, [`${side}Longitude`]: longitude } as Record<`${Side}Latitude` | `${Side}Longitude`, number>
+}
 
 export const bookingKeys = {
   all: ["bookings"] as const,
@@ -79,8 +86,10 @@ export function useUpdateBooking() {
         lastUpdatedAt: booking.updatedAt,
         originAddress: values.originAddress,
         originCountry: values.originCountry,
+        ...pairOf("origin", values.originLatitude, values.originLongitude),
         destinationAddress: values.destinationAddress,
         destinationCountry: values.destinationCountry,
+        ...pairOf("destination", values.destinationLatitude, values.destinationLongitude),
         requestedDepartureDate: values.requestedDepartureDate,
         requestedArrivalDate: values.requestedArrivalDate || undefined,
         specialRequirements: values.specialRequirements || undefined,
@@ -161,6 +170,7 @@ export function useApproveBooking() {
   return useMutation({
     mutationFn: (bookingId: EntityId) => bookingService.approveBooking(bookingId),
     onSuccess: (_, bookingId) => {
+      void queryClient.invalidateQueries({ queryKey: approvedBookingKeys.detail(bookingId) })
       void queryClient.invalidateQueries({ queryKey: bookingKeys.detail(bookingId) })
       void queryClient.invalidateQueries({ queryKey: bookingKeys.lists() })
     },

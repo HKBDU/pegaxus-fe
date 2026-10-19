@@ -26,6 +26,7 @@ const bookingErrorMessages: Record<string, string> = {
   BOOKING_BEING_EDITED: "The customer is editing this booking. Wait until the customer saves it, then review it again.",
   BOOKING_HAS_NO_HORSE: "This booking has no horse, so it cannot be approved.",
   REASON_REQUIRED: "Please enter a reason.",
+  INVALID_COORDINATES: "The pickup or destination point is outside the valid map range. Pick the point again on the map.",
   DEPARTURE_DATE_OUT_OF_RANGE: "The departure date must be between 3 weeks and 2 months from today.",
   ARRIVAL_DATE_INVALID: "The arrival date cannot be before the departure date.",
   DUPLICATE_HORSE_IN_BOOKING: "A horse can only be selected once per booking.",
@@ -39,7 +40,21 @@ const bookingErrorMessages: Record<string, string> = {
 /** The booking service rethrows API failures as Error(errorCode); mock mode throws the same codes. */
 export function getBookingErrorMessage(error: unknown, fallback: string) {
   const code = error instanceof Error ? error.message : ""
-  return bookingErrorMessages[code] ?? fallback
+  return bookingErrorMessages[code] ?? getValidationMessage(error) ?? fallback
+}
+
+/** A 400 from the BE (field validation, supported countries, route rules) already says what is wrong, in English. */
+function getValidationMessage(error: unknown): string | undefined {
+  const response = (error instanceof Error ? error.cause : undefined) as
+    | { response?: { status?: number; data?: { message?: unknown; errors?: unknown } } }
+    | undefined
+  if (response?.response?.status !== 400) return undefined
+  const data = response.response.data
+  const messages = Array.isArray(data?.errors)
+    ? data.errors.map((item) => (item as { message?: unknown })?.message).filter((m): m is string => typeof m === "string" && m.length > 0)
+    : []
+  if (messages.length) return [...new Set(messages)].join(" ")
+  return typeof data?.message === "string" && data.message ? data.message : undefined
 }
 
 export function formatSex(sex?: string | null) {

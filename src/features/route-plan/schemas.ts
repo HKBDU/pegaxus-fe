@@ -1,20 +1,20 @@
 import { z } from 'zod'
 import type { RouteSegmentInput } from './types'
 
-const uuid = z.string().uuid('Must be a valid identifier.')
+const entityId = z.string().min(1, 'Must be a valid identifier.')
 const dateTime = z.string().datetime({ offset: true, message: 'Must be a valid ISO date-time.' })
 
 export const routeSegmentSchema = z.object({
   sequenceNo: z.number().int().positive(),
-  routeId: uuid.optional(),
-  fromLocationId: uuid.optional(),
-  toLocationId: uuid.optional(),
+  routeId: entityId.optional(),
+  fromLocationId: entityId.optional(),
+  toLocationId: entityId.optional(),
   transportMode: z.enum(['ROAD', 'SEA', 'AIR']).optional(),
   plannedDepartureAt: dateTime,
   plannedArrivalAt: dateTime,
-  vehicleIds: z.array(uuid).optional(),
+  vehicleIds: z.array(entityId).optional(),
   outsourcing: z.object({
-    transportProviderId: uuid,
+    transportProviderId: entityId,
     note: z.string().trim().max(500).optional(),
   }).optional(),
   note: z.string().trim().max(500).optional(),
@@ -23,6 +23,9 @@ export const routeSegmentSchema = z.object({
   const hasManualRoute = Boolean(segment.fromLocationId && segment.toLocationId && segment.transportMode)
   if (!hasRoute && !hasManualRoute) {
     context.addIssue({ code: 'custom', path: ['routeId'], message: 'Select a route or provide origin, destination and mode.' })
+  }
+  if (hasRoute && (segment.fromLocationId || segment.toLocationId || segment.transportMode)) {
+    context.addIssue({ code: 'custom', path: ['routeId'], message: 'Use either routeId or the route location/mode fields, not both' })
   }
   if (new Date(segment.plannedArrivalAt) <= new Date(segment.plannedDepartureAt)) {
     context.addIssue({ code: 'custom', path: ['plannedArrivalAt'], message: 'Arrival must be after departure.' })

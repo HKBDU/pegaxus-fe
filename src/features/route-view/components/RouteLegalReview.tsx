@@ -1,0 +1,66 @@
+import { formatBookingDate } from "@/features/booking/utils";
+import { Badge } from "@/shared/components/ui/badge";
+import { ShieldCheck } from "lucide-react";
+import {
+  Field,
+  Section,
+} from "@/features/transport-plan/components/ApprovedBookingDetails";
+import type { RouteLegalReviewData } from "../types";
+
+export function RouteLegalReview({
+  review,
+  embedded = false,
+}: {
+  review: RouteLegalReviewData | null;
+  embedded?: boolean;
+}) {
+  return (
+    <Section
+      embedded={embedded}
+      title="Legal Feasibility"
+      icon={ShieldCheck}
+      actions={
+        review ? (
+          <Badge
+            variant="outline"
+            className={`h-6 rounded-full px-2.5 text-[11px] ${review.isFeasible ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}
+          >
+            {review.isFeasible ? "Feasible" : "Not feasible"}
+          </Badge>
+        ) : undefined
+      }
+    >
+      {!review ? (
+        <p className="text-sm text-slate-500">Not reviewed yet</p>
+      ) : (
+        <>
+          <dl className="grid gap-3 sm:grid-cols-3">
+            {review.reviewedBy && (
+              <Field label="Reviewed by">{review.reviewedBy.fullName}</Field>
+            )}
+            {review.reviewedAt && (
+              <Field label="Reviewed at">
+                {formatBookingDate(review.reviewedAt, true)}
+              </Field>
+            )}
+            <Field label="Blocked segments">
+              {review.blockedSegments == null
+                ? "Not supplied"
+                : review.blockedSegments.length
+                  ? review.blockedSegments.join(", ")
+                  : "None"}
+            </Field>
+          </dl>
+          {review.note && (
+            <div>
+              <p className="mb-1 text-xs text-slate-500">Notes</p>
+              <p className="whitespace-pre-wrap break-words text-sm">
+                {review.note}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+    </Section>
+  );
+}

@@ -120,7 +120,7 @@ export function TemplateItemsEditor({ form, options, optionsLoading, fallbackNam
       </div>
 
       <TooltipProvider delayDuration={200}>
-      <div className="overflow-x-auto border border-slate-200">
+      <div className="relative overflow-x-auto border border-slate-200">
         {/* table-fixed: the same column widths in view and edit mode, whatever a row currently holds. */}
         <table className="w-full min-w-[1120px] table-fixed border-collapse text-xs">
           <colgroup>

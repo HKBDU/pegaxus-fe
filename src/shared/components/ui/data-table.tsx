@@ -1,5 +1,5 @@
 import * as React from "react"
-import { flexRender, type Table as TanstackTable } from "@tanstack/react-table"
+import { flexRender, type Row, type Table as TanstackTable } from "@tanstack/react-table"
 
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/shared/components/ui/skeleton"
@@ -16,6 +16,7 @@ interface DataTableProps<TData> extends React.ComponentProps<"div"> {
   rowClassName?: string
   cellClassName?: string
   emptyMessage?: React.ReactNode
+  onRowClick?: (row: Row<TData>) => void
 }
 
 export function DataTable<TData>({
@@ -31,12 +32,13 @@ export function DataTable<TData>({
   rowClassName,
   cellClassName,
   emptyMessage = "No bookings match the current filters.",
+  onRowClick,
   ...props
 }: DataTableProps<TData>) {
   return (
     <div className={cn("flex w-full flex-col gap-2.5", className)} {...props}>
       {children}
-      <div className={cn("overflow-hidden rounded-[2px] border bg-white", containerClassName)}>
+      <div className={cn("relative overflow-hidden rounded-[2px] border bg-white", containerClassName)}>
         <Table className={tableClassName}>
           <TableHeader className={cn("[&_tr]:border-b-0!", headerClassName)}>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -75,7 +77,7 @@ export function DataTable<TData>({
               ))
             ) : table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} className={cn(row.index % 2 === 0 ? "bg-white" : "bg-[#f7f6f3]", rowClassName)}>
+                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} className={cn(row.index % 2 === 0 ? "bg-white" : "bg-[#f7f6f3]", onRowClick && "cursor-pointer", rowClassName)} onClick={() => onRowClick?.(row)}>
                   {row.getVisibleCells().map((cell) => {
                     const isActionsColumn = cell.column.id === "actions"
 

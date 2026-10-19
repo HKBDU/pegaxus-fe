@@ -4,9 +4,8 @@ import { forwardRef } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { z } from "zod"
 
-import type { BookedHorse } from "@/features/booking/types"
 import { templateControlClass } from "@/features/compliance-catalog/components/TemplateItemsEditor"
-import type { CustomRequirementDraft } from "@/features/compliance-catalog/dossier-types"
+import type { ApplyBooking, CustomRequirementDraft } from "@/features/compliance-catalog/dossier-types"
 import type { ComplianceRequirementSummary } from "@/features/compliance-catalog/types"
 import { cn } from "@/lib/utils"
 import { DatePicker } from "@/shared/components/ui/date-picker"
@@ -59,7 +58,7 @@ function ChoiceCard({ selected, title, hint, onSelect }: { selected: boolean; ti
 }
 
 interface AddCustomRequirementPanelProps {
-  horses: BookedHorse[]
+  horses: ApplyBooking["horses"]
   requirements: ComplianceRequirementSummary[]
   requirementsLoading: boolean
   /** Returns an error message when the line cannot be added (duplicate), otherwise null. */

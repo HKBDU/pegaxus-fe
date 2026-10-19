@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -11,16 +11,13 @@ import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Form } from '@/shared/components/ui/form'
+import { PhotoCaptureSection } from '@/shared/components/PhotoCaptureSection'
 import {
   BcpLocationSection,
-  PhotographicProofSection,
   QuickNotesSection,
 } from '../components'
 
 // ─── Schema ──────────────────────────────────────────────────────────────────
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5 MB per file
-const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png']
 
 const schema = z
   .object({
@@ -55,35 +52,15 @@ function formatRoute(dossier?: ReturnType<typeof useDossierContext>['data']): st
 
 export default function BcpQuarantineProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
-  const dossierId = dossierIdParam ? Number(dossierIdParam) : null
+  const dossierId = dossierIdParam ?? null
 
   const { data: dossier, isLoading: dossierLoading } = useDossierContext(dossierId)
-  const { mutateAsync: submitProof, isPending } = useSubmitQuarantineProof(dossierId ?? 0)
+  const { mutateAsync: submitProof, isPending } = useSubmitQuarantineProof(dossierId ?? '')
 
   // ─── Photo state ──────────────────────────────────────────────────────────
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
-
-  const handleFilePicked = useCallback((file: File | undefined) => {
-    if (!file) return
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      toast.error('Only JPG, PNG or WebP images are accepted.')
-      return
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error('Image must be ≤ 5 MB.')
-      return
-    }
-    setPhotoFile(file)
-    setPhotoTakenAt(new Date())
-    setPhotoError(null) // clear error once photo attached
-  }, [])
-
-  const handleRemovePhoto = useCallback(() => {
-    setPhotoFile(null)
-    setPhotoTakenAt(null)
-  }, [])
 
   // ─── Form ──────────────────────────────────────────────────────────────────
   const form = useForm<FormValues>({
@@ -186,12 +163,13 @@ export default function BcpQuarantineProofPage() {
             <BcpLocationSection form={form} isHoldback={isHoldback} />
 
             {/* Section 2: Photographic Proof (FileUploader & ImageViewer) */}
-            <PhotographicProofSection
-              photoFile={photoFile}
-              photoTakenAt={photoTakenAt}
-              onFilePicked={handleFilePicked}
-              onRemovePhoto={handleRemovePhoto}
+            <PhotoCaptureSection
+              files={photoFile ? [photoFile] : []}
+              capturedAt={photoTakenAt ? [photoTakenAt] : []}
               error={photoError}
+              onFilesChange={(files) => { setPhotoFile(files[0] ?? null); setPhotoTakenAt(files[0] ? new Date() : null) }}
+              onCapturedAtChange={(values) => setPhotoTakenAt(values[0] ?? null)}
+              onError={setPhotoError}
             />
 
             {/* Section 3: Quick Notes */}

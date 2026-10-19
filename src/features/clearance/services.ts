@@ -27,7 +27,7 @@ function unwrap<T>(payload: ApiEnvelope<T>): T {
 export { getDossierContext }
 
 export async function submitCustomsClearanceProof(
-  dossierId: number,
+  dossierId: string,
   params: SubmitCustomsClearanceProofRequest,
 ): Promise<SubmitCustomsClearanceProofResponse> {
   const form = new FormData()
@@ -41,7 +41,7 @@ export async function submitCustomsClearanceProof(
 
   const res = await callApi(
     apiClient.post<unknown, ApiEnvelope<SubmitCustomsClearanceProofResponse>>(
-      `/compliance-dossiers/${dossierId}/customs-clearance-proofs`,
+      `/compliance-dossiers/${encodeURIComponent(dossierId)}/customs-clearance-proofs`,
       form,
       { headers: { 'Content-Type': 'multipart/form-data' } },
     ),
@@ -49,22 +49,22 @@ export async function submitCustomsClearanceProof(
   return unwrap(res)
 }
 
-export async function getCustomsClearanceProof(proofId: number): Promise<CustomsClearanceProofDetail> {
+export async function getCustomsClearanceProof(proofId: string): Promise<CustomsClearanceProofDetail> {
   const res = await callApi(
     apiClient.get<unknown, ApiEnvelope<CustomsClearanceProofDetail>>(
-      `/customs-clearance-proofs/${proofId}`,
+      `/customs-clearance-proofs/${encodeURIComponent(proofId)}`,
     ),
   )
   return unwrap(res)
 }
 
 export async function finalizeCustomsClearanceProof(
-  proofId: number,
+  proofId: string,
   payload: FinalizeCustomsClearanceProofRequest,
 ): Promise<FinalizeCustomsClearanceProofResponse> {
   const res = await callApi(
     apiClient.patch<unknown, ApiEnvelope<FinalizeCustomsClearanceProofResponse>>(
-      `/customs-clearance-proofs/${proofId}/finalize`,
+      `/customs-clearance-proofs/${encodeURIComponent(proofId)}/finalize`,
       payload,
     ),
   )

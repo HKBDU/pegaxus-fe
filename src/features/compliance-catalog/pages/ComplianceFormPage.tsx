@@ -228,7 +228,7 @@ function ComplianceForm({ mode, requirement }: ComplianceFormProps) {
 
         <Form {...form}>
           <form onSubmit={onSubmit} noValidate className="booking-panel mt-4 border bg-white p-6 sm:p-7">
-            <fieldset disabled={isSaving} className="grid gap-5">
+            <fieldset disabled={isSaving} className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5">
               <SectionTitle>01. Identification &amp; classification</SectionTitle>
               <div className="grid gap-4 sm:grid-cols-2">
                 <TextField control={form.control} name="requirementCode" label="Requirement code" placeholder="e.g. CR-EQ-VET-01" />

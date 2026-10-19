@@ -10,6 +10,7 @@ const labels: Record<Exclude<MapMode, "view">, string> = {
   addLocation: "Click map to add location",
   addRoute: "Select start and end locations",
   buildPlan: "Select a route to build the plan",
+  pickPoint: "Click the map or search to pick a point",
 };
 
 export function MapSelectionMode({

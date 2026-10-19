@@ -1,5 +1,4 @@
-import type { BookedHorse } from "@/features/booking/types"
-import type { CustomRequirementDraft, FinalRequirementRow } from "@/features/compliance-catalog/dossier-types"
+import type { ApplyBooking, CustomRequirementDraft, FinalRequirementRow } from "@/features/compliance-catalog/dossier-types"
 import type { DossierTemplateItem } from "@/features/compliance-catalog/template-types"
 import type { ComplianceCategory } from "@/features/compliance-catalog/types"
 
@@ -14,7 +13,7 @@ export function buildFinalRows(
   items: DossierTemplateItem[],
   selectedItemIds: Set<string>,
   customs: CustomRequirementDraft[],
-  horses: BookedHorse[],
+  horses: ApplyBooking["horses"],
   categoryOf: (complianceRequirementId: DossierTemplateItem["complianceRequirementId"]) => ComplianceCategory | null,
 ): FinalRequirementRow[] {
   const rows: FinalRequirementRow[] = []

@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react"
-import { useState } from "react"
-import { Link, useParams } from "react-router-dom"
+import { lazy, Suspense, useEffect, useRef, useState } from "react"
+import { Link, useParams, useSearchParams } from "react-router-dom"
 
 import { ApproveBookingDialog, RejectBookingDialog } from "@/features/booking/components/BookingDecisionDialogs"
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
@@ -9,12 +9,17 @@ import { CancelBookingDialog } from "@/features/booking/components/CancelBooking
 import { useBooking } from "@/features/booking/hooks"
 import type { BookingAudience } from "@/features/booking/types"
 import { formatBookingDate, formatSex } from "@/features/booking/utils"
+import { CustomerInvoicesTab } from "@/features/invoice"
+import { BookingTransportPlanAction } from "@/features/transport-plan/components/BookingTransportPlanAction"
 import { cn } from "@/lib/utils"
 import { ErrorState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
 
 const EMPTY_VALUE = "—"
+
+// maplibre-gl stays out of the main bundle: the map loads only when a booking has coordinates.
+const BookingRouteMap = lazy(() => import("@/features/booking/components/BookingRouteMap"))
 
 const panelClass = "border border-[#e5e2d9] bg-white"
 const actionButtonClass =
@@ -60,13 +65,16 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
-function AddressBlock({ label, address, country }: { label: string; address: string; country: string }) {
+function AddressBlock({ label, address, country, latitude, longitude }: { label: string; address: string; country: string; latitude?: number | null; longitude?: number | null }) {
   return (
     <div className="min-w-0">
       <dt className="font-heading text-[11px] font-medium uppercase leading-4 tracking-[0.06em] text-gray-500">{label}</dt>
       <dd className="mt-1 whitespace-pre-line text-xs leading-4 text-gray-700">
         {[address, country].filter(Boolean).join(", ")}
       </dd>
+      {typeof latitude === "number" && typeof longitude === "number" ? (
+        <dd className="mt-0.5 text-[11px] leading-4 text-gray-500">{latitude.toFixed(4)}, {longitude.toFixed(4)}</dd>
+      ) : null}
     </div>
   )
 }
@@ -83,6 +91,9 @@ function ScheduleBlock({ label, value, className }: { label: string; value: Reac
 
 export default function BookingDetailsPage({ audience = "customer" }: { audience?: BookingAudience }) {
   const { bookingId = "" } = useParams()
+  // Invoice notifications deep-link here as /bookings/:id?invoiceId=...; the Invoices block scrolls into view and marks that row.
+  const invoiceId = useSearchParams()[0].get("invoiceId") ?? undefined
+  const invoicesSection = useRef<HTMLElement>(null)
   const bookingQuery = useBooking(bookingId)
   const booking = bookingQuery.data
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -90,6 +101,10 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
   const [rejectOpen, setRejectOpen] = useState(false)
   const isPending = booking?.status === "PENDING"
   const canEdit = booking?.status === "PENDING" || booking?.status === "DRAFT"
+  const bookingLoaded = Boolean(booking)
+  useEffect(() => {
+    if (invoiceId && bookingLoaded) invoicesSection.current?.scrollIntoView({ block: "start" })
+  }, [invoiceId, bookingLoaded])
   const listPath = audience === "manager" ? "/admin/transport-requests" : "/bookings"
   const hasOutcome = Boolean(
     booking && (booking.assignedEmployee || booking.transport || booking.rejectionReason || booking.cancellationReason),
@@ -120,6 +135,13 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                     Approve
                   </button>
                 </>
+              ) : null}
+              {audience === "manager" && booking.status === "APPROVED" && typeof booking.bookingId === "string" ? (
+                <BookingTransportPlanAction
+                  key={booking.bookingId}
+                  bookingId={booking.bookingId}
+                  status={booking.status}
+                />
               ) : null}
               <Link
                 to={`/bookings/${encodeURIComponent(String(booking.bookingId))}/history`}
@@ -160,11 +182,11 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                 <CardTitle>Route &amp; schedule</CardTitle>
                 <dl className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_20px_minmax(0,1fr)_1px_minmax(0,1.1fr)] lg:gap-x-4 xl:grid-cols-[190fr_13px_20px_30px_148fr_24px_1px_36px_235fr] xl:gap-x-0">
                   <div className="xl:col-start-1">
-                    <AddressBlock label="Pickup address" address={booking.originAddress} country={booking.originCountry} />
+                    <AddressBlock label="Pickup address" address={booking.originAddress} country={booking.originCountry} latitude={booking.originLatitude} longitude={booking.originLongitude} />
                   </div>
                   <ArrowRight className="hidden size-5 text-gray-700 xl:col-start-3 lg:mt-1 lg:block" strokeWidth={1.5} aria-hidden="true" />
                   <div className="xl:col-start-5">
-                    <AddressBlock label="Destination address" address={booking.destinationAddress} country={booking.destinationCountry} />
+                    <AddressBlock label="Destination address" address={booking.destinationAddress} country={booking.destinationCountry} latitude={booking.destinationLatitude} longitude={booking.destinationLongitude} />
                   </div>
                   <div className="hidden bg-gray-200 xl:col-start-7 lg:block lg:self-stretch" aria-hidden="true" />
                   <div className="space-y-1.5 xl:col-start-9">
@@ -176,6 +198,18 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                 </dl>
               </section>
             </div>
+
+            {/* Bookings made before the map existed have no coordinates, so there is nothing to draw. */}
+            {typeof booking.originLatitude === "number" || typeof booking.destinationLatitude === "number" ? (
+              <section className={cn(panelClass, "p-4")}>
+                <CardTitle>Route map</CardTitle>
+                <div className="mt-2.5">
+                  <Suspense fallback={<div className="h-[420px] animate-pulse bg-[#e9e6de]" />}>
+                    <BookingRouteMap {...booking} />
+                  </Suspense>
+                </div>
+              </section>
+            ) : null}
 
             <section className={cn(panelClass, "p-4")}>
               <CardTitle>Selected racehorses</CardTitle>
@@ -251,6 +285,15 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                 {booking.rejectionReason ? <InfoBlock label="Rejection reason" value={booking.rejectionReason} className="sm:col-span-2" /> : null}
                 {booking.cancellationReason ? <InfoBlock label="Cancellation reason" value={booking.cancellationReason} className="sm:col-span-2" /> : null}
               </dl>
+            ) : null}
+
+            {audience === "customer" ? (
+              <section ref={invoicesSection} id="booking-invoices" aria-label="Invoices" className={cn(panelClass, "scroll-mt-4 p-4")}>
+                <CardTitle>Invoices</CardTitle>
+                <div className="mt-2.5">
+                  <CustomerInvoicesTab bookingId={String(booking.bookingId)} highlightInvoiceId={invoiceId} />
+                </div>
+              </section>
             ) : null}
 
             {audience === "customer" && isPending ? (

@@ -1,5 +1,7 @@
-# Logs
+# Environment & Logs
 .env
+.env.*
+!.env.example
 logs
 *.log
 npm-debug.log*
@@ -25,4 +27,7 @@ dist-ssr
 *.sln
 *.sw?
 
-*/*/*/.docs/
+.docs/
+.docs
+**/.docs/
+**/.docs/*

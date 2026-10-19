@@ -6,7 +6,7 @@ import {
   History,
   ShieldCheck,
 } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ErrorState, LoadingState } from "@/shared/components/common";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { AuthorityInspectionTab } from "@/features/clearance/components/AuthorityInspectionTab";
@@ -55,9 +55,19 @@ function QueryError({
 export default function DossierDetailsPage() {
   const { dossierId = "" } = useParams<{ dossierId: string }>();
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState<SectionId>("requirements");
+  const [searchParams] = useSearchParams();
+  // `?tab=audit` lets the old /audit-history link open straight on its tab of this single page.
+  const requestedTab = sections.find(
+    ({ id }) => id === searchParams.get("tab"),
+  )?.id;
+  const [activeSection, setActiveSection] = useState<SectionId>(
+    requestedTab ?? "requirements",
+  );
   const role = useDossierRole();
-  const visibleSections = role === "CUSTOMER" ? sections.filter(({ id }) => id === "requirements" || id === "documents") : sections;
+  const visibleSections =
+    role === "CUSTOMER"
+      ? sections.filter(({ id }) => id === "requirements" || id === "documents")
+      : sections;
   const query = useDossierOverview(dossierId);
   return (
     <div className="booking-page-shell min-w-0 px-5 py-6 font-sans sm:px-6 lg:px-10">
@@ -66,7 +76,17 @@ export default function DossierDetailsPage() {
           <div className="min-w-0">
             <button
               type="button"
-              onClick={() => navigate(role === "TRANSPORT_SPECIALIST" ? ROLE_ROUTES.complianceDossiers : query.data?.bookingId ? `${role === "LOGISTICS_MANAGER" ? "/admin/transport-requests" : "/bookings"}/${encodeURIComponent(String(query.data.bookingId))}` : role === "LOGISTICS_MANAGER" ? "/admin/transport-requests" : "/bookings")}
+              onClick={() =>
+                navigate(
+                  role === "TRANSPORT_SPECIALIST"
+                    ? ROLE_ROUTES.complianceDossiers
+                    : query.data?.bookingId
+                      ? `${role === "LOGISTICS_MANAGER" ? "/admin/transport-requests" : "/bookings"}/${encodeURIComponent(String(query.data.bookingId))}`
+                      : role === "LOGISTICS_MANAGER"
+                        ? "/admin/transport-requests"
+                        : "/bookings",
+                )
+              }
               className="inline-flex items-center gap-[6px] pt-2 text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase hover:underline focus-visible:outline-2 focus-visible:outline-ring"
             >
               <ArrowLeft aria-hidden="true" className="size-3.5" /> Back to
@@ -126,20 +146,24 @@ export default function DossierDetailsPage() {
               id={`dossier-panel-${activeSection}`}
               aria-labelledby={`dossier-tab-${activeSection}`}
             >
-              {activeSection === "requirements" ? (
-                <DossierRequirementsPanel embedded />
-              ) : activeSection === "documents" ? (
+              {activeSection === "requirements" && role !== "CUSTOMER" ? (
+                <DossierRequirementsPanel />
+              ) : activeSection === "requirements" ||
+                activeSection === "documents" ? (
                 <DossierRequirementsPreview
                   dossierId={dossierId}
                   horses={query.data.bookingSummary.horses}
                   dossier={query.data}
-                  plannedDepartureDate={query.data.bookingSummary.requestedDepartureDate ?? undefined}
+                  plannedDepartureDate={
+                    query.data.bookingSummary.requestedDepartureDate ??
+                    undefined
+                  }
                   documentsOnly={activeSection === "documents"}
                 />
               ) : activeSection === "authority" ? (
                 <AuthorityInspectionTab dossier={query.data} />
               ) : (
-                <AuditHistoryPanel embedded />
+                <AuditHistoryPanel />
               )}
             </div>
           </>

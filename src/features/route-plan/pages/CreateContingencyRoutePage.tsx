@@ -1,31 +1,16 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { RoutePlanBuilder } from "../components/RoutePlanBuilder";
-import { getRoutePlans } from "../services";
+import { RoutePlanBuilder, type RoutePlanBuilderMetadata } from "../components/RoutePlanBuilder";
+import { getRoutePlan, getRoutePlans, getTransportPlan } from "../services";
+import { adaptTransportPlan, loadAllLocations, loadAllRoutes, toMapLocation, toMapRoute, type TransportPlanApiValue } from "../api-adapters";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
-
-function toMapLocation(location: {
-  locationId: string;
-  locationName: string;
-  city: string;
-  country: string;
-  latitude: number | null;
-  longitude: number | null;
-}): MapLocation | null {
-  if (location.latitude == null || location.longitude == null) return null;
-  return {
-    id: location.locationId,
-    name: location.locationName,
-    city: location.city,
-    country: location.country,
-    latitude: location.latitude,
-    longitude: location.longitude,
-  };
-}
 
 export default function CreateContingencyRoutePage() {
   const { transportPlanId } = useParams<{ transportPlanId: string }>();
   const [primaryRoutes, setPrimaryRoutes] = useState<MapRoute[]>([]);
+  const [locations, setLocations] = useState<MapLocation[]>([]);
+  const [routes, setRoutes] = useState<MapRoute[]>([]);
+  const [metadata, setMetadata] = useState<RoutePlanBuilderMetadata>();
   const [loading, setLoading] = useState(Boolean(transportPlanId));
   const [error, setError] = useState<string | undefined>();
 
@@ -39,37 +24,56 @@ export default function CreateContingencyRoutePage() {
     }
 
     let active = true;
-    void getRoutePlans(transportPlanId, {
-      routeType: "PRIMARY",
-      pageIndex: 1,
-      pageSize: 20,
-    })
-      .then((result) => {
+    void Promise.all([
+      getTransportPlan(transportPlanId),
+      getRoutePlans(transportPlanId, { routeType: "PRIMARY" }),
+      loadAllLocations(),
+      loadAllRoutes(),
+    ])
+      .then(async ([transportPlan, result, locationItems, routeItems]) => {
         if (!active) return;
-        const primary = result.items.find(
+        const mapLocations = locationItems.flatMap((item) => {
+          const value = toMapLocation(item);
+          return value ? [value] : [];
+        });
+        setLocations(mapLocations);
+        setRoutes(routeItems.flatMap((item) => {
+          const value = toMapRoute(item, mapLocations);
+          return value ? [value] : [];
+        }));
+        setMetadata(adaptTransportPlan(transportPlan as TransportPlanApiValue, mapLocations));
+        const primarySummary = (result?.items ?? []).find(
           (plan) =>
             plan.routeType === "PRIMARY" &&
-            plan.status !== "CANCELLED" &&
-            plan.segments.length > 0,
+            plan.status !== "CANCELLED",
         );
+        let primary = primarySummary;
+        if (primary && (!primary.segments || primary.segments.length === 0)) {
+          try {
+            primary = await getRoutePlan(primary.routePlanId);
+          } catch {
+          }
+        }
+        if (!active) return;
         const routes =
-          primary?.segments.flatMap((segment) => {
-            const from = toMapLocation(segment.fromLocation);
-            const to = toMapLocation(segment.toLocation);
+          (primary?.segments ?? []).flatMap((segment) => {
+            const from = toMapLocation(segment?.fromLocation);
+            const to = toMapLocation(segment?.toLocation);
             if (!from || !to) return [];
             return [
               {
-                id: segment.route.routeId,
-                name: segment.route.routeName,
-                transportMode: segment.route.transportMode,
+                id: segment.route?.routeId ?? segment.routePlanRouteId,
+                name: segment.route?.routeName ?? "Primary Segment",
+                transportMode: segment.route?.transportMode ?? "ROAD",
                 fromLocation: from,
                 toLocation: to,
-                distanceKm: segment.route.distanceKm,
-                durationMinutes: segment.route.estimatedDurationMinutes,
+                distanceKm: segment.route?.distanceKm ?? 0,
+                durationMinutes: segment.route?.estimatedDurationMinutes ?? 0,
+                isOutsourced: segment.isOutsourced,
                 readonly: true,
               },
             ];
-          }) ?? [];
+          });
         setPrimaryRoutes(routes);
         if (!routes.length)
           setError(
@@ -98,6 +102,13 @@ export default function CreateContingencyRoutePage() {
       </main>
     );
 
+  if (error && !primaryRoutes.length)
+    return (
+      <main className="grid min-h-screen place-items-center bg-slate-50 p-6 text-center text-sm text-destructive">
+        {error}
+      </main>
+    );
+
   return (
     <RoutePlanBuilder
       routeType="BACKUP"
@@ -105,8 +116,9 @@ export default function CreateContingencyRoutePage() {
       primaryRoutes={primaryRoutes}
       primaryAvailable={primaryRoutes.length > 0}
       primaryError={error}
-      locations={primaryRoutes.flatMap((route) => [route.fromLocation, route.toLocation]).filter((value): value is NonNullable<typeof value> => Boolean(value))}
-      routes={primaryRoutes}
+      metadata={metadata}
+      locations={locations.length ? locations : primaryRoutes.flatMap((route) => [route.fromLocation, route.toLocation]).filter((value): value is NonNullable<typeof value> => Boolean(value))}
+      routes={routes.length ? routes : primaryRoutes}
     />
   );
 }

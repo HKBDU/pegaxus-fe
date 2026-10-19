@@ -1,11 +1,24 @@
-.dossier-upload-file-row { animation: dossier-upload-file-enter 160ms ease-out both; }
-.dossier-revision-notice { animation: dossier-upload-file-enter 160ms ease-out both; }
+.dossier-upload-file-row {
+  animation: dossier-upload-file-enter 160ms ease-out both;
+}
+.dossier-revision-notice {
+  animation: dossier-upload-file-enter 160ms ease-out both;
+}
 
 @keyframes dossier-upload-file-enter {
-  from { opacity: 0; translate: 0 4px; }
-  to { opacity: 1; translate: 0 0; }
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dossier-upload-file-row, .dossier-revision-notice { animation: none; }
+  .dossier-upload-file-row,
+  .dossier-revision-notice {
+    animation: none;
+  }
 }

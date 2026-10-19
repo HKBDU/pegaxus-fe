@@ -11,7 +11,9 @@ export function evaluatePasswordPolicy(value: string) {
     {
       key: "length",
       label: "8–128 characters",
-      passed: value.length >= passwordPolicy.minLength && value.length <= passwordPolicy.maxLength,
+      passed:
+        value.length >= passwordPolicy.minLength &&
+        value.length <= passwordPolicy.maxLength,
     },
     {
       key: "uppercase",
@@ -30,7 +32,13 @@ export function evaluatePasswordPolicy(value: string) {
     },
   ] as const;
   const passedCount = rules.filter((rule) => rule.passed).length;
-  const strength = !value ? "none" : passedCount === rules.length ? "strong" : passedCount >= 2 ? "fair" : "weak";
+  const strength = !value
+    ? "none"
+    : passedCount === rules.length
+      ? "strong"
+      : passedCount >= 2
+        ? "fair"
+        : "weak";
 
   return { rules, passedCount, strength };
 }

@@ -44,7 +44,19 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         enableHiding: false,
         cell: ({ row }) => (
           <span className="inline-block whitespace-nowrap rounded-[2px] border border-slate-300 bg-white px-1.5 py-0.5 font-mono text-[0.7rem] font-semibold text-slate-900">
-            {row.original.dossierCode ?? `#${row.original.complianceDossierId}`}
+            {row.original.dossierCode || "—"}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "dossierType",
+        header: "TYPE",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span
+            className={`inline-block whitespace-nowrap rounded-[2px] border px-1.5 py-0.5 font-heading text-[0.6rem] font-semibold uppercase leading-none tracking-[0.06em] ${row.original.dossierType === "EXTRA" ? "border-violet-300 bg-violet-50 text-violet-700" : "border-slate-300 bg-white text-slate-700"}`}
+          >
+            {row.original.dossierType === "EXTRA" ? "Extra" : "Main"}
           </span>
         ),
       },

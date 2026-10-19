@@ -1,10 +1,10 @@
-import { Bell, ChevronRight, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 
 import { useAuthStore } from "@/features/auth/store"
 import { useUser } from "@/features/auth/hooks/useAuth"
+import { NotificationBell } from "@/features/notification"
 import { ProfileDropdown } from "@/shared/components/ProfileDropdown"
-import { Button } from "@/shared/components/ui/button"
 import { SidebarTrigger, useSidebar } from "@/shared/components/ui/sidebar"
 import { getAdminHeaderContext } from "@/app/route-config"
 
@@ -43,9 +43,7 @@ export function AdminHeader() {
         ) : null}
       </nav>
       <div className="ml-auto flex shrink-0 items-center gap-3">
-        <Button type="button" variant="ghost" size="icon" aria-label="Notifications" className="text-[#d7d9dc] hover:bg-white/10 hover:text-white">
-          <Bell className="size-[18px]" />
-        </Button>
+        {accessToken ? <NotificationBell /> : null}
         <span className="h-7 w-px bg-white/10" aria-hidden="true" />
         <ProfileDropdown isLoggedIn={Boolean(accessToken)} user={user} />
       </div>

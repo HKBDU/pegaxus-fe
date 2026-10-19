@@ -53,7 +53,8 @@ interface AddDossierRequirementDialogProps {
   onOpenChange: (open: boolean) => void
   dossierId: EntityId
   bookingCode: string
-  plannedDepartureDate: string
+  /** Lead time is derived from it; unknown (e.g. the booking schedule is not readable) falls back to 0. */
+  plannedDepartureDate?: string
   horses: HorseOption[]
   requirements: ComplianceRequirementSummary[]
   requirementsLoading: boolean
@@ -128,11 +129,11 @@ export function AddDossierRequirementDialog({ open, onOpenChange, dossierId, boo
       const guarded = await attempt.run(() =>
         addRequirement.mutateAsync({
           complianceRequirementId: formValues.complianceRequirementId,
-          horseId: horseId === null ? null : Number(horseId),
+          horseId,
           isMandatory: formValues.isMandatory === "YES",
           dueDate: formValues.dueDate || undefined,
           instruction: formValues.instruction || undefined,
-          leadTimeDays: formValues.dueDate
+          leadTimeDays: formValues.dueDate && plannedDepartureDate
             ? Math.max(0, Math.round((Date.parse(`${plannedDepartureDate}T00:00:00Z`) - Date.parse(`${formValues.dueDate}T00:00:00Z`)) / 86_400_000))
             : 0,
           reason: "Added from dossier detail",

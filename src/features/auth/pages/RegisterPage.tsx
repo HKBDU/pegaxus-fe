@@ -13,7 +13,10 @@ import {
 import { useRegisterMutation } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
-import { PasswordMatchHint, PasswordRequirements } from "../components/PasswordRequirements";
+import {
+  PasswordMatchHint,
+  PasswordRequirements,
+} from "../components/PasswordRequirements";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 
 const fields = new Set<keyof RegisterFormValues>([
@@ -34,9 +37,13 @@ export default function RegisterPage() {
     },
   });
   const attempt = useFormRequestAttemptGuard(form);
-  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
+  const isPending =
+    mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
   const password = useWatch({ control: form.control, name: "password" });
-  const confirmation = useWatch({ control: form.control, name: "confirmPassword" });
+  const confirmation = useWatch({
+    control: form.control,
+    name: "confirmPassword",
+  });
 
   async function submit(values: RegisterFormValues) {
     if (attempt.isBlocked) return;
@@ -129,7 +136,10 @@ export default function RegisterPage() {
             visibilityLabel="confirm password"
             placeholder="•••••••••"
           />
-          <PasswordMatchHint password={password ?? ""} confirmation={confirmation ?? ""} />
+          <PasswordMatchHint
+            password={password ?? ""}
+            confirmation={confirmation ?? ""}
+          />
 
           {form.formState.errors.root?.server && (
             <p role="alert" className="text-sm text-red-700">
@@ -148,7 +158,11 @@ export default function RegisterPage() {
                 className="size-5 animate-spin"
               />
             )}
-            {isPending ? "Creating account" : attempt.isBlocked ? "Please wait..." : "Sign up"}
+            {isPending
+              ? "Creating account"
+              : attempt.isBlocked
+                ? "Please wait..."
+                : "Sign up"}
           </Button>
         </form>
       </Form>

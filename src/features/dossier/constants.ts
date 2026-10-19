@@ -1,57 +1,97 @@
-import type { DossierHorseOption, DossierOverview, DossierRequirement, DossierRequirementStatus, DossierRequirementsParams } from "./types";
+import type {
+  DossierHorseOption,
+  DossierOverview,
+  DossierRequirement,
+  DossierRequirementStatus,
+  DossierRequirementsParams,
+} from "./types";
 
 // The current presigned signature endpoint accepts 5 MiB, unlike the older multipart contract.
 export const UPLOAD_MAX_FILE_BYTES = 5 * 1024 * 1024;
-export const UPLOAD_ACCEPTED_MIME_TYPES = ["application/pdf", "image/jpeg", "image/png"] as const;
-export const DOSSIER_UPLOAD_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
-export const DOCUMENT_REQUEST_TYPES = ["MISSING_DOCUMENT", "REVISION", "REUPLOAD", "ADDITIONAL_INFORMATION"] as const;
-export const documentRequestTypeLabels: Record<(typeof DOCUMENT_REQUEST_TYPES)[number], string> = {
+export const UPLOAD_ACCEPTED_MIME_TYPES = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+] as const;
+export const DOSSIER_UPLOAD_ACCEPT =
+  ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+export const DOCUMENT_REQUEST_TYPES = [
+  "MISSING_DOCUMENT",
+  "REVISION",
+  "REUPLOAD",
+  "ADDITIONAL_INFORMATION",
+] as const;
+export const documentRequestTypeLabels: Record<
+  (typeof DOCUMENT_REQUEST_TYPES)[number],
+  string
+> = {
   MISSING_DOCUMENT: "Missing Document",
   REVISION: "Revise Document Information",
   REUPLOAD: "Re-upload Document",
   ADDITIONAL_INFORMATION: "Additional Information",
 };
 export const DOSSIER_REQUIREMENT_STATUSES = [
-  "PENDING", "REQUESTED", "PROVIDED", "SATISFIED", "REJECTED", "WAIVED",
+  "PENDING",
+  "REQUESTED",
+  "PROVIDED",
+  "SATISFIED",
+  "REJECTED",
+  "WAIVED",
 ] as const;
 
-export function isMissingDossierRequirement(requirement: Pick<DossierRequirement, "status" | "document">) {
-  return requirement.document === null &&
-    (requirement.status === "PENDING" || requirement.status === "REQUESTED");
+export function isMissingDossierRequirement(
+  requirement: Pick<DossierRequirement, "status" | "document">,
+) {
+  return (
+    requirement.document === null &&
+    (requirement.status === "PENDING" || requirement.status === "REQUESTED")
+  );
 }
 
 export function canSendMissingDocumentReminder(
   role: string | undefined,
   dossier: Pick<DossierOverview, "status" | "writeLocked">,
 ) {
-  return role === "TRANSPORT_SPECIALIST" && dossier.status === "IN_PREPARATION" && !dossier.writeLocked;
+  return (
+    role === "TRANSPORT_SPECIALIST" &&
+    dossier.status === "IN_PREPARATION" &&
+    !dossier.writeLocked
+  );
 }
 
 export function canUploadInitialDocument(
   role: string | undefined,
-  dossier: DossierOverview,
-  requirement: DossierRequirement,
+  dossier: Pick<DossierOverview, "status" | "writeLocked">,
+  requirement: Pick<DossierRequirement, "status" | "document" | "openRequest">,
 ) {
-  return role === "CUSTOMER" &&
+  return (
+    role === "CUSTOMER" &&
     ["IN_PREPARATION", "REJECTED"].includes(dossier.status) &&
     !dossier.writeLocked &&
     requirement.document === null &&
-    (requirement.status === "PENDING" || requirement.status === "REQUESTED");
+    (requirement.status === "PENDING" ||
+      (requirement.status === "REQUESTED" &&
+        requirement.openRequest?.status === "OPEN"))
+  );
 }
 
 export function getCustomerDocumentActions(
   dossier: Pick<DossierOverview, "status" | "writeLocked">,
-  requirement: Pick<DossierRequirement, "status" | "document">,
+  requirement: Pick<DossierRequirement, "status" | "document" | "openRequest">,
 ): string[] {
   if (requirement.status === "WAIVED") return ["View Requirement"];
   const document = requirement.document;
   if (!document) {
-    return ["IN_PREPARATION", "REJECTED"].includes(dossier.status) && !dossier.writeLocked &&
-      (requirement.status === "PENDING" || requirement.status === "REQUESTED")
-      ? ["Upload Document"] : ["View Requirement"];
+    return canUploadInitialDocument("CUSTOMER", dossier, requirement)
+      ? ["Upload Document"]
+      : ["View Requirement"];
   }
   const actions = ["View Document"];
-  if (["IN_PREPARATION", "REJECTED"].includes(dossier.status) && !dossier.writeLocked && requirement.status !== "SATISFIED") {
+  if (
+    ["IN_PREPARATION", "REJECTED"].includes(dossier.status) &&
+    !dossier.writeLocked &&
+    requirement.status !== "SATISFIED"
+  ) {
     if (document.status === "PROVIDED") actions.push("Edit Document");
     if (document.status === "REJECTED") actions.push("Update Document");
   }
@@ -61,7 +101,11 @@ export function getCustomerDocumentActions(
 }
 
 export function canViewDossierAudit(roles: readonly string[] | undefined) {
-  return roles?.includes("TRANSPORT_SPECIALIST") || roles?.includes("LOGISTICS_MANAGER") || false;
+  return (
+    roles?.includes("TRANSPORT_SPECIALIST") ||
+    roles?.includes("LOGISTICS_MANAGER") ||
+    false
+  );
 }
 
 export function getDossierRequirementActionLabels(
@@ -69,28 +113,49 @@ export function getDossierRequirementActionLabels(
   status: DossierRequirementStatus,
   hasDocument: boolean,
 ): string[] {
-  if (status === "WAIVED" && ["CUSTOMER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"].includes(role ?? "")) return ["View Requirement"];
+  if (
+    status === "WAIVED" &&
+    ["CUSTOMER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"].includes(
+      role ?? "",
+    )
+  )
+    return ["View Requirement"];
   if (role === "CUSTOMER") {
-    if (!hasDocument) return status === "PENDING" || status === "REQUESTED" ? ["Upload Document"] : ["View Requirement"];
-    if (status === "PROVIDED") return ["View Document", "Edit Document", "View Version History"];
-    if (status === "REJECTED") return ["View Document", "View Request", "Update Document", "View Version History"];
+    if (!hasDocument)
+      return status === "PENDING" || status === "REQUESTED"
+        ? ["Upload Document"]
+        : ["View Requirement"];
+    if (status === "PROVIDED")
+      return ["View Document", "Edit Document", "View Version History"];
+    if (status === "REJECTED")
+      return [
+        "View Document",
+        "View Request",
+        "Update Document",
+        "View Version History",
+      ];
     return ["View Document", "View Version History"];
   }
   if (role === "TRANSPORT_SPECIALIST") {
     if (!hasDocument) {
-      if (status === "PENDING") return ["View Requirement", "Request Missing Document"];
-      if (status === "REQUESTED") return ["View Requirement", "Send Reminder Again"];
+      if (status === "PENDING")
+        return ["View Requirement", "Request Missing Document"];
+      if (status === "REQUESTED")
+        return ["View Requirement", "Send Reminder Again"];
       return ["View Requirement"];
     }
     if (status === "PROVIDED") return ["View Document", "Review Document"];
-    if (status === "REJECTED") return ["View Document", "View Review Result", "View Request"];
+    if (status === "REJECTED")
+      return ["View Document", "View Review Result", "View Request"];
     return ["View Document", "View Review Result"];
   }
   if (role === "LOGISTICS_MANAGER") {
     return [
       "View Requirement",
       ...(hasDocument ? ["View Document"] : []),
-      ...(hasDocument && (status === "SATISFIED" || status === "REJECTED") ? ["View Review Result"] : []),
+      ...(hasDocument && (status === "SATISFIED" || status === "REJECTED")
+        ? ["View Review Result"]
+        : []),
     ];
   }
   return [];
@@ -102,10 +167,15 @@ export const initialDossierRequirementsParams: DossierRequirementsParams = {
   sortBy: "createdAt:asc",
 };
 
-export function getDossierHorseFilterOptions(horses: readonly DossierHorseOption[]) {
+export function getDossierHorseFilterOptions(
+  horses: readonly DossierHorseOption[],
+) {
   return [
     { value: "ALL", label: "All Horses" },
-    ...horses.map(({ horseId, horseName }) => ({ value: String(horseId), label: horseName })),
+    ...horses.map(({ horseId, horseName }) => ({
+      value: String(horseId),
+      label: horseName,
+    })),
   ];
 }
 
@@ -116,16 +186,28 @@ export function updateDossierRequirementFilters(
   return { ...current, ...filters, pageIndex: 1 };
 }
 
-export function resetDossierRequirementFilters(current: DossierRequirementsParams): DossierRequirementsParams {
+export function resetDossierRequirementFilters(
+  current: DossierRequirementsParams,
+): DossierRequirementsParams {
   return { ...initialDossierRequirementsParams, pageSize: current.pageSize };
 }
 
-export function reconcileDossierHorseFilter(current: DossierRequirementsParams, horses: readonly DossierHorseOption[]) {
-  if (current.horseId === undefined || horses.some(({ horseId }) => horseId === current.horseId)) return current;
+export function reconcileDossierHorseFilter(
+  current: DossierRequirementsParams,
+  horses: readonly DossierHorseOption[],
+) {
+  if (
+    current.horseId === undefined ||
+    horses.some(({ horseId }) => horseId === current.horseId)
+  )
+    return current;
   return updateDossierRequirementFilters(current, { horseId: undefined });
 }
 
-export const dossierStatusLabels: Record<DossierOverview["status"] | DossierRequirementStatus | "EXPIRED", string> = {
+export const dossierStatusLabels: Record<
+  DossierOverview["status"] | DossierRequirementStatus | "EXPIRED",
+  string
+> = {
   DRAFT: "Draft",
   IN_PREPARATION: "In preparation",
   READY_FOR_SUBMISSION: "Ready for submission",
@@ -141,7 +223,10 @@ export const dossierStatusLabels: Record<DossierOverview["status"] | DossierRequ
   EXPIRED: "Expired",
 };
 
-export const dossierStatusStyles: Record<keyof typeof dossierStatusLabels, string> = {
+export const dossierStatusStyles: Record<
+  keyof typeof dossierStatusLabels,
+  string
+> = {
   DRAFT: "border-sky-300 bg-sky-50 text-sky-700",
   IN_PREPARATION: "border-sky-300 bg-sky-50 text-sky-700",
   READY_FOR_SUBMISSION: "border-amber-300 bg-amber-50 text-amber-700",
@@ -159,7 +244,10 @@ export const dossierStatusStyles: Record<keyof typeof dossierStatusLabels, strin
 
 export const dossierRequirementStatusOptions = [
   { value: "ALL", label: "All statuses" },
-  ...DOSSIER_REQUIREMENT_STATUSES.map((status) => ({ value: status, label: dossierStatusLabels[status] })),
+  ...DOSSIER_REQUIREMENT_STATUSES.map((status) => ({
+    value: status,
+    label: dossierStatusLabels[status],
+  })),
 ];
 
 export const dossierRequirementSortOptions = [

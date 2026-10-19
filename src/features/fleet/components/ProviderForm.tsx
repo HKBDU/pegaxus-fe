@@ -1,0 +1,153 @@
+import { Info } from "lucide-react"
+import type { Control, Path, UseFormReturn } from "react-hook-form"
+
+import { cn } from "@/lib/utils"
+import { FormCard, formControlClass, formLabelClass } from "@/features/fleet/components/DetailParts"
+import { PROVIDER_COUNTRY_OPTIONS, PROVIDER_MODE_LABEL, PROVIDER_NOTE_MAX } from "@/features/fleet/constants/fleet.constants"
+import type { ProviderFormValues } from "@/features/fleet/schemas"
+import { TRANSPORT_MODES } from "@/features/fleet/types"
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form"
+import { Input } from "@/shared/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
+import { Textarea } from "@/shared/components/ui/textarea"
+
+const hintClass = "m-0 text-[11px] leading-4 text-slate-500"
+
+type TextName = "providerName" | "taxCode" | "contactName" | "phone" | "email" | "address"
+
+function TextField({ control, name, label, placeholder, hint, required, className }: { control: Control<ProviderFormValues>; name: TextName; label: string; placeholder: string; hint?: string; required?: boolean; className?: string }) {
+  return (
+    <FormField
+      control={control}
+      name={name as Path<ProviderFormValues>}
+      render={({ field }) => (
+        <FormItem className={cn("gap-1", className)}>
+          <FormLabel className={formLabelClass}>
+            {label}
+            {required ? <span className="text-red-600"> *</span> : null}
+          </FormLabel>
+          <FormControl>
+            <Input {...field} value={String(field.value ?? "")} placeholder={placeholder} spellCheck={false} className={formControlClass} />
+          </FormControl>
+          {hint ? <p className={hintClass}>{hint}</p> : null}
+          <FormMessage className="text-xs" />
+        </FormItem>
+      )}
+    />
+  )
+}
+
+/** The fields of the provider form, laid out as booking-details style cards. */
+export function ProviderFormSections({ form, isEdit }: { form: UseFormReturn<ProviderFormValues>; isEdit: boolean }) {
+  return (
+    <div className="grid gap-2.5">
+      <FormCard title="Identification">
+        <FormField
+          control={form.control}
+          name="providerCode"
+          render={({ field }) => (
+            <FormItem className="gap-1">
+              <FormLabel className={formLabelClass}>Provider code <span className="text-red-600">*</span></FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="e.g., PRV-EUR-013" spellCheck={false} disabled={isEdit} className={formControlClass} />
+              </FormControl>
+              <p className={hintClass}>{isEdit ? "The provider code cannot be changed." : "A unique code for this provider."}</p>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+        <div role="note" className="flex items-start gap-2 self-start rounded-[2px] border border-sky-200 bg-sky-50 px-3 py-2 text-sky-900">
+          <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="m-0 text-xs font-semibold">Duplicate check</p>
+            <p className="m-0 text-[11px] leading-4">Provider code and tax code are checked for duplicates before saving.</p>
+          </div>
+        </div>
+      </FormCard>
+
+      <FormCard title="Basic information">
+        <TextField control={form.control} name="providerName" label="Provider name" placeholder="e.g., EquiTrans Europe GmbH" hint="Legal name of the transport company." required />
+        <TextField control={form.control} name="taxCode" label="Tax code / VAT number" placeholder="e.g., DE123456789" hint="Company tax code or VAT number." required />
+        <FormField
+          control={form.control}
+          name="supportedModes"
+          render={({ field }) => (
+            <FormItem className="gap-1 sm:col-span-2">
+              <FormLabel className={formLabelClass}>Service type <span className="text-red-600">*</span></FormLabel>
+              <div role="group" aria-label="Service types" className="flex flex-wrap gap-2">
+                {TRANSPORT_MODES.map((mode) => {
+                  const selected = field.value.includes(mode)
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => field.onChange(selected ? field.value.filter((item) => item !== mode) : [...field.value, mode])}
+                      className={cn(
+                        "h-8 rounded-[2px] border px-3 text-xs font-medium transition-colors",
+                        selected ? "border-[#ef8f00] bg-amber-50 text-slate-900" : "border-slate-300 bg-white text-slate-600 hover:border-slate-400",
+                      )}
+                    >
+                      {PROVIDER_MODE_LABEL[mode]}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className={hintClass}>Transport modes this provider supports.</p>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+      </FormCard>
+
+      <FormCard title="Contact information">
+        <TextField control={form.control} name="email" label="Email" placeholder="e.g., ops@equitrans-europe.de" hint="Primary operational email address." />
+        <TextField control={form.control} name="phone" label="Hotline" placeholder="e.g., +49 69 1234 5678" hint="24/7 operational contact number." />
+        <TextField control={form.control} name="contactName" label="Business representative" placeholder="e.g., Anna Weber" hint="Name of the main business representative." />
+        <FormField
+          control={form.control}
+          name="country"
+          render={({ field }) => (
+            <FormItem className="gap-1">
+              <FormLabel className={formLabelClass}>Country</FormLabel>
+              <Select value={field.value || "__none__"} onValueChange={(value) => field.onChange(value === "__none__" ? "" : value)}>
+                <FormControl>
+                  <SelectTrigger className={cn(formControlClass, "justify-between")}>
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent className="max-h-64 rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
+                  <SelectItem value="__none__" className="h-7 rounded-[2px] text-xs">Not specified</SelectItem>
+                  {/* a stored country that is not in the preset list (older data) stays selectable */}
+                  {(field.value && !(PROVIDER_COUNTRY_OPTIONS as readonly string[]).includes(field.value) ? [field.value, ...PROVIDER_COUNTRY_OPTIONS] : PROVIDER_COUNTRY_OPTIONS).map((country) => (
+                    <SelectItem key={country} value={country} className="h-7 rounded-[2px] text-xs">{country}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className={hintClass}>Country where the provider is based.</p>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+        <TextField control={form.control} name="address" label="Address" placeholder="e.g., Frankfurt Airport, Cargo City Süd" className="sm:col-span-2" />
+      </FormCard>
+
+      <FormCard title="Additional information (optional)" columns={1}>
+        <FormField
+          control={form.control}
+          name="note"
+          render={({ field }) => (
+            <FormItem className="gap-1">
+              <FormLabel className={formLabelClass}>Notes for coordinators</FormLabel>
+              <FormControl>
+                <Textarea {...field} rows={4} maxLength={PROVIDER_NOTE_MAX} placeholder="Notes about this provider..." className={cn(formControlClass, "h-auto min-h-24 resize-none py-2 leading-5")} />
+              </FormControl>
+              <p className={cn(hintClass, "text-right")}>{field.value.length}/{PROVIDER_NOTE_MAX}</p>
+              <FormMessage className="text-xs" />
+            </FormItem>
+          )}
+        />
+      </FormCard>
+    </div>
+  )
+}

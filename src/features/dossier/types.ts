@@ -42,93 +42,139 @@ export type DashboardSort =
   | "status:desc"
 
 /** Dossier overview contract used by both the dashboard and document workflow. */
-export type DossierOverview = Omit<z.infer<typeof dossierOverviewSchema>, "openedAt"> & {
-  openedAt: string | null
-}
-export type DossierRequirement = z.infer<typeof dossierRequirementSchema>
-export type DossierRequirementStatus = z.infer<typeof dossierRequirementStatusSchema>
-export type DossierRequirementsParams = z.input<typeof dossierRequirementsParamsSchema>
-export type DossierRequirementsPage = z.infer<typeof dossierRequirementsPageSchema>
-export type BookingSummary = z.infer<typeof bookingSummarySchema>
-export type DossierHorseOption = z.infer<typeof dossierHorseOptionSchema>
-export type RequirementSummary = z.infer<typeof requirementSummarySchema>
-export type UploadDocumentResult = z.infer<typeof uploadDocumentResultSchema>
-export type ComplianceDocumentDetail = z.infer<typeof complianceDocumentDetailSchema>
-export type DocumentVersion = z.infer<typeof documentVersionSchema>
-export type DocumentVersionFile = z.infer<typeof documentVersionFileSchema>
-export type DocumentReviewSummary = z.infer<typeof documentReviewSummarySchema>
-export type DocumentRequestSummary = z.infer<typeof documentRequestSummarySchema>
-export type SubmitDocumentVersionResult = z.infer<typeof submitDocumentVersionEnvelopeSchema>["value"]
-export type UpdateDocumentMetadataResult = z.infer<typeof updateDocumentMetadataEnvelopeSchema>["value"]
-export type ApproveDocumentReview = z.infer<typeof approveDocumentReviewSchema>
-export type ApproveDocumentResponse = z.infer<typeof approveDocumentEnvelopeSchema>
-export type RejectDocumentReview = z.infer<typeof rejectDocumentReviewSchema>
-export type DocumentRequestFormValues = z.input<typeof documentRequestFormSchema>
-export type DocumentReviewPayload = z.infer<typeof documentReviewSchema>
-export type DocumentReviewResponse = z.infer<typeof documentReviewEnvelopeSchema>
-export type ReadyForSubmissionResponse = z.infer<typeof readyForSubmissionEnvelopeSchema>
-export type MissingDocumentReminderInput = z.infer<typeof missingDocumentReminderSchema>
-export type MissingDocumentReminderFormValues = z.input<typeof missingDocumentReminderSchema>
-export type MissingDocumentReminderResponse = z.infer<typeof missingDocumentReminderEnvelopeSchema>
-export type MissingDocumentReminderResult = MissingDocumentReminderResponse["value"]
-export type SendMissingDocumentReminderInput = { dossierId: string; reminder: MissingDocumentReminderInput }
+export type DossierOverview = Omit<
+  z.infer<typeof dossierOverviewSchema>,
+  "openedAt"
+> & {
+  openedAt: string | null;
+};
+export type DossierRequirement = z.infer<typeof dossierRequirementSchema>;
+export type DossierRequirementStatus = z.infer<
+  typeof dossierRequirementStatusSchema
+>;
+export type DossierRequirementsParams = z.input<
+  typeof dossierRequirementsParamsSchema
+>;
+export type DossierRequirementsPage = z.infer<
+  typeof dossierRequirementsPageSchema
+>;
+export type BookingSummary = z.infer<typeof bookingSummarySchema>;
+export type DossierHorseOption = z.infer<typeof dossierHorseOptionSchema>;
+export type RequirementSummary = z.infer<typeof requirementSummarySchema>;
+export type UploadDocumentResult = z.infer<typeof uploadDocumentResultSchema>;
+export type ComplianceDocumentDetail = z.infer<
+  typeof complianceDocumentDetailSchema
+>;
+export type DocumentVersion = z.infer<typeof documentVersionSchema>;
+export type DocumentVersionFile = z.infer<typeof documentVersionFileSchema>;
+export type DocumentReviewSummary = z.infer<typeof documentReviewSummarySchema>;
+export type DocumentRequestSummary = z.infer<
+  typeof documentRequestSummarySchema
+>;
+export type SubmitDocumentVersionResult = z.infer<
+  typeof submitDocumentVersionEnvelopeSchema
+>["value"];
+export type UpdateDocumentMetadataResult = z.infer<
+  typeof updateDocumentMetadataEnvelopeSchema
+>["value"];
+export type ApproveDocumentReview = z.infer<typeof approveDocumentReviewSchema>;
+export type ApproveDocumentResponse = z.infer<
+  typeof approveDocumentEnvelopeSchema
+>;
+export type RejectDocumentReview = z.infer<typeof rejectDocumentReviewSchema>;
+export type DocumentRequestFormValues = z.input<
+  typeof documentRequestFormSchema
+>;
+export type DocumentReviewPayload = z.infer<typeof documentReviewSchema>;
+export type DocumentReviewResponse = z.infer<
+  typeof documentReviewEnvelopeSchema
+>;
+export type ReadyForSubmissionResponse = z.infer<
+  typeof readyForSubmissionEnvelopeSchema
+>;
+export type MissingDocumentReminderInput = z.infer<
+  typeof missingDocumentReminderSchema
+>;
+export type MissingDocumentReminderFormValues = z.input<
+  typeof missingDocumentReminderSchema
+>;
+export type MissingDocumentReminderResponse = z.infer<
+  typeof missingDocumentReminderEnvelopeSchema
+>;
+export type MissingDocumentReminderResult =
+  MissingDocumentReminderResponse["value"];
+export type SendMissingDocumentReminderInput = {
+  dossierId: string;
+  reminder: MissingDocumentReminderInput;
+};
 export type ApproveDocumentInput = {
-  documentId?: string
-  versionId: string | number
-  dossierId: string
-  requirementId: string | number
-  review: ApproveDocumentReview
-}
-export type DocumentReviewInput = Omit<ApproveDocumentInput, "review"> & { review: DocumentReviewPayload }
+  documentId?: string;
+  versionId: string | number;
+  dossierId: string;
+  requirementId: string | number;
+  review: ApproveDocumentReview;
+};
+export type DocumentReviewInput = Omit<ApproveDocumentInput, "review"> & {
+  review: DocumentReviewPayload;
+};
 export type DocumentReviewError = {
-  code: string
-  message: string
-  backendMessage?: string
-  refresh: boolean
-}
+  code: string;
+  message: string;
+  backendMessage?: string;
+  refresh: boolean;
+};
 export type UploadDocumentError = {
-  code: string
-  message: string
-  field?: "expiryDate"
-  refresh?: "overview" | "requirements"
-}
+  code: string;
+  message: string;
+  field?: "expiryDate";
+  refresh?: "overview" | "requirements";
+};
 export type UploadDocumentMetadata = {
-  documentNumber?: string | null
-  issuingAuthority?: string | null
-  issuedDate?: string | null
-  expiryDate?: string | null
-  uploadNote?: string
-}
+  documentNumber?: string | null;
+  issuingAuthority?: string | null;
+  issuedDate?: string | null;
+  expiryDate?: string | null;
+  uploadNote?: string;
+};
 export type DossierUploadedAssetRef = {
-  publicId: string
-  fileName: string
-  mimeType: string
-  fileSizeBytes: number
-}
+  publicId: string;
+  fileName: string;
+  mimeType: string;
+  fileSizeBytes: number;
+};
 export type UploadDocumentInput = {
-  dossierId: string
-  requirementId: string | number
-  files: DossierUploadedAssetRef[]
-  metadata: UploadDocumentMetadata
-}
+  dossierId: string;
+  requirementId: string | number;
+  files: DossierUploadedAssetRef[];
+  metadata: UploadDocumentMetadata;
+};
 export type SubmitDocumentVersionInput = {
-  documentId?: string
-  dossierId: string
-  requirementId: string | number
-  files: DossierUploadedAssetRef[]
-  metadata: UploadDocumentMetadata
-}
+  documentId?: string;
+  dossierId: string;
+  requirementId: string | number;
+  files: DossierUploadedAssetRef[];
+  metadata: UploadDocumentMetadata;
+};
 export type UpdateDocumentMetadataInput = {
-  documentId?: string
-  dossierId: string
-  requirementId: string | number
-  changes: Partial<Pick<UploadDocumentMetadata, "documentNumber" | "issuingAuthority" | "issuedDate" | "expiryDate">>
-}
+  documentId?: string;
+  dossierId: string;
+  requirementId: string | number;
+  changes: Partial<
+    Pick<
+      UploadDocumentMetadata,
+      "documentNumber" | "issuingAuthority" | "issuedDate" | "expiryDate"
+    >
+  >;
+};
 
 export type RevokeDocumentReviewInput = {
-  dossierId: string; requirementId: string | number; documentId?: string; versionId: string | number; reviewId: string;
-  review: { status: 3 | 5; reason: string }
-}
+  dossierId: string;
+  requirementId: string | number;
+  documentId?: string;
+  versionId: string | number;
+  reviewId: string;
+  review: { status: 3 | 5; reason: string };
+};
 
 export interface DashboardKpi {
   totalActive: number
@@ -140,6 +186,8 @@ export interface DashboardKpi {
 export interface DashboardItem {
   complianceDossierId: EntityId
   dossierCode?: string
+  /** K1 lists MAIN and EXTRA dossiers as separate rows. */
+  dossierType?: "MAIN" | "EXTRA" | null
   bookingCode: string
   customerName: string
   originCountry: string
@@ -194,5 +242,6 @@ export interface AuditResponse {
   meta: PaginationMeta
 }
 
-export type DossierSourceKind = "api" | "mock"
-export type DossierLoadErrorKind = "forbidden" | "not-found" | "contract" | "unauthorized" | "load"
+export type DossierSourceKind = "api" | "mock";
+export type DossierLoadErrorKind =
+  "forbidden" | "not-found" | "contract" | "unauthorized" | "load";

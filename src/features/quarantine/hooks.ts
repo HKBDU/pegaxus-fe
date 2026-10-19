@@ -6,31 +6,32 @@ import type { FinalizeQuarantineProofResponse, SubmitQuarantineProofResponse } f
 
 export const quarantineKeys = {
   all: ['quarantine'] as const,
-  dossier: (id: number) => [...quarantineKeys.all, 'dossier', id] as const,
-  quarantineProof: (id: number) => [...quarantineKeys.all, 'proof', id] as const,
+  dossier: (id: string) => [...quarantineKeys.all, 'dossier', id] as const,
+  quarantineProof: (id: string) => [...quarantineKeys.all, 'proof', id] as const,
 }
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
 
-export function useDossierContext(dossierId: number | null) {
+export function useDossierContext(dossierId: string | null) {
   return useQuery({
-    queryKey: quarantineKeys.dossier(dossierId ?? 0),
+    queryKey: quarantineKeys.dossier(dossierId ?? ''),
     queryFn: () => getDossierContext(dossierId!),
     enabled: dossierId != null,
     staleTime: 60_000,
+    retry: false,
   })
 }
 
-export function useQuarantineProofDetail(proofId: number | null) {
+export function useQuarantineProofDetail(proofId: string | null) {
   return useQuery({
-    queryKey: quarantineKeys.quarantineProof(proofId ?? 0),
+    queryKey: quarantineKeys.quarantineProof(proofId ?? ''),
     queryFn: () => getQuarantineProof(proofId!),
     enabled: proofId != null,
     staleTime: 30_000,
   })
 }
 
-export function useFinalizeQuarantineProof(proofId: number) {
+export function useFinalizeQuarantineProof(proofId: string) {
   const qc = useQueryClient()
   return useMutation<
     FinalizeQuarantineProofResponse,
@@ -44,7 +45,7 @@ export function useFinalizeQuarantineProof(proofId: number) {
   })
 }
 
-export function useSubmitQuarantineProof(dossierId: number) {
+export function useSubmitQuarantineProof(dossierId: string) {
   const qc = useQueryClient()
   return useMutation<
     SubmitQuarantineProofResponse,

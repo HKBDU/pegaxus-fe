@@ -36,7 +36,7 @@ type Errors = Partial<
 >;
 const DialogDescription = (_props: { children?: unknown }) => null;
 interface Props {
-  submissionId: number;
+  submissionId: string;
   onUpdated?: () => void;
 }
 const decisions: Array<{

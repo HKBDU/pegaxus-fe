@@ -14,6 +14,7 @@ const templateErrorMessages: Record<string, string> = {
   TEMPLATE_NEEDS_ONE_ITEM: "A DossierTemplate must contain at least 1 item.",
   TEMPLATE_IN_USE: "This DossierTemplate is linked to existing ComplianceDossiers, so it cannot be edited or deleted. Change its status to INACTIVE instead.",
   DOSSIER_TEMPLATE_IN_USE: "This DossierTemplate is linked to existing ComplianceDossiers, so it cannot be deleted. Change its status to INACTIVE instead.",
+  INVALID_TEMPLATE_STATUS_TRANSITION: "A template can only go from DRAFT to ACTIVE, or from ACTIVE to INACTIVE.",
   TEMPLATE_NOT_ACTIVATABLE: "A template needs at least 1 item and valid effective dates before it can be activated.",
   VALIDATION_ERROR: "Some fields are invalid. Check the form and try again.",
   NOT_FOUND: "This DossierTemplate no longer exists.",
@@ -37,7 +38,7 @@ export function formatTemplateDate(value: string | null | undefined) {
 // Messages for the errorCode values of the dossier endpoints D2/D3 (API contract, flow 2, section 5-6).
 const dossierErrorMessages: Record<string, string> = {
   BOOKING_NOT_APPROVED: "ComplianceDossier can only be initialized for APPROVED transport bookings.",
-  DOSSIER_ALREADY_EXISTS: "A ComplianceDossier already exists for this booking. Please manage individual DossierRequirements instead.",
+  DOSSIER_ALREADY_EXISTS: "A MAIN ComplianceDossier already exists for this transport. Open it and manage its individual DossierRequirements instead.",
   TEMPLATE_OR_MANUAL_REQUIRED: "Select a template with at least one item, or add at least one custom requirement.",
   TEMPLATE_ITEM_INVALID: "A selected template item no longer belongs to this template, or the template is not ACTIVE. Go back and reselect the template.",
   REQUIREMENT_INACTIVE: "A selected ComplianceRequirement is no longer ACTIVE.",
