@@ -5,6 +5,9 @@ import {
   LoadingState,
   NotFoundPage,
   UnauthorizedPage,
+  ForbiddenPage,
+  NetworkErrorPage,
+  ServerErrorPage,
 } from "@/shared/components/common";
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
@@ -721,6 +724,18 @@ export const router = createBrowserRouter([
   {
     path: "/unauthorized",
     element: <UnauthorizedPage />,
+  },
+  {
+    path: "/forbidden",
+    element: <ForbiddenPage />,
+  },
+  {
+    path: "/server-error",
+    element: <ServerErrorPage />,
+  },
+  {
+    path: "/network-error",
+    element: <NetworkErrorPage />,
   },
   {
     path: "*",
