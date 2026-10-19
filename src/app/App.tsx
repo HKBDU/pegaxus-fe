@@ -2,7 +2,7 @@ import { QueryProvider, RouterProvider } from '@/app/providers'
 import { router } from '@/app/router'
 import '@/app/notification-routes'
 import { RealtimeProvider } from '@/shared/realtime'
-import { Toaster } from 'sonner'
+import { Toaster } from 'sonner' 
 
 const openPath = (path: string) => void router.navigate(path)
 
