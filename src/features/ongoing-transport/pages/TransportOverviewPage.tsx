@@ -142,7 +142,10 @@ export default function TransportOverviewPage({
             <TransportStaff segment={overview.currentSegment} />
           </div>
           <TransportDossiers dossiers={overview.complianceDossiers} />
-          <TransportIncidents incidents={overview.activeIncidents} />
+          {audience !== "customer" &&
+          !canAccess(principal, { anyRole: ["CUSTOMER"] }) ? (
+            <TransportIncidents incidents={overview.activeIncidents} />
+          ) : null}
         </>
       )}
     </>

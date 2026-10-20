@@ -98,7 +98,7 @@ export async function loadActivationResources(
             : "Unable to load available vehicles.";
       }
       // R17 permits the same transport's PRIMARY vehicles, including IN_USE vehicles excluded by VH1 availability.
-      const inherited =
+      const primaryVehicles =
         primary?.routeType === "PRIMARY" &&
         primary.transportPlanId === plan.transportPlanId &&
         primary.bookingId === plan.bookingId
@@ -106,6 +106,12 @@ export async function loadActivationResources(
               .flatMap((item) => item.vehicles)
               .filter((vehicle) => vehicle.transportMode === mode)
           : [];
+      const inherited = [
+        ...primaryVehicles,
+        ...plan.segments
+          .flatMap((item) => item.vehicles)
+          .filter((vehicle) => vehicle.transportMode === mode),
+      ];
       const vehicles = new Map<string, VehicleOption>(
         inherited.map((vehicle) => [vehicle.vehicleId, vehicle]),
       );

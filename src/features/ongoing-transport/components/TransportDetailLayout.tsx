@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useParams } from "react-router-dom";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useTransportOverview } from "../hooks/useTransportOverview";
+import { useTransportProgressRefresh } from "../hooks/useTransportProgressRefresh";
 import { transportViewFromPath } from "../navigation";
 import type { TransportAudience } from "../types";
 import { TransportPageHeader } from "./TransportPageHeader";
@@ -22,6 +23,7 @@ export function TransportDetailLayout({
     bookingId: string;
   }>();
   const { pathname } = useLocation();
+  useTransportProgressRefresh(transportId);
   const view = transportViewFromPath(pathname);
   const queryClient = useQueryClient();
   const fetching = useIsFetching() > 0;

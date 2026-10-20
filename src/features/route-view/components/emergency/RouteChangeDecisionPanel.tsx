@@ -43,6 +43,7 @@ import type { RoutePlanDetail } from "../../types";
 import { isRelatedPrimary } from "../../route-comparison";
 import { RouteChangeComparison } from "./RouteChangeComparison";
 import { EmergencyFeedback } from "./EmergencyFeedback";
+import { REJECTED_BY_MANAGER } from "@/shared/constants/route-plan-status";
 
 const rejectionSchema = z.object({
   note: z
@@ -82,6 +83,9 @@ export function RouteChangeDecisionPanel({
       : undefined;
   const primaryPlan = !comparisonError ? primary.data : undefined;
   const isReturn = plan.routeType === "RETURN";
+  const rejectLabel = isReturn
+    ? "Không Duyệt RETURN & Chỉ Đạo Chờ Đợi"
+    : "Reject Change";
   const busy = attempt.isRunning || mutation.isPending;
   const versionChanged = baseline !== plan.updatedAt && !mutation.data;
   const locked =
@@ -108,8 +112,14 @@ export function RouteChangeDecisionPanel({
       setRejectOpen(false);
       const outcome = result.value;
       toast.success(
-        `Route change ${outcome.decision.toLowerCase()}d. Route status: ${outcome.status}.${outcome.complianceDossier ? ` Dossier: ${outcome.complianceDossier.status}.` : ""}`,
+        `Route change ${outcome.decision.toLowerCase()}d. Route status: ${outcome.status === REJECTED_BY_MANAGER ? "LM đã từ chối" : outcome.status}.${outcome.complianceDossier ? ` Dossier: ${outcome.complianceDossier.status}.` : ""}`,
       );
+      if (isReturn && outcome.decision === "REJECT")
+        toast.info(
+          outcome.status === "CANCELLED"
+            ? "Backend trả CANCELLED (legacy). Chưa xác nhận đã gửi LM Note cho Driver và Escort."
+            : "Quyết định đã được lưu. Việc gửi LM Note cho tổ lái do Backend xử lý; FE không có xác nhận giao thông báo.",
+        );
       onBack();
     } catch {
       setApproveOpen(false);
@@ -170,7 +180,7 @@ export function RouteChangeDecisionPanel({
         )}
         <p className="text-xs leading-5 text-slate-500">
           {isReturn
-            ? "Approval reopens the dossier for the Transport Specialist. The return remains a draft until documents and legal review are complete."
+            ? "Approval creates an EXTRA dossier in DRAFT for the Transport Specialist. MAIN remains APPROVED. RETURN is not activated; legal confirmation and EXTRA approval are still required."
             : "Approval activates this backup for its replacement segments. The primary route remains active for the rest of the journey."}
         </p>
       </Section>
@@ -181,7 +191,7 @@ export function RouteChangeDecisionPanel({
       >
         <p className="text-sm leading-6 text-slate-600">
           {isReturn
-            ? "Approve return for legal preparation, or reject and cancel this return proposal."
+            ? "Approve return for legal preparation, or reject with an operational instruction to hold and wait. The backend determines the recorded status."
             : "Approve activation, or reject without cancelling the prepared backup."}
         </p>
         {!canApprove && (
@@ -194,10 +204,10 @@ export function RouteChangeDecisionPanel({
             variant="outline"
             disabled={locked}
             onClick={() => setRejectOpen(true)}
-            className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none h-9 border-red-200 text-destructive hover:bg-red-50 hover:text-destructive"
+            className="min-h-9 h-auto whitespace-normal rounded-[2px] py-2 transition-colors duration-200 motion-reduce:transition-none border-red-200 text-destructive hover:bg-red-50 hover:text-destructive"
           >
             <X aria-hidden="true" className="size-4" />
-            Reject Change
+            {rejectLabel}
           </Button>
           <Button
             disabled={locked || !canApprove}
@@ -215,7 +225,9 @@ export function RouteChangeDecisionPanel({
           className="rounded-[2px] border border-emerald-200 bg-emerald-50 p-4 text-sm"
         >
           Decision: {mutation.data.decision} · Route status:{" "}
-          {mutation.data.status}
+          {mutation.data.status === REJECTED_BY_MANAGER
+            ? "LM đã từ chối"
+            : mutation.data.status}
           {mutation.data.complianceDossier
             ? ` · Dossier: ${mutation.data.complianceDossier.status}`
             : ""}
@@ -264,7 +276,7 @@ export function RouteChangeDecisionPanel({
             </AlertDialogTitle>
             <AlertDialogDescription>
               {isReturn
-                ? "Compliance dossier APPROVED → DRAFT. RETURN remains DRAFT until TS completes legal review. Customer upload is not reopened."
+                ? "Create a new EXTRA dossier in DRAFT; MAIN stays APPROVED. RETURN remains DRAFT until RP7 legal review, then awaits approved EXTRA documents and a separate EC3 activation."
                 : "BACKUP becomes ACTIVE. Only the indicated PRIMARY segments are replaced; the backend sends the required notifications."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -307,11 +319,11 @@ export function RouteChangeDecisionPanel({
         >
           <DialogHeader>
             <DialogTitle className="m-0! font-heading text-xl! leading-6!">
-              Reject Route Change
+              {isReturn ? rejectLabel : "Reject Route Change"}
             </DialogTitle>
             <DialogDescription>
               {isReturn
-                ? "This cancels the RETURN proposal."
+                ? "LM Note là chỉ đạo trực tiếp cho Driver và Escort theo D6. Backend legacy có thể vẫn trả CANCELLED và chưa gửi chỉ đạo; không xác nhận thông báo đã được giao."
                 : "BACKUP remains CONFIRMED."}{" "}
               Explain why this proposal cannot be accepted.
             </DialogDescription>
@@ -330,7 +342,9 @@ export function RouteChangeDecisionPanel({
                 render={({ field }) => (
                   <FormItem className="min-w-0 content-start gap-1.5">
                     <FormLabel className="leading-4">
-                      Rejection Reason *
+                      {isReturn
+                        ? "LM Note (gửi thẳng cho Driver và Escort) *"
+                        : "Rejection Reason *"}
                     </FormLabel>
                     <FormControl>
                       <Textarea
@@ -356,12 +370,12 @@ export function RouteChangeDecisionPanel({
                   Cancel
                 </Button>
                 <Button
-                  className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
+                  className="h-auto min-h-9 whitespace-normal rounded-[2px] py-2 transition-colors duration-200 motion-reduce:transition-none"
                   type="submit"
                   variant="destructive"
                   disabled={locked}
                 >
-                  {busy ? "Rejecting…" : "Reject Change"}
+                  {busy ? "Rejecting…" : rejectLabel}
                 </Button>
               </DialogFooter>
             </form>

@@ -260,6 +260,9 @@ export const handoverBoundarySchema = z.object({
     })
     .nullable(),
   canCreate: z.boolean(),
+  handoverRequired: z.boolean().optional(),
+  arrivalAt: timestampSchema.nullable().optional(),
+  createModes: z.array(z.string()).optional(),
 });
 
 export const transportSegmentsSchema = z.object({

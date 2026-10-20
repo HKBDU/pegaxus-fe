@@ -28,6 +28,7 @@ import type {
   RoutePlanSummary,
 } from "../types";
 import type { RouteWorkspaceContext } from "../workspace-actions";
+import { refreshTransportProgress } from "@/features/ongoing-transport/hooks/useTransportProgressRefresh";
 
 export type EmergencyContext = {
   workspace: RouteWorkspaceContext;
@@ -36,6 +37,8 @@ export type EmergencyContext = {
   primaryRoute?: RoutePlanSummary;
   dossierId?: string;
   horseCount?: number;
+  transportId: string;
+  extraDossierStatus?: string;
 };
 
 export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
@@ -76,7 +79,9 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
         ),
         hasOpenReturn: routes.data.items.some(
           (route) =>
-            route.routeType === "RETURN" && route.status !== "CANCELLED",
+            route.routeType === "RETURN" &&
+            route.status !== "CANCELLED" &&
+            route.status !== "REJECTED_BY_MANAGER",
         ),
       },
       transportCode: transport.data!.transport.transportCode,
@@ -89,6 +94,10 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
       ),
       dossierId: booking.data!.complianceDossier?.complianceDossierId,
       horseCount: transport.data!.booking.totalHorses,
+      transportId: transport.data!.transport.transportId,
+      extraDossierStatus: booking.data!.complianceDossiers.find(
+        (dossier) => dossier.dossierType === "EXTRA",
+      )?.status,
     };
   }
   const mismatch =
@@ -106,6 +115,7 @@ export async function refreshEmergencyQueries(
   action: EmergencyAction | "management",
   dossierId?: string,
   changedVehicleIds: readonly string[] = [],
+  transportId?: string,
 ) {
   const keys: readonly (readonly unknown[])[] = [
     routeViewKeys.detail(plan.routePlanId),
@@ -124,6 +134,9 @@ export async function refreshEmergencyQueries(
     ) ?? []),
   ]);
   await Promise.all([
+    ...(updatesWorkspace && transportId
+      ? [refreshTransportProgress(client, transportId)]
+      : []),
     ...keys.map((queryKey) => client.invalidateQueries({ queryKey })),
     ...(updatesWorkspace
       ? [
@@ -221,6 +234,7 @@ export function useEmergencyMutation<A extends EmergencyAction>(
                 segment.vehicles.map((vehicle) => vehicle.vehicleId),
               )
           : [],
+        context.transportId,
       ),
     onError: async (error) => {
       const { code } = getApiErrorInfo(error);
@@ -230,10 +244,18 @@ export function useEmergencyMutation<A extends EmergencyAction>(
           "INVALID_ROUTE_PLAN_STATUS",
           "TRANSPORT_NOT_IN_TRANSIT",
           "DOSSIER_NOT_APPROVED",
+          "RETURN_DOSSIER_NOT_APPROVED",
         ].includes(code ?? "")
       ) {
         // Refresh, but never resubmit. The form retains its input/version until explicit review.
-        await refreshEmergencyQueries(client, plan, action, context.dossierId);
+        await refreshEmergencyQueries(
+          client,
+          plan,
+          action,
+          context.dossierId,
+          [],
+          context.transportId,
+        );
       }
     },
   });

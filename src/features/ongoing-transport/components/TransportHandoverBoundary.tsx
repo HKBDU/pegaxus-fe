@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ClipboardCheck, MapPin } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
+import { canAccess } from "@/features/auth/access-control";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -13,7 +14,12 @@ import {
 } from "@/shared/components/ui/select";
 import { formatTransportLabel } from "../format";
 import { transportHandoversPath } from "../navigation";
-import type { HandoverBoundary, TransportAudience } from "../types";
+import { isSameDriverBoundary } from "../timeline";
+import type {
+  HandoverBoundary,
+  TrackingSegment,
+  TransportAudience,
+} from "../types";
 
 const supportedTypes = [
   "PICKUP",
@@ -34,19 +40,26 @@ export function TransportHandoverBoundary({
   boundary,
   audience,
   position,
+  segments,
 }: {
   boundary: HandoverBoundary;
   audience: TransportAudience;
   position: "pickup" | "transfer" | "delivery" | "unmatched";
+  segments: TrackingSegment[];
 }) {
-  const roles = useAuthStore((state) => state.principal?.roles);
+  const principal = useAuthStore((state) => state.principal);
   const { transportId, bookingId } = useParams<{
     transportId: string;
     bookingId: string;
   }>();
   const [selection, setSelection] = useState("");
-  const availableTypes = boundary.allowedHandoverTypes.filter((value) =>
-    supportedTypes.includes(value),
+  const sameDriver =
+    position === "transfer" && isSameDriverBoundary(boundary, segments);
+  const exempt =
+    position === "transfer" &&
+    (boundary.handoverRequired === false || sameDriver);
+  const availableTypes = (exempt ? [] : boundary.allowedHandoverTypes).filter(
+    (value) => supportedTypes.includes(value),
   );
   const selected = availableTypes.includes(selection)
     ? selection
@@ -55,7 +68,11 @@ export function TransportHandoverBoundary({
       : "";
   const canCreate =
     audience !== "customer" &&
-    roles?.some((role) => operatorRoles.includes(role)) &&
+    canAccess(principal, { anyRole: operatorRoles }) &&
+    boundary.handoverRequired === true &&
+    !exempt &&
+    position !== "unmatched" &&
+    boundary.createModes?.includes("START_NOW") &&
     boundary.canCreate &&
     !boundary.existingHandover &&
     availableTypes.length > 0;
@@ -111,6 +128,37 @@ export function TransportHandoverBoundary({
               pair.
             </p>
           ) : null}
+          {exempt ? (
+            <p className="m-0 pt-1 text-xs text-slate-500">
+              Không cần biên bản giữa hai chặng cùng Driver. Giờ đến chỉ cập
+              nhật từ popup GPS.
+            </p>
+          ) : boundary.handoverRequired === undefined ||
+            boundary.createModes === undefined ? (
+            <p className="m-0 pt-1 text-xs text-slate-500">
+              Backend chưa cung cấp đầy đủ khả năng bàn giao; chỉ xem thông tin.
+            </p>
+          ) : boundary.handoverRequired &&
+            record &&
+            record.status !== "COMPLETED" ? (
+            <p className="m-0 pt-1 text-xs text-amber-800">
+              Chờ hoàn tất biên bản; mốc thời gian chính thức do máy chủ xác
+              nhận.
+            </p>
+          ) : null}
+          {boundary.arrivalAt ? (
+            <p className="m-0 text-xs text-slate-500">
+              Arrival: {new Date(boundary.arrivalAt).toLocaleString()}
+            </p>
+          ) : null}
+          {boundary.createModes &&
+          boundary.createModes.length > 0 &&
+          !exempt ? (
+            <p className="m-0 text-xs text-slate-500">
+              Creation modes:{" "}
+              {boundary.createModes.map(formatTransportLabel).join(" / ")}
+            </p>
+          ) : null}
           {record ? (
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <ClipboardCheck
@@ -127,7 +175,7 @@ export function TransportHandoverBoundary({
                 {formatTransportLabel(record.status)}
               </Badge>
             </div>
-          ) : boundary.allowedHandoverTypes.length > 0 ? (
+          ) : !exempt && boundary.allowedHandoverTypes.length > 0 ? (
             <p className="m-0 pt-1 text-xs text-slate-500">
               Allowed:{" "}
               {boundary.allowedHandoverTypes

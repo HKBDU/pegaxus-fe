@@ -113,6 +113,10 @@ export function getEmergencyError(error: unknown) {
       "Emergency actions require a transport that is in transit.",
     DOSSIER_NOT_APPROVED:
       "The compliance dossier must be approved before this return can proceed.",
+    RETURN_DOSSIER_NOT_APPROVED:
+      "The EXTRA compliance dossier must be approved before activation.",
+    VEHICLE_SCHEDULE_CONFLICT:
+      "A vehicle overlaps an assignment in another transport plan.",
     SCHEDULE_CONFLICT: "A segment resource has a scheduling conflict.",
     PROVIDER_INACTIVE: "The selected transport provider is inactive.",
     OUTSOURCED_SEGMENT: "Vehicles cannot be assigned to an outsourced segment.",
@@ -136,8 +140,8 @@ export function getEmergencyError(error: unknown) {
         ? "Your session has expired. Please sign in again."
         : error instanceof z.ZodError
           ? "Check the form fields or contact support if the API response is unexpected."
-          : messages[info.code ?? ""] ||
-            info.message ||
+          : info.message ||
+            messages[info.code ?? ""] ||
             (error instanceof Error
               ? error.message
               : "Unable to complete the emergency action."),

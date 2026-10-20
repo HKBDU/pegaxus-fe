@@ -102,6 +102,7 @@ function buildBoundaries(
       "FLEET_ROUTE_COORDINATOR",
       "DRIVER",
       "ESCORT",
+      "TRANSPORT_SPECIALIST",
     ].includes(role),
   );
   return Array.from(
@@ -113,19 +114,36 @@ function buildBoundaries(
       const last = index === segments.length;
       const location = first ? segments[0].fromLocation : from!.toLocation;
       const outsourced = Boolean(from?.isOutsourced || to?.isOutsourced);
-      const types = outsourced
-        ? []
-        : first
-          ? ["PICKUP"]
-          : last
-            ? ["DELIVERY"]
-            : ["TRANSFER", "BORDER_HANDOVER"];
+      const exempt =
+        !first &&
+        !last &&
+        !outsourced &&
+        Boolean(from?.driver?.employeeId) &&
+        from?.driver?.employeeId === to?.driver?.employeeId;
+      const types =
+        outsourced || exempt
+          ? []
+          : first
+            ? ["PICKUP"]
+            : last
+              ? ["DELIVERY"]
+              : ["TRANSFER", "BORDER_HANDOVER"];
       const executed =
         !outsourced &&
         (first
           ? overview.transport.status !== "READY"
           : from?.status === "COMPLETED");
-      const existing = executed && (audience !== "customer" || first || last);
+      const existing =
+        !exempt && executed && (audience !== "customer" || first || last);
+      const canCreate =
+        !exempt &&
+        !outsourced &&
+        !executed &&
+        audience !== "customer" &&
+        operator &&
+        (first
+          ? overview.transport.status === "READY"
+          : overview.transport.status === "IN_TRANSIT");
       return {
         boundaryNo: index + 1,
         fromRoutePlanRouteId: from?.routePlanRouteId ?? null,
@@ -144,14 +162,17 @@ function buildBoundaries(
               status: "COMPLETED",
             }
           : null,
-        canCreate:
-          !outsourced &&
-          !executed &&
-          audience !== "customer" &&
-          operator &&
-          (first
-            ? overview.transport.status === "READY"
-            : overview.transport.status === "IN_TRANSIT"),
+        handoverRequired: !exempt,
+        arrivalAt: from?.actualArrivalAt ?? null,
+        canCreate,
+        createModes: !canCreate
+          ? []
+          : roles.includes("LOGISTICS_MANAGER") ||
+              roles.includes("FLEET_ROUTE_COORDINATOR")
+            ? ["START_NOW", "SCHEDULE"]
+            : roles.includes("TRANSPORT_SPECIALIST")
+              ? ["SCHEDULE"]
+              : ["START_NOW"],
       };
     },
   );

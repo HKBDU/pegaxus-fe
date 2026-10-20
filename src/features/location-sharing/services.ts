@@ -6,9 +6,13 @@ import {
   driverLocationRequestSchema,
   locationEnvelopeSchema,
   locationPermissionDeniedSchema,
+  assignedLocationContextSchema,
+  segmentArrivalRequestSchema,
+  segmentArrivalResultSchema,
 } from "./schemas";
 import type { DriverLocationRequest } from "./types";
 import { isFreshObservation } from "./position";
+import { FEATURES } from "./features";
 
 class ExpiredLocationSampleError extends Error {
   constructor() {
@@ -16,12 +20,16 @@ class ExpiredLocationSampleError extends Error {
   }
 }
 
-class LocationSharingApiError extends Error {
+export class LocationSharingApiError extends Error {
   readonly status: number;
   readonly errorCode: string | null | undefined;
 
-  constructor(status: number, errorCode: string | null | undefined) {
-    super("Location sharing request was rejected.");
+  constructor(
+    status: number,
+    errorCode: string | null | undefined,
+    message = "Location sharing request was rejected.",
+  ) {
+    super(message);
     this.status = status;
     this.errorCode = errorCode;
   }
@@ -30,12 +38,65 @@ class LocationSharingApiError extends Error {
 function readValue(response: unknown) {
   const envelope = locationEnvelopeSchema.parse(response);
   if (!envelope.isSuccess || envelope.code < 200 || envelope.code >= 300) {
-    throw new LocationSharingApiError(envelope.code, envelope.errorCode);
+    throw new LocationSharingApiError(
+      envelope.code,
+      envelope.errorCode,
+      envelope.message,
+    );
   }
   return envelope.value;
 }
 
 export const locationSharingService = {
+  async assigned(signal: AbortSignal) {
+    const response = await apiClient.get<unknown, unknown>(
+      "/transports/assigned-to-me",
+      {
+        signal,
+        params: { status: "READY,IN_TRANSIT,COMPLETED" },
+      },
+    );
+    signal.throwIfAborted();
+    return assignedLocationContextSchema.parse(readValue(response));
+  },
+  async confirmArrival(
+    transportId: string,
+    segmentId: string,
+    sample: DriverLocationRequest,
+    signal: AbortSignal,
+  ) {
+    if (!FEATURES.segmentArrival)
+      throw new Error("HO7 is not enabled on this deployment.");
+    signal.throwIfAborted();
+    const body = segmentArrivalRequestSchema.parse(sample);
+    const guard: AxiosRequestTransformer = (data: unknown) => {
+      signal.throwIfAborted();
+      if (!isFreshObservation(Date.parse(sample.recordedAt), Date.now()))
+        throw new ExpiredLocationSampleError();
+      return data;
+    };
+    const transforms = apiClient.defaults.transformRequest;
+    const response = await apiClient.post<unknown, unknown>(
+      `/transports/${encodeURIComponent(transportId)}/segments/${encodeURIComponent(segmentId)}/arrival`,
+      body,
+      {
+        signal,
+        transformRequest: [
+          guard,
+          ...(Array.isArray(transforms)
+            ? transforms
+            : transforms
+              ? [transforms]
+              : []),
+        ],
+      },
+    );
+    signal.throwIfAborted();
+    const result = segmentArrivalResultSchema.parse(readValue(response));
+    if (result.from.routePlanRouteId !== segmentId)
+      throw new Error("Arrival response does not match the requested segment.");
+    return result;
+  },
   async send(
     transportId: string,
     request: DriverLocationRequest,
@@ -82,6 +143,24 @@ export const locationSharingService = {
     return locationPermissionDeniedSchema.parse(readValue(response));
   },
 };
+
+export function getArrivalError(error: unknown) {
+  const payload = isAxiosError(error)
+    ? locationEnvelopeSchema.safeParse(error.response?.data)
+    : null;
+  const code =
+    error instanceof LocationSharingApiError
+      ? error.errorCode
+      : payload?.success
+        ? payload.data.errorCode
+        : undefined;
+  const message = payload?.success
+    ? payload.data.message
+    : error instanceof Error
+      ? error.message
+      : "Arrival could not be confirmed.";
+  return { code, message, network: isAxiosError(error) && !error.response };
+}
 
 export function getLocationSharingError(error: unknown) {
   if (error instanceof ExpiredLocationSampleError)

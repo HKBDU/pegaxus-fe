@@ -3,6 +3,8 @@ import type {
   driverLocationRequestSchema,
   driverLocationAcceptedSchema,
   locationPermissionDeniedSchema,
+  arrivalBoundarySchema,
+  assignedLocationContextSchema,
 } from "./schemas";
 
 export type DriverLocationRequest = z.infer<typeof driverLocationRequestSchema>;
@@ -12,6 +14,10 @@ export type DriverLocationAccepted = z.infer<
 export type LocationPermissionDenied = z.infer<
   typeof locationPermissionDeniedSchema
 >;
+export type ArrivalBoundaryEvent = z.infer<typeof arrivalBoundarySchema>;
+export type AssignedLocationContext = z.infer<
+  typeof assignedLocationContextSchema
+>["items"][number];
 
 export type SharingStatus =
   | "stopped"
@@ -42,6 +48,19 @@ export type LocationSharingState = {
   restartBlocked: boolean;
   message: string | null;
   notification: "none" | "sending" | "notified" | "not_notified" | "failed";
+  acceptance: "unknown" | "legacy" | "accepted" | "rejected";
+  lastAcceptedAt: number | null;
+  acceptedSegmentId: string | null;
+  acceptanceScope: {
+    transportId: string;
+    accountId: string;
+    sessionVersion: number;
+  } | null;
+  arrival: ArrivalBoundaryEvent | null;
+  arrivalWarning: {
+    distanceMeters: number;
+    secondsRemaining: number | null;
+  } | null;
 };
 
 // A UI projection of the already validated OT3 response, supplied only at the route boundary.
@@ -51,6 +70,7 @@ export type DriverTransportContext = {
   status: "READY" | "IN_TRANSIT" | "COMPLETED";
   serverTime: string;
   currentLeg: { displayOrder: number; from: string; to: string } | null;
+  currentSegmentId?: string;
 };
 export type DriverTransportReadState =
   | { kind: "loading" }

@@ -95,7 +95,9 @@ export function ReturnActivationPanel({
     : undefined;
   const versionChanged = baseline !== plan.updatedAt && !mutation.data;
   // RP7 is authoritative through CONFIRMED. Display dossier readiness only when actually read.
-  const dossierBlocked = context.workspace.dossierStatus !== "APPROVED";
+  const dossierBlocked =
+    context.workspace.dossierStatus !== "APPROVED" ||
+    context.extraDossierStatus !== "APPROVED";
   const blocked =
     busy ||
     attempt.isBlocked ||
@@ -168,9 +170,10 @@ export function ReturnActivationPanel({
             {[
               { label: "Legal confirmation", value: plan.status },
               {
-                label: "Compliance dossier",
+                label: "MAIN dossier",
                 value: context.workspace.dossierStatus,
               },
+              { label: "EXTRA dossier", value: context.extraDossierStatus },
               { label: "Transport", value: context.workspace.transportStatus },
             ].map((item) => (
               <div
@@ -190,7 +193,8 @@ export function ReturnActivationPanel({
           </dl>
           {dossierBlocked && (
             <p className="text-xs text-destructive">
-              Complete the approved compliance workflow before activation.
+              MAIN and EXTRA must both be APPROVED before activation. Missing
+              EXTRA information is not treated as approval.
             </p>
           )}
         </Section>

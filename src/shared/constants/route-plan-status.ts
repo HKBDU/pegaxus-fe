@@ -1,3 +1,4 @@
+export const REJECTED_BY_MANAGER = 'REJECTED_BY_MANAGER' as const
 export type RoutePlanStatus = 'DRAFT' | 'CONFIRMED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
 
 export const ROUTE_PLAN_STATUSES = ['DRAFT', 'CONFIRMED', 'ACTIVE', 'COMPLETED', 'CANCELLED'] as const satisfies readonly RoutePlanStatus[]

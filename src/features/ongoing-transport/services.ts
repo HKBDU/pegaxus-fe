@@ -1,6 +1,8 @@
 import { isAxiosError } from "axios";
 import { z } from "zod";
 import apiClient from "@/lib/axios";
+import { useAuthStore } from "@/features/auth/store";
+import { canAccess } from "@/features/auth/access-control";
 import {
   ongoingTransportEnvelopeSchema,
   ongoingTransportPageSchema,
@@ -15,6 +17,7 @@ import type {
   OverviewScenario,
   TransportAudience,
   SegmentsScenario,
+  TransportOverview,
 } from "./types";
 
 export class OngoingTransportApiError extends Error {
@@ -87,7 +90,18 @@ export const ongoingTransportService = {
         envelope.errorCode,
         envelope.message,
       );
-    return transportOverviewSchema.parse(envelope.value);
+    const hideIncidents =
+      audience === "customer" ||
+      canAccess(useAuthStore.getState().principal, { anyRole: ["CUSTOMER"] });
+    return (
+      hideIncidents
+        ? transportOverviewSchema.extend({
+            activeIncidents: z
+              .unknown()
+              .transform((): TransportOverview["activeIncidents"] => []),
+          })
+        : transportOverviewSchema
+    ).parse(envelope.value);
   },
   async list(
     params: OngoingTransportParams,
