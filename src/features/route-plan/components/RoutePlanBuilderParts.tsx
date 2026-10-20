@@ -9,9 +9,11 @@ import {
   Trash2,
   Truck,
 } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -189,6 +191,7 @@ export function SegmentCard({
   availableVehicles?: Vehicle[];
   routePlanId?: string;
 }) {
+  const [pendingVehicleId, setPendingVehicleId] = useState<string | null>(null);
   const principal = useAuthStore((state) => state.principal);
   const canManageOutsource = canAccess(principal, {
     anyRole: ["LOGISTICS_MANAGER"],
@@ -434,7 +437,17 @@ export function SegmentCard({
                 <div className="min-w-0 flex-1">
                   <Select
                     value={segment.vehicleIds?.[0] ?? "NONE"}
-                    onValueChange={(val) => onVehicleChange?.(val === "NONE" ? [] : [val])}
+                    onValueChange={(val) => {
+                      if (val === "NONE") { onVehicleChange?.([]); return; }
+                      const selected = availableVehicles.find((vehicle) => vehicle.vehicleId === val);
+                      const originCountry = segment.route.fromLocation?.country?.trim().toUpperCase();
+                      const vehicleCountry = selected?.country?.trim().toUpperCase();
+                      if (originCountry && vehicleCountry && originCountry !== vehicleCountry) {
+                        setPendingVehicleId(val);
+                        return;
+                      }
+                      onVehicleChange?.([val]);
+                    }}
                   >
                     <SelectTrigger className="h-7 w-full min-w-0 rounded-[2px] border border-slate-200 bg-white px-2 text-xs font-normal text-slate-900 *:data-[slot=select-value]:truncate" aria-label="Assign vehicle">
                       <SelectValue placeholder="-- No vehicle assigned --" />
@@ -449,6 +462,20 @@ export function SegmentCard({
                     </SelectContent>
                   </Select>
                 </div>
+                <AlertDialog open={Boolean(pendingVehicleId)} onOpenChange={(open) => !open && setPendingVehicleId(null)}>
+                  <AlertDialogContent className="rounded-[2px]">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Vehicle country differs from departure</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This vehicle is based in a different country from the segment departure location. Do you still want to assign it?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="rounded-[2px]">Choose another</AlertDialogCancel>
+                      <AlertDialogAction className="rounded-[2px]" onClick={() => { if (pendingVehicleId) onVehicleChange?.([pendingVehicleId]); setPendingVehicleId(null); }}>Continue selecting</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             )}
           </div>

@@ -48,6 +48,7 @@ export const vehicleFormSchema = z
     insuranceExpiryDate: futureDate("Insurance expiration date"),
     equipmentTags: z.array(z.string()),
     equipmentNotes: z.string().trim().max(VALIDATION_LIMITS.noteMaxLength, `Special equipment must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`),
+    country: z.string().trim().toUpperCase().refine((value) => !value || isIso2CountryCodeValid(value), "Country must be a 2-letter ISO code."),
   })
   .superRefine((values, ctx) => {
     if (values.transportMode === "ROAD" && !values.licensePlate.trim()) {

@@ -66,6 +66,12 @@ export function VehicleTable({ vehicles, filters, meta, isLoading, onSearchChang
         cell: ({ row }) => <span className="whitespace-nowrap text-slate-900">{row.original.licensePlate ?? "—"}</span>,
       },
       {
+        accessorKey: "country",
+        header: "COUNTRY",
+        enableSorting: false,
+        cell: ({ row }) => <span className="whitespace-nowrap text-slate-900">{row.original.country ?? "Unknown"}</span>,
+      },
+      {
         id: "type",
         header: "TYPE & SPECIFICATION",
         enableSorting: false,
