@@ -8,13 +8,11 @@ export function FinalCtaSection() {
       aria-labelledby="final-title"
     >
       <div className="landing-final-copy" data-reveal>
-        <p className="landing-eyebrow">
-          PEGAXUS / A considered approach to movement
-        </p>
+        <p className="landing-eyebrow">08 / The next chapter</p>
         <h2 id="final-title">
-          Move with
+          Their next chapter
           <br />
-          <em>confidence.</em>
+          <em>starts here.</em>
         </h2>
         <p className="landing-lead">
           Cross-border coordination for every journey.

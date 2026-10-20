@@ -3,13 +3,9 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { HORSE_CHAPTERS, type LandingChapter } from "../lib/landing-navigation";
-import { getPlaybackRate } from "../lib/horse-animation";
 import {
   createLandingStory,
   getHorseShots,
-  resolveMotionCue,
-  type HorseShot,
-  type MotionCue,
   type StoryProfile,
 } from "../lib/horse-story";
 
@@ -44,15 +40,14 @@ export function useLandingStory(
               ? "tablet"
               : "mobile";
           const reduced = Boolean(conditions.reduced);
-          const shots = getHorseShots(profile, reduced);
           const state = scene.current;
           const previous = {
             heroCompleted: state.heroCompleted,
             heroPhase: state.heroPhase,
-            introX: state.introX,
-            introZ: state.introZ,
-            shotVersion: state.shotVersion + 1,
+            journeyCompleted: state.journeyCompleted || state.inJourney,
+            journeyTravel: state.journeyTravel,
             invalidate: state.invalidate,
+            shotVersion: state.shotVersion + 1,
           };
           Object.assign(state, createLandingStory(profile, reduced), previous, {
             visible: !document.hidden,
@@ -61,84 +56,86 @@ export function useLandingStory(
               (navigator.hardwareConcurrency > 0 &&
                 navigator.hardwareConcurrency <= 4),
           });
-          if (previous.heroPhase === "LOADING" && !previous.heroCompleted) {
-            const initial = createLandingStory(profile, reduced);
-            Object.assign(state, {
-              introX: initial.introX,
-              introZ: initial.introZ,
-            });
-          }
+          // A breakpoint change never restarts a partially played gait in another composition.
+          if (state.heroPhase !== "LOADING")
+            Object.assign(state, { heroCompleted: true, introX: 0, introZ: 0 });
+          const shots = getHorseShots(profile, reduced);
           const sections = HORSE_CHAPTERS.map((id) =>
             element.querySelector<HTMLElement>("#" + id)!,
           );
           const hero = sections[0];
           const journey = sections[1];
-          let lastPresent = true;
-          let lastScrolled = false;
-          let lastActive: LandingChapter | null = null;
-          const shot = { ...shots.journey };
-          let cueIndex = 0;
-          const cues: MotionCue[] = [
-            { at: 0, motion: "walk" },
-            { at: 0.3, motion: "idle" },
-            { at: 0.86, motion: "walk" },
-            { at: 0.94, motion: "run" },
-          ];
+          const progressFill = element.querySelector<HTMLElement>(
+            ".landing-scroll-progress > span",
+          );
+          let lastPresent: boolean | undefined;
+          let lastScrolled: boolean | undefined;
+          let currentShot = "";
+          let frame = 0;
+          let refreshFrame = 0;
+          let disposed = false;
 
           const updatePresentation = () => {
             const heroRect = hero.getBoundingClientRect();
             const journeyRect = journey.getBoundingClientRect();
+            const inHero = heroRect.bottom > 0;
+            const inJourney =
+              !inHero &&
+              journeyRect.bottom > 0 &&
+              journeyRect.top < innerHeight;
+            const nextShot = inHero ? "home" : inJourney ? "journey" : "none";
+            if (currentShot !== nextShot) {
+              if (currentShot === "home" && !inHero)
+                Object.assign(state, {
+                  heroCompleted: true,
+                  introX: 0,
+                  introZ: 0,
+                });
+              if (currentShot === "journey")
+                Object.assign(state, { journeyCompleted: true });
+              currentShot = nextShot;
+              Object.assign(state, inJourney ? shots.journey : shots.home, {
+                inHero,
+                inJourney,
+                horsePresence: nextShot === "none" ? 0 : 1,
+                shotVersion: state.shotVersion + 1,
+              });
+            }
             const layer = canvasLayer.current;
-            const compact = profile !== "desktop";
             const stageTop =
-              layer?.getBoundingClientRect().top ?? (compact ? 75 : 0);
+              layer?.getBoundingClientRect().top ??
+              (profile === "desktop" ? 0 : 75);
             const stageHeight =
               layer?.clientHeight ??
-              (compact ? innerHeight * 0.43 : innerHeight);
-            const inHero = heroRect.bottom > 0;
-            if (state.inHero !== inHero) {
-              Object.assign(state, {
-                inHero,
-                shotVersion: state.shotVersion + 1,
-                heroCompleted: true,
-                introX: 0,
-                introZ: 0,
-              });
-              Object.assign(state, inHero ? shots.home : shot);
-            }
-            // The Hero stage moves with the document, not through opacity or pinning.
-            const offset = inHero ? heroRect.top : Math.max(0, journeyRect.top);
-            const sectionTop = inHero ? heroRect.top : journeyRect.top;
-            const sectionBottom = inHero
-              ? heroRect.bottom
-              : element.getBoundingClientRect().bottom;
+              (profile === "desktop" ? innerHeight : innerHeight * 0.43);
+            const rect = inHero ? heroRect : journeyRect;
+            const offset = inHero
+              ? rect.top
+              : Math.max(0, rect.top) +
+                Math.min(0, rect.bottom - stageTop - stageHeight);
             const clipTop = Math.max(
               0,
-              Math.min(stageHeight, sectionTop - stageTop),
+              Math.min(stageHeight, rect.top - stageTop),
             );
             const clipBottom = Math.max(
               0,
-              Math.min(stageHeight, stageTop + stageHeight - sectionBottom),
+              Math.min(stageHeight, stageTop + stageHeight - rect.bottom),
             );
+            const present =
+              nextShot !== "none" && clipTop + clipBottom < stageHeight;
             Object.assign(state, { stageOffsetY: offset, clipTop, clipBottom });
-            const stageOnscreen =
-              offset + stageTop + stageHeight > 0 &&
-              offset + stageTop < innerHeight &&
-              clipTop + clipBottom < stageHeight;
-            if (inHero && !stageOnscreen && !state.heroCompleted)
+            if (inHero && !present)
               Object.assign(state, {
                 heroCompleted: true,
                 introX: 0,
                 introZ: 0,
               });
-            const presence = inHero ? 1 : state.horsePresence;
             if (layer) {
               layer.style.setProperty("--scene-offset-y", offset + "px");
               layer.style.clipPath =
                 "inset(" + clipTop + "px 0 " + clipBottom + "px)";
-              layer.style.opacity = String(presence);
+              layer.style.opacity = present ? "1" : "0";
             }
-            const present = stageOnscreen && presence > 0.001;
             if (lastPresent !== present) {
               lastPresent = present;
               setHorsePresent(present);
@@ -148,150 +145,160 @@ export function useLandingStory(
               lastScrolled = nextScrolled;
               setScrolled(nextScrolled);
             }
+            const range =
+              document.documentElement.scrollHeight -
+              document.documentElement.clientHeight;
+            const progress =
+              range > 0 ? Math.min(1, Math.max(0, scrollY / range)) : 0;
+            if (progressFill)
+              progressFill.style.transform = "scaleX(" + progress + ")";
             state.invalidate?.();
           };
-          const syncStory = () => {
-            cueIndex = resolveMotionCue(
-              master.progress(),
-              cues,
-              cueIndex,
-              0.015,
-            );
-            shot.motion = reduced ? "idle" : cues[cueIndex].motion;
-            if (!state.inHero) Object.assign(state, shot);
-            updatePresentation();
+          const requestUpdate = () => {
+            if (frame) return;
+            frame = requestAnimationFrame(() => {
+              frame = 0;
+              updatePresentation();
+            });
           };
-          const master = gsap.timeline({
-            paused: true,
-            defaults: { ease: "none" },
-            onUpdate: syncStory,
-          });
-          const frames: { at: number; shot: HorseShot }[] = [
-            {
-              at: 0.18,
-              shot: {
-                ...shots.journey,
-                horseX: reduced
-                  ? shots.journey.horseX
-                  : profile === "desktop"
-                    ? -0.9
-                    : -0.15,
-              },
-            },
-            { at: 0.34, shot: shots.compliance },
-            { at: 0.46, shot: shots.compliance },
-            { at: 0.56, shot: { ...shots.platform, horsePresence: 1 } },
-            { at: 0.65, shot: shots.platform },
-            { at: 0.72, shot: { ...shots.care, horsePresence: 0 } },
-            { at: 0.8, shot: shots.care },
-            { at: 0.86, shot: shots.care },
-            { at: 0.92, shot: shots.movement },
-            {
-              at: 0.96,
-              shot: {
-                ...shots.movement,
-                horseX: reduced
-                  ? shots.movement.horseX
-                  : profile === "desktop"
-                    ? 0.25
-                    : -0.1,
-              },
-            },
-            { at: 1, shot: { ...shots.about, horsePresence: 0 } },
-          ];
-          let previousAt = 0;
-          for (const frame of frames) {
-            const { motion: _motion, ...targets } = frame.shot;
-            master.to(
-              shot,
-              { ...targets, duration: frame.at - previousAt },
-              previousAt,
-            );
-            previousAt = frame.at;
-          }
-          ScrollTrigger.create({
-            id: "landing-story",
-            trigger: journey,
-            start: "top top",
-            endTrigger: element,
-            end: "bottom bottom",
-            animation: master,
-            scrub: reduced ? true : 0.45,
-            onUpdate: (self) => {
-              Object.assign(state, {
-                playbackRate: reduced ? 1 : getPlaybackRate(self.getVelocity()),
-                lastScrollAt: performance.now(),
-                storyProgress: self.progress,
-                rawProgress: self.progress,
-              });
-            },
-          });
-          ScrollTrigger.create({
-            id: "landing-bounds",
-            trigger: element,
-            start: "top top",
-            end: "bottom bottom",
-            onUpdate: updatePresentation,
-            onRefresh: updatePresentation,
-          });
-          sections.forEach((section, index) => {
+          const refresh = () => {
+            if (refreshFrame || disposed) return;
+            refreshFrame = requestAnimationFrame(() => {
+              refreshFrame = 0;
+              if (!disposed) {
+                ScrollTrigger.refresh();
+                updatePresentation();
+              }
+            });
+          };
+
+          sections.forEach((section) => {
             ScrollTrigger.create({
               trigger: section,
               start: "top center",
               end: "bottom center",
               onToggle: (self) => {
-                if (!self.isActive) return;
-                const chapter = HORSE_CHAPTERS[index];
-                const next =
-                  chapter === "care" || chapter === "movement"
-                    ? "platform"
-                    : chapter;
-                if (lastActive !== next) {
-                  lastActive = next;
-                  setActive(next);
-                }
+                if (self.isActive)
+                  setActive(
+                    ["care", "movement", "reliability"].includes(section.id)
+                      ? "platform"
+                      : (section.id as LandingChapter),
+                  );
               },
             });
+            if (reduced) return;
             const copy = section.querySelector("[data-reveal]");
-            if (!copy) return;
-            const targets = copy.querySelectorAll(
-              ":scope > .landing-eyebrow, :scope > h1, :scope > h2, :scope > .landing-lead, :scope > .landing-actions, .landing-journey-stages > li, .landing-document-lines > div, .landing-pillars > article, :scope > .landing-route, :scope > .landing-caption",
-            );
-            if (!reduced)
-              gsap.from(targets, {
+            if (copy)
+              gsap.from(copy.children, {
                 opacity: 0,
-                y: 22,
-                duration: 0.65,
+                y: 24,
+                duration: 0.75,
                 stagger: 0.09,
                 ease: "power2.out",
-                scrollTrigger: {
-                  trigger: copy,
-                  start: section.id === "platform" ? "top 45%" : "top 78%",
-                  once: true,
-                },
+                scrollTrigger: { trigger: copy, start: "top 85%", once: true },
               });
-          });
-          if (!reduced) {
-            const route = element.querySelector(".landing-route > div");
-            if (route)
+            section
+              .querySelectorAll<HTMLElement>("[data-media-reveal]")
+              .forEach((media) => {
+                gsap.from(media, {
+                  clipPath: "inset(12% 0 12% 0)",
+                  duration: 1.1,
+                  ease: "power2.out",
+                  scrollTrigger: {
+                    trigger: media,
+                    start: "top 88%",
+                    once: true,
+                  },
+                });
+                if (
+                  profile === "desktop" &&
+                  matchMedia("(hover: hover) and (pointer: fine)").matches
+                ) {
+                  const image = media.querySelector("img");
+                  if (image)
+                    gsap.fromTo(
+                      image,
+                      { yPercent: -3 },
+                      {
+                        yPercent: 3,
+                        ease: "none",
+                        scrollTrigger: {
+                          trigger: media,
+                          start: "top bottom",
+                          end: "bottom top",
+                          scrub: 0.6,
+                        },
+                      },
+                    );
+                }
+              });
+            section.querySelectorAll("[data-interface]").forEach((preview) => {
               gsap.fromTo(
-                route,
-                { "--route-progress": 0 },
+                preview,
+                { scale: 0.97, clipPath: "inset(8% 0 0 0)" },
                 {
-                  "--route-progress": 1,
+                  scale: 1,
+                  clipPath: "inset(0% 0 0 0)",
                   ease: "none",
                   scrollTrigger: {
-                    trigger: sections[5],
-                    start: "top 65%",
-                    end: "bottom 80%",
-                    scrub: 0.45,
+                    trigger: preview,
+                    start: "top 90%",
+                    end: "center 55%",
+                    scrub: 0.5,
                   },
                 },
               );
+            });
+          });
+          const map = element.querySelector("#movement");
+          const routes = element.querySelectorAll("[data-route-flow]");
+          const routeLoop =
+            !reduced && routes.length
+              ? gsap.to(routes, {
+                  strokeDashoffset: -36,
+                  duration: 1.5,
+                  repeat: -1,
+                  ease: "none",
+                  paused: true,
+                })
+              : null;
+          let mapVisible = false;
+          const syncMap = () => {
+            map?.toggleAttribute(
+              "data-route-active",
+              mapVisible && !document.hidden,
+            );
+            if (mapVisible && !document.hidden) routeLoop?.play();
+            else routeLoop?.pause();
+          };
+          if (map && !reduced) {
+            gsap.fromTo(
+              element.querySelectorAll("[data-route-reveal]"),
+              { attr: { "stroke-dashoffset": 1 } },
+              {
+                attr: { "stroke-dashoffset": 0 },
+                ease: "none",
+                scrollTrigger: {
+                  trigger: map,
+                  start: "top 85%",
+                  end: "center 60%",
+                  scrub: 0.5,
+                },
+              },
+            );
+            ScrollTrigger.create({
+              trigger: map,
+              start: "top bottom",
+              end: "bottom top",
+              onToggle: (self) => {
+                mapVisible = self.isActive;
+                syncMap();
+              },
+            });
           }
-          const fine = matchMedia("(hover: hover) and (pointer: fine)");
           const clearPointer = () =>
             Object.assign(state, { pointerX: 0, pointerY: 0 });
+          const fine = matchMedia("(hover: hover) and (pointer: fine)");
           const pointer = (event: PointerEvent) => {
             if (
               reduced ||
@@ -311,21 +318,32 @@ export function useLandingStory(
           const visibility = () => {
             Object.assign(state, { visible: !document.hidden });
             clearPointer();
+            syncMap();
+            requestUpdate();
           };
+          window.addEventListener("scroll", requestUpdate, { passive: true });
+          window.addEventListener("resize", refresh, { passive: true });
           window.addEventListener("pointermove", pointer, { passive: true });
           window.addEventListener("pointerleave", clearPointer);
           document.addEventListener("visibilitychange", visibility);
-          let disposed = false;
-          void document.fonts.ready.then(() => {
-            if (!disposed) ScrollTrigger.refresh();
-          });
+          element.addEventListener("load", refresh, true);
+          const resize = new ResizeObserver(refresh);
+          resize.observe(element);
+          void document.fonts.ready.then(refresh);
           updatePresentation();
           return () => {
             disposed = true;
-            master.kill();
+            cancelAnimationFrame(frame);
+            cancelAnimationFrame(refreshFrame);
+            resize.disconnect();
+            routeLoop?.kill();
+            map?.removeAttribute("data-route-active");
+            window.removeEventListener("scroll", requestUpdate);
+            window.removeEventListener("resize", refresh);
             window.removeEventListener("pointermove", pointer);
             window.removeEventListener("pointerleave", clearPointer);
             document.removeEventListener("visibilitychange", visibility);
+            element.removeEventListener("load", refresh, true);
           };
         },
       );

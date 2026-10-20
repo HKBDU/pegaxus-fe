@@ -1,40 +1,54 @@
-const stages = [
-  ["Planning", "Define the journey, horses and requested departure."],
-  ["Legal & Health", "Bring requirements and supporting documents together."],
-  ["Border Crossing", "Coordinate the details across countries and teams."],
-  ["Arrival", "Keep the destination in view from the beginning."],
-];
+import departure from "../../assets/journey-departure.jpg";
+
+const stages = ["Planning", "Legal & health", "Border crossing", "Arrival"];
 
 export function JourneySection() {
   return (
     <section
       id="journey"
-      className="landing-chapter landing-copy-right"
+      className="landing-chapter landing-journey"
       aria-labelledby="journey-title"
     >
+      <figure className="landing-departure-photo" data-media-reveal>
+        <div className="landing-photo-frame">
+          <img
+            src={departure}
+            alt="Grooms leading racehorses out of a stable"
+            width="1280"
+            height="853"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+        <figcaption>THE DEPARTURE / Photography: Tom Fisk · Pexels</figcaption>
+      </figure>
       <div className="landing-copy" data-reveal>
-        <p className="landing-eyebrow">01 / The journey</p>
+        <p className="landing-eyebrow">02 / The departure</p>
         <h2 id="journey-title">
-          From stable
-          <br />
-          <em>to destination.</em>
+          Every great journey begins with <em>a single step.</em>
         </h2>
         <p className="landing-lead">
-          Crossing a border is one moment in a much bigger journey. Connect the
-          planning, paperwork and people behind every move.
+          Before a border is crossed, there is a horse to prepare. A route to
+          consider. People who need the same clear picture.
         </p>
-        <ol className="landing-journey-stages">
-          {stages.map(([title, copy], index) => (
-            <li key={title}>
-              <span className="landing-step-number">0{index + 1}</span>
-              <div>
-                <h3>{title}</h3>
-                <p>{copy}</p>
-              </div>
+        <ol
+          className="landing-stage-line"
+          aria-label="Journey preparation stages"
+        >
+          {stages.map((stage, index) => (
+            <li key={stage}>
+              <span>0{index + 1}</span>
+              {stage}
             </li>
           ))}
         </ol>
+        <p className="landing-caption">
+          Thoughtful preparation. Connected from the beginning.
+        </p>
       </div>
+      <span className="landing-shot-caption" aria-hidden="true">
+        A NEW PERSPECTIVE / THE JOURNEY BEGINS
+      </span>
     </section>
   );
 }

@@ -1,9 +1,10 @@
 import {
   HERO_APPROACH_DISTANCE,
+  HERO_YAW,
   type HeroPhase,
   type HorseMotion,
 } from "./horse-animation";
-import type { LandingChapter } from "./landing-navigation";
+import { HORSE_CHAPTERS, type LandingChapter } from "./landing-navigation";
 
 export type StoryProfile = "desktop" | "tablet" | "mobile";
 export type HorseShot = {
@@ -30,12 +31,11 @@ export type LandingSceneState = HorseShot & {
   reducedMotion: boolean;
   lowPower: boolean;
   visible: boolean;
-  playbackRate: number;
-  lastScrollAt: number;
-  rawProgress: number;
-  storyProgress: number;
   inHero: boolean;
+  inJourney: boolean;
   heroCompleted: boolean;
+  journeyCompleted: boolean;
+  journeyTravel: number;
   heroPhase: HeroPhase;
   shotVersion: number;
   invalidate?: () => void;
@@ -45,150 +45,40 @@ export type LandingSceneState = HorseShot & {
   introX: number;
   introZ: number;
 };
-export type MotionCue = { at: number; motion: HorseMotion };
 
-// Composition targets only. GSAP interpolates one mutable state;
-// R3F owns the final world/camera transforms.
 export function getHorseShots(profile: StoryProfile, reduced: boolean) {
-  const base: HorseShot = {
+  const compact = profile !== "desktop";
+  const home: HorseShot = {
     horsePresence: 1,
-    horseX: 1.75,
-    horseY: -1.25,
+    horseX: compact ? 0 : 1.7,
+    horseY: -1.2,
     horseZ: 0,
-    horseScale: 1,
-    horseYaw: 1.25,
+    horseScale: compact ? 0.92 : 1,
+    horseYaw: HERO_YAW,
     cameraX: 0,
-    cameraY: 0.45,
-    cameraZ: 6.9,
+    cameraY: 0.35,
+    cameraZ: compact ? 7.6 : 6.9,
     targetX: 0,
     targetY: 0,
     targetZ: 0,
-    keyLight: 3.8,
-    rimLight: 2.6,
+    keyLight: 3.6,
+    rimLight: compact ? 1.3 : 2,
     motion: "idle",
   };
-  const shots: Record<LandingChapter, HorseShot> = {
-    home: { ...base },
-    journey: {
-      ...base,
-      horseX: -1.65,
-      horseYaw: 0.08,
-      horseScale: 0.9,
-      cameraZ: 7.5,
-      motion: "walk",
-    },
-    compliance: {
-      ...base,
-      horseX: 2.15,
-      horseScale: 0.72,
-      horseYaw: -0.3,
-      cameraZ: 7.4,
-      keyLight: 3.2,
-      rimLight: 1.8,
-    },
-    platform: {
-      ...base,
-      horsePresence: 0,
-      horseX: 6,
-      horseScale: 0.65,
-      cameraZ: 8,
-      rimLight: 1.5,
-    },
-    care: {
-      ...base,
-      horseX: -2.55,
-      horseY: -1.9,
-      horseScale: 1.38,
-      horseYaw: 2.65,
-      cameraY: 0.75,
-      cameraZ: 6.1,
-      targetY: 0.4,
-      keyLight: 4.2,
-      rimLight: 2.1,
-    },
-    movement: {
-      ...base,
-      horseX: 1.15,
-      horseYaw: 0.06,
-      horseScale: 0.87,
-      cameraZ: 8.1,
-      motion: "walk",
-    },
-    about: {
-      ...base,
-      horseX: -5.5,
-      horseYaw: 0.06,
-      horseScale: 0.8,
-      cameraZ: 8.5,
-      motion: "run",
-    },
+  const shots = Object.fromEntries(
+    HORSE_CHAPTERS.map((chapter) => [chapter, { ...home, horsePresence: 0 }]),
+  ) as Record<LandingChapter, HorseShot>;
+  shots.home = home;
+  shots.journey = {
+    ...home,
+    horsePresence: 1,
+    horseX: compact ? 0.25 : -1.25,
+    horseY: compact ? -1.2 : -1.6,
+    horseScale: compact ? 0.8 : 0.55,
+    horseYaw: 0.3,
+    cameraZ: compact ? 7.8 : 7.5,
+    motion: reduced ? "idle" : "walk",
   };
-  if (profile === "tablet") {
-    Object.assign(shots.home, { horseX: 0.45, horseScale: 0.9, cameraZ: 7.4 });
-    Object.assign(shots.journey, {
-      horseX: -0.45,
-      horseScale: 0.8,
-      cameraZ: 7.8,
-    });
-    Object.assign(shots.compliance, { horseX: 0.85, horseScale: 0.65 });
-    Object.assign(shots.care, {
-      horseX: -0.6,
-      horseY: -1.7,
-      horseScale: 1.13,
-      cameraZ: 6.7,
-      targetX: 0.7,
-      targetY: 0.25,
-    });
-    Object.assign(shots.movement, {
-      horseX: 0.45,
-      horseScale: 0.77,
-      cameraZ: 8.2,
-    });
-  } else if (profile === "mobile") {
-    // Centered stage above copy, not a miniature desktop camera path.
-    for (const shot of Object.values(shots)) {
-      Object.assign(shot, {
-        horseX: 0,
-        horseY: -1.2,
-        horseZ: 0,
-        horseScale: 0.95,
-        cameraX: 0,
-        cameraY: 0.45,
-        cameraZ: 7.4,
-        targetY: 0,
-        keyLight: 3.4,
-        rimLight: 1.3,
-      });
-    }
-    Object.assign(shots.home, { horseYaw: 1.25 });
-    Object.assign(shots.journey, { horseX: 0.15, horseYaw: 0.04 });
-    Object.assign(shots.compliance, { horseX: 0.4, horseScale: 0.7 });
-    Object.assign(shots.platform, { horseX: 3.8, horsePresence: 0 });
-    Object.assign(shots.care, {
-      horseX: -0.35,
-      horseY: -1.6,
-      horseScale: 1.08,
-      horseYaw: 2.65,
-      cameraZ: 7.8,
-      targetX: 0.65,
-      targetY: 0.35,
-    });
-    Object.assign(shots.movement, { horseX: 0.3, horseYaw: 0.04 });
-    Object.assign(shots.about, { horseX: -3.8, horseYaw: 0.04 });
-  }
-  if (reduced) {
-    const staticShot = {
-      ...shots.home,
-      horseYaw: 1.25,
-      motion: "idle" as const,
-    };
-    for (const chapter of Object.keys(shots) as LandingChapter[]) {
-      shots[chapter] = {
-        ...staticShot,
-        horsePresence: chapter === "platform" || chapter === "about" ? 0 : 1,
-      };
-    }
-  }
   return shots;
 }
 
@@ -196,41 +86,27 @@ export function createLandingStory(
   profile: StoryProfile,
   reducedMotion: boolean,
 ): LandingSceneState {
+  const home = getHorseShots(profile, reducedMotion).home;
+  const distance = profile === "desktop" ? HERO_APPROACH_DISTANCE : 0.65;
   return {
-    ...getHorseShots(profile, reducedMotion).home,
+    ...home,
     profile,
     reducedMotion,
     pointerX: 0,
     pointerY: 0,
     lowPower: profile !== "desktop",
     visible: true,
-    playbackRate: 1,
-    lastScrollAt: 0,
-    rawProgress: 0,
-    storyProgress: 0,
     inHero: true,
+    inJourney: false,
     heroCompleted: false,
+    journeyCompleted: false,
+    journeyTravel: 0,
     heroPhase: "LOADING",
     shotVersion: 0,
     stageOffsetY: 0,
     clipTop: 0,
     clipBottom: 0,
-    introX: reducedMotion ? 0 : HERO_APPROACH_DISTANCE * Math.cos(1.25),
-    introZ: reducedMotion ? 0 : -HERO_APPROACH_DISTANCE * Math.sin(1.25),
+    introX: reducedMotion ? 0 : distance * Math.cos(HERO_YAW),
+    introZ: reducedMotion ? 0 : -distance * Math.sin(HERO_YAW),
   };
-}
-
-export function resolveMotionCue(
-  time: number,
-  cues: readonly MotionCue[],
-  currentIndex: number,
-  margin: number,
-) {
-  if (!cues.length || !Number.isFinite(time)) return 0;
-  let index = Math.max(0, Math.min(cues.length - 1, currentIndex));
-  const hysteresis = Math.max(0, margin);
-  while (index < cues.length - 1 && time >= cues[index + 1].at + hysteresis)
-    index++;
-  while (index > 0 && time < cues[index].at - hysteresis) index--;
-  return index;
 }

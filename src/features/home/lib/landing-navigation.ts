@@ -16,6 +16,7 @@ export const HORSE_CHAPTERS = [
   "platform",
   "care",
   "movement",
+  "reliability",
   "about",
 ] as const;
 export type LandingChapter = (typeof HORSE_CHAPTERS)[number];

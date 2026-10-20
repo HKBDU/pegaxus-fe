@@ -1,17 +1,4 @@
-const pillars = [
-  [
-    "Transport planning",
-    "Start with the horse, route and departure details. Keep each request connected to the journey it represents.",
-  ],
-  [
-    "Compliance coordination",
-    "Organize requirements, uploaded documents, reviews and revisions without losing the context.",
-  ],
-  [
-    "Cross-border visibility",
-    "Bring booking status and document progress into a clearer view for the people coordinating the journey.",
-  ],
-];
+import { CustomerPreview } from "./CustomerPreview";
 
 export function PlatformSection() {
   return (
@@ -21,23 +8,24 @@ export function PlatformSection() {
       aria-labelledby="platform-title"
     >
       <div className="landing-copy" data-reveal>
-        <p className="landing-eyebrow">03 / A connected platform</p>
+        <p className="landing-eyebrow">04 / The connected platform</p>
         <h2 id="platform-title">
-          Connected by
+          Every journey.
           <br />
-          <em>the details.</em>
+          <em>One clear view.</em>
         </h2>
-        <div className="landing-pillars">
-          {pillars.map(([title, copy], index) => (
-            <article key={title}>
-              <span>0{index + 1}</span>
-              <div>
-                <h3>{title}</h3>
-                <p>{copy}</p>
-              </div>
-            </article>
-          ))}
-        </div>
+        <p className="landing-lead">
+          From your booking to the current route segment. See the context behind
+          the status, without losing sight of the destination.
+        </p>
+      </div>
+      <div className="landing-platform-window" data-interface>
+        <CustomerPreview mode="journey" />
+      </div>
+      <div className="landing-platform-index">
+        <span>01 / Booking context</span>
+        <span>02 / Route segments</span>
+        <span>03 / Journey status</span>
       </div>
     </section>
   );

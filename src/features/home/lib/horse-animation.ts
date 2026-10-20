@@ -4,7 +4,10 @@ export type HorseMotion = "idle" | "walk" | "run";
 export type HeroPhase =
   "LOADING" | "APPROACH" | "HOOF_SCRAPE_1" | "HOOF_SCRAPE_2" | "FINAL_POSE";
 
-export const HERO_APPROACH_DISTANCE = 2.1;
+export const HERO_APPROACH_DISTANCE = 1.2;
+// The original rig faces −X. This yaw aims forward and modestly toward the copy.
+export const HERO_YAW = 0.92;
+export const JOURNEY_TRAVEL_DISTANCE = 0.45;
 export const HERO_STANDING_TIME = 0;
 export const HERO_SCRAPE_CLIP = "HorseALL_HoofScrape2";
 

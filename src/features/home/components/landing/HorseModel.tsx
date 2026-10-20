@@ -13,8 +13,8 @@ import {
 import horseUrl from "../../assets/horse-lite.glb?url&no-inline";
 import {
   assertHorseAnimations,
-  transitionHorseAction,
   HERO_APPROACH_DISTANCE,
+  JOURNEY_TRAVEL_DISTANCE,
   HERO_SCRAPE_CLIP,
   HERO_STANDING_TIME,
   HORSE_CLIPS,
@@ -57,7 +57,8 @@ export function HorseModel({
       if ((node as SkinnedMesh).isSkinnedMesh)
         (node as SkinnedMesh).skeleton.update();
     });
-    const box = new Box3().setFromObject(scene);
+    // Recompute posed vertices: cached SkinnedMesh bounds may belong to a prior mount/pose.
+    const box = new Box3().setFromObject(scene, true);
     const size = box.getSize(new Vector3());
     const center = box.getCenter(new Vector3());
     sampler.stopAllAction();
@@ -75,7 +76,8 @@ export function HorseModel({
     finish: (immediate?: boolean) => void;
     enterStory: () => void;
   } | null>(null);
-  const previousHero = useRef(true);
+  const previousShot = useRef("");
+  const previousVersion = useRef(-1);
   const settle = useRef(0);
 
   useLayoutEffect(() => {
@@ -125,14 +127,33 @@ export function HorseModel({
     const enterStory = () => {
       mixer.stopAllAction();
       current.current = null;
-      const next = play(HORSE_CLIPS[state.motion], false, state.reducedMotion);
-      if (!state.reducedMotion) next.setEffectiveTimeScale(state.playbackRate);
+      const walking =
+        state.inJourney && !state.journeyCompleted && !state.reducedMotion;
+      Object.assign(state, {
+        journeyTravel: walking ? 0 : JOURNEY_TRAVEL_DISTANCE,
+      });
+      play(walking ? HORSE_CLIPS.walk : HORSE_CLIPS.idle, walking, !walking);
+      mixer.update(0);
     };
     controller.current = { finish, enterStory };
-    previousHero.current = state.inHero;
+    previousShot.current = state.inHero
+      ? "hero"
+      : state.inJourney
+        ? "journey"
+        : "none";
+    previousVersion.current = state.shotVersion;
     const completed = ({ action }: { action: AnimationAction }) => {
-      if (action !== current.current || !state.inHero || state.reducedMotion)
+      if (action !== current.current || state.reducedMotion) return;
+      if (!state.inHero) {
+        if (state.inJourney && action === actions[HORSE_CLIPS.walk]) {
+          Object.assign(state, {
+            journeyCompleted: true,
+            journeyTravel: JOURNEY_TRAVEL_DISTANCE,
+          });
+          play(HORSE_CLIPS.idle, false, true);
+        }
         return;
+      }
       if (
         state.heroPhase === "APPROACH" &&
         action === actions[HORSE_CLIPS.walk]
@@ -177,10 +198,15 @@ export function HorseModel({
   useFrame((_frame, elapsed) => {
     const state = story.current;
     const delta = Math.min(elapsed, 0.05);
-    if (previousHero.current !== state.inHero) {
+    const shot = state.inHero ? "hero" : state.inJourney ? "journey" : "none";
+    if (
+      previousShot.current !== shot ||
+      previousVersion.current !== state.shotVersion
+    ) {
       controller.current?.finish(true);
       if (!state.inHero) controller.current?.enterStory();
-      previousHero.current = state.inHero;
+      previousShot.current = shot;
+      previousVersion.current = state.shotVersion;
     }
     if (
       (state.reducedMotion || state.heroCompleted) &&
@@ -193,7 +219,9 @@ export function HorseModel({
         1,
         current.current.time / current.current.getClip().duration,
       );
-      const remaining = HERO_APPROACH_DISTANCE * (1 - progress);
+      const distance =
+        state.profile === "desktop" ? HERO_APPROACH_DISTANCE : 0.65;
+      const remaining = distance * (1 - progress);
       Object.assign(state, {
         introX: remaining * Math.cos(state.horseYaw),
         introZ: -remaining * Math.sin(state.horseYaw),
@@ -201,38 +229,15 @@ export function HorseModel({
       current.current.setEffectiveTimeScale(
         0.85 * (1 - 0.4 * Math.max(0, (progress - 0.8) / 0.2)),
       );
-    } else if (!state.inHero) {
-      const next = actions[HORSE_CLIPS[state.motion]];
-      if (
-        next &&
-        (next !== current.current || next.paused !== state.reducedMotion)
-      ) {
-        transitionHorseAction(
-          next,
-          current.current ?? undefined,
-          state.reducedMotion,
-          state.playbackRate,
-          0.22,
-        );
-        next.setLoop(LoopRepeat, Infinity);
-        Object.assign(next, {
-          clampWhenFinished: false,
-          paused: state.reducedMotion,
-        });
-        current.current = next;
-        settle.current = 0;
-      }
-      if (!state.reducedMotion) {
-        const speed =
-          performance.now() - state.lastScrollAt > 180 ? 1 : state.playbackRate;
-        const action = current.current;
-        if (action)
-          action.setEffectiveTimeScale(
-            action.getEffectiveTimeScale() +
-              (speed - action.getEffectiveTimeScale()) *
-                (1 - Math.exp(-10 * delta)),
-          );
-      }
+    } else if (state.inJourney && !state.journeyCompleted && current.current) {
+      Object.assign(state, {
+        journeyTravel:
+          JOURNEY_TRAVEL_DISTANCE *
+          Math.min(
+            1,
+            current.current.time / current.current.getClip().duration,
+          ),
+      });
     }
     // At most one outgoing action during the short blend; no hidden loops.
     if (state.visible) settle.current += delta;

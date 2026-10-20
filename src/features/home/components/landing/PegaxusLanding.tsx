@@ -7,6 +7,7 @@ import { ComplianceSection } from "./ComplianceSection";
 import { PlatformSection } from "./PlatformSection";
 import { HorseCareSection } from "./HorseCareSection";
 import { GlobalMovementSection } from "./GlobalMovementSection";
+import { ReliabilitySection } from "./ReliabilitySection";
 import { FinalCtaSection } from "./FinalCtaSection";
 import { LandingFooter } from "./LandingFooter";
 import "../../landing.css";
@@ -56,6 +57,9 @@ export function PegaxusLanding() {
   };
   return (
     <div className="pegaxus-landing" ref={root} onClick={navigateSection}>
+      <div className="landing-scroll-progress" aria-hidden="true">
+        <span />
+      </div>
       <a className="landing-skip" href="#home">
         Skip to content
       </a>
@@ -84,6 +88,7 @@ export function PegaxusLanding() {
         <PlatformSection />
         <HorseCareSection />
         <GlobalMovementSection />
+        <ReliabilitySection />
         <FinalCtaSection />
         <LandingFooter />
       </div>

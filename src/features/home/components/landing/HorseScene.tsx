@@ -103,7 +103,7 @@ export function HorseScene({
       key.current.position.lerp(scratch.keyPos, damp);
       key.current.intensity += (state.keyLight - key.current.intensity) * alpha;
     }
-    const composition = snap || state.inHero ? 1 : alpha;
+    const composition = 1;
     const framedX =
       state.inHero &&
       state.profile === "desktop" &&
@@ -112,10 +112,23 @@ export function HorseScene({
         : state.horseX;
     const position = world.current.position;
     position.x +=
-      (framedX + (state.inHero ? state.introX : 0) - position.x) * composition;
+      (framedX +
+        (state.inHero
+          ? state.introX
+          : state.inJourney
+            ? -state.journeyTravel * Math.cos(state.horseYaw)
+            : 0) -
+        position.x) *
+      composition;
     position.y += (state.horseY - position.y) * composition;
     position.z +=
-      (state.horseZ + (state.inHero ? state.introZ : 0) - position.z) *
+      (state.horseZ +
+        (state.inHero
+          ? state.introZ
+          : state.inJourney
+            ? state.journeyTravel * Math.sin(state.horseYaw)
+            : 0) -
+        position.z) *
       composition;
     scratch.yaw.set(0, state.horseYaw, 0);
     scratch.rotation.setFromEuler(scratch.yaw);
@@ -133,7 +146,7 @@ export function HorseScene({
   });
   return (
     <>
-      <hemisphereLight args={["#f3e8d7", "#20291f", 1.6]} />
+      <hemisphereLight args={["#f4efe6", "#272522", 1.6]} />
       <directionalLight
         ref={key}
         position={[3, 5, 4]}
@@ -143,7 +156,7 @@ export function HorseScene({
       <directionalLight
         ref={rim}
         position={[-4, 3, -3]}
-        color="#D7B887"
+        color="#F39200"
         intensity={lowPower ? 1.4 : 2.8}
       />
       {!lowPower && (
