@@ -5,6 +5,7 @@ import { normalizeRole } from "@/features/auth/access-control";
 import FileUploader from "@/shared/components/FileUploader";
 import { Field } from "@/shared/components/Field";
 import { Button } from "@/shared/components/ui/button";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { DatePicker } from "@/shared/components/ui/date-picker";
 import {
   Dialog,
@@ -35,7 +36,8 @@ type Errors = Partial<
     | "submissionReference"
     | "submissionDate"
     | "decisionNote"
-    | "proofFiles",
+    | "proofFiles"
+    | "submissionMethod",
     string
   >
 >;
@@ -69,6 +71,8 @@ export function RecordAuthoritySubmissionDialog({
   const [open, setOpen] = useState(false);
   const [authorityName, setAuthorityName] = useState("");
   const [submissionReference, setSubmissionReference] = useState("");
+  const [submissionMethod, setSubmissionMethod] = useState("ONLINE_PORTAL");
+  const [isRequired, setIsRequired] = useState(true);
   const [submissionDate, setSubmissionDate] = useState(today());
   const [decisionNote, setDecisionNote] = useState("");
   const [errors, setErrors] = useState<Errors>({});
@@ -86,6 +90,8 @@ export function RecordAuthoritySubmissionDialog({
   const reset = () => {
     setAuthorityName("");
     setSubmissionReference("");
+    setSubmissionMethod("ONLINE_PORTAL");
+    setIsRequired(true);
     setSubmissionDate(today());
     setDecisionNote("");
     setUploadedIds([]);
@@ -139,15 +145,14 @@ export function RecordAuthoritySubmissionDialog({
       next.decisionNote = `Decision note must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
     }
 
-    if (!proofFiles.length)
-      next.proofFiles = "At least one proof file is required.";
     if (Object.keys(next).length) return setErrors(next);
     try {
       await mutation.mutateAsync({
         authorityName,
         submissionReference,
+        submissionMethod,
         submittedAt: `${submissionDate}T00:00:00.000Z`,
-        isRequired: true,
+        isRequired,
         proofFiles,
         decisionNote,
       });
@@ -229,6 +234,18 @@ export function RecordAuthoritySubmissionDialog({
               />
             </Field>
           </div>
+          <Field label="Submission Method *">
+            <select value={submissionMethod} onChange={(event) => setSubmissionMethod(event.target.value)} className="h-9 w-full rounded-[2px] border border-input bg-background px-3 text-sm">
+              <option value="ONLINE_PORTAL">Online portal</option>
+              <option value="EMAIL">Email</option>
+              <option value="IN_PERSON">In person</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </Field>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox checked={isRequired} onCheckedChange={(checked) => setIsRequired(Boolean(checked))} aria-label="Mandatory submission" />
+            Mandatory authority submission
+          </label>
           <Field label="Submission Date *" error={errors.submissionDate}>
             <DatePicker
               className={errors.submissionDate ? "border-red-500" : ""}
@@ -239,7 +256,7 @@ export function RecordAuthoritySubmissionDialog({
               }}
             />
           </Field>
-          <Field label="Proof *" error={errors.proofFiles}>
+          <Field label="Proof files (optional)" error={errors.proofFiles}>
             <div
               className={
                 errors.proofFiles ? "rounded border border-red-500 p-1" : ""

@@ -5,7 +5,15 @@ export interface ApiEnvelope<T> {
   value: T
 }
 
-export type AuthoritySubmissionStatus = 'READY_FOR_SUBMISSION' | 'SUBMITTED' | 'PENDING'
+export type AuthoritySubmissionStatus =
+  | 'READY_FOR_SUBMISSION'
+  | 'IN_PREPARATION'
+  | 'SUBMITTED'
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'RETURNED'
+  | 'CLOSED'
 
 export interface RecordAuthoritySubmissionInput {
   authorityName: string
@@ -13,7 +21,24 @@ export interface RecordAuthoritySubmissionInput {
   submittedAt: string
   isRequired: boolean
   proofFiles: File[]
+  submissionMethod?: string
   decisionNote?: string
+}
+
+export interface AuthoritySubmissionSummary {
+  authoritySubmissionId: string
+  submissionNo: string | number
+  authorityName: string
+  submissionReference: string
+  submissionMethod?: string | null
+  status: AuthoritySubmissionStatus | string
+  isRequired: boolean
+  submittedAt: string
+  responseReceivedAt?: string | null
+  permitNumber?: string | null
+  revisionDueDate?: string | null
+  rejectionReason?: string | null
+  evidenceFiles?: Array<{ fileName: string; fileUrl?: string; fileSizeBytes?: number; evidenceType?: string }>
 }
 
 export interface RecordAuthoritySubmissionResult {
@@ -53,6 +78,7 @@ export interface AuthoritySubmissionDetail {
   submittedBy?: string
   status: string
   dossierStatus: string
+  isRequired?: boolean
   evidenceFile?: {
     fileName: string
     fileUrl: string

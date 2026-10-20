@@ -55,6 +55,7 @@ type Errors = Partial<
     | "permitExpiryDate"
     | "decisionFile"
     | "rejectionReason"
+    | "informationRequested"
     | "revisionDueDate"
     | "decisionNote",
     string
@@ -78,7 +79,7 @@ export function UpdateAuthorityReviewDialog({
     (role) => normalizeRole(role) === "TRANSPORT_SPECIALIST",
   );
 
-  const { data: submissionDetail } = useAuthoritySubmissionDetail(submissionId);
+  const { data: submissionDetail, isPending: isDetailPending, isError: isDetailError, refetch: refetchDetail } = useAuthoritySubmissionDetail(submissionId);
   const mutation = useUpdateAuthorityReview(submissionId);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,6 +90,7 @@ export function UpdateAuthorityReviewDialog({
   const [permitExpiryDate, setPermitExpiryDate] = useState("");
   const [revisionDueDate, setRevisionDueDate] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
+  const [informationRequested, setInformationRequested] = useState("");
   const [decisionNote, setDecisionNote] = useState("");
   const [notifyStakeholders, setNotifyStakeholders] = useState(true);
   const [decisionFile, setDecisionFile] = useState<File | undefined>(undefined);
@@ -106,6 +108,7 @@ export function UpdateAuthorityReviewDialog({
     setPermitExpiryDate("");
     setRevisionDueDate("");
     setRejectionReason("");
+    setInformationRequested("");
     setDecisionNote("");
     setNotifyStakeholders(true);
     setDecisionFile(undefined);
@@ -166,9 +169,7 @@ export function UpdateAuthorityReviewDialog({
         next.permitNumber = "Permit / Approval Code cannot exceed 100 characters.";
       }
 
-      if (!permitIssuedDate) {
-        next.permitIssuedDate = "Issue Date is required.";
-      } else {
+      if (permitIssuedDate) {
         const issued = new Date(permitIssuedDate);
         const now = new Date();
         const diffYears = Math.abs(issued.getFullYear() - now.getFullYear());
@@ -177,9 +178,7 @@ export function UpdateAuthorityReviewDialog({
         }
       }
 
-      if (!permitExpiryDate) {
-        next.permitExpiryDate = "Expiry Date is required.";
-      } else {
+      if (permitExpiryDate) {
         const expiry = new Date(permitExpiryDate);
         const now = new Date();
         const diffYears = Math.abs(expiry.getFullYear() - now.getFullYear());
@@ -196,10 +195,10 @@ export function UpdateAuthorityReviewDialog({
         next.rejectionReason = `Rejection reason cannot exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
       }
     } else if (decision === "RETURNED") {
-      if (!rejectionReason.trim()) {
-        next.rejectionReason = "Information Requested description is required.";
-      } else if (rejectionReason.length > VALIDATION_LIMITS.noteMaxLength) {
-        next.rejectionReason = `Information Requested description cannot exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
+      if (!informationRequested.trim()) {
+        next.informationRequested = "Information Requested description is required.";
+      } else if (informationRequested.length > VALIDATION_LIMITS.noteMaxLength) {
+        next.informationRequested = `Information Requested description cannot exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
       }
       if (!revisionDueDate) {
         next.revisionDueDate = "Revision Due Date is required.";
@@ -213,9 +212,7 @@ export function UpdateAuthorityReviewDialog({
       }
     }
 
-    if (!decisionNote.trim()) {
-      next.decisionNote = "Authority Note / Reason is required.";
-    } else if (decisionNote.length > VALIDATION_LIMITS.noteMaxLength) {
+    if (decisionNote.length > VALIDATION_LIMITS.noteMaxLength) {
       next.decisionNote = `Authority Note / Reason cannot exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
     }
 
@@ -231,8 +228,8 @@ export function UpdateAuthorityReviewDialog({
         permitIssuedDate: decision === "APPROVED" ? permitIssuedDate : undefined,
         permitExpiryDate: decision === "APPROVED" ? permitExpiryDate : undefined,
         decisionFile: decisionFile!,
-        decisionNote: decisionNote.trim(),
-        rejectionReason: decision !== "APPROVED" ? rejectionReason.trim() : undefined,
+        rejectionReason: decision === "REJECTED" ? rejectionReason.trim() : undefined,
+        decisionNote: decision === "RETURNED" ? informationRequested.trim() : decisionNote.trim(),
         revisionDueDate: decision === "RETURNED" ? revisionDueDate : undefined,
         notifyStakeholders,
       });
@@ -257,6 +254,14 @@ export function UpdateAuthorityReviewDialog({
   );
 
   if (!canUpdate) return null;
+
+  if (isDetailPending) {
+    return <Card className="p-6 text-sm text-slate-500">Loading authority submission details…</Card>;
+  }
+
+  if (isDetailError || !submissionDetail) {
+    return <Card className="space-y-3 p-6 text-sm text-red-600">Unable to load authority submission details.<Button type="button" variant="outline" onClick={() => void refetchDetail()}>Retry</Button></Card>;
+  }
 
   return (
     <Dialog
@@ -477,18 +482,18 @@ export function UpdateAuthorityReviewDialog({
                   <div className="space-y-4">
                     <Field
                       label="INFORMATION REQUESTED *"
-                      error={errors.rejectionReason}
+                      error={errors.informationRequested}
                     >
                       <Textarea
                         rows={3}
                         className={cn(
                           "rounded-[2px] border-input focus-visible:border-[#f39200] focus-visible:ring-[#f39200]/20",
-                          errors.rejectionReason && "border-red-500 focus-visible:ring-red-500",
+                          errors.informationRequested && "border-red-500 focus-visible:ring-red-500",
                         )}
-                        value={rejectionReason}
+                        value={informationRequested}
                         onChange={(event) => {
-                          setRejectionReason(event.target.value);
-                          clearError("rejectionReason");
+                          setInformationRequested(event.target.value);
+                          clearError("informationRequested");
                         }}
                         placeholder="Describe specific documents or items requested by authority for revision or addition..."
                       />
