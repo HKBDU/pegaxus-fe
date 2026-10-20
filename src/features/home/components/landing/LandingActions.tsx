@@ -1,22 +1,45 @@
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useAuthStore } from "@/features/auth/store";
-import { normalizeRole } from "@/features/auth/access-control";
-import { getTransportCta } from "../../lib/landing-navigation";
+import { useLandingAuth } from "../../hooks/useLandingAuth";
+
+export function GuestLinks({
+  className = "landing-sign-in",
+  onClick,
+}: {
+  className?: string;
+  onClick?: () => void;
+}) {
+  const { guest } = useLandingAuth();
+  if (!guest) return null;
+  return (
+    <>
+      <Link to="/login" className={className} onClick={onClick}>
+        Sign in
+      </Link>
+      <Link to="/register" className={className} onClick={onClick}>
+        Sign up
+      </Link>
+    </>
+  );
+}
 
 export function TransportLink({
-  final = false,
   onClick,
 }: {
   final?: boolean;
   onClick?: () => void;
 }) {
-  const authenticated = useAuthStore((state) => Boolean(state.accessToken));
-  const principal = useAuthStore((state) => state.principal);
-  const cta = getTransportCta(
-    authenticated,
-    principal?.roles.map(normalizeRole) ?? [],
-  );
+  const { pending, cta } = useLandingAuth();
+  if (pending)
+    return (
+      <span
+        className="landing-button landing-action-pending"
+        role="status"
+        aria-busy="true"
+      >
+        Preparing navigation
+      </span>
+    );
   if (!cta)
     return (
       <a className="landing-button" href="#platform" onClick={onClick}>
@@ -25,7 +48,7 @@ export function TransportLink({
     );
   return (
     <Link className="landing-button" to={cta.to} onClick={onClick}>
-      {final && cta.to === "/bookings/new" ? "Start a transport" : cta.label}
+      {cta.label}
       <ArrowUpRight aria-hidden="true" />
     </Link>
   );

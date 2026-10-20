@@ -1,6 +1,12 @@
 import type { AnimationAction } from "three";
 
 export type HorseMotion = "idle" | "walk" | "run";
+export type HeroPhase =
+  "LOADING" | "APPROACH" | "HOOF_SCRAPE_1" | "HOOF_SCRAPE_2" | "FINAL_POSE";
+
+export const HERO_APPROACH_DISTANCE = 2.1;
+export const HERO_STANDING_TIME = 0;
+export const HERO_SCRAPE_CLIP = "HorseALL_HoofScrape2";
 
 export function getLocomotionPhase(
   time: number,
@@ -37,6 +43,8 @@ export function assertHorseAnimations(clips: readonly { name: string }[]) {
   for (const name of Object.values(HORSE_CLIPS)) {
     if (!names.has(name)) throw new Error(`Missing horse animation: ${name}`);
   }
+  if (!names.has(HERO_SCRAPE_CLIP))
+    throw new Error(`Missing horse animation: ${HERO_SCRAPE_CLIP}`);
 }
 
 export function transitionHorseAction(

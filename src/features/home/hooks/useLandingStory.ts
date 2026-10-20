@@ -45,205 +45,211 @@ export function useLandingStory(
               : "mobile";
           const reduced = Boolean(conditions.reduced);
           const shots = getHorseShots(profile, reduced);
-          Object.assign(scene.current, createLandingStory(profile, reduced), {
+          const state = scene.current;
+          const previous = {
+            heroCompleted: state.heroCompleted,
+            heroPhase: state.heroPhase,
+            introX: state.introX,
+            introZ: state.introZ,
+            shotVersion: state.shotVersion + 1,
+            invalidate: state.invalidate,
+          };
+          Object.assign(state, createLandingStory(profile, reduced), previous, {
             visible: !document.hidden,
             lowPower:
               profile !== "desktop" ||
               (navigator.hardwareConcurrency > 0 &&
                 navigator.hardwareConcurrency <= 4),
           });
+          if (previous.heroPhase === "LOADING" && !previous.heroCompleted) {
+            const initial = createLandingStory(profile, reduced);
+            Object.assign(state, {
+              introX: initial.introX,
+              introZ: initial.introZ,
+            });
+          }
           const sections = HORSE_CHAPTERS.map((id) =>
             element.querySelector<HTMLElement>("#" + id)!,
           );
+          const hero = sections[0];
+          const journey = sections[1];
           let lastPresent = true;
-          let lastScrolled = window.scrollY > 32;
+          let lastScrolled = false;
           let lastActive: LandingChapter | null = null;
-          setScrolled(lastScrolled);
-          const syncPresence = () => {
-            const presence = scene.current.horsePresence;
-            if (canvasLayer.current)
-              canvasLayer.current.style.opacity = String(presence);
-            const present = presence > 0.001;
-            if (present !== lastPresent) {
+          const shot = { ...shots.journey };
+          let cueIndex = 0;
+          const cues: MotionCue[] = [
+            { at: 0, motion: "walk" },
+            { at: 0.3, motion: "idle" },
+            { at: 0.86, motion: "walk" },
+            { at: 0.94, motion: "run" },
+          ];
+
+          const updatePresentation = () => {
+            const heroRect = hero.getBoundingClientRect();
+            const journeyRect = journey.getBoundingClientRect();
+            const layer = canvasLayer.current;
+            const compact = profile !== "desktop";
+            const stageTop =
+              layer?.getBoundingClientRect().top ?? (compact ? 75 : 0);
+            const stageHeight =
+              layer?.clientHeight ??
+              (compact ? innerHeight * 0.43 : innerHeight);
+            const inHero = heroRect.bottom > 0;
+            if (state.inHero !== inHero) {
+              Object.assign(state, {
+                inHero,
+                shotVersion: state.shotVersion + 1,
+                heroCompleted: true,
+                introX: 0,
+                introZ: 0,
+              });
+              Object.assign(state, inHero ? shots.home : shot);
+            }
+            // The Hero stage moves with the document, not through opacity or pinning.
+            const offset = inHero ? heroRect.top : Math.max(0, journeyRect.top);
+            const sectionTop = inHero ? heroRect.top : journeyRect.top;
+            const sectionBottom = inHero
+              ? heroRect.bottom
+              : element.getBoundingClientRect().bottom;
+            const clipTop = Math.max(
+              0,
+              Math.min(stageHeight, sectionTop - stageTop),
+            );
+            const clipBottom = Math.max(
+              0,
+              Math.min(stageHeight, stageTop + stageHeight - sectionBottom),
+            );
+            Object.assign(state, { stageOffsetY: offset, clipTop, clipBottom });
+            const stageOnscreen =
+              offset + stageTop + stageHeight > 0 &&
+              offset + stageTop < innerHeight &&
+              clipTop + clipBottom < stageHeight;
+            if (inHero && !stageOnscreen && !state.heroCompleted)
+              Object.assign(state, {
+                heroCompleted: true,
+                introX: 0,
+                introZ: 0,
+              });
+            const presence = inHero ? 1 : state.horsePresence;
+            if (layer) {
+              layer.style.setProperty("--scene-offset-y", offset + "px");
+              layer.style.clipPath =
+                "inset(" + clipTop + "px 0 " + clipBottom + "px)";
+              layer.style.opacity = String(presence);
+            }
+            const present = stageOnscreen && presence > 0.001;
+            if (lastPresent !== present) {
               lastPresent = present;
               setHorsePresent(present);
             }
-          };
-          setHorsePresent(true);
-          syncPresence();
-          const updateNavigation = (index: number) => {
-            // Care/Movement are chapters of the Platform navigation destination.
-            const chapter = HORSE_CHAPTERS[index];
-            const next =
-              chapter === "care" || chapter === "movement"
-                ? "platform"
-                : chapter;
-            if (next !== lastActive) {
-              lastActive = next;
-              setActive(next);
+            const nextScrolled = scrollY > 32;
+            if (lastScrolled !== nextScrolled) {
+              lastScrolled = nextScrolled;
+              setScrolled(nextScrolled);
             }
-            if (reduced) {
-              scene.current.horsePresence = shots[chapter].horsePresence;
-              syncPresence();
-            }
+            state.invalidate?.();
           };
-          let cues: MotionCue[] = [];
-          let cueIndex = 0;
           const syncStory = () => {
-            if ((scene.current.rawProgress ?? 0) <= 0.15) {
-              scene.current.motion = "idle";
-            } else {
-              cueIndex = resolveMotionCue(master.progress(), cues, cueIndex, 0.02);
-              if (cues[cueIndex]) scene.current.motion = cues[cueIndex].motion;
-            }
-            syncPresence();
+            cueIndex = resolveMotionCue(
+              master.progress(),
+              cues,
+              cueIndex,
+              0.015,
+            );
+            shot.motion = reduced ? "idle" : cues[cueIndex].motion;
+            if (!state.inHero) Object.assign(state, shot);
+            updatePresentation();
           };
           const master = gsap.timeline({
             paused: true,
             defaults: { ease: "none" },
             onUpdate: syncStory,
           });
-          const buildStory = () => {
-            const frames: { at: number; shot: HorseShot }[] = [
-              // Hero composition
-              { at: 0, shot: { ...shots.home, horsePresence: 1 } },
-              // 6. Cinematic handoff: Hero horse softly fades out at Journey entry
-              { at: 0.04, shot: { ...shots.home, horsePresence: 0 } },
-              // Scene/camera handoff to Journey while hidden
-              { at: 0.08, shot: { ...shots.journey, horsePresence: 0 } },
-              // Horse softly fades in at Journey composition
-              { at: 0.13, shot: { ...shots.journey, horsePresence: 1 } },
-              {
-                at: 0.25,
-                shot: {
-                  ...shots.journey,
-                  horseX:
-                    profile === "desktop"
-                      ? -0.9
-                      : profile === "tablet"
-                        ? -0.6
-                        : -0.15,
-                },
+          const frames: { at: number; shot: HorseShot }[] = [
+            {
+              at: 0.18,
+              shot: {
+                ...shots.journey,
+                horseX: reduced
+                  ? shots.journey.horseX
+                  : profile === "desktop"
+                    ? -0.9
+                    : -0.15,
               },
-              { at: 0.40, shot: shots.compliance },
-              { at: 0.50, shot: shots.compliance },
-              {
-                at: 0.60,
-                shot: { ...shots.platform, horsePresence: 1 },
+            },
+            { at: 0.34, shot: shots.compliance },
+            { at: 0.46, shot: shots.compliance },
+            { at: 0.56, shot: { ...shots.platform, horsePresence: 1 } },
+            { at: 0.65, shot: shots.platform },
+            { at: 0.72, shot: { ...shots.care, horsePresence: 0 } },
+            { at: 0.8, shot: shots.care },
+            { at: 0.86, shot: shots.care },
+            { at: 0.92, shot: shots.movement },
+            {
+              at: 0.96,
+              shot: {
+                ...shots.movement,
+                horseX: reduced
+                  ? shots.movement.horseX
+                  : profile === "desktop"
+                    ? 0.25
+                    : -0.1,
               },
-              { at: 0.68, shot: shots.platform },
-              {
-                at: 0.75,
-                shot: { ...shots.care, horsePresence: 0 },
-              },
-              { at: 0.82, shot: shots.care },
-              { at: 0.88, shot: shots.care },
-              { at: 0.92, shot: shots.movement },
-              {
-                at: 0.96,
-                shot: {
-                  ...shots.movement,
-                  horseX:
-                    profile === "desktop"
-                      ? 0.25
-                      : profile === "tablet"
-                        ? 0.3
-                        : -0.1,
-                },
-              },
-              {
-                at: 0.99,
-                shot: { ...shots.about, horsePresence: 0 },
-              },
-              { at: 1.0, shot: { ...shots.about, horsePresence: 0 } },
-            ];
-            cues = [
-              { at: 0, motion: "idle" },
-              // Cross-fade idle -> walk while hidden during Journey handoff
-              { at: 0.06, motion: "walk" },
-              { at: 0.40, motion: "idle" },
-              { at: 0.88, motion: "walk" },
-              { at: 0.93, motion: "run" },
-            ];
-            master.clear();
-            Object.assign(scene.current, shots.home);
-            let previous = 0;
-            for (const frame of frames.slice(1)) {
-              const { motion: _motion, ...targets } = frame.shot;
-              master.to(
-                scene.current,
-                { ...targets, duration: Math.max(0.001, frame.at - previous) },
-                previous,
-              );
-              previous = frame.at;
-            }
-          };
-          if (!reduced) {
-            buildStory();
-            const proxy = { progress: 0 };
-            const scrubTween = gsap.to(proxy, {
-              progress: 1,
-              ease: "none",
-              onUpdate: () => {
-                const rawProgress = proxy.progress;
-                scene.current.rawProgress = rawProgress;
-
-                // 4. Scroll Threshold / Deadzone (0% -> 15%) & Post-Hero Locomotion (> 15%)
-                const storyProgress = Math.max(0, (rawProgress - 0.15) / 0.85);
-                scene.current.storyProgress = storyProgress;
-
-                if (rawProgress <= 0.15) {
-                  master.progress(0);
-                  scene.current.motion = "idle";
-                  scene.current.playbackRate = 0.6;
-                } else {
-                  master.progress(storyProgress);
-                }
-                syncPresence();
-              },
-            });
-
-            ScrollTrigger.create({
-              id: "landing-master",
-              trigger: element,
-              start: "top top",
-              end: "bottom bottom",
-              animation: scrubTween,
-              scrub: 0.45,
-              onRefreshInit: buildStory,
-              onRefresh: syncStory,
-              onUpdate: (self) => {
-                if (self.progress > 0.15) {
-                  scene.current.playbackRate = getPlaybackRate(
-                    self.getVelocity(),
-                  );
-                } else {
-                  scene.current.playbackRate = 0.6;
-                }
-                scene.current.lastScrollAt = performance.now();
-                const next = self.scroll() > 32;
-                if (next !== lastScrolled) {
-                  lastScrolled = next;
-                  setScrolled(next);
-                }
-              },
-            });
-          } else {
-            // Static camera/pose; only presence follows the current content chapter.
-            ScrollTrigger.create({
-              trigger: element,
-              start: "top top",
-              end: "bottom bottom",
-              onUpdate: (self) => setScrolled(self.scroll() > 32),
-            });
+            },
+            { at: 1, shot: { ...shots.about, horsePresence: 0 } },
+          ];
+          let previousAt = 0;
+          for (const frame of frames) {
+            const { motion: _motion, ...targets } = frame.shot;
+            master.to(
+              shot,
+              { ...targets, duration: frame.at - previousAt },
+              previousAt,
+            );
+            previousAt = frame.at;
           }
+          ScrollTrigger.create({
+            id: "landing-story",
+            trigger: journey,
+            start: "top top",
+            endTrigger: element,
+            end: "bottom bottom",
+            animation: master,
+            scrub: reduced ? true : 0.45,
+            onUpdate: (self) => {
+              Object.assign(state, {
+                playbackRate: reduced ? 1 : getPlaybackRate(self.getVelocity()),
+                lastScrollAt: performance.now(),
+                storyProgress: self.progress,
+                rawProgress: self.progress,
+              });
+            },
+          });
+          ScrollTrigger.create({
+            id: "landing-bounds",
+            trigger: element,
+            start: "top top",
+            end: "bottom bottom",
+            onUpdate: updatePresentation,
+            onRefresh: updatePresentation,
+          });
           sections.forEach((section, index) => {
             ScrollTrigger.create({
               trigger: section,
               start: "top center",
               end: "bottom center",
               onToggle: (self) => {
-                if (self.isActive) updateNavigation(index);
+                if (!self.isActive) return;
+                const chapter = HORSE_CHAPTERS[index];
+                const next =
+                  chapter === "care" || chapter === "movement"
+                    ? "platform"
+                    : chapter;
+                if (lastActive !== next) {
+                  lastActive = next;
+                  setActive(next);
+                }
               },
             });
             const copy = section.querySelector("[data-reveal]");
@@ -251,18 +257,19 @@ export function useLandingStory(
             const targets = copy.querySelectorAll(
               ":scope > .landing-eyebrow, :scope > h1, :scope > h2, :scope > .landing-lead, :scope > .landing-actions, .landing-journey-stages > li, .landing-document-lines > div, .landing-pillars > article, :scope > .landing-route, :scope > .landing-caption",
             );
-            gsap.from(targets, {
-              opacity: 0,
-              y: reduced ? 0 : 22,
-              duration: reduced ? 0.25 : 0.65,
-              stagger: reduced ? 0 : 0.09,
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: copy,
-                start: section.id === "platform" ? "top 45%" : "top 78%",
-                once: true,
-              },
-            });
+            if (!reduced)
+              gsap.from(targets, {
+                opacity: 0,
+                y: 22,
+                duration: 0.65,
+                stagger: 0.09,
+                ease: "power2.out",
+                scrollTrigger: {
+                  trigger: copy,
+                  start: section.id === "platform" ? "top 45%" : "top 78%",
+                  once: true,
+                },
+              });
           });
           if (!reduced) {
             const route = element.querySelector(".landing-route > div");
@@ -274,61 +281,45 @@ export function useLandingStory(
                   "--route-progress": 1,
                   ease: "none",
                   scrollTrigger: {
-                    trigger: "#movement",
+                    trigger: sections[5],
                     start: "top 65%",
                     end: "bottom 80%",
                     scrub: 0.45,
                   },
                 },
               );
-            element
-              .querySelectorAll(
-                ".landing-outline-wordmark, .landing-final-wordmark",
-              )
-              .forEach((wordmark) => {
-                gsap.to(wordmark, {
-                  yPercent: -12,
-                  ease: "none",
-                  scrollTrigger: {
-                    trigger: wordmark.parentElement,
-                    start: "top bottom",
-                    end: "bottom top",
-                    scrub: 0.45,
-                  },
-                });
-              });
           }
-          const fine = matchMedia("(pointer: fine)");
+          const fine = matchMedia("(hover: hover) and (pointer: fine)");
+          const clearPointer = () =>
+            Object.assign(state, { pointerX: 0, pointerY: 0 });
           const pointer = (event: PointerEvent) => {
             if (
               reduced ||
               profile !== "desktop" ||
-              scene.current.lowPower ||
+              state.lowPower ||
               !fine.matches ||
+              !state.inHero ||
+              state.heroPhase !== "FINAL_POSE" ||
               event.pointerType !== "mouse"
             )
               return;
-            scene.current.pointerX =
-              (event.clientX / window.innerWidth) * 2 - 1;
-            scene.current.pointerY =
-              (event.clientY / window.innerHeight) * 2 - 1;
-          };
-          const clearPointer = () => {
-            scene.current.pointerX = 0;
-            scene.current.pointerY = 0;
+            Object.assign(state, {
+              pointerX: (event.clientX / innerWidth) * 2 - 1,
+              pointerY: 1 - (event.clientY / innerHeight) * 2,
+            });
           };
           const visibility = () => {
-            scene.current.visible = !document.hidden;
+            Object.assign(state, { visible: !document.hidden });
             clearPointer();
           };
           window.addEventListener("pointermove", pointer, { passive: true });
           window.addEventListener("pointerleave", clearPointer);
           document.addEventListener("visibilitychange", visibility);
-          // Font loading can change chapter boundaries without a viewport resize.
           let disposed = false;
           void document.fonts.ready.then(() => {
             if (!disposed) ScrollTrigger.refresh();
           });
+          updatePresentation();
           return () => {
             disposed = true;
             master.kill();

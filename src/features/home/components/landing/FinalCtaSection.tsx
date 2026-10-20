@@ -1,5 +1,4 @@
-import { Link } from "react-router-dom";
-import { TransportLink } from "./LandingActions";
+import { GuestLinks, TransportLink } from "./LandingActions";
 
 export function FinalCtaSection() {
   return (
@@ -24,9 +23,7 @@ export function FinalCtaSection() {
         </p>
         <div className="landing-actions">
           <TransportLink final />
-          <Link className="landing-text-link" to="/login">
-            Sign in <span aria-hidden="true">↗</span>
-          </Link>
+          <GuestLinks className="landing-text-link" />
         </div>
       </div>
       <span className="landing-final-wordmark" aria-hidden="true">

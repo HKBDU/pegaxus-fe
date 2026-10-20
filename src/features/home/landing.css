@@ -1,17 +1,18 @@
 .pegaxus-landing {
   --landing-ink: #111311;
-  --landing-ivory: #F1EADF;
+  --landing-ivory: #f1eadf;
   --landing-muted: #a2a79a;
   --landing-gold: #e8b66b;
-  --landing-champagne: #D7B887;
-  --landing-champagne-light: #E8C79C;
-  --landing-charcoal: #242A24;
-  --landing-olive: #40473C;
+  --landing-champagne: #d7b887;
+  --landing-champagne-light: #e8c79c;
+  --landing-charcoal: #242a24;
+  --landing-olive: #40473c;
   --landing-line: rgb(235 224 204 / 16%);
   position: relative;
   isolation: isolate;
   background:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E") repeat,
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.03'/%3E%3C/svg%3E")
+      repeat,
     var(--landing-ink);
   color: var(--landing-ivory);
   font-family: var(--sans);
@@ -81,7 +82,7 @@
 }
 .landing-story {
   position: relative;
-  z-index: 1;
+  z-index: auto;
   pointer-events: auto;
 }
 .landing-story a,
@@ -107,11 +108,8 @@
 .landing-canvas-layer {
   height: 100%;
   width: 100%;
-}
-.landing-scene-halo {
-  position: absolute;
-  inset: 10% 0 0;
-  background: radial-gradient(ellipse at 72% 55%, #8c997718, transparent 48%);
+  transform: translate3d(0, var(--scene-offset-y, 0px), 0);
+  will-change: transform;
 }
 .landing-navbar {
   position: fixed;
@@ -268,6 +266,54 @@
   padding-top: 9rem;
   padding-bottom: 10rem;
   border-top: 0;
+  overflow: clip;
+  background:
+    radial-gradient(
+      ellipse at 76% 38%,
+      rgb(132 139 100 / 13%),
+      transparent 57%
+    ),
+    linear-gradient(110deg, #111311, #182017 75%, #111510);
+}
+.landing-hero-atmosphere {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      126deg,
+      transparent 48%,
+      rgb(215 184 135 / 4%) 49%,
+      transparent 69%
+    ),
+    linear-gradient(
+      116deg,
+      transparent 67%,
+      rgb(232 199 156 / 5%) 68%,
+      transparent 85%
+    );
+}
+.landing-hero-routes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  stroke: rgb(215 184 135 / 13%);
+  stroke-width: 1;
+}
+.landing-hero-routes circle {
+  fill: var(--landing-champagne);
+  stroke: none;
+  opacity: 0.35;
+}
+.landing-hero-route-caption {
+  position: absolute;
+  right: 6vw;
+  bottom: 20%;
+  color: rgb(215 184 135 / 42%);
+  font: 0.5rem var(--mono);
+  letter-spacing: 0.15em;
 }
 .landing-copy {
   position: relative;
@@ -277,7 +323,10 @@
   justify-content: flex-end;
 }
 .landing-hero-copy {
-  width: 54%;
+  width: 44%;
+}
+.landing-action-pending {
+  opacity: 0.65;
 }
 .landing-eyebrow {
   display: block;
@@ -355,9 +404,11 @@
 }
 .landing-outline-wordmark {
   position: absolute;
-  z-index: -1;
-  left: 7vw;
-  bottom: 1rem;
+  z-index: 0;
+  right: 2vw;
+  bottom: 9%;
+  max-width: 95%;
+  overflow: hidden;
   font-family: var(--heading);
   font-weight: 600;
   font-size: clamp(6rem, 18vw, 22rem);
@@ -510,6 +561,8 @@
   padding-bottom: 15rem;
 }
 .landing-final-copy {
+  position: relative;
+  z-index: 10;
   width: 100%;
 }
 .landing-final h2 {
@@ -535,6 +588,7 @@
 }
 .landing-footer {
   position: relative;
+  z-index: 10;
   padding: 3.8rem 7.2vw 1.5rem;
   background: rgb(16 19 16 / 92%);
   border-top: 1px solid var(--landing-line);
@@ -722,8 +776,8 @@
 .landing-mobile-actions .landing-text-link {
   align-self: flex-start;
 }
-/* === Sections are transparent to allow the 3D Canvas (z-index: 1) to be visible === */
-.landing-chapter {
+/* Non-Hero chapters stay transparent beneath the shared stage; Hero owns its background. */
+.landing-chapter:not(.landing-hero) {
   background: transparent;
 }
 /* === Oversized chapter numbers (decorative) === */
@@ -742,11 +796,21 @@
   letter-spacing: -0.04em;
   z-index: -1;
 }
-#journey::after { content: "01"; }
-#compliance::after { content: "02"; }
-#platform::after { content: "03"; }
-#care::after { content: "04"; }
-#movement::after { content: "05"; }
+#journey::after {
+  content: "01";
+}
+#compliance::after {
+  content: "02";
+}
+#platform::after {
+  content: "03";
+}
+#care::after {
+  content: "04";
+}
+#movement::after {
+  content: "05";
+}
 /* === PEGAXUS marquee band (Compact 50%, Transparent, Behind Horse) === */
 .landing-marquee-band {
   position: relative;
@@ -800,7 +864,9 @@
   border-color: var(--landing-champagne);
 }
 .landing-platform .landing-pillars article {
-  transition: border-color 300ms, transform 300ms;
+  transition:
+    border-color 300ms,
+    transform 300ms;
 }
 .landing-platform .landing-pillars article:hover {
   border-color: rgb(215 184 135 / 30%);
@@ -822,8 +888,12 @@
   }
 }
 @keyframes marquee-ltr {
-  from { transform: translateX(-50%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 @media (max-width: 1100px) {
   .landing-desktop-nav,
@@ -841,11 +911,11 @@
     padding-left: 5vw;
     padding-right: 5vw;
   }
-  .landing-hero-copy {
-    width: 57%;
-  }
   .landing-copy {
     width: 48%;
+  }
+  .landing-hero-copy {
+    width: 44%;
   }
   .landing-hero h1 {
     font-size: clamp(3rem, 6.7vw, 5.8rem);
@@ -856,10 +926,6 @@
     top: 75px;
     bottom: auto;
     height: 43svh;
-  }
-  .landing-scene-halo {
-    inset: 0;
-    background: radial-gradient(ellipse at 50% 50%, #8c997718, transparent 70%);
   }
   .landing-chapter {
     display: block;
@@ -913,6 +979,7 @@
     margin-top: 1.6rem;
   }
   .landing-hero-coordinate,
+  .landing-hero-route-caption,
   .landing-hero-caption,
   .landing-border-stamp {
     display: none;

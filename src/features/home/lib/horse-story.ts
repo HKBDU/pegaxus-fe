@@ -1,4 +1,8 @@
-import type { HorseMotion } from "./horse-animation";
+import {
+  HERO_APPROACH_DISTANCE,
+  type HeroPhase,
+  type HorseMotion,
+} from "./horse-animation";
 import type { LandingChapter } from "./landing-navigation";
 
 export type StoryProfile = "desktop" | "tablet" | "mobile";
@@ -30,7 +34,15 @@ export type LandingSceneState = HorseShot & {
   lastScrollAt: number;
   rawProgress: number;
   storyProgress: number;
-  introScale: number;
+  inHero: boolean;
+  heroCompleted: boolean;
+  heroPhase: HeroPhase;
+  shotVersion: number;
+  invalidate?: () => void;
+  stageOffsetY: number;
+  clipTop: number;
+  clipBottom: number;
+  introX: number;
   introZ: number;
 };
 export type MotionCue = { at: number; motion: HorseMotion };
@@ -40,11 +52,11 @@ export type MotionCue = { at: number; motion: HorseMotion };
 export function getHorseShots(profile: StoryProfile, reduced: boolean) {
   const base: HorseShot = {
     horsePresence: 1,
-    horseX: 1.6,
+    horseX: 1.75,
     horseY: -1.25,
     horseZ: 0,
     horseScale: 1,
-    horseYaw: -0.48,
+    horseYaw: 1.25,
     cameraX: 0,
     cameraY: 0.45,
     cameraZ: 6.9,
@@ -148,7 +160,7 @@ export function getHorseShots(profile: StoryProfile, reduced: boolean) {
         rimLight: 1.3,
       });
     }
-    Object.assign(shots.home, { horseYaw: -0.28 });
+    Object.assign(shots.home, { horseYaw: 1.25 });
     Object.assign(shots.journey, { horseX: 0.15, horseYaw: 0.04 });
     Object.assign(shots.compliance, { horseX: 0.4, horseScale: 0.7 });
     Object.assign(shots.platform, { horseX: 3.8, horsePresence: 0 });
@@ -167,7 +179,7 @@ export function getHorseShots(profile: StoryProfile, reduced: boolean) {
   if (reduced) {
     const staticShot = {
       ...shots.home,
-      horseYaw: -0.28,
+      horseYaw: 1.25,
       motion: "idle" as const,
     };
     for (const chapter of Object.keys(shots) as LandingChapter[]) {
@@ -196,8 +208,15 @@ export function createLandingStory(
     lastScrollAt: 0,
     rawProgress: 0,
     storyProgress: 0,
-    introScale: reducedMotion ? 1 : 0.78,
-    introZ: reducedMotion ? 0 : -1.6,
+    inHero: true,
+    heroCompleted: false,
+    heroPhase: "LOADING",
+    shotVersion: 0,
+    stageOffsetY: 0,
+    clipTop: 0,
+    clipBottom: 0,
+    introX: reducedMotion ? 0 : HERO_APPROACH_DISTANCE * Math.cos(1.25),
+    introZ: reducedMotion ? 0 : -HERO_APPROACH_DISTANCE * Math.sin(1.25),
   };
 }
 
