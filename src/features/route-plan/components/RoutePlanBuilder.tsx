@@ -29,6 +29,7 @@ import {
   createLocation,
   getLocation,
   updateLocation,
+  getRoutePlanError,
 } from "../services";
 import { loadAllVehicles } from "../api-adapters";
 import {
@@ -289,12 +290,16 @@ export function RoutePlanBuilder({
       setAvailableVehicles(initialVehicles);
       return;
     }
-    void loadAllVehicles()
+    void loadAllVehicles({
+      availableFrom: plan.departureAt,
+      availableTo: plan.arrivalAt,
+      transportPlanId,
+    })
       .then((items) => {
         setAvailableVehicles(items.filter((v) => v.status === "AVAILABLE"));
       })
       .catch(() => {});
-  }, [initialVehicles]);
+  }, [initialVehicles, plan.departureAt, plan.arrivalAt, transportPlanId]);
 
   const routeCatalog = useMemo(
     () =>
@@ -1036,9 +1041,10 @@ export function RoutePlanBuilder({
           : "Submitted for legal review.",
       );
     } catch (error) {
-      setSaveError(
-        error instanceof Error ? error.message : "Unable to save route plan.",
-      );
+      const mapped = getRoutePlanError(error);
+      setSaveError(mapped.code === "VEHICLE_SCHEDULE_CONFLICT"
+        ? "This vehicle is already assigned to another Transport during this time slot. Choose another vehicle or adjust the route time."
+        : mapped.message);
     }
   }
 
