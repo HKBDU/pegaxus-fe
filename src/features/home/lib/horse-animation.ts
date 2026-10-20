@@ -7,7 +7,10 @@ export type HeroPhase =
 export const HERO_APPROACH_DISTANCE = 1.2;
 // The original rig faces −X. This yaw aims forward and modestly toward the copy.
 export const HERO_YAW = 0.92;
-export const JOURNEY_TRAVEL_DISTANCE = 0.45;
+// Measured planted-hoof travel per SlowWalk cycle, in the original rig's units.
+export const JOURNEY_STRIDE = 1.388;
+export const JOURNEY_WALK_CYCLES = 2;
+export const HERO_CALM_CLIP = "HorseALL_IdleEars_Calm";
 export const HERO_STANDING_TIME = 0;
 export const HERO_SCRAPE_CLIP = "HorseALL_HoofScrape2";
 

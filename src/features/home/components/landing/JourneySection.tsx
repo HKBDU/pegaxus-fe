@@ -1,5 +1,3 @@
-import departure from "../../assets/journey-departure.jpg";
-
 const stages = ["Planning", "Legal & health", "Border crossing", "Arrival"];
 
 export function JourneySection() {
@@ -9,19 +7,11 @@ export function JourneySection() {
       className="landing-chapter landing-journey"
       aria-labelledby="journey-title"
     >
-      <figure className="landing-departure-photo" data-media-reveal>
-        <div className="landing-photo-frame">
-          <img
-            src={departure}
-            alt="Grooms leading racehorses out of a stable"
-            width="1280"
-            height="853"
-            loading="lazy"
-            decoding="async"
-          />
-        </div>
-        <figcaption>THE DEPARTURE / Photography: Tom Fisk · Pexels</figcaption>
-      </figure>
+      <div className="landing-journey-perspective" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
       <div className="landing-copy" data-reveal>
         <p className="landing-eyebrow">02 / The departure</p>
         <h2 id="journey-title">
@@ -47,7 +37,7 @@ export function JourneySection() {
         </p>
       </div>
       <span className="landing-shot-caption" aria-hidden="true">
-        A NEW PERSPECTIVE / THE JOURNEY BEGINS
+        FORWARD, WITH PURPOSE / THE JOURNEY BEGINS
       </span>
     </section>
   );

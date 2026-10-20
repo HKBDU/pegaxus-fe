@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { HORSE_CHAPTERS, type LandingChapter } from "../lib/landing-navigation";
+import { createMapTraversal } from "../lib/map-traversal";
 import {
   createLandingStory,
   getHorseShots,
@@ -17,6 +18,7 @@ export function useLandingStory(
   canvasLayer: RefObject<HTMLDivElement | null>,
 ) {
   const scene = useRef(createLandingStory("mobile", true));
+  const initialMapAnchor = useRef(location.hash === "#movement");
   const [active, setActive] = useState<LandingChapter>("home");
   const [scrolled, setScrolled] = useState(false);
   const [horsePresent, setHorsePresent] = useState(true);
@@ -31,6 +33,7 @@ export function useLandingStory(
           tablet: "(min-width: 768px) and (max-width: 1023px)",
           mobile: "(max-width: 767px)",
           reduced: "(prefers-reduced-motion: reduce)",
+          short: "(max-height: 559px)",
         },
         (context) => {
           const conditions = context.conditions!;
@@ -41,11 +44,16 @@ export function useLandingStory(
               : "mobile";
           const reduced = Boolean(conditions.reduced);
           const state = scene.current;
+          const resumeJourney = state.inJourney;
+          const resumeMap = state.inMap || initialMapAnchor.current;
+          initialMapAnchor.current = false;
           const previous = {
             heroCompleted: state.heroCompleted,
             heroPhase: state.heroPhase,
-            journeyCompleted: state.journeyCompleted || state.inJourney,
+            journeyCompleted: state.journeyCompleted,
             journeyTravel: state.journeyTravel,
+            journeyDistance: state.journeyDistance,
+            mapProgress: state.mapProgress,
             invalidate: state.invalidate,
             shotVersion: state.shotVersion + 1,
           };
@@ -60,11 +68,23 @@ export function useLandingStory(
           if (state.heroPhase !== "LOADING")
             Object.assign(state, { heroCompleted: true, introX: 0, introZ: 0 });
           const shots = getHorseShots(profile, reduced);
+          if (resumeJourney || resumeMap)
+            Object.assign(
+              state,
+              resumeJourney ? shots.journey : shots.movement,
+              {
+                inHero: false,
+                inJourney: resumeJourney,
+                inMap: resumeMap,
+              },
+            );
           const sections = HORSE_CHAPTERS.map((id) =>
             element.querySelector<HTMLElement>("#" + id)!,
           );
           const hero = sections[0];
           const journey = sections[1];
+          const map = element.querySelector<HTMLElement>("#movement")!;
+          const traversal = createMapTraversal(map, state);
           const progressFill = element.querySelector<HTMLElement>(
             ".landing-scroll-progress > span",
           );
@@ -74,16 +94,38 @@ export function useLandingStory(
           let frame = 0;
           let refreshFrame = 0;
           let disposed = false;
+          let restorePending = resumeJourney || resumeMap;
 
           const updatePresentation = () => {
+            if (restorePending) return;
+            const viewportProfile =
+              innerWidth >= 1024
+                ? "desktop"
+                : innerWidth >= 768
+                  ? "tablet"
+                  : "mobile";
+            if (viewportProfile !== profile) return;
             const heroRect = hero.getBoundingClientRect();
             const journeyRect = journey.getBoundingClientRect();
-            const inHero = heroRect.bottom > 0;
+            const mapRect = map.getBoundingClientRect();
+            // A navbar-covered sliver of Hero must not steal Journey anchor reentry.
+            const inHero = heroRect.bottom > (profile === "desktop" ? 80 : 75);
             const inJourney =
               !inHero &&
               journeyRect.bottom > 0 &&
               journeyRect.top < innerHeight;
-            const nextShot = inHero ? "home" : inJourney ? "journey" : "none";
+            const inMap =
+              !inHero &&
+              !inJourney &&
+              mapRect.top < innerHeight &&
+              mapRect.bottom > 0;
+            const nextShot = inHero
+              ? "home"
+              : inJourney
+                ? "journey"
+                : inMap
+                  ? "map"
+                  : "none";
             if (currentShot !== nextShot) {
               if (currentShot === "home" && !inHero)
                 Object.assign(state, {
@@ -94,25 +136,35 @@ export function useLandingStory(
               if (currentShot === "journey")
                 Object.assign(state, { journeyCompleted: true });
               currentShot = nextShot;
-              Object.assign(state, inJourney ? shots.journey : shots.home, {
-                inHero,
-                inJourney,
-                horsePresence: nextShot === "none" ? 0 : 1,
-                shotVersion: state.shotVersion + 1,
-              });
+              Object.assign(
+                state,
+                inJourney ? shots.journey : inMap ? shots.movement : shots.home,
+                {
+                  inHero,
+                  inJourney,
+                  inMap,
+                  horsePresence: nextShot === "none" ? 0 : 1,
+                  shotVersion: state.shotVersion + 1,
+                },
+              );
             }
             const layer = canvasLayer.current;
+            if (layer) layer.dataset.shot = nextShot;
             const stageTop =
               layer?.getBoundingClientRect().top ??
-              (profile === "desktop" ? 0 : 75);
+              (inMap || profile === "desktop" ? 0 : 75);
             const stageHeight =
               layer?.clientHeight ??
-              (profile === "desktop" ? innerHeight : innerHeight * 0.43);
-            const rect = inHero ? heroRect : journeyRect;
+              (inMap || profile === "desktop"
+                ? innerHeight
+                : innerHeight * 0.43);
+            const rect = inHero ? heroRect : inMap ? mapRect : journeyRect;
             const offset = inHero
               ? rect.top
-              : Math.max(0, rect.top) +
-                Math.min(0, rect.bottom - stageTop - stageHeight);
+              : inMap
+                ? 0
+                : Math.max(0, rect.top) +
+                  Math.min(0, rect.bottom - stageTop - stageHeight);
             const clipTop = Math.max(
               0,
               Math.min(stageHeight, rect.top - stageTop),
@@ -123,7 +175,16 @@ export function useLandingStory(
             );
             const present =
               nextShot !== "none" && clipTop + clipBottom < stageHeight;
-            Object.assign(state, { stageOffsetY: offset, clipTop, clipBottom });
+            Object.assign(state, {
+              stageOffsetY: offset,
+              clipTop,
+              clipBottom,
+              journeyReady:
+                inJourney &&
+                clipTop < stageHeight * 0.12 &&
+                clipBottom < stageHeight * 0.12 &&
+                offset < stageHeight * 0.12,
+            });
             if (inHero && !present)
               Object.assign(state, {
                 heroCompleted: true,
@@ -136,6 +197,7 @@ export function useLandingStory(
                 "inset(" + clipTop + "px 0 " + clipBottom + "px)";
               layer.style.opacity = present ? "1" : "0";
             }
+            traversal.update();
             if (lastPresent !== present) {
               lastPresent = present;
               setHorsePresent(present);
@@ -167,6 +229,15 @@ export function useLandingStory(
               refreshFrame = 0;
               if (!disposed) {
                 ScrollTrigger.refresh();
+                if (restorePending) {
+                  restorePending = false;
+                  if (resumeJourney)
+                    window.scrollTo({
+                      top: journey.getBoundingClientRect().top + scrollY,
+                      behavior: "instant",
+                    });
+                  if (resumeMap) traversal.restore(previous.mapProgress);
+                }
                 updatePresentation();
               }
             });
@@ -187,6 +258,66 @@ export function useLandingStory(
               },
             });
             if (reduced) return;
+            if (section.id === "journey") {
+              gsap.from(section.querySelectorAll(".landing-stage-line li"), {
+                y: 14,
+                opacity: 0,
+                stagger: 0.14,
+                duration: 0.65,
+                ease: "power2.out",
+                scrollTrigger: {
+                  trigger: section.querySelector(".landing-stage-line"),
+                  start: "top 92%",
+                  once: true,
+                },
+              });
+              gsap.fromTo(
+                section.querySelector(".landing-journey-perspective"),
+                { opacity: 0.15, y: 35 },
+                {
+                  opacity: 0.45,
+                  y: -15,
+                  ease: "none",
+                  scrollTrigger: {
+                    trigger: section,
+                    start: "top bottom",
+                    end: "bottom top",
+                    scrub: 0.8,
+                  },
+                },
+              );
+            }
+            if (
+              ["compliance", "platform", "reliability"].includes(section.id)
+            ) {
+              const rows = section.querySelectorAll(
+                ".landing-preview-checklist > div, .landing-preview-timeline > li",
+              );
+              gsap.from(rows, {
+                y: 14,
+                opacity: 0,
+                stagger: 0.12,
+                duration: 0.7,
+                ease: "power2.out",
+                scrollTrigger: {
+                  trigger: section.querySelector("[data-interface]"),
+                  start: "top 75%",
+                  once: true,
+                },
+              });
+            }
+            if (section.id === "compliance")
+              gsap.from(section.querySelector(".landing-document-sheet"), {
+                x: 25,
+                rotation: 0,
+                duration: 1.1,
+                ease: "power2.out",
+                scrollTrigger: {
+                  trigger: section,
+                  start: "top 75%",
+                  once: true,
+                },
+              });
             const copy = section.querySelector("[data-reveal]");
             if (copy)
               gsap.from(copy.children, {
@@ -250,52 +381,6 @@ export function useLandingStory(
               );
             });
           });
-          const map = element.querySelector("#movement");
-          const routes = element.querySelectorAll("[data-route-flow]");
-          const routeLoop =
-            !reduced && routes.length
-              ? gsap.to(routes, {
-                  strokeDashoffset: -36,
-                  duration: 1.5,
-                  repeat: -1,
-                  ease: "none",
-                  paused: true,
-                })
-              : null;
-          let mapVisible = false;
-          const syncMap = () => {
-            map?.toggleAttribute(
-              "data-route-active",
-              mapVisible && !document.hidden,
-            );
-            if (mapVisible && !document.hidden) routeLoop?.play();
-            else routeLoop?.pause();
-          };
-          if (map && !reduced) {
-            gsap.fromTo(
-              element.querySelectorAll("[data-route-reveal]"),
-              { attr: { "stroke-dashoffset": 1 } },
-              {
-                attr: { "stroke-dashoffset": 0 },
-                ease: "none",
-                scrollTrigger: {
-                  trigger: map,
-                  start: "top 85%",
-                  end: "center 60%",
-                  scrub: 0.5,
-                },
-              },
-            );
-            ScrollTrigger.create({
-              trigger: map,
-              start: "top bottom",
-              end: "bottom top",
-              onToggle: (self) => {
-                mapVisible = self.isActive;
-                syncMap();
-              },
-            });
-          }
           const clearPointer = () =>
             Object.assign(state, { pointerX: 0, pointerY: 0 });
           const fine = matchMedia("(hover: hover) and (pointer: fine)");
@@ -318,7 +403,7 @@ export function useLandingStory(
           const visibility = () => {
             Object.assign(state, { visible: !document.hidden });
             clearPointer();
-            syncMap();
+            traversal.update();
             requestUpdate();
           };
           window.addEventListener("scroll", requestUpdate, { passive: true });
@@ -330,14 +415,16 @@ export function useLandingStory(
           const resize = new ResizeObserver(refresh);
           resize.observe(element);
           void document.fonts.ready.then(refresh);
-          updatePresentation();
+          if (restorePending) {
+            if (canvasLayer.current) canvasLayer.current.style.opacity = "0";
+            refresh();
+          } else updatePresentation();
           return () => {
             disposed = true;
             cancelAnimationFrame(frame);
             cancelAnimationFrame(refreshFrame);
             resize.disconnect();
-            routeLoop?.kill();
-            map?.removeAttribute("data-route-active");
+            traversal.destroy();
             window.removeEventListener("scroll", requestUpdate);
             window.removeEventListener("resize", refresh);
             window.removeEventListener("pointermove", pointer);

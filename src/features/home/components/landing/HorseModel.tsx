@@ -3,9 +3,11 @@ import { useFrame } from "@react-three/fiber";
 import { useAnimations, useGLTF } from "@react-three/drei";
 import {
   AnimationMixer,
+  AnimationUtils,
   Box3,
   LoopOnce,
   LoopRepeat,
+  LoopPingPong,
   Vector3,
   type AnimationAction,
   type SkinnedMesh,
@@ -14,7 +16,9 @@ import horseUrl from "../../assets/horse-lite.glb?url&no-inline";
 import {
   assertHorseAnimations,
   HERO_APPROACH_DISTANCE,
-  JOURNEY_TRAVEL_DISTANCE,
+  JOURNEY_STRIDE,
+  JOURNEY_WALK_CYCLES,
+  HERO_CALM_CLIP,
   HERO_SCRAPE_CLIP,
   HERO_STANDING_TIME,
   HORSE_CLIPS,
@@ -70,11 +74,19 @@ export function HorseModel({
       offset: [-center.x, -box.min.y, -center.z] as [number, number, number],
     };
   }, [scene, animations]);
-  const { actions, mixer } = useAnimations(animations, scene);
+  const presentationClips = useMemo(() => {
+    const source = animations.find((clip) => clip.name === HORSE_CLIPS.idle)!;
+    // Only the verified calm 0–2.5s; the original clip later rears.
+    const calm = AnimationUtils.subclip(source, HERO_CALM_CLIP, 0, 75, 30);
+    return [...animations, calm];
+  }, [animations]);
+  const { actions, mixer } = useAnimations(presentationClips, scene);
+  const journeyLoops = useRef(0);
   const current = useRef<AnimationAction | null>(null);
   const controller = useRef<{
     finish: (immediate?: boolean) => void;
     enterStory: () => void;
+    settleMap: () => void;
   } | null>(null);
   const previousShot = useRef("");
   const previousVersion = useRef(-1);
@@ -104,6 +116,8 @@ export function HorseModel({
         next.fadeIn(0.22);
       }
       next.play();
+      if (name === HERO_CALM_CLIP)
+        next.setLoop(LoopPingPong, Infinity).setEffectiveTimeScale(0.65);
       if (paused)
         Object.assign(next, { time: HERO_STANDING_TIME, paused: true });
       current.current = next;
@@ -121,26 +135,73 @@ export function HorseModel({
         introX: 0,
         introZ: 0,
       });
-      play(HORSE_CLIPS.idle, false, true);
+      play(HERO_CALM_CLIP, false, state.reducedMotion);
       if (immediate || state.reducedMotion) mixer.update(0);
     };
     const enterStory = () => {
       mixer.stopAllAction();
       current.current = null;
+      if (state.inMap) {
+        play(
+          state.reducedMotion || state.mapProgress >= 1
+            ? HERO_CALM_CLIP
+            : HORSE_CLIPS.run,
+          false,
+          true,
+        );
+        mixer.update(0);
+        return;
+      }
+      if (!state.inJourney) {
+        play(HERO_CALM_CLIP, false, state.reducedMotion);
+        mixer.update(0);
+        return;
+      }
+      const progress =
+        state.journeyDistance > 0
+          ? Math.min(1, state.journeyTravel / state.journeyDistance)
+          : 0;
       const walking =
-        state.inJourney && !state.journeyCompleted && !state.reducedMotion;
+        !state.journeyCompleted && !state.reducedMotion && progress < 1;
+      const distance =
+        JOURNEY_STRIDE * frame.scale * state.horseScale * JOURNEY_WALK_CYCLES;
       Object.assign(state, {
-        journeyTravel: walking ? 0 : JOURNEY_TRAVEL_DISTANCE,
+        journeyDistance: distance,
+        journeyTravel: walking ? distance * progress : distance,
+        journeyCompleted:
+          state.journeyCompleted || state.reducedMotion || progress >= 1,
       });
-      play(walking ? HORSE_CLIPS.walk : HORSE_CLIPS.idle, walking, !walking);
+      journeyLoops.current = walking
+        ? Math.floor(progress * JOURNEY_WALK_CYCLES)
+        : 0;
+      const action = play(
+        walking ? HORSE_CLIPS.walk : HERO_CALM_CLIP,
+        false,
+        state.reducedMotion || walking,
+      );
+      if (walking) {
+        action
+          .setLoop(LoopRepeat, JOURNEY_WALK_CYCLES - journeyLoops.current)
+          .setEffectiveTimeScale(0.85);
+        action.clampWhenFinished = true;
+        action.time =
+          (progress * JOURNEY_WALK_CYCLES - journeyLoops.current) *
+          action.getClip().duration;
+      }
       mixer.update(0);
     };
-    controller.current = { finish, enterStory };
+    const settleMap = () => {
+      if (current.current) current.current.paused = true;
+      play(HERO_CALM_CLIP, false, state.reducedMotion);
+    };
+    controller.current = { finish, enterStory, settleMap };
     previousShot.current = state.inHero
       ? "hero"
       : state.inJourney
         ? "journey"
-        : "none";
+        : state.inMap
+          ? "map"
+          : "none";
     previousVersion.current = state.shotVersion;
     const completed = ({ action }: { action: AnimationAction }) => {
       if (action !== current.current || state.reducedMotion) return;
@@ -148,9 +209,9 @@ export function HorseModel({
         if (state.inJourney && action === actions[HORSE_CLIPS.walk]) {
           Object.assign(state, {
             journeyCompleted: true,
-            journeyTravel: JOURNEY_TRAVEL_DISTANCE,
+            journeyTravel: state.journeyDistance,
           });
-          play(HORSE_CLIPS.idle, false, true);
+          play(HERO_CALM_CLIP);
         }
         return;
       }
@@ -172,7 +233,16 @@ export function HorseModel({
         } else if (state.heroPhase === "HOOF_SCRAPE_2") finish();
       }
     };
+    const looped = ({ action }: { action: AnimationAction }) => {
+      if (
+        state.inJourney &&
+        action === current.current &&
+        action === actions[HORSE_CLIPS.walk]
+      )
+        journeyLoops.current += 1;
+    };
     mixer.addEventListener("finished", completed);
+    mixer.addEventListener("loop", looped);
     if (
       state.heroCompleted ||
       state.reducedMotion ||
@@ -189,16 +259,23 @@ export function HorseModel({
     state.invalidate?.();
     return () => {
       mixer.removeEventListener("finished", completed);
+      mixer.removeEventListener("loop", looped);
       mixer.stopAllAction();
       current.current = null;
       controller.current = null;
     };
-  }, [actions, mixer, onReady, story]);
+  }, [actions, mixer, onReady, story, frame.scale]);
 
   useFrame((_frame, elapsed) => {
     const state = story.current;
     const delta = Math.min(elapsed, 0.05);
-    const shot = state.inHero ? "hero" : state.inJourney ? "journey" : "none";
+    const shot = state.inHero
+      ? "hero"
+      : state.inJourney
+        ? "journey"
+        : state.inMap
+          ? "map"
+          : "none";
     if (
       previousShot.current !== shot ||
       previousVersion.current !== state.shotVersion
@@ -214,7 +291,20 @@ export function HorseModel({
       state.heroPhase !== "FINAL_POSE"
     )
       controller.current?.finish(true);
-    if (state.inHero && state.heroPhase === "APPROACH" && current.current) {
+    if (state.inMap && current.current) {
+      if (state.mapProgress >= 1 || state.reducedMotion) {
+        if (current.current.getClip().name !== HERO_CALM_CLIP)
+          controller.current?.settleMap();
+      } else {
+        current.current.paused =
+          !state.mapRunning || performance.now() - state.mapUpdatedAt > 140;
+        current.current.setEffectiveTimeScale(state.mapRunRate);
+      }
+    } else if (
+      state.inHero &&
+      state.heroPhase === "APPROACH" &&
+      current.current
+    ) {
       const progress = Math.min(
         1,
         current.current.time / current.current.getClip().duration,
@@ -229,13 +319,22 @@ export function HorseModel({
       current.current.setEffectiveTimeScale(
         0.85 * (1 - 0.4 * Math.max(0, (progress - 0.8) / 0.2)),
       );
-    } else if (state.inJourney && !state.journeyCompleted && current.current) {
+    } else if (
+      state.inJourney &&
+      !state.reducedMotion &&
+      !state.journeyCompleted &&
+      current.current?.getClip().name === HORSE_CLIPS.walk
+    ) {
+      // Hold the start pose until the section and projected horse are visible.
+      current.current.paused = !(state.journeyReady && state.journeyFramed);
       Object.assign(state, {
         journeyTravel:
-          JOURNEY_TRAVEL_DISTANCE *
+          state.journeyDistance *
           Math.min(
             1,
-            current.current.time / current.current.getClip().duration,
+            (journeyLoops.current +
+              current.current.time / current.current.getClip().duration) /
+              JOURNEY_WALK_CYCLES,
           ),
       });
     }

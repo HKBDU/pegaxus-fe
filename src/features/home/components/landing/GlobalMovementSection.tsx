@@ -12,7 +12,7 @@ export function GlobalMovementSection() {
         <h2 id="movement-title">
           Across borders.
           <br />
-          <em>Without uncertainty.</em>
+          <em>With clarity.</em>
         </h2>
         <p className="landing-lead">
           Different countries. Different requirements. Keep route preparation
@@ -21,7 +21,7 @@ export function GlobalMovementSection() {
       </div>
       <JourneyMap />
       <p className="landing-map-caption">
-        Illustrative route · Not live tracking or a statement of service
+        Symbolic journey · Illustrative route, not live tracking or service
         coverage.
       </p>
     </section>

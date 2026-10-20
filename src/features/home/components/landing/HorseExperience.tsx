@@ -3,6 +3,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useState,
   type ReactNode,
   type RefObject,
@@ -73,10 +74,20 @@ export default function HorseExperience({
   const lowPower =
     quality.compact ||
     (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 4);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const layer = canvasLayer.current;
     const state = story.current;
     if (layer) {
+      layer.setAttribute(
+        "data-shot",
+        state.inHero
+          ? "home"
+          : state.inJourney
+            ? "journey"
+            : state.inMap
+              ? "map"
+              : "none",
+      );
       layer.style.setProperty(
         "opacity",
         String(state.inHero ? 1 : state.horsePresence),

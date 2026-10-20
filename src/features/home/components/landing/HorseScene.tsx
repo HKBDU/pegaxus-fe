@@ -11,6 +11,8 @@ import {
   Quaternion,
   PerspectiveCamera,
   Vector3,
+  Plane,
+  Ray,
   type Group,
   type DirectionalLight,
 } from "three";
@@ -55,10 +57,16 @@ export function HorseScene({
       pointer: new Vector3(),
       rimPos: new Vector3(-4, 3, -3),
       keyPos: new Vector3(3, 5, 4),
+      head: new Vector3(),
+      hoof: new Vector3(),
+      route: new Vector3(),
+      tangent: new Vector3(),
+      ray: new Ray(),
+      ground: new Plane(new Vector3(0, 1, 0), 0),
     }),
     [],
   );
-  useFrame(({ camera }, elapsed) => {
+  useFrame(({ camera, size }, elapsed) => {
     if (!world.current) return;
     const state = story.current;
     const delta = Math.min(elapsed, 0.05);
@@ -103,9 +111,57 @@ export function HorseScene({
       key.current.position.lerp(scratch.keyPos, damp);
       key.current.intensity += (state.keyLight - key.current.intensity) * alpha;
     }
+    if (state.inMap) {
+      camera.position.set(state.cameraX, state.cameraY, state.cameraZ);
+      scratch.look.set(state.targetX, state.targetY, state.targetZ);
+      camera.lookAt(scratch.look);
+      camera.updateMatrixWorld();
+      scratch.route
+        .set(
+          (state.mapScreenX / size.width) * 2 - 1,
+          1 - (state.mapScreenY / size.height) * 2,
+          0.5,
+        )
+        .unproject(camera);
+      scratch.ray.origin.copy(camera.position);
+      scratch.ray.direction
+        .copy(scratch.route)
+        .sub(camera.position)
+        .normalize();
+      if (!scratch.ray.intersectPlane(scratch.ground, scratch.route)) return;
+      scratch.tangent
+        .set(
+          ((state.mapScreenX + state.mapTangentX) / size.width) * 2 - 1,
+          1 - ((state.mapScreenY + state.mapTangentY) / size.height) * 2,
+          0.5,
+        )
+        .unproject(camera);
+      scratch.ray.direction
+        .copy(scratch.tangent)
+        .sub(camera.position)
+        .normalize();
+      if (!scratch.ray.intersectPlane(scratch.ground, scratch.tangent)) return;
+      scratch.tangent.sub(scratch.route);
+      scratch.yaw.set(0, Math.atan2(scratch.tangent.z, -scratch.tangent.x), 0);
+      scratch.rotation.setFromEuler(scratch.yaw);
+      world.current.position.copy(scratch.route);
+      world.current.quaternion.slerp(
+        scratch.rotation,
+        snap ? 1 : 1 - Math.exp(-18 * delta),
+      );
+      scratch.head.copy(scratch.route).y += 1;
+      scratch.head.project(camera);
+      scratch.hoof.copy(scratch.route).project(camera);
+      const pixelsPerUnit =
+        (Math.abs(scratch.head.y - scratch.hoof.y) * size.height) / 2;
+      world.current.scale.setScalar(
+        state.mapHorseHeight / (2.4 * Math.max(1, pixelsPerUnit)),
+      );
+      return;
+    }
     const composition = 1;
     const framedX =
-      state.inHero &&
+      (state.inHero || state.inJourney) &&
       state.profile === "desktop" &&
       camera instanceof PerspectiveCamera
         ? (state.horseX * camera.aspect) / (16 / 9)
@@ -116,7 +172,8 @@ export function HorseScene({
         (state.inHero
           ? state.introX
           : state.inJourney
-            ? -state.journeyTravel * Math.cos(state.horseYaw)
+            ? (state.journeyDistance - state.journeyTravel) *
+              Math.cos(state.horseYaw)
             : 0) -
         position.x) *
       composition;
@@ -126,7 +183,8 @@ export function HorseScene({
         (state.inHero
           ? state.introZ
           : state.inJourney
-            ? state.journeyTravel * Math.sin(state.horseYaw)
+            ? -(state.journeyDistance - state.journeyTravel) *
+              Math.sin(state.horseYaw)
             : 0) -
         position.z) *
       composition;
@@ -143,6 +201,19 @@ export function HorseScene({
     scratch.target.set(state.targetX, state.targetY, state.targetZ);
     scratch.look.lerp(scratch.target, alpha);
     camera.lookAt(scratch.look);
+    if (state.inJourney) {
+      camera.updateMatrixWorld();
+      scratch.head.copy(position).y += 2.4 * state.horseScale;
+      scratch.hoof.copy(position);
+      scratch.head.project(camera);
+      scratch.hoof.project(camera);
+      Object.assign(state, {
+        journeyFramed:
+          Math.abs(scratch.head.x) < 0.88 &&
+          scratch.head.y < 0.94 &&
+          scratch.hoof.y > -0.94,
+      });
+    }
   });
   return (
     <>
