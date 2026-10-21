@@ -11,6 +11,8 @@ import { emergencyCostStatuses, type EmergencyCostParams } from "../schemas";
 import { canReadEmergencyCosts, getEmergencyCostError } from "../services";
 import { EmergencyCostFilters, type EmergencyCostFilterPatch } from "./EmergencyCostFilters";
 import { EmergencyCostResults } from "./EmergencyCostResults";
+import { emergencyCostSource } from "../source";
+import { emergencyCostDetailPath, type EmergencyCostAudience } from "../navigation";
 
 export interface EmergencyCostListProps {
   incidentReportId?: string;
@@ -18,6 +20,7 @@ export interface EmergencyCostListProps {
   embedded?: boolean;
   audience?: IncidentAudience;
   className?: string;
+  routeAudience?: EmergencyCostAudience;
 }
 
 export function EmergencyCostList(props: EmergencyCostListProps) {
@@ -30,11 +33,11 @@ export function EmergencyCostList(props: EmergencyCostListProps) {
   if (props.embedded && !props.incidentReportId?.trim())
     return <ErrorState message="An incident is required for this embedded emergency cost list." />;
   return <EmergencyCostListContent {...props}
-    key={JSON.stringify([principal!.id, sessionVersion, principal!.roles.map(normalizeRole).sort(), props.incidentReportId, props.transportId, props.embedded])}
+    key={JSON.stringify([principal!.id, sessionVersion, principal!.roles.map(normalizeRole).sort(), emergencyCostSource(), props.incidentReportId, props.transportId, props.embedded])}
     manager={canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })} />;
 }
 
-function EmergencyCostListContent({ incidentReportId, transportId, embedded, className, manager }: EmergencyCostListProps & { manager: boolean }) {
+function EmergencyCostListContent({ incidentReportId, transportId, embedded, className, manager, routeAudience }: EmergencyCostListProps & { manager: boolean }) {
   const headingId = useId();
   const defaults: EmergencyCostParams = {
     status: manager ? "PENDING" : emergencyCostStatuses.join(","),
@@ -101,7 +104,8 @@ function EmergencyCostListContent({ incidentReportId, transportId, embedded, cla
         <div className="[&>div]:rounded-xs [&>div]:p-4"><ErrorState message={error.message} onRetry={error.retryable ? () => void query.refetch() : undefined} /></div>
       ) : (
         <div className="min-w-0 rounded-xs border border-border bg-card">
-          <EmergencyCostResults items={page?.items ?? []} loading={!page} busy={busy} />
+          <EmergencyCostResults items={page?.items ?? []} loading={!page} busy={busy}
+            detailPath={routeAudience ? (item) => emergencyCostDetailPath(routeAudience, item.emergencyCostRequestId, incidentReportId) : undefined} />
         </div>
       )}
       {page && meta ? (

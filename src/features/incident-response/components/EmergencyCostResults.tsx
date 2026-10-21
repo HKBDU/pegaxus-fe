@@ -6,15 +6,24 @@ import {
 } from "@/shared/components/ui/table";
 import { EMERGENCY_COST_CATEGORY_LABELS } from "@/shared/constants/incident";
 import type { EmergencyCostListItem } from "../schemas";
+import { Link, useNavigate } from "react-router-dom";
+import type { MouseEvent } from "react";
 
 const dates = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" });
 const formatDate = (value: string) => dates.format(new Date(value));
 
-export function EmergencyCostResults({ items, loading, busy }: {
+export function EmergencyCostResults({ items, loading, busy, detailPath }: {
   items: EmergencyCostListItem[];
   loading: boolean;
   busy: boolean;
+  detailPath?: (item: EmergencyCostListItem) => string;
 }) {
+  const navigate = useNavigate();
+  const openRow = (event: MouseEvent<HTMLElement>, item: EmergencyCostListItem) => {
+    if (!detailPath || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey ||
+      (event.target instanceof Element && event.target.closest("a,button,input,select,textarea")) || window.getSelection()?.toString()) return;
+    navigate(detailPath(item));
+  };
   if (loading) return (
     <div role="status" aria-label="Loading emergency cost requests" className="space-y-3 p-4">
       <span className="sr-only">Loading emergency cost requests...</span>
@@ -37,8 +46,8 @@ export function EmergencyCostResults({ items, loading, busy }: {
           </TableHeader>
           <TableBody>
             {items.map((item) => (
-              <TableRow key={item.emergencyCostRequestId}>
-                <TableCell className="font-semibold">{item.requestCode}</TableCell>
+              <TableRow key={item.emergencyCostRequestId} className={detailPath ? "cursor-pointer" : undefined} onClick={(event) => openRow(event, item)}>
+                <TableCell className="font-semibold">{detailPath ? <Link className="inline-flex min-h-11 items-center text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2" to={detailPath(item)}>{item.requestCode}</Link> : item.requestCode}</TableCell>
                 <TableCell><span className="block">{item.incident.incidentCode}</span><span className="text-muted-foreground">{item.transportCode}</span></TableCell>
                 <TableCell className="max-w-40 whitespace-normal">{EMERGENCY_COST_CATEGORY_LABELS[item.category]}</TableCell>
                 <TableCell className="text-right tabular-nums"><VndText amount={item.requestedAmount} /></TableCell>
@@ -53,9 +62,9 @@ export function EmergencyCostResults({ items, loading, busy }: {
       </div>
       <ul aria-label="Emergency cost requests" className="m-0 grid min-w-0 list-none divide-y divide-border p-0 lg:hidden">
         {items.map((item) => (
-          <li key={item.emergencyCostRequestId} className="min-w-0 space-y-2 p-3">
+          <li key={item.emergencyCostRequestId} className={`min-w-0 space-y-2 p-3 ${detailPath ? "cursor-pointer" : ""}`} onClick={(event) => openRow(event, item)}>
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <span className="min-w-0 break-words text-sm font-semibold">{item.requestCode}</span>
+              <span className="min-w-0 break-words text-sm font-semibold">{detailPath ? <Link className="inline-flex min-h-11 items-center text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2" to={detailPath(item)}>{item.requestCode}</Link> : item.requestCode}</span>
               <CostStatusBadge status={item.status} />
             </div>
             <p className="m-0 text-xs text-muted-foreground">{EMERGENCY_COST_CATEGORY_LABELS[item.category]}</p>
