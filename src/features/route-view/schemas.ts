@@ -8,6 +8,7 @@ import { employeeBriefSchema } from "@/features/transport-plan/schemas";
 
 export const routePlanIdSchema = z.union([entityIdSchema, z.number()]).transform(String);
 export const routeTypeSchema = z.enum(["PRIMARY", "BACKUP", "RETURN"]);
+const responseTimestamp = z.iso.datetime({ offset: true });
 const transportModeSchema = z.enum(["ROAD", "SEA", "AIR"]);
 // Tolerant timestamp parser: accepts ISO strings with or without offset, Date objects
 const timestamp = z.union([z.string(), z.date()]).transform((val) => {
@@ -44,37 +45,25 @@ const providerSchema = z.object({
   supportedModes: z.array(transportModeSchema).nullish().transform((v) => v ?? []),
 });
 export const routeSegmentSchema = z.object({
-  routePlanRouteId: z.union([entityIdSchema, z.number()]).nullish().transform((v) => String(v ?? "")),
-  sequenceNo: z.number().int().nullish().transform((v) => v ?? 1),
-  routeType: z.union([routeTypeSchema, z.string()]).nullish().transform((v) => (v as any) ?? "PRIMARY"),
+  routePlanRouteId: z.string().min(1),
+  sequenceNo: z.number().int().positive(),
+  routeType: routeTypeSchema,
   route: z
     .object({
-      routeId: z.union([entityIdSchema, z.number()]).nullish().transform((v) => String(v ?? "")),
+      routeId: z.string().min(1),
       routeCode: z.string().nullish().transform((v) => v ?? ""),
       routeName: text,
-      transportMode: z.union([transportModeSchema, z.string()]).nullish().transform((v) => (v as any) ?? "ROAD"),
+      transportMode: transportModeSchema,
       distanceKm: z.number().nullish().transform((v) => v ?? 0),
       estimatedDurationMinutes: durationMinutes,
-    })
-    .nullish()
-    .transform(
-      (r) =>
-        r ?? {
-          routeId: "",
-          routeCode: "",
-          routeName: null,
-          transportMode: "ROAD" as const,
-          distanceKm: 0,
-          estimatedDurationMinutes: 0,
-        },
-    ),
+    }),
   fromLocation: routeLocationSchema,
   toLocation: routeLocationSchema,
-  plannedDepartureAt: timestamp,
-  plannedArrivalAt: timestamp,
+  plannedDepartureAt: responseTimestamp.nullable(),
+  plannedArrivalAt: responseTimestamp.nullable(),
   actualDepartureAt: timestamp.nullable().optional().transform((v) => v ?? null),
   actualArrivalAt: timestamp.nullable().optional().transform((v) => v ?? null),
-  status: z.union([z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]), z.string()]).nullish().transform((v) => (v as any) ?? "PENDING"),
+  status: z.enum(["PLANNED", "IN_TRANSIT", "COMPLETED", "PENDING", "IN_PROGRESS"]),
   dwellAfterMinutes: z
     .union([z.number(), z.null(), z.undefined()])
     .transform((v) => (typeof v === "number" ? v : null)),
@@ -120,38 +109,38 @@ export const routeLegalReviewSchema = z.object({
   reviewedAt: timestamp.nullable().optional().transform((v) => v ?? null),
 });
 export const routePlanDetailSchema = z.object({
-  routePlanId: z.union([entityIdSchema, z.number()]).transform(String),
+  routePlanId: z.string().min(1),
   routePlanCode: z.string().nullish().transform((v) => v ?? ""),
-  transportPlanId: z.union([entityIdSchema, z.number()]).nullish().transform((v) => String(v ?? "")),
-  bookingId: z.union([entityIdSchema, z.number()]).nullish().transform((v) => String(v ?? "")),
+  transportPlanId: z.string().min(1),
+  bookingId: z.string().min(1),
   bookingCode: z.string().nullish().transform((v) => v ?? ""),
-  routeType: z.union([routeTypeSchema, z.string()]).nullish().transform((v) => (v as any) ?? "PRIMARY"),
-  status: z.union([routePlanStatusSchema, z.string()]).nullish().transform((v) => (v as any) ?? "DRAFT"),
+  routeType: routeTypeSchema,
+  status: routePlanStatusSchema,
   isCrossBorder: z.boolean().nullish().transform((v) => Boolean(v)),
   totalDistanceKm: z.number().nullish().transform((v) => v ?? 0),
   estimatedDurationMinutes: durationMinutes,
   plannedDepartureAt: timestamp.nullish(),
   plannedArrivalAt: timestamp.nullish(),
-  segments: z.array(routeSegmentSchema).nullish().transform((v) => v ?? []),
+  segments: z.array(routeSegmentSchema),
   isPersonnelComplete: z.boolean().nullish().transform((v) => Boolean(v)),
   legalReview: routeLegalReviewSchema.nullable().optional().transform((v) => v ?? null),
   replacesSequenceNo: replacesSequenceNoSchema,
   routeNote: text,
-  createdAt: timestamp,
-  updatedAt: timestamp,
+  createdAt: responseTimestamp,
+  updatedAt: responseTimestamp,
 });
 export const routePlanSummarySchema = z.object({
-  routePlanId: z.union([entityIdSchema, z.number()]).transform(String),
+  routePlanId: z.string().min(1),
   routePlanCode: z.string().nullish().transform((v) => v ?? ""),
-  routeType: z.union([routeTypeSchema, z.string()]).nullish().transform((v) => (v as any) ?? "PRIMARY"),
-  status: z.union([routePlanStatusSchema, z.string()]).nullish().transform((v) => (v as any) ?? "DRAFT"),
+  routeType: routeTypeSchema,
+  status: routePlanStatusSchema,
   totalDistanceKm: z.number().nullish().transform((v) => v ?? 0),
   estimatedDurationMinutes: durationMinutes,
   isPersonnelComplete: z.boolean().nullish().transform((v) => Boolean(v)),
   segmentCount: z.number().int().nonnegative(),
   replacesSequenceNo: replacesSequenceNoSchema,
   routeNote: text,
-  updatedAt: timestamp,
+  updatedAt: responseTimestamp,
 });
 export const routePlansSchema = z.object({
   items: z.array(routePlanSummarySchema),
