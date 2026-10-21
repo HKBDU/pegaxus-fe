@@ -26,6 +26,12 @@ const defaultNavItems: HeaderNavItem[] = [
   { label: "BOOKING", href: "/bookings" },
 ]
 
+/** "/" matches only the home page; the other items match their path and everything below it (plus `alsoActiveFor`). */
+function isNavItemActive(item: HeaderNavItem, pathname: string) {
+  if (item.href === "/") return pathname === "/"
+  return [item.href, ...(item.alsoActiveFor ?? [])].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+}
+
 function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
   const { setOpenMobile } = useSidebar()
   const location = useLocation()
@@ -41,7 +47,7 @@ function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
           <SidebarGroupContent>
             <SlidingSidebarMenu>
               {navItems.map((item, index) => {
-                const isActive = item.href === "/" ? location.pathname === "/" : location.pathname.startsWith(item.href)
+                const isActive = isNavItemActive(item, location.pathname)
                 const Icon = icons[index] ?? House
 
                 return (
@@ -80,10 +86,9 @@ export function Header({
   className,
 }: HeaderProps) {
   const location = useLocation()
-  const activeNavIndex =   Math.max(
-    navItems.findIndex((item) => item.href === "/" ? location.pathname === "/" : location.pathname.startsWith(item.href)),
-    0,
-  )
+  // -1 = the page belongs to no menu item (no item is highlighted, the bar is hidden).
+  const matchedNavIndex = navItems.findIndex((item) => isNavItemActive(item, location.pathname))
+  const activeNavIndex = Math.max(matchedNavIndex, 0)
   const navItemCount = Math.max(navItems.length, 1)
   const activeBarWidth = 65
 
@@ -105,12 +110,10 @@ export function Header({
               key={item.href}
               to={item.href}
               end={item.href === "/"}
-              className={({ isActive }) =>
-                cn(
-                  "relative flex h-full flex-1 items-center justify-center whitespace-nowrap font-heading text-sm text-[#c7c9cc] transition-colors duration-300 hover:text-white",
-                  isActive && "font-semibold text-white",
-                )
-              }
+              className={cn(
+                "relative flex h-full flex-1 items-center justify-center whitespace-nowrap font-heading text-sm text-[#c7c9cc] transition-colors duration-300 hover:text-white",
+                isNavItemActive(item, location.pathname) && "font-semibold text-white",
+              )}
             >
               {item.label}
             </NavLink>
@@ -122,6 +125,7 @@ export function Header({
               left: `${(100 - activeBarWidth) / (2 * navItemCount)}%`,
               width: `${activeBarWidth / navItemCount}%`,
               transform: `translateX(${activeNavIndex * (100 / activeBarWidth) * 100}%)`,
+              opacity: matchedNavIndex < 0 ? 0 : 1,
             }}
           />
         </nav> : null}

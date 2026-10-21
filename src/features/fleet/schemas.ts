@@ -14,7 +14,6 @@ const futureDate = (label: string) =>
 
 export const vehicleFormSchema = z
   .object({
-    vehicleCode: z.string().trim().min(1, "Vehicle code is required.").max(50, "Vehicle code must be at most 50 characters."),
     vehicleName: optionalText(200, "Vehicle name"),
     transportMode: z.enum(TRANSPORT_MODES),
     licensePlate: optionalText(50, "License plate"),
@@ -51,7 +50,6 @@ export type VehicleStatusFormValues = z.infer<typeof vehicleStatusSchema>
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const providerFormSchema = z.object({
-  providerCode: z.string().trim().min(1, "Provider code is required.").max(50, "Provider code must be at most 50 characters."),
   providerName: z.string().trim().min(1, "Provider name is required.").max(200, "Provider name must be at most 200 characters."),
   taxCode: z.string().trim().min(1, "Tax code / VAT number is required.").max(100, "Tax code must be at most 100 characters."),
   supportedModes: z.array(z.enum(TRANSPORT_MODES)).min(1, "Select at least one service type."),

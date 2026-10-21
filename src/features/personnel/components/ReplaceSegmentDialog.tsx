@@ -186,6 +186,8 @@ export function ReplaceSegmentDialog({ row, onOpenChange, plan, routePlan }: Rep
                                 role="DRIVER"
                                 ariaLabel="New driver"
                                 window={window}
+                                transportPlanId={plan.transportPlanId}
+                                segmentCountry={row.fromCountry}
                                 value={field.value}
                                 keepLabel="Keep current driver"
                                 excludeIds={row.driver ? [row.driver.employeeId] : undefined}
@@ -215,6 +217,8 @@ export function ReplaceSegmentDialog({ row, onOpenChange, plan, routePlan }: Rep
                                 role="ESCORT"
                                 ariaLabel="New escort"
                                 window={window}
+                                transportPlanId={plan.transportPlanId}
+                                segmentCountry={row.fromCountry}
                                 value={field.value}
                                 keepLabel="Keep current escort"
                                 excludeIds={row.escort ? [row.escort.employeeId] : undefined}

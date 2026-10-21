@@ -14,6 +14,25 @@ interface RealtimeProviderProps {
   onNavigate?: (path: string) => void
 }
 
+/**
+ * A pushed notification means something changed on the server (a booking was decided, a dossier moved on, a route plan was
+ * confirmed...). Query roots of the screens that show such state are re-read, so the page updates without a manual reload.
+ * Catalogue / form sources (fleet, templates, requirements) are left alone so a form being typed in is not reset.
+ */
+const REFRESH_ON_NOTIFICATION = new Set([
+  "bookings",
+  "approved-bookings",
+  "transport-plans",
+  "ongoing-transports",
+  "route-view",
+  "personnel",
+  "dossier",
+  "dossier-booking-departure",
+  "invoice",
+  "handover",
+  "horse-health",
+])
+
 /** Re-read what SignalR could not deliver (offline, reconnect): unread count + latest unread rows. */
 async function syncFromRest() {
   const store = useNotificationStore.getState()
@@ -62,6 +81,7 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
         showToast(notification, onNavigate)
       }
       void queryClient.invalidateQueries({ queryKey: ["notifications"] })
+      void queryClient.invalidateQueries({ predicate: (query) => REFRESH_ON_NOTIFICATION.has(String(query.queryKey[0])) })
       void notificationHub.acknowledgeDelivered(notification.id)
     })
     return () => {

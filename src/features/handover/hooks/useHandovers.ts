@@ -50,6 +50,8 @@ function useAfterWrite(transportId: string) {
     if (record) client.setQueryData(keys.record(record.handoverRecordId), record)
     void client.invalidateQueries({ queryKey: [...keys.all, "list", transportId] })
     void client.invalidateQueries({ queryKey: keys.segments(transportId) })
+    // OT3 / OT4 of the transport screens show the leg times and statuses that HO5 writes.
+    void client.invalidateQueries({ queryKey: ["ongoing-transports"] })
   }
 }
 

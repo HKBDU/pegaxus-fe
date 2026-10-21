@@ -683,3 +683,12 @@ export const dossierRequirementsParamsSchema = z.object({
     ])
     .default("createdAt:asc"),
 });
+
+/** One row of D1 (`GET /bookings/{id}/compliance-dossier`): enough to link to the dossier. */
+export const bookingDossierLinkSchema = z.object({
+  complianceDossierId: z.string().min(1),
+  dossierCode: z.string().nullish(),
+  dossierType: z.enum(["MAIN", "EXTRA"]).nullish(),
+  status: z.string().nullish(),
+});
+export type BookingDossierLink = z.infer<typeof bookingDossierLinkSchema>;

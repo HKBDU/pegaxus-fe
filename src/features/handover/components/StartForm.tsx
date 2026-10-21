@@ -46,12 +46,16 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
   const types = selected?.allowedHandoverTypes ?? []
   const type = pickedType && types.includes(pickedType) ? pickedType : preset.type && types.includes(preset.type) ? preset.type : types[0]
 
-  const canSchedule = audience === "admin"
-  const scheduled = canSchedule && schedule
+  // createModes (HO3): START_NOW for LM / RC / DRV / ESC, SCHEDULE for LM / RC / TS. An older BE without it keeps the old rule.
+  const modes = selected?.createModes
+  const canStartNow = modes ? modes.includes("START_NOW") : true
+  const canSchedule = modes ? modes.includes("SCHEDULE") : audience === "admin"
+  const scheduled = canSchedule && (schedule || !canStartNow)
 
   const submit = async () => {
     setFormError(null)
     if (!selected || !type) return
+    if (!canStartNow && !canSchedule) return
     if (scheduled && !plannedAt) {
       setFormError("Choose the planned date and time.")
       return
@@ -114,6 +118,8 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
                         View record
                       </Link>
                     </div>
+                  ) : !boundary.handoverRequired ? (
+                    <p className="mt-auto border-t border-slate-200 pt-2 text-xs text-gray-500">No handover record is needed here: the same driver continues on the next leg.</p>
                   ) : !boundary.canCreate ? (
                     <p className="mt-auto border-t border-slate-200 pt-2 text-xs text-gray-500">A handover cannot be created here right now.</p>
                   ) : null}
@@ -148,12 +154,19 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
 
           {canSchedule ? (
             <div className="space-y-2 border-t border-slate-200 pt-3">
-              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-gray-800 sm:min-h-8">
-                <input type="checkbox" checked={schedule} onChange={(event) => setSchedule(event.target.checked)} className="size-4 accent-primary" />
-                <CalendarClock aria-hidden="true" className="size-4 text-gray-500" />
-                Schedule for later instead of starting now (status Planned)
-              </label>
-              {schedule ? (
+              {canStartNow ? (
+                <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-gray-800 sm:min-h-8">
+                  <input type="checkbox" checked={schedule} onChange={(event) => setSchedule(event.target.checked)} className="size-4 accent-primary" />
+                  <CalendarClock aria-hidden="true" className="size-4 text-gray-500" />
+                  Schedule for later instead of starting now (status Planned)
+                </label>
+              ) : (
+                <p className="m-0 flex min-h-8 items-center gap-2 text-sm text-gray-800">
+                  <CalendarClock aria-hidden="true" className="size-4 text-gray-500" />
+                  You can schedule this handover; the crew starts it on site (status Planned).
+                </p>
+              )}
+              {scheduled ? (
                 <div className="max-w-xs space-y-1">
                   <label htmlFor="planned-at" className="font-heading text-[0.6875rem] font-semibold tracking-[0.06em] text-gray-500 uppercase">Planned at <span className="text-red-600">*</span></label>
                   <Input id="planned-at" type="datetime-local" value={plannedAt} onChange={(event) => setPlannedAt(event.target.value)} className="h-11 rounded-[2px] border-slate-300 bg-white text-base shadow-none sm:h-9 sm:text-sm" />

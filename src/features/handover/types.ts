@@ -48,6 +48,9 @@ export interface CompleteDraft {
 
 export interface CompleteInput extends CompleteDraft {
   lastUpdatedAt: string
+  /** Device position at the moment of pressing Complete (HO5 checks it against the geofence, then drops it). */
+  latitude: number
+  longitude: number
   senderSignature: Blob
   receiverSignature: Blob
 }

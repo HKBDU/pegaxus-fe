@@ -33,6 +33,12 @@ export default function HandoverStartPage({ audience }: { audience: HandoverAudi
         navigate(recordHref(error.value.handoverRecordId), { replace: true })
         return
       }
+      if (error instanceof HandoverApiError && error.errorCode === "HANDOVER_NOT_REQUIRED") {
+        // Both legs have the same driver: show why and go back to the transport page.
+        toast.info(error.message)
+        navigate(back, { replace: true })
+        return
+      }
       throw error
     }
   }

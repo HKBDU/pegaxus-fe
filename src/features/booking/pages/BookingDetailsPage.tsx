@@ -9,6 +9,7 @@ import { CancelBookingDialog } from "@/features/booking/components/CancelBooking
 import { useBooking } from "@/features/booking/hooks"
 import type { BookingAudience } from "@/features/booking/types"
 import { formatBookingDate, formatSex } from "@/features/booking/utils"
+import { BookingDossierLink } from "@/features/dossier"
 import { CustomerInvoicesTab } from "@/features/invoice"
 import { BookingTransportPlanAction } from "@/features/transport-plan/components/BookingTransportPlanAction"
 import { cn } from "@/lib/utils"
@@ -142,6 +143,9 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                   bookingId={booking.bookingId}
                   status={booking.status}
                 />
+              ) : null}
+              {audience === "customer" && (booking.status === "APPROVED" || booking.status === "CANCELLED") ? (
+                <BookingDossierLink bookingId={String(booking.bookingId)} className={cn(actionButtonClass, outlineButtonClass)} />
               ) : null}
               <Link
                 to={`/bookings/${encodeURIComponent(String(booking.bookingId))}/history`}

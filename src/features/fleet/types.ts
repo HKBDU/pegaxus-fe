@@ -76,7 +76,6 @@ export interface VehicleListParams {
 
 /** POST /vehicles (VH3). status is always AVAILABLE server-side. */
 export interface VehiclePayload {
-  vehicleCode: string
   vehicleName?: string
   transportMode: TransportMode
   licensePlate?: string
@@ -92,7 +91,7 @@ export interface VehiclePayload {
 }
 
 /** PUT /vehicles/{id} (VH4): vehicleCode and status are not editable. */
-export type VehicleUpdatePayload = Omit<VehiclePayload, "vehicleCode"> & { lastUpdatedAt: string }
+export type VehicleUpdatePayload = VehiclePayload & { lastUpdatedAt: string }
 
 export interface VehicleStatusPayload {
   lastUpdatedAt: string
@@ -138,7 +137,6 @@ export interface ProviderListParams {
 
 /** POST /transport-providers (PV3). */
 export interface ProviderPayload {
-  providerCode: string
   providerName: string
   supportedModes: TransportMode[]
   taxCode: string
@@ -151,7 +149,7 @@ export interface ProviderPayload {
 }
 
 /** PUT /transport-providers/{id} (PV4): providerCode is immutable, status uses PV5. */
-export type ProviderUpdatePayload = Omit<ProviderPayload, "providerCode"> & { lastUpdatedAt: string }
+export type ProviderUpdatePayload = ProviderPayload & { lastUpdatedAt: string }
 
 /** PATCH /transport-providers/{id}/status (PV5). lastUpdatedAt: the BE rejects the call without it (409 PROVIDER_MODIFIED when stale). */
 export interface ProviderStatusPayload {

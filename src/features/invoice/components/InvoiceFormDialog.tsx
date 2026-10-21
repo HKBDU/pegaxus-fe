@@ -6,9 +6,10 @@ import { toast } from "sonner"
 import { BillingSummaryCard } from "@/features/invoice/components/BillingSummaryCard"
 import { InvoiceLineItemsTable } from "@/features/invoice/components/InvoiceLineItemsTable"
 import { IssueInvoiceDialog } from "@/features/invoice/components/IssueInvoiceDialog"
-import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_TYPE_HINTS, TRANSPORT_STATUS_LABELS, INVOICE_TYPE, INVOICE_TYPE_LABELS } from "@/features/invoice/constants"
+import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_STATUS, INVOICE_TYPE_HINTS, TRANSPORT_STATUS_LABELS, INVOICE_TYPE, INVOICE_TYPE_LABELS, initialInvoiceParams } from "@/features/invoice/constants"
 import { getInvoiceErrorCode, getInvoiceErrorMessage, InvoiceApiError } from "@/features/invoice/errors"
 import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/features/invoice/hooks/useInvoiceCompose"
+import { useBookingInvoices } from "@/features/invoice/hooks/useInvoices"
 import { invoiceFormSchema, invoiceToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoiceType } from "@/features/invoice/types"
 import { estimateSummary, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
@@ -26,6 +27,9 @@ const panelClass = "border border-[#e5e2d9] bg-white"
 const panelHeaderClass = "m-0! flex items-center gap-2 border-b border-[#e5e2d9] bg-[#f7f6f3] px-4 py-2.5 font-heading text-[13px]! font-bold! uppercase tracking-[0.04em]! text-gray-900!"
 
 type Intent = "draft" | "issue"
+
+/** A booking has at most one deposit invoice that is not cancelled: only its cancellation allows another one. */
+const DEPOSIT_LOOKUP = { ...initialInvoiceParams, pageSize: 50, type: INVOICE_TYPE.DEPOSIT }
 
 /** `items[0].quantity` from the BE -> react-hook-form path `items.0.quantity`. */
 const toFormPath = (field: string) => field.replace(/\[(\d+)\]/g, ".$1")
@@ -64,6 +68,10 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
     mode: "onTouched",
   })
   const { control, handleSubmit, setValue, setError, register, formState: { errors, isDirty } } = form
+
+  const depositsQuery = useBookingInvoices(booking.bookingId, DEPOSIT_LOOKUP, "manager")
+  const activeDeposit = isEdit ? undefined : depositsQuery.data?.items.find((item) => item.status !== INVOICE_STATUS.CANCELLED)
+  const depositBlocked = Boolean(activeDeposit) && selectedType === INVOICE_TYPE.DEPOSIT
 
   // IV1 only when creating: for an existing draft it would answer INVOICE_ALREADY_EXISTS about the draft itself.
   const suggestionQuery = useInvoiceSuggestion(booking.bookingId, isEdit ? undefined : (selectedType ?? undefined))
@@ -151,7 +159,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
     onReload?.()
   }
 
-  const canSave = selectedType !== null && !precheckError && !(suggestionQuery.isFetching && !isEdit)
+  const canSave = selectedType !== null && !precheckError && !depositBlocked && !(suggestionQuery.isFetching && !isEdit)
   const issueLabel = isEdit ? "Issue Invoice" : "Create Invoice"
   const dateLabel = type === "QUOTATION" ? "Valid Until" : "Due Date"
 
@@ -210,7 +218,10 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                         <Select value={selectedType ?? ""} onValueChange={(value) => pickType(value as InvoiceType)} disabled={isEdit || isSaving}>
                           <SelectTrigger id="invoice-type" className={controlClass}><SelectValue placeholder="Select invoice type" /></SelectTrigger>
                           <SelectContent>
-                            {Object.values(INVOICE_TYPE).map((option) => <SelectItem key={option} value={option}>{INVOICE_TYPE_LABELS[option]}</SelectItem>)}
+                            {Object.values(INVOICE_TYPE).map((option) => {
+                              const taken = option === INVOICE_TYPE.DEPOSIT && Boolean(activeDeposit)
+                              return <SelectItem key={option} value={option} disabled={taken}>{INVOICE_TYPE_LABELS[option]}{taken ? " (already created)" : ""}</SelectItem>
+                            })}
                           </SelectContent>
                         </Select>
                       </div>
@@ -244,6 +255,12 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                         {suggestionQuery.isFetching && !isEdit ? <span role="status">Checking the booking...</span> : null}
                         {!suggestionQuery.isFetching || isEdit ? (selectedType ? INVOICE_TYPE_HINTS[selectedType] : "Quotation, Deposit, Final, Supplementary or Credit note.") : null}
                       </div>
+                      {depositBlocked && activeDeposit ? (
+                        <div className="flex gap-2 border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:col-span-3" role="alert">
+                          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                          <p>This booking already has a deposit invoice ({activeDeposit.invoiceNumber}). Cancel it first to create another one.</p>
+                        </div>
+                      ) : null}
                       {precheckError ? (
                         <div className="flex gap-2 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:col-span-3" role="alert">
                           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />

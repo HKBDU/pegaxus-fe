@@ -2,13 +2,14 @@ import { CheckCircle2, PencilLine } from "lucide-react"
 import { useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/shared/components/ui/button"
+import { distanceMeters, formatDistance } from "../utils"
 import { completeFormSchema } from "../schemas"
 import { HandoverApiError } from "../services"
 import { hasSignature, INK, strokesToPng } from "../signature"
 import type { CompleteDraft, CompleteInput, HandoverRecord, SignatureStroke } from "../types"
 import { useCompleteDraft } from "../hooks/useCompleteDraft"
 import { describeError } from "../utils"
-import { LocationCheck } from "./LocationCheck"
+import { LocationCheck, metersOutside, readPosition, useHandoverPosition, type HandoverTarget } from "./LocationCheck"
 import { NoteSection } from "./NoteSection"
 import { PartiesSection } from "./PartyBlock"
 import { RecordSummary } from "./RecordSummary"
@@ -19,7 +20,9 @@ interface Props {
   /** Crew pages get a bar fixed to the bottom of the screen and bigger buttons. */
   mobile: boolean
   pending: boolean
-  target: { latitude: number; longitude: number; name?: string } | null
+  /** Handover point and radius. `geofenced`: the BE enforces it (HO5 `geofence`), so [Complete] waits for the device to be inside. */
+  target: HandoverTarget | null
+  geofenced: boolean
   onSubmit: (input: CompleteInput) => Promise<void>
   onBack: () => void
   /** The BE refused the last submit; shown above the buttons. */
@@ -40,12 +43,17 @@ const toFormKey = (field: string) => {
  * Completion step (HO5): notes, optional corrections to the parties and place, and the two signatures. The customer signs
  * on the driver's phone, so every control is sized for a finger and the pads keep a 2:1 shape at any screen width.
  */
-export function CompleteForm({ record, mobile, pending, target, onSubmit, onBack, submitError, onClearSubmitError }: Props) {
+export function CompleteForm({ record, mobile, pending, target, geofenced, onSubmit, onBack, submitError, onClearSubmitError }: Props) {
   const { draft, sender, receiver, setDraft, setSender, setReceiver, clear } = useCompleteDraft(record)
   const [editing, setEditing] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [padErrors, setPadErrors] = useState<{ sender?: string; receiver?: string }>({})
   const root = useRef<HTMLFormElement>(null)
+  const here = useHandoverPosition(target)
+  const signed = hasSignature(sender) && hasSignature(receiver)
+  // Both signatures and, when the BE enforces a geofence, a position inside it.
+  const canComplete = signed && (!geofenced || here.inside)
+  const [positionError, setPositionError] = useState<string | null>(null)
 
   const patch = (next: Partial<CompleteDraft>) => {
     onClearSubmitError()
@@ -84,8 +92,25 @@ export function CompleteForm({ record, mobile, pending, target, onSubmit, onBack
     if (!parsed.success) return
 
     try {
+      // The position is read again at the click: the one on screen may be minutes old.
+      setPositionError(null)
+      let position
+      try {
+        position = await readPosition()
+      } catch (error) {
+        setPositionError(error instanceof Error ? error.message : "Could not read your position.")
+        return
+      }
+      if (target && geofenced) {
+        const meters = distanceMeters(position, target)
+        if (meters > target.radiusMeters) {
+          here.setState({ kind: "done", position, meters })
+          setPositionError(`You are not within ${target.radiusMeters} m of the handover point (${formatDistance(metersOutside(meters, target))} to go).`)
+          return
+        }
+      }
       const [senderSignature, receiverSignature] = await Promise.all([strokesToPng(sender, INK.sender), strokesToPng(receiver, INK.receiver)])
-      await onSubmit({ ...parsed.data, lastUpdatedAt: record.updatedAt, senderSignature, receiverSignature })
+      await onSubmit({ ...parsed.data, lastUpdatedAt: record.updatedAt, latitude: position.latitude, longitude: position.longitude, senderSignature, receiverSignature })
       clear()
     } catch (error) {
       if (error instanceof HandoverApiError) {
@@ -133,7 +158,7 @@ export function CompleteForm({ record, mobile, pending, target, onSubmit, onBack
         </div>
       </div>
 
-      <LocationCheck target={target} />
+      <LocationCheck target={target} state={here.state} onCheck={() => void here.check()} required={geofenced} />
 
       <section aria-label="Handover notes" className="overflow-hidden rounded-[2px] border border-slate-300 bg-white">
         <NoteSection name="horseConditionNote" title="Horse condition" required placeholder="Describe how the horses look and behave at handover…" value={draft.horseConditionNote} error={errors.horseConditionNote} onChange={(horseConditionNote) => { clearError("horseConditionNote"); patch({ horseConditionNote }) }} />
@@ -167,17 +192,32 @@ export function CompleteForm({ record, mobile, pending, target, onSubmit, onBack
         </div>
       </section>
 
+      {positionError ? (
+        <p role="alert" className="rounded-[2px] border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {positionError}
+        </p>
+      ) : null}
+
       {submitError && !(submitError instanceof HandoverApiError && ["SIGNATURE_REQUIRED", "INVALID_IMAGE", "HANDOVER_MODIFIED"].includes(submitError.errorCode ?? "")) ? (
         <p role="alert" className="rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {describeError(submitError)}
         </p>
       ) : null}
 
+      <p className="m-0 text-xs text-gray-600">
+        {record.fromSegment && record.toSegment
+          ? "The time you press Complete is saved as the end of the previous leg and the start of the next leg."
+          : record.toSegment
+            ? "The time you press Complete is saved as the start of the first leg."
+            : "The time you press Complete is saved as the end of the last leg."}
+        {!signed ? " Both signatures are needed first." : geofenced && !here.inside ? " Be within the handover radius to complete." : ""}
+      </p>
+
       <div className={bar}>
         <Button type="button" variant="outline" onClick={onBack} disabled={pending} className="rounded-[2px]">
           Back
         </Button>
-        <Button type="submit" disabled={pending} className="gap-2 rounded-[2px] font-heading font-semibold tracking-[0.06em] uppercase shadow-[0.125rem_0.125rem_0_0_rgb(0_0_0/0.85)]">
+        <Button type="submit" disabled={pending || !canComplete} className="gap-2 rounded-[2px] font-heading font-semibold tracking-[0.06em] uppercase shadow-[0.125rem_0.125rem_0_0_rgb(0_0_0/0.85)]">
           <CheckCircle2 aria-hidden="true" className="size-4" />
           {pending ? "Completing…" : "Complete handover record"}
         </Button>

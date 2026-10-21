@@ -258,6 +258,7 @@ export async function mockAssignable(params: AssignableEmployeesParams): Promise
   const items = EMPLOYEES.filter(
     (employee) =>
       employee.role === params.role &&
+      (!params.country || employee.country?.toUpperCase() === params.country.toUpperCase()) &&
       (!search || employee.fullName.toLowerCase().includes(search) || employee.employeeCode.toLowerCase().includes(search)),
   )
   const pageSize = params.pageSize ?? 20

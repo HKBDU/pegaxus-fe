@@ -59,6 +59,7 @@ export function useDossierRequirements(
   });
 }
 
+/** D1: the dossiers the viewer may open for a booking (empty until one exists / is visible). */
 export function useDossierByBooking(bookingId: string, enabled = true) {
   return useQuery({
     queryKey: dossierKeys.booking(bookingId),
