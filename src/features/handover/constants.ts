@@ -49,7 +49,7 @@ export const CANCEL_REASON_MIN = 10
 /** Field limits of the party snapshot and the location (HO3/HO5 validators). */
 export const LIMITS = { partyName: 200, contactName: 150, contactPhone: 30, locationName: 200, address: 500, country: 100, note: 2000 } as const
 
-/** Geofence of the vehicle tracking (GP2). Used only for the advisory distance check on the form. */
+/** Radius used for the hint when the record carries no `geofence` (the BE value, `TrackingOptions.GeofenceRadiusMeters`, wins). */
 export const HANDOVER_GEOFENCE_METERS = 500
 
 /** Every handover of a transport fits in one page: one per boundary plus the cancelled ones. */

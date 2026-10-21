@@ -16,6 +16,7 @@ import {
   missingDocumentReminderSchema,
   missingDocumentReminderEnvelopeSchema,
 } from "./schemas"
+import { bookingDossierLinkSchema, type BookingDossierLink } from "./schemas"
 import type { EntityId, PaginationMeta } from "@/shared/types"
 import { MOCK_AUDIT_EVENTS, MOCK_DASHBOARD_ITEMS } from "@/features/dossier/constants/dossier.mock"
 import type {
@@ -517,15 +518,30 @@ const documentServiceMethods = {
       body,
     );
   },
-  async getDossierByBooking(bookingId: string, signal?: AbortSignal) {
-    return overviewDtoSchema.parse(
-      unwrapBackendValue(
-        await apiClient.get<unknown, unknown>(
-          `bookings/${dossierIdSchema.parse(bookingId)}/compliance-dossier`,
-          { signal },
-        ),
-      ),
-    );
+  /**
+   * D1: the dossiers of a booking (MAIN first). The customer never gets a DRAFT one, and a booking without any dossier
+   * answers 404, which is just "nothing to open yet" here. Also accepts the older single-object answer.
+   */
+  async getDossierByBooking(bookingId: string, signal?: AbortSignal): Promise<BookingDossierLink[]> {
+    let value: unknown;
+    try {
+      value = unwrapBackendValue(
+        await apiClient.get<unknown, unknown>(`bookings/${dossierIdSchema.parse(bookingId)}/compliance-dossier`, { signal }),
+      );
+    } catch (error) {
+      if ((error as { response?: { status?: number } }).response?.status === 404) return [];
+      throw error;
+    }
+    const rows = Array.isArray((value as { items?: unknown })?.items)
+      ? (value as { items: unknown[] }).items
+      : value && typeof value === "object"
+        ? [value]
+        : [];
+    const links = rows.flatMap((row) => {
+      const parsed = bookingDossierLinkSchema.safeParse(row);
+      return parsed.success ? [parsed.data] : [];
+    });
+    return links.sort((a, b) => Number(b.dossierType === "MAIN") - Number(a.dossierType === "MAIN"));
   },
 };
 

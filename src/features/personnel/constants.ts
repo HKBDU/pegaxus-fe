@@ -12,6 +12,22 @@ export const ROLE_LABEL: Record<AssignableRole, string> = {
   ESCORT: "Escort",
 }
 
+/** Countries of the optional "filter by country" of PS6 (ISO-2 code, as `Employee.country` and `Location.country`). */
+export const COUNTRY_FILTER_OPTIONS: { code: string; label: string }[] = [
+  { code: "AT", label: "Austria" },
+  { code: "BE", label: "Belgium" },
+  { code: "DK", label: "Denmark" },
+  { code: "FR", label: "France" },
+  { code: "DE", label: "Germany" },
+  { code: "IE", label: "Ireland" },
+  { code: "IT", label: "Italy" },
+  { code: "NL", label: "Netherlands" },
+  { code: "ES", label: "Spain" },
+  { code: "SE", label: "Sweden" },
+  { code: "CH", label: "Switzerland" },
+  { code: "GB", label: "United Kingdom" },
+]
+
 export const TRANSPORT_PLAN_STATUS_LABEL: Record<TransportPlanStatus, string> = {
   DRAFT: "Draft",
   PENDING: "Pending",

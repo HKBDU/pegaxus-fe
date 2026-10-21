@@ -45,7 +45,7 @@ async function call<T>(request: Promise<unknown>): Promise<T> {
     return unwrap<T>(await request)
   } catch (error) {
     const data = (
-      error as { response?: { data?: { errorCode?: string; message?: string; errors?: { field: string; message: string }[]; value?: ScheduleConflictDetails | null } } }
+      error as { response?: { data?: { errorCode?: string; message?: string; errors?: { field: string; message: string }[]; value?: RawConflictDetails | null } } }
     ).response?.data
     if (data?.errorCode) {
       throw new PersonnelApiError(data.errorCode, {
@@ -53,7 +53,7 @@ async function call<T>(request: Promise<unknown>): Promise<T> {
         backendMessage: data.message,
         errors: data.errors,
         // Only SCHEDULE_CONFLICT carries an object in `value`.
-        details: data.errorCode === "SCHEDULE_CONFLICT" && data.value ? data.value : undefined,
+        details: data.errorCode === "SCHEDULE_CONFLICT" ? toConflictDetails(data.value) : undefined,
       })
     }
     throw error
@@ -61,6 +61,28 @@ async function call<T>(request: Promise<unknown>): Promise<T> {
 }
 
 const enc = encodeURIComponent
+
+type RawConflictDetails = ScheduleConflictDetails & {
+  conflictingSegment?: { transportPlanCode?: string; plannedDepartureAt?: string; plannedArrivalAt?: string; fromLocationName?: string; toLocationName?: string }
+}
+
+/** `value` of a 409 SCHEDULE_CONFLICT: the segment of the other TransportPlan is flattened to the fields the dialog reads. */
+function toConflictDetails(value: RawConflictDetails | null | undefined): ScheduleConflictDetails | undefined {
+  if (!value) return undefined
+  const { conflictingSegment: segment, ...rest } = value
+  return {
+    ...rest,
+    ...(segment
+      ? {
+          conflictingTransportPlanCode: segment.transportPlanCode,
+          conflictingFromLocationName: segment.fromLocationName,
+          conflictingToLocationName: segment.toLocationName,
+          conflictingPlannedDepartureAt: segment.plannedDepartureAt,
+          conflictingPlannedArrivalAt: segment.plannedArrivalAt,
+        }
+      : {}),
+  }
+}
 
 function cleanParams(params: Record<string, string | number | undefined>) {
   return Object.fromEntries(Object.entries(params).filter(([, value]) => value !== undefined && value !== ""))
@@ -76,6 +98,8 @@ export const personnelService = {
           role: params.role,
           availableFrom: params.availableFrom,
           availableTo: params.availableTo,
+          transportPlanId: params.transportPlanId,
+          country: params.country,
           search: params.search?.trim(),
           pageIndex: params.pageIndex,
           pageSize: params.pageSize,

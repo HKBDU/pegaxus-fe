@@ -13,7 +13,7 @@ import { ReadOnlyRecord } from "../components/ReadOnlyRecord"
 import { RecordSummary } from "../components/RecordSummary"
 import { ReloadDialog } from "../components/ReloadDialog"
 import { StatusBadge } from "../components/StatusBadge"
-import { handoverPaths, type HandoverAudience } from "../constants"
+import { handoverPaths, HANDOVER_GEOFENCE_METERS, type HandoverAudience } from "../constants"
 import { useCancelHandover, useCompleteHandover, useHandoverRecord, useReloadHandover, useStartHandover, useTransportSegments } from "../hooks/useHandovers"
 import { HandoverApiError } from "../services"
 import type { CompleteInput, HandoverRecord } from "../types"
@@ -27,7 +27,7 @@ function handoverPoint(record: HandoverRecord, legs: Array<{ routePlanRouteId: s
   const previous = record.fromSegment ? legs.find((leg) => leg.routePlanRouteId === record.fromSegment?.routePlanRouteId)?.toLocation : undefined
   const place = next ?? previous
   if (place?.latitude == null || place.longitude == null) return null
-  return { latitude: place.latitude, longitude: place.longitude, name: record.location.locationName ?? place.locationName }
+  return { latitude: place.latitude, longitude: place.longitude, radiusMeters: HANDOVER_GEOFENCE_METERS, name: record.location.locationName ?? place.locationName }
 }
 
 /**
@@ -108,7 +108,9 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
               record={shown}
               mobile={mobile}
               pending={complete.isPending}
-              target={segments.data ? handoverPoint(shown, segments.data.segments) : null}
+              // The BE sends the point to check (HO5 `geofence`, null for OTHER); OT4 only gives a hint when it is missing.
+              target={shown.geofence ? { ...shown.geofence, name: shown.location.locationName ?? undefined } : segments.data ? handoverPoint(shown, segments.data.segments) : null}
+              geofenced={Boolean(shown.geofence)}
               onSubmit={submitComplete}
               onBack={() => navigate(back)}
               submitError={complete.error}

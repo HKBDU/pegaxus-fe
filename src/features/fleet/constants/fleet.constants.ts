@@ -87,6 +87,15 @@ export const VEHICLE_TYPE_OPTIONS = [
   "Semi-Trailer Livestock Transporter",
 ]
 
+/** Vehicle types of the add / edit form. The internal fleet is road-only, so air and sea types are not offered. */
+export const ROAD_VEHICLE_TYPE_OPTIONS = [
+  "Specialized Transporter",
+  "Long Hauler",
+  "Enclosed Box Van",
+  "Specialized Shuttle",
+  "Semi-Trailer Livestock Transporter",
+]
+
 /** Preset equipment tags of the add/edit form; stored inside the single specialEquipment text column. */
 export const EQUIPMENT_PRESETS = [
   "AIR SUSPENSION DAMPING",

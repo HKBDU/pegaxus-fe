@@ -14,7 +14,8 @@ import type { HeaderNavItem } from "@/shared/types/type"
 const customerNavItems: HeaderNavItem[] = [
   { label: "HOME", href: "/" },
   { label: "HORSE", href: "/my-horses" },
-  { label: "BOOKING", href: "/bookings" },
+  // A customer opens a compliance dossier from a booking (notification link), so it belongs to BOOKING.
+  { label: "BOOKING", href: "/bookings", alsoActiveFor: ["/compliance-dossiers"] },
 ]
 
 const crewNavItems: HeaderNavItem[] = [

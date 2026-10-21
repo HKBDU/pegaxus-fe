@@ -3,7 +3,6 @@ import type { Vehicle, VehiclePayload } from "@/features/fleet/types"
 import { buildEquipment, parseEquipment } from "@/features/fleet/utils"
 
 const emptyValues: VehicleFormValues = {
-  vehicleCode: "",
   vehicleName: "",
   transportMode: "ROAD",
   licensePlate: "",
@@ -25,7 +24,6 @@ export function toVehicleDefaults(vehicle?: Vehicle): VehicleFormValues {
   if (!vehicle) return emptyValues
   const equipment = parseEquipment(vehicle.specialEquipment)
   return {
-    vehicleCode: vehicle.vehicleCode,
     vehicleName: vehicle.vehicleName ?? "",
     transportMode: vehicle.transportMode,
     licensePlate: vehicle.licensePlate ?? "",
@@ -49,7 +47,6 @@ const optional = (value: string) => value.trim() || undefined
 /** Form values to the VH3 payload. */
 export function toVehiclePayload(values: VehicleFormValues): VehiclePayload {
   return {
-    vehicleCode: values.vehicleCode.trim(),
     vehicleName: optional(values.vehicleName),
     // Internal fleet is road-only: the mode is a constant, not a user choice.
     transportMode: "ROAD",

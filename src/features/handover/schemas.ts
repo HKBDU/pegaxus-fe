@@ -56,6 +56,9 @@ export const handoverRecordSchema = z.object({
   documentHandoverNote: z.string().nullish(),
   equipmentHandoverNote: z.string().nullish(),
   discrepancyNote: z.string().nullish(),
+  /** Point and radius the device must be in to complete (HO5); null for `OTHER`. */
+  geofence: z.object({ latitude: z.number(), longitude: z.number(), radiusMeters: z.number() }).nullish(),
+  /** Signed URLs that expire after 5 minutes: never cached for long. */
   senderSignatureUrl: z.string().nullish(),
   receiverSignatureUrl: z.string().nullish(),
   cancelledAt: timestamp.nullish(),
@@ -123,6 +126,11 @@ export const segmentsOverviewSchema = z.object({
         .object({ handoverRecordId: id, handoverCode: z.string(), handoverType: z.string(), status: z.string() })
         .nullish(),
       canCreate: z.boolean(),
+      /** false: both legs have the same driver, so no record is needed (and HO3 answers 422 HANDOVER_NOT_REQUIRED). */
+      handoverRequired: z.boolean().default(true),
+      arrivalAt: timestamp.nullish(),
+      /** START_NOW (LM, RC, DRV, ESC) and / or SCHEDULE (LM, RC, TS). Missing on an older BE. */
+      createModes: z.array(z.string()).optional(),
     }),
   ),
 })

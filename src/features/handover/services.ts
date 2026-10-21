@@ -1,5 +1,6 @@
 import { isAxiosError } from "axios"
 import apiClient from "@/lib/axios"
+import { presignedUpload } from "@/shared/utils/presigned"
 import { LIST_PAGE_SIZE } from "./constants"
 import { apiEnvelopeSchema, handoverListSchema, handoverRecordSchema, segmentsOverviewSchema } from "./schemas"
 import type { CancelInput, CompleteInput, CreateHandoverInput, HandoverList, HandoverRecord, ListFilters, SegmentsOverview } from "./types"
@@ -77,6 +78,22 @@ const clean = (value: string) => {
   return trimmed === "" ? undefined : trimmed
 }
 
+/** Uploads both signature PNGs (separate uploads) and returns their `publicId`s; a failure becomes a `HandoverApiError`. */
+async function uploadSignatures(sender: Blob, receiver: Blob): Promise<[string, string]> {
+  const toFile = (blob: Blob, name: string) => new File([blob], name, { type: "image/png" })
+  try {
+    return await Promise.all([
+      presignedUpload.upload({ file: toFile(sender, "sender-signature.png"), entity: "attachment" }),
+      presignedUpload.upload({ file: toFile(receiver, "receiver-signature.png"), entity: "attachment" }),
+    ])
+  } catch (error) {
+    const code = (error as { code?: string }).code
+    // The BE rejected the picture itself (not a PNG / too big): same answer HO5 gives for a bad image.
+    if (code === "FILE_REJECTED") throw new HandoverApiError({ errorCode: "INVALID_IMAGE", message: "A signature image was rejected. Clear the pad, sign again and retry." })
+    throw new HandoverApiError({ errorCode: "SIGNATURE_UPLOAD_FAILED", message: "Could not upload the signatures. Check your connection and try again." })
+  }
+}
+
 export const handoverService = {
   /** HO1. */
   listByTransport(transportId: string, filters: ListFilters, signal?: AbortSignal): Promise<HandoverList> {
@@ -108,16 +125,24 @@ export const handoverService = {
     return call(() => apiClient.post<unknown, unknown>(`${recordPath(handoverRecordId)}/start`), (value) => handoverRecordSchema.parse(value))
   },
 
-  /** HO5: multipart. The party and location snapshot is sent only for the fields the user filled in. */
-  complete(handoverRecordId: string, input: CompleteInput): Promise<HandoverRecord> {
-    const form = new FormData()
-    form.set("lastUpdatedAt", input.lastUpdatedAt)
-    form.set("horseConditionNote", input.horseConditionNote.trim())
-    form.set("documentHandoverNote", input.documentHandoverNote.trim())
-    form.set("equipmentHandoverNote", input.equipmentHandoverNote.trim())
-    const discrepancy = clean(input.discrepancyNote)
-    if (discrepancy) form.set("discrepancyNote", discrepancy)
+  /**
+   * HO5: JSON. The two signature PNGs are uploaded first (presigned, one upload each) and only their `publicId` is sent.
+   * The party and location snapshot is sent only for the fields the user filled in.
+   */
+  async complete(handoverRecordId: string, input: CompleteInput): Promise<HandoverRecord> {
+    const [senderSignature, receiverSignature] = await uploadSignatures(input.senderSignature, input.receiverSignature)
+    const body: Record<string, unknown> = {
+      lastUpdatedAt: input.lastUpdatedAt,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      horseConditionNote: input.horseConditionNote.trim(),
+      documentHandoverNote: input.documentHandoverNote.trim(),
+      equipmentHandoverNote: input.equipmentHandoverNote.trim(),
+      senderSignature: { publicId: senderSignature },
+      receiverSignature: { publicId: receiverSignature },
+    }
     const optional: Array<[string, string]> = [
+      ["discrepancyNote", input.discrepancyNote],
       ["fromPartyName", input.from.partyName],
       ["fromContactName", input.from.contactName],
       ["fromContactPhone", input.from.contactPhone],
@@ -130,12 +155,10 @@ export const handoverService = {
     ]
     for (const [key, raw] of optional) {
       const value = clean(raw)
-      if (value) form.set(key, value)
+      if (value) body[key] = value
     }
-    form.set("senderSignature", input.senderSignature, "sender-signature.png")
-    form.set("receiverSignature", input.receiverSignature, "receiver-signature.png")
     return call(
-      () => apiClient.post<unknown, unknown>(`${recordPath(handoverRecordId)}/complete`, form, { timeout: 60_000 }),
+      () => apiClient.post<unknown, unknown>(`${recordPath(handoverRecordId)}/complete`, body),
       (value) => handoverRecordSchema.parse(value),
     )
   },
