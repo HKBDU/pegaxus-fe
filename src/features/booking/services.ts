@@ -215,8 +215,8 @@ const bookingBaseService = createBaseService<
         bookingId,
         bookingCode,
         status: "PENDING",
-        statusName: "Chờ duyệt",
-        customer: { customerId: 301, fullName: "Nguyễn Minh Khang", phone: "0901234567" },
+        statusName: "Pending Approval",
+        customer: { customerId: 301, fullName: "Khang Nguyen", phone: "0901234567" },
         originAddress: data.originAddress,
         originCountry: data.originCountry,
         originLatitude: data.originLatitude,
@@ -394,7 +394,7 @@ export const bookingService = {
       const booking = findMockBooking(bookingId)
       assertPending(booking)
       booking.status = "CANCELLED"
-      booking.statusName = "Đã hủy"
+      booking.statusName = "Cancelled"
       booking.cancellationReason = reason
       booking.cancelledAt = new Date().toISOString()
       booking.updatedAt = booking.cancelledAt
@@ -411,8 +411,8 @@ export const bookingService = {
       if (!booking.horses.length) throw new Error("BOOKING_HAS_NO_HORSE")
       const transport = { transportId: 90, transportCode: "TP-20260924-0001", status: "CREATED" }
       booking.status = "APPROVED"
-      booking.statusName = "Đã duyệt"
-      booking.assignedEmployee = { employeeId: 41, fullName: "Trần Anh Tuấn" }
+      booking.statusName = "Approved"
+      booking.assignedEmployee = { employeeId: 41, fullName: "Tran Anh Tuan" }
       booking.approvedAt = new Date().toISOString()
       booking.updatedAt = booking.approvedAt
       booking.transport = transport
@@ -453,8 +453,8 @@ export const bookingService = {
       const booking = findMockBooking(bookingId)
       assertPending(booking)
       booking.status = "REJECTED"
-      booking.statusName = "Từ chối"
-      booking.assignedEmployee = { employeeId: 41, fullName: "Trần Anh Tuấn" }
+      booking.statusName = "Rejected"
+      booking.assignedEmployee = { employeeId: 41, fullName: "Tran Anh Tuan" }
       booking.rejectionReason = reason
       booking.rejectedAt = new Date().toISOString()
       booking.updatedAt = booking.rejectedAt

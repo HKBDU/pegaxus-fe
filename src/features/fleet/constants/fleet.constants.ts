@@ -71,6 +71,8 @@ export const CAPACITY_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: "8", label: "8+ horses" },
 ]
 
+export const VEHICLE_COUNTRY_OPTIONS = ["ALL", "BE", "DE", "FR", "GB", "IE", "IT", "NL", "ES"] as const
+
 export const VEHICLE_CAPACITY_MIN = 2
 export const VEHICLE_CAPACITY_MAX = 9
 
@@ -82,6 +84,15 @@ export const VEHICLE_TYPE_OPTIONS = [
   "Specialized Shuttle",
   "Air Freight Pod",
   "Maritime Container",
+  "Semi-Trailer Livestock Transporter",
+]
+
+/** Vehicle types of the add / edit form. The internal fleet is road-only, so air and sea types are not offered. */
+export const ROAD_VEHICLE_TYPE_OPTIONS = [
+  "Specialized Transporter",
+  "Long Hauler",
+  "Enclosed Box Van",
+  "Specialized Shuttle",
   "Semi-Trailer Livestock Transporter",
 ]
 

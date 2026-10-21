@@ -1,8 +1,8 @@
-import { Loader2 } from "lucide-react"
-import type { ReactNode } from "react"
+import { Loader2, Search } from "lucide-react"
+import { useState, type ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
-import { ROLE_LABEL, ROUTE_PLAN_STATUS_LABEL, TRANSPORT_PLAN_STATUS_LABEL } from "@/features/personnel/constants"
+import { COUNTRY_FILTER_OPTIONS, ROLE_LABEL, ROUTE_PLAN_STATUS_LABEL, TRANSPORT_PLAN_STATUS_LABEL } from "@/features/personnel/constants"
 import { useAssignableEmployees } from "@/features/personnel/hooks"
 import type {
   AssignableRole,
@@ -12,7 +12,10 @@ import type {
   TransportPlanStatus,
   TransportPlanSummary,
 } from "@/features/personnel/types"
-import { employeeLabel, formatDate, type SegmentAssignmentState } from "@/features/personnel/utils"
+import { employeeLabel, formatDate, isOtherCountry, normalizeCountry, type SegmentAssignmentState } from "@/features/personnel/utils"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
+import { Input } from "@/shared/components/ui/input"
+import { useDebounce } from "@/shared/hooks/useDebounce"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 
@@ -173,6 +176,18 @@ interface EmployeeSelectProps {
   disabled?: boolean
   invalid?: boolean
   ariaLabel: string
+  /** DRIVER / ESCORT: the plan being assigned, so its own segments do not make a person look busy (PS6). */
+  transportPlanId?: string
+  /** Country (ISO-2) where the segment starts. A person from another country is allowed after a confirmation (R18). */
+  segmentCountry?: string | null
+}
+
+const ALL_COUNTRIES = "__all__"
+
+const countryName = (code: string | null | undefined) => {
+  const normalized = normalizeCountry(code)
+  if (!normalized) return "Unknown"
+  return COUNTRY_FILTER_OPTIONS.find((option) => option.code === normalized)?.label ?? normalized
 }
 
 /** PS6-backed dropdown. The BE already filtered by role and availability, so the list is shown as returned. */
@@ -188,16 +203,65 @@ export function EmployeeSelect({
   disabled,
   invalid,
   ariaLabel,
+  transportPlanId,
+  segmentCountry,
 }: EmployeeSelectProps) {
-  const query = useAssignableEmployees(role, window)
+  // Search and country filter are for the field staff; the TS / RC lists are short and need neither.
+  const filterable = role === "DRIVER" || role === "ESCORT"
+  const [searchText, setSearchText] = useState("")
+  const [country, setCountry] = useState(ALL_COUNTRIES)
+  const [pendingOtherCountry, setPendingOtherCountry] = useState<EmployeeBrief | null>(null)
+  const search = useDebounce(searchText.trim(), 300)
+  const filters = { search: search || undefined, country: country === ALL_COUNTRIES ? undefined : country }
+  const query = useAssignableEmployees(role, window, true, transportPlanId, filterable ? filters : {})
   const items = (query.data?.items ?? []).filter((employee) => !excludeIds?.includes(employee.employeeId))
   const hasCurrent = current ? items.some((employee) => employee.employeeId === current.employeeId) : true
   const options = current && !hasCurrent ? [current, ...items] : items
-  const waitingForWindow = (role === "DRIVER" || role === "ESCORT") && !(window?.from && window?.to)
+  const waitingForWindow = filterable && !(window?.from && window?.to)
+  const isFiltered = Boolean(filters.search || filters.country)
+
+  function pick(next: string) {
+    if (next === KEEP) return onChange("")
+    const employee = options.find((item) => item.employeeId === next)
+    // R18: the BE does not block another country, the manager confirms it.
+    if (employee && filterable && isOtherCountry(employee.country, segmentCountry)) return setPendingOtherCountry(employee)
+    onChange(next, employee)
+  }
+
+  function clearFilters() {
+    setSearchText("")
+    setCountry(ALL_COUNTRIES)
+  }
 
   return (
     <div className="grid gap-1">
-      <Select value={value || (keepLabel ? KEEP : "")} onValueChange={(next) => onChange(next === KEEP ? "" : next, options.find((employee) => employee.employeeId === next))} disabled={disabled || waitingForWindow}>
+      {filterable ? (
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,9rem)] gap-1.5">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2 top-1/2 size-3 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+            <Input
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              disabled={disabled || waitingForWindow}
+              placeholder="Search name or code"
+              aria-label={`Search ${ariaLabel}`}
+              className="h-8 rounded-[2px] border-0 bg-[#f3f3f3] pl-7 text-xs shadow-none"
+            />
+          </div>
+          <Select value={country} onValueChange={setCountry} disabled={disabled || waitingForWindow}>
+            <SelectTrigger aria-label={`Country of ${ariaLabel}`} className="h-8 w-full rounded-[2px] border-0 bg-[#f3f3f3] px-2 text-xs shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="max-h-72 rounded-[2px]">
+              <SelectItem value={ALL_COUNTRIES} className="text-xs">All countries</SelectItem>
+              {COUNTRY_FILTER_OPTIONS.map((option) => (
+                <SelectItem key={option.code} value={option.code} className="text-xs">{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+      <Select value={value || (keepLabel ? KEEP : "")} onValueChange={pick} disabled={disabled || waitingForWindow}>
         <SelectTrigger aria-label={ariaLabel} aria-invalid={invalid || undefined} className={cn(controlClass, "justify-between", invalid && "ring-2 ring-red-400/60")}>
           <SelectValue placeholder={query.isLoading ? "Loading..." : placeholder} />
           {query.isFetching ? <Loader2 className="ml-1 size-3 shrink-0 animate-spin text-slate-400" aria-hidden="true" /> : null}
@@ -207,16 +271,50 @@ export function EmployeeSelect({
           {options.map((employee) => (
             <SelectItem key={employee.employeeId} value={employee.employeeId} className="text-xs">
               {employeeLabel(employee)}
+              {filterable ? ` · ${countryName(employee.country)}` : ""}
               {current?.employeeId === employee.employeeId ? " (current)" : ""}
             </SelectItem>
           ))}
           {!options.length && !query.isLoading ? (
             <p className="m-0 px-2 py-2 text-xs text-slate-500">
-              {query.isError ? "Unable to load employees." : "No employee is available for this role / time window."}
+              {query.isError
+                ? "Unable to load employees."
+                : isFiltered
+                  ? "No one matches this search / country."
+                  : "No employee is available for this role / time window."}
             </p>
           ) : null}
         </SelectContent>
       </Select>
+      {isFiltered && !options.length && !query.isLoading && !query.isError ? (
+        <p className="m-0 flex items-center gap-2 text-[11px] text-slate-500">
+          No one available{filters.country ? ` in ${countryName(filters.country)}` : ""}.
+          <button type="button" onClick={clearFilters} className="font-semibold text-[#c77700] underline-offset-2 hover:underline">Clear filters</button>
+        </p>
+      ) : null}
+
+      <AlertDialog open={pendingOtherCountry !== null} onOpenChange={(open) => !open && setPendingOtherCountry(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Employee is based in another country</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingOtherCountry ? employeeLabel(pendingOtherCountry) : "This employee"} works in {countryName(pendingOtherCountry?.country)}, while this segment starts in {countryName(segmentCountry)}.
+              Assign this person anyway?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Choose someone else</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingOtherCountry) onChange(pendingOtherCountry.employeeId, pendingOtherCountry)
+                setPendingOtherCountry(null)
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

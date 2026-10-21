@@ -6,7 +6,7 @@ export const MOCK_EMPLOYEE_PROFILE: Profile = {
   accountType: "EMPLOYEE",
   status: "ACTIVE",
   role: "LOGISTICS_MANAGER",
-  fullName: "Nguyễn Minh Khang",
+  fullName: "Khang Nguyen",
   dob: "1988-07-21",
   phone: "0901234567",
   country: "Thailand",

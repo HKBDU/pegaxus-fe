@@ -49,7 +49,7 @@ export function HandoverTable({ items, isLoading, hasFilters, hrefFor, filters, 
       { accessorKey: "toPartyName", header: "To party", enableSorting: false, cell: ({ row }) => <span className={cn("block min-w-28 whitespace-normal", dim(row.original) && "text-gray-400")}>{row.original.toPartyName || dash}</span> },
       { accessorKey: "locationName", header: "Location", enableSorting: false, cell: ({ row }) => <span className={cn("block min-w-28 whitespace-normal", dim(row.original) && "text-gray-400")}>{row.original.locationName || dash}</span> },
       { accessorKey: "plannedHandoverAt", header: "PLANNED AT", cell: ({ row }) => <span className="whitespace-nowrap text-gray-500 tabular-nums">{formatDateTime(row.original.plannedHandoverAt)}</span> },
-      { accessorKey: "actualHandoverAt", header: "ACTUAL AT", cell: ({ row }) => <span className={cn("whitespace-nowrap tabular-nums", dim(row.original) && "text-gray-400")}>{row.original.actualHandoverAt ? formatDateTime(row.original.actualHandoverAt) : dash}</span> },
+      { accessorKey: "actualHandoverAt", header: "HANDOVER TIME", cell: ({ row }) => <span className={cn("whitespace-nowrap tabular-nums", dim(row.original) && "text-gray-400")}>{row.original.actualHandoverAt ? formatDateTime(row.original.actualHandoverAt) : dash}</span> },
       { accessorKey: "status", header: "Status", enableSorting: false, cell: ({ row }) => <StatusBadge status={row.original.status} /> },
       {
         id: "actions",

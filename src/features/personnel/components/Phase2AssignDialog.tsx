@@ -212,6 +212,8 @@ export function Phase2AssignDialog({ open, onOpenChange, plan, routePlan, dossie
                         role="DRIVER"
                         ariaLabel={`Driver for segment ${row.sequenceNo}`}
                         window={window}
+                        transportPlanId={plan.transportPlanId}
+                        segmentCountry={row.fromCountry}
                         placeholder="Select driver"
                         value={form.watch(`segments.${index}.driverEmployeeId`)}
                         invalid={Boolean(errors?.driverEmployeeId)}
@@ -229,6 +231,8 @@ export function Phase2AssignDialog({ open, onOpenChange, plan, routePlan, dossie
                         role="ESCORT"
                         ariaLabel={`Escort for segment ${row.sequenceNo}`}
                         window={window}
+                        transportPlanId={plan.transportPlanId}
+                        segmentCountry={row.fromCountry}
                         placeholder="Select escort"
                         value={form.watch(`segments.${index}.escortEmployeeId`)}
                         invalid={Boolean(errors?.escortEmployeeId)}

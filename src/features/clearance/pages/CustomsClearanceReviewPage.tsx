@@ -12,17 +12,26 @@ import { Field } from '@/shared/components/Field'
 import { cn } from '@/lib/utils'
 import { useCustomsClearanceProofDetail, useFinalizeCustomsClearanceProof } from '../hooks'
 import type { CustomsLane, FinalizeCustomsClearanceProofRequest } from '../types'
+import { VALIDATION_LIMITS } from '@/shared/constants/validation-limits'
 
 const INPUT = 'w-full border border-[#d8d5ce] bg-[#f4f4f4] px-3 py-2.5 text-sm text-[#181818] focus:border-[#f39200] focus:outline-none focus:ring-1 focus:ring-[#f39200]'
 const LANE_OPTIONS: CustomsLane[] = ['GREEN_LANE', 'ORANGE_LANE', 'RED_LANE']
 const FINAL_STATUSES = ['CLEARED', 'HELD', 'REJECTED'] as const
 
 const finalizeSchema = z.object({
-  mrnNumber: z.string().trim().min(1, 'Official MRN is required.'),
-  customsLane: z.enum(['GREEN_LANE', 'ORANGE_LANE', 'RED_LANE']),
-  ataCarnetExpiryDate: z.string().optional(),
+  mrnNumber: z.string().trim().max(100, 'MRN must not exceed 100 characters.').optional(),
+  customsLane: z.enum(['GREEN_LANE', 'ORANGE_LANE', 'RED_LANE']).optional(),
+  ataCarnetExpiryDate: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val) return true
+      const d = new Date(val)
+      const now = new Date()
+      return Math.abs(d.getFullYear() - now.getFullYear()) <= VALIDATION_LIMITS.dateWindowYears
+    }, `ATA Carnet expiry date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`),
   status: z.enum(FINAL_STATUSES),
-  verificationNote: z.string().optional(),
+  verificationNote: z.string().max(VALIDATION_LIMITS.noteMaxLength, `Verification note must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`).optional(),
 })
 
 function formatDate(value: string | null) {

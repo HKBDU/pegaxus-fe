@@ -17,7 +17,6 @@ import { PageHeader } from "@/shared/components/PageHeader"
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard"
 
 const FORM_FIELDS = new Set<string>([
-  "vehicleCode",
   "vehicleName",
   "transportMode",
   "licensePlate",
@@ -49,8 +48,7 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
       const guarded = await attempt.run(async () => {
         const payload = toVehiclePayload(values)
         if (isEdit && vehicleQuery.data) {
-          const { vehicleCode: _vehicleCode, ...rest } = payload
-          await updateVehicle.mutateAsync({ id: vehicleQuery.data.vehicleId, payload: { ...rest, lastUpdatedAt: vehicleQuery.data.updatedAt } })
+          await updateVehicle.mutateAsync({ id: vehicleQuery.data.vehicleId, payload: { ...payload, lastUpdatedAt: vehicleQuery.data.updatedAt } })
         } else {
           await createVehicle.mutateAsync(payload)
         }
@@ -62,10 +60,6 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
       attempt.reset()
       const code = getFleetErrorCode(error)
       const message = getFleetErrorMessage(error, "Unable to save this vehicle.")
-      if (code === "VEHICLE_CODE_DUPLICATED") {
-        form?.setError("vehicleCode", { message }, { shouldFocus: true })
-        return
-      }
       if (code === "LICENSE_PLATE_DUPLICATED") {
         form?.setError("licensePlate", { message }, { shouldFocus: true })
         return

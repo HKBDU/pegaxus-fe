@@ -1,4 +1,10 @@
-import { lazy, Suspense, useRef, type MouseEvent } from "react";
+import {
+  lazy,
+  Suspense,
+  useLayoutEffect,
+  useRef,
+  type MouseEvent,
+} from "react";
 import { useLandingStory } from "../../hooks/useLandingStory";
 import { LandingNavbar } from "./LandingNavbar";
 import { HeroSection } from "./HeroSection";
@@ -7,6 +13,7 @@ import { ComplianceSection } from "./ComplianceSection";
 import { PlatformSection } from "./PlatformSection";
 import { HorseCareSection } from "./HorseCareSection";
 import { GlobalMovementSection } from "./GlobalMovementSection";
+import { ReliabilitySection } from "./ReliabilitySection";
 import { FinalCtaSection } from "./FinalCtaSection";
 import { LandingFooter } from "./LandingFooter";
 import "../../landing.css";
@@ -18,6 +25,24 @@ const HorseExperience = lazy(() => import("./HorseExperience"));
 export function PegaxusLanding() {
   const root = useRef<HTMLDivElement>(null);
   const canvasLayer = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const html = document.documentElement;
+    const attribute = html.getAttribute("data-pegaxus-scrollbar");
+    const gap = html.style.getPropertyValue("--landing-scrollbar-gap");
+    const priority = html.style.getPropertyPriority("--landing-scrollbar-gap");
+    // Reserve the old gutter so hiding browser chrome does not reflow About or Hero.
+    html.style.setProperty(
+      "--landing-scrollbar-gap",
+      `${innerWidth - html.clientWidth}px`,
+    );
+    html.setAttribute("data-pegaxus-scrollbar", "hidden");
+    return () => {
+      if (attribute === null) html.removeAttribute("data-pegaxus-scrollbar");
+      else html.setAttribute("data-pegaxus-scrollbar", attribute);
+      if (gap) html.style.setProperty("--landing-scrollbar-gap", gap, priority);
+      else html.style.removeProperty("--landing-scrollbar-gap");
+    };
+  }, []);
   const { scene, active, scrolled, horsePresent } = useLandingStory(
     root,
     canvasLayer,
@@ -56,6 +81,9 @@ export function PegaxusLanding() {
   };
   return (
     <div className="pegaxus-landing" ref={root} onClick={navigateSection}>
+      <div className="landing-scroll-progress" aria-hidden="true">
+        <span />
+      </div>
       <a className="landing-skip" href="#home">
         Skip to content
       </a>
@@ -84,6 +112,7 @@ export function PegaxusLanding() {
         <PlatformSection />
         <HorseCareSection />
         <GlobalMovementSection />
+        <ReliabilitySection />
         <FinalCtaSection />
         <LandingFooter />
       </div>

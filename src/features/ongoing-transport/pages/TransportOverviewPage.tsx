@@ -74,9 +74,9 @@ export default function TransportOverviewPage({
             className="mt-0.5 size-4 shrink-0"
           />
           <span>
-            Đang hiển thị dữ liệu đã lưu lúc{" "}
-            {formatTransportTime(overview.serverTime)}. Đang tự động kết nối lại
-            khi có mạng…
+            Showing cached data from{" "}
+            {formatTransportTime(overview.serverTime)}. Automatically reconnecting
+            when network is available…
           </span>
         </div>
       ) : null}

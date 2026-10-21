@@ -1,4 +1,4 @@
-import { FileCheck2, Files, ShieldCheck } from "lucide-react";
+import { CustomerPreview } from "./CustomerPreview";
 
 export function ComplianceSection() {
   return (
@@ -8,47 +8,34 @@ export function ComplianceSection() {
       aria-labelledby="compliance-title"
     >
       <div className="landing-copy" data-reveal>
-        <p className="landing-eyebrow">02 / Details that matter</p>
+        <p className="landing-eyebrow">03 / Precision across borders</p>
         <h2 id="compliance-title">
-          Every border.
+          Every detail.
           <br />
-          Every document.
-          <br />
-          <em>Under control.</em>
+          <em>Considered.</em>
         </h2>
         <p className="landing-lead">
-          Keep legal and health documentation connected to its transport
-          booking. Organize submissions, document reviews and requested
-          revisions in one dossier.
+          The right documents, in the context of the right journey. Keep trip
+          and horse requirements, submissions and requested revisions together.
         </p>
-        <div className="landing-document-lines">
-          <div>
-            <Files aria-hidden="true" />
-            <span>Trip & horse requirements</span>
-            <span>01</span>
-          </div>
-          <div>
-            <FileCheck2 aria-hidden="true" />
-            <span>Document submissions & reviews</span>
-            <span>02</span>
-          </div>
-          <div>
-            <ShieldCheck aria-hidden="true" />
-            <span>A clear record of revisions</span>
-            <span>03</span>
-          </div>
-        </div>
         <p className="landing-caption">
           Preparation, not promises. Requirements depend on the journey.
         </p>
       </div>
-      <span className="landing-border-stamp" aria-hidden="true">
-        PREPARE
-        <br />
-        REVIEW
-        <br />
-        COORDINATE
-      </span>
+      <div className="landing-document-composition" data-interface>
+        <div className="landing-document-sheet" aria-hidden="true">
+          <span>JOURNEY DOSSIER</span>
+          <b>
+            Prepared with
+            <br />
+            purpose.
+          </b>
+          <i />
+          <i />
+          <i />
+        </div>
+        <CustomerPreview mode="dossier" />
+      </div>
     </section>
   );
 }

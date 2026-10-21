@@ -27,30 +27,25 @@ function unwrap<T>(payload: ApiEnvelope<T>): T {
 
 // ─── Q1: Submit BCP Quarantine Proof (UC-28a) ─────────────────────────────────
 // POST /api/v1/compliance-dossiers/{dossierId}/quarantine-proofs
-// multipart/form-data   Role: ESC, DRV
+// application/json   Role: ESC, DRV
 
 export async function submitQuarantineProof(
   dossierId: string,
   params: SubmitQuarantineProofRequest,
 ): Promise<SubmitQuarantineProofResponse> {
-  const form = new FormData()
-  form.append('bcpName', params.bcpName)
-  if (params.locationId != null) form.append('locationId', String(params.locationId))
-  if (params.officialVetName) form.append('officialVetName', params.officialVetName)
-  if (params.bcpReceiptNumber) form.append('bcpReceiptNumber', params.bcpReceiptNumber)
-  if (params.inspectionAt) form.append('inspectionAt', params.inspectionAt)
-  // Holdback is an immediate operational signal; quickNote is intentionally optional.
-  if (params.isHoldback != null) form.append('isHoldback', String(params.isHoldback))
-  if (params.quickNote) form.append('quickNote', params.quickNote)
-  for (const file of params.files) {
-    form.append('files', file)
+  const payload = {
+    bcpName: params.bcpName || undefined,
+    locationId: params.locationId != null ? String(params.locationId) : undefined,
+    inspectionAt: params.inspectionAt || new Date().toISOString(),
+    isHoldback: params.isHoldback ?? false,
+    quickNote: params.quickNote || undefined,
+    files: params.files,
   }
 
   const res = await callApi(
     apiClient.post<unknown, ApiEnvelope<SubmitQuarantineProofResponse>>(
       `/compliance-dossiers/${encodeURIComponent(dossierId)}/quarantine-proofs`,
-      form,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
+      payload,
     ),
   )
   return unwrap(res)
@@ -72,10 +67,22 @@ export async function finalizeQuarantineProof(
   proofId: string,
   payload: FinalizeQuarantineProofRequest,
 ): Promise<FinalizeQuarantineProofResponse> {
+  const formData = new FormData()
+  if (payload.action) formData.append('Action', payload.action)
+  if (payload.officialVetName) formData.append('OfficialVetName', payload.officialVetName)
+  if (payload.bcpReceiptNo) formData.append('BcpReceiptNo', payload.bcpReceiptNo)
+  if (payload.status) formData.append('Status', payload.status)
+  if (payload.conditions) formData.append('Conditions', payload.conditions)
+  if (payload.microchipChecklist) {
+    formData.append('MicrochipChecklist', JSON.stringify(payload.microchipChecklist))
+  }
+  if (payload.rejectionReason) formData.append('RejectionReason', payload.rejectionReason)
+  if (payload.verificationNote) formData.append('VerificationNote', payload.verificationNote)
+
   const res = await callApi(
     apiClient.patch<unknown, ApiEnvelope<FinalizeQuarantineProofResponse>>(
       `/quarantine-proofs/${encodeURIComponent(proofId)}/finalize`,
-      payload,
+      formData,
     ),
   )
   return unwrap(res)

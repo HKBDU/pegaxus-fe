@@ -23,7 +23,7 @@ export function isBookingCountry(name: string): boolean {
 function countryNameFromCode(code: string | null | undefined): string | undefined {
   const upper = code?.trim().toUpperCase()
   if (!upper) return undefined
-  if (upper === "GB") return UNITED_KINGDOM
+  if (upper === "GB" || upper === "UK") return UNITED_KINGDOM
   return EU_COUNTRIES.find((country) => country.isoCode === upper)?.name
 }
 

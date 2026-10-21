@@ -66,7 +66,7 @@ export default function DossierDetailsPage() {
   const role = useDossierRole();
   const visibleSections =
     role === "CUSTOMER"
-      ? sections.filter(({ id }) => id === "requirements" || id === "documents")
+      ? sections.filter(({ id }) => id !== "audit")
       : sections;
   const query = useDossierOverview(dossierId);
   return (

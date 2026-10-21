@@ -667,7 +667,7 @@ export const createDocumentSubmissionSchema = (
     });
 
 // The BE does not require UUID/GUID format, so any non-empty string is accepted (empty only means "no id in the URL").
-export const dossierIdSchema = z.string().min(1);
+export const dossierIdSchema = z.string();
 export const dossierRequirementsParamsSchema = z.object({
   status: dossierRequirementStatusSchema.optional(),
   horseId: entityId.optional(),
@@ -683,3 +683,12 @@ export const dossierRequirementsParamsSchema = z.object({
     ])
     .default("createdAt:asc"),
 });
+
+/** One row of D1 (`GET /bookings/{id}/compliance-dossier`): enough to link to the dossier. */
+export const bookingDossierLinkSchema = z.object({
+  complianceDossierId: z.string().min(1),
+  dossierCode: z.string().nullish(),
+  dossierType: z.enum(["MAIN", "EXTRA"]).nullish(),
+  status: z.string().nullish(),
+});
+export type BookingDossierLink = z.infer<typeof bookingDossierLinkSchema>;

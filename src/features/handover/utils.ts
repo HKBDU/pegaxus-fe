@@ -21,7 +21,7 @@ export const canOperateHandover = (principal: AuthPrincipal | null) =>
   });
 
 export function handoverCreateModes(
-  boundary: HandoverBoundary,
+  boundary: Omit<HandoverBoundary, "handoverRequired"> & { handoverRequired?: boolean },
   legs: Map<string, OverviewSegment>,
   principal: AuthPrincipal | null,
 ): string[] {

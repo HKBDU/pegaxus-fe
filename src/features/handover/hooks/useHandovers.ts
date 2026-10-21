@@ -1,325 +1,113 @@
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { useLayoutEffect, useRef } from "react";
-import { useAuthStore } from "@/features/auth/store";
-import { canAccess } from "@/features/auth/access-control";
-import { handoverService, HandoverApiError } from "../services";
-import { canOperateHandover, handoverCreateModes } from "../utils";
-import type {
-  CancelInput,
-  CompleteInput,
-  CreateHandoverInput,
-  HandoverRecord,
-  ListFilters,
-} from "../types";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useAuthStore } from "@/features/auth/store"
+import { handoverService } from "../services"
+import type { CancelInput, CompleteInput, CreateHandoverInput, HandoverRecord, ListFilters } from "../types"
+
+/** Last part of every key: a new sign-in never reads the cache of the previous account. Prefix invalidation still matches. */
+const useSession = () => useAuthStore((state) => state.sessionVersion)
 
 const keys = {
   all: ["handover"] as const,
-  list: (transportId: string, filters: ListFilters) =>
-    [
-      "handover",
-      "list",
-      transportId,
-      filters.handoverType ?? "",
-      filters.status ?? "",
-    ] as const,
-  record: (handoverRecordId: string) =>
-    ["handover", "record", handoverRecordId] as const,
-  segments: (transportId: string) =>
-    ["handover", "segments", transportId] as const,
-};
-
-const identity = () =>
-  `${useAuthStore.getState().sessionVersion}:${useAuthStore.getState().principal?.id ?? ""}`;
-function useIdentity() {
-  const session = useAuthStore((state) => state.sessionVersion);
-  const account = useAuthStore((state) => state.principal?.id);
-  return `${session}:${account ?? ""}`;
+  list: (transportId: string, filters: ListFilters, session: number) => ["handover", "list", transportId, filters.handoverType ?? "", filters.status ?? "", session] as const,
+  record: (handoverRecordId: string, session: number) => ["handover", "record", handoverRecordId, session] as const,
+  segments: (transportId: string, session: number) => ["handover", "segments", transportId, session] as const,
+  // Prefixes without the session, for invalidation.
+  recordPrefix: (handoverRecordId: string) => ["handover", "record", handoverRecordId] as const,
+  segmentsPrefix: (transportId: string) => ["handover", "segments", transportId] as const,
 }
 
 /** Errors that a retry cannot fix: stop asking and show the message. */
 const retryOnlyNetwork = (failureCount: number, error: unknown) =>
-  failureCount < 2 &&
-  (error as { errorCode?: string })?.errorCode === "NETWORK_ERROR";
+  failureCount < 2 && (error as { errorCode?: string })?.errorCode === "NETWORK_ERROR"
 
 /** HO1. */
 export function useHandoverList(transportId: string, filters: ListFilters) {
-  const session = useIdentity();
+  const session = useSession()
   return useQuery({
-    queryKey: [...keys.list(transportId, filters), session],
-    queryFn: ({ signal }) =>
-      handoverService.listByTransport(transportId, filters, signal),
-    placeholderData: (previous, query) =>
-      query?.queryKey.at(-1) === session
-        ? keepPreviousData(previous)
-        : undefined,
+    queryKey: keys.list(transportId, filters, session),
+    queryFn: ({ signal }) => handoverService.listByTransport(transportId, filters, signal),
+    placeholderData: keepPreviousData,
     retry: retryOnlyNetwork,
-  });
+  })
 }
 
 /** HO2. */
 export function useHandoverRecord(handoverRecordId: string | undefined) {
-  const session = useIdentity();
+  const session = useSession()
   return useQuery({
-    queryKey: [...keys.record(handoverRecordId ?? ""), session],
-    queryFn: ({ signal }) =>
-      handoverService.getRecord(handoverRecordId as string, signal),
+    queryKey: keys.record(handoverRecordId ?? "", session),
+    queryFn: ({ signal }) => handoverService.getRecord(handoverRecordId as string, signal),
     enabled: Boolean(handoverRecordId),
     retry: retryOnlyNetwork,
+    // The signature URLs in the record expire after 5 minutes: never serve a copy older than a minute.
     staleTime: 60_000,
     refetchOnWindowFocus: "always",
-    gcTime: 0,
-  });
+  })
 }
 
 /** OT4 (read only): boundaries for the "start" page and the coordinates of the handover point. */
 export function useTransportSegments(transportId: string, enabled = true) {
-  const session = useIdentity();
+  const session = useSession()
   return useQuery({
-    queryKey: [...keys.segments(transportId), session],
+    queryKey: keys.segments(transportId, session),
     queryFn: ({ signal }) => handoverService.getSegments(transportId, signal),
     enabled,
     retry: retryOnlyNetwork,
-  });
+  })
 }
 
 /** After any write the record and every list of the transport are stale (status, availableActions, boundaries). */
 function useAfterWrite(transportId: string) {
-  const client = useQueryClient();
+  const client = useQueryClient()
+  const session = useSession()
   return (record?: HandoverRecord) => {
-    if (record)
-      client.setQueryData(
-        [...keys.record(record.handoverRecordId), identity()],
-        record,
-      );
-    void client.invalidateQueries({
-      queryKey: [...keys.all, "list", transportId],
-    });
-    void client.invalidateQueries({ queryKey: keys.segments(transportId) });
-    void client.invalidateQueries({
-      predicate: (query) =>
-        query.queryKey[0] === "driver-location-assignment" ||
-        (query.queryKey[0] === "ongoing-transports" &&
-          ["overview", "segments"].includes(String(query.queryKey[1])) &&
-          query.queryKey.includes(transportId)),
-    });
-  };
-}
-
-function useHandoverMutation<T>(
-  transportId: string,
-  request: (
-    input: T,
-    signal: AbortSignal,
-    assertCurrent: () => void,
-  ) => Promise<HandoverRecord>,
-  recordId = "",
-) {
-  const session = useIdentity();
-  const scope = `${session}:${transportId}:${recordId}`;
-  const currentScope = useRef(scope);
-  const generation = useRef(0);
-  const controller = useRef<AbortController | null>(null);
-  const mounted = useRef(true);
-  const after = useAfterWrite(transportId);
-  useLayoutEffect(() => {
-    currentScope.current = scope;
-    mounted.current = true;
-    const unsubscribe = useAuthStore.subscribe(() => {
-      if (identity() !== session) controller.current?.abort();
-    });
-    return () => {
-      generation.current += 1;
-      mounted.current = false;
-      unsubscribe();
-      controller.current?.abort();
-    };
-  }, [session, scope]);
-  return useMutation({
-    mutationKey: ["handover-write", scope],
-    onMutate: () => ({ scope, generation: generation.current }),
-    retry: false,
-    networkMode: "always",
-    gcTime: 0,
-    mutationFn: async (input: T) => {
-      if (
-        !mounted.current ||
-        controller.current ||
-        currentScope.current !== scope ||
-        identity() !== session ||
-        !navigator.onLine
-      )
-        throw new HandoverApiError({
-          message:
-            "Connect to the network and try again in the current session.",
-        });
-      const active = new AbortController();
-      const activeGeneration = generation.current;
-      const assertCurrent = () => {
-        if (
-          !mounted.current ||
-          active.signal.aborted ||
-          identity() !== session ||
-          currentScope.current !== scope ||
-          generation.current !== activeGeneration
-        ) {
-          active.abort();
-          throw new HandoverApiError({
-            errorCode: "CANCELED",
-            message: "Request canceled because the handover page changed.",
-          });
-        }
-      };
-      controller.current = active;
-      try {
-        assertCurrent();
-        const record = await request(input, active.signal, assertCurrent);
-        assertCurrent();
-        return record;
-      } finally {
-        if (controller.current === active) controller.current = null;
-      }
-    },
-    onSuccess: (record, _input, context) => {
-      if (
-        mounted.current &&
-        identity() === session &&
-        currentScope.current === scope &&
-        context?.generation === generation.current &&
-        context.scope === scope
-      )
-        after(record);
-      else
-        throw new HandoverApiError({
-          errorCode: "CANCELED",
-          message: "Request canceled because the handover page changed.",
-        });
-    },
-  });
+    if (record) client.setQueryData(keys.record(record.handoverRecordId, session), record)
+    void client.invalidateQueries({ queryKey: [...keys.all, "list", transportId] })
+    void client.invalidateQueries({ queryKey: keys.segmentsPrefix(transportId) })
+    // OT3 / OT4 of the transport screens show the leg times and statuses that HO5 writes.
+    void client.invalidateQueries({ queryKey: ["ongoing-transports"] })
+    // The driver's location gate reads who holds the current leg, which a handover changes.
+    void client.invalidateQueries({ queryKey: ["driver-location-assignment"] })
+  }
 }
 
 export function useCreateHandover(transportId: string) {
-  return useHandoverMutation(
-    transportId,
-    async (input: CreateHandoverInput, signal, assertCurrent) => {
-      const overview = await handoverService.getSegments(transportId, signal);
-      assertCurrent();
-      const boundary = overview.handoverBoundaries.find(
-        (entry) =>
-          (entry.fromRoutePlanRouteId ?? null) ===
-            (input.fromRoutePlanRouteId ?? null) &&
-          (entry.toRoutePlanRouteId ?? null) ===
-            (input.toRoutePlanRouteId ?? null),
-      );
-      const mode = input.startNow ? "START_NOW" : "SCHEDULE";
-      if (boundary?.existingHandover)
-        throw new HandoverApiError({
-          errorCode: "HANDOVER_ALREADY_EXISTS",
-          message: "This handover point already has a record.",
-          value: {
-            handoverRecordId: boundary.existingHandover.handoverRecordId,
-          },
-        });
-      if (
-        !boundary ||
-        !boundary.allowedHandoverTypes.includes(input.handoverType) ||
-        !handoverCreateModes(
-          boundary,
-          new Map(overview.segments.map((leg) => [leg.routePlanRouteId, leg])),
-          useAuthStore.getState().principal,
-        ).includes(mode)
-      )
-        throw new HandoverApiError({
-          message:
-            "This handover mode is no longer available. Reload the handover points.",
-        });
-      return handoverService.create(transportId, input, signal, assertCurrent);
-    },
-  );
+  const after = useAfterWrite(transportId)
+  return useMutation({
+    mutationFn: (input: CreateHandoverInput) => handoverService.create(transportId, input),
+    onSuccess: after,
+  })
 }
 
-export function useStartHandover(transportId: string, recordId = "") {
-  return useHandoverMutation(
-    transportId,
-    async (handoverRecordId: string, signal, assertCurrent) => {
-      if (
-        !canOperateHandover(useAuthStore.getState().principal) ||
-        canAccess(useAuthStore.getState().principal, {
-          anyRole: ["TRANSPORT_SPECIALIST"],
-        })
-      )
-        throw new HandoverApiError({
-          message: "You cannot start this handover.",
-        });
-      const record = await handoverService.getRecord(handoverRecordId, signal);
-      assertCurrent();
-      if (
-        record.status !== "PLANNED" ||
-        !record.availableActions.includes("START")
-      )
-        throw new HandoverApiError({
-          errorCode: "INVALID_HANDOVER_STATUS",
-          message: "This handover cannot be started.",
-        });
-      return handoverService.start(handoverRecordId, signal, assertCurrent);
-    },
-    recordId,
-  );
+export function useStartHandover(transportId: string) {
+  const after = useAfterWrite(transportId)
+  return useMutation({
+    mutationFn: (handoverRecordId: string) => handoverService.start(handoverRecordId),
+    onSuccess: after,
+  })
 }
 
-export function useCompleteHandover(
-  transportId: string,
-  handoverRecordId: string,
-) {
-  return useHandoverMutation(
-    transportId,
-    (input: CompleteInput, signal, assertCurrent) => {
-      if (
-        !canOperateHandover(useAuthStore.getState().principal) ||
-        canAccess(useAuthStore.getState().principal, {
-          anyRole: ["TRANSPORT_SPECIALIST"],
-        })
-      )
-        throw new HandoverApiError({
-          message: "You cannot complete this handover.",
-        });
-      return handoverService.complete(
-        handoverRecordId,
-        input,
-        signal,
-        assertCurrent,
-      );
-    },
-    handoverRecordId,
-  );
+export function useCompleteHandover(transportId: string, handoverRecordId: string) {
+  const after = useAfterWrite(transportId)
+  return useMutation({
+    mutationFn: (input: CompleteInput) => handoverService.complete(handoverRecordId, input),
+    onSuccess: after,
+  })
 }
 
-export function useCancelHandover(
-  transportId: string,
-  handoverRecordId: string,
-) {
-  return useHandoverMutation(
-    transportId,
-    (input: CancelInput, signal, assertCurrent) =>
-      handoverService.cancel(handoverRecordId, input, signal, assertCurrent),
-    handoverRecordId,
-  );
+export function useCancelHandover(transportId: string, handoverRecordId: string) {
+  const after = useAfterWrite(transportId)
+  return useMutation({
+    mutationFn: (input: CancelInput) => handoverService.cancel(handoverRecordId, input),
+    onSuccess: after,
+  })
 }
 
 /** Reload after `HANDOVER_MODIFIED`: fetch the record again and refresh the lists. */
-export function useReloadHandover(
-  transportId: string,
-  handoverRecordId: string,
-) {
-  const client = useQueryClient();
+export function useReloadHandover(transportId: string, handoverRecordId: string) {
+  const client = useQueryClient()
   return () => {
-    void client.invalidateQueries({ queryKey: keys.record(handoverRecordId) });
-    void client.invalidateQueries({
-      queryKey: [...keys.all, "list", transportId],
-    });
-  };
+    void client.invalidateQueries({ queryKey: keys.recordPrefix(handoverRecordId) })
+    void client.invalidateQueries({ queryKey: [...keys.all, "list", transportId] })
+  }
 }

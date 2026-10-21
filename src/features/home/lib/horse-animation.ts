@@ -1,6 +1,18 @@
 import type { AnimationAction } from "three";
 
 export type HorseMotion = "idle" | "walk" | "run";
+export type HeroPhase =
+  "LOADING" | "APPROACH" | "HOOF_SCRAPE_1" | "HOOF_SCRAPE_2" | "FINAL_POSE";
+
+export const HERO_APPROACH_DISTANCE = 1.2;
+// The original rig faces −X. This yaw aims forward and modestly toward the copy.
+export const HERO_YAW = 0.92;
+// Measured planted-hoof travel per SlowWalk cycle, in the original rig's units.
+export const JOURNEY_STRIDE = 1.388;
+export const JOURNEY_WALK_CYCLES = 2;
+export const HERO_CALM_CLIP = "HorseALL_IdleEars_Calm";
+export const HERO_STANDING_TIME = 0;
+export const HERO_SCRAPE_CLIP = "HorseALL_HoofScrape2";
 
 export function getLocomotionPhase(
   time: number,
@@ -37,6 +49,8 @@ export function assertHorseAnimations(clips: readonly { name: string }[]) {
   for (const name of Object.values(HORSE_CLIPS)) {
     if (!names.has(name)) throw new Error(`Missing horse animation: ${name}`);
   }
+  if (!names.has(HERO_SCRAPE_CLIP))
+    throw new Error(`Missing horse animation: ${HERO_SCRAPE_CLIP}`);
 }
 
 export function transitionHorseAction(

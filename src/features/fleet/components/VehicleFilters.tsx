@@ -7,6 +7,7 @@ import {
   VEHICLE_SORT_OPTIONS,
   VEHICLE_STATUS_LABEL,
   VEHICLE_TYPE_OPTIONS,
+  VEHICLE_COUNTRY_OPTIONS,
 } from "@/features/fleet/constants/fleet.constants"
 import { VEHICLE_STATUSES, type VehicleListParams, type VehicleSort, type VehicleStatus } from "@/features/fleet/types"
 import { DataTableRadioFilter, type DataTableRadioOption } from "@/shared/components/ui/data-table-radio-filter"
@@ -20,6 +21,7 @@ const STATUS_OPTIONS: DataTableRadioOption[] = [
 const TYPE_OPTIONS: DataTableRadioOption[] = [{ value: "ALL", label: "All types" }, ...VEHICLE_TYPE_OPTIONS.map((type) => ({ value: type, label: type }))]
 const CAPACITY_OPTIONS: DataTableRadioOption[] = CAPACITY_FILTER_OPTIONS.map((option) => (option.value === "ALL" ? { ...option, label: "Any capacity" } : option))
 const SORT_OPTIONS: DataTableRadioOption[] = VEHICLE_SORT_OPTIONS.map((option) => ({ value: option.value, label: option.label.charAt(0) + option.label.slice(1).toLowerCase() }))
+const COUNTRY_OPTIONS: DataTableRadioOption[] = VEHICLE_COUNTRY_OPTIONS.map((country) => ({ value: country, label: country === "ALL" ? "All countries" : country }))
 
 interface VehicleFiltersProps {
   filters: VehicleListParams
@@ -64,6 +66,7 @@ export function VehicleFilters({ filters, onSearchChange, onPatch, trailing }: V
         onValueChange={(value) => onPatch({ minCapacity: value === "ALL" ? "ALL" : Number(value) })}
       />
       <DataTableRadioFilter title="Sort" value={filters.sortBy} defaultValue={DEFAULT_VEHICLE_SORT} options={SORT_OPTIONS} onValueChange={(value) => onPatch({ sortBy: value as VehicleSort })} />
+      <DataTableRadioFilter title="Country" value={filters.country ?? "ALL"} options={COUNTRY_OPTIONS} onValueChange={(value) => onPatch({ country: value === "ALL" ? undefined : value })} />
 
       <div className="col-span-2 flex items-center justify-end gap-1.5 max-lg:[&_button]:w-full lg:col-span-1">{trailing}</div>
     </div>

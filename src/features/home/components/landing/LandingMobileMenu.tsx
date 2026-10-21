@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
-import { Link } from "react-router-dom";
 import {
   Sheet,
   SheetClose,
@@ -13,7 +12,7 @@ import {
   LANDING_NAV_ITEMS,
   type LandingChapter,
 } from "../../lib/landing-navigation";
-import { TransportLink } from "./LandingActions";
+import { GuestLinks, TransportLink } from "./LandingActions";
 
 export function LandingMobileMenu({ active }: { active: LandingChapter }) {
   const [open, setOpen] = useState(false);
@@ -72,9 +71,7 @@ export function LandingMobileMenu({ active }: { active: LandingChapter }) {
         </nav>
         <div className="landing-mobile-actions">
           <TransportLink onClick={close} />
-          <Link to="/login" className="landing-text-link" onClick={close}>
-            Sign in <span aria-hidden="true">↗</span>
-          </Link>
+          <GuestLinks className="landing-text-link" onClick={close} />
         </div>
       </SheetContent>
     </Sheet>

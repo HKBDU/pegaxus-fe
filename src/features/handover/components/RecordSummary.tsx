@@ -29,7 +29,7 @@ export function RecordSummary({ record, editing = false, location, onLocationCha
         <Item label="Sequence no.">{record.sequenceNo}</Item>
         <Item label="Type">{typeLabel(record.handoverType)}</Item>
         <Item label="Planned at">{formatDateTime(record.plannedHandoverAt)}</Item>
-        <Item label="Actual time">{formatDateTime(record.actualHandoverAt)}</Item>
+        <Item label="Handover time">{formatDateTime(record.actualHandoverAt)}</Item>
       </dl>
 
       <div className="mt-3 border-t border-slate-200 pt-3">

@@ -23,8 +23,6 @@ import { AuthShell } from "@/features/auth/components/AuthShell";
 import { liveTrackingTabRoutes } from "@/features/live-tracking";
 import BcpQuarantineProofPage from "@/features/quarantine/pages/BcpQuarantineProofPage";
 import QuarantineReviewPage from "@/features/quarantine/pages/QuarantineReviewPage";
-import AuthoritySubmissionPage from "@/features/authority/pages/AuthoritySubmissionPage";
-import AuthorityReviewPage from "@/features/authority/pages/AuthorityReviewPage";
 import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearanceProofPage";
 import CustomsClearanceReviewPage from "@/features/clearance/pages/CustomsClearanceReviewPage";
 import { horseHealthCrewFormRoutes, horseHealthRoutes, horseHealthTabRoutes } from "@/features/horse-health";
@@ -687,22 +685,6 @@ export const router = createBrowserRouter([
           {
             path: "/quarantine-proofs/:proofId/verify",
             element: <QuarantineReviewPage />,
-          },
-          {
-            path: "/compliance-dossiers/:dossierId/authority-submission",
-            element: (
-              <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
-                <AuthoritySubmissionPage />
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: "/authority-submissions/:submissionId/review",
-            element: (
-              <ProtectedRoute allowedRoles={["TRANSPORT_SPECIALIST"]}>
-                <AuthorityReviewPage />
-              </ProtectedRoute>
-            ),
           },
           {
             path: "/customs-clearance-proofs/:proofId/verify",

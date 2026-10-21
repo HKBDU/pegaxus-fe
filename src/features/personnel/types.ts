@@ -24,6 +24,8 @@ export interface EmployeeBrief {
   email?: string | null
   /** Account.avatar_url (nullable). Shown on the employee cards of the dialogs. */
   avatarUrl?: string | null
+  /** Employee.country: where the person works now (ISO-2, nullable). Shown in the dropdowns, used for the R18 warning. */
+  country?: string | null
 }
 
 /** PS2 phase 1 person: EmployeeBrief + EmployeeTransportPlan.assigned_at. */
@@ -85,9 +87,19 @@ export interface AssignableEmployeesParams {
   /** Required for DRIVER / ESCORT: plannedDepartureAt / plannedArrivalAt of the segment. */
   availableFrom?: string
   availableTo?: string
+  /** The plan being assigned: its own segments never make a person "busy" (PS6). */
+  transportPlanId?: string
+  /** Optional filter chosen by the Route Coordinator (ISO-2). Never sent by default (R18). */
+  country?: string
   search?: string
   pageIndex?: number
   pageSize?: number
+}
+
+/** What the Route Coordinator typed / picked in the search and country filter of the assignment dialogs. */
+export interface AssignableFilters {
+  search?: string
+  country?: string
 }
 
 export interface AssignableEmployeesPage {
