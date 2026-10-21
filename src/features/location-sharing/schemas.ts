@@ -12,8 +12,7 @@ export const locationEnvelopeSchema = z.object({
   value: z.unknown(),
 });
 
-export const driverLocationRequestSchema = z
-  .object({
+const driverLocationRequestShape = {
     latitude: z
       .number()
       .min(VALIDATION_LIMITS.latitude.min)
@@ -66,7 +65,10 @@ export const driverLocationRequestSchema = z
       .nullable()
       .optional(),
     routePlanRouteId: z.string().nullable().optional(),
-  })
+} satisfies z.ZodRawShape;
+
+export const driverLocationRequestSchema = z
+  .object(driverLocationRequestShape)
   .superRefine((data, ctx) => {
     if (data.latitude === 0 && data.longitude === 0) {
       ctx.addIssue({
@@ -105,9 +107,9 @@ export const driverLocationAcceptedSchema = z.object({
   arrival: arrivalBoundarySchema.nullish(),
 });
 
-export const segmentArrivalRequestSchema = driverLocationRequestSchema.pick({
-  latitude: true,
-  longitude: true,
+export const segmentArrivalRequestSchema = z.object({
+  latitude: driverLocationRequestShape.latitude,
+  longitude: driverLocationRequestShape.longitude,
 });
 const arrivalSegmentSchema = z.object({
   routePlanRouteId: z.string(),
