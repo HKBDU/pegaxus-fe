@@ -22,7 +22,12 @@ type LegacyMaterial = {
 
 // Accepts Drei's actual loader without importing its transitive three-stdlib dependency.
 type HorseParser = {
-  json: { materials?: { extensions?: Record<string, LegacyMaterial> }[] };
+  json: {
+    materials?: {
+      name?: string;
+      extensions?: Record<string, LegacyMaterial>;
+    }[];
+  };
   assignTexture: (
     params: HorseMaterialParams,
     name: string,
@@ -100,6 +105,15 @@ export function createHorseMaterialPlugin(parser: HorseParser) {
           "pegaxus-horse-specular-glossiness-v1";
       }
       await Promise.all(pending);
+      if (
+        parser.json.materials?.[index]?.name === "CH_NPC_MOB_WHorse_A02_MI_BYN"
+      ) {
+        // Apply after texture awaits: GLTFLoader sets BLEND defaults after invoking plugins.
+        // Body and hair cards share this material, so depth alone would occlude the mane.
+        params.transparent = false;
+        params.depthWrite = true;
+        params.alphaTest = 0.5;
+      }
       // Loader may share the RGB sRGB / linear-alpha texture between both maps.
       if (params.specularColorMap)
         params.specularColorMap.colorSpace = SRGBColorSpace;

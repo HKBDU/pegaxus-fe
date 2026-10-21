@@ -10,6 +10,11 @@ import { CountrySelect } from "@/shared/components/ui/country-select"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Input } from "@/shared/components/ui/input"
 import { PageHeader } from "@/shared/components/PageHeader"
+import {
+  PHONE_MESSAGE,
+  VALIDATION_LIMITS,
+  isPhoneValid,
+} from "@/shared/constants/validation-limits"
 
 import { ACCOUNT_TYPE_LABELS } from "../constants/profile.constants"
 import { useProfile } from "../hooks/useProfile"
@@ -181,11 +186,42 @@ export function ProfileSettingsPage() {
       return
     }
 
-    const phoneDigits = currentDraft.phone.replace(/\D/g, "")
-    if (currentDraft.phone.trim() && (phoneDigits.length < 7 || phoneDigits.length > 15 || !/^[+\d][\d\s().-]*$/.test(currentDraft.phone.trim()))) {
-      toast.error("Enter a valid phone number.")
+    if (currentDraft.phone.trim() && !isPhoneValid(currentDraft.phone)) {
+      toast.error(PHONE_MESSAGE)
       setEditingField("phone")
       return
+    }
+
+    if (currentDraft.dob) {
+      const dobDate = new Date(currentDraft.dob)
+      if (Number.isNaN(dobDate.getTime())) {
+        toast.error("Enter a valid date of birth.")
+        setEditingField("dob")
+        return
+      }
+      const today = new Date()
+      const minAgeDate = new Date()
+      minAgeDate.setFullYear(minAgeDate.getFullYear() - VALIDATION_LIMITS.accountMinAgeYears)
+      minAgeDate.setHours(23, 59, 59, 999)
+      const maxAgeDate = new Date()
+      maxAgeDate.setFullYear(maxAgeDate.getFullYear() - VALIDATION_LIMITS.accountMaxAgeYears)
+      maxAgeDate.setHours(0, 0, 0, 0)
+
+      if (dobDate > today) {
+        toast.error("Date of birth cannot be in the future.")
+        setEditingField("dob")
+        return
+      }
+      if (dobDate > minAgeDate) {
+        toast.error(`You must be at least ${VALIDATION_LIMITS.accountMinAgeYears} years old.`)
+        setEditingField("dob")
+        return
+      }
+      if (dobDate < maxAgeDate) {
+        toast.error(`Date of birth cannot be more than ${VALIDATION_LIMITS.accountMaxAgeYears} years ago.`)
+        setEditingField("dob")
+        return
+      }
     }
 
     const input: UpdateProfileRequest = {

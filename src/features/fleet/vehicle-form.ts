@@ -16,6 +16,7 @@ const emptyValues: VehicleFormValues = {
   insuranceExpiryDate: "",
   equipmentTags: [],
   equipmentNotes: "",
+  country: "",
 }
 
 /** Vehicle (or nothing, for create) to form values. */
@@ -36,6 +37,7 @@ export function toVehicleDefaults(vehicle?: Vehicle): VehicleFormValues {
     insuranceExpiryDate: vehicle.insuranceExpiryDate ?? "",
     equipmentTags: equipment.tags,
     equipmentNotes: equipment.notes,
+    country: vehicle.country ?? "",
   }
 }
 
@@ -58,5 +60,6 @@ export function toVehiclePayload(values: VehicleFormValues): VehiclePayload {
     insuranceNumber: optional(values.insuranceNumber),
     insuranceExpiryDate: optional(values.insuranceExpiryDate),
     specialEquipment: buildEquipment(values.equipmentTags, values.equipmentNotes),
+    country: optional(values.country)?.toUpperCase(),
   }
 }

@@ -2,8 +2,9 @@ import { z } from "zod"
 import { invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts, DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_TYPE } from "@/features/invoice/constants"
 import type { CreateInvoicePayload, Invoice, InvoiceItemPayload, UpdateInvoicePayload } from "@/features/invoice/types"
 import { parseWholeNumber, todayIsoDate } from "@/features/invoice/utils"
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits"
 
-export const invoiceIdSchema = z.string().trim().min(1);
+export const invoiceIdSchema = z.string();
 const date = z.iso.date();
 const timestamp = z.iso.datetime({ offset: true });
 const text = z.string().nullable();
@@ -205,6 +206,7 @@ export const invoiceItemFormSchema = z.object({
     const quantity = parseWholeNumber(value)
     if (Number.isNaN(quantity)) ctx.addIssue({ code: "custom", message: "Enter a whole number" })
     else if (quantity <= 0) ctx.addIssue({ code: "custom", message: "Must be greater than 0" })
+    else if (quantity > 5000) ctx.addIssue({ code: "custom", message: "Quantity must be at most 5,000" })
     else if (!Number.isSafeInteger(quantity)) ctx.addIssue({ code: "custom", message: "Number is too large" })
   }),
   price: z.string().superRefine((value, ctx) => {
@@ -218,13 +220,20 @@ export const invoiceItemFormSchema = z.object({
   note: z.string(),
 })
 
+function maxFutureDateIso(years = VALIDATION_LIMITS.dateWindowYears): string {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() + years)
+  return d.toISOString().slice(0, 10)
+}
+
 export const invoiceFormSchema = z.object({
   type: z.enum(INVOICE_TYPE),
   dueDate: z
     .string()
     .min(1, "Due date is required")
-    .refine((value) => value >= todayIsoDate(), "Due date cannot be before today"),
-  note: z.string(),
+    .refine((value) => value >= todayIsoDate(), "Due date cannot be before today")
+    .refine((value) => value <= maxFutureDateIso(), `Due date must be within ${VALIDATION_LIMITS.dateWindowYears} years from today`),
+  note: z.string().max(VALIDATION_LIMITS.noteMaxLength, `Note must be at most ${VALIDATION_LIMITS.noteMaxLength} characters`),
   items: z.array(invoiceItemFormSchema),
 })
 

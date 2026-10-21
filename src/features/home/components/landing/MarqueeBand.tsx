@@ -21,24 +21,25 @@ export function MarqueeBand() {
 
     // Reduced-motion: keep track static.
     const reducedMq = matchMedia("(prefers-reduced-motion: reduce)");
-    if (reducedMq.matches) {
-      track.style.animationPlayState = "paused";
-    }
+    let onscreen = false;
+    let disposed = false;
+    const syncPlayback = () => {
+      track.style.animationPlayState =
+        !reducedMq.matches && onscreen && !document.hidden
+          ? "running"
+          : "paused";
+    };
+    syncPlayback();
     const onReducedChange = () => {
-      track.style.animationPlayState = reducedMq.matches
-        ? "paused"
-        : "running";
+      syncPlayback();
     };
     reducedMq.addEventListener("change", onReducedChange);
 
     // Pause animation when offscreen for performance.
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!reducedMq.matches) {
-          track.style.animationPlayState = entry.isIntersecting
-            ? "running"
-            : "paused";
-        }
+        onscreen = entry.isIntersecting;
+        syncPlayback();
       },
       { threshold: 0 },
     );
@@ -46,18 +47,23 @@ export function MarqueeBand() {
 
     // Recompute seamless-loop width on resize/font-load.
     const recompute = () => {
+      if (disposed) return;
       // Force a reflow to recalculate track dimensions after font swap.
       track.style.animation = "none";
       void track.offsetWidth;
       track.style.animation = "";
+      syncPlayback();
     };
     window.addEventListener("resize", recompute);
+    document.addEventListener("visibilitychange", syncPlayback);
     void document.fonts.ready.then(recompute);
 
     return () => {
+      disposed = true;
       reducedMq.removeEventListener("change", onReducedChange);
       observer.disconnect();
       window.removeEventListener("resize", recompute);
+      document.removeEventListener("visibilitychange", syncPlayback);
     };
   }, []);
 
@@ -79,11 +85,7 @@ export function MarqueeBand() {
     <div className="landing-marquee-band" ref={bandRef} role="presentation">
       {/* Accessible name: exposed once, then all copies are decorative. */}
       <span className="sr-only">PEGAXUS</span>
-      <div
-        className="landing-marquee-track"
-        ref={trackRef}
-        aria-hidden="true"
-      >
+      <div className="landing-marquee-track" ref={trackRef} aria-hidden="true">
         {/* Two identical loops create the seamless wrap. */}
         <div className="landing-marquee-loop">{items}</div>
         <div className="landing-marquee-loop">{items}</div>

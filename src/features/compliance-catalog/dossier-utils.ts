@@ -15,16 +15,23 @@ export function buildFinalRows(
   customs: CustomRequirementDraft[],
   horses: ApplyBooking["horses"],
   categoryOf: (complianceRequirementId: DossierTemplateItem["complianceRequirementId"]) => ComplianceCategory | null,
+  isMandatoryRoute?: boolean,
 ): FinalRequirementRow[] {
   const rows: FinalRequirementRow[] = []
 
   for (const item of [...items].sort((left, right) => left.sequenceNo - right.sequenceNo)) {
     const key = templateItemKey(item)
     if (!selectedItemIds.has(key)) continue
+    const category = categoryOf(item.complianceRequirementId)
+    // For intra-EU routes (isMandatoryRoute === false), Quarantine and Customs requirements are optional.
+    const isMandatory =
+      isMandatoryRoute === false && (category === "QUARANTINE" || category === "CUSTOMS")
+        ? false
+        : item.isMandatory
     const base = {
       requirementName: item.requirementName,
-      category: categoryOf(item.complianceRequirementId),
-      isMandatory: item.isMandatory,
+      category,
+      isMandatory,
       instruction: item.instruction,
       isCustom: false,
     }

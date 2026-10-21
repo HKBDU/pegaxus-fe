@@ -81,7 +81,7 @@ function applyPayload(target: DossierTemplate, data: DossierTemplatePayload) {
   target.itemCount = target.items.length
 }
 
-/** Mock of the T1 recommendation mode (API contract section 4, "Danh sách gợi ý"). */
+/** Mock of the T1 recommendation mode (API contract section 4, "Recommendation list"). */
 async function getMockRecommendations(bookingId: EntityId) {
   const booking = await bookingService.getBooking(bookingId)
   const origin = getComplianceCountryCode(booking.originCountry)

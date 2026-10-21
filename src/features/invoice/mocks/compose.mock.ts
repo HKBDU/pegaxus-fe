@@ -252,6 +252,9 @@ function validate(payload: { dueDate: string; items: InvoiceItemPayload[] }, boo
     if (!(item.quantity > 0) || !(item.price > 0)) {
       errors.push({ field: `items[${index}].quantity`, message: "Quantity and unit price must be greater than 0" })
     }
+    if (item.quantity > 5000) {
+      errors.push({ field: `items[${index}].quantity`, message: "Quantity must be at most 5,000" })
+    }
     if (item.horseId && !booking.horses.some((horse) => horse.horseId === item.horseId)) {
       errors.push({ field: `items[${index}].horseId`, message: "Horse does not belong to this booking" })
     }

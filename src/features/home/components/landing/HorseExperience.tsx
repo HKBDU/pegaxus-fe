@@ -3,6 +3,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useState,
   type ReactNode,
   type RefObject,
@@ -51,6 +52,7 @@ export default function HorseExperience({
     visible: !document.hidden,
   }));
   const ready = useCallback(() => setPending(false), []);
+  const contextLost = useCallback(() => setFailed(true), []);
   useEffect(() => {
     const compact = matchMedia("(max-width: 1023px)");
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -72,15 +74,33 @@ export default function HorseExperience({
   const lowPower =
     quality.compact ||
     (navigator.hardwareConcurrency > 0 && navigator.hardwareConcurrency <= 4);
-  useEffect(() => {
-    canvasLayer.current?.style.setProperty(
-      "opacity",
-      String(story.current.horsePresence),
-    );
+  useLayoutEffect(() => {
+    const layer = canvasLayer.current;
+    const state = story.current;
+    if (layer) {
+      layer.setAttribute(
+        "data-shot",
+        state.inHero
+          ? "home"
+          : state.inJourney
+            ? "journey"
+            : state.inMap
+              ? "map"
+              : "none",
+      );
+      layer.style.setProperty(
+        "opacity",
+        String(state.inHero ? 1 : state.horsePresence),
+      );
+      layer.style.setProperty("--scene-offset-y", state.stageOffsetY + "px");
+      layer.style.setProperty(
+        "clip-path",
+        "inset(" + state.clipTop + "px 0 " + state.clipBottom + "px)",
+      );
+    }
   }, [canvasLayer, story]);
   return (
-    <div className="landing-experience" aria-hidden="true">
-      <div className="landing-scene-halo" />
+    <div className="landing-experience" ref={canvasLayer} aria-hidden="true">
       <HorseSceneBoundary>
         {failed ? (
           <div className="landing-scene-fallback">
@@ -90,7 +110,7 @@ export default function HorseExperience({
             </small>
           </div>
         ) : (
-          <div className="landing-canvas-layer" ref={canvasLayer}>
+          <div className="landing-canvas-layer">
             <Canvas
               camera={{ position: [0, 0.45, 6.9], fov: 32, near: 0.1, far: 40 }}
               dpr={lowPower ? 1 : [1, 1.5]}
@@ -114,15 +134,14 @@ export default function HorseExperience({
               }
               onCreated={({ gl }) => {
                 gl.setClearColor("#111311", 0);
-                gl.domElement.addEventListener(
-                  "webglcontextlost",
-                  () => setFailed(true),
-                  { once: true },
-                );
               }}
             >
               <Suspense fallback={null}>
-                <HorseScene story={story} lowPower={lowPower}>
+                <HorseScene
+                  story={story}
+                  lowPower={lowPower}
+                  onContextLost={contextLost}
+                >
                   <HorseModel story={story} onReady={ready} />
                 </HorseScene>
               </Suspense>

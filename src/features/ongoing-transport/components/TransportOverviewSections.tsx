@@ -270,7 +270,7 @@ export function TransportDossiers({
           Legal dossiers
         </h2>
         {ordered.length === 0 ? (
-          <p className="mt-3 mb-0 text-xs text-slate-500">Chưa có hồ sơ</p>
+          <p className="mt-3 mb-0 text-xs text-slate-500">No dossiers available</p>
         ) : (
           <ul className="mt-3 mb-0 grid list-none gap-2 p-0 md:grid-cols-2">
             {ordered.map((dossier) => (
@@ -281,7 +281,7 @@ export function TransportDossiers({
                 {dossier.dossierType ? (
                   <Badge variant="secondary" className="rounded-xs text-[10px]">
                     {dossier.dossierType === "EXTRA"
-                      ? "Bổ sung (quay đầu)"
+                      ? "Extra (Return)"
                       : "MAIN"}
                   </Badge>
                 ) : null}

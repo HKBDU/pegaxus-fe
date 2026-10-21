@@ -86,9 +86,17 @@ export default function ApplyTemplatePage() {
   )
   const categoryOf = useCallback((id: EntityId) => categoryById.get(String(id)) ?? null, [categoryById])
 
+  const isMandatoryRoute = useMemo(() => {
+    const origin = booking?.originCountry?.trim().toLowerCase()
+    const destination = booking?.destinationCountry?.trim().toLowerCase()
+    if (!origin || !destination) return true
+    const ukIe = new Set(["united kingdom", "uk", "gb", "great britain", "ireland", "ie"])
+    return ukIe.has(origin) || ukIe.has(destination)
+  }, [booking?.destinationCountry, booking?.originCountry])
+
   const finalRows = useMemo(
-    () => buildFinalRows(template?.items ?? [], selectedItemIds, customs, booking?.horses ?? [], categoryOf),
-    [booking?.horses, categoryOf, customs, selectedItemIds, template],
+    () => buildFinalRows(template?.items ?? [], selectedItemIds, customs, booking?.horses ?? [], categoryOf, isMandatoryRoute),
+    [booking?.horses, categoryOf, customs, isMandatoryRoute, selectedItemIds, template],
   )
   const counts = useMemo(() => countRows(finalRows), [finalRows])
 

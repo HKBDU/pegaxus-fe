@@ -93,9 +93,12 @@ function parseFeature(
   const properties = feature?.properties;
   if (!properties) return null;
 
-  const latitude = Number(properties.lat);
-  const longitude = Number(properties.lon);
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  const rawLat = Number(properties.lat);
+  const rawLon = Number(properties.lon);
+  if (!Number.isFinite(rawLat) || !Number.isFinite(rawLon)) return null;
+
+  const latitude = Number(rawLat.toFixed(4));
+  const longitude = Number(rawLon.toFixed(4));
 
   return {
     name: typeof properties.name === "string" ? properties.name : null,

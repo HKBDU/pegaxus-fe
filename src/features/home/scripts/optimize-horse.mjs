@@ -38,6 +38,7 @@ const names = new Set([
   "HorseALL_IdleEars",
   "HorseALL_SlowWalk",
   "HorseALL_RunLoop",
+  "HorseALL_HoofScrape2",
 ]);
 document.animations = document.animations.filter((clip) =>
   names.has(clip.name),

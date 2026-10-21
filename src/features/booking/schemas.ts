@@ -12,7 +12,7 @@ const optionalText = (max: number) => z.string().trim().max(max)
 
 const DATE_FORMAT = "yyyy-MM-dd"
 
-export const bookingIdSchema = z.string().min(1)
+export const bookingIdSchema = z.string()
 
 export function getBookingDepartureDateRange(now = new Date()) {
   const utcToday = parseISO(now.toISOString().slice(0, 10))
@@ -46,7 +46,7 @@ export const bookingFormSchema = z
     horses: z
       .array(
         z.object({
-          horseId: z.union([z.string().min(1), z.number().int().positive()]),
+          horseId: z.union([z.string(), z.number()]),
           specialHandlingNotes: optionalText(500),
         }),
       )

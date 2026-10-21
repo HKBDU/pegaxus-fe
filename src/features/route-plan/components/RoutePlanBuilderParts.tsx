@@ -5,12 +5,15 @@ import {
   ChevronUp,
   Clock,
   PlusCircle,
+  ShieldAlert,
   Trash2,
   Truck,
 } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -159,6 +162,9 @@ export function SegmentCard({
   segment,
   index,
   totalSegments = 1,
+  isLatest = false,
+  isReversedOrder = false,
+  onSplitAtBcp,
   onDelete,
   onMoveUp,
   onMoveDown,
@@ -172,6 +178,9 @@ export function SegmentCard({
   segment: DraftSegment;
   index: number;
   totalSegments?: number;
+  isLatest?: boolean;
+  isReversedOrder?: boolean;
+  onSplitAtBcp?: () => void;
   onDelete: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
@@ -182,6 +191,7 @@ export function SegmentCard({
   availableVehicles?: Vehicle[];
   routePlanId?: string;
 }) {
+  const [pendingVehicleId, setPendingVehicleId] = useState<string | null>(null);
   const principal = useAuthStore((state) => state.principal);
   const canManageOutsource = canAccess(principal, {
     anyRole: ["LOGISTICS_MANAGER"],
@@ -198,9 +208,16 @@ export function SegmentCard({
     >
       <CardContent className="px-3 min-w-0 w-full overflow-hidden">
         <div className="flex items-start gap-2 min-w-0 w-full overflow-hidden">
-          <span className="mt-1 grid size-6 shrink-0 place-items-center rounded-[2px] bg-slate-600 text-xs font-bold text-white">
-            {index + 1}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-[2px] bg-slate-700 text-xs font-bold text-white">
+              {index + 1}
+            </span>
+            {isLatest && totalSegments > 1 && (
+              <Badge className="rounded-[2px] bg-amber-500 text-white text-[10px] px-1.5 py-0 font-semibold shrink-0">
+                Latest
+              </Badge>
+            )}
+          </div>
           <div className="min-w-0 flex-1 overflow-hidden">
             <div className="flex items-start justify-between gap-2 min-w-0 w-full">
               <div className="min-w-0 flex-1 overflow-hidden">
@@ -242,13 +259,27 @@ export function SegmentCard({
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-0.5 text-muted-foreground">
+              <div className="flex items-center gap-1 text-muted-foreground">
+                {onSplitAtBcp && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-1.5 text-[10px] font-semibold text-amber-900 border-amber-300 bg-amber-50 hover:bg-amber-100 rounded-[2px] shrink-0"
+                    onClick={onSplitAtBcp}
+                    title="Split this cross-border route at a Border Control Point (BCP)"
+                  >
+                    <ShieldAlert className="mr-1 size-3 text-amber-600" />
+                    Split at BCP
+                  </Button>
+                )}
+                {/* When displayed in reversed order (newest on top), visually moving UP means increasing index in route, while visually moving DOWN means decreasing index */}
                 {onMoveUp && (
                   <button
                     type="button"
-                    disabled={index === 0}
+                    disabled={isReversedOrder ? index === totalSegments - 1 : index === 0}
                     onClick={onMoveUp}
-                    title="Move up"
+                    title={isReversedOrder ? "Move later in route (Move up visually)" : "Move earlier in route"}
                     aria-label="Move segment up"
                     className="rounded-[2px] p-1 text-muted-foreground hover:bg-muted hover:text-slate-900 disabled:opacity-30 disabled:pointer-events-none"
                   >
@@ -258,9 +289,9 @@ export function SegmentCard({
                 {onMoveDown && (
                   <button
                     type="button"
-                    disabled={index === totalSegments - 1}
+                    disabled={isReversedOrder ? index === 0 : index === totalSegments - 1}
                     onClick={onMoveDown}
-                    title="Move down"
+                    title={isReversedOrder ? "Move earlier in route (Move down visually)" : "Move later in route"}
                     aria-label="Move segment down"
                     className="rounded-[2px] p-1 text-muted-foreground hover:bg-muted hover:text-slate-900 disabled:opacity-30 disabled:pointer-events-none"
                   >
@@ -406,7 +437,17 @@ export function SegmentCard({
                 <div className="min-w-0 flex-1">
                   <Select
                     value={segment.vehicleIds?.[0] ?? "NONE"}
-                    onValueChange={(val) => onVehicleChange?.(val === "NONE" ? [] : [val])}
+                    onValueChange={(val) => {
+                      if (val === "NONE") { onVehicleChange?.([]); return; }
+                      const selected = availableVehicles.find((vehicle) => vehicle.vehicleId === val);
+                      const originCountry = segment.route.fromLocation?.country?.trim().toUpperCase();
+                      const vehicleCountry = selected?.country?.trim().toUpperCase();
+                      if (originCountry && vehicleCountry && originCountry !== vehicleCountry) {
+                        setPendingVehicleId(val);
+                        return;
+                      }
+                      onVehicleChange?.([val]);
+                    }}
                   >
                     <SelectTrigger className="h-7 w-full min-w-0 rounded-[2px] border border-slate-200 bg-white px-2 text-xs font-normal text-slate-900 *:data-[slot=select-value]:truncate" aria-label="Assign vehicle">
                       <SelectValue placeholder="-- No vehicle assigned --" />
@@ -421,6 +462,20 @@ export function SegmentCard({
                     </SelectContent>
                   </Select>
                 </div>
+                <AlertDialog open={Boolean(pendingVehicleId)} onOpenChange={(open) => !open && setPendingVehicleId(null)}>
+                  <AlertDialogContent className="rounded-[2px]">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Vehicle country differs from departure</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This vehicle is based in a different country from the segment departure location. Do you still want to assign it?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="rounded-[2px]">Choose another</AlertDialogCancel>
+                      <AlertDialogAction className="rounded-[2px]" onClick={() => { if (pendingVehicleId) onVehicleChange?.([pendingVehicleId]); setPendingVehicleId(null); }}>Continue selecting</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             )}
           </div>

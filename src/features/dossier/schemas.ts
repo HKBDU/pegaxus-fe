@@ -667,7 +667,7 @@ export const createDocumentSubmissionSchema = (
     });
 
 // The BE does not require UUID/GUID format, so any non-empty string is accepted (empty only means "no id in the URL").
-export const dossierIdSchema = z.string().min(1);
+export const dossierIdSchema = z.string();
 export const dossierRequirementsParamsSchema = z.object({
   status: dossierRequirementStatusSchema.optional(),
   horseId: entityId.optional(),

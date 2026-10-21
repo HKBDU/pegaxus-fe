@@ -5,7 +5,15 @@ export interface ApiEnvelope<T> {
   value: T
 }
 
-export type AuthoritySubmissionStatus = 'READY_FOR_SUBMISSION' | 'SUBMITTED' | 'PENDING'
+export type AuthoritySubmissionStatus =
+  | 'READY_FOR_SUBMISSION'
+  | 'IN_PREPARATION'
+  | 'SUBMITTED'
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'RETURNED'
+  | 'CLOSED'
 
 export interface RecordAuthoritySubmissionInput {
   authorityName: string
@@ -13,7 +21,24 @@ export interface RecordAuthoritySubmissionInput {
   submittedAt: string
   isRequired: boolean
   proofFiles: File[]
+  submissionMethod?: string
   decisionNote?: string
+}
+
+export interface AuthoritySubmissionSummary {
+  authoritySubmissionId: string
+  submissionNo: string | number
+  authorityName: string
+  submissionReference: string
+  submissionMethod?: string | null
+  status: AuthoritySubmissionStatus | string
+  isRequired: boolean
+  submittedAt: string
+  responseReceivedAt?: string | null
+  permitNumber?: string | null
+  revisionDueDate?: string | null
+  rejectionReason?: string | null
+  evidenceFiles?: Array<{ fileName: string; fileUrl?: string; fileSizeBytes?: number; evidenceType?: string }>
 }
 
 export interface RecordAuthoritySubmissionResult {
@@ -34,10 +59,54 @@ export interface UpdateAuthorityReviewInput {
   decisionNote?: string
   rejectionReason?: string
   revisionDueDate?: string
+  notifyStakeholders?: boolean
 }
 
 export interface UpdateAuthorityReviewResult {
   authoritySubmissionId: string
   submissionStatus: string
   dossierStatus: string
+}
+
+export interface AuthoritySubmissionDetail {
+  authoritySubmissionId: string
+  submissionNo: string
+  dossierId: string
+  authorityName: string
+  submissionReference: string
+  submittedAt: string
+  submittedBy?: string
+  status: string
+  dossierStatus: string
+  isRequired?: boolean
+  evidenceFile?: {
+    fileName: string
+    fileUrl: string
+    fileSize: number
+  }
+  notes?: string
+  dossierSummary?: {
+    cdosCode: string
+    bookingNo: string
+    originCountry: string
+    destinationCountry: string
+    departureDate: string
+    horsesCount: number
+    customerName: string
+    status: string
+  }
+  reviewHistory?: Array<{
+    id: string
+    title: string
+    timestamp: string
+    actor: string
+    referenceOrPermit?: string
+    expiryDate?: string
+    outcome?: AuthorityDecision
+    file?: {
+      fileName: string
+      fileSize: number
+      fileUrl?: string
+    }
+  }>
 }
