@@ -1,5 +1,32 @@
 import type { HandoverBoundary, TrackingSegment } from "./types";
 
+export function isSameDriverBoundary(
+  boundary: Pick<
+    HandoverBoundary,
+    "fromRoutePlanRouteId" | "toRoutePlanRouteId"
+  >,
+  segments: TrackingSegment[],
+) {
+  if (!boundary.fromRoutePlanRouteId || !boundary.toRoutePlanRouteId)
+    return false;
+  const ordered = [...segments].sort((a, b) => a.displayOrder - b.displayOrder);
+  const index = ordered.findIndex(
+    (segment) => segment.routePlanRouteId === boundary.fromRoutePlanRouteId,
+  );
+  const from = ordered[index];
+  const to = ordered[index + 1];
+  return Boolean(
+    from &&
+    to &&
+    to.routePlanRouteId === boundary.toRoutePlanRouteId &&
+    !from.isOutsourced &&
+    !to.isOutsourced &&
+    from.driver?.employeeId.trim() &&
+    from.driver.employeeId !== "00000000-0000-0000-0000-000000000000" &&
+    from.driver.employeeId === to.driver?.employeeId,
+  );
+}
+
 type TimelineEntry =
   | { kind: "leg"; segment: TrackingSegment }
   | {

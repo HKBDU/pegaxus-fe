@@ -113,6 +113,9 @@ export const segmentsOverviewSchema = z.object({
       displayOrder: z.number().int(),
       fromLocation: locationBriefSchema,
       toLocation: locationBriefSchema,
+      /** Read by the OT4 handover shortcut to spot a boundary run by the same driver. */
+      driver: z.object({ employeeId: id }).nullish(),
+      isOutsourced: z.boolean().optional(),
     }),
   ),
   handoverBoundaries: z.array(

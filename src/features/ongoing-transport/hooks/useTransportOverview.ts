@@ -10,7 +10,7 @@ export function useTransportOverview(
   scenario: OverviewScenario,
   poll = true,
 ) {
-  const context = useTransportQueryContext();
+  const context = useTransportQueryContext(true);
   const query = useQuery({
     queryKey: [
       "ongoing-transports",

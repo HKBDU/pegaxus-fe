@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ClipboardCheck, MapPin } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
+import { handoverCreateModes } from "@/features/handover/utils";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -13,7 +14,12 @@ import {
 } from "@/shared/components/ui/select";
 import { formatTransportLabel } from "../format";
 import { transportHandoversPath } from "../navigation";
-import type { HandoverBoundary, TransportAudience } from "../types";
+import { isSameDriverBoundary } from "../timeline";
+import type {
+  HandoverBoundary,
+  TrackingSegment,
+  TransportAudience,
+} from "../types";
 
 const supportedTypes = [
   "PICKUP",
@@ -23,39 +29,49 @@ const supportedTypes = [
   "DELIVERY",
   "OTHER",
 ];
-const operatorRoles = [
-  "LOGISTICS_MANAGER",
-  "FLEET_ROUTE_COORDINATOR",
-  "DRIVER",
-  "ESCORT",
-];
 
 export function TransportHandoverBoundary({
   boundary,
   audience,
   position,
+  segments,
 }: {
   boundary: HandoverBoundary;
   audience: TransportAudience;
   position: "pickup" | "transfer" | "delivery" | "unmatched";
+  segments: TrackingSegment[];
 }) {
-  const roles = useAuthStore((state) => state.principal?.roles);
+  const principal = useAuthStore((state) => state.principal);
   const { transportId, bookingId } = useParams<{
     transportId: string;
     bookingId: string;
   }>();
   const [selection, setSelection] = useState("");
-  const availableTypes = boundary.allowedHandoverTypes.filter((value) =>
-    supportedTypes.includes(value),
-  );
+  const sameDriver =
+    position === "transfer" && isSameDriverBoundary(boundary, segments);
+  const exempt = position === "transfer" && sameDriver;
+  const unverifiedExemption =
+    position === "transfer" &&
+    boundary.handoverRequired === false &&
+    !sameDriver;
+  const availableTypes = (
+    exempt || unverifiedExemption ? [] : boundary.allowedHandoverTypes
+  ).filter((value) => supportedTypes.includes(value));
   const selected = availableTypes.includes(selection)
     ? selection
     : availableTypes.length === 1
       ? availableTypes[0]
       : "";
+  const modes = handoverCreateModes(
+    boundary,
+    new Map(segments.map((segment) => [segment.routePlanRouteId, segment])),
+    principal,
+  ).filter((mode) => audience === "admin" || mode !== "SCHEDULE");
   const canCreate =
     audience !== "customer" &&
-    roles?.some((role) => operatorRoles.includes(role)) &&
+    !exempt &&
+    position !== "unmatched" &&
+    modes.length > 0 &&
     boundary.canCreate &&
     !boundary.existingHandover &&
     availableTypes.length > 0;
@@ -64,10 +80,11 @@ export function TransportHandoverBoundary({
     ? transportHandoversPath(transportId, audience, bookingId)
     : undefined;
   // The handover page reads the boundary and the type from the query and asks for a last confirmation.
-  const createPath =
+  const createPath = (mode: string) =>
     handoversPath && selected
       ? `${handoversPath}/new?${new URLSearchParams({
           handoverType: selected,
+          mode,
           ...(boundary.fromRoutePlanRouteId
             ? { fromRoutePlanRouteId: boundary.fromRoutePlanRouteId }
             : {}),
@@ -111,6 +128,43 @@ export function TransportHandoverBoundary({
               pair.
             </p>
           ) : null}
+          {exempt ? (
+            <p className="m-0 pt-1 text-xs text-slate-500">
+              Không cần biên bản giữa hai chặng cùng Driver. Giờ đến chỉ cập
+              nhật từ popup GPS.
+            </p>
+          ) : unverifiedExemption ? (
+            <p className="m-0 pt-1 text-xs text-amber-800">
+              Server reports a handover exemption without a verified same-Driver
+              pair. Reload before creating a record.
+            </p>
+          ) : boundary.handoverRequired === undefined ||
+            boundary.createModes === undefined ? (
+            <p className="m-0 pt-1 text-xs text-slate-500">
+              Backend chưa trả đủ capability mới. Chỉ giữ thao tác legacy khi
+              canCreate và quyền hiện có cho phép.
+            </p>
+          ) : boundary.handoverRequired &&
+            record &&
+            record.status !== "COMPLETED" ? (
+            <p className="m-0 pt-1 text-xs text-amber-800">
+              Chờ hoàn tất biên bản; mốc thời gian chính thức do máy chủ xác
+              nhận.
+            </p>
+          ) : null}
+          {boundary.arrivalAt ? (
+            <p className="m-0 text-xs text-slate-500">
+              Arrival: {new Date(boundary.arrivalAt).toLocaleString()}
+            </p>
+          ) : null}
+          {boundary.createModes &&
+          boundary.createModes.length > 0 &&
+          !exempt ? (
+            <p className="m-0 text-xs text-slate-500">
+              Creation modes:{" "}
+              {boundary.createModes.map(formatTransportLabel).join(" / ")}
+            </p>
+          ) : null}
           {record ? (
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <ClipboardCheck
@@ -127,7 +181,7 @@ export function TransportHandoverBoundary({
                 {formatTransportLabel(record.status)}
               </Badge>
             </div>
-          ) : boundary.allowedHandoverTypes.length > 0 ? (
+          ) : !exempt && boundary.allowedHandoverTypes.length > 0 ? (
             <p className="m-0 pt-1 text-xs text-slate-500">
               Allowed:{" "}
               {boundary.allowedHandoverTypes
@@ -179,20 +233,27 @@ export function TransportHandoverBoundary({
                 </SelectContent>
               </Select>
             ) : null}
-            <Button
-              asChild={Boolean(createPath)}
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={!createPath}
-              className="rounded-xs text-xs"
-            >
-              {createPath ? (
-                <Link to={createPath}>Create Handover Record</Link>
-              ) : (
-                "Create Handover Record"
-              )}
-            </Button>
+            {modes.map((mode) => (
+              <Button
+                key={mode}
+                asChild={Boolean(createPath(mode))}
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!createPath(mode)}
+                className="rounded-xs text-xs"
+              >
+                {createPath(mode) ? (
+                  <Link to={createPath(mode)!}>
+                    {mode === "SCHEDULE"
+                      ? "Schedule Handover"
+                      : "Start Handover Now"}
+                  </Link>
+                ) : (
+                  "Create Handover Record"
+                )}
+              </Button>
+            ))}
           </div>
         ) : null}
       </div>

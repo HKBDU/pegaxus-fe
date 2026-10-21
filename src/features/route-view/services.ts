@@ -8,8 +8,11 @@ import {
   readEnvelope,
   getApiErrorInfo,
 } from "@/features/transport-plan/services";
-import { actionEntityIdSchema } from "@/features/transport-plan/schemas";
-import { isFlow3MockMode } from "@/features/transport-plan/source";
+import {
+  actionEntityIdSchema,
+  approvedBookingDetailSchema,
+  transportPlanDetailSchema,
+} from "@/features/transport-plan/schemas";
 import {
   routePlanDetailSchema,
   routePlansQuerySchema,
@@ -74,6 +77,7 @@ export async function executeEmergencyAction<A extends EmergencyAction>(
   action: A,
   id: string,
   input: EmergencyRequestMap[A],
+  signal?: AbortSignal,
 ): Promise<EmergencyResultMap[A]> {
   const path = routePath(id),
     contract = emergencyContracts[action];
@@ -88,15 +92,13 @@ export async function executeEmergencyAction<A extends EmergencyAction>(
     });
   }
   const body = contract.input.parse(input);
-  const payload =
-    !import.meta.env.PROD && isFlow3MockMode()
-      ? (
-          await import("@/features/transport-plan/mock/mock-service")
-        ).flow3MockService.executeEmergency(action, id, body, principal)
-      : await apiClient.post<unknown, unknown>(
-          `${path}/${contract.path}`,
-          body,
-        );
+  signal?.throwIfAborted();
+  const payload = await apiClient.post<unknown, unknown>(
+    `${path}/${contract.path}`,
+    body,
+    { signal },
+  );
+  signal?.throwIfAborted();
   return contract.output.parse(readEnvelope(payload)) as EmergencyResultMap[A];
 }
 
@@ -113,6 +115,10 @@ export function getEmergencyError(error: unknown) {
       "Emergency actions require a transport that is in transit.",
     DOSSIER_NOT_APPROVED:
       "The compliance dossier must be approved before this return can proceed.",
+    RETURN_DOSSIER_NOT_APPROVED:
+      "The EXTRA compliance dossier must be approved before activation.",
+    VEHICLE_SCHEDULE_CONFLICT:
+      "A vehicle overlaps an assignment in another transport plan.",
     SCHEDULE_CONFLICT: "A segment resource has a scheduling conflict.",
     PROVIDER_INACTIVE: "The selected transport provider is inactive.",
     OUTSOURCED_SEGMENT: "Vehicles cannot be assigned to an outsourced segment.",
@@ -136,8 +142,8 @@ export function getEmergencyError(error: unknown) {
         ? "Your session has expired. Please sign in again."
         : error instanceof z.ZodError
           ? "Check the form fields or contact support if the API response is unexpected."
-          : messages[info.code ?? ""] ||
-            info.message ||
+          : info.message ||
+            messages[info.code ?? ""] ||
             (error instanceof Error
               ? error.message
               : "Unable to complete the emergency action."),
@@ -156,6 +162,22 @@ async function parseErrorBlob(blob: Blob) {
 }
 
 export const routeViewService = {
+  async getEmergencyTransportPlan(id: string, signal?: AbortSignal) {
+    const response = await apiClient.get<unknown, unknown>(
+      `/transport-plans/${encodeURIComponent(actionEntityIdSchema.parse(id))}`,
+      { signal },
+    );
+    signal?.throwIfAborted();
+    return transportPlanDetailSchema.parse(readEnvelope(response));
+  },
+  async getEmergencyBooking(id: string, signal?: AbortSignal) {
+    const response = await apiClient.get<unknown, unknown>(
+      `/bookings/approved/${encodeURIComponent(actionEntityIdSchema.parse(id))}`,
+      { signal },
+    );
+    signal?.throwIfAborted();
+    return approvedBookingDetailSchema.parse(readEnvelope(response));
+  },
   async getRoutes(
     transportPlanId: string,
     params: RoutePlansQuery = {},
@@ -164,15 +186,10 @@ export const routeViewService = {
     const id = actionEntityIdSchema.parse(transportPlanId),
       query = routePlansQuerySchema.parse(params);
     signal?.throwIfAborted();
-    const payload =
-      !import.meta.env.PROD && isFlow3MockMode()
-        ? (
-            await import("@/features/transport-plan/mock/mock-service")
-          ).flow3MockService.getRoutes(id, query)
-        : await apiClient.get<unknown, unknown>(
-            `/transport-plans/${encodeURIComponent(id)}/route-plans`,
-            { params: query, signal },
-          );
+    const payload = await apiClient.get<unknown, unknown>(
+      `/transport-plans/${encodeURIComponent(id)}/route-plans`,
+      { params: query, signal },
+    );
     const unwrapped = readEnvelope(payload);
     const rawItems = Array.isArray(unwrapped)
       ? unwrapped
@@ -231,12 +248,7 @@ export const routeViewService = {
   async getRoute(id: string, signal?: AbortSignal): Promise<RoutePlanDetail> {
     const path = routePath(id);
     signal?.throwIfAborted();
-    const payload =
-      !import.meta.env.PROD && isFlow3MockMode()
-        ? (
-            await import("@/features/transport-plan/mock/mock-service")
-          ).flow3MockService.getRoute(id)
-        : await apiClient.get<unknown, unknown>(path, { signal });
+    const payload = await apiClient.get<unknown, unknown>(path, { signal });
     const unwrapped = readEnvelope(payload);
     const raw =
       typeof unwrapped === "object" && unwrapped !== null
@@ -334,10 +346,6 @@ export const routeViewService = {
     const path = routePath(id);
     if (!canExportRoute(useAuthStore.getState().principal))
       throw new Error("You do not have permission to export route plans.");
-    if (!import.meta.env.PROD && isFlow3MockMode())
-      throw new Error(
-        "PDF export is unavailable in development mock mode. Use the real API.",
-      );
     let blob: Blob;
     try {
       blob = await apiClient.get<Blob, Blob>(`${path}/export`, {

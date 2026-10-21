@@ -8,8 +8,9 @@ export function useTransportSegments(
   bookingId: string | undefined,
   audience: TransportAudience,
   scenario: SegmentsScenario,
+  enabled = true,
 ) {
-  const context = useTransportQueryContext();
+  const context = useTransportQueryContext(true);
   const query = useQuery({
     queryKey: [
       "ongoing-transports",
@@ -27,7 +28,7 @@ export function useTransportSegments(
         scenario,
         signal,
       ),
-    enabled: context.enabled && transportId !== undefined,
+    enabled: enabled && context.enabled && transportId !== undefined,
     refetchInterval: context.visible ? 30_000 : false,
     refetchIntervalInBackground: false,
     refetchOnReconnect: true,

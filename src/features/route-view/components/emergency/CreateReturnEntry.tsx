@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { GitBranch } from "lucide-react";
 import { returnRouteCreate } from "@/app/route-config";
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
-import { isFlow3MockMode } from "@/features/transport-plan/source";
 import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
@@ -40,15 +39,13 @@ export function CreateReturnEntry({
     getWorkspaceRole(context.workspace.principal) === "coordinator" &&
     context.workspace.transportStatus === "IN_TRANSIT" &&
     plan.routeType === "PRIMARY";
-  const blockedReason = isFlow3MockMode()
-    ? "The existing Return Builder uses real APIs. Open it with real development data, not mock fixtures."
-    : context.workspace.hasOpenReturn
-      ? "A non-cancelled RETURN already exists."
-      : context.workspace.planStatus !== "APPROVED" || plan.status !== "ACTIVE"
-        ? "An approved transport plan and active PRIMARY are required."
-        : context.workspace.dossierStatus !== "APPROVED"
-          ? "An approved compliance dossier is required."
-          : undefined;
+  const blockedReason = context.workspace.hasOpenReturn
+    ? "A non-cancelled RETURN already exists."
+    : context.workspace.planStatus !== "APPROVED" || plan.status !== "ACTIVE"
+      ? "An approved transport plan and active PRIMARY are required."
+      : context.workspace.dossierStatus !== "APPROVED"
+        ? "An approved compliance dossier is required."
+        : undefined;
   if (!inScope) return null;
   return (
     <>

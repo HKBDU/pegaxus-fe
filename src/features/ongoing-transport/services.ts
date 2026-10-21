@@ -1,6 +1,8 @@
 import { isAxiosError } from "axios";
 import { z } from "zod";
 import apiClient from "@/lib/axios";
+import { useAuthStore } from "@/features/auth/store";
+import { canAccess } from "@/features/auth/access-control";
 import {
   ongoingTransportEnvelopeSchema,
   ongoingTransportPageSchema,
@@ -15,6 +17,7 @@ import type {
   OverviewScenario,
   TransportAudience,
   SegmentsScenario,
+  TransportOverview,
 } from "./types";
 
 export class OngoingTransportApiError extends Error {
@@ -39,20 +42,15 @@ export const buildOngoingTransportQuery = (params: OngoingTransportParams) =>
 export const ongoingTransportService = {
   async segments(
     transportId: string,
-    audience: TransportAudience,
-    scenario: SegmentsScenario = "data",
+    _audience: TransportAudience,
+    _scenario: SegmentsScenario = "data",
     signal?: AbortSignal,
   ) {
     signal?.throwIfAborted();
-    const response =
-      !import.meta.env.PROD && isOngoingTransportMockMode()
-        ? await (
-            await import("./mock/segments")
-          ).getMockTransportSegments(transportId, audience, scenario, signal)
-        : await apiClient.get<unknown, unknown>(
-            `/transports/${encodeURIComponent(transportId)}/segments`,
-            { signal },
-          );
+    const response = await apiClient.get<unknown, unknown>(
+      `/transports/${encodeURIComponent(transportId)}/segments`,
+      { signal },
+    );
     signal?.throwIfAborted();
     const envelope = ongoingTransportEnvelopeSchema.parse(response);
     if (!envelope.isSuccess)
@@ -66,19 +64,14 @@ export const ongoingTransportService = {
   async overview(
     transportId: string,
     audience: TransportAudience,
-    scenario: OverviewScenario = "data",
+    _scenario: OverviewScenario = "data",
     signal?: AbortSignal,
   ) {
     signal?.throwIfAborted();
-    const response =
-      !import.meta.env.PROD && isOngoingTransportMockMode()
-        ? await (
-            await import("./mock/overview")
-          ).getMockTransportOverview(transportId, audience, scenario, signal)
-        : await apiClient.get<unknown, unknown>(
-            `/transports/${encodeURIComponent(transportId)}/overview`,
-            { signal },
-          );
+    const response = await apiClient.get<unknown, unknown>(
+      `/transports/${encodeURIComponent(transportId)}/overview`,
+      { signal },
+    );
     signal?.throwIfAborted();
     const envelope = ongoingTransportEnvelopeSchema.parse(response);
     if (!envelope.isSuccess)
@@ -87,7 +80,18 @@ export const ongoingTransportService = {
         envelope.errorCode,
         envelope.message,
       );
-    return transportOverviewSchema.parse(envelope.value);
+    const hideIncidents =
+      audience === "customer" ||
+      canAccess(useAuthStore.getState().principal, { anyRole: ["CUSTOMER"] });
+    return (
+      hideIncidents
+        ? transportOverviewSchema.extend({
+            activeIncidents: z
+              .unknown()
+              .transform((): TransportOverview["activeIncidents"] => []),
+          })
+        : transportOverviewSchema
+    ).parse(envelope.value);
   },
   async list(
     params: OngoingTransportParams,

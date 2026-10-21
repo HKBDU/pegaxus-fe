@@ -4,6 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { transportPlanDetail } from "@/app/route-config";
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge";
 import type { RoutePlanDetail } from "../types";
+import { Badge } from "@/shared/components/ui/badge";
+import { REJECTED_BY_MANAGER } from "@/shared/constants/route-plan-status";
 
 export function RoutePlanHeader({
   plan,
@@ -33,7 +35,11 @@ export function RoutePlanHeader({
             {plan.routePlanCode}
           </h2>
           <ApprovedBookingBadge value={plan.routeType} />
-          <ApprovedBookingBadge value={plan.status} />
+          {plan.status === REJECTED_BY_MANAGER ? (
+            <Badge variant="outline">LM đã từ chối</Badge>
+          ) : (
+            <ApprovedBookingBadge value={plan.status} />
+          )}
         </div>
         <p className="text-xs text-slate-500">
           Booking:{" "}

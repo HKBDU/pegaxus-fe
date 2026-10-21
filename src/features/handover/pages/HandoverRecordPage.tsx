@@ -123,7 +123,13 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
               <p className="rounded-[2px] border border-slate-300 bg-white px-3 py-2 text-sm text-gray-600">This handover is planned. Start it when the parties are at the handover point; then you can fill it in and collect the signatures.</p>
             </div>
           ) : (
-            <ReadOnlyRecord record={shown} justCompleted={Boolean(completed && completed.handoverRecordId === shown.handoverRecordId)} />
+            <ReadOnlyRecord
+              record={shown}
+              justCompleted={Boolean(completed && completed.handoverRecordId === shown.handoverRecordId)}
+              // Signature URLs expire after 5 minutes: reading the record again returns fresh ones.
+              onReloadSignatures={() => void recordQuery.refetch()}
+              reloadingSignatures={recordQuery.isFetching}
+            />
           )}
 
           {start.error && !modified ? <p role="alert" className="rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{describeError(start.error)}</p> : null}

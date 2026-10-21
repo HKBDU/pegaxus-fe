@@ -7,6 +7,9 @@ import {
   SEND_INTERVAL_MS,
 } from "./position";
 import type { DriverLocationRequest, LocationSharingState } from "./types";
+import { distanceMeters } from "@/features/handover/utils";
+
+export const ARRIVAL_WARN_METERS = 400;
 
 type SenderContext = {
   transportId?: string;
@@ -14,6 +17,7 @@ type SenderContext = {
   sessionVersion: number;
   eligible: boolean;
   revision?: string;
+  segmentId?: string;
   onReload: () => void;
 };
 
@@ -21,7 +25,7 @@ type SenderContext = {
 let owner: LocationSender | null = null;
 let gp2InFlight = false;
 
-const initialState = (): LocationSharingState => ({
+export const createStoppedLocationSharingState = (): LocationSharingState => ({
   sharingStatus: "stopped",
   permissionStatus: "not_requested",
   networkStatus: "unknown",
@@ -31,10 +35,16 @@ const initialState = (): LocationSharingState => ({
   restartBlocked: false,
   message: null,
   notification: "none",
+  acceptance: "unknown",
+  lastAcceptedAt: null,
+  acceptedSegmentId: null,
+  acceptanceScope: null,
+  arrival: null,
+  arrivalWarning: null,
 });
 
 export class LocationSender {
-  private state = initialState();
+  private state = createStoppedLocationSharingState();
   private listeners = new Set<() => void>();
   private context: SenderContext = {
     sessionVersion: -1,
@@ -53,6 +63,12 @@ export class LocationSender {
   private newestObservation = 0;
   private lastAttempt = -Infinity;
   private rejectedRevision: string | undefined;
+  private latestPosition: {
+    body: DriverLocationRequest;
+    timestamp: number;
+  } | null = null;
+  private seenArrivals = new Set<string>();
+  private previousDistance: number | null = null;
 
   getSnapshot = () => this.state;
   subscribe = (listener: () => void) => {
@@ -66,19 +82,43 @@ export class LocationSender {
     for (const listener of this.listeners) listener();
   }
   configure(context: SenderContext) {
+    const previousSegmentId = this.context.segmentId;
     const changed =
+      this.context.transportId !== context.transportId ||
+      this.context.accountId !== context.accountId ||
+      this.context.sessionVersion !== context.sessionVersion ||
+      this.context.segmentId !== context.segmentId;
+    const newVisit =
       this.context.transportId !== context.transportId ||
       this.context.accountId !== context.accountId ||
       this.context.sessionVersion !== context.sessionVersion;
     this.context = context;
-    if (changed) {
+    if (changed && newVisit) {
       this.release();
-      this.state = initialState();
+      if (newVisit) this.seenArrivals.clear();
+      this.state = createStoppedLocationSharingState();
       this.publish({ networkStatus: navigator.onLine ? "online" : "offline" });
-    } else if (
-      !this.authorized() &&
-      (this.state.active || this.denialRequest)
-    ) {
+    } else if (changed) {
+      const arrival = this.state.arrival;
+      const continuingExemptArrival =
+        arrival?.handoverRequired === false &&
+        arrival.fromRoutePlanRouteId === previousSegmentId &&
+        arrival.toRoutePlanRouteId === context.segmentId;
+      if (!continuingExemptArrival) this.dismissArrival();
+      this.request?.abort();
+      this.sample = null;
+      this.acquiredAfter = Date.now();
+      if (!continuingExemptArrival) this.latestPosition = null;
+      this.publish({
+        lastAcceptedAt: null,
+        acceptedSegmentId: null,
+        acceptance:
+          this.state.acceptance === "rejected" && !context.eligible
+            ? "rejected"
+            : "unknown",
+      });
+    }
+    if (!this.authorized() && (this.state.active || this.denialRequest)) {
       this.stopWith(
         "transport_unavailable",
         "Journey context or authorization changed. Reload before starting again.",
@@ -87,7 +127,8 @@ export class LocationSender {
     if (
       this.state.restartBlocked &&
       this.authorized() &&
-      context.revision !== this.rejectedRevision
+      context.revision !== this.rejectedRevision &&
+      this.state.acceptance !== "rejected"
     ) {
       this.publish({ restartBlocked: false });
     }
@@ -214,6 +255,20 @@ export class LocationSender {
       "stopped",
       "Stopped by you. No new locations will be collected or sent.",
     );
+  dismissArrival = () => {
+    this.previousDistance = null;
+    this.publish({ arrival: null, arrivalWarning: null });
+  };
+  freshPosition = () => {
+    const position = this.latestPosition;
+    return this.authorized() &&
+      this.state.active &&
+      this.foreground() &&
+      position &&
+      isFreshObservation(position.timestamp, Date.now())
+      ? position.body
+      : null;
+  };
   private stopWith(
     status: LocationSharingState["sharingStatus"],
     message: string,
@@ -225,6 +280,10 @@ export class LocationSender {
       sending: false,
       sharingStatus: status,
       message,
+      lastAcceptedAt: null,
+      acceptedSegmentId: null,
+      arrival: null,
+      arrivalWarning: null,
       ...(notifying ? { notification: "failed" as const } : {}),
     });
   }
@@ -245,6 +304,14 @@ export class LocationSender {
     if (this.permission) this.permission.onchange = null;
     this.permission = null;
     this.sample = null;
+    this.latestPosition = null;
+    this.previousDistance = null;
+    this.publish({
+      lastAcceptedAt: null,
+      acceptedSegmentId: null,
+      arrival: null,
+      arrivalWarning: null,
+    });
   }
   private acquire() {
     this.clearResources();
@@ -338,6 +405,8 @@ export class LocationSender {
     }
     this.newestObservation = position.timestamp;
     this.sample = { body, timestamp: position.timestamp };
+    this.latestPosition = this.sample;
+    this.updateArrivalDistance(body);
     if (this.state.sharingStatus !== "sharing" && !this.state.sending)
       this.publish({
         sharingStatus: "waiting_to_send",
@@ -355,6 +424,9 @@ export class LocationSender {
       return;
     }
     this.sample = null;
+    this.latestPosition = null;
+    this.dismissArrival();
+    this.publish({ lastAcceptedAt: null, acceptedSegmentId: null });
     this.publish({
       sharingStatus: "location_unavailable",
       permissionStatus:
@@ -409,6 +481,7 @@ export class LocationSender {
       return;
     }
     const request = new AbortController();
+    const segmentId = this.context.segmentId;
     this.request = request;
     gp2InFlight = true;
     this.lastAttempt = performance.now();
@@ -428,11 +501,36 @@ export class LocationSender {
         !this.current(generation) ||
         request.signal.aborted ||
         !this.state.active ||
-        !this.foreground()
+        !this.foreground() ||
+        segmentId !== this.context.segmentId
       )
         return;
+      if (accepted.accepted === false) {
+        this.stopWith(
+          "stopped",
+          accepted.reason === "NOT_CURRENT_SEGMENT_DRIVER"
+            ? "Bạn đã bàn giao chặng này. Định vị đã tự động dừng."
+            : "Máy chủ không nhận vị trí cho chặng hiện tại. Định vị đã dừng.",
+        );
+        this.publish({ acceptance: "rejected", restartBlocked: true });
+        this.rejectedRevision = this.context.revision;
+        this.context.onReload();
+        return;
+      }
       this.publish({
         lastSuccessfulTransmissionAt: accepted.serverTime,
+        acceptance: accepted.accepted === true ? "accepted" : "legacy",
+        lastAcceptedAt: accepted.accepted === true ? Date.now() : null,
+        acceptedSegmentId:
+          accepted.accepted === true ? (this.context.segmentId ?? null) : null,
+        acceptanceScope:
+          accepted.accepted === true
+            ? {
+                transportId: this.context.transportId!,
+                accountId: this.context.accountId!,
+                sessionVersion: this.context.sessionVersion,
+              }
+            : null,
         sharingStatus:
           this.state.sharingStatus === "location_unavailable"
             ? "location_unavailable"
@@ -442,6 +540,24 @@ export class LocationSender {
             ? this.state.message
             : "The server acknowledged the last send. This does not confirm a live GPS broadcast.",
       });
+      if (accepted.accepted === true && accepted.arrival) {
+        const event = accepted.arrival;
+        const key = JSON.stringify([
+          this.context.transportId,
+          event.boundaryNo,
+          event.fromRoutePlanRouteId,
+          event.toRoutePlanRouteId,
+        ]);
+        if (!this.seenArrivals.has(key)) {
+          this.seenArrivals.add(key);
+          this.previousDistance = null;
+          this.publish({ arrival: event, arrivalWarning: null });
+          if (this.latestPosition)
+            this.updateArrivalDistance(this.latestPosition.body);
+        }
+        // Only exempt arrivals change timestamps at GP2; required handovers wait for HO5.
+        if (!event.handoverRequired) this.context.onReload();
+      }
     } catch (error) {
       if (!this.current(generation) || request.signal.aborted) return;
       const failure = getLocationSharingError(error);
@@ -462,6 +578,35 @@ export class LocationSender {
       }
       if (this.current(generation)) this.publish({ sending: false });
     }
+  }
+  private updateArrivalDistance(body: DriverLocationRequest) {
+    const arrival = this.state.arrival;
+    if (!arrival) return;
+    const distance = distanceMeters(body, arrival.location);
+    if (!Number.isFinite(distance)) return;
+    if (distance > arrival.radiusMeters) {
+      this.dismissArrival();
+      return;
+    }
+    const outward =
+      this.previousDistance !== null && distance > this.previousDistance;
+    this.previousDistance = distance;
+    const speed =
+      body.speedKmh !== undefined && body.speedKmh !== null
+        ? body.speedKmh / 3.6
+        : null;
+    this.publish({
+      arrivalWarning:
+        outward && distance >= ARRIVAL_WARN_METERS
+          ? {
+              distanceMeters: Math.round(distance),
+              secondsRemaining:
+                speed !== null && Number.isFinite(speed) && speed > 0
+                  ? Math.ceil((arrival.radiusMeters - distance) / speed)
+                  : null,
+            }
+          : null,
+    });
   }
   private denied(generation: number) {
     if (!this.current(generation) || !this.state.active) return;

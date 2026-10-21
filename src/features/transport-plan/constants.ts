@@ -3,6 +3,10 @@ import type {
   TransportPlansQueryParams,
 } from "./types";
 import {
+  REJECTED_BY_MANAGER,
+  ROUTE_PLAN_STATUS_LABELS,
+} from "@/shared/constants/route-plan-status";
+import {
   approvedBookingsQuerySchema,
   dossierStatusSchema,
   routePlanStatusSchema,
@@ -29,7 +33,10 @@ export const routeStatusOptions = [
   { value: "ALL", label: "All route statuses" },
   ...routePlanStatusSchema.options.map((value) => ({
     value,
-    label: formatStatusLabel(value),
+    label:
+      value === REJECTED_BY_MANAGER
+        ? ROUTE_PLAN_STATUS_LABELS[value]
+        : formatStatusLabel(value),
   })),
 ];
 export const dossierStatusOptions = [

@@ -227,6 +227,7 @@ export function TransportRouteTimeline({
                 boundary={entry.boundary}
                 position={entry.position}
                 audience={audience}
+                segments={data.segments}
               />
             ),
           )}

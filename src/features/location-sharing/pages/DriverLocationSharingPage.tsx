@@ -1,72 +1,27 @@
 import { Link, useParams } from "react-router-dom";
-import { useTransportOverview } from "@/features/ongoing-transport/hooks/useTransportOverview";
-import { getOngoingTransportError } from "@/features/ongoing-transport/services";
-import { isOngoingTransportMockMode } from "@/features/ongoing-transport/source";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { LocationSharingControl } from "../components/LocationSharingControl";
 import { LocationSharingSummary } from "../components/LocationSharingDetails";
-import { useLocationSharing } from "../hooks/useLocationSharing";
+import { useDriverLocationSession } from "../hooks/useDriverLocationSession";
 import { driverTransportOverviewPath } from "../navigation";
-import type { DriverTransportReadState } from "../types";
+import { FEATURES } from "../features";
 import "../ui.css";
 
 export default function DriverLocationSharingPage() {
   const { transportId } = useParams<{ transportId: string }>();
-  const query = useTransportOverview(
-    transportId,
-    undefined,
-    "crew",
-    "data",
-    false,
-  );
-  let context: DriverTransportReadState;
-  if (transportId === undefined) {
-    context = {
-      kind: "error",
-      message: "Transport route information is missing.",
-      retryable: false,
-    };
-  } else if (query.isError) {
-    const error = getOngoingTransportError(query.error, "overview");
-    context = { kind: "error", ...error };
-  } else if (query.data) {
-    const { transport, currentSegment, serverTime } = query.data;
-    context = {
-      kind: "available",
-      stale: !query.online,
-      transport: {
-        transportId: transport.transportId,
-        transportCode: transport.transportCode,
-        status: transport.status,
-        serverTime,
-        currentLeg: currentSegment
-          ? {
-              displayOrder: currentSegment.displayOrder,
-              from: currentSegment.fromLocation.locationName,
-              to: currentSegment.toLocation.locationName,
-            }
-          : null,
-      },
-    };
-  } else if (!query.online) {
-    context = {
-      kind: "unavailable",
-      message:
-        "You are offline and no journey context is cached. Reconnect to load this transport.",
-    };
-  } else {
-    context = { kind: "loading" };
-  }
-  const source = isOngoingTransportMockMode() ? "mock" : "real";
-  const { environment, state, canStart, start, stop } = useLocationSharing({
-    transportId,
+  const {
+    environment,
+    state,
+    canStart,
+    start,
+    stop,
     context,
-    refreshing: query.isFetching,
     source,
-    onReloadContext: () => void query.refetch(),
-  });
+    reload,
+    gate,
+  } = useDriverLocationSession();
   const unavailableReason =
     context.kind === "loading"
       ? "Loading journey"
@@ -138,6 +93,43 @@ export default function DriverLocationSharingPage() {
                 : null
             }
           />
+          {!FEATURES.segmentArrival ? (
+            <p role="status" className="m-0 text-sm text-muted-foreground">
+              Arrival confirmation is unavailable on the verified backend
+              version. GPS sharing remains separate; this page does not confirm
+              arrival locally.
+            </p>
+          ) : null}
+          {state.message ? (
+            <p role="status" className="m-0 text-sm text-muted-foreground">
+              {state.message}
+            </p>
+          ) : null}
+          {state.notification !== "none" ? (
+            <p role="status" className="m-0 text-sm text-muted-foreground">
+              {state.notification === "notified"
+                ? "The coordinator was notified by the server."
+                : state.notification === "not_notified"
+                  ? "The server did not send a new notification."
+                  : state.notification === "sending"
+                    ? "Reporting permission denial…"
+                    : "Coordinator notification could not be confirmed."}
+            </p>
+          ) : null}
+          {source === "mock" ||
+          !gate.ownershipKnown ||
+          context.kind === "error" ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                {source === "mock"
+                  ? "MOCK DATA — real GPS sharing is disabled."
+                  : "C9 is waiting for verified current-segment ownership from the backend."}
+              </p>
+              <Button type="button" variant="outline" onClick={reload}>
+                Reload journey context
+              </Button>
+            </div>
+          ) : null}
         </Card>
       </div>
     </main>

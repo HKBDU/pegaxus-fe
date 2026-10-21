@@ -259,8 +259,13 @@ export const routeChangeDecisionResultSchema = z.object({
     .object({
       complianceDossierId: entityIdSchema,
       status: dossierStatusSchema,
+      dossierCode: z.string().optional(),
+      dossierType: z.literal("EXTRA").optional(),
+      inheritedRequirementCount: z.number().int().nonnegative().optional(),
     })
     .nullable(),
+  branchSequenceNo: z.number().int().positive().nullish(),
+  branchLocation: routeLocationSchema.nullish(),
 });
 export const returnActivationResultSchema = z.object({
   routePlanId: z.union([entityIdSchema, z.number()]).transform(String),

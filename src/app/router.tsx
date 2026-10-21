@@ -1,6 +1,7 @@
 // oxlint-disable react/only-export-components -- router modules intentionally export configuration
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { DriverLocationSession } from "@/features/location-sharing/components/DriverLocationSession";
 import {
   LoadingState,
   NotFoundPage,
@@ -137,14 +138,31 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
-  ...horseHealthRoutes,
-  // Transport shell (Overview, Route Tracking) with the tabs of the other features mounted inside it.
-  ...ongoingTransportRoutes({
-    admin: [...horseHealthTabRoutes, ...liveTrackingTabRoutes("admin"), ...handoverTabRoutes("admin")],
-    crew: [...horseHealthTabRoutes, ...handoverTabRoutes("crew")],
-    customer: [...horseHealthTabRoutes, ...liveTrackingTabRoutes("customer"), ...handoverTabRoutes("customer")],
-    crewStandalone: horseHealthCrewFormRoutes,
-  }),
+  {
+    element: (
+      <DriverLocationSession>
+        <Outlet />
+      </DriverLocationSession>
+    ),
+    children: [
+      ...horseHealthRoutes,
+      // Transport shell (Overview, Route Tracking) with the tabs of the other features mounted inside it.
+      ...ongoingTransportRoutes({
+        admin: [
+          ...horseHealthTabRoutes,
+          ...liveTrackingTabRoutes("admin"),
+          ...handoverTabRoutes("admin"),
+        ],
+        crew: [...horseHealthTabRoutes, ...handoverTabRoutes("crew")],
+        customer: [
+          ...horseHealthTabRoutes,
+          ...liveTrackingTabRoutes("customer"),
+          ...handoverTabRoutes("customer"),
+        ],
+        crewStandalone: horseHealthCrewFormRoutes,
+      }),
+    ],
+  },
   {
     path: ROLE_ROUTES.transportPlans,
     element: <ProtectedRoute allowedRoles={TRANSPORT_PLANS_ACCESS.anyRole}><AdminLayout /></ProtectedRoute>,

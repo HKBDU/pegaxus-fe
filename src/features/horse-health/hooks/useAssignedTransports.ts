@@ -1,12 +1,5 @@
-import { useQuery } from "@tanstack/react-query"
-
-import { getAssignedTransports } from "../services"
+import { useAssignedDriverContext } from "@/features/location-sharing/hooks/useLocationGate";
 
 export function useAssignedTransports() {
-  return useQuery({
-    queryKey: ["horse-health", "assigned-transports"],
-    queryFn: ({ signal }) => getAssignedTransports(signal),
-    refetchInterval: 30_000,
-    refetchIntervalInBackground: false,
-  })
+  return useAssignedDriverContext(true, true);
 }

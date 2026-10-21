@@ -5,7 +5,11 @@ import { LocationSender } from "../sender";
 import type { DriverLocationSharingPageProps } from "../types";
 import { useLocationSharingEnvironment } from "./useLocationSharingEnvironment";
 
-export function useLocationSharing(props: DriverLocationSharingPageProps) {
+export function useLocationSharing(
+  props: DriverLocationSharingPageProps,
+  segmentId?: string,
+  isMine?: boolean,
+) {
   const [sender] = useState(() => new LocationSender());
   const principal = useAuthStore((state) => state.principal);
   const sessionVersion = useAuthStore((state) => state.sessionVersion);
@@ -18,7 +22,8 @@ export function useLocationSharing(props: DriverLocationSharingPageProps) {
     props.source === "real" &&
     props.context.kind === "available" &&
     props.context.transport.transportId === props.transportId &&
-    props.context.transport.status === "IN_TRANSIT";
+    props.context.transport.status === "IN_TRANSIT" &&
+    isMine !== false;
   const revision =
     props.context.kind === "available"
       ? props.context.transport.serverTime
@@ -30,6 +35,7 @@ export function useLocationSharing(props: DriverLocationSharingPageProps) {
       sessionVersion,
       eligible,
       revision,
+      segmentId,
       onReload: props.onReloadContext,
     });
   }, [
@@ -39,6 +45,7 @@ export function useLocationSharing(props: DriverLocationSharingPageProps) {
     sessionVersion,
     eligible,
     revision,
+    segmentId,
     props.onReloadContext,
   ]);
   useLayoutEffect(() => sender.mount(), [sender]);
@@ -57,5 +64,7 @@ export function useLocationSharing(props: DriverLocationSharingPageProps) {
       environment.capability === "available",
     start: sender.start,
     stop: sender.stop,
+    dismissArrival: sender.dismissArrival,
+    freshPosition: sender.freshPosition,
   };
 }
