@@ -1,3 +1,5 @@
+import { JourneyMap } from "./JourneyMap";
+
 export function GlobalMovementSection() {
   return (
     <section
@@ -6,42 +8,22 @@ export function GlobalMovementSection() {
       aria-labelledby="movement-title"
     >
       <div className="landing-copy" data-reveal>
-        <p className="landing-eyebrow">05 / Beyond borders</p>
+        <p className="landing-eyebrow">06 / Routes in motion</p>
         <h2 id="movement-title">
-          International
+          Across borders.
           <br />
-          transport,
-          <br />
-          <em>
-            without losing
-            <br />
-            control.
-          </em>
+          <em>With clarity.</em>
         </h2>
         <p className="landing-lead">
-          Different destinations. Different requirements. One place to connect
-          the preparation and coordination.
-        </p>
-        <div
-          className="landing-route"
-          aria-label="Illustrative cross-border route, not service coverage"
-        >
-          <span>
-            Origin<small>THE START</small>
-          </span>
-          <div aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </div>
-          <span>
-            Destination<small>THE NEXT CHAPTER</small>
-          </span>
-        </div>
-        <p className="landing-caption">
-          An illustration of the journey. Not a live route or coverage map.
+          Different countries. Different requirements. Keep route preparation
+          and the next destination connected.
         </p>
       </div>
+      <JourneyMap />
+      <p className="landing-map-caption">
+        Symbolic journey · Illustrative route, not live tracking or service
+        coverage.
+      </p>
     </section>
   );
 }

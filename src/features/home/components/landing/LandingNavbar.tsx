@@ -1,11 +1,10 @@
-import { Link } from "react-router-dom";
 import {
   LANDING_NAV_ITEMS,
   type LandingChapter,
 } from "../../lib/landing-navigation";
 import { LandingMobileMenu } from "./LandingMobileMenu";
-import { TransportLink } from "./LandingActions";
-import logo from "@/assets/logo-dark.png"
+import { GuestLinks, TransportLink } from "./LandingActions";
+import logo from "@/assets/logo-dark.png";
 export function LandingNavbar({
   active,
   scrolled,
@@ -30,9 +29,7 @@ export function LandingNavbar({
         ))}
       </nav>
       <div className="landing-nav-actions">
-        <Link to="/login" className="landing-sign-in">
-          Sign in
-        </Link>
+        <GuestLinks />
         <TransportLink />
       </div>
       <LandingMobileMenu active={active} />

@@ -1,5 +1,4 @@
-import { Link } from "react-router-dom";
-import { TransportLink } from "./LandingActions";
+import { GuestLinks, TransportLink } from "./LandingActions";
 
 export function LandingFooter() {
   return (
@@ -22,7 +21,7 @@ export function LandingFooter() {
         </nav>
         <div className="landing-footer-account">
           <span className="landing-eyebrow">Your next chapter</span>
-          <Link to="/login">Sign in</Link>
+          <GuestLinks />
           <TransportLink final />
         </div>
       </div>

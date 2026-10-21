@@ -1,5 +1,4 @@
-import { Link } from "react-router-dom";
-import { TransportLink } from "./LandingActions";
+import { GuestLinks, TransportLink } from "./LandingActions";
 
 export function FinalCtaSection() {
   return (
@@ -9,13 +8,11 @@ export function FinalCtaSection() {
       aria-labelledby="final-title"
     >
       <div className="landing-final-copy" data-reveal>
-        <p className="landing-eyebrow">
-          PEGAXUS / A considered approach to movement
-        </p>
+        <p className="landing-eyebrow">08 / The next chapter</p>
         <h2 id="final-title">
-          Move with
+          Their next chapter
           <br />
-          <em>confidence.</em>
+          <em>starts here.</em>
         </h2>
         <p className="landing-lead">
           Cross-border coordination for every journey.
@@ -24,9 +21,7 @@ export function FinalCtaSection() {
         </p>
         <div className="landing-actions">
           <TransportLink final />
-          <Link className="landing-text-link" to="/login">
-            Sign in <span aria-hidden="true">↗</span>
-          </Link>
+          <GuestLinks className="landing-text-link" />
         </div>
       </div>
       <span className="landing-final-wordmark" aria-hidden="true">
