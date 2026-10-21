@@ -12,24 +12,32 @@ export const locationEnvelopeSchema = z.object({
   value: z.unknown(),
 });
 
+const latitudeSchema = z
+  .number()
+  .min(VALIDATION_LIMITS.latitude.min)
+  .max(VALIDATION_LIMITS.latitude.max)
+  .refine(
+    (val) => countDecimalPlaces(val) <= VALIDATION_LIMITS.coordinateScale,
+    "Latitude must have at most 4 decimal places.",
+  );
+
+const longitudeSchema = z
+  .number()
+  .min(VALIDATION_LIMITS.longitude.min)
+  .max(VALIDATION_LIMITS.longitude.max)
+  .refine(
+    (val) => countDecimalPlaces(val) <= VALIDATION_LIMITS.coordinateScale,
+    "Longitude must have at most 4 decimal places.",
+  );
+
+const driverLocationRequestFields = {
+  latitude: latitudeSchema,
+  longitude: longitudeSchema,
+};
+
 export const driverLocationRequestSchema = z
   .object({
-    latitude: z
-      .number()
-      .min(VALIDATION_LIMITS.latitude.min)
-      .max(VALIDATION_LIMITS.latitude.max)
-      .refine(
-        (val) => countDecimalPlaces(val) <= VALIDATION_LIMITS.coordinateScale,
-        "Latitude must have at most 4 decimal places.",
-      ),
-    longitude: z
-      .number()
-      .min(VALIDATION_LIMITS.longitude.min)
-      .max(VALIDATION_LIMITS.longitude.max)
-      .refine(
-        (val) => countDecimalPlaces(val) <= VALIDATION_LIMITS.coordinateScale,
-        "Longitude must have at most 4 decimal places.",
-      ),
+    ...driverLocationRequestFields,
     recordedAt: z.iso.datetime({ offset: true }),
     speedKmh: z
       .number()
@@ -105,10 +113,7 @@ export const driverLocationAcceptedSchema = z.object({
   arrival: arrivalBoundarySchema.nullish(),
 });
 
-export const segmentArrivalRequestSchema = driverLocationRequestSchema.pick({
-  latitude: true,
-  longitude: true,
-});
+export const segmentArrivalRequestSchema = z.object(driverLocationRequestFields);
 const arrivalSegmentSchema = z.object({
   routePlanRouteId: z.string(),
   actualDepartureAt: z.iso.datetime({ offset: true }),

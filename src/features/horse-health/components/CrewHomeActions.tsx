@@ -1,9 +1,9 @@
 import {
   ArrowLeftRight,
+  CarFront,
   FileText,
-  Flag,
+  HeartPulse,
   Navigation,
-  Siren,
   Truck,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -11,6 +11,7 @@ import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useDriverLocationSession } from "@/features/location-sharing/hooks/useDriverLocationSession";
 import { driverLocationSharingPath } from "@/features/location-sharing/navigation";
+import { incidentPaths } from "@/shared/constants/incident";
 
 import { CREW_ACTION_LABELS, HORSE_HEALTH_ROUTES } from "../constants";
 import type { AssignedTransport } from "../types";
@@ -104,9 +105,9 @@ export function CrewHomeActions({
           />
         )}
         <ActionButton
-          icon={Siren}
-          label={CREW_ACTION_LABELS.incident}
-          disabled
+          icon={CarFront}
+          label="Report Transport Incident"
+          to={incidentPaths.newVehicle()}
           tone="danger"
         />
         <ActionButton
@@ -114,7 +115,12 @@ export function CrewHomeActions({
           label={CREW_ACTION_LABELS.viewTransport}
           to={HORSE_HEALTH_ROUTES.transportDetail(transport.transportId)}
         />
-        <ActionButton icon={Flag} label="Report" disabled />
+        <ActionButton
+          icon={HeartPulse}
+          label="Report Horse Incident"
+          to={incidentPaths.newHorseHealth()}
+          tone="danger"
+        />
         <ActionButton
           icon={ArrowLeftRight}
           label={CREW_ACTION_LABELS.handover}
