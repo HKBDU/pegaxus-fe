@@ -238,6 +238,7 @@ export const incidentRequestMocks: {
     category: INCIDENT_CATEGORY.VEHICLE,
     incidentType: VEHICLE_INCIDENT_TYPE.ENGINE_FAILURE,
     severity: INCIDENT_SEVERITY.HIGH,
+    title: "Engine failure during transport",
     description: "Engine stopped during the current transport.",
     vehicleOperable: false,
     emergencySettlementRequired: false,
