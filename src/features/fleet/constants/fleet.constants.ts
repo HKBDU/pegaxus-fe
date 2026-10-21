@@ -71,6 +71,8 @@ export const CAPACITY_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: "8", label: "8+ horses" },
 ]
 
+export const VEHICLE_COUNTRY_OPTIONS = ["ALL", "BE", "DE", "FR", "GB", "IE", "IT", "NL", "ES"] as const
+
 export const VEHICLE_CAPACITY_MIN = 2
 export const VEHICLE_CAPACITY_MAX = 9
 

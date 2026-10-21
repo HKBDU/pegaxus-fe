@@ -31,6 +31,7 @@ export interface Vehicle {
   model: string | null
   capacityHorses: number
   status: VehicleStatus
+  country: string | null
   registrationNumber: string | null
   registrationExpiryDate: string | null
   registrationStatus: ExpiryStatus
@@ -72,6 +73,10 @@ export interface VehicleListParams {
   /** "ALL" = any capacity, otherwise capacityHorses >= value. */
   minCapacity: number | "ALL"
   sortBy: VehicleSort
+  availableFrom?: string
+  availableTo?: string
+  transportPlanId?: string
+  country?: string
 }
 
 /** POST /vehicles (VH3). status is always AVAILABLE server-side. */
@@ -89,6 +94,7 @@ export interface VehiclePayload {
   insuranceNumber?: string
   insuranceExpiryDate?: string
   specialEquipment?: string
+  country?: string
 }
 
 /** PUT /vehicles/{id} (VH4): vehicleCode and status are not editable. */

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const bookingHistoryBookingIdSchema = z.string().min(1);
+export const bookingHistoryBookingIdSchema = z.string();
 
 export const changedBySchema = z.object({
   accountId: z.string(),

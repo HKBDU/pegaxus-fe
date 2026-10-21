@@ -56,45 +56,46 @@ export function BcpLocationSection({ form, isHoldback }: BcpLocationSectionProps
         )}
       />
 
-      {/* 2. Official Veterinarian (optional) */}
-      <FormField
-        control={form.control}
-        name="officialVetName"
-        render={({ field, fieldState }) => (
-          <FormItem>
-            <FormControl>
-              <Field label="Official Veterinarian" error={fieldState.error?.message}>
-                <input
-                  {...field}
-                  id="official-vet-input"
-                  placeholder="e.g. Dr. Arthur Pendelton"
-                  className={inputCn(!!fieldState.error)}
-                />
-              </Field>
-            </FormControl>
-          </FormItem>
-        )}
-      />
+      {/* 2. Official Veterinarian & 3. Clearance Receipt Number */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <FormField
+          control={form.control}
+          name="officialVetName"
+          render={({ field, fieldState }) => (
+            <FormItem>
+              <FormControl>
+                <Field label="Official Veterinarian" error={fieldState.error?.message}>
+                  <input
+                    {...field}
+                    id="official-vet-input"
+                    placeholder="e.g. Dr. Arthur Pendelton"
+                    className={inputCn(!!fieldState.error)}
+                  />
+                </Field>
+              </FormControl>
+            </FormItem>
+          )}
+        />
 
-      {/* 3. Clearance Receipt Number (optional) */}
-      <FormField
-        control={form.control}
-        name="bcpReceiptNumber"
-        render={({ field, fieldState }) => (
-          <FormItem>
-            <FormControl>
+        <FormField
+          control={form.control}
+          name="bcpReceiptNumber"
+          render={({ field, fieldState }) => (
+            <FormItem>
+              <FormControl>
                 <Field label="VET Clearance Receipt Number" error={fieldState.error?.message}>
-                <input
-                  {...field}
-                  id="bcp-receipt-input"
-                  placeholder="e.g. BCP-IE-2026-8841"
-                  className={inputCn(!!fieldState.error)}
-                />
-              </Field>
-            </FormControl>
-          </FormItem>
-        )}
-      />
+                  <input
+                    {...field}
+                    id="bcp-receipt-input"
+                    placeholder="e.g. BCP-IE-2026-8841"
+                    className={inputCn(!!fieldState.error)}
+                  />
+                </Field>
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </div>
 
       {/* Fast operational signal: flag the trip now, complete the detailed report later. */}
       <FormField

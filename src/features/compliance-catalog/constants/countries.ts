@@ -10,7 +10,7 @@ export interface ComplianceCountryOption {
 export const COMPLIANCE_COUNTRIES: readonly ComplianceCountryOption[] = [
   { code: "EU", name: "European Union" },
   { code: "GB", name: "United Kingdom" },
-  ...EU_COUNTRIES.map(({ isoCode, name }) => ({ code: isoCode, name })),
+  ...EU_COUNTRIES.filter(({ isoCode }) => isoCode !== "GB").map(({ isoCode, name }) => ({ code: isoCode, name })),
 ]
 
 export function getComplianceCountryName(code: string | null | undefined) {
@@ -21,6 +21,8 @@ export function getComplianceCountryName(code: string | null | undefined) {
 export function getComplianceCountryCode(name: string | null | undefined) {
   const normalized = name?.trim().toLowerCase()
   if (!normalized) return undefined
-  const alias = normalized === "czech republic" ? "czechia" : normalized
+  let alias = normalized
+  if (alias === "czech republic") alias = "czechia"
+  else if (alias === "uk" || alias === "great britain") alias = "united kingdom"
   return COMPLIANCE_COUNTRIES.find((country) => country.name.toLowerCase() === alias || country.code.toLowerCase() === alias)?.code
 }

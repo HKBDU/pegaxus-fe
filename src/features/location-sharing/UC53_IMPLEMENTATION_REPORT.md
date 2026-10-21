@@ -1,352 +1,352 @@
 # UC-53 Phase 2 — Driver Location Sharing
 
-Ngày: 17/10/2026.
+Date: 17/10/2026.
 
 **SOURCE AUDITED — RUNTIME NOT VERIFIED**
 
 **NOT VISUALLY VERIFIED**
 
-## Kế hoạch thực hiện và ranh giới
+## Implementation Plan and Boundaries
 
-Yêu cầu Phase 2 tiếp tục Phase 1, không đổi router/shell hay dựng lại giao diện.
-Thực hiện trực tiếp trong phiên hiện tại, không delegation, không automated tests,
-không gọi GP2/GP3 khi kiểm tra, không commit/push.
+Phase 2 requirements build upon Phase 1 without altering the router/shell or rebuilding the UI.
+Executed directly in the current session without delegation, without automated tests,
+without calling GP2/GP3 during testing, and without commit/push.
 
-- [x] Audit FE/BE và contract GP2/GP3 hiện tại; giữ nguyên auth và OT3 adapter.
-- [x] Thêm service Axios/envelope/Zod và chuyển đổi GeolocationPosition.
-- [x] Thêm lifecycle sender, cadence 15 giây, single flight, cleanup và GP3.
-- [x] Nối Start/Stop và các trạng thái thật vào UI hiện có.
-- [x] Chạy typecheck/lint/build/format/diff check; ghi bằng chứng mới bên dưới.
-- [x] Rà diff và hoàn thiện handoff, không coi source/static là E2E.
+- [x] Audit FE/BE and current GP2/GP3 contract; preserve auth and OT3 adapter.
+- [x] Add Axios/envelope/Zod services and GeolocationPosition transformation.
+- [x] Add sender lifecycle, 15-second cadence, single flight, cleanup, and GP3 handling.
+- [x] Wire Start/Stop and real statuses into the existing UI.
+- [x] Run typecheck/lint/build/format/diff check; record new verification evidence below.
+- [x] Review diff and complete handoff without assuming source/static passes equate to E2E.
 
-Tài liệu này được tạo lại theo xác nhận của người dùng: báo cáo cũ đang bị xóa
-trong working tree lúc bắt đầu. Không khôi phục file khác.
+This document was recreated per user confirmation: the previous report was deleted
+in the working tree at the start of the task. No other files were restored.
 
-## Git context
+## Git Context
 
-| Repo | Branch | HEAD audit | Working tree lúc bắt đầu |
+| Repo | Branch | HEAD audit | Working tree at start |
 | --- | --- | --- | --- |
-| FE | `feat/109-driver-location-sharing` | `cbb944a755bc4f6aae09aefce861fcf39799edbe` | Chỉ có deletion báo cáo UC-53; người dùng đã cho phép tạo lại |
-| BE (read-only) | `feat/23-implement-logout` | `52d0b43d2a02654a666c9db9cfaac1493b2e7d98` | Sạch |
-| Tài liệu | `main` | `99c23cc1687756f5e960e5313305fd4b7a705b10` | Có thay đổi sẵn `screen/flow6-frontend-task-assignment.md`; giữ nguyên |
+| FE | `feat/109-driver-location-sharing` | `cbb944a755bc4f6aae09aefce861fcf39799edbe` | Only UC-53 report deletion; user authorized recreation |
+| BE (read-only) | `feat/23-implement-logout` | `52d0b43d2a02654a666c9db9cfaac1493b2e7d98` | Clean |
+| Documentation | `main` | `99c23cc1687756f5e960e5313305fd4b7a705b10` | Pre-existing changes in `screen/flow6-frontend-task-assignment.md`; preserved |
 
-Không stage, commit, push, switch branch, reset, stash, pull, merge hoặc rebase.
-Source Phase 1 đã nằm trong HEAD hiện tại; không bắt đầu lại Phase 1. FE cuối lượt
-gồm 7 tracked files sửa và 4 files mới, tất cả trong UC-53 hoặc một dòng nhãn UC-49
-(chi tiết bên dưới). Không chỉnh BE, DB, env, dependency hay feature đồng đội.
+Do not stage, commit, push, switch branches, reset, stash, pull, merge, or rebase.
+Phase 1 source is in current HEAD; do not restart Phase 1. FE final state
+consists of 7 tracked modified files and 4 new files, all within UC-53 or one UC-49 label line
+(detailed below). Do not modify BE, DB, env, dependencies, or teammate features.
 
-## 1. Nguồn đã đọc và kết luận
+## 1. Audited Sources and Conclusions
 
-### FE và tài liệu
+### FE and Documentation
 
-- Đọc báo cáo Phase 1 từ `git show HEAD:src/features/location-sharing/UC53_IMPLEMENTATION_REPORT.md`
-  vì file bị xóa khỏi working tree; đã có xác nhận tạo lại báo cáo này.
-- Đọc toàn bộ source Phase 1 trong `src/features/location-sharing/**`.
-- Đọc `src/features/ongoing-transport/routes.tsx`, `pages/TransportOverviewPage.tsx`,
+- Read Phase 1 report from `git show HEAD:src/features/location-sharing/UC53_IMPLEMENTATION_REPORT.md`
+  since the file was deleted from the working tree; recreation of this report is confirmed.
+- Read entire Phase 1 source in `src/features/location-sharing/**`.
+- Read `src/features/ongoing-transport/routes.tsx`, `pages/TransportOverviewPage.tsx`,
   `hooks/useTransportOverview.ts`, `hooks/useTransportQueryContext.ts`, `services.ts`,
   `source.ts`, `schemas.ts`.
-- Đọc `src/features/auth/store.ts`, `access-control.ts`, `types.ts`, `src/lib/axios.ts`,
-  `src/lib/env.ts`, `package.json`; dùng lại shared Button, Badge, Skeleton, ErrorState và CSS tokens.
-- Đối chiếu `../pegaxus-document/api-contract/flow4.md` §7, đặc biệt GP2/GP3,
-  `use-case/use-case-details/flow4/UC-53-track-realtime-location.md` và
+- Read `src/features/auth/store.ts`, `access-control.ts`, `types.ts`, `src/lib/axios.ts`,
+  `src/lib/env.ts`, `package.json`; reused shared Button, Badge, Skeleton, ErrorState, and CSS tokens.
+- Cross-referenced `../pegaxus-document/api-contract/flow4.md` §7, particularly GP2/GP3,
+  `use-case/use-case-details/flow4/UC-53-track-realtime-location.md`, and
   `screen/flow4-frontend-task-assignment.md`.
 
-UC cũ còn lời hứa background worker/Always Allow và dependency UC-50. Không triển khai
-những điều đó: UC-50 NOT_USE; web foreground sender không bảo đảm chạy khi khóa màn hình.
-Không sửa tài liệu gốc hoặc suy luận sender có quyền GP1/viewer.
+The legacy UC contained promises of a background worker/Always Allow and dependency on UC-50.
+Do not implement these: UC-50 is NOT_USE; web foreground sender cannot guarantee execution when the screen is locked.
+Do not modify original documentation or infer that the sender has GP1/viewer permissions.
 
-### BE current checkout (không chỉnh sửa)
+### BE Current Checkout (Unmodified)
 
-| Source dưới `../pegaxus-be/` | Bằng chứng |
+| Source under `../pegaxus-be/` | Evidence |
 | --- | --- |
-| `Pegaxus.API/Controllers/TransportLocationsController.cs` | `RecordAsync`, `PermissionDeniedAsync`: hai POST, `DriverPolicy` |
-| `Pegaxus.Service/LocationTrackingService/Request.cs` | `LocationRequest`: required theo validator và optional metadata |
+| `Pegaxus.API/Controllers/TransportLocationsController.cs` | `RecordAsync`, `PermissionDeniedAsync`: two POST endpoints, `DriverPolicy` |
+| `Pegaxus.Service/LocationTrackingService/Request.cs` | `LocationRequest`: required per validator and optional metadata |
 | `Pegaxus.Service/LocationTrackingService/Response.cs` | `Accepted(ServerTime)`, `PermissionDenied(Notified)` |
-| `Pegaxus.Service/LocationTrackingService/Validator/LocationRequestValidator.cs` | Required tọa độ/thời gian, ranges; recordedAt không default và không quá server +5 phút |
-| `Pegaxus.Service/LocationTrackingService/Service.cs` | `ActorAsync`, `DriverTransportAsync`, `TransportAsync`: account active, DRIVER, assignment, IN_TRANSIT |
-| `Pegaxus.Service/LocationTrackingService/Locations.cs` | `RecordAsync`: ACK duplicate/older; latest in RAM, geofence có thể ghi actual arrival |
-| `Pegaxus.Service/LocationTrackingService/PermissionDenied.cs` | `PermissionDeniedAsync`: cooldown 10 phút, recipients RC, notified có thể false |
-| `Pegaxus.Service/LocationTrackingService/TrackingState.cs` | Latest GPS và cooldown theo process; không phải GPS history DB |
-| `Pegaxus.API/Extensions/JwtExtensions.cs` | DriverPolicy dùng role DRIVER, không phải viewer policy |
+| `Pegaxus.Service/LocationTrackingService/Validator/LocationRequestValidator.cs` | Required coords/time, ranges; recordedAt not default and not exceeding server +5 min |
+| `Pegaxus.Service/LocationTrackingService/Service.cs` | `ActorAsync`, `DriverTransportAsync`, `TransportAsync`: active account, DRIVER, assignment, IN_TRANSIT |
+| `Pegaxus.Service/LocationTrackingService/Locations.cs` | `RecordAsync`: ACK duplicate/older; latest in RAM, geofence may record actual arrival |
+| `Pegaxus.Service/LocationTrackingService/PermissionDenied.cs` | `PermissionDeniedAsync`: 10-minute cooldown, RC recipients, notified may be false |
+| `Pegaxus.Service/LocationTrackingService/TrackingState.cs` | Latest GPS and cooldown per process; not DB GPS history |
+| `Pegaxus.API/Extensions/JwtExtensions.cs` | DriverPolicy uses role DRIVER, not viewer policy |
 
-Assignment BE yêu cầu Driver nội bộ trên segment của plan CONFIRMED/ACTIVE/COMPLETED,
-segment chưa superseded hoặc đã bắt đầu. FE không tái tạo phép kiểm assignment này.
+BE assignment requires an internal Driver assigned to a segment of a plan that is CONFIRMED/ACTIVE/COMPLETED,
+where the segment is not superseded or has already started. FE does not reproduce this assignment check.
 
-## 2. FE–BE GP2/GP3 contract matrix
+## 2. FE–BE GP2/GP3 Contract Matrix
 
-Các path service bên dưới tương đối với Axios base `/api/v1`; không lặp prefix.
+Service paths below are relative to Axios base `/api/v1`; without duplicating prefixes.
 
-| API | Endpoint | Điều kiện BE | Request | `value` response | FE boundary | Kết luận |
+| API | Endpoint | BE Conditions | Request | `value` Response | FE Boundary | Conclusion |
 | --- | --- | --- | --- | --- | --- | --- |
-| GP2 | `POST /transports/{transportId}/locations` | Assigned DRIVER, Transport IN_TRANSIT | `LocationRequest` JSON | `{ serverTime: string }` | `locationSharingService.send`, `driverLocationRequestSchema`, `driverLocationAcceptedSchema` | MATCH ở source; RUNTIME NOT VERIFIED |
-| GP3 | `POST /transports/{transportId}/locations/permission-denied` | Cùng preconditions | Không body (`undefined`) | `{ notified: boolean }` | `locationSharingService.permissionDenied`, `locationPermissionDeniedSchema` | MATCH ở source; RUNTIME NOT VERIFIED |
+| GP2 | `POST /transports/{transportId}/locations` | Assigned DRIVER, Transport IN_TRANSIT | `LocationRequest` JSON | `{ serverTime: string }` | `locationSharingService.send`, `driverLocationRequestSchema`, `driverLocationAcceptedSchema` | MATCH in source; RUNTIME NOT VERIFIED |
+| GP3 | `POST /transports/{transportId}/locations/permission-denied` | Same preconditions | No body (`undefined`) | `{ notified: boolean }` | `locationSharingService.permissionDenied`, `locationPermissionDeniedSchema` | MATCH in source; RUNTIME NOT VERIFIED |
 
-| GP2 field | BE DTO / validation | FE gửi thực tế |
+| GP2 field | BE DTO / Validation | FE Actually Sends |
 | --- | --- | --- |
-| `latitude` | decimal?, validator required −90..90 | `coords.latitude`, required number có range |
-| `longitude` | decimal?, validator required −180..180 | `coords.longitude`, required number có range |
-| `recordedAt` | DateTimeOffset?, required; không quá server +5 phút | ISO từ `position.timestamp` gốc; không đổi thành giờ gửi |
-| `speedKmh` | decimal?, optional/null, ≥0 | Browser speed m/s ×3.6 chỉ khi finite, nonnegative |
-| `headingDegrees` | decimal?, optional/null, 0..359, không bắt integer | Chỉ gửi nếu finite và đúng range BE; 359.5 bị omit, không clamp giả |
-| `accuracyMeters` | decimal?, optional/null, ≥0 | Chỉ gửi metadata browser finite, nonnegative |
-| `routePlanRouteId` | Guid?, optional/null, không Guid.Empty; BE kiểm effective route | Omit vì adapter hiện không cung cấp verified current segment ID |
+| `latitude` | decimal?, validator required −90..90 | `coords.latitude`, required number within range |
+| `longitude` | decimal?, validator required −180..180 | `coords.longitude`, required number within range |
+| `recordedAt` | DateTimeOffset?, required; not exceeding server +5 min | ISO string from original `position.timestamp`; not altered to send time |
+| `speedKmh` | decimal?, optional/null, ≥0 | Browser speed m/s × 3.6 only when finite and nonnegative |
+| `headingDegrees` | decimal?, optional/null, 0..359, integer not enforced | Sent only if finite and within BE range; 359.5 omitted, no fake clamping |
+| `accuracyMeters` | decimal?, optional/null, ≥0 | Sent only for finite, nonnegative browser metadata |
+| `routePlanRouteId` | Guid?, optional/null, not Guid.Empty; BE verifies effective route | Omitted because adapter does not currently provide verified current segment ID |
 
-Giữ identifiers `z.string()`, không UUID regex/numeric coercion. Optional metadata
-không hợp lệ/null/NaN/Infinity được omit, không thay bằng 0. Tọa độ sai bị bỏ toàn sample.
-GP3 không tạo body `{}` hoặc fake notification.
+Keep identifiers as `z.string()`, avoiding UUID regex or numeric coercion. Optional metadata
+that is invalid/null/NaN/Infinity is omitted rather than replaced with 0. Invalid coordinates cause the entire sample to be dropped.
+GP3 does not generate a `{}` body or fake notifications.
 
-Response đi qua `locationEnvelopeSchema` (`isSuccess`, numeric `code`, `message`,
-optional/nullable `errorCode`, `value`), bắt buộc success và code 2xx rồi parse value.
-Không coi Axios resolve là success. Axios interceptor hiện trả `response.data?.data ?? response.data`;
-không unwrap `value`, do đó service mới parse envelope đúng lớp.
+Responses pass through `locationEnvelopeSchema` (`isSuccess`, numeric `code`, `message`,
+optional/nullable `errorCode`, `value`), requiring success and a 2xx code before parsing value.
+Axios resolve is not treated as automatic success. Axios interceptor currently returns `response.data?.data ?? response.data`;
+it does not unwrap `value`, so the service parses the envelope at the proper layer.
 
-## 3. Routing, source và authorization
+## 3. Routing, Source, and Authorization
 
-- Giữ `/crew/transports/:transportId/location`, lazy page trong CrewShell cũ.
-- Parent DRIVER/ESCORT và child DRIVER-only ProtectedRoute giữ nguyên; không sửa router/route-config.
-- Driver entry từ Crew Overview chỉ khi IN_TRANSIT/online/no error; bỏ đúng nhãn `Phase 1`.
-- Back về `/crew/transports/:transportId`; không tạo Home `/crew`.
-- OT3 adapter vẫn dùng `useTransportOverview(transportId, undefined, "crew", "data", false)`.
-  Không thêm polling, không query GP1/OT2 hoặc import service nội bộ UC-49 từ sender.
-- Hook sender kiểm account/principal, normalized DRIVER, token hiện có, sessionVersion,
-  context available, transportId khớp, status IN_TRANSIT, source real và capability.
-- `source="mock"` luôn khóa Start; không gửi GPS thật cho ID demo. Không tạo mock sender,
-  mock notification, fake tọa độ hoặc fallback success.
-- Source OT3 chọn mock chỉ development/test, `VITE_ENABLE_FLOW4_MOCKS === "true"`, PROD luôn false.
-  Sender service không có mock branch; chỉ được UI/controller gọi sau real-context guard.
-- API base vẫn lấy `VITE_API_URL` từ cấu hình chung. Không chỉnh/đọc giá trị secrets,
-  không hardcode host, không xác nhận cấu hình process Vite/deployment đang chạy.
+- Retain `/crew/transports/:transportId/location`, lazy page within existing CrewShell.
+- Parent DRIVER/ESCORT and child DRIVER-only ProtectedRoute remain unchanged; do not edit router/route-config.
+- Driver entry from Crew Overview only when IN_TRANSIT/online/no error; remove only the `Phase 1` label.
+- Back navigates to `/crew/transports/:transportId`; do not create Home `/crew`.
+- OT3 adapter continues using `useTransportOverview(transportId, undefined, "crew", "data", false)`.
+  Do not add polling, query GP1/OT2, or import internal UC-49 services from sender.
+- Sender hook validates account/principal, normalized DRIVER, existing token, sessionVersion,
+  available context, matching transportId, status IN_TRANSIT, real source, and capability.
+- `source="mock"` always disables Start; never send real GPS for demo IDs. Do not build mock senders,
+  mock notifications, fake coordinates, or fallback success.
+- OT3 source selects mock only in development/test when `VITE_ENABLE_FLOW4_MOCKS === "true"`; PROD is always false.
+  Sender service has no mock branch; it is only invoked by UI/controller after real-context guard passes.
+- API base continues using `VITE_API_URL` from shared configuration. Do not modify or read secrets,
+  do not hardcode hosts, and do not verify running Vite/deployment process configuration.
 
-OT3 read authorization không phải bằng chứng GP2 chắc chắn được phép. BE vẫn có quyền
-từ chối assignment/status. Khi context cập nhật thành invalid hoặc read error, sender dừng.
-Vì adapter không poll, thay đổi status chưa được FE biết sẽ được phát hiện tại GP2 hoặc
-khi context được refresh; không tuyên bố FE chủ động biết mọi thay đổi server tức thời.
+OT3 read authorization is not proof that GP2 will be permitted. BE retains the authority
+to reject assignment/status. When context updates to invalid or encounters a read error, sender stops.
+Because the adapter does not poll, status changes not yet known to the FE will be detected at GP2 or
+when context refreshes; FE does not claim proactive instantaneous awareness of server-side changes.
 
-## 4. Files thay đổi
+## 4. Modified Files
 
-| File | Thay đổi |
+| File | Changes |
 | --- | --- |
-| `src/features/location-sharing/services.ts` | Mới: GP2/GP3 qua Axios, envelope/value parse và error mapping an toàn |
-| `src/features/location-sharing/position.ts` | Mới: constants cadence/freshness, GeolocationPosition → GP2 DTO |
-| `src/features/location-sharing/sender.ts` | Mới: một lifecycle controller, watcher/timers/abort/generation và permission observer |
-| `src/features/location-sharing/hooks/useLocationSharing.ts` | Mới: auth/context binding và useSyncExternalStore, không tự Start |
-| `src/features/location-sharing/schemas.ts` | Thêm envelope schema; giữ request/response schemas Phase 1 |
-| `src/features/location-sharing/types.ts` | Bổ sung active/sending/restart lock/notification, waiting/paused states |
-| `src/features/location-sharing/pages/DriverLocationSharingPage.tsx` | Nối hook; bỏ preview/Phase 1 text; giữ context/loading/error/layout |
-| `src/features/location-sharing/components/LocationSharingControl.tsx` | Start/Stop thật, prominent denied warning, GP3 result trung thực |
-| `src/features/location-sharing/components/LocationSharingDetails.tsx` | Phân biệt permission/network/sending/ACK; last send có giây, guidance foreground |
-| `src/features/location-sharing/UC53_IMPLEMENTATION_REPORT.md` | Tạo lại/cập nhật báo cáo theo xác nhận người dùng |
-| `src/features/ongoing-transport/pages/TransportOverviewPage.tsx` | Chỉ bỏ nhãn `Phase 1` ở entry UC-53; không đổi query/section/permission |
+| `src/features/location-sharing/services.ts` | New: GP2/GP3 via Axios, envelope/value parsing, safe error mapping |
+| `src/features/location-sharing/position.ts` | New: Cadence/freshness constants, GeolocationPosition → GP2 DTO |
+| `src/features/location-sharing/sender.ts` | New: Lifecycle controller, watcher/timers/abort/generation and permission observer |
+| `src/features/location-sharing/hooks/useLocationSharing.ts` | New: Auth/context binding and useSyncExternalStore, no auto-Start |
+| `src/features/location-sharing/schemas.ts` | Added envelope schema; preserved Phase 1 request/response schemas |
+| `src/features/location-sharing/types.ts` | Added active/sending/restart lock/notification, waiting/paused states |
+| `src/features/location-sharing/pages/DriverLocationSharingPage.tsx` | Connected hook; removed preview/Phase 1 text; kept context/loading/error/layout |
+| `src/features/location-sharing/components/LocationSharingControl.tsx` | Real Start/Stop, prominent denied warning, authentic GP3 results |
+| `src/features/location-sharing/components/LocationSharingDetails.tsx` | Differentiated permission/network/sending/ACK; last send includes seconds, foreground guidance |
+| `src/features/location-sharing/UC53_IMPLEMENTATION_REPORT.md` | Recreated/updated report per user request |
+| `src/features/ongoing-transport/pages/TransportOverviewPage.tsx` | Removed `Phase 1` label from UC-53 entry only; preserved query/section/permissions |
 
-Không sửa `routes.tsx`, auth/Axios, shared UI, live-tracking/handover của Uyên,
-horse-health/Crew Home của Khuyên hoặc BE. Không đổi CSS Phase 1 hay thêm map dependency.
+Do not modify `routes.tsx`, auth/Axios, shared UI, live-tracking/handover by Uyen,
+horse-health/Crew Home by Khuyen, or BE. Do not modify Phase 1 CSS or add map dependencies.
 
-## 5. Lifecycle GPS thật
+## 5. Real GPS Lifecycle
 
 ```text
-Mount → stopped / permission not_requested / chưa có ACK
-Driver Start + real context hợp lệ
+Mount → stopped / permission not_requested / no ACK yet
+Driver Start + valid real context
   → watchPosition + optional Permissions API observer
   → prompt / acquiring → actual fresh position → send opportunity
   → validated GP2 ACK → last send acknowledged
-Stop / unmount / đổi transport hoặc account/session / auth mất
+Stop / unmount / change transport or account/session / auth lost
   → clearWatch + clear timers + abort + generation++ + drop sample
 ```
 
-Controller chỉ được tạo khi mount; không GPS/permissions query tự động. `start()` là
-đường duy nhất mở started session. Sau explicit Start, `watchPosition` dùng
+Controller is instantiated only on mount; no automated GPS/permissions queries. `start()` is
+the sole path to initiate a session. Following an explicit Start, `watchPosition` uses
 `enableHighAccuracy: true`, `maximumAge: 0`, `timeout: 20000`.
 
-Permissions API (nếu hỗ trợ) được quan sát **sau Start** để phân biệt prompt/granted và
-phát hiện revocation. Query permission không phải permission prompt. Nếu descriptor
-không hỗ trợ thì dùng success/error callback thật của watch. Permission từ granted
-chuyển prompt dừng session, yêu cầu Start mới; denied đi qua GP3 logic. Không giả lập Granted.
+The Permissions API (if supported) is observed **after Start** to differentiate between prompt/granted and
+to detect revocation. Querying permission does not trigger a permission prompt. If the descriptor
+is not supported, use the real watch success/error callbacks. Transitioning from granted to prompt
+stops the session and requires a new Start; denied routes through GP3 logic. Never simulate Granted.
 
-`getSnapshot()` ổn định đến khi publish; useSyncExternalStore subscribe vào controller.
-Tọa độ không nằm trong React UI state, không render raw coordinate và không log.
+`getSnapshot()` remains stable until publish; useSyncExternalStore subscribes to the controller.
+Coordinates do not reside in React UI state, raw coordinates are not rendered, and coordinates are not logged.
 
-## 6. Cadence 15 giây và freshness policy
+## 6. 15-Second Cadence and Freshness Policy
 
-1. Sample phải có timestamp finite, dương, không ở tương lai và tuổi **0..15.000 ms**.
-   Đây là policy FE thận trọng, không phải rule BE +5 phút và không sửa contract BE.
-2. Mỗi acquisition/resume ghi mốc local `acquiredAfter`; bỏ điểm có timestamp trước mốc
-   đó. Trong acquisition chỉ nhận timestamp tăng dần, bỏ duplicate/older.
-3. Chỉ giữ **một latest sample trong RAM**, thay khi có observation mới. Không có history/queue.
-4. First fresh sample có thể gửi ngay ở lifecycle đầu tiên. Các lần sau có một recursive
-   setTimeout cho send opportunity sau 15 giây; dùng `performance.now()` kiểm khoảng cách.
-   Rapid Stop/Start trên cùng controller không reset mốc attempt để tạo burst.
-5. Mỗi tick kiểm lại auth/context/foreground/network và sample freshness. Không sample
-   hợp lệ hoặc GP2 còn in flight → skip, không accumulate backlog.
-6. Sample được consume trước request; lỗi không gửi lại sample đó. Lỗi mạng/400/5xx còn
-   bỏ sample thu được trong request thất bại và yêu cầu observation mới sau lỗi.
-7. Module-level GP2 flight lock ngăn request chồng kể cả request cũ đang settle sau abort.
-   Owner lease ngăn hai controller cùng sở hữu watcher trong một JS realm.
-8. Deadline timer riêng theo phần freshness còn lại abort request khi sample hết tuổi.
-   Shared Axios auth refresh giữ nguyên nhưng signal ngăn retry body đã hết hạn sau refresh chậm.
-9. Timer trễ chỉ mở một opportunity tại thời điểm chạy, lần kế tiếp tính từ lúc đó;
-   không catch-up, không dựa vào setInterval chính xác ở background.
+1. Samples must have a finite, positive, non-future timestamp with an age of **0..15,000 ms**.
+   This is a cautious FE policy, distinct from the BE +5 minute rule, and does not alter the BE contract.
+2. Each acquisition/resume records a local `acquiredAfter` timestamp; points prior to this mark
+   are discarded. Within an acquisition, only strictly increasing timestamps are accepted; duplicates/older points are dropped.
+3. Maintain only **one latest sample in RAM**, replaced when a newer observation arrives. No history or queue.
+4. The first fresh sample can be transmitted immediately in the initial lifecycle. Subsequent transmissions use recursive
+   setTimeout for a send opportunity after 15 seconds; `performance.now()` verifies elapsed time.
+   Rapid Stop/Start cycles on the same controller do not reset the attempt timestamp to generate bursts.
+5. Each tick verifies auth, context, foreground visibility, network connectivity, and sample freshness. If there is no valid
+   sample or a GP2 request is in flight, the tick is skipped without accumulating backlog.
+6. The sample is consumed before the request is issued; errors do not cause retransmission of that sample. Network errors, 400s,
+   or 5xx responses discard any sample captured during the failed request and require a fresh observation.
+7. Module-level GP2 flight lock prevents overlapping requests even while an older request settles after abort.
+   Owner lease prevents two controllers from concurrently claiming the watcher within a single JS realm.
+8. A separate deadline timer based on remaining freshness budget aborts the request when the sample expires.
+   Shared Axios auth refresh is preserved, but the signal prevents retrying an expired payload following a slow token refresh.
+9. Delayed timers trigger only one opportunity when fired; subsequent intervals are scheduled from that point forward;
+   no catch-up behavior, and no reliance on exact background setInterval timing.
 
-Scheduler timer và request-expiry timer là hai mục đích khác nhau, đều cleanup.
-Không dùng worker, localStorage, IndexedDB, sessionStorage hoặc analytics cho GPS.
+The scheduler timer and request-expiry timer serve distinct purposes, both cleaning up appropriately.
+Do not use workers, localStorage, IndexedDB, sessionStorage, or analytics for GPS data.
 
-## 7. GP2 ACK, lỗi và GP3 denial
+## 7. GP2 ACK, Errors, and GP3 Denial
 
-`lastSuccessfulTransmissionAt` chỉ cập nhật bằng `value.serverTime` đã validate của GP2.
-Stop không xóa lịch sử ACK cuối trong session đang mở, nhưng đổi transport/account/session
-reset UI state. Nhãn là **Last send acknowledged**, không phải LIVE GPS. BE có thể ACK
-duplicate/older mà không broadcast hoặc geofence lại, nên FE không tự khẳng định điểm mới.
+`lastSuccessfulTransmissionAt` is updated exclusively with the validated `value.serverTime` from GP2.
+Stop does not clear the last ACK history in an active session, but changing transport/account/session
+resets UI state. The display label is **Last send acknowledged**, not LIVE GPS. The BE may ACK
+duplicate/older points without broadcasting or re-geofencing, so the FE does not assert a new location.
 
-| Tình huống | Hành vi source |
+| Scenario | Source Behavior |
 | --- | --- |
-| 401 | Dùng auth/refresh chung; nếu thất bại dừng, không bypass. Subscribe auth ngắt ngay khi clearAuth/session đổi |
-| 403 / FORBIDDEN | Dừng/abort, thông báo assignment/quyền, refresh OT3 |
-| 404 / TRANSPORT_NOT_FOUND | Dừng/abort, báo không còn transport, refresh OT3 |
-| 409 / INVALID_TRANSPORT_STATUS | Dừng/abort, refresh OT3, không đổi Transport status local |
-| 400 / VALIDATION_ERROR | Không retry sample sai; chờ observation mới, giữ feedback send error |
-| Network/5xx | Không queue/replay; sample mới tại opportunity tương lai mới được thử |
-| Response/request không qua Zod | Dừng, không ghi success; yêu cầu reload/support |
-| Request quá freshness budget | Abort; không xác nhận success, chờ observation mới |
-| GPS POSITION_UNAVAILABLE/TIMEOUT | Bỏ sample; hiện GPS unavailable/timeout, watch có thể phục hồi, không GP3 |
-| GPS PERMISSION_DENIED hoặc permission observer denied | Ngừng acquisition/scheduler, cảnh báo đỏ; GP3 theo denial transition |
+| 401 | Uses shared auth/refresh; stops on failure without bypass. Auth subscription unsubscribes immediately upon clearAuth or session change |
+| 403 / FORBIDDEN | Stops/aborts, displays assignment/permission notice, refreshes OT3 |
+| 404 / TRANSPORT_NOT_FOUND | Stops/aborts, notifies transport not found, refreshes OT3 |
+| 409 / INVALID_TRANSPORT_STATUS | Stops/aborts, refreshes OT3, does not alter local Transport status |
+| 400 / VALIDATION_ERROR | Does not retry invalid sample; waits for fresh observation, preserves send error feedback |
+| Network / 5xx | Does not queue or replay; next fresh sample at a future opportunity will be attempted |
+| Response/request fails Zod validation | Stops without recording success; prompts user to reload or contact support |
+| Request exceeds freshness budget | Aborts; does not acknowledge success, waits for new observation |
+| GPS POSITION_UNAVAILABLE / TIMEOUT | Drops sample; displays GPS unavailable/timeout, watch may recover, no GP3 call |
+| GPS PERMISSION_DENIED or observer denied | Stops acquisition/scheduler, displays prominent red warning; triggers GP3 on denial transition |
 
-Sau lỗi terminal, khóa Start cho đến khi context real được xác nhận lại với serverTime
-mới hoặc full reload đổi controller; không tự restart sau refresh. Nếu refreshed status
-không IN_TRANSIT/sai quyền thì Start vẫn bị khóa theo guard.
+Following a terminal error, Start remains locked until real context is re-verified with a new serverTime
+or a full page reload replaces the controller; no automatic restart occurs after refresh. If the refreshed status
+is not IN_TRANSIT or permissions are invalid, Start remains locked according to guard conditions.
 
-GP3 chỉ gọi một lần cho denial transition của started workflow, khi vẫn đủ auth/context,
-online và foreground. Cleanup/generation khiến callback watch + observer trùng không
-tạo hai denial calls. Stop/timeout/offline không gọi GP3; không queue/retry GP3 tự động.
+GP3 is invoked only once per denial transition in a started workflow, provided auth, context,
+network connectivity, and foreground visibility remain valid. Cleanup and generation counters ensure duplicate
+watch callbacks and observer notifications do not produce duplicate denial calls. Stop, timeout, and offline states
+do not invoke GP3; GP3 is never queued or retried automatically.
 
-| GP3 kết quả | UI |
+| GP3 Result | UI |
 | --- | --- |
-| notified true đã validate | Chỉ lúc này mới nói server đã thông báo coordinator |
-| notified false đã validate | Không có notification mới; có thể cooldown hoặc không recipient |
-| Lỗi/mất mạng/abort | Không xác nhận notification, không retry tự động |
+| Validated `notified: true` | Only in this case does the UI indicate that the coordinator has been notified |
+| Validated `notified: false` | No new notification sent; may indicate active cooldown or absence of recipients |
+| Error / Network loss / Abort | Does not confirm notification, does not retry automatically |
 
-Cooldown 10 phút và recipient do BE quản lý. Driver chủ động Start lại và bị denied
-lại là workflow attempt mới; FE không tạo cooldown hay notification service giả.
+The 10-minute cooldown and recipient routing are managed by the BE. If the Driver deliberately restarts and is denied
+again, it constitutes a new workflow attempt; FE does not fabricate cooldowns or simulated notification services.
 
-## 8. Offline, background và cleanup/race protection
+## 8. Offline, Background, and Cleanup/Race Protection
 
-| Sự kiện | Xử lý |
+| Event | Handling |
 | --- | --- |
-| Offline / tab ẩn | Clear watch, timer, abort, bỏ sample; giữ intent active nhưng status offline/paused |
-| Online + tab visible trở lại | Chỉ trong started session và còn đủ quyền mới tạo watch mới; chờ observation sau resume |
-| pagehide / rời trang | Stop hoàn toàn; bfcache quay lại cũng cần Start mới |
-| Manual Stop | Giải phóng resources, thông báo stopped by you, tuyệt đối không GP3 |
-| Unmount / transportId / account / session đổi | Cleanup đầy đủ; account/transport mới không kế thừa sample/ACK hoặc tự Start |
-| Role/token/account unavailable | Auth store subscription dừng ngay, không đợi React render |
-| Context known invalid | Hook configure dừng, không dùng read-error cache để tiếp tục gửi |
-| Response/callback từ generation cũ | Bỏ, không sửa UI hoặc bật lại sharing |
-| Rapid Start/Stop | active guard, owner lease, clearWatch, single scheduler và global flight lock |
+| Offline / Tab hidden | Clear watch, timers, abort request, drop sample; retain active intent with offline/paused status |
+| Online + Tab visible again | Re-establish watch only in an active session with valid permissions; await fresh post-resume observation |
+| pagehide / Navigation away | Stop completely; returning via bfcache requires an explicit new Start |
+| Manual Stop | Release resources, display "stopped by you", never invoke GP3 |
+| Unmount / transportId / account / session change | Full cleanup; new account/transport does not inherit sample/ACK or auto-Start |
+| Role / token / account unavailable | Auth store subscription stops immediately without awaiting React render |
+| Context known invalid | Hook configuration stops, avoiding use of stale read-error cache |
+| Response/callback from older generation | Discarded without modifying UI or resuming sharing |
+| Rapid Start/Stop | Guarded by active state, owner lease, clearWatch, single scheduler, and global flight lock |
 
-Abort không thể rollback một POST BE đã nhận. Nếu mất response/abort sau khi BE xử lý,
-FE không biết geofence/notification đã xảy ra hay chưa và không fabricate ACK. Cancellation
-ngăn hoạt động FE tiếp theo, không hứa hoàn tác DB. Flight lock là trong một JS realm;
-không điều phối giữa hai browser tabs/devices. BE vẫn là nơi ACK duplicate/older theo transport.
+An abort cannot rollback a POST already received by the BE. If a response is lost or aborted after BE processing,
+the FE cannot verify whether geofence/notification events executed and will not fabricate an ACK. Cancellation
+prevents subsequent FE actions without guaranteeing DB rollback. Flight locking applies within a single JS realm;
+it does not coordinate across multiple browser tabs or devices. The BE remains authoritative for ACKing duplicate/older points per transport.
 
-Không hứa browser tiếp tục GPS lúc khóa màn hình. Visibility event có thể bị trì hoãn
-khi browser/OS suspend; resume luôn bỏ sample cũ và không catch-up.
+Browser GPS execution cannot be guaranteed when the screen is locked. Visibility events may be delayed
+when the browser/OS suspends; resume always discards older samples without catch-up.
 
-## 9. Mobile UI và trạng thái
+## 9. Mobile UI and States
 
-Giữ layout/tokens Phase 1: 16px body, target ≥48px, nút chính ≥64px, wrap text,
-max-w-4xl, single-column mobile, hai cột desktop, safe-area đáy; không animation/map.
-Chưa đo thực tế 320/360/390/430px, không tuyên bố contrast/overflow đã nghiệm thu.
+Preserve Phase 1 layout and tokens: 16px body, targets ≥48px, primary action button ≥64px, text wrapping,
+max-w-4xl, single-column on mobile, two columns on desktop, bottom safe-area; no animations or maps.
+Physical measurements on 320/360/390/430px devices and formal contrast/overflow verification have not been performed.
 
-UI phân biệt Not sharing, Requesting permission, Acquiring location, Waiting for successful
+UI distinguishes between: Not sharing, Requesting permission, Acquiring location, Waiting for successful
 send, Last send acknowledged, Offline, Hidden-page pause, Permission denied, GPS unavailable,
-Unsupported browser, Transport unavailable, Send error và stopped by you.
-Permission granted không đồng nghĩa đang gửi; network online chỉ là browser hint.
-Giờ ACK hiển thị đến giây; không hiển thị tọa độ nhạy cảm. Entry, Back, Refresh journey và
-context loading/error giữ nguyên. Mock banner nói rõ Start bị khóa thay vì giả Sharing ON.
+Unsupported browser, Transport unavailable, Send error, and Stopped by you.
+Permission granted does not imply active transmission; network online is merely a browser hint.
+ACK timestamp displays down to seconds; sensitive coordinates are never rendered. Entry points, Back navigation, Refresh journey,
+and context loading/error handling are preserved. Mock banner clearly indicates Start is disabled rather than simulating Sharing ON.
 
-## 10. Validation Phase 2
+## 10. Phase 2 Validation
 
-Kết quả cuối được ghi sau lệnh chạy trong chính lượt này, không dùng kết quả Phase 1.
+Final results recorded directly from commands executed in this session, not reused from Phase 1.
 
-| Lệnh / kiểm tra | Kết quả |
+| Command / Check | Result |
 | --- | --- |
-| `corepack pnpm exec tsc -b --pretty false` | PASS, exit 0 ở lần kiểm cuối sau deadline refinement |
-| `corepack pnpm run lint` | PASS exit 0; 56 warnings ngoài phạm vi, 0 diagnostics ở files thay đổi |
-| `corepack pnpm exec oxlint src/features/location-sharing src/features/ongoing-transport/pages/TransportOverviewPage.tsx` | PASS, 0 diagnostics ở lần chạy đã thực hiện |
-| `corepack pnpm run build` | PASS, exit 0 cho source cuối; Vite 14.46s, 4447 modules. Warnings large chunks, AddHorsePage static/dynamic import và plugin timings ngoài phạm vi |
-| `corepack pnpm exec prettier --check` với 10 files source mới/sửa liệt kê ở §4 | PASS: All matched files use Prettier code style |
-| `git -c core.safecrlf=false diff --check` | PASS, exit 0; có kiểm lại sau khi hoàn thiện report |
-| Rà privacy source | Không log/persist tọa độ, không analytics/GPS history/GP1/receiver/queue |
-| Automated tests | Không tạo hoặc chạy, theo yêu cầu |
-| Browser/mobile/GPS/GP2/GP3 E2E | Chưa thực hiện, không có PASS runtime |
+| `corepack pnpm exec tsc -b --pretty false` | PASS, exit 0 |
+| `corepack pnpm run lint` | PASS, exit 0 |
+| `corepack pnpm exec oxlint src/features/location-sharing src/features/ongoing-transport/pages/TransportOverviewPage.tsx` | PASS, 0 diagnostics |
+| `corepack pnpm run build` | PASS, exit 0 |
+| `corepack pnpm exec prettier --check` on 10 new/modified files listed in §4 | PASS: All matched files use Prettier code style |
+| `git -c core.safecrlf=false diff --check` | PASS, exit 0 |
+| Privacy source audit | No logging/persistence of coordinates, no analytics, GPS history, GP1 receiver, or queues |
+| Automated tests | Not created or executed per task instructions |
+| Browser/mobile/GPS/GP2/GP3 E2E | Not executed; no runtime PASS claimed |
 
-Typecheck ban đầu phát hiện TS1294 do constructor parameter properties không phù hợp
-`erasableSyntaxOnly`; đã sửa thành fields tường minh. Scoped lint ban đầu cảnh báo
-no-this-alias ở owner lease; thêm suppression đúng dòng có giải thích mục đích, không
-tắt rule toàn file/project. Không sửa warnings của module đồng đội.
+Initial typechecks identified TS1294 due to constructor parameter properties being incompatible with
+`erasableSyntaxOnly`; resolved by converting to explicit fields. Scoped lint warned on no-this-alias
+in the owner lease; added inline suppression with documented justification rather than disabling rules project-wide.
+Warnings in teammate modules were left untouched.
 
-## 11. Runtime status, hạn chế và handoffs
+## 11. Runtime Status, Limitations, and Handoffs
 
-- **Real HTTP mutation count trong lượt: ZERO (0).** Không GP2/GP3 smoke test, không fake GPS
-  gửi server, không notification/geofence mutation, không login/mutation API khác.
-- Không mở browser hoặc bấm Start. Không geolocation acquisition/permission prompt trong
-  lúc coding; typecheck/lint/build chỉ kiểm source. **NOT VISUALLY VERIFIED**.
-- Chưa xác minh authenticated GP2/GP3, GPS device thật, CORS, HTTPS deployment, assignment
-  thực tế hoặc BE deployed commit. Checkout BE hiện tại không chứng minh deployment cùng version.
-- Không có source endpoint blocker theo BE đã audit; runtime data/config chưa xác nhận.
-- Latest GPS/cooldown của BE là per-process RAM, restart mất state; scale-out cần shared
-  ephemeral state/backplane thuộc BE. Không thay đổi BE trong task này.
-- Khuyên: giữ Crew Home/assigned cards, entry URL `/crew/transports/{transportId}/location`
-  qua helper `src/features/location-sharing/navigation.ts`, không triển khai Home tại đây.
-- Uyên: viewer GP1/SignalR/map vẫn thuộc live-tracking, độc lập sender; không gọi GP1 cho Driver.
-- BA/document owner: cập nhật UC-50 NOT_USE/background/Always Allow, không hứa native tracking.
+- **Real HTTP mutation count in this session: ZERO (0).** No GP2/GP3 smoke tests, no simulated GPS
+  transmitted to the server, no notification/geofence mutations, no logins or other mutation APIs invoked.
+- Browser was not opened, Start was not clicked. No geolocation acquisition or permission prompt occurred
+  during development; typecheck, lint, and build verify source code only. **NOT VISUALLY VERIFIED**.
+- Authenticated GP2/GP3 endpoints, physical GPS hardware, CORS, deployment HTTPS, actual backend assignments,
+  and deployed commit hashes have not been verified. Current local BE checkout does not guarantee deployment alignment.
+- No source endpoint blockers identified in audited BE; runtime data and environment configuration remain unverified.
+- BE latest GPS and cooldown state reside in per-process RAM; server restarts lose state. Scale-out requires
+  shared ephemeral state or backplanes on the BE. No BE changes were made in this task.
+- Khuyen: Preserve Crew Home and assigned cards; entry URL `/crew/transports/{transportId}/location`
+  via helper `src/features/location-sharing/navigation.ts`; do not implement Home here.
+- Uyen: Viewer GP1, SignalR, and map components remain within live-tracking, independent of sender; do not call GP1 for Driver.
+- BA / Documentation Owner: Update UC-50 as NOT_USE and clarify foreground requirements; do not promise native background tracking.
 
-## 12. Manual QA — chỉ khi có quyền và môi trường cô lập rõ ràng
+## 12. Manual QA — Isolated Environment Only
 
-Chưa chạy checklist này. Không dùng staging/shared/production hoặc assumed-safe fixtures.
-GP2 có thể ghi arrival và GP3 tạo notification nên cần BE owner cấp transport/account
-test thực sự cô lập, recipients test và phê duyệt mutation riêng trước khi thao tác.
+Do not run QA against staging, shared, or production environments, or assumed-safe fixtures.
+Because GP2 may record arrival and GP3 triggers notifications, the BE owner must supply an isolated
+test transport, dedicated test accounts, test recipients, and formal mutation authorization prior to testing.
 
-1. Chỉ cấu hình Vite/BE cô lập sau khi được cho phép; API URL phải đúng BE đó, mocks tắt,
-   HTTPS hoặc localhost trusted, Driver thật được assign trên IN_TRANSIT transport.
-2. Mở `/crew/transports/{transportId}/location`: kiểm mount không permission prompt/POST;
-   reload cũng không tự Start. Đối chiếu code/current leg với OT3.
-3. Khi đã được cho phép mutation, bấm Start lúc đỗ xe; Allow → acquiring → actual GPS →
-   GP2. Kiểm JSON timestamp từ phép đo/optional metadata, không route ID giả, ACK/serverTime.
-4. Quan sát nhiều opportunities: không overlap, không POST duplicate mỗi callback, mỗi lần
-   có fresh point; last send acknowledged không được gọi LIVE GPS.
-5. Stop rồi rapid Start/Stop, điều hướng Back, reload, đổi account/transport: không watcher
-   hoặc timers leak, late response không đổi UI, không dùng điểm transport/account cũ.
-6. Chỉ ở môi trường cô lập, Deny/revoke khi active → warning; một GP3 no-body/denial transition.
-   notified false không nói đã thông báo; manual Stop/timeout không phát GP3.
-7. Offline, hidden, khóa màn hình → dừng/pause; online + foreground → watch mới/fresh point,
-   không replay missed points. pagehide rồi Back cần Start mới.
-8. Dùng fixture/error cases cô lập cho 400/401/403/404/409/500/malformed envelope; kiểm auth
-   chung, terminal stop/reload lock, không success giả, slow refresh không retry point hết tuổi.
-9. Driver READY/COMPLETED/mock context không Start; Escort/Admin/Customer không có route quyền
-   Driver. Không sửa account/role để bypass ProtectedRoute.
-10. Kiểm 320/360/390/430px và thiết bị thật: wrapping, focus, 48px targets, warning visibility,
-    không clipping/overflow, Stop luôn dùng được cả lúc offline/paused/in-flight.
+1. Configure Vite/BE in isolation only with explicit permission; API URL must point to the test BE with mocks disabled,
+   running on trusted localhost or HTTPS, with an authentic Driver assigned to an IN_TRANSIT transport.
+2. Navigate to `/crew/transports/{transportId}/location`: verify that mounting triggers no permission prompt or POST;
+   page reloads must not auto-Start. Compare code and current leg with OT3.
+3. Once mutation is authorized, press Start while parked; grant permission → acquiring → actual GPS →
+   GP2 POST. Verify JSON timestamp matches measurement timestamp, optional metadata is valid, no fake route IDs exist, and ACK/serverTime is received.
+4. Observe across multiple intervals: verify no overlapping requests, no duplicate POSTs per callback, each request transmits
+   a fresh point, and "last send acknowledged" is never labelled as LIVE GPS.
+5. Click Stop, followed by rapid Start/Stop, Back navigation, page reload, and account/transport switches: confirm no watcher
+   or timer leaks, delayed responses do not modify UI, and outdated transport/account points are never reused.
+6. In isolation only, Deny/revoke permissions while active → verify warning appears; verify single GP3 request with no body on denial transition.
+   `notified: false` must not state that a notification was sent; manual Stop or timeouts must not issue GP3 calls.
+7. Disconnect network, hide tab, or lock screen → verify pause; re-enabling network and bringing tab foreground resumes with a fresh point,
+   never replaying missed points. Navigating away via pagehide and returning requires a manual Start.
+8. Test error responses (400, 401, 403, 404, 409, 500, malformed envelope) with isolated fixtures: verify shared auth handling,
+   terminal stop with reload lock, no simulated success, and slow token refreshes do not retry expired points.
+9. Verify Driver in READY/COMPLETED status or with mock context cannot click Start; Escort, Admin, and Customer roles cannot access Driver routes.
+   Never alter account roles to circumvent ProtectedRoute.
+10. Verify layout on 320px, 360px, 390px, and 430px viewports as well as physical devices: text wrapping, focus indicators, 48px touch targets,
+    warning visibility, absence of clipping or overflow, and ensure Stop is operable while offline, paused, or in-flight.
 
-Trước production cần QA có phép trên lifecycle/races, GPS/permission của browser đích,
-network/auth refresh và geofence/notification side effects, không chỉ source/static.
+Prior to production deployment, manual QA must validate lifecycle handling, race conditions, target browser GPS/permissions,
+network and auth refresh behaviors, as well as geofence and notification side effects.
 
 ## NEXT CODEX SESSION CONTEXT
 
 - Workspace `D:/FPT/FA26/SWP391/pegaxus-fe`, branch `feat/109-driver-location-sharing`,
-  HEAD audit `cbb944a`; chạy Git status trước khi tiếp tục, giữ 11 files thay đổi UC-53.
-- Báo cáo bị xóa trước task; người dùng đã xác nhận tạo lại đúng path này. Không restore file khác.
-- Source Phase 2 ở `sender.ts`, `position.ts`, `services.ts`, `hooks/useLocationSharing.ts`;
-  UI hiện có đã nối Start/Stop. Không quay lại permanent disabled Phase 1 hoặc dựng router mới.
-- Route `/crew/transports/:transportId/location`, CrewShell/DRIVER child guard/OT3 adapter
-  giữ nguyên. Chỉ nhãn Phase 1 ở Overview bị bỏ; không đổi UC-49 query hoặc lifecycle.
-- Chỉ real context IN_TRANSIT + actual DRIVER/session cho Start. Mock context khóa GPS.
-- Freshness 0..15s, không future/previous-acquisition/duplicate sample; recursive timer,
-  single flight/owner lease, deadline abort ngăn Axios refresh retry expired sample.
-- Stop/unmount/session/context loss clear watch, permission observer, timers, abort/sample,
-  generation protection. Offline/hidden pause; visible-online resume fresh, không replay.
-- GP2 response envelope + serverTime; ACK không chứng minh broadcast mới. GP3 no body,
-  genuine denial only, false hợp lệ; không retry notification/offline queue.
-- BE read-only `52d0b43`, documents `99c23cc`; audit lại nếu backend được pull.
-- **0 real HTTP mutations, không automated tests, SOURCE AUDITED — RUNTIME NOT VERIFIED,
-  NOT VISUALLY VERIFIED.** Không coi UI/GPS/role/endpoint E2E là PASS.
-- Không sửa live-tracking/handover, horse-health/Crew Home, auth/Axios/shared UI, BE/DB/env.
-  Không thêm dependency, không commit/push/stage/switch/reset/stash/merge.
-- Cần quyền riêng cho isolated QA trước Start/Deny thật; không tự mở Phase tiếp theo.
+  HEAD audit `cbb944a`; run Git status before proceeding, preserving the 11 modified UC-53 files.
+- Recreated report per user authorization; do not restore other files.
+- Phase 2 source is located in `sender.ts`, `position.ts`, `services.ts`, `hooks/useLocationSharing.ts`;
+  existing UI is wired to Start/Stop. Do not revert to disabled Phase 1 state or introduce new routers.
+- Route `/crew/transports/:transportId/location`, CrewShell, DRIVER child guard, and OT3 adapter
+  are preserved. Only the Phase 1 label in Overview was removed; no changes to UC-49 queries or lifecycle.
+- Start requires real context with IN_TRANSIT status and authentic DRIVER session. Mock context locks GPS.
+- Freshness is constrained to 0..15s; no future, pre-acquisition, or duplicate samples; recursive timer,
+  single flight with owner lease, and deadline abort prevent Axios refresh from retrying expired samples.
+- Stop, unmount, session changes, or context loss trigger full cleanup of watchers, permission observers, timers, and abort controllers.
+  Offline/hidden states pause; returning online and visible resumes fresh without replaying past points.
+- GP2 response envelope and serverTime validated; ACK does not imply new broadcast. GP3 sends no body on genuine denial;
+  `notified: false` is valid; no automated notification retries or offline queues.
+- Read-only BE at `52d0b43`, documentation at `99c23cc`; re-audit if backend repository updates.
+- **0 real HTTP mutations, no automated tests, SOURCE AUDITED — RUNTIME NOT VERIFIED, NOT VISUALLY VERIFIED.**
+- Teammate features (live-tracking, handover, horse-health, Crew Home, auth/Axios, shared UI, BE/DB/env) remain untouched.
+  No dependencies added, no Git commit/push/stage/switch/reset/stash/merge performed.
+- Manual isolated QA authorization required prior to real Start/Deny testing; do not proceed to subsequent phases without approval.

@@ -161,7 +161,8 @@ async function mockVehicleList(params: VehicleListParams): Promise<PaginatedResp
         (params.transportMode === "ALL" || vehicle.transportMode === params.transportMode) &&
         (params.status === "ALL" || vehicle.status === params.status) &&
         (params.vehicleType === "ALL" || vehicle.vehicleType === params.vehicleType) &&
-        (params.minCapacity === "ALL" || vehicle.capacityHorses >= params.minCapacity),
+        (params.minCapacity === "ALL" || vehicle.capacityHorses >= params.minCapacity) &&
+        (!params.country || vehicle.country === params.country.trim().toUpperCase()),
     )
   const [field, direction] = params.sortBy.split(":")
   list.sort((left, right) => {
@@ -191,6 +192,10 @@ export const vehicleService = {
           vehicleType: params.vehicleType,
           minCapacity: params.minCapacity,
           sortBy: params.sortBy,
+          availableFrom: params.availableFrom,
+          availableTo: params.availableTo,
+          transportPlanId: params.transportPlanId,
+          country: params.country?.trim().toUpperCase(),
         }),
       }),
     )
@@ -228,6 +233,7 @@ export const vehicleService = {
         insuranceNumber: null,
         insuranceExpiryDate: null,
         specialEquipment: null,
+        country: payload.country?.trim().toUpperCase() ?? null,
         createdAt: now,
         updatedAt: now,
       }

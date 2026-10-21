@@ -17,7 +17,7 @@ const phoneSchema = z
     (value) => /^\+?[1-9]\d{7,14}$/.test(value),
     "Enter a valid phone number (8–15 digits, e.g. +33123456789).",
   );
-const entityId = z.union([z.number().int().positive(), z.string().min(1)]);
+const entityId = z.string();
 export const employeeSchema = z.object({
   employeeId: entityId,
   accountId: entityId,

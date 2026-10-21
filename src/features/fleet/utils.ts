@@ -9,7 +9,7 @@ export function todayIso() {
   return format(new Date(), "yyyy-MM-dd")
 }
 
-/** Mirrors the BE rule (api-contract "Field BE tính"): <= today expired, < 7 days left expiring soon. Used by the mock only. */
+/** Mirrors the BE rule (api-contract "BE calculated field"): <= today expired, < 7 days left expiring soon. Used by the mock only. */
 export function computeExpiryStatus(date: string | null, now = new Date()): ExpiryStatus {
   if (!date) return "VALID"
   const expiry = parseISO(date)

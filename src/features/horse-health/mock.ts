@@ -141,15 +141,41 @@ export function mockCreateHealthLog(transportId: string, input: HealthLogInput):
 }
 
 export function mockMarkAllNormal(transportId: string, input: MarkAllNormalInput): HealthLog {
-  return mockCreateHealthLog(transportId, { horseId: MOCK_HORSES[0].horseId, logType: input.logType, healthStatus: "NORMAL", hydrationStatus: "NORMAL", checkedAt: input.checkedAt, locationDescription: input.locationDescription, generalNote: input.generalNote, files: input.files })
+  return mockCreateHealthLog(transportId, {
+    horseId: MOCK_HORSES[0].horseId,
+    logType: input.logType,
+    healthStatus: "NORMAL",
+    hydrationStatus: "NORMAL",
+    checkedAt: input.checkedAt,
+    locationDescription: input.locationDescription,
+    generalNote: input.generalNote,
+    photoPublicIds: input.photoPublicIds,
+    files: input.files,
+  })
 }
 
 export function mockAddHealthLogPhotos(transportId: string, horseHealthLogId: string, input: HealthLogPhotoInput): HealthLog {
   const log = MOCK_LOGS.find((item) => item.horseHealthLogId === horseHealthLogId) ?? MOCK_LOGS[0]
   if (!log) throw new Error("Health log not found")
   const capturedAt = input.capturedAt ?? new Date().toISOString()
-  log.photos = input.files.map((file) => ({ photoUrl: URL.createObjectURL(file), latitude: input.latitude ?? null, longitude: input.longitude ?? null, capturedAt, caption: input.caption ?? null }))
+  const photos = input.photoPublicIds?.length
+    ? input.photoPublicIds.map((publicId) => ({
+        photoUrl: `https://mock.storage/${publicId}`,
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+        capturedAt,
+        caption: input.caption ?? null,
+      }))
+    : (input.files ?? []).map((file) => ({
+        photoUrl: URL.createObjectURL(file),
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+        capturedAt,
+        caption: input.caption ?? null,
+      }))
+  log.photos = [...(log.photos ?? []), ...photos]
   log.hasPhoto = log.photos.length > 0
   log.updatedAt = capturedAt
   return { ...log, transportId }
 }
+

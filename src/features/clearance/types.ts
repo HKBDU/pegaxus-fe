@@ -1,13 +1,17 @@
 export type CustomsLane = 'GREEN_LANE' | 'ORANGE_LANE' | 'RED_LANE'
 
+export interface UploadedAssetReference {
+  publicId: string
+}
+
 export interface SubmitCustomsClearanceProofRequest {
   customsPortName: string
-  locationId?: number
+  locationId?: string | number | null
   mrnNumber?: string
   customsLane?: CustomsLane
   isHeld?: boolean
   quickNote?: string
-  files: File[]
+  files: UploadedAssetReference[]
 }
 
 export interface SubmitCustomsClearanceProofResponse {

@@ -121,6 +121,13 @@ export function VehicleForm({ mode, vehicle, isSaving = false, cancelHref, onSub
               <TextField control={form.control} name="vehicleName" label="Vehicle name" placeholder="e.g., Pegaxus Titan Cruiser" />
               {isEdit ? <Locked label="Current status">{vehicle ? <VehicleStatusBadge status={vehicle.status} /> : null}</Locked> : null}
               <TextField control={form.control} name="licensePlate" label="License plate / registration no." placeholder="e.g., 29C-882.14" required />
+              <FormField control={form.control} name="country" render={({ field }) => (
+                <FormItem className="gap-1">
+                  <FormLabel className={formLabelClass}>Current country</FormLabel>
+                  <FormControl><Input {...field} value={field.value ?? ""} maxLength={2} placeholder="e.g., FR" className={formControlClass} /></FormControl>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )} />
             </FormCard>
 
             <FormCard title="Specifications & technical">

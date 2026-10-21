@@ -64,9 +64,9 @@ export default function TransportRouteTrackingPage({
             className="mt-0.5 size-4 shrink-0"
           />
           <span>
-            Đang hiển thị dữ liệu đã lưu lúc{" "}
-            {formatTransportTime(data.serverTime)}. Đang tự động kết nối lại khi
-            có mạng…
+            Showing cached data from{" "}
+            {formatTransportTime(data.serverTime)}. Automatically reconnecting when
+            network is available…
           </span>
         </div>
       ) : null}

@@ -97,7 +97,7 @@ export function InvoiceStatusHistory({ invoiceId }: { invoiceId: string }) {
             ))}
           </div>
         ) : !history.length ? (
-          <EmptyState message="Không tìm thấy dữ liệu lịch sử trạng thái." />
+          <EmptyState message="No status history data found." />
         ) : (
           <ol
             aria-label="Invoice status timeline"

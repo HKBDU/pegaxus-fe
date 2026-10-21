@@ -104,6 +104,7 @@ export interface VehicleBrief {
   licensePlate: string | null;
   transportMode: TransportMode;
   capacityHorses: number;
+  country: string | null;
 }
 
 export interface Vehicle extends VehicleBrief {
@@ -302,6 +303,8 @@ export interface VehicleListParams extends MasterListParams {
   minCapacity?: number;
   availableFrom?: string;
   availableTo?: string;
+  transportPlanId?: string;
+  country?: string;
 }
 
 export interface ProviderListParams extends MasterListParams {

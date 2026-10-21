@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { HEALTH_STATUSES, HYDRATION_STATUSES, LOG_TYPES } from "./constants"
 
-const id = z.string().uuid()
+const id = z.string()
 const nullableText = z.string().nullable()
 const timestamp = z.string().datetime({ offset: true })
 
