@@ -6,7 +6,7 @@ import {
   Navigation,
   Truck,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, type To } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 import { useDriverLocationSession } from "@/features/location-sharing/hooks/useDriverLocationSession";
@@ -20,13 +20,15 @@ function ActionButton({
   icon: Icon,
   label,
   to,
+  state,
   disabled,
   disabledReason,
   tone = "neutral",
 }: {
   icon: typeof FileText;
   label: string;
-  to?: string;
+  to?: To;
+  state?: unknown;
   disabled?: boolean;
   disabledReason?: string;
   tone?: "accent" | "neutral" | "danger";
@@ -61,7 +63,7 @@ function ActionButton({
       </button>
     );
   return (
-    <Link to={to} className={className}>
+    <Link to={to} state={state} className={className}>
       {content}
     </Link>
   );
@@ -119,6 +121,7 @@ export function CrewHomeActions({
           icon={HeartPulse}
           label="Report Horse Incident"
           to={incidentPaths.newHorseHealth()}
+          state={{ transportId: transport.transportId }}
           tone="danger"
         />
         <ActionButton
