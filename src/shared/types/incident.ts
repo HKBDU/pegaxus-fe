@@ -283,6 +283,7 @@ export interface VehicleIncidentRequest {
   category: Extract<IncidentCategory, "VEHICLE" | "BOTH">;
   incidentType: VehicleIncidentType;
   severity: IncidentSeverity;
+  title: string;
   description: string;
   immediateAction?: string;
   vehicleOperable: boolean;
@@ -305,6 +306,7 @@ export interface VehicleIncidentRequest {
 export interface HorseHealthIncidentRequest {
   transportId: string;
   severity: IncidentSeverity;
+  title?: string;
   immediateAction?: string;
   emergencySettlementRequired: boolean;
   occurredAt: string;

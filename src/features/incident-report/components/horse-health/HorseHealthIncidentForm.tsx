@@ -107,7 +107,7 @@ export function HorseHealthIncidentForm({
         value={photos}
         onChange={onPhotosChange}
         disabled={disabled}
-        maxFiles={10}
+        maxFiles={5}
         error={error}
       />
       <IncidentSubmitBar

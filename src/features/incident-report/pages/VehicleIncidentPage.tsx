@@ -9,6 +9,8 @@ import type { IncidentPhotoFieldValue } from "../components/IncidentPhotoField";
 import { useIncidentLocation } from "../hooks/useIncidentLocation";
 import { useIncidentMutations } from "../hooks/useIncidentMutations";
 import { useIncidentReport } from "../hooks/useIncidentReport";
+import { useAssignedTransports } from "@/features/horse-health/hooks/useAssignedTransports";
+import { useTransportOverview } from "@/features/ongoing-transport/hooks/useTransportOverview";
 import {
   incidentPaths,
   INCIDENT_CATEGORY,
@@ -38,6 +40,24 @@ const initialPhotos: IncidentPhotoFieldValue = {
 export default function VehicleIncidentPage() {
   const navigate = useNavigate();
   const routeState = (useLocation().state as VehicleRouteState | null) ?? {};
+  const assignedQuery = useAssignedTransports();
+  const activeTransportId =
+    routeState.transportId ??
+    assignedQuery.data?.items.find(
+      (transport) =>
+        transport.status === "IN_TRANSIT" || transport.status === "READY",
+    )?.transportId ??
+    "";
+  const transportOverview = useTransportOverview(
+    activeTransportId,
+    undefined,
+    "crew",
+    "data",
+    false,
+  );
+  const overviewVehicleId =
+    transportOverview.data?.currentSegment?.vehicles[0]?.vehicleId;
+  const vehicleId = routeState.vehicleId ?? overviewVehicleId ?? "";
   const [photos, setPhotos] = useState(initialPhotos);
   const [locationId, setLocationId] = useState(routeState.locationId);
   const location = useIncidentLocation({
@@ -47,8 +67,8 @@ export default function VehicleIncidentPage() {
   const mutations = useIncidentMutations();
   const initialValue = useMemo<VehicleIncidentFormValue>(
     () => ({
-      transportId: routeState.transportId ?? "",
-      vehicleId: routeState.vehicleId ?? "",
+      transportId: activeTransportId,
+      vehicleId,
       category: INCIDENT_CATEGORY.VEHICLE,
       incidentType: VEHICLE_INCIDENT_TYPE.BREAKDOWN,
       severity: INCIDENT_SEVERITY.MEDIUM,
@@ -75,11 +95,23 @@ export default function VehicleIncidentPage() {
       location.coordinates,
       location.locationDescription,
       locationId,
-      routeState.transportId,
-      routeState.vehicleId,
+      activeTransportId,
+      vehicleId,
     ],
   );
+
   const form = useIncidentReport<VehicleIncidentFormValue>(initialValue);
+
+  useEffect(() => {
+    const nextValues: Partial<VehicleIncidentFormValue> = {};
+    if (activeTransportId && form.values.transportId !== activeTransportId) {
+      nextValues.transportId = activeTransportId;
+    }
+    if (vehicleId && form.values.vehicleId !== vehicleId) {
+      nextValues.vehicleId = vehicleId;
+    }
+    if (Object.keys(nextValues).length > 0) form.patch(nextValues);
+  }, [activeTransportId, form, vehicleId]);
 
   useEffect(() => {
     if (!location.locationId || location.locationId === locationId) return;
@@ -109,6 +141,7 @@ export default function VehicleIncidentPage() {
         value.category === INCIDENT_CATEGORY.BOTH
           ? INCIDENT_SEVERITY.CRITICAL
           : value.severity,
+      title: value.title,
       description: value.description,
       immediateAction: value.immediateAction || undefined,
       vehicleOperable: value.vehicleOperable,

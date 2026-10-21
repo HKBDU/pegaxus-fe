@@ -36,7 +36,7 @@ const photoFilesSchema = z
   .optional();
 const horsePhotoFilesSchema = z
   .array(photoFileSchema)
-  .max(10, "A maximum of 10 photos is allowed")
+  .max(5, "A maximum of 5 photos is allowed")
   .optional();
 const coordinates = z.object({
   latitude: z.number().min(-90).max(90).optional(),
@@ -50,7 +50,8 @@ export const vehicleIncidentRequestSchema = z
     category: z.enum([INCIDENT_CATEGORY.VEHICLE, INCIDENT_CATEGORY.BOTH]),
     incidentType: vehicleIncidentTypeSchema,
     severity: incidentSeveritySchema,
-    description: z.string().trim().min(1).max(2000),
+    title: z.string().trim().min(1).max(200),
+    description: z.string().trim().min(10).max(2000),
     immediateAction: optionalText,
     vehicleOperable: z.boolean(),
     vehicleCondition: optionalText,
@@ -66,7 +67,7 @@ export const vehicleIncidentRequestSchema = z
     emergencySettlementRequired: z.boolean(),
     occurredAt: timestamp,
     locationId: id.optional(),
-    locationDescription: z.string().trim().max(1000).optional(),
+    locationDescription: z.string().trim().max(500).optional(),
     ...coordinates.shape,
     photoFiles: photoFilesSchema,
   })
@@ -103,11 +104,12 @@ export const horseHealthDetailRequestSchema = z.object({
 export const horseHealthIncidentRequestSchema = z.object({
   transportId: id,
   severity: incidentSeveritySchema,
+  title: z.string().trim().max(200).optional(),
   immediateAction: optionalText,
   emergencySettlementRequired: z.boolean(),
   occurredAt: timestamp,
   locationId: id.optional(),
-  locationDescription: z.string().trim().max(1000).optional(),
+  locationDescription: z.string().trim().max(500).optional(),
   ...coordinates.shape,
   horses: z
     .array(horseHealthDetailRequestSchema)

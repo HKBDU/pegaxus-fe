@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useHorseHealthOverview } from "@/features/horse-health/hooks/useHorseHealth";
+import { useAssignedTransports } from "@/features/horse-health/hooks/useAssignedTransports";
 import {
   HORSE_INCIDENT_TYPE,
   INCIDENT_SEVERITY,
@@ -68,7 +69,14 @@ function createHorseDetailsMap(horseIds: string[]) {
 export default function HorseHealthIncidentPage() {
   const navigate = useNavigate();
   const routeState = (useLocation().state as HorseRouteState | null) ?? {};
-  const transportId = routeState.transportId ?? null;
+  const assignedQuery = useAssignedTransports();
+  const transportId =
+    routeState.transportId ??
+    assignedQuery.data?.items.find(
+      (transport) =>
+        transport.status === "IN_TRANSIT" || transport.status === "READY",
+    )?.transportId ??
+    null;
   const overview = useHorseHealthOverview(transportId);
   const [step, setStep] = useState<"selection" | "form">("selection");
   const [selectedHorseIds, setSelectedHorseIds] = useState<string[]>(
@@ -148,6 +156,7 @@ export default function HorseHealthIncidentPage() {
     const input: HorseHealthIncidentRequest = {
       transportId: value.transportId,
       severity: value.severity,
+      title: value.title,
       immediateAction: value.immediateAction || undefined,
       emergencySettlementRequired: value.emergencySettlementRequired,
       occurredAt: new Date(value.occurredAt).toISOString(),

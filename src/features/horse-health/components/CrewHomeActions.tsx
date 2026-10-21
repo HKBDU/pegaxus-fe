@@ -110,6 +110,9 @@ export function CrewHomeActions({
           icon={CarFront}
           label="Report Transport Incident"
           to={incidentPaths.newVehicle()}
+          state={{ transportId: transport.transportId }}
+          disabled={transport.status !== "IN_TRANSIT"}
+          disabledReason="Available after departure"
           tone="danger"
         />
         <ActionButton
@@ -122,6 +125,8 @@ export function CrewHomeActions({
           label="Report Horse Incident"
           to={incidentPaths.newHorseHealth()}
           state={{ transportId: transport.transportId }}
+          disabled={transport.status !== "IN_TRANSIT"}
+          disabledReason="Available after departure"
           tone="danger"
         />
         <ActionButton
