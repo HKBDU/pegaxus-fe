@@ -1,4 +1,7 @@
-import { INCIDENT_SEVERITY, INCIDENT_SEVERITY_OPTIONS } from "@/shared/constants/incident";
+import {
+  INCIDENT_SEVERITY,
+  INCIDENT_SEVERITY_OPTIONS,
+} from "@/shared/constants/incident";
 import type { IncidentSeverity } from "@/shared/types/incident";
 import { Input } from "@/shared/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group";
@@ -44,7 +47,9 @@ export function IncidentReportDetailsForm({
         <RadioGroup
           value={value.severity}
           disabled={disabled}
-          onValueChange={(nextValue) => update("severity", nextValue as IncidentSeverity)}
+          onValueChange={(nextValue) =>
+            update("severity", nextValue as IncidentSeverity)
+          }
           aria-label="Severity"
           className="grid grid-cols-2 gap-2 "
         >
@@ -104,10 +109,7 @@ export function IncidentReportDetailsForm({
               key={String(required)}
               className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-[2px] border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-800 transition-colors hover:border-[#f39200] has-[[data-state=checked]]:bg-[#f39200] has-[[data-state=checked]]:bg-[#181818] has-[[data-state=checked]]:text-white has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50"
             >
-              <RadioGroupItem
-                value={String(required)}
-                className="sr-only"
-              />
+              <RadioGroupItem value={String(required)} className="sr-only" />
               {required ? "YES" : "NO"}
             </label>
           ))}
