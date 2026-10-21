@@ -48,7 +48,7 @@ function readValue(response: unknown) {
 }
 
 export const locationSharingService = {
-  async assigned(signal: AbortSignal) {
+  async assigned(signal?: AbortSignal) {
     const response = await apiClient.get<unknown, unknown>(
       "/transports/assigned-to-me",
       {
@@ -56,7 +56,7 @@ export const locationSharingService = {
         params: { status: "READY,IN_TRANSIT,COMPLETED" },
       },
     );
-    signal.throwIfAborted();
+    signal?.throwIfAborted();
     return assignedLocationContextSchema.parse(readValue(response));
   },
   async confirmArrival(

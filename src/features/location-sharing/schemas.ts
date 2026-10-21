@@ -69,11 +69,20 @@ export const assignedLocationContextSchema = z.object({
   items: z.array(
     z.object({
       transportId: z.string(),
+      transportCode: z.string(),
+      bookingCode: z.string(),
+      complianceDossierId: z.string().nullish(),
       status: z.enum(["READY", "IN_TRANSIT", "COMPLETED"]),
       myRole: z.enum(["DRIVER", "ESCORT"]),
+      horseCount: z.number().int().nonnegative(),
+      departureAt: z.iso.datetime({ offset: true }).nullable(),
+      etaAt: z.iso.datetime({ offset: true }).nullable(),
       currentSegment: z
         .object({
           routePlanRouteId: z.string(),
+          displayOrder: z.number().int().positive(),
+          fromLocationName: z.string(),
+          toLocationName: z.string(),
           status: z.enum(["PLANNED", "IN_TRANSIT", "COMPLETED"]),
           isMine: z.boolean().optional(),
         })

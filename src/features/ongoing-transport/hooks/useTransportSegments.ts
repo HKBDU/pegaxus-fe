@@ -10,7 +10,7 @@ export function useTransportSegments(
   scenario: SegmentsScenario,
   enabled = true,
 ) {
-  const context = useTransportQueryContext();
+  const context = useTransportQueryContext(true);
   const query = useQuery({
     queryKey: [
       "ongoing-transports",

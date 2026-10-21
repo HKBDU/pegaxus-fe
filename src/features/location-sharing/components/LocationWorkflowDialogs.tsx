@@ -82,7 +82,7 @@ export function LocationWorkflowDialogs({
                 : undefined,
           })
         : null;
-  if (gate.applicable && gate.locked)
+  if (gate.applicable && gate.locked && pathname !== "/crew")
     return (
       <Dialog open>
         <DialogContent

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { isFlow3MockMode } from "@/features/transport-plan/source";
 import { toast } from "sonner";
 import { ArrowLeft, ClipboardCheck, Play, Truck } from "lucide-react";
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge";
@@ -53,7 +52,6 @@ export function ReturnActivationPanel({
   const [overrides, setOverrides] = useState<
     Record<string, ReturnResourceOverride>
   >({});
-  const mockMode = isFlow3MockMode();
   const primary = useRoutePlanDetail(
     context.primaryRoute?.routePlanId ?? "",
     Boolean(context.primaryRoute),
@@ -67,7 +65,7 @@ export function ReturnActivationPanel({
       primary.data?.updatedAt,
     ],
     queryFn: () => loadActivationResources(plan, primary.data),
-    enabled: !mockMode && (!context.primaryRoute || !primary.isPending),
+    enabled: !context.primaryRoute || !primary.isPending,
     retry: false,
   });
   const staged = Object.values(overrides);
@@ -206,20 +204,12 @@ export function ReturnActivationPanel({
           submitted together only when you confirm activation. The backend
           resolves Driver/Escort inheritance and checks resource eligibility.
         </p>
-        {!mockMode &&
-        (resources.isPending ||
-          resources.isFetching ||
-          (Boolean(context.primaryRoute) && primary.isPending)) ? (
+        {resources.isPending ||
+        resources.isFetching ||
+        (Boolean(context.primaryRoute) && primary.isPending) ? (
           <p role="status" className="text-xs text-slate-500">
             Loading resource choices. Activation without overrides remains
             available.
-          </p>
-        ) : null}
-        {mockMode ? (
-          <p className="text-xs text-slate-500">
-            Resource catalogs use real APIs and are not queried for mock
-            fixtures. Keep-existing activation remains available in the existing
-            mock flow.
           </p>
         ) : null}
         {resources.isError || primary.isError ? (

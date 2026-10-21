@@ -5,7 +5,6 @@ import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useAuthStore } from "@/features/auth/store";
-import { Flow3MockIndicator } from "@/features/transport-plan/components/Flow3MockIndicator";
 import { useRoutePlanDetail } from "../hooks/useRoutePlanDetail";
 import {
   canViewRoute,
@@ -124,7 +123,6 @@ export default function RoutePlanDetailPage({
       className="flow3-ui booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] scroll-mt-24 px-4 py-4 font-sans sm:px-6 lg:py-6"
     >
       <div className="mx-auto w-full min-w-0 max-w-[1152px] space-y-4">
-        <Flow3MockIndicator />
         {allowed && valid && !error && !accessFailure && plan ? (
           <>
             {waitingForAction ? (

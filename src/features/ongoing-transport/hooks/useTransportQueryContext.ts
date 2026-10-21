@@ -13,7 +13,7 @@ const subscribeOnline = (onChange: () => void) =>
   onlineManager.subscribe(onChange);
 const getOnline = () => onlineManager.isOnline();
 
-export function useTransportQueryContext() {
+export function useTransportQueryContext(real = false) {
   const principal = useAuthStore((state) => state.principal);
   const sessionVersion = useAuthStore((state) => state.sessionVersion);
   const signedIn = useAuthStore((state) => Boolean(state.accessToken));
@@ -23,7 +23,7 @@ export function useTransportQueryContext() {
     () => false,
   );
   const online = useSyncExternalStore(subscribeOnline, getOnline, () => true);
-  const mode = isOngoingTransportMockMode() ? "mock" : "real";
+  const mode = !real && isOngoingTransportMockMode() ? "mock" : "real";
   return {
     scope: [mode, principal?.id, principal?.roles, sessionVersion] as const,
     mode,

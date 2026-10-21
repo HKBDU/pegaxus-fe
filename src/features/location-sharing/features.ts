@@ -1,6 +1,5 @@
-// Enable only after the target deployment implements HO7 and the new arrival contract.
+// HO7 is absent from BE 353d951 and DEV OpenAPI checked on 2026-10-21.
+// Reconfirm endpoint and arrival locking before enabling; a local env flag is not capability evidence.
 export const FEATURES = {
-  segmentArrival:
-    (import.meta.env as Record<string, unknown>).VITE_ENABLE_SEGMENT_ARRIVAL ===
-    "true",
+  segmentArrival: false,
 } as const;

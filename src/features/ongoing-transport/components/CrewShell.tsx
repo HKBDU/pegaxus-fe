@@ -1,6 +1,5 @@
 import { Outlet } from "react-router-dom";
 import logo from "@/assets/logo-dark.png";
-import { DriverLocationSession } from "@/features/location-sharing/components/DriverLocationSession";
 
 export function CrewShell() {
   return (
@@ -17,9 +16,7 @@ export function CrewShell() {
           </span>
         </div>
       </header>
-      <DriverLocationSession>
-        <Outlet />
-      </DriverLocationSession>
+      <Outlet />
     </div>
   );
 }

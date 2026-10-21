@@ -6,6 +6,7 @@ import { LocationSharingControl } from "../components/LocationSharingControl";
 import { LocationSharingSummary } from "../components/LocationSharingDetails";
 import { useDriverLocationSession } from "../hooks/useDriverLocationSession";
 import { driverTransportOverviewPath } from "../navigation";
+import { FEATURES } from "../features";
 import "../ui.css";
 
 export default function DriverLocationSharingPage() {
@@ -92,6 +93,13 @@ export default function DriverLocationSharingPage() {
                 : null
             }
           />
+          {!FEATURES.segmentArrival ? (
+            <p role="status" className="m-0 text-sm text-muted-foreground">
+              Arrival confirmation is unavailable on the verified backend
+              version. GPS sharing remains separate; this page does not confirm
+              arrival locally.
+            </p>
+          ) : null}
           {state.message ? (
             <p role="status" className="m-0 text-sm text-muted-foreground">
               {state.message}

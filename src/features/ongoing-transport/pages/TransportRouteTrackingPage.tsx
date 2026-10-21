@@ -1,15 +1,13 @@
-import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { TriangleAlert } from "lucide-react";
 import { ErrorState } from "@/shared/components/common";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { TransportRouteTimeline } from "../components/TransportRouteTimeline";
-import { TransportSegmentsMockControls } from "../components/TransportSegmentsMockControls";
 import { useTransportSegments } from "../hooks/useTransportSegments";
 import { useTransportOverview } from "../hooks/useTransportOverview";
 import { getOngoingTransportError } from "../services";
 import { formatTransportDate, formatTransportTime } from "../format";
-import type { SegmentsScenario, TransportAudience } from "../types";
+import type { TransportAudience } from "../types";
 
 export default function TransportRouteTrackingPage({
   audience,
@@ -20,13 +18,7 @@ export default function TransportRouteTrackingPage({
     transportId: string;
     bookingId: string;
   }>();
-  const [scenario, setScenario] = useState<SegmentsScenario>("data");
-  const query = useTransportSegments(
-    transportId,
-    bookingId,
-    audience,
-    scenario,
-  );
+  const query = useTransportSegments(transportId, bookingId, audience, "data");
   // The shell header reads OT3 for the code, booking and GPS permission; this page only reports when that metadata is missing.
   const metadataQuery = useTransportOverview(
     transportId,
@@ -50,10 +42,6 @@ export default function TransportRouteTrackingPage({
     (audience === "customer" && bookingId === undefined);
   return (
     <>
-      <TransportSegmentsMockControls
-        scenario={scenario}
-        onChange={setScenario}
-      />
       {cached && data ? (
         <div
           role="status"
@@ -124,7 +112,7 @@ export default function TransportRouteTrackingPage({
             </p>
           ) : null}
           <TransportRouteTimeline
-            key={`${transportId}-${audience}-${scenario}`}
+            key={`${transportId}-${audience}`}
             data={data}
             audience={audience}
           />

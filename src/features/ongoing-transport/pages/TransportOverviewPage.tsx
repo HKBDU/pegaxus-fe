@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Navigation, TriangleAlert } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
@@ -15,11 +14,10 @@ import {
 } from "../components/TransportOverviewSections";
 import { TransportIncidents } from "../components/TransportIncidents";
 import { TransportOverviewSkeleton } from "../components/TransportOverviewSkeleton";
-import { TransportOverviewMockControls } from "../components/TransportOverviewMockControls";
 import { useTransportOverview } from "../hooks/useTransportOverview";
 import { formatTransportDate, formatTransportTime } from "../format";
 import { getOngoingTransportError } from "../services";
-import type { OverviewScenario, TransportAudience } from "../types";
+import type { TransportAudience } from "../types";
 
 export default function TransportOverviewPage({
   audience,
@@ -31,13 +29,7 @@ export default function TransportOverviewPage({
     transportId: string;
     bookingId: string;
   }>();
-  const [scenario, setScenario] = useState<OverviewScenario>("data");
-  const query = useTransportOverview(
-    transportId,
-    bookingId,
-    audience,
-    scenario,
-  );
+  const query = useTransportOverview(transportId, bookingId, audience, "data");
   const error = query.isError
     ? getOngoingTransportError(query.error, "overview")
     : null;
@@ -55,10 +47,6 @@ export default function TransportOverviewPage({
 
   return (
     <>
-      <TransportOverviewMockControls
-        scenario={scenario}
-        onChange={setScenario}
-      />
       {audience === "crew" &&
       canAccess(principal, { anyRole: ["DRIVER"] }) &&
       transportId !== undefined &&

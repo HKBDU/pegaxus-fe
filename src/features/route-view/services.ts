@@ -8,8 +8,11 @@ import {
   readEnvelope,
   getApiErrorInfo,
 } from "@/features/transport-plan/services";
-import { actionEntityIdSchema } from "@/features/transport-plan/schemas";
-import { isFlow3MockMode } from "@/features/transport-plan/source";
+import {
+  actionEntityIdSchema,
+  approvedBookingDetailSchema,
+  transportPlanDetailSchema,
+} from "@/features/transport-plan/schemas";
 import {
   routePlanDetailSchema,
   routePlansQuerySchema,
@@ -74,6 +77,7 @@ export async function executeEmergencyAction<A extends EmergencyAction>(
   action: A,
   id: string,
   input: EmergencyRequestMap[A],
+  signal?: AbortSignal,
 ): Promise<EmergencyResultMap[A]> {
   const path = routePath(id),
     contract = emergencyContracts[action];
@@ -88,15 +92,13 @@ export async function executeEmergencyAction<A extends EmergencyAction>(
     });
   }
   const body = contract.input.parse(input);
-  const payload =
-    !import.meta.env.PROD && isFlow3MockMode()
-      ? (
-          await import("@/features/transport-plan/mock/mock-service")
-        ).flow3MockService.executeEmergency(action, id, body, principal)
-      : await apiClient.post<unknown, unknown>(
-          `${path}/${contract.path}`,
-          body,
-        );
+  signal?.throwIfAborted();
+  const payload = await apiClient.post<unknown, unknown>(
+    `${path}/${contract.path}`,
+    body,
+    { signal },
+  );
+  signal?.throwIfAborted();
   return contract.output.parse(readEnvelope(payload)) as EmergencyResultMap[A];
 }
 
@@ -160,6 +162,22 @@ async function parseErrorBlob(blob: Blob) {
 }
 
 export const routeViewService = {
+  async getEmergencyTransportPlan(id: string, signal?: AbortSignal) {
+    const response = await apiClient.get<unknown, unknown>(
+      `/transport-plans/${encodeURIComponent(actionEntityIdSchema.parse(id))}`,
+      { signal },
+    );
+    signal?.throwIfAborted();
+    return transportPlanDetailSchema.parse(readEnvelope(response));
+  },
+  async getEmergencyBooking(id: string, signal?: AbortSignal) {
+    const response = await apiClient.get<unknown, unknown>(
+      `/bookings/approved/${encodeURIComponent(actionEntityIdSchema.parse(id))}`,
+      { signal },
+    );
+    signal?.throwIfAborted();
+    return approvedBookingDetailSchema.parse(readEnvelope(response));
+  },
   async getRoutes(
     transportPlanId: string,
     params: RoutePlansQuery = {},
@@ -168,36 +186,22 @@ export const routeViewService = {
     const id = actionEntityIdSchema.parse(transportPlanId),
       query = routePlansQuerySchema.parse(params);
     signal?.throwIfAborted();
-    const payload =
-      !import.meta.env.PROD && isFlow3MockMode()
-        ? (
-            await import("@/features/transport-plan/mock/mock-service")
-          ).flow3MockService.getRoutes(id, query)
-        : await apiClient.get<unknown, unknown>(
-            `/transport-plans/${encodeURIComponent(id)}/route-plans`,
-            { params: query, signal },
-          );
+    const payload = await apiClient.get<unknown, unknown>(
+      `/transport-plans/${encodeURIComponent(id)}/route-plans`,
+      { params: query, signal },
+    );
     return routePlansSchema.parse(readEnvelope(payload));
   },
   async getRoute(id: string, signal?: AbortSignal) {
     const path = routePath(id);
     signal?.throwIfAborted();
-    const payload =
-      !import.meta.env.PROD && isFlow3MockMode()
-        ? (
-            await import("@/features/transport-plan/mock/mock-service")
-          ).flow3MockService.getRoute(id)
-        : await apiClient.get<unknown, unknown>(path, { signal });
+    const payload = await apiClient.get<unknown, unknown>(path, { signal });
     return routePlanDetailSchema.parse(readEnvelope(payload));
   },
   async exportPdf(id: string, signal?: AbortSignal): Promise<Blob> {
     const path = routePath(id);
     if (!canExportRoute(useAuthStore.getState().principal))
       throw new Error("You do not have permission to export route plans.");
-    if (!import.meta.env.PROD && isFlow3MockMode())
-      throw new Error(
-        "PDF export is unavailable in development mock mode. Use the real API.",
-      );
     let blob: Blob;
     try {
       blob = await apiClient.get<Blob, Blob>(`${path}/export`, {

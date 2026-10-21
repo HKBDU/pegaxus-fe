@@ -1,23 +1,18 @@
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
+import { useLayoutEffect, useRef } from "react";
 import { useAuthStore } from "@/features/auth/store";
-import {
-  useApprovedBooking,
-  approvedBookingKeys,
-} from "@/features/transport-plan/hooks/useApprovedBookings";
-import {
-  useTransportPlan,
-  transportPlanKeys,
-} from "@/features/transport-plan/hooks/useTransportPlans";
+import { approvedBookingKeys } from "@/features/transport-plan/hooks/useApprovedBookings";
+import { transportPlanKeys } from "@/features/transport-plan/hooks/useTransportPlans";
 import { getApiErrorInfo } from "@/features/transport-plan/services";
-import { isFlow3MockMode } from "@/features/transport-plan/source";
 import { dossierKeys } from "@/features/dossier/hooks/useDossier";
 import { vehicleKeys } from "@/features/fleet/hooks/useVehicles";
 import { personnelKeys } from "@/features/personnel/hooks";
-import { executeEmergencyAction } from "../services";
+import { executeEmergencyAction, routeViewService } from "../services";
 import { getEmergencyActions } from "../emergency-policy";
 import { routeViewKeys, useRoutePlanAlternatives } from "./useRoutePlanDetail";
 import { returnActivationResultSchema } from "../schemas";
@@ -43,9 +38,37 @@ export type EmergencyContext = {
 
 export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
   const principal = useAuthStore((state) => state.principal);
-  const ready = enabled && Boolean(plan);
-  const transport = useTransportPlan(plan?.transportPlanId ?? "", ready);
-  const booking = useApprovedBooking(plan?.bookingId ?? "", ready);
+  const sessionVersion = useAuthStore((state) => state.sessionVersion);
+  const signedIn = useAuthStore((state) => Boolean(state.accessToken));
+  const ready = enabled && signedIn && Boolean(plan);
+  const transport = useQuery({
+    queryKey: [
+      "route-view",
+      "emergency-workspace",
+      "transport",
+      plan?.transportPlanId,
+      principal?.id,
+      sessionVersion,
+    ],
+    queryFn: ({ signal }) =>
+      routeViewService.getEmergencyTransportPlan(plan!.transportPlanId, signal),
+    enabled: ready,
+    retry: false,
+  });
+  const booking = useQuery({
+    queryKey: [
+      "route-view",
+      "emergency-workspace",
+      "booking",
+      plan?.bookingId,
+      principal?.id,
+      sessionVersion,
+    ],
+    queryFn: ({ signal }) =>
+      routeViewService.getEmergencyBooking(plan!.bookingId, signal),
+    enabled: ready,
+    retry: false,
+  });
   const routes = useRoutePlanAlternatives(
     plan?.transportPlanId ?? "",
     {},
@@ -123,7 +146,6 @@ export async function refreshEmergencyQueries(
   ];
   const updatesWorkspace =
     action === "decision" || action === "activation" || action === "management";
-  const realMode = !isFlow3MockMode();
   const previousRoute = client.getQueryData<RoutePlanDetail>(
     routeViewKeys.detail(plan.routePlanId),
   );
@@ -134,6 +156,18 @@ export async function refreshEmergencyQueries(
     ) ?? []),
   ]);
   await Promise.all([
+    ...(updatesWorkspace
+      ? [
+          client.invalidateQueries({
+            queryKey: ["route-view", "emergency-workspace"],
+            predicate: (query) =>
+              query.queryKey[2] === "transport"
+                ? query.queryKey[3] === plan.transportPlanId
+                : query.queryKey[2] === "booking" &&
+                  query.queryKey[3] === plan.bookingId,
+          }),
+        ]
+      : []),
     ...(updatesWorkspace && transportId
       ? [refreshTransportProgress(client, transportId)]
       : []),
@@ -148,23 +182,19 @@ export async function refreshEmergencyQueries(
             queryKey: approvedBookingKeys.detail(plan.bookingId),
           }),
           client.invalidateQueries({ queryKey: ["approved-bookings", "list"] }),
-          ...(realMode
-            ? [
-                client.invalidateQueries({
-                  queryKey: personnelKeys.plan(plan.transportPlanId),
-                }),
-                client.invalidateQueries({
-                  queryKey: personnelKeys.assignments(plan.transportPlanId),
-                }),
-                client.invalidateQueries({
-                  queryKey: personnelKeys.primaryRoute(plan.transportPlanId),
-                }),
-                client.invalidateQueries({
-                  queryKey: personnelKeys.routePlan(plan.routePlanId),
-                }),
-              ]
-            : []),
-          ...(realMode && dossierId
+          client.invalidateQueries({
+            queryKey: personnelKeys.plan(plan.transportPlanId),
+          }),
+          client.invalidateQueries({
+            queryKey: personnelKeys.assignments(plan.transportPlanId),
+          }),
+          client.invalidateQueries({
+            queryKey: personnelKeys.primaryRoute(plan.transportPlanId),
+          }),
+          client.invalidateQueries({
+            queryKey: personnelKeys.routePlan(plan.routePlanId),
+          }),
+          ...(dossierId
             ? [
                 client.invalidateQueries({
                   queryKey: dossierKeys.overview(dossierId),
@@ -185,7 +215,7 @@ export async function refreshEmergencyQueries(
           }),
         ]
       : []),
-    ...(action === "activation" && realMode
+    ...(action === "activation"
       ? [
           client.invalidateQueries({
             queryKey: ["route-view", "activation-resources", plan.routePlanId],
@@ -207,10 +237,52 @@ export function useEmergencyMutation<A extends EmergencyAction>(
   context: EmergencyContext,
 ) {
   const client = useQueryClient();
+  const account = useAuthStore((state) => state.principal?.id);
+  const session = useAuthStore((state) => state.sessionVersion);
+  const request = useRef<AbortController | null>(null);
+  const scope = `${account}:${session}:${plan.routePlanId}:${action}`;
+  const currentScope = useRef(scope);
+  const generation = useRef(0);
+  const mounted = useRef(false);
+  const currentSession = () => {
+    const auth = useAuthStore.getState();
+    return (
+      Boolean(auth.accessToken) &&
+      mounted.current &&
+      currentScope.current === scope &&
+      auth.principal?.id === account &&
+      auth.sessionVersion === session
+    );
+  };
+  useLayoutEffect(() => {
+    mounted.current = true;
+    currentScope.current = scope;
+    const unsubscribe = useAuthStore.subscribe((auth) => {
+      if (
+        !auth.accessToken ||
+        auth.principal?.id !== account ||
+        auth.sessionVersion !== session
+      )
+        request.current?.abort();
+    });
+    return () => {
+      mounted.current = false;
+      generation.current += 1;
+      unsubscribe();
+      request.current?.abort();
+    };
+  }, [account, session, scope]);
   return useMutation({
-    mutationKey: ["route-view", "emergency", plan.routePlanId],
+    mutationKey: ["route-view", "emergency", scope],
+    onMutate: () => ({ scope, generation: generation.current }),
     retry: false,
-    mutationFn: (input: EmergencyRequestMap[A]) => {
+    networkMode: "always",
+    gcTime: 0,
+    mutationFn: async (input: EmergencyRequestMap[A]) => {
+      if (!currentSession() || request.current || !navigator.onLine)
+        throw new Error(
+          "Connect and reload the route in your current session before submitting.",
+        );
       const workspace = {
         ...context.workspace,
         principal: useAuthStore.getState().principal,
@@ -219,10 +291,29 @@ export function useEmergencyMutation<A extends EmergencyAction>(
         throw new Error(
           "This emergency action is not available for the current route and transport.",
         );
-      return executeEmergencyAction(action, plan.routePlanId, input);
+      const controller = new AbortController();
+      request.current = controller;
+      try {
+        return await executeEmergencyAction(
+          action,
+          plan.routePlanId,
+          input,
+          controller.signal,
+        );
+      } finally {
+        if (request.current === controller) request.current = null;
+      }
     },
-    onSuccess: (response) =>
-      refreshEmergencyQueries(
+    onSuccess: async (response, _input, mutationContext) => {
+      const stillCurrent = () =>
+        currentSession() &&
+        mutationContext?.scope === scope &&
+        mutationContext.generation === generation.current;
+      if (!stillCurrent())
+        throw new Error(
+          "The route or account changed before the result could be applied.",
+        );
+      await refreshEmergencyQueries(
         client,
         plan,
         action,
@@ -235,8 +326,14 @@ export function useEmergencyMutation<A extends EmergencyAction>(
               )
           : [],
         context.transportId,
-      ),
+      );
+      if (!stillCurrent())
+        throw new Error(
+          "The route or account changed while the workspace was refreshing.",
+        );
+    },
     onError: async (error) => {
+      if (!currentSession()) return;
       const { code } = getApiErrorInfo(error);
       if (
         [

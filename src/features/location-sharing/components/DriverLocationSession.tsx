@@ -1,12 +1,11 @@
 import { useCallback, useEffect, type ReactNode } from "react";
-import { useParams } from "react-router-dom";
+import { useMatch, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/store";
 import { canAccess } from "@/features/auth/access-control";
 import { useTransportOverview } from "@/features/ongoing-transport/hooks/useTransportOverview";
 import { refreshTransportProgress } from "@/features/ongoing-transport/hooks/useTransportProgressRefresh";
 import { getOngoingTransportError } from "@/features/ongoing-transport/services";
-import { isOngoingTransportMockMode } from "@/features/ongoing-transport/source";
 import { useLocationSharing } from "../hooks/useLocationSharing";
 import {
   useAssignedDriverContext,
@@ -17,9 +16,20 @@ import { LocationWorkflowDialogs } from "./LocationWorkflowDialogs";
 import type { DriverTransportReadState } from "../types";
 
 export function DriverLocationSession({ children }: { children: ReactNode }) {
-  const { transportId } = useParams<{ transportId: string }>();
+  const route = useMatch("/crew/transports/:transportId/*");
+  const { pathname } = useLocation();
   const principal = useAuthStore((state) => state.principal);
   const driver = canAccess(principal, { anyRole: ["DRIVER"] });
+  const crewRoute = pathname === "/crew" || pathname.startsWith("/crew/");
+  const source = "real";
+  const assigned = useAssignedDriverContext(crewRoute);
+  const transportId =
+    route?.params.transportId ??
+    (pathname === "/crew"
+      ? assigned.data?.items.find(
+          (item) => item.status === "IN_TRANSIT" && item.myRole === "DRIVER",
+        )?.transportId
+      : undefined);
   const query = useTransportOverview(
     transportId,
     undefined,
@@ -27,8 +37,6 @@ export function DriverLocationSession({ children }: { children: ReactNode }) {
     "data",
     false,
   );
-  const source = isOngoingTransportMockMode() ? "mock" : "real";
-  const assigned = useAssignedDriverContext(source === "real");
   const client = useQueryClient();
   const refetchAssignment = assigned.refetch;
   const assignment = assigned.isError

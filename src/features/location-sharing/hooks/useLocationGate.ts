@@ -7,14 +7,19 @@ import type { AssignedLocationContext, LocationSharingState } from "../types";
 
 export const LOCATION_ACCEPTANCE_MAX_AGE_MS = 60_000;
 
-export function useAssignedDriverContext(real: boolean) {
+export function useAssignedDriverContext(real: boolean, crew = false) {
   const principal = useAuthStore((state) => state.principal);
   const sessionVersion = useAuthStore((state) => state.sessionVersion);
   const signedIn = useAuthStore((state) => Boolean(state.accessToken));
   return useQuery({
     queryKey: ["driver-location-assignment", principal?.id, sessionVersion],
     queryFn: ({ signal }) => locationSharingService.assigned(signal),
-    enabled: real && signedIn && canAccess(principal, { anyRole: ["DRIVER"] }),
+    enabled:
+      real &&
+      signedIn &&
+      canAccess(principal, {
+        anyRole: crew ? ["DRIVER", "ESCORT"] : ["DRIVER"],
+      }),
     staleTime: 10_000,
     refetchInterval: 15_000,
     refetchIntervalInBackground: false,
