@@ -131,3 +131,107 @@ export const rerouteContextSchema = z.object({
 
 export type RerouteContext = z.infer<typeof rerouteContextSchema>;
 export type ReroutePlan = RerouteContext["backupPlans"][number];
+
+export const rerouteEscalationRequestSchema = z
+  .strictObject({
+    reason: z
+      .string()
+      .trim()
+      .min(10, "Enter at least 10 characters.")
+      .max(2000, "Use at most 2,000 characters."),
+    suggestedAction: z.enum(["HOLD", "RETURN"]).optional(),
+    suggestedHoldMinutes: z
+      .number()
+      .int("Enter whole minutes.")
+      .min(15)
+      .max(240)
+      .optional(),
+    blockedRoutePlanIds: z.array(rerouteIncidentIdSchema).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (
+      value.suggestedHoldMinutes !== undefined &&
+      value.suggestedAction !== "HOLD"
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["suggestedHoldMinutes"],
+        message: "A wait duration is only valid with HOLD.",
+      });
+    const ids =
+      value.blockedRoutePlanIds?.map((value) => value.toLowerCase()) ?? [];
+    if (new Set(ids).size !== ids.length)
+      ctx.addIssue({
+        code: "custom",
+        path: ["blockedRoutePlanIds"],
+        message: "Select each route plan only once.",
+      });
+  });
+
+const rerouteEscalationFormBase = z.object({
+  reason: z.string(),
+  suggestedAction: z.enum(["NONE", "HOLD", "RETURN"]),
+  suggestedHoldMinutes: z.string(),
+  blockedRoutePlanIds: z.array(z.string()),
+});
+
+function escalationRequestFromForm(
+  values: z.infer<typeof rerouteEscalationFormBase>,
+) {
+  const minutes = values.suggestedHoldMinutes.trim();
+  return {
+    reason: values.reason,
+    ...(values.suggestedAction !== "NONE"
+      ? { suggestedAction: values.suggestedAction }
+      : {}),
+    ...(values.suggestedAction === "HOLD" && minutes
+      ? { suggestedHoldMinutes: Number(minutes) }
+      : {}),
+    ...(values.blockedRoutePlanIds.length
+      ? { blockedRoutePlanIds: values.blockedRoutePlanIds }
+      : {}),
+  };
+}
+
+export function parseRerouteEscalationForm(
+  values: z.infer<typeof rerouteEscalationFormBase>,
+) {
+  return rerouteEscalationRequestSchema.parse(
+    escalationRequestFromForm(values),
+  );
+}
+
+export const rerouteEscalationFormSchema =
+  rerouteEscalationFormBase.superRefine((values, ctx) => {
+    const parsed = rerouteEscalationRequestSchema.safeParse(
+      escalationRequestFromForm(values),
+    );
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues)
+        ctx.addIssue({
+          code: "custom",
+          path: issue.path,
+          message: issue.message,
+        });
+    }
+  });
+
+export const rerouteEscalationResultSchema = z.object({
+  incidentReportId: rerouteIncidentIdSchema,
+  incidentStatus: z.literal("PENDING"),
+  notifiedLogisticsManagers: z.array(
+    z.object({
+      ...employee.shape,
+      employeeId: rerouteIncidentIdSchema,
+      role: z.literal("LOGISTICS_MANAGER"),
+    }),
+  ),
+  sentAt: time,
+});
+
+export type RerouteEscalationRequest = z.infer<
+  typeof rerouteEscalationRequestSchema
+>;
+export type RerouteEscalationResult = z.infer<
+  typeof rerouteEscalationResultSchema
+>;

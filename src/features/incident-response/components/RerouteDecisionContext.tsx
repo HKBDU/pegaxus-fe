@@ -4,6 +4,7 @@ import {
 } from "@/features/transport-plan/components/ApprovedBookingDetails";
 import { formatPlanDate } from "@/features/transport-plan/format";
 import type { RerouteContext } from "../reroute-schemas";
+import type { ReactNode } from "react";
 
 const actionLabels: Record<string, string> = {
   REQUEST_BACKUP: "Request BACKUP review",
@@ -16,8 +17,10 @@ const actionLabels: Record<string, string> = {
 
 export function RerouteDecisionOptions({
   context,
+  children,
 }: {
   context: RerouteContext;
+  children?: ReactNode;
 }) {
   const has = (action: string) => context.availableActions.includes(action);
   const options = [
@@ -71,6 +74,7 @@ export function RerouteDecisionOptions({
           </li>
         ))}
       </ul>
+      {children}
     </Section>
   );
 }

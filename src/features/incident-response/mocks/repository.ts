@@ -1,7 +1,13 @@
 import { canAccess, normalizeRole } from "@/features/auth/access-control";
 import type { AuthPrincipal } from "@/features/auth/types";
 import { useAuthStore } from "@/features/auth/store";
-import { rerouteContextSchema, type RerouteContext } from "../reroute-schemas";
+import {
+  rerouteContextSchema,
+  rerouteEscalationRequestSchema,
+  type RerouteContext,
+  type RerouteEscalationRequest,
+  type RerouteEscalationResult,
+} from "../reroute-schemas";
 import {
   emergencyCostCreateSchema,
   type EmergencyCostCreateInput,
@@ -54,6 +60,12 @@ export const emergencyCostMockIds = {
   approvedRequest: uuid(102),
 };
 const seededTime = "2026-10-21T08:00:00Z";
+const mockRerouteManager = {
+  employeeId: uuid(440),
+  employeeCode: "EMP-MOCK-LM",
+  fullName: "Synthetic manager",
+  role: "LOGISTICS_MANAGER" as const,
+};
 const creatorRoles = ["DRIVER", "ESCORT", "FLEET_ROUTE_COORDINATOR"];
 const readerRoles = [
   "LOGISTICS_MANAGER",
@@ -766,12 +778,7 @@ function rerouteContext(id: string, actor: Actor): RerouteContext {
           monitorIntervalMinutes: 15,
           reason: "Synthetic safe-stop monitoring decision.",
           safeStopLocation: from,
-          decidedBy: {
-            employeeId: uuid(440),
-            employeeCode: "EMP-MOCK-LM",
-            fullName: "Synthetic manager",
-            role: "LOGISTICS_MANAGER",
-          },
+          decidedBy: { ...mockRerouteManager },
         }
       : null,
     availableActions: !open
@@ -788,6 +795,46 @@ function rerouteContext(id: string, actor: Actor): RerouteContext {
   };
 }
 
+function escalateReroute(
+  id: string,
+  input: RerouteEscalationRequest,
+  actor: Actor,
+): RerouteEscalationResult {
+  if (
+    !canAccess(actor.principal, { anyRole: ["FLEET_ROUTE_COORDINATOR"] }) ||
+    canAccess(actor.principal, { anyRole: ["CUSTOMER", "LOGISTICS_MANAGER"] })
+  )
+    throw new MockEmergencyCostError(403, "FORBIDDEN");
+  const parsed = rerouteEscalationRequestSchema.safeParse(input);
+  if (!parsed.success)
+    throw new MockEmergencyCostError(400, "VALIDATION_ERROR");
+  const incident = getIncident(id, actor);
+  if (!["REPORTED", "PENDING"].includes(incident.status))
+    throw new MockEmergencyCostError(422, "INVALID_INCIDENT_STATUS");
+  if (incident.transport.status !== "IN_TRANSIT")
+    throw new MockEmergencyCostError(409, "TRANSPORT_NOT_IN_TRANSIT");
+  const context = rerouteContext(id, actor);
+  const ids = new Set(
+    [
+      context.currentSegment?.routePlanId,
+      ...context.remainingSegments.map((segment) => segment.routePlanId),
+      ...context.backupPlans.map((plan) => plan.routePlanId),
+      context.returnPlan?.routePlanId,
+    ]
+      .filter((id): id is string => Boolean(id))
+      .map((id) => id.toLowerCase()),
+  );
+  if (parsed.data.blockedRoutePlanIds?.some((id) => !ids.has(id.toLowerCase())))
+    throw new MockEmergencyCostError(400, "VALIDATION_ERROR");
+  incident.status = "PENDING";
+  return {
+    incidentReportId: incident.incidentReportId,
+    incidentStatus: "PENDING",
+    notifiedLogisticsManagers: [{ ...mockRerouteManager }],
+    sentAt: seededTime,
+  };
+}
+
 export const emergencyCostMockRepository = {
   list,
   create,
@@ -796,4 +843,5 @@ export const emergencyCostMockRepository = {
   cancel,
   decide,
   rerouteContext,
+  escalateReroute,
 };

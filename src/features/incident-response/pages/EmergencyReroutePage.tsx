@@ -22,6 +22,7 @@ import {
 } from "../components/RerouteDecisionContext";
 import { useRerouteContext } from "../hooks/useRerouteContext";
 import { getRerouteError } from "../reroute-services";
+import { RerouteEscalationAction } from "../components/RerouteEscalationAction";
 
 export default function EmergencyReroutePage() {
   const { incidentReportId } = useParams<{ incidentReportId: string }>();
@@ -102,8 +103,8 @@ export default function EmergencyReroutePage() {
       ) : data ? (
         <>
           <p role="note" className="m-0 text-xs text-slate-500">
-            Read-only context. Proposals, approvals and hold decisions are not
-            submitted here.
+            Route and hold decisions remain read-only. Authorized coordinators
+            can escalate the incident to Logistics Management.
           </p>
           <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <div className="min-w-0 space-y-3">
@@ -142,7 +143,15 @@ export default function EmergencyReroutePage() {
               <RerouteComparison context={data} />
             </div>
             <div className="min-w-0 space-y-3">
-              <RerouteDecisionOptions context={data} />
+              <RerouteDecisionOptions context={data}>
+                <RerouteEscalationAction
+                  key={`${query.source}:${query.scope}:${data.incident.incidentReportId}`}
+                  context={data}
+                  scope={query.scope}
+                  queryKey={query.queryKey}
+                  refreshing={query.isFetching}
+                />
+              </RerouteDecisionOptions>
               <RerouteDecisionContext context={data} />
             </div>
           </div>
