@@ -10,6 +10,7 @@ import type { EmergencyCostAudience } from "./navigation";
 const ListPage = lazy(() => import("./pages/EmergencyCostListPage"));
 const CreatePage = lazy(() => import("./pages/EmergencyCostCreatePage"));
 const DetailPage = lazy(() => import("./pages/EmergencyCostDetailPage"));
+const ReroutePage = lazy(() => import("./pages/EmergencyReroutePage"));
 const page = (element: ReactNode) => (
   <Suspense fallback={<LoadingState />}>{element}</Suspense>
 );
@@ -62,5 +63,19 @@ export const emergencyCostRoutes: RouteObject[] = [
       </ProtectedRoute>
     ),
     children: children("crew"),
+  },
+];
+
+export const emergencyRerouteRoutes: RouteObject[] = [
+  {
+    path: "/admin/incidents/:incidentReportId/reroute",
+    element: (
+      <ProtectedRoute
+        allowedRoles={["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR"]}
+      >
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [{ index: true, element: page(<ReroutePage />) }],
   },
 ];

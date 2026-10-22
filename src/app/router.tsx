@@ -27,7 +27,10 @@ import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearan
 import CustomsClearanceReviewPage from "@/features/clearance/pages/CustomsClearanceReviewPage";
 import { horseHealthCrewFormRoutes, horseHealthRoutes, horseHealthTabRoutes } from "@/features/horse-health";
 import { ongoingTransportRoutes } from "@/features/ongoing-transport";
-import { emergencyCostRoutes } from "@/features/incident-response";
+import {
+  emergencyCostRoutes,
+  emergencyRerouteRoutes,
+} from "@/features/incident-response";
 import TestPage from "@/Test";
 
 import LogoutPage from "@/features/auth/pages/LogoutPage";
@@ -140,6 +143,7 @@ const bookingHistoryPage = (
 
 export const router = createBrowserRouter([
   ...emergencyCostRoutes,
+  ...emergencyRerouteRoutes,
   {
     element: (
       <DriverLocationSession>

@@ -1,6 +1,7 @@
 import { canAccess, normalizeRole } from "@/features/auth/access-control";
 import type { AuthPrincipal } from "@/features/auth/types";
 import { useAuthStore } from "@/features/auth/store";
+import { rerouteContextSchema, type RerouteContext } from "../reroute-schemas";
 import {
   emergencyCostCreateSchema,
   type EmergencyCostCreateInput,
@@ -595,6 +596,198 @@ function decide(id: string, input: EmergencyCostDecisionInput, actor: Actor) {
   return { ...record.request };
 }
 
+function rerouteContext(id: string, actor: Actor): RerouteContext {
+  if (
+    !canAccess(actor.principal, {
+      anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR"],
+    }) ||
+    canAccess(actor.principal, { anyRole: ["CUSTOMER"] })
+  )
+    throw new MockEmergencyCostError(403, "FORBIDDEN");
+  const incident = getIncident(id, actor);
+  const manager = canAccess(actor.principal, {
+    anyRole: ["LOGISTICS_MANAGER"],
+  });
+  const open =
+    ["REPORTED", "PENDING"].includes(incident.status) &&
+    incident.transport.status === "IN_TRANSIT";
+  const extended = id.toLowerCase() === emergencyCostMockIds.pendingIncident;
+  const location = (value: number, name: string) => ({
+    locationId: uuid(value),
+    locationName: name,
+    locationType: "REST_STOP",
+    city: null,
+    country: "FR",
+    latitude: null,
+    longitude: null,
+  });
+  const from = location(501, "Synthetic rest stop");
+  const to = location(502, "Synthetic border stop");
+  const checks = [
+    {
+      code: "DRIVING_HOURS_BR033",
+      passed: true,
+      message: "Synthetic schedule satisfies driving and rest limits.",
+    },
+    {
+      code: "REST_STOP_24H_BR034",
+      passed: true,
+      message: "Synthetic schedule includes the required rest.",
+    },
+  ];
+  const backup: RerouteContext["backupPlans"][number] = {
+    routePlanId: uuid(410),
+    routePlanCode: "RP-MOCK-BACKUP-01",
+    status: "CONFIRMED",
+    totalDistanceKm: 360.5,
+    estimatedDurationMinutes: 480,
+    plannedArrivalAt: "2026-10-22T11:00:00Z",
+    etaDelayMinutes: 180,
+    isAvailable: true,
+    unavailableReason: null,
+    checks,
+    branchSequenceNo: 3,
+    branchLocation: to,
+  };
+  const empty =
+    incident.status === "RESOLVED" || incident.status === "CANCELLED";
+  return {
+    serverTime: seededTime,
+    incident: {
+      incidentReportId: incident.incidentReportId,
+      incidentCode: incident.incidentCode,
+      category: incident.category,
+      severity: incident.severity,
+      status: incident.status,
+      title: incident.title,
+      vehicleOperable: incident.category === "VEHICLE" ? false : null,
+      occurredAt: "2026-10-21T07:00:00Z",
+    },
+    transport: rerouteContextSchema.shape.transport.parse({
+      ...incident.transport,
+      transportPlanId: uuid(400),
+    }),
+    currentSegment:
+      incident.transport.status === "IN_TRANSIT" && !empty
+        ? {
+            routePlanRouteId: uuid(420),
+            routePlanId: uuid(401),
+            sequenceNo: 2,
+            routeType: "PRIMARY",
+            fromLocation: from,
+            toLocation: to,
+            status: "IN_TRANSIT",
+            plannedArrivalAt: "2026-10-21T09:30:00Z",
+            actualDepartureAt: "2026-10-21T06:00:00Z",
+            actualArrivalAt: null,
+          }
+        : null,
+    remainingSegments: empty
+      ? []
+      : [
+          {
+            routePlanRouteId: uuid(421),
+            routePlanId: uuid(401),
+            sequenceNo: 3,
+            routeType: "PRIMARY",
+            fromLocation: to,
+            toLocation: location(503, "Synthetic destination"),
+            status: "PLANNED",
+            plannedArrivalAt: "2026-10-22T08:00:00Z",
+            actualDepartureAt: null,
+            actualArrivalAt: null,
+          },
+        ],
+    backupPlans: empty
+      ? []
+      : [
+          backup,
+          {
+            ...backup,
+            routePlanId: uuid(411),
+            routePlanCode: "RP-MOCK-BACKUP-02",
+            status: "DRAFT",
+            totalDistanceKm: null,
+            estimatedDurationMinutes: null,
+            plannedArrivalAt: null,
+            etaDelayMinutes: -30,
+            isAvailable: false,
+            unavailableReason: "NOT_CONFIRMED",
+            branchLocation: null,
+            branchSequenceNo: null,
+            checks: [
+              {
+                code: "DRIVING_HOURS_BR033",
+                passed: false,
+                message: "Synthetic planned schedule is incomplete.",
+              },
+            ],
+          },
+        ],
+    returnPlan: extended
+      ? {
+          ...backup,
+          routePlanId: uuid(412),
+          routePlanCode: "RP-MOCK-RETURN-01",
+          status: "PENDING_LEGAL_REVIEW",
+          isAvailable: false,
+          unavailableReason: "NOT_CONFIRMED",
+          etaDelayMinutes: null,
+          branchSequenceNo: undefined,
+          branchLocation: undefined,
+        }
+      : null,
+    complianceDossiers: empty
+      ? []
+      : [
+          {
+            complianceDossierId: uuid(430),
+            dossierCode: "CD-MOCK-MAIN",
+            dossierType: "MAIN",
+            status: "APPROVED",
+          },
+          ...(extended
+            ? [
+                {
+                  complianceDossierId: uuid(431),
+                  dossierCode: "CD-MOCK-EXTRA",
+                  dossierType: "EXTRA" as const,
+                  status: "DRAFT" as const,
+                },
+              ]
+            : []),
+        ],
+    hold: extended
+      ? {
+          status: "ACTIVE",
+          startedAt: "2026-10-21T07:45:00Z",
+          holdUntil: "2026-10-21T08:45:00Z",
+          holdMinutes: 60,
+          monitorIntervalMinutes: 15,
+          reason: "Synthetic safe-stop monitoring decision.",
+          safeStopLocation: from,
+          decidedBy: {
+            employeeId: uuid(440),
+            employeeCode: "EMP-MOCK-LM",
+            fullName: "Synthetic manager",
+            role: "LOGISTICS_MANAGER",
+          },
+        }
+      : null,
+    availableActions: !open
+      ? []
+      : [
+          manager ? "APPROVE_BACKUP" : "REQUEST_BACKUP",
+          ...(!manager
+            ? ["ESCALATE_REROUTE"]
+            : !extended
+              ? ["HOLD_ROUTE"]
+              : []),
+          ...(!extended ? ["CREATE_RETURN"] : []),
+        ],
+  };
+}
+
 export const emergencyCostMockRepository = {
   list,
   create,
@@ -602,4 +795,5 @@ export const emergencyCostMockRepository = {
   incidentContext,
   cancel,
   decide,
+  rerouteContext,
 };

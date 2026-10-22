@@ -2,7 +2,7 @@ export { EmergencyCostList } from "./components/EmergencyCostList";
 export type { EmergencyCostListProps } from "./components/EmergencyCostList";
 export { useEmergencyCostRequests } from "./hooks/useEmergencyCostRequests";
 export { emergencyCostService, getEmergencyCostError } from "./services";
-export { emergencyCostRoutes } from "./routes";
+export { emergencyCostRoutes, emergencyRerouteRoutes } from "./routes";
 export {
   emergencyCostCreatePath,
   emergencyCostDetailPath,
