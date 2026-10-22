@@ -13,6 +13,8 @@ import {
 } from "../navigation";
 import { emergencyCostIdSchema } from "../schemas";
 import { getEmergencyCostError } from "../services";
+import { EmergencyCostActions } from "../components/EmergencyCostActions";
+import { useEmergencyCostScope } from "../hooks/useEmergencyCostScope";
 
 export default function EmergencyCostDetailPage({
   audience,
@@ -24,6 +26,7 @@ export default function EmergencyCostDetailPage({
   }>();
   const [search] = useSearchParams();
   const query = useEmergencyCostDetail(emergencyCostRequestId);
+  const { scope, source } = useEmergencyCostScope();
   const error = query.isError
     ? getEmergencyCostError(query.error, "detail")
     : null;
@@ -66,11 +69,17 @@ export default function EmergencyCostDetailPage({
                 {data.request.requestCode}
               </h1>
               <p className="mt-1 mb-0 text-sm text-muted-foreground">
-                Emergency cost request · read-only
+                Emergency cost request
               </p>
             </div>
             <CostStatusBadge status={data.request.status} />
           </header>
+          <EmergencyCostActions
+            key={`${scope}:${source}:${data.request.emergencyCostRequestId}`}
+            request={data.request}
+            refreshing={query.isFetching}
+            onReload={() => void query.refetch()}
+          />
           <EmergencyCostDetailSections
             request={data.request}
             evidence={data.evidence}

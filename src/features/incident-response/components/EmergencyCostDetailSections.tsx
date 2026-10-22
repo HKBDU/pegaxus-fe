@@ -95,7 +95,13 @@ export function EmergencyCostDetailSections({
           <Details
             rows={[
               ["Category", EMERGENCY_COST_CATEGORY_LABELS[request.category]],
-              ["Status", <CostStatusBadge status={request.status} />],
+              [
+                "Status",
+                <CostStatusBadge
+                  key="request-status"
+                  status={request.status}
+                />,
+              ],
               [
                 "Requested by",
                 request.requestedBy
@@ -249,20 +255,26 @@ export function EmergencyCostDetailSections({
       <Section title="Decision and request metadata">
         {request.status === "PENDING" ? (
           <p className="m-0 text-sm">
-            Awaiting review. Approval, rejection and cancellation are not
-            available in this feature batch.
+            Awaiting review. Available actions depend on your role and the
+            latest server permissions.
           </p>
         ) : null}
         {decision ? (
           <Details
             rows={[
               ["Decision", decision.decision],
-              ["Approved amount", <VndText amount={decision.approvedAmount} />],
+              [
+                "Approved amount",
+                <VndText
+                  key="decision-amount"
+                  amount={decision.approvedAmount}
+                />,
+              ],
               ["Decided by", decision.decidedBy?.fullName],
               ["Decided at", date(decision.decidedAt)],
               [
                 "Reason",
-                <span className="whitespace-pre-wrap">
+                <span key="decision-reason" className="whitespace-pre-wrap">
                   {decision.decisionReason ?? "—"}
                 </span>,
               ],

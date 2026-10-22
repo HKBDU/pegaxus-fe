@@ -9,6 +9,12 @@ import {
   type EmergencyCostParams,
   type EmergencyCostRequestDto,
 } from "../schemas";
+import {
+  createEmergencyCostDecisionSchema,
+  emergencyCostCancelSchema,
+  type EmergencyCostCancelInput,
+  type EmergencyCostDecisionInput,
+} from "../action-schemas";
 
 export interface MockCostEvidence {
   publicId: string;
@@ -26,6 +32,7 @@ type MockIncident = EmergencyCostIncident & { assignedRoles: string[] };
 type MockRecord = {
   request: EmergencyCostRequestDto;
   evidence: CostEvidencePreview[];
+  ownerAccountId: string;
 };
 type Repository = {
   incidents: MockIncident[];
@@ -82,7 +89,16 @@ function visible(incident: MockIncident, actor: Actor) {
   );
 }
 
-function seed(): Repository {
+function isCreator(actor: Actor) {
+  return (
+    canAccess(actor.principal, { anyRole: creatorRoles }) &&
+    !canAccess(actor.principal, {
+      anyRole: ["LOGISTICS_MANAGER", "TRANSPORT_SPECIALIST"],
+    })
+  );
+}
+
+function seed(actor: Actor): Repository {
   const incidents: MockIncident[] = [
     "REPORTED",
     "PENDING",
@@ -147,6 +163,13 @@ function seed(): Repository {
     ).toISOString();
     const amount = (index + 1) * 1_500_000;
     return {
+      // Synthetic fixture ownership is independent of the nullable wire requester.
+      ownerAccountId:
+        isCreator(actor) &&
+        (index === 0 ||
+          canAccess(actor.principal, { anyRole: [creatorRoles[index % 3]] }))
+          ? actor.principal.id
+          : uuid(300 + index),
       request: {
         emergencyCostRequestId: uuid(101 + index),
         requestCode: `ECR-20261021-${String(index + 1).padStart(4, "0")}`,
@@ -252,7 +275,7 @@ function repository(actor: Actor) {
   if (key !== activeKey || !activeRepository) {
     clearRepository();
     activeKey = key;
-    activeRepository = seed();
+    activeRepository = seed(actor);
   }
   return activeRepository;
 }
@@ -358,8 +381,7 @@ function create(
 ) {
   const store = repository(actor);
   const incident = getIncident(id, actor);
-  if (!canAccess(actor.principal, { anyRole: creatorRoles }))
-    throw new MockEmergencyCostError(403, "FORBIDDEN");
+  if (!isCreator(actor)) throw new MockEmergencyCostError(403, "FORBIDDEN");
   if (!["REPORTED", "PENDING"].includes(incident.status))
     throw new MockEmergencyCostError(422, "INVALID_INCIDENT_STATUS");
   if (incident.transport.status !== "IN_TRANSIT")
@@ -410,6 +432,7 @@ function create(
   };
   store.records.push({
     request,
+    ownerAccountId: actor.principal.id,
     evidence: photos.map((photo) => ({
       id: photo.publicId,
       url: URL.createObjectURL(photo.file),
@@ -444,9 +467,10 @@ function getDetail(
       availableActions:
         record.request.status !== "PENDING"
           ? []
-          : canAccess(actor.principal, { anyRole: ["LOGISTICS_MANAGER"] })
+          : canAccess(actor.principal, { anyRole: ["LOGISTICS_MANAGER"] }) &&
+              ["REPORTED", "PENDING"].includes(incident.status)
             ? ["DECIDE"]
-            : canAccess(actor.principal, { anyRole: creatorRoles })
+            : isCreator(actor) && record.ownerAccountId === actor.principal.id
               ? ["CANCEL"]
               : [],
       incidentSummary: {
@@ -493,9 +517,89 @@ function getDetail(
   };
 }
 
+function actionRecord(id: string, actor: Actor) {
+  const record = repository(actor).records.find(
+    ({ request }) =>
+      request.emergencyCostRequestId.toLowerCase() === id.toLowerCase(),
+  );
+  if (!record)
+    throw new MockEmergencyCostError(404, "EMERGENCY_COST_NOT_FOUND");
+  const incident = getIncident(record.request.incident.incidentReportId, actor);
+  return { record, incident };
+}
+
+function nextVersion(previous: string) {
+  return new Date(
+    Math.max(Date.now(), new Date(previous).getTime() + 1),
+  ).toISOString();
+}
+
+function cancel(id: string, input: EmergencyCostCancelInput, actor: Actor) {
+  const { record } = actionRecord(id, actor);
+  if (!isCreator(actor) || record.ownerAccountId !== actor.principal.id)
+    throw new MockEmergencyCostError(403, "FORBIDDEN");
+  if (record.request.status !== "PENDING")
+    throw new MockEmergencyCostError(409, "INVALID_EMERGENCY_COST_STATUS");
+  const body = emergencyCostCancelSchema.parse(input);
+  if (body.lastUpdatedAt !== record.request.updatedAt)
+    throw new MockEmergencyCostError(409, "EMERGENCY_COST_MODIFIED");
+  const now = nextVersion(record.request.updatedAt);
+  record.request = {
+    ...record.request,
+    status: "CANCELLED",
+    approvedAmount: null,
+    decision: null,
+    cancelledAt: now,
+    cancellationReason: body.cancellationReason,
+    updatedAt: now,
+  };
+  return { ...record.request };
+}
+
+function decide(id: string, input: EmergencyCostDecisionInput, actor: Actor) {
+  const { record, incident } = actionRecord(id, actor);
+  if (!canAccess(actor.principal, { anyRole: ["LOGISTICS_MANAGER"] }))
+    throw new MockEmergencyCostError(403, "FORBIDDEN");
+  if (record.request.status !== "PENDING")
+    throw new MockEmergencyCostError(409, "EMERGENCY_COST_ALREADY_DECIDED");
+  const body = createEmergencyCostDecisionSchema(
+    record.request.requestedAmount,
+  ).parse(input);
+  if (body.lastUpdatedAt !== record.request.updatedAt)
+    throw new MockEmergencyCostError(409, "EMERGENCY_COST_MODIFIED");
+  if (!["REPORTED", "PENDING"].includes(incident.status))
+    throw new MockEmergencyCostError(422, "INVALID_INCIDENT_STATUS");
+  const status = body.decision === "APPROVE" ? "APPROVED" : "REJECTED";
+  const approvedAmount = body.decision === "APPROVE" ? body.approvedAmount : 0;
+  const now = nextVersion(record.request.updatedAt);
+  if (incident.status === "REPORTED") incident.status = "PENDING";
+  record.request = {
+    ...record.request,
+    status,
+    approvedAmount,
+    updatedAt: now,
+    incident: { ...record.request.incident, status: incident.status },
+    decision: {
+      decision: status,
+      approvedAmount,
+      decisionReason: body.decisionReason || null,
+      decidedBy: {
+        employeeId: uuid(70),
+        employeeCode: "EMP-MOCK-LM",
+        fullName: "Synthetic logistics manager",
+        role: "LOGISTICS_MANAGER",
+      },
+      decidedAt: now,
+    },
+  };
+  return { ...record.request };
+}
+
 export const emergencyCostMockRepository = {
   list,
   create,
   getDetail,
   incidentContext,
+  cancel,
+  decide,
 };
