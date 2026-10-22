@@ -30,6 +30,12 @@ export function RerouteEscalationAction({
   const principal = useAuthStore((state) => state.principal);
   const mutation = useRerouteEscalation(scope, queryKey);
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<RerouteEscalationRequest>();
+  const [verifying, setVerifying] = useState(false);
+  const [verification, setVerification] = useState<{
+    message: string;
+    eligible: boolean;
+  }>();
   const mounted = useRef(false);
   useEffect(() => {
     mounted.current = true;
@@ -41,10 +47,12 @@ export function RerouteEscalationAction({
   const error = mutation.isError
     ? getRerouteEscalationError(mutation.error)
     : null;
-  const blocked = refreshing || !allowed || Boolean(error?.blocked);
+  const blocked =
+    refreshing || verifying || !allowed || Boolean(error?.blocked);
   async function submit(request: RerouteEscalationRequest) {
     if (blocked || mutation.isPending || emergencyCostAuthScope() !== scope)
       return;
+    setDraft(request);
     try {
       await mutation.mutateAsync({ context, request });
       if (mounted.current && emergencyCostAuthScope() === scope) setOpen(false);
@@ -52,12 +60,49 @@ export function RerouteEscalationAction({
       // Keep form values; conflicts and uncertain delivery are never resubmitted automatically.
     }
   }
+  async function verify() {
+    if (verifying || mutation.isPending || emergencyCostAuthScope() !== scope)
+      return;
+    setVerifying(true);
+    setVerification(undefined);
+    try {
+      const latest = await mutation.verifyContext(
+        context.incident.incidentReportId,
+      );
+      if (mounted.current && emergencyCostAuthScope() === scope)
+        setVerification({
+          eligible: canEscalateReroute(
+            useAuthStore.getState().principal,
+            latest,
+          ),
+          message: `Latest incident status: ${latest.incident.status}. RT1 does not provide an escalation delivery receipt. Check with Logistics Management before considering another attempt.`,
+        });
+    } catch {
+      if (mounted.current && emergencyCostAuthScope() === scope)
+        setVerification({
+          eligible: false,
+          message:
+            "The latest context could not be verified. Your draft remains locked and preserved.",
+        });
+    } finally {
+      if (mounted.current) setVerifying(false);
+    }
+  }
   return (
     <Dialog
       open={open}
       onOpenChange={(value) => {
-        if (mutation.isPending || (value && (!allowed || refreshing))) return;
-        if (value) mutation.reset();
+        if (
+          mutation.isPending ||
+          verifying ||
+          (value && (!allowed || refreshing))
+        )
+          return;
+        if (value && !error?.outcomeUnknown) {
+          mutation.reset();
+          setDraft(undefined);
+          setVerification(undefined);
+        }
         setOpen(value);
       }}
     >
@@ -65,11 +110,13 @@ export function RerouteEscalationAction({
         <DialogTrigger asChild>
           <Button
             type="button"
-            disabled={refreshing || mutation.isPending}
+            disabled={refreshing || mutation.isPending || verifying}
             className="min-h-11 w-full rounded-[2px] font-heading text-xs uppercase sm:min-h-9"
           >
             <Send aria-hidden="true" className="size-3.5" />
-            Escalate to LM
+            {error?.outcomeUnknown
+              ? "Review Escalation Outcome"
+              : "Escalate to LM"}
           </Button>
         </DialogTrigger>
       )}
@@ -78,6 +125,19 @@ export function RerouteEscalationAction({
           context={context}
           busy={mutation.isPending}
           blocked={blocked}
+          initialRequest={draft}
+          uncertain={error?.outcomeUnknown}
+          verifying={verifying}
+          verificationMessage={verification?.message}
+          onVerify={() => void verify()}
+          onReview={
+            verification?.eligible && allowed && !refreshing
+              ? () => {
+                  mutation.reset();
+                  setVerification(undefined);
+                }
+              : undefined
+          }
           feedback={
             error?.message ??
             (!allowed
@@ -85,7 +145,7 @@ export function RerouteEscalationAction({
               : undefined)
           }
           onClose={() => {
-            if (!mutation.isPending) setOpen(false);
+            if (!mutation.isPending && !verifying) setOpen(false);
           }}
           onSubmit={submit}
         />

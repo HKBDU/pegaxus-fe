@@ -8,7 +8,11 @@ import { useDebounce } from "@/shared/hooks/useDebounce";
 import { EMERGENCY_COST_STATUS_OPTIONS } from "@/shared/constants/incident";
 import type { IncidentAudience } from "@/shared/types/incident";
 import { useEmergencyCostRequests } from "../hooks/useEmergencyCostRequests";
-import { emergencyCostStatuses, type EmergencyCostParams } from "../schemas";
+import {
+  emergencyCostStatuses,
+  type EmergencyCostParams,
+  type EmergencyCostListItem,
+} from "../schemas";
 import { canReadEmergencyCosts, getEmergencyCostError } from "../services";
 import {
   EmergencyCostFilters,
@@ -36,6 +40,8 @@ export interface EmergencyCostListProps {
   audience?: IncidentAudience;
   className?: string;
   routeAudience?: EmergencyCostAudience;
+  hideHeading?: boolean;
+  onOpenRequest?: (item: EmergencyCostListItem) => void;
 }
 
 export function EmergencyCostList(props: EmergencyCostListProps) {
@@ -75,10 +81,12 @@ function EmergencyCostListContent({
   className,
   manager,
   routeAudience,
+  hideHeading,
+  onOpenRequest,
 }: EmergencyCostListProps & { manager: boolean }) {
   const headingId = useId();
   const defaults: EmergencyCostParams = {
-    status: manager ? "PENDING" : emergencyCostStatuses.join(","),
+    status: manager && !embedded ? "PENDING" : emergencyCostStatuses.join(","),
     pageIndex: 1,
     pageSize: 20,
     sortBy: "requestedAt:desc",
@@ -117,24 +125,26 @@ function EmergencyCostListContent({
       aria-labelledby={headingId}
       className={cn("w-full min-w-0 max-w-full space-y-3 font-sans", className)}
     >
-      <header className="border-b border-border pb-3">
-        <h2
-          id={headingId}
-          className="m-0 font-heading text-xl font-semibold uppercase tracking-wide text-foreground sm:text-2xl"
-        >
-          {embedded ? "Emergency costs" : "Emergency cost requests"}
-        </h2>
-        <p className="mt-1 mb-0 text-sm text-muted-foreground">
-          View and monitor emergency expenses. Dates use your local timezone.
-        </p>
-        {incidentReportId || transportId ? (
-          <p className="mt-1 mb-0 text-xs break-all text-muted-foreground">
-            {incidentReportId ? `Incident scope: ${incidentReportId}` : null}
-            {incidentReportId && transportId ? " · " : null}
-            {transportId ? `Transport scope: ${transportId}` : null}
+      {!hideHeading && (
+        <header className="border-b border-border pb-3">
+          <h2
+            id={headingId}
+            className="m-0 font-heading text-xl font-semibold uppercase tracking-wide text-foreground sm:text-2xl"
+          >
+            {embedded ? "Emergency costs" : "Emergency cost requests"}
+          </h2>
+          <p className="mt-1 mb-0 text-sm text-muted-foreground">
+            View and monitor emergency expenses. Dates use your local timezone.
           </p>
-        ) : null}
-      </header>
+          {incidentReportId || transportId ? (
+            <p className="mt-1 mb-0 text-xs break-all text-muted-foreground">
+              {incidentReportId ? `Incident scope: ${incidentReportId}` : null}
+              {incidentReportId && transportId ? " · " : null}
+              {transportId ? `Transport scope: ${transportId}` : null}
+            </p>
+          ) : null}
+        </header>
+      )}
       {!embedded ? (
         <div>
           <p className="mb-1 text-xs text-muted-foreground">
@@ -214,6 +224,7 @@ function EmergencyCostListContent({
             items={page?.items ?? []}
             loading={!page}
             busy={busy}
+            onOpen={onOpenRequest}
             detailPath={
               routeAudience
                 ? (item) =>

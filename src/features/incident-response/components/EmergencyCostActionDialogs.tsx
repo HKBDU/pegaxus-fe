@@ -40,6 +40,7 @@ import {
 import { emergencyCostFormSchema, type EmergencyCostDetail } from "../schemas";
 
 interface DialogProps {
+  open?: boolean;
   snapshot: EmergencyCostDetail;
   busy: boolean;
   blocked: boolean;
@@ -47,6 +48,8 @@ interface DialogProps {
   onClose: () => void;
   onReload?: () => void;
   refreshing?: boolean;
+  verificationMessage?: string;
+  onReview?: () => void;
 }
 const controlClass =
   "min-h-11 rounded-[2px] border-input bg-background text-sm shadow-none sm:min-h-9";
@@ -59,11 +62,14 @@ function ActionDialog({
   onClose,
   onReload,
   refreshing,
+  open = true,
+  verificationMessage,
+  onReview,
   children,
 }: DialogProps & { title: string; children: ReactNode }) {
   return (
     <Dialog
-      open
+      open={open}
       onOpenChange={(open) => {
         if (!open && !busy) onClose();
       }}
@@ -105,6 +111,22 @@ function ActionDialog({
             Reload request details
           </Button>
         ) : null}
+        {verificationMessage && (
+          <p role="status" className="m-0 text-xs text-muted-foreground">
+            {verificationMessage}
+          </p>
+        )}
+        {onReview && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy || refreshing}
+            onClick={onReview}
+            className="min-h-11 whitespace-normal rounded-[2px]"
+          >
+            I reviewed the request — allow a new attempt
+          </Button>
+        )}
         {children}
       </DialogContent>
     </Dialog>
@@ -134,7 +156,14 @@ export function CancelCostDialog(
       >
         <form
           noValidate
-          onSubmit={(event) => void form.handleSubmit(props.onSubmit)(event)}
+          onSubmit={(event) =>
+            void form.handleSubmit((values) =>
+              props.onSubmit({
+                ...values,
+                lastUpdatedAt: props.snapshot.updatedAt,
+              }),
+            )(event)
+          }
           className="min-w-0 space-y-3"
         >
           <fieldset

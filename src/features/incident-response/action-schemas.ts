@@ -5,7 +5,8 @@ const timestamp = z.iso.datetime({ offset: true });
 const reason = z
   .string()
   .trim()
-  .min(10, "Enter at least 10 characters after trimming.");
+  .min(10, "Enter at least 10 characters after trimming.")
+  .max(2000);
 const positiveWholeVnd = z
   .number()
   .positive()
@@ -24,7 +25,7 @@ export function createEmergencyCostDecisionSchema(requestedAmount: number) {
           lastUpdatedAt: timestamp,
           decision: z.literal("APPROVE"),
           approvedAmount: positiveWholeVnd,
-          decisionReason: z.string().trim().optional(),
+          decisionReason: z.string().trim().max(2000).optional(),
         })
         .strict(),
       z

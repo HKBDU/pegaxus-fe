@@ -201,7 +201,7 @@ export function EmergencyCostDetailSections({
             <p className="m-0 text-sm text-muted-foreground">
               {mock
                 ? "No local mock evidence is attached to this request."
-                : "Persisted cost photos are not exposed by the current CO3 contract. No receipt or upload history is inferred."}
+                : "No supporting evidence is returned for this request."}
             </p>
           )}
           {mock && evidence.length ? (
@@ -265,10 +265,14 @@ export function EmergencyCostDetailSections({
               ["Decision", decision.decision],
               [
                 "Approved amount",
-                <VndText
-                  key="decision-amount"
-                  amount={decision.approvedAmount}
-                />,
+                decision.approvedAmount === null ? (
+                  "Not supplied"
+                ) : (
+                  <VndText
+                    key="decision-amount"
+                    amount={decision.approvedAmount}
+                  />
+                ),
               ],
               ["Decided by", decision.decidedBy?.fullName],
               ["Decided at", date(decision.decidedAt)],

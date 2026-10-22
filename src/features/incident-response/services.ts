@@ -362,15 +362,30 @@ export const emergencyCostService = {
         )
       )
         throw new EmergencyCostApiError(400, "INVALID_IMAGE");
-      if (data.invoiceRequired !== undefined)
-        throw new EmergencyCostApiError(400, "INVOICE_CAPABILITY_UNCONFIRMED");
-      value = unwrap(
-        await apiClient.post<unknown, unknown>(
-          `/incidents/${encodeURIComponent(id)}/emergency-cost-requests`,
-          data,
-          { signal },
-        ),
+      let responseStatus: number | undefined;
+      const response = await apiClient.post<unknown, unknown>(
+        `/incidents/${encodeURIComponent(id)}/emergency-cost-requests`,
+        data,
+        {
+          signal,
+          // A non-idempotent financial POST must not be replayed by token refresh.
+          validateStatus: (status) => {
+            responseStatus = status;
+            return status === 401 || (status >= 200 && status < 300);
+          },
+        },
       );
+      if (responseStatus === 401)
+        throw new EmergencyCostApiError(401, "UNAUTHORIZED");
+      const envelope = emergencyCostEnvelopeSchema.safeParse(response);
+      if (
+        responseStatus !== 201 ||
+        !envelope.success ||
+        !envelope.data.isSuccess ||
+        envelope.data.code !== 201
+      )
+        throw new EmergencyCostApiError(502, "COST_SCOPE_MISMATCH");
+      value = envelope.data.value;
     }
     ensureActive(auth.scope, signal);
     const request = emergencyCostRequestSchema.parse(value);
@@ -379,7 +394,8 @@ export const emergencyCostService = {
       request.incident.incidentReportId.toLowerCase() !== id.toLowerCase() ||
       request.status !== "PENDING" ||
       request.category !== data.category ||
-      request.requestedAmount !== data.requestedAmount
+      request.requestedAmount !== data.requestedAmount ||
+      request.invoiceRequired !== (data.invoiceRequired ?? false)
     )
       throw new EmergencyCostApiError(502, "COST_SCOPE_MISMATCH");
     return request;
@@ -410,6 +426,14 @@ export const emergencyCostService = {
     const request = emergencyCostDetailSchema.parse(value);
     if (request.emergencyCostRequestId.toLowerCase() !== id.toLowerCase())
       throw new EmergencyCostApiError(502, "COST_SCOPE_MISMATCH");
+    if (!isEmergencyCostMockMode())
+      evidence = [...(request.photos ?? [])]
+        .sort((first, second) => first.sortOrder - second.sortOrder)
+        .map((photo) => ({
+          id: photo.photoId,
+          url: photo.photoUrl,
+          caption: photo.caption ?? "Supporting evidence",
+        }));
     return { request, evidence, source: emergencyCostSource() };
   },
 };
@@ -449,11 +473,15 @@ export function getEmergencyCostError(
       : undefined;
   if (mutation && status === 409) {
     const message =
-      code === "EMERGENCY_COST_ALREADY_DECIDED"
-        ? "This request has already been processed. The latest server details are being reloaded."
-        : code === "INVALID_EMERGENCY_COST_STATUS"
-          ? "Only a pending request can be cancelled. The latest details are being reloaded."
-          : "This request was modified. Reload and review its latest status before submitting again.";
+      code === "INVALID_TRANSPORT_STATUS"
+        ? "This transport is no longer IN_TRANSIT. Reload its context before creating a request."
+        : code === "INCIDENT_MODIFIED"
+          ? "The incident was modified. Reload its context before continuing."
+          : code === "EMERGENCY_COST_ALREADY_DECIDED"
+            ? "This request has already been processed. The latest server details are being reloaded."
+            : code === "INVALID_EMERGENCY_COST_STATUS"
+              ? "Only a pending request can be cancelled. The latest details are being reloaded."
+              : "This request was modified. Reload and review its latest status before submitting again.";
     return {
       message,
       retryable: false,
@@ -526,12 +554,6 @@ export function getEmergencyCostError(
     return {
       message:
         "The supporting images were rejected. Use up to five confirmed JPG/PNG uploads of at most 5 MB each.",
-      retryable: false,
-    };
-  if (code === "INVOICE_CAPABILITY_UNCONFIRMED")
-    return {
-      message:
-        "VAT invoice input is unavailable until the backend DTO is confirmed.",
       retryable: false,
     };
   if (status === 400 || status === 422 || code === "VALIDATION_ERROR")

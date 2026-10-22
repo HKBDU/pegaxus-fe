@@ -20,10 +20,14 @@ export function EmergencyCostActions({
   request,
   refreshing,
   onReload,
+  onChanged,
+  decisionAllowed = true,
 }: {
   request: EmergencyCostDetail;
   refreshing: boolean;
   onReload: () => void;
+  onChanged?: () => void | Promise<void>;
+  decisionAllowed?: boolean;
 }) {
   const { principal, scope } = useEmergencyCostScope();
   const mutation = useEmergencyCostAction();
@@ -31,6 +35,10 @@ export function EmergencyCostActions({
     action: "cancel" | "decision";
     snapshot: EmergencyCostDetail;
   } | null>(null);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifiedVersion, setVerifiedVersion] = useState<string>();
+  const [verificationMessage, setVerificationMessage] = useState<string>();
   const mounted = useRef(false);
   useEffect(() => {
     mounted.current = true;
@@ -39,7 +47,7 @@ export function EmergencyCostActions({
     };
   }, []);
   const cancel = canCancelEmergencyCost(principal, request);
-  const decide = canDecideEmergencyCost(principal, request);
+  const decide = decisionAllowed && canDecideEmergencyCost(principal, request);
   const error = mutation.isError
     ? getEmergencyCostError(mutation.error, dialog?.action ?? "detail")
     : null;
@@ -52,30 +60,86 @@ export function EmergencyCostActions({
   const allowed = dialog?.action === "cancel" ? cancel : decide;
   const blocked =
     refreshing ||
+    verifying ||
     stale ||
     !allowed ||
     Boolean(
       error?.conflict || error?.outcomeUnknown || error?.submissionBlocked,
     );
   const feedback = error
-    ? `${error.message} Current displayed status: ${request.status}. Close and review the refreshed request before another action.`
+    ? `${error.message} Current displayed status: ${request.status}.`
     : stale || (dialog && !allowed)
       ? `This request is now ${request.status} or its version/permissions have changed. Close this dialog and review the latest details.`
       : undefined;
   const reloadProps = {
-    refreshing,
-    onReload:
-      error?.conflict || error?.outcomeUnknown || stale ? onReload : undefined,
+    refreshing: refreshing || verifying,
+    verificationMessage,
+    onReview:
+      error?.outcomeUnknown &&
+      verifiedVersion === request.updatedAt &&
+      allowed &&
+      !refreshing &&
+      !verifying
+        ? () => {
+            mutation.reset();
+            setDialog((current) =>
+              current ? { ...current, snapshot: request } : null,
+            );
+            setVerifiedVersion(undefined);
+            setVerificationMessage(undefined);
+          }
+        : undefined,
+    onReload: error?.outcomeUnknown
+      ? () => void verify()
+      : error?.conflict || stale
+        ? onReload
+        : undefined,
   };
+  async function verify() {
+    if (verifying || mutation.isPending) return;
+    setVerifying(true);
+    setVerifiedVersion(undefined);
+    try {
+      const latest = await mutation.verifyRequest(
+        request.emergencyCostRequestId,
+      );
+      if (mounted.current && emergencyCostAuthScope() === scope) {
+        setVerifiedVersion(latest.updatedAt);
+        setVerificationMessage(
+          `Latest server status: ${latest.status}. A pending status does not prove the earlier request was never received; review before another attempt.`,
+        );
+      }
+    } catch {
+      if (mounted.current && emergencyCostAuthScope() === scope)
+        setVerificationMessage(
+          "The latest request could not be verified. Your draft remains locked and preserved.",
+        );
+    } finally {
+      if (mounted.current) setVerifying(false);
+    }
+  }
+  function close() {
+    if (mutation.isPending || verifying) return;
+    setOpenDialog(false);
+    if (!error?.outcomeUnknown) setDialog(null);
+  }
   function open(action: "cancel" | "decision") {
     if (
       refreshing ||
       mutation.isPending ||
+      verifying ||
       !(action === "cancel" ? cancel : decide)
     )
       return;
+    if (error?.outcomeUnknown && dialog) {
+      setOpenDialog(true);
+      return;
+    }
     mutation.reset();
+    setVerifiedVersion(undefined);
+    setVerificationMessage(undefined);
     setDialog({ action, snapshot: request });
+    setOpenDialog(true);
   }
   async function submit(submission: EmergencyCostActionSubmission) {
     if (blocked || mutation.isPending || emergencyCostAuthScope() !== scope)
@@ -89,9 +153,17 @@ export function EmergencyCostActions({
             ? "Emergency cost request cancelled."
             : "Emergency cost decision saved.",
         );
+        try {
+          await onChanged?.();
+        } catch {
+          if (mounted.current && emergencyCostAuthScope() === scope)
+            toast.error(
+              "The decision is saved, but the incident could not be refreshed. Reload its context.",
+            );
+        }
       }
     } catch {
-      // The dialog keeps its values; the hook reloads server details for conflicts or uncertain outcomes.
+      // Unknown outcomes retain the draft and require an explicit read/review, never an automatic POST retry.
     }
   }
   return (
@@ -101,21 +173,25 @@ export function EmergencyCostActions({
           <Button
             type="button"
             variant="outline"
-            disabled={refreshing || mutation.isPending}
+            disabled={refreshing || mutation.isPending || verifying}
             onClick={() => open("cancel")}
             className="min-h-11 rounded-[2px] border-destructive/40 text-destructive sm:min-h-9"
           >
-            Cancel request
+            {error?.outcomeUnknown
+              ? "Review cancellation outcome"
+              : "Cancel request"}
           </Button>
         ) : null}
         {decide ? (
           <Button
             type="button"
-            disabled={refreshing || mutation.isPending}
+            disabled={refreshing || mutation.isPending || verifying}
             onClick={() => open("decision")}
             className="min-h-11 rounded-[2px] sm:min-h-9"
           >
-            Review request
+            {error?.outcomeUnknown
+              ? "Review decision outcome"
+              : "Review request"}
           </Button>
         ) : null}
       </div>
@@ -127,13 +203,12 @@ export function EmergencyCostActions({
       {dialog?.action === "cancel" ? (
         <CancelCostDialog
           {...reloadProps}
+          open={openDialog}
           snapshot={dialog.snapshot}
           busy={mutation.isPending}
           blocked={blocked}
           feedback={feedback}
-          onClose={() => {
-            if (!mutation.isPending) setDialog(null);
-          }}
+          onClose={close}
           onSubmit={(input) =>
             submit({
               action: "cancel",
@@ -146,13 +221,12 @@ export function EmergencyCostActions({
       {dialog?.action === "decision" ? (
         <DecisionCostDialog
           {...reloadProps}
+          open={openDialog}
           snapshot={dialog.snapshot}
           busy={mutation.isPending}
           blocked={blocked}
           feedback={feedback}
-          onClose={() => {
-            if (!mutation.isPending) setDialog(null);
-          }}
+          onClose={close}
           onSubmit={(input) =>
             submit({
               action: "decision",

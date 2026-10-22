@@ -27,11 +27,13 @@ export function EmergencyCostResults({
   loading,
   busy,
   detailPath,
+  onOpen,
 }: {
   items: EmergencyCostListItem[];
   loading: boolean;
   busy: boolean;
   detailPath?: (item: EmergencyCostListItem) => string;
+  onOpen?: (item: EmergencyCostListItem) => void;
 }) {
   const navigate = useNavigate();
   const openRow = (
@@ -49,7 +51,24 @@ export function EmergencyCostResults({
       window.getSelection()?.toString()
     )
       return;
-    navigate(detailPath(item));
+    if (onOpen) onOpen(item);
+    else navigate(detailPath(item));
+  };
+  const openLink = (
+    event: MouseEvent<HTMLElement>,
+    item: EmergencyCostListItem,
+  ) => {
+    if (
+      !onOpen ||
+      event.button !== 0 ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.shiftKey
+    )
+      return;
+    event.preventDefault();
+    onOpen(item);
   };
   if (loading)
     return (
@@ -102,6 +121,7 @@ export function EmergencyCostResults({
                     <Link
                       className="inline-flex min-h-7 items-center text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2"
                       to={detailPath(item)}
+                      onClick={(event) => openLink(event, item)}
                     >
                       {item.requestCode}
                     </Link>
@@ -149,6 +169,7 @@ export function EmergencyCostResults({
                     >
                       <Link
                         to={detailPath(item)}
+                        onClick={(event) => openLink(event, item)}
                         aria-label={`View ${item.requestCode}`}
                       >
                         <Eye aria-hidden className="size-3.5" />
@@ -177,6 +198,7 @@ export function EmergencyCostResults({
                   <Link
                     className="inline-flex min-h-11 items-center text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2"
                     to={detailPath(item)}
+                    onClick={(event) => openLink(event, item)}
                   >
                     {item.requestCode}
                   </Link>
@@ -221,7 +243,10 @@ export function EmergencyCostResults({
                 variant="outline"
                 className="min-h-11 w-full rounded-[2px] text-xs"
               >
-                <Link to={detailPath(item)}>
+                <Link
+                  to={detailPath(item)}
+                  onClick={(event) => openLink(event, item)}
+                >
                   <Eye aria-hidden className="size-3.5" />
                   View details
                 </Link>

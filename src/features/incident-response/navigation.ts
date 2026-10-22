@@ -1,5 +1,8 @@
 export type EmergencyCostAudience = "admin" | "crew";
 
+export const emergencyReroutePath = (incidentReportId: string) =>
+  `/admin/incidents/${encodeURIComponent(incidentReportId)}/reroute`;
+
 export const emergencyCostListPath = (audience: EmergencyCostAudience) =>
   `/${audience}/emergency-costs`;
 

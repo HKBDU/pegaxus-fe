@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { emergencyCostAuthScope } from "../services";
 import {
   escalateReroute,
+  getRerouteContext,
   getRerouteEscalationError,
 } from "../reroute-services";
 import type {
@@ -28,7 +29,7 @@ export function useRerouteEscalation(scope: string, queryKey: QueryKey) {
       controller.current?.abort();
     };
   }, [scope]);
-  return useMutation({
+  const mutation = useMutation({
     mutationKey: [...queryKey, "escalate"],
     retry: false,
     networkMode: "always",
@@ -59,4 +60,18 @@ export function useRerouteEscalation(scope: string, queryKey: QueryKey) {
         return client.invalidateQueries({ queryKey, exact: true });
     },
   });
+  async function verifyContext(incidentId: string) {
+    if (controller.current)
+      throw new Error("Wait for the current operation to finish.");
+    const flight = new AbortController();
+    controller.current = flight;
+    try {
+      const result = await getRerouteContext(incidentId, scope, flight.signal);
+      client.setQueryData(queryKey, result);
+      return result;
+    } finally {
+      if (controller.current === flight) controller.current = null;
+    }
+  }
+  return { ...mutation, verifyContext };
 }

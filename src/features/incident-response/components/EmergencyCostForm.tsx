@@ -98,7 +98,7 @@ export function EmergencyCostForm({
       requestedAmount: "",
       description: "",
       justification: "",
-      ...(mock ? { invoiceRequired: false } : {}),
+      invoiceRequired: false,
     },
   });
   const allowed =
@@ -145,7 +145,7 @@ export function EmergencyCostForm({
         incidentReportId: incident.incidentReportId,
         request: {
           ...fields,
-          ...(mock ? { invoiceRequired: invoiceRequired ?? false } : {}),
+          invoiceRequired: invoiceRequired ?? false,
           ...(files.length ? { photoFiles: files } : {}),
         },
         ...(mock ? { mockEvidence: mockPhotos } : {}),
@@ -261,6 +261,7 @@ export function EmergencyCostForm({
               {...form.register(field)}
               id={`${id}-${field}`}
               rows={3}
+              maxLength={2000}
               className="min-h-24 rounded-xs text-base sm:text-sm"
               aria-invalid={Boolean(form.formState.errors[field])}
               aria-describedby={`${id}-${field}-error`}
@@ -268,38 +269,29 @@ export function EmergencyCostForm({
             {message(field)}
           </div>
         ))}
-        {mock ? (
-          <div className="space-y-1">
-            <Controller
-              control={form.control}
-              name="invoiceRequired"
-              render={({ field }) => (
-                <div className="flex min-h-11 items-center gap-2">
-                  <Checkbox
-                    id={`${id}-vat`}
-                    checked={field.value ?? false}
-                    onCheckedChange={(checked) =>
-                      field.onChange(checked === true)
-                    }
-                    disabled={busy || !allowed || uncertainResult}
-                  />
-                  <Label htmlFor={`${id}-vat`}>
-                    VAT invoice required · mock only
-                  </Label>
-                </div>
-              )}
-            />
-            <p className="m-0 text-xs text-muted-foreground">
-              Local mock value only. Real backend DTO support and the screen
-              default still require confirmation.
-            </p>
-          </div>
-        ) : (
+        <div className="space-y-1">
+          <Controller
+            control={form.control}
+            name="invoiceRequired"
+            render={({ field }) => (
+              <div className="flex min-h-11 items-center gap-2">
+                <Checkbox
+                  id={`${id}-vat`}
+                  checked={field.value ?? false}
+                  onCheckedChange={(checked) =>
+                    field.onChange(checked === true)
+                  }
+                  disabled={busy || !allowed || uncertainResult}
+                />
+                <Label htmlFor={`${id}-vat`}>VAT invoice required</Label>
+              </div>
+            )}
+          />
           <p className="m-0 text-xs text-muted-foreground">
-            VAT invoice input is unavailable until the backend confirms its DTO.
-            No invoice field or VAT text workaround is sent.
+            Request a VAT invoice for this expense. This does not create or pay
+            an invoice.
           </p>
-        )}
+        </div>
         <section
           aria-label="Supporting evidence"
           className="space-y-2 border-t border-border pt-4"
@@ -319,9 +311,8 @@ export function EmergencyCostForm({
           ) : (
             <>
               <p className="text-xs text-muted-foreground">
-                Uploads use real storage. The current cost contract does not
-                confirm persisted evidence in CO3; do not upload sensitive
-                material to an unapproved environment.
+                Uploads use real storage. Only upload supporting images in an
+                approved environment.
               </p>
               <FileUploader
                 ref={uploader}
@@ -378,12 +369,14 @@ export function EmergencyCostForm({
         >
           <Link
             to={back}
+            target={uncertainResult ? "_blank" : undefined}
+            rel={uncertainResult ? "noreferrer" : undefined}
             aria-disabled={busy}
             onClick={(event) => {
               if (busy) event.preventDefault();
             }}
           >
-            {uncertainResult ? "Check request list" : "Cancel"}
+            {uncertainResult ? "Check requests in a new tab" : "Cancel"}
           </Link>
         </Button>
         <Button

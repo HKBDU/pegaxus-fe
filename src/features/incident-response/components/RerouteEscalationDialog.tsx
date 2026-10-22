@@ -46,6 +46,12 @@ export function RerouteEscalationDialog({
   busy,
   blocked,
   feedback,
+  initialRequest,
+  uncertain,
+  verifying,
+  verificationMessage,
+  onVerify,
+  onReview,
   onClose,
   onSubmit,
 }: {
@@ -53,6 +59,12 @@ export function RerouteEscalationDialog({
   busy: boolean;
   blocked: boolean;
   feedback?: string;
+  initialRequest?: RerouteEscalationRequest;
+  uncertain?: boolean;
+  verifying?: boolean;
+  verificationMessage?: string;
+  onVerify?: () => void;
+  onReview?: () => void;
   onClose: () => void;
   onSubmit: (request: RerouteEscalationRequest) => Promise<void>;
 }) {
@@ -61,10 +73,13 @@ export function RerouteEscalationDialog({
     resolver: zodResolver(rerouteEscalationFormSchema),
     mode: "onChange",
     defaultValues: {
-      reason: "",
-      suggestedAction: "NONE",
-      suggestedHoldMinutes: "",
-      blockedRoutePlanIds: [],
+      reason: initialRequest?.reason ?? "",
+      suggestedAction: initialRequest?.suggestedAction ?? "NONE",
+      suggestedHoldMinutes:
+        initialRequest?.suggestedHoldMinutes === undefined
+          ? ""
+          : String(initialRequest.suggestedHoldMinutes),
+      blockedRoutePlanIds: initialRequest?.blockedRoutePlanIds ?? [],
     },
   });
   const suggestion = useWatch({
@@ -77,7 +92,7 @@ export function RerouteEscalationDialog({
     name: "blockedRoutePlanIds",
   });
   const plans = getRerouteBlockedPlans(context);
-  const sending = busy || form.formState.isSubmitting;
+  const sending = busy || verifying || form.formState.isSubmitting;
   return (
     <DialogContent
       showCloseButton={!sending}
@@ -114,6 +129,35 @@ export function RerouteEscalationDialog({
               >
                 {feedback}
               </p>
+            )}
+            {uncertain && (
+              <div className="space-y-2 text-xs">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={sending}
+                  onClick={onVerify}
+                  className="min-h-11 rounded-[2px] sm:min-h-9"
+                >
+                  {verifying ? "Checking…" : "Check latest context"}
+                </Button>
+                {verificationMessage && (
+                  <p role="status" className="m-0 text-muted-foreground">
+                    {verificationMessage}
+                  </p>
+                )}
+                {onReview && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={sending}
+                    onClick={onReview}
+                    className="min-h-11 whitespace-normal rounded-[2px]"
+                  >
+                    I checked with Logistics Management — allow a new attempt
+                  </Button>
+                )}
+              </div>
             )}
             <fieldset
               disabled={sending || blocked}
