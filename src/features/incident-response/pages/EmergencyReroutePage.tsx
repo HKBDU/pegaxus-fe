@@ -1,12 +1,8 @@
-import { ArrowLeft, RefreshCw } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { getPostLoginPath, routePlanDetail } from "@/app/route-config";
-import { rerouteIncidentIdSchema } from "../reroute-schemas";
+import { getPostLoginPath } from "@/app/route-config";
 import { canAccess } from "@/features/auth/access-control";
-import {
-  Section,
-  Field,
-} from "@/features/transport-plan/components/ApprovedBookingDetails";
+import { Field } from "@/features/transport-plan/components/ApprovedBookingDetails";
 import { formatPlanDate } from "@/features/transport-plan/format";
 import { ErrorState } from "@/shared/components/common";
 import {
@@ -14,6 +10,7 @@ import {
   SeverityBadge,
   StatusBadge,
 } from "@/shared/components/incident";
+import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { RerouteComparison } from "../components/RerouteComparison";
@@ -36,12 +33,12 @@ export default function EmergencyReroutePage() {
   const data =
     query.allowed && query.validId && !query.isError ? query.data : undefined;
   return (
-    <main className="mx-auto w-full min-w-0 max-w-7xl space-y-3 p-4 font-sans sm:p-6">
+    <main className="mx-auto w-full min-w-0 max-w-7xl space-y-3 p-3 font-sans sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button
           variant="ghost"
           asChild
-          className="min-h-11 rounded-[2px] px-2 text-xs"
+          className="min-h-11 rounded-[2px] px-2 text-sm"
         >
           <Link
             to={getPostLoginPath(
@@ -52,47 +49,114 @@ export default function EmergencyReroutePage() {
             Workspace
           </Link>
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!query.allowed || !query.validId || query.isFetching}
-          onClick={() => void query.refetch()}
-          className="min-h-11 rounded-[2px] font-heading text-[11px] uppercase sm:min-h-8"
-        >
-          <RefreshCw aria-hidden="true" className="size-3.5" />
-          {query.isFetching ? "Refreshing" : "Refresh"}
-        </Button>
       </div>
-      <header className="space-y-2 border-l-2 border-primary bg-white p-3">
-        <h1 className="m-0! break-words font-heading text-2xl! leading-tight! uppercase text-slate-900">
-          Emergency Route Decision
-        </h1>
-        <p className="m-0 text-xs text-slate-500">
-          {manager
-            ? "Logistics Manager · Decision context"
-            : "Fleet & Route Coordinator · Proposal evaluation"}
-        </p>
+      <header className="min-w-0 space-y-3 rounded-[2px] border border-slate-200 border-l-2 border-l-primary bg-white p-3 sm:p-4">
+        <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 space-y-2">
+            <h1 className="m-0! font-heading text-2xl! leading-tight! uppercase text-slate-900 [overflow-wrap:anywhere]">
+              Emergency Route Decision
+            </h1>
+            {data && (
+              <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-slate-700">
+                <span className="font-semibold [overflow-wrap:anywhere]">
+                  {data.incident.incidentCode}
+                </span>
+                <SeverityBadge severity={data.incident.severity} />
+                <StatusBadge status={data.incident.status} />
+                <span className="text-slate-400" aria-hidden="true">
+                  /
+                </span>
+                <span className="[overflow-wrap:anywhere]">
+                  {data.transport.transportCode}
+                </span>
+                <span className="text-xs text-slate-500">
+                  {data.transport.status.replaceAll("_", " ")}
+                </span>
+              </div>
+            )}
+          </div>
+          <p className="m-0 text-xs text-slate-500">
+            {manager ? "Logistics Manager" : "Fleet & Route Coordinator"}
+          </p>
+        </div>
+        {query.source === "mock" && (
+          <p
+            role="note"
+            className="m-0 flex flex-wrap items-center gap-2 text-xs text-amber-900"
+          >
+            <Badge
+              variant="outline"
+              className="rounded-[2px] border-amber-300 bg-amber-50 text-xs text-amber-900"
+            >
+              MOCK DATA
+            </Badge>
+            Synthetic routes and assignments. Real sign-in is required.
+          </p>
+        )}
         {data && (
-          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-700">
-            <span className="break-all font-semibold">
-              {data.incident.incidentCode}
-            </span>
-            <SeverityBadge severity={data.incident.severity} />
-            <StatusBadge status={data.incident.status} />
-            <span className="break-all">{data.transport.transportCode}</span>
-            <span>{data.transport.status.replaceAll("_", " ")}</span>
+          <div className="min-w-0 space-y-3 border-t border-slate-200 pt-3">
+            <div className="space-y-1.5">
+              <h2 className="m-0! font-heading text-base! uppercase text-slate-900">
+                Current situation
+              </h2>
+              <p className="m-0 text-sm font-medium leading-5 text-slate-800 [overflow-wrap:anywhere]">
+                {data.incident.title}
+              </p>
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <CategoryBadge category={data.incident.category} />
+                {data.incident.vehicleOperable !== null && (
+                  <span className="text-slate-700">
+                    Vehicle:{" "}
+                    <strong className="font-medium">
+                      {data.incident.vehicleOperable
+                        ? "Operable"
+                        : "Not operable"}
+                    </strong>
+                  </span>
+                )}
+              </div>
+            </div>
+            <dl className="m-0 grid gap-3 sm:grid-cols-3 [&_dd]:[overflow-wrap:anywhere] [&_dt]:text-xs">
+              <Field label="Current segment">
+                {data.currentSegment
+                  ? data.currentSegment.routeType +
+                    " · Segment " +
+                    data.currentSegment.sequenceNo +
+                    " · " +
+                    data.currentSegment.status.replaceAll("_", " ")
+                  : "No current segment provided"}
+              </Field>
+              <Field label="From">
+                {data.currentSegment?.fromLocation?.locationName ??
+                  "Location not provided"}
+              </Field>
+              <Field label="To">
+                {data.currentSegment?.toLocation?.locationName ??
+                  "Location not provided"}
+              </Field>
+            </dl>
+            <div className="flex min-w-0 flex-wrap gap-x-5 gap-y-1 border-t border-slate-100 pt-2 text-xs leading-5 text-slate-500">
+              <p className="m-0">
+                Occurred: {formatPlanDate(data.incident.occurredAt)}
+              </p>
+              {data.currentSegment && (
+                <p className="m-0">
+                  Planned arrival:{" "}
+                  {data.currentSegment.plannedArrivalAt
+                    ? formatPlanDate(data.currentSegment.plannedArrivalAt)
+                    : "Not provided"}
+                </p>
+              )}
+              <p className="m-0">
+                Server snapshot:{" "}
+                <time dateTime={data.serverTime}>
+                  {formatPlanDate(data.serverTime)}
+                </time>
+              </p>
+            </div>
           </div>
         )}
       </header>
-      {query.source === "mock" && (
-        <aside
-          role="note"
-          className="rounded-[2px] border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950"
-        >
-          <strong>MOCK DATA.</strong> Synthetic route context and assignments;
-          no RT1 backend request. Real sign-in remains required.
-        </aside>
-      )}
       {!query.allowed ? (
         <ErrorState message="Only logistics managers and fleet & route coordinators may view this workspace." />
       ) : !query.validId ? (
@@ -103,85 +167,51 @@ export default function EmergencyReroutePage() {
           onRetry={error.retryable ? () => void query.refetch() : undefined}
         />
       ) : data ? (
-        <>
-          <p role="note" className="m-0 text-xs text-slate-500">
-            Coordinators may escalate and Logistics Managers may record Hold
-            &amp; Wait when authorized. BACKUP and RETURN activation remain
-            separate workflows.
-          </p>
-          <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-            <div className="min-w-0 space-y-3">
-              <Section title="01. Reroute Context Summary">
-                <p className="m-0 break-words text-sm font-medium text-slate-900">
-                  {data.incident.title}
-                </p>
-                <CategoryBadge category={data.incident.category} />
-                <dl className="m-0 grid gap-3 sm:grid-cols-2">
-                  <Field label="Occurred">
-                    {formatPlanDate(data.incident.occurredAt)}
-                  </Field>
-                  <Field label="Vehicle operability">
-                    {data.incident.vehicleOperable === null
-                      ? "Not supplied"
-                      : data.incident.vehicleOperable
-                        ? "Operable"
-                        : "Not operable"}
-                  </Field>
-                  <Field label="Current segment">
-                    {data.currentSegment
-                      ? `${data.currentSegment.routeType} · Segment ${data.currentSegment.sequenceNo} · ${data.currentSegment.status.replaceAll("_", " ")}`
-                      : "No current segment supplied"}
-                    {query.source === "real" &&
-                      data.currentSegment &&
-                      rerouteIncidentIdSchema.safeParse(
-                        data.currentSegment.routePlanId,
-                      ).success && (
-                        <Link
-                          to={routePlanDetail(data.currentSegment.routePlanId)}
-                          className="mt-1 block text-xs underline decoration-primary/50 underline-offset-2 hover:decoration-primary"
-                        >
-                          View current route plan
-                        </Link>
-                      )}
-                  </Field>
-                  <Field label="Planned arrival">
-                    {formatPlanDate(data.currentSegment?.plannedArrivalAt)}
-                  </Field>
-                  <Field label="From">
-                    {data.currentSegment?.fromLocation?.locationName}
-                  </Field>
-                  <Field label="To">
-                    {data.currentSegment?.toLocation?.locationName}
-                  </Field>
-                </dl>
-              </Section>
-              <RerouteComparison context={data} />
-            </div>
-            <div className="min-w-0 space-y-3">
-              <RerouteDecisionOptions context={data}>
-                <RerouteEscalationAction
-                  key={`${query.source}:${query.scope}:${data.incident.incidentReportId}`}
-                  context={data}
-                  scope={query.scope}
-                  queryKey={query.queryKey}
-                  refreshing={query.isFetching}
-                />
+        <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:grid-rows-[auto_1fr]">
+          <div className="min-w-0 lg:col-start-2 lg:row-start-1">
+            <RerouteDecisionOptions
+              context={data}
+              manager={manager}
+              holdAction={
                 <RerouteHoldAction
-                  key={`${query.source}:${query.scope}:${data.incident.incidentReportId}`}
+                  key={
+                    query.source +
+                    ":" +
+                    query.scope +
+                    ":" +
+                    data.incident.incidentReportId
+                  }
                   context={data}
                   scope={query.scope}
                   source={query.source}
                   queryKey={query.queryKey}
                   refreshing={query.isFetching}
                 />
-              </RerouteDecisionOptions>
-              <RerouteDecisionContext context={data} />
-            </div>
+              }
+              escalationAction={
+                <RerouteEscalationAction
+                  key={
+                    query.source +
+                    ":" +
+                    query.scope +
+                    ":" +
+                    data.incident.incidentReportId
+                  }
+                  context={data}
+                  scope={query.scope}
+                  queryKey={query.queryKey}
+                  refreshing={query.isFetching}
+                />
+              }
+            />
           </div>
-          <p className="m-0 text-[11px] text-slate-500">
-            Server snapshot: {formatPlanDate(data.serverTime)}
-          </p>
-        </>
+          <div className="min-w-0 lg:col-start-1 lg:row-start-1 lg:row-span-2">
+            <RerouteComparison context={data} />
+          </div>
+          <div className="min-w-0 lg:col-start-2 lg:row-start-2">
+            <RerouteDecisionContext context={data} />
+          </div>
+        </div>
       ) : (
         <div
           role="status"

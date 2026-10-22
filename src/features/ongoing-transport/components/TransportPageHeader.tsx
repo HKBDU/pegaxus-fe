@@ -1,8 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
-import { Button } from "@/shared/components/ui/button";
 import {
   readOngoingListReturn,
   transportOverviewPath,
@@ -37,9 +36,6 @@ export function TransportPageHeader({
   bookingCode,
   status,
   view,
-  busy,
-  online,
-  onRefresh,
 }: {
   audience: TransportAudience;
   bookingId?: string;
@@ -48,9 +44,6 @@ export function TransportPageHeader({
   bookingCode?: string;
   status?: OngoingTransportStatus;
   view: TransportView;
-  busy: boolean;
-  online: boolean;
-  onRefresh: () => void;
 }) {
   const location = useLocation();
   const isCrew = audience === "crew";
@@ -137,22 +130,6 @@ export function TransportPageHeader({
             </p>
           ) : null}
         </div>
-        {!isCrew ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={busy || !online || missingContext}
-            onClick={onRefresh}
-            className="h-8 rounded-xs border-slate-300 bg-white text-xs"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-3.5 ${busy ? "animate-spin motion-reduce:animate-none" : ""}`}
-            />
-            Refresh
-          </Button>
-        ) : null}
       </header>
     </>
   );

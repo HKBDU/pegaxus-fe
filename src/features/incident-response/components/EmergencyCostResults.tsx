@@ -12,15 +12,78 @@ import {
 import { EMERGENCY_COST_CATEGORY_LABELS } from "@/shared/constants/incident";
 import type { EmergencyCostListItem } from "../schemas";
 import { Link, useNavigate } from "react-router-dom";
-import type { MouseEvent } from "react";
-import { Eye } from "lucide-react";
+import { useRef, type MouseEvent } from "react";
+import { MoreHorizontal } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu";
 
 const dates = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
   timeStyle: "short",
 });
 const formatDate = (value: string) => dates.format(new Date(value));
+
+function RequestActions({
+  item,
+  href,
+  onOpen,
+}: {
+  item: EmergencyCostListItem;
+  href: string;
+  onOpen?: (item: EmergencyCostListItem) => void;
+}) {
+  const openingDetail = useRef(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  return (
+    <div className="inline-flex" onClick={(event) => event.stopPropagation()}>
+      <DropdownMenu modal={!onOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            ref={trigger}
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-11 rounded-[2px] lg:size-7"
+            aria-label={`Actions for ${item.requestCode}`}
+          >
+            <MoreHorizontal aria-hidden="true" className="size-4 lg:size-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          onCloseAutoFocus={(event) => {
+            if (openingDetail.current) {
+              event.preventDefault();
+              openingDetail.current = false;
+            }
+          }}
+        >
+          {onOpen ? (
+            <DropdownMenuItem
+              onSelect={() => {
+                openingDetail.current = true;
+                // Keep a mounted return-focus target for the embedded detail dialog.
+                trigger.current?.focus();
+                onOpen(item);
+              }}
+            >
+              View details
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem asChild>
+              <Link to={href}>View details</Link>
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
 
 export function EmergencyCostResults({
   items,
@@ -161,20 +224,11 @@ export function EmergencyCostResults({
                 </TableCell>
                 {detailPath ? (
                   <TableCell className="w-16 text-center">
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="icon"
-                      className="size-7 rounded-[2px]"
-                    >
-                      <Link
-                        to={detailPath(item)}
-                        onClick={(event) => openLink(event, item)}
-                        aria-label={`View ${item.requestCode}`}
-                      >
-                        <Eye aria-hidden className="size-3.5" />
-                      </Link>
-                    </Button>
+                    <RequestActions
+                      item={item}
+                      href={detailPath(item)}
+                      onOpen={onOpen}
+                    />
                   </TableCell>
                 ) : null}
               </TableRow>
@@ -206,7 +260,16 @@ export function EmergencyCostResults({
                   item.requestCode
                 )}
               </span>
-              <CostStatusBadge status={item.status} />
+              <div className="flex shrink-0 items-center gap-1">
+                <CostStatusBadge status={item.status} />
+                {detailPath && (
+                  <RequestActions
+                    item={item}
+                    href={detailPath(item)}
+                    onOpen={onOpen}
+                  />
+                )}
+              </div>
             </div>
             <p className="m-0 text-xs text-muted-foreground">
               {EMERGENCY_COST_CATEGORY_LABELS[item.category]}
@@ -237,21 +300,6 @@ export function EmergencyCostResults({
               <dt>Requested by</dt>
               <dd>{item.requestedBy?.fullName ?? "—"}</dd>
             </dl>
-            {detailPath ? (
-              <Button
-                asChild
-                variant="outline"
-                className="min-h-11 w-full rounded-[2px] text-xs"
-              >
-                <Link
-                  to={detailPath(item)}
-                  onClick={(event) => openLink(event, item)}
-                >
-                  <Eye aria-hidden className="size-3.5" />
-                  View details
-                </Link>
-              </Button>
-            ) : null}
           </li>
         ))}
       </ul>

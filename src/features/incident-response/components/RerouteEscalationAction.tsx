@@ -111,12 +111,12 @@ export function RerouteEscalationAction({
           <Button
             type="button"
             disabled={refreshing || mutation.isPending || verifying}
-            className="min-h-11 w-full rounded-[2px] font-heading text-xs uppercase sm:min-h-9"
+            className="min-h-11 w-full whitespace-normal rounded-[2px] font-heading text-sm uppercase sm:min-h-9"
           >
             <Send aria-hidden="true" className="size-3.5" />
             {error?.outcomeUnknown
               ? "Review Escalation Outcome"
-              : "Escalate to LM"}
+              : "Escalate to Logistics Manager"}
           </Button>
         </DialogTrigger>
       )}

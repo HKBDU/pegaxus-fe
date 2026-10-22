@@ -111,7 +111,7 @@ export function RerouteHoldAction({
           <Button
             type="button"
             disabled={refreshing || mutation.isPending || verifying}
-            className="min-h-11 w-full rounded-[2px] font-heading text-xs uppercase sm:min-h-9"
+            className="min-h-11 w-full whitespace-normal rounded-[2px] font-heading text-sm uppercase sm:min-h-9"
           >
             <PauseCircle aria-hidden="true" className="size-3.5" />
             {uncertain ? "Review Hold Outcome" : "Hold & Wait"}
