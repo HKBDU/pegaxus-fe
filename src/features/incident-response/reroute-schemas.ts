@@ -235,3 +235,102 @@ export type RerouteEscalationRequest = z.infer<
 export type RerouteEscalationResult = z.infer<
   typeof rerouteEscalationResultSchema
 >;
+
+const holdMinutes = z
+  .number({ error: "Enter whole minutes from 15 to 240." })
+  .int()
+  .min(15)
+  .max(240);
+const monitorMinutes = z
+  .number({ error: "Enter whole minutes from 10 to 120." })
+  .int()
+  .min(10)
+  .max(120);
+export const rerouteHoldRequestSchema = z.strictObject({
+  holdMinutes,
+  reason: z
+    .string()
+    .trim()
+    .min(10, "Enter at least 10 characters.")
+    .max(2000, "Use at most 2,000 characters."),
+  monitorIntervalMinutes: monitorMinutes.optional(),
+  safeStopLocationId: rerouteIncidentIdSchema.optional(),
+});
+const holdFormBase = z.object({
+  holdMinutes: z.string(),
+  reason: z.string(),
+  monitorIntervalMinutes: z.string(),
+  safeStopLocationId: z.string(),
+});
+function holdRequestFromForm(values: z.infer<typeof holdFormBase>) {
+  const integer = (value: string) =>
+    /^\d+$/.test(value.trim()) ? Number(value.trim()) : NaN;
+  return {
+    holdMinutes: integer(values.holdMinutes),
+    reason: values.reason,
+    ...(values.monitorIntervalMinutes.trim()
+      ? { monitorIntervalMinutes: integer(values.monitorIntervalMinutes) }
+      : {}),
+    ...(values.safeStopLocationId
+      ? { safeStopLocationId: values.safeStopLocationId }
+      : {}),
+  };
+}
+export const rerouteHoldFormSchema = holdFormBase.superRefine((values, ctx) => {
+  const parsed = rerouteHoldRequestSchema.safeParse(
+    holdRequestFromForm(values),
+  );
+  if (!parsed.success)
+    for (const issue of parsed.error.issues)
+      ctx.addIssue({
+        code: "custom",
+        path: issue.path,
+        message: issue.message,
+      });
+});
+export const parseRerouteHoldForm = (values: z.infer<typeof holdFormBase>) =>
+  rerouteHoldRequestSchema.parse(holdRequestFromForm(values));
+
+export const rerouteHoldLocationSchema = z.object({
+  ...location.shape,
+  locationId: rerouteIncidentIdSchema,
+});
+export const rerouteHoldLocationsSchema = z.object({
+  items: z.array(rerouteHoldLocationSchema),
+  pageIndex: z.number().int().positive(),
+  pageSize: z.number().int().positive(),
+  totalItems: z.number().int().nonnegative(),
+  totalPages: z.number().int().nonnegative(),
+});
+export const rerouteHoldResultSchema = z
+  .object({
+    incidentReportId: rerouteIncidentIdSchema,
+    incidentStatus: z.literal("PENDING"),
+    hold: z.object({
+      ...rerouteContextSchema.shape.hold.unwrap().shape,
+      status: z.literal("ACTIVE"),
+      holdMinutes,
+      monitorIntervalMinutes: monitorMinutes,
+      safeStopLocation: rerouteHoldLocationSchema.nullable(),
+      decidedBy: z.object({
+        ...employee.shape,
+        employeeId: rerouteIncidentIdSchema,
+        role: z.literal("LOGISTICS_MANAGER"),
+      }),
+    }),
+    notified: z.array(
+      z.object({ ...employee.shape, employeeId: rerouteIncidentIdSchema }),
+    ),
+  })
+  .superRefine((result, ctx) => {
+    if (Date.parse(result.hold.holdUntil) <= Date.parse(result.hold.startedAt))
+      ctx.addIssue({
+        code: "custom",
+        path: ["hold", "holdUntil"],
+        message: "The hold end must follow its start.",
+      });
+  });
+export type RerouteHoldRequest = z.infer<typeof rerouteHoldRequestSchema>;
+export type RerouteHoldResult = z.infer<typeof rerouteHoldResultSchema>;
+export type RerouteHold = NonNullable<RerouteContext["hold"]>;
+export type RerouteHoldLocation = z.infer<typeof rerouteHoldLocationSchema>;

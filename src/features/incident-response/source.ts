@@ -14,5 +14,5 @@ export function isEmergencyCostMockMode(
   );
 }
 
-export const emergencyCostSource = () =>
+export const emergencyCostSource = (): "mock" | "real" =>
   isEmergencyCostMockMode() ? "mock" : "real";

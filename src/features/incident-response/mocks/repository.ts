@@ -7,6 +7,11 @@ import {
   type RerouteContext,
   type RerouteEscalationRequest,
   type RerouteEscalationResult,
+  rerouteHoldRequestSchema,
+  type RerouteHold,
+  type RerouteHoldRequest,
+  type RerouteHoldResult,
+  type RerouteHoldLocation,
 } from "../reroute-schemas";
 import {
   emergencyCostCreateSchema,
@@ -45,6 +50,8 @@ type Repository = {
   incidents: MockIncident[];
   records: MockRecord[];
   sequence: number;
+  routeHolds: Map<string, { incidentReportId: string; hold: RerouteHold }>;
+  holdLocations: RerouteHoldLocation[];
 };
 
 const uuid = (value: number) =>
@@ -246,7 +253,57 @@ function seed(actor: Actor): Repository {
           : [],
     };
   });
-  return { incidents, records, sequence: 200 };
+  const holdLocations: RerouteHoldLocation[] = [550, 551].map(
+    (value, index) => ({
+      locationId: uuid(value),
+      locationName: `Synthetic service area ${index + 1}`,
+      locationType: "REST_STOP",
+      city: null,
+      country: "FR",
+      latitude: null,
+      longitude: null,
+    }),
+  );
+  const fixtureHold = (expired: boolean): RerouteHold => ({
+    status: expired ? "EXPIRED" : "ACTIVE",
+    startedAt: expired ? "2026-10-21T06:45:00Z" : "2026-10-21T07:45:00Z",
+    holdUntil: expired ? "2026-10-21T07:45:00Z" : "2026-10-21T08:45:00Z",
+    holdMinutes: 60,
+    monitorIntervalMinutes: 15,
+    reason: "Synthetic safe-stop monitoring decision.",
+    safeStopLocation: {
+      locationId: uuid(501),
+      locationName: "Synthetic rest stop",
+      locationType: "REST_STOP",
+      city: null,
+      country: "FR",
+      latitude: null,
+      longitude: null,
+    },
+    decidedBy: { ...mockRerouteManager },
+  });
+  return {
+    incidents,
+    records,
+    sequence: 200,
+    holdLocations,
+    routeHolds: new Map([
+      [
+        incidents[1].transport.transportId,
+        {
+          incidentReportId: incidents[1].incidentReportId,
+          hold: fixtureHold(false),
+        },
+      ],
+      [
+        incidents[4].transport.transportId,
+        {
+          incidentReportId: incidents[4].incidentReportId,
+          hold: fixtureHold(true),
+        },
+      ],
+    ]),
+  };
 }
 
 let activeKey = "";
@@ -620,6 +677,9 @@ function rerouteContext(id: string, actor: Actor): RerouteContext {
   const manager = canAccess(actor.principal, {
     anyRole: ["LOGISTICS_MANAGER"],
   });
+  const storedHold = repository(actor).routeHolds.get(
+    incident.transport.transportId,
+  );
   const open =
     ["REPORTED", "PENDING"].includes(incident.status) &&
     incident.transport.status === "IN_TRANSIT";
@@ -769,25 +829,17 @@ function rerouteContext(id: string, actor: Actor): RerouteContext {
               ]
             : []),
         ],
-    hold: extended
-      ? {
-          status: "ACTIVE",
-          startedAt: "2026-10-21T07:45:00Z",
-          holdUntil: "2026-10-21T08:45:00Z",
-          holdMinutes: 60,
-          monitorIntervalMinutes: 15,
-          reason: "Synthetic safe-stop monitoring decision.",
-          safeStopLocation: from,
-          decidedBy: { ...mockRerouteManager },
-        }
-      : null,
+    hold:
+      storedHold?.incidentReportId === incident.incidentReportId
+        ? storedHold.hold
+        : null,
     availableActions: !open
       ? []
       : [
           manager ? "APPROVE_BACKUP" : "REQUEST_BACKUP",
           ...(!manager
             ? ["ESCALATE_REROUTE"]
-            : !extended
+            : storedHold?.hold.status !== "ACTIVE"
               ? ["HOLD_ROUTE"]
               : []),
           ...(!extended ? ["CREATE_RETURN"] : []),
@@ -844,4 +896,102 @@ export const emergencyCostMockRepository = {
   decide,
   rerouteContext,
   escalateReroute,
+  holdLocations,
+  holdReroute,
 };
+
+function holdLocations(search: string, page: number, actor: Actor) {
+  if (
+    !canAccess(actor.principal, { anyRole: ["LOGISTICS_MANAGER"] }) ||
+    canAccess(actor.principal, { anyRole: ["CUSTOMER"] })
+  )
+    throw new MockEmergencyCostError(403, "FORBIDDEN");
+  const rows = repository(actor).holdLocations.filter((location) =>
+    location.locationName.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+  return {
+    items: rows.slice((page - 1) * 20, page * 20),
+    pageIndex: page,
+    pageSize: 20,
+    totalItems: rows.length,
+    totalPages: Math.ceil(rows.length / 20),
+  };
+}
+
+function holdReroute(
+  id: string,
+  input: RerouteHoldRequest,
+  actor: Actor,
+): RerouteHoldResult {
+  if (
+    !canAccess(actor.principal, { anyRole: ["LOGISTICS_MANAGER"] }) ||
+    canAccess(actor.principal, { anyRole: ["CUSTOMER"] })
+  )
+    throw new MockEmergencyCostError(403, "FORBIDDEN");
+  const parsed = rerouteHoldRequestSchema.safeParse(input);
+  if (!parsed.success)
+    throw new MockEmergencyCostError(400, "VALIDATION_ERROR");
+  const request = parsed.data;
+  const incident = getIncident(id, actor);
+  if (!["REPORTED", "PENDING"].includes(incident.status))
+    throw new MockEmergencyCostError(422, "INVALID_INCIDENT_STATUS");
+  if (incident.transport.status !== "IN_TRANSIT")
+    throw new MockEmergencyCostError(409, "TRANSPORT_NOT_IN_TRANSIT");
+  const store = repository(actor);
+  if (
+    store.routeHolds.get(incident.transport.transportId)?.hold.status ===
+    "ACTIVE"
+  )
+    throw new MockEmergencyCostError(409, "HOLD_ALREADY_ACTIVE");
+  if (!rerouteContext(id, actor).availableActions.includes("HOLD_ROUTE"))
+    throw new MockEmergencyCostError(403, "FORBIDDEN");
+  const safeStopLocation = request.safeStopLocationId
+    ? store.holdLocations.find(
+        (location) =>
+          location.locationId.toLowerCase() ===
+          request.safeStopLocationId!.toLowerCase(),
+      )
+    : null;
+  if (request.safeStopLocationId && !safeStopLocation)
+    throw new MockEmergencyCostError(404, "LOCATION_NOT_FOUND");
+  const hold: RerouteHoldResult["hold"] = {
+    status: "ACTIVE",
+    startedAt: seededTime,
+    holdUntil: new Date(
+      Date.parse(seededTime) + request.holdMinutes * 60_000,
+    ).toISOString(),
+    holdMinutes: request.holdMinutes,
+    monitorIntervalMinutes: request.monitorIntervalMinutes ?? 30,
+    reason: request.reason,
+    safeStopLocation: safeStopLocation ?? null,
+    decidedBy: { ...mockRerouteManager },
+  };
+  store.routeHolds.set(incident.transport.transportId, {
+    incidentReportId: incident.incidentReportId,
+    hold,
+  });
+  incident.status = "PENDING";
+  const notified = new Map<string, RerouteHoldResult["notified"][number]>();
+  for (const record of store.records) {
+    if (record.request.incident.incidentReportId !== incident.incidentReportId)
+      continue;
+    const person = record.request.requestedBy;
+    if (
+      person &&
+      person.employeeCode != null &&
+      creatorRoles.includes(person.role)
+    )
+      notified.set(person.employeeId, {
+        employeeId: person.employeeId,
+        employeeCode: person.employeeCode,
+        fullName: person.fullName,
+        role: person.role,
+      });
+  }
+  return {
+    incidentReportId: incident.incidentReportId,
+    incidentStatus: "PENDING",
+    hold,
+    notified: [...notified.values()],
+  };
+}

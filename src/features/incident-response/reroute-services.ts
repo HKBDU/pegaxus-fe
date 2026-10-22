@@ -7,6 +7,7 @@ import type { AuthPrincipal } from "@/features/auth/types";
 import { emergencyCostEnvelopeSchema } from "./schemas";
 import { emergencyCostAuthScope } from "./services";
 import { isEmergencyCostMockMode } from "./source";
+import { getLocations } from "@/features/route-plan/services";
 import {
   rerouteContextSchema,
   rerouteIncidentIdSchema,
@@ -14,6 +15,10 @@ import {
   rerouteEscalationResultSchema,
   type RerouteContext,
   type RerouteEscalationRequest,
+  rerouteHoldRequestSchema,
+  rerouteHoldResultSchema,
+  rerouteHoldLocationsSchema,
+  type RerouteHoldRequest,
 } from "./reroute-schemas";
 
 export const canReadReroute = (principal: AuthPrincipal | null) =>
@@ -319,6 +324,195 @@ export function getRerouteEscalationError(error: unknown) {
   return {
     message:
       "Delivery could not be confirmed. The server may have received this escalation. Do not resend until you verify it with Logistics Management; your input is preserved.",
+    blocked: true,
+    refreshContext: false,
+    outcomeUnknown: true,
+  };
+}
+
+export const canHoldReroute = (
+  principal: AuthPrincipal | null,
+  context: RerouteContext,
+) =>
+  canReadReroute(principal) &&
+  canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) &&
+  context.availableActions.includes("HOLD_ROUTE") &&
+  context.hold?.status !== "ACTIVE" &&
+  ["REPORTED", "PENDING"].includes(context.incident.status) &&
+  context.transport.status === "IN_TRANSIT";
+
+export async function getRerouteHoldLocations(
+  search: string,
+  page: number,
+  scope: string,
+  signal?: AbortSignal,
+) {
+  const actor = authorize(scope, signal);
+  if (!canAccess(actor.principal, { anyRole: ["LOGISTICS_MANAGER"] }))
+    throw new RerouteApiError(403, "FORBIDDEN");
+  let result: unknown;
+  if (isEmergencyCostMockMode()) {
+    const { emergencyCostMockRepository } = await import("./mocks/repository");
+    authorize(scope, signal);
+    result = emergencyCostMockRepository.holdLocations(search, page, actor);
+  } else
+    result = await getLocations({
+      search: search.trim() || undefined,
+      pageIndex: page,
+      pageSize: 20,
+    });
+  authorize(scope, signal);
+  return rerouteHoldLocationsSchema.parse(result);
+}
+
+class HoldOutcomeUnknown extends Error {}
+const holdFlights = new Set<string>();
+export async function holdReroute(
+  context: RerouteContext,
+  input: RerouteHoldRequest,
+  scope: string,
+  signal?: AbortSignal,
+) {
+  const snapshot = rerouteContextSchema.parse(context);
+  const id = rerouteIncidentIdSchema.parse(snapshot.incident.incidentReportId);
+  const body = rerouteHoldRequestSchema.parse(input);
+  const requireActor = () => {
+    const actor = authorize(scope, signal);
+    if (!canHoldReroute(actor.principal, snapshot))
+      throw new RerouteApiError(403, "FORBIDDEN");
+    return actor;
+  };
+  const actor = requireActor();
+  const flight = JSON.stringify([
+    scope,
+    snapshot.transport.transportId.toLowerCase(),
+  ]);
+  if (holdFlights.has(flight)) throw new RerouteApiError(409);
+  holdFlights.add(flight);
+  try {
+    let value: unknown;
+    if (isEmergencyCostMockMode()) {
+      const { emergencyCostMockRepository, MockEmergencyCostError } =
+        await import("./mocks/repository");
+      requireActor();
+      try {
+        value = emergencyCostMockRepository.holdReroute(id, body, actor);
+      } catch (error) {
+        if (error instanceof MockEmergencyCostError)
+          throw new RerouteApiError(error.status, error.errorCode);
+        throw error;
+      }
+    } else {
+      let responseStatus: number | undefined;
+      const response = await apiClient.post<unknown, unknown>(
+        `/incidents/${encodeURIComponent(id)}/route-hold`,
+        body,
+        {
+          signal,
+          // Surface 401 without allowing the shared interceptor to replay a hold decision.
+          validateStatus: (status) => {
+            responseStatus = status;
+            return status === 401 || (status >= 200 && status < 300);
+          },
+        },
+      );
+      if (responseStatus === 401)
+        throw new RerouteApiError(401, "UNAUTHORIZED");
+      requireActor();
+      const envelope = emergencyCostEnvelopeSchema.safeParse(response);
+      if (responseStatus !== 200 || !envelope.success)
+        throw new HoldOutcomeUnknown();
+      if (!envelope.data.isSuccess || envelope.data.code !== 200) {
+        if (envelope.data.code >= 400 && envelope.data.code < 500)
+          throw new RerouteApiError(
+            envelope.data.code,
+            envelope.data.errorCode,
+          );
+        throw new HoldOutcomeUnknown();
+      }
+      value = envelope.data.value;
+    }
+    requireActor();
+    const result = rerouteHoldResultSchema.safeParse(value);
+    if (
+      !result.success ||
+      result.data.incidentReportId.toLowerCase() !== id.toLowerCase() ||
+      result.data.hold.holdMinutes !== body.holdMinutes ||
+      result.data.hold.reason !== body.reason ||
+      result.data.hold.monitorIntervalMinutes !==
+        (body.monitorIntervalMinutes ?? 30) ||
+      (result.data.hold.safeStopLocation?.locationId.toLowerCase() ?? null) !==
+        (body.safeStopLocationId?.toLowerCase() ?? null)
+    )
+      throw new HoldOutcomeUnknown();
+    return result.data;
+  } finally {
+    holdFlights.delete(flight);
+  }
+}
+
+export function getRerouteHoldError(error: unknown) {
+  const payload = isAxiosError(error)
+    ? emergencyCostEnvelopeSchema.safeParse(error.response?.data)
+    : null;
+  const status =
+    error instanceof RerouteApiError
+      ? error.status
+      : isAxiosError(error)
+        ? error.response?.status
+        : undefined;
+  const code =
+    error instanceof RerouteApiError
+      ? error.errorCode
+      : payload?.success
+        ? payload.data.errorCode
+        : undefined;
+  if (error instanceof z.ZodError || status === 400)
+    return {
+      message:
+        "Review the duration, reason, monitoring interval and selected location; your input is preserved.",
+      blocked: false,
+      refreshContext: false,
+    };
+  if (code === "LOCATION_NOT_FOUND")
+    return {
+      message:
+        "The selected location is no longer available. Choose another location or clear the optional selection.",
+      blocked: false,
+      refreshContext: false,
+    };
+  if (status === 401 || status === 403)
+    return {
+      message:
+        "Your session or role no longer permits a hold decision. Refresh context or sign in again.",
+      blocked: true,
+      refreshContext: true,
+    };
+  if (status === 404)
+    return {
+      message: "This incident or hold endpoint is not available.",
+      blocked: true,
+      refreshContext: true,
+    };
+  if (status === 409 || status === 422) {
+    const rawEnd =
+      code === "HOLD_ALREADY_ACTIVE" && payload?.success
+        ? payload.data.message.split("until ")[1]?.trim()
+        : undefined;
+    const end = z.iso.datetime({ offset: true }).safeParse(rawEnd);
+    const message =
+      code === "HOLD_ALREADY_ACTIVE"
+        ? `A hold is already active${end.success ? ` until ${end.data}` : ""}. Review the latest recorded hold.`
+        : code === "TRANSPORT_NOT_IN_TRANSIT"
+          ? "The transport is no longer IN_TRANSIT. Review the latest context."
+          : status === 422
+            ? "The incident is resolved or cancelled. Review the latest context."
+            : "The incident was modified or another decision is in progress. Review the latest context.";
+    return { message, blocked: true, refreshContext: true };
+  }
+  return {
+    message:
+      "The hold outcome could not be confirmed. The server may have recorded it. Check the latest context before considering another attempt; your input is preserved.",
     blocked: true,
     refreshContext: false,
     outcomeUnknown: true,

@@ -5,6 +5,10 @@ import {
 import { formatPlanDate } from "@/features/transport-plan/format";
 import type { RerouteContext } from "../reroute-schemas";
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+import { routePlanDetail } from "@/app/route-config";
+import { rerouteIncidentIdSchema } from "../reroute-schemas";
+import { isEmergencyCostMockMode } from "../source";
 
 const actionLabels: Record<string, string> = {
   REQUEST_BACKUP: "Request BACKUP review",
@@ -143,9 +147,26 @@ export function RerouteDecisionContext({
           })}
           <p className="mt-3 mb-0 break-words text-slate-600">
             RETURN:{" "}
-            {context.returnPlan
-              ? `${context.returnPlan.routePlanCode} · ${context.returnPlan.status.replaceAll("_", " ")}`
-              : "No plan supplied"}
+            {context.returnPlan ? (
+              <>
+                {!isEmergencyCostMockMode() &&
+                rerouteIncidentIdSchema.safeParse(
+                  context.returnPlan.routePlanId,
+                ).success ? (
+                  <Link
+                    to={routePlanDetail(context.returnPlan.routePlanId)}
+                    className="underline decoration-primary/50 underline-offset-2 hover:decoration-primary"
+                  >
+                    {context.returnPlan.routePlanCode}
+                  </Link>
+                ) : (
+                  context.returnPlan.routePlanCode
+                )}{" "}
+                · {context.returnPlan.status.replaceAll("_", " ")}
+              </>
+            ) : (
+              "No plan supplied"
+            )}
           </p>
           {context.returnPlan && (
             <p
@@ -176,7 +197,9 @@ export function RerouteDecisionContext({
             ))}
         </div>
         {context.hold && (
-          <div className="border-t border-slate-100 pt-3">
+          <div
+            className={`border-t border-slate-100 pt-3 ${context.hold.status === "ACTIVE" ? "border-l-2 border-l-primary pl-3" : ""}`}
+          >
             <h3 className="mb-2! font-heading text-xs! uppercase text-slate-600">
               Recorded hold · {context.hold.status}
             </h3>
@@ -185,7 +208,9 @@ export function RerouteDecisionContext({
                 {formatPlanDate(context.hold.startedAt)}
               </Field>
               <Field label="Until">
-                {formatPlanDate(context.hold.holdUntil)}
+                <time dateTime={context.hold.holdUntil}>
+                  {formatPlanDate(context.hold.holdUntil)}
+                </time>
               </Field>
               <Field label="Duration">{context.hold.holdMinutes} min</Field>
               <Field label="Monitoring interval">

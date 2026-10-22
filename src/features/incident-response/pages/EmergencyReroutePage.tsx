@@ -1,6 +1,7 @@
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { getPostLoginPath } from "@/app/route-config";
+import { getPostLoginPath, routePlanDetail } from "@/app/route-config";
+import { rerouteIncidentIdSchema } from "../reroute-schemas";
 import { canAccess } from "@/features/auth/access-control";
 import {
   Section,
@@ -23,6 +24,7 @@ import {
 import { useRerouteContext } from "../hooks/useRerouteContext";
 import { getRerouteError } from "../reroute-services";
 import { RerouteEscalationAction } from "../components/RerouteEscalationAction";
+import { RerouteHoldAction } from "../components/RerouteHoldAction";
 
 export default function EmergencyReroutePage() {
   const { incidentReportId } = useParams<{ incidentReportId: string }>();
@@ -103,8 +105,9 @@ export default function EmergencyReroutePage() {
       ) : data ? (
         <>
           <p role="note" className="m-0 text-xs text-slate-500">
-            Route and hold decisions remain read-only. Authorized coordinators
-            can escalate the incident to Logistics Management.
+            Coordinators may escalate and Logistics Managers may record Hold
+            &amp; Wait when authorized. BACKUP and RETURN activation remain
+            separate workflows.
           </p>
           <div className="grid min-w-0 items-start gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
             <div className="min-w-0 space-y-3">
@@ -128,6 +131,18 @@ export default function EmergencyReroutePage() {
                     {data.currentSegment
                       ? `${data.currentSegment.routeType} · Segment ${data.currentSegment.sequenceNo} · ${data.currentSegment.status.replaceAll("_", " ")}`
                       : "No current segment supplied"}
+                    {query.source === "real" &&
+                      data.currentSegment &&
+                      rerouteIncidentIdSchema.safeParse(
+                        data.currentSegment.routePlanId,
+                      ).success && (
+                        <Link
+                          to={routePlanDetail(data.currentSegment.routePlanId)}
+                          className="mt-1 block text-xs underline decoration-primary/50 underline-offset-2 hover:decoration-primary"
+                        >
+                          View current route plan
+                        </Link>
+                      )}
                   </Field>
                   <Field label="Planned arrival">
                     {formatPlanDate(data.currentSegment?.plannedArrivalAt)}
@@ -148,6 +163,14 @@ export default function EmergencyReroutePage() {
                   key={`${query.source}:${query.scope}:${data.incident.incidentReportId}`}
                   context={data}
                   scope={query.scope}
+                  queryKey={query.queryKey}
+                  refreshing={query.isFetching}
+                />
+                <RerouteHoldAction
+                  key={`${query.source}:${query.scope}:${data.incident.incidentReportId}`}
+                  context={data}
+                  scope={query.scope}
+                  source={query.source}
                   queryKey={query.queryKey}
                   refreshing={query.isFetching}
                 />

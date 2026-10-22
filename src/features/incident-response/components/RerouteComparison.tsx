@@ -1,4 +1,6 @@
 import { Check, CircleDot, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { routePlanDetail } from "@/app/route-config";
 import { Section } from "@/features/transport-plan/components/ApprovedBookingDetails";
 import { formatPlanDate } from "@/features/transport-plan/format";
 import { distanceLabel, durationLabel } from "@/features/route-view/display";
@@ -12,7 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/shared/components/ui/table";
-import type { RerouteContext } from "../reroute-schemas";
+import {
+  rerouteIncidentIdSchema,
+  type RerouteContext,
+} from "../reroute-schemas";
+import { isEmergencyCostMockMode } from "../source";
 
 export function RerouteComparison({ context }: { context: RerouteContext }) {
   const segments = [
@@ -89,7 +95,20 @@ export function RerouteComparison({ context }: { context: RerouteContext }) {
               >
                 <TableCell className="space-y-2 whitespace-normal break-words px-2.5 py-2 align-top">
                   <p className="m-0 text-[11px] text-slate-500">BACKUP</p>
-                  <p className="m-0 font-semibold">{plan.routePlanCode}</p>
+                  <p className="m-0 font-semibold">
+                    {!isEmergencyCostMockMode() &&
+                    rerouteIncidentIdSchema.safeParse(plan.routePlanId)
+                      .success ? (
+                      <Link
+                        to={routePlanDetail(plan.routePlanId)}
+                        className="text-slate-900 underline decoration-primary/50 underline-offset-2 hover:decoration-primary"
+                      >
+                        {plan.routePlanCode}
+                      </Link>
+                    ) : (
+                      plan.routePlanCode
+                    )}
+                  </p>
                   <Badge
                     variant="outline"
                     className="max-w-full whitespace-normal break-words rounded-[2px] text-[10px]"
