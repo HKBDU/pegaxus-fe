@@ -19,6 +19,7 @@ const ImageViewer = lazy(
 function isGalleryImage(file: DocumentVersionFile) {
   return (
     (file.mimeType === "image/jpeg" || file.mimeType === "image/png") &&
+    file.fileSizeBytes !== null &&
     file.fileSizeBytes <= MAX_IMAGE_FILE_SIZE
   );
 }
@@ -54,7 +55,7 @@ function ProtectedFilePreview({ files }: { files: DocumentVersionFile[] }) {
             const resource = {
               url,
               size: blob.size,
-              mimeType: blob.type || item.mimeType,
+              mimeType: blob.type || item.mimeType || "",
             };
             if (
               files.length > 1 &&

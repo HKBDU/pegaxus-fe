@@ -7,10 +7,18 @@ import {
   dossierRequirementStatusSchema,
   dossierStatusSchema,
   documentVersionSchema,
+  bookingSummarySchema,
+  dossierLifecycleFields,
 } from "../schemas";
 
 const id = z.string();
 const time = z.string().min(1);
+export const backendEnvelopeSchema = z.object({
+  isSuccess: z.literal(true),
+  code: z.number().int().min(200).max(299),
+  message: z.string(),
+  value: z.unknown(),
+});
 const actions = z.object({ canUpload: z.boolean(), canReview: z.boolean() });
 const requestDto = z.object({
   documentRequestId: id,
@@ -76,10 +84,12 @@ const documentDto = z.object({
   versions: z.array(versionDto),
 });
 export const overviewDtoSchema = z.object({
+  ...dossierLifecycleFields,
   isInitialized: z.boolean(),
   message: z.string().nullable().optional(),
   bookingId: id,
   bookingCode: z.string(),
+  bookingSummary: bookingSummarySchema,
   complianceDossierId: id.nullable(),
   dossierCode: z.string().nullable(),
   dossierType: dossierTypeSchema.nullish(),
@@ -106,6 +116,16 @@ export const overviewDtoSchema = z.object({
     }),
   ),
   actions,
+  writeLocked: z.boolean().optional(),
+  writeLockReason: z.string().nullish(),
+});
+export const backendReminderEnvelopeSchema = backendEnvelopeSchema.extend({
+  value: z.object({
+    reminderId: id,
+    requirements: z.array(requirementDto),
+    emailSent: z.boolean(),
+    deliveryWarning: z.string().nullish(),
+  }),
 });
 export const requirementDetailDtoSchema = z.object({
   requirement: requirementDto,
@@ -118,17 +138,11 @@ export const requirementDetailDtoSchema = z.object({
 });
 
 export function unwrapBackendValue(payload: unknown): unknown {
-  return payload && typeof payload === "object" && "value" in payload
-    ? (payload as { value: unknown }).value
-    : payload;
+  return backendEnvelopeSchema.parse(payload).value;
 }
 
 function mapRequest(request: z.infer<typeof requestDto>) {
-  return {
-    ...request,
-    // The current request DTO exposes an error category, not its domain request type.
-    requestType: null,
-  };
+  return { ...request };
 }
 
 export function mapBackendRequirement(payload: unknown) {
@@ -150,6 +164,7 @@ export function mapBackendDossierOverview(payload: unknown) {
   const value = overviewDtoSchema.parse(unwrapBackendValue(payload));
   if (!value.isInitialized || !value.complianceDossierId || !value.status)
     throw new Error("DOSSIER_NOT_INITIALIZED");
+  const dossierCode = z.string().trim().min(1).parse(value.dossierCode);
   const requirements = [
     ...value.tripRequirements,
     ...value.horseRequirements.flatMap((horse) => horse.requirements),
@@ -159,45 +174,44 @@ export function mapBackendDossierOverview(payload: unknown) {
   const mandatory = requirements.filter(
     (requirement) => requirement.isMandatory,
   );
-  const locked = ["SUBMITTED", "PENDING", "APPROVED", "CLOSED"].includes(
+  const statusLocked = ["SUBMITTED", "PENDING", "APPROVED", "CLOSED"].includes(
     value.status,
   );
+  const bookingLocked = ["CANCELLED", "REJECTED"].includes(
+    value.bookingSummary.bookingStatus ?? "",
+  );
+  const locked = value.writeLocked === true || statusLocked || bookingLocked;
   return dossierOverviewSchema.parse({
     complianceDossierId: value.complianceDossierId,
-    dossierCode: value.dossierCode ?? "",
-    dossierType: value.dossierType ?? null,
-    complianceDossiers: value.complianceDossiers ?? [],
+    dossierCode,
+    dossierType: value.dossierType,
+    complianceDossiers: value.complianceDossiers,
     bookingId: value.bookingId,
     bookingCode: value.bookingCode,
     status: value.status,
     isInitialized: value.isInitialized,
     actions: value.actions,
-    openedAt: null,
-    readyForSubmissionAt: null,
-    approvedAt: null,
-    rejectedAt: null,
-    closedAt: null,
-    rejectionReason: null,
-    note: null,
+    openedAt: value.openedAt,
+    readyForSubmissionAt: value.readyForSubmissionAt,
+    approvedAt: value.approvedAt,
+    rejectedAt: value.rejectedAt,
+    closedAt: value.closedAt,
+    rejectionReason: value.rejectionReason,
+    note: value.note,
     writeLocked: locked,
-    writeLockReason: locked ? `DOSSIER_${value.status}` : null,
+    writeLockReason:
+      value.writeLockReason ??
+      (bookingLocked
+        ? "BOOKING_UNAVAILABLE"
+        : statusLocked
+          ? `DOSSIER_${value.status}`
+          : null),
     progressPercent: value.completionPercent,
     mandatoryTotal: mandatory.length,
     mandatorySatisfiedOrWaived: mandatory.filter((requirement) =>
       ["SATISFIED", "WAIVED"].includes(requirement.status),
     ).length,
-    bookingSummary: {
-      bookingStatus: null,
-      originCountry: null,
-      destinationCountry: null,
-      requestedDepartureDate: null,
-      customerName: null,
-      horseCount: value.horseRequirements.length,
-      horses: value.horseRequirements.map(({ horseId, horseName }) => ({
-        horseId,
-        horseName,
-      })),
-    },
+    bookingSummary: value.bookingSummary,
     requirementSummary: {
       total: requirements.length,
       pending: count("PENDING"),
@@ -215,7 +229,7 @@ export function mapBackendDossierOverview(payload: unknown) {
 function mapReview(review: z.infer<typeof reviewDto>) {
   return {
     ...review,
-    reviewedBy: { accountId: review.reviewedByAccountId, fullName: "" },
+    reviewedBy: { accountId: review.reviewedByAccountId },
   };
 }
 
@@ -244,16 +258,16 @@ export function mapBackendRequirementDetail(payload: unknown) {
               {
                 fileName: version.fileName,
                 fileUrl: version.previewUrl,
-                mimeType: version.mimeType ?? "",
-                fileSizeBytes: version.fileSizeBytes ?? 0,
+                mimeType: version.mimeType,
+                fileSizeBytes: version.fileSizeBytes,
                 sortOrder: 0,
                 documentAttachmentId: null,
               },
               ...version.attachments.map((file) => ({
                 ...file,
                 fileUrl: file.previewUrl,
-                mimeType: file.mimeType ?? "",
-                fileSizeBytes: file.fileSizeBytes ?? 0,
+                mimeType: file.mimeType,
+                fileSizeBytes: file.fileSizeBytes,
               })),
             ],
           };
@@ -270,10 +284,9 @@ export function mapBackendRequirementDetail(payload: unknown) {
     document: document
       ? {
           ...document,
-          latestVersionNo: Math.max(
-            1,
-            ...document.versions.map((version) => version.versionNo),
-          ),
+          latestVersionNo: document.versions.length
+            ? Math.max(...document.versions.map((version) => version.versionNo))
+            : null,
         }
       : null,
   });
@@ -282,10 +295,9 @@ export function mapBackendRequirementDetail(payload: unknown) {
     document: document
       ? {
           ...document,
-          latestVersionNo: Math.max(
-            1,
-            ...document.versions.map((version) => version.versionNo),
-          ),
+          latestVersionNo: document.versions.length
+            ? Math.max(...document.versions.map((version) => version.versionNo))
+            : null,
         }
       : null,
     documentRequests: requests,
@@ -335,8 +347,8 @@ export function mapBackendDocumentVersions(
       review: reviews[0] ?? null,
       files: version.files.map((file, sortOrder) => ({
         ...file,
-        mimeType: file.mimeType ?? "",
-        fileSizeBytes: file.fileSizeBytes ?? 0,
+        mimeType: file.mimeType,
+        fileSizeBytes: file.fileSizeBytes,
         sortOrder,
         fileUrl: protectedPreviewUrl(
           dossierId,

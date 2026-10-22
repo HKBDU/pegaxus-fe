@@ -23,6 +23,7 @@ export function useMissingDossierRequirements(id: string, enabled: boolean) {
 export function useMissingDocumentReminder() {
   const client = useQueryClient();
   const guard = useRef(createRequestAttemptGuard());
+  const outcomeUnknown = useRef(false);
   const mutation = useMutation({
     mutationFn: (input: SendMissingDocumentReminderInput) =>
       loadMissingRequirementReminder(input),
@@ -30,13 +31,17 @@ export function useMissingDocumentReminder() {
     onSuccess: (_response, input) =>
       invalidateDossierAfterUpload(client, input.dossierId),
     onError: (error, input) => {
-      if (mapMissingDocumentReminderError(error).refresh)
+      const mapped = mapMissingDocumentReminderError(error);
+      if (mapped.outcomeUnknown) outcomeUnknown.current = true;
+      if (mapped.refresh)
         return invalidateDossierAfterUpload(client, input.dossierId);
     },
   });
   return {
     ...mutation,
     sendReminder: (input: SendMissingDocumentReminderInput) => {
+      if (outcomeUnknown.current)
+        return Promise.resolve({ started: false } as const);
       guard.current.reset();
       return guard.current.run(() => mutation.mutateAsync(input));
     },

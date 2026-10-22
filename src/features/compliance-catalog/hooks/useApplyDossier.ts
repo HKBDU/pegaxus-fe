@@ -5,6 +5,7 @@ import type { CreateDossierInput } from "@/features/compliance-catalog/dossier-t
 import { templateService } from "@/features/compliance-catalog/template-services"
 import type { DossierTemplateListParams } from "@/features/compliance-catalog/template-types"
 import type { EntityId } from "@/shared/types"
+import { dossierKeys } from "@/features/dossier/hooks"
 
 export const applyKeys = {
   all: ["apply-dossier"] as const,
@@ -47,6 +48,14 @@ export function useCreateDossier() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: CreateDossierInput) => dossierService.createDossier(input),
-    onSuccess: (_, input) => void queryClient.invalidateQueries({ queryKey: applyKeys.existing(input.bookingId) }),
+    retry: false,
+    onSuccess: async (created, input) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: applyKeys.existing(input.bookingId) }),
+        queryClient.invalidateQueries({ queryKey: dossierKeys.booking(String(input.bookingId)) }),
+        queryClient.invalidateQueries({ queryKey: dossierKeys.overview(String(created.complianceDossierId)) }),
+        queryClient.invalidateQueries({ queryKey: dossierKeys.requirementsRoot(String(created.complianceDossierId)) }),
+      ])
+    },
   })
 }

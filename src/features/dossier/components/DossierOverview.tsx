@@ -42,12 +42,12 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
     ["Rejected", dossier.rejectedAt],
     ["Closed", dossier.closedAt],
   ] as const;
-  const meaningfulMilestones = milestones.filter(([, value]) => value !== null);
+  const meaningfulMilestones = milestones.filter(([, value]) => value != null);
   const proofs = [
     ["Quarantine proof", dossier.quarantineStatus],
     ["Customs clearance proof", dossier.customsClearanceStatus],
   ] as const;
-  const hasProof = proofs.some(([, proof]) => proof !== null);
+  const hasProof = proofs.some(([, proof]) => proof != null);
   const progress = Math.max(0, Math.min(100, dossier.progressPercent));
   const siblings = dossier.complianceDossiers ?? [];
   const lockMessage =
@@ -139,7 +139,7 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
               <div className="flex w-full min-w-0 max-w-36 flex-col items-center gap-2 justify-self-center">
                 <div
                   role="progressbar"
-                  aria-label="Mandatory dossier requirements completed"
+                  aria-label="Dossier requirements completed"
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={progress}

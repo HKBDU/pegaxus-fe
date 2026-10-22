@@ -43,6 +43,12 @@ export interface CreateDossierInput {
   /** Missing = custom dossier without a template (UC-18 ALT-01). */
   dossierTemplateId?: EntityId
   selectedTemplateItemIds: EntityId[]
+  initializationItems: {
+    complianceRequirementId: EntityId
+    isMandatory: boolean
+    appliesPerHorse: boolean
+    instruction?: string | null
+  }[]
   customRequirements: CustomRequirementDraft[]
 }
 

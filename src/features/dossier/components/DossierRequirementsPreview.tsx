@@ -237,7 +237,9 @@ export function RequirementTable({
                 {row.original.document.documentCode}
               </span>
               <span className="mt-1 block text-[0.68rem] text-slate-400">
-                Version {row.original.document.latestVersionNo}
+                {row.original.document.latestVersionNo === null
+                  ? "No version available"
+                  : `Version ${row.original.document.latestVersionNo}`}
               </span>
             </div>
           ) : (

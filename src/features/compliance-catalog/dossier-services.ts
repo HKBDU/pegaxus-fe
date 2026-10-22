@@ -1,4 +1,6 @@
 import { bookingService } from "@/features/booking/services"
+import { z } from "zod"
+import { approvedBookingDetailSchema } from "@/features/transport-plan/schemas"
 import { api, ComplianceApiError, useComplianceMocks, useFlow2HttpMocks, wait } from "@/features/compliance-catalog/services"
 import type {
   ApplyBooking,
@@ -23,6 +25,41 @@ const toDossierRequirementBody = (draft: CustomRequirementDraft) => ({
   instruction: draft.instruction || undefined,
 })
 
+const initializationItemSchema = z.object({
+  complianceRequirementId: z.string().min(1),
+  isMandatory: z.boolean(),
+  appliesPerHorse: z.boolean(),
+  instruction: z.string().nullish(),
+});
+const initializationRequestSchema = z.object({
+  dossierTemplateId: z.string().min(1).optional(),
+  items: z
+    .array(initializationItemSchema)
+    .min(1)
+    .refine(
+      (items) =>
+        new Set(items.map((item) => item.complianceRequirementId)).size ===
+        items.length,
+      "Each ComplianceRequirement must appear only once in the initialization request.",
+    ),
+});
+const createdDossierEnvelopeSchema = z.object({
+  isSuccess: z.literal(true),
+  code: z.literal(201),
+  message: z.string(),
+  value: z.object({
+    complianceDossierId: z.string().min(1),
+    dossierCode: z.string().min(1),
+    dossierType: z.literal("MAIN"),
+    bookingId: z.string().min(1),
+    transportId: z.string().min(1),
+    status: z.literal("DRAFT"),
+    requirements: z.array(
+      z.object({ dossierRequirementId: z.string().min(1) }),
+    ).min(1),
+  }),
+});
+
 function isNotFound(error: unknown) {
   if (error instanceof ComplianceApiError) return error.message === "NOT_FOUND"
   return (error as { response?: { status?: number } })?.response?.status === 404
@@ -30,14 +67,25 @@ function isNotFound(error: unknown) {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null
 
+const dossierSummarySchema = z.object({
+  complianceDossierId: z.union([
+    z.string().min(1),
+    z.number().int().positive(),
+  ]),
+  dossierCode: z.string().min(1),
+  status: z.string().min(1),
+  dossierType: z.enum(["MAIN", "EXTRA"]).nullish(),
+});
+
 function toSummary(value: unknown): ComplianceDossierSummary | null {
-  if (!isRecord(value) || value.complianceDossierId === null || value.complianceDossierId === undefined || value.complianceDossierId === "") return null
-  return {
-    complianceDossierId: value.complianceDossierId as EntityId,
-    dossierCode: String(value.dossierCode ?? ""),
-    status: String(value.status ?? ""),
-    dossierType: value.dossierType === "MAIN" || value.dossierType === "EXTRA" ? value.dossierType : null,
-  }
+  if (
+    !isRecord(value) ||
+    value.complianceDossierId === null ||
+    value.complianceDossierId === undefined ||
+    value.complianceDossierId === ""
+  )
+    return null;
+  return dossierSummarySchema.parse(value);
 }
 
 /**
@@ -45,24 +93,38 @@ function toSummary(value: unknown): ComplianceDossierSummary | null {
  * `complianceDossiers[]` summary list; the contract (flow4.md X10) shows `{ items: [] }`. Both are read, and the MAIN
  * dossier wins (the first one when no type is sent). null = nothing initialised yet (complianceDossierId: null).
  */
-export function pickMainDossier(payload: unknown): ComplianceDossierSummary | null {
-  const body = isRecord(payload) && isRecord(payload.value) ? payload.value : payload
-  if (!isRecord(body)) return null
+export function pickMainDossier(
+  payload: unknown,
+): ComplianceDossierSummary | null {
+  const body = z
+    .object({
+      isSuccess: z.literal(true),
+      code: z.number().int().min(200).max(299),
+      value: z.record(z.string(), z.unknown()),
+    })
+    .parse(payload).value;
+  if (!isRecord(body)) return null;
 
-  const list = [body.complianceDossiers, body.items].find(Array.isArray) as unknown[] | undefined
-  const candidates = [toSummary(body), ...(list ?? []).map(toSummary)].filter((item): item is ComplianceDossierSummary => item !== null)
-  return candidates.find((item) => item.dossierType === "MAIN") ?? candidates[0] ?? null
-}
-
-interface ApprovedBookingPayload {
-  bookingId: EntityId
-  bookingCode: string
-  status: ApplyBooking["status"]
-  originCountry: string
-  destinationCountry: string
-  customer?: { fullName: string }
-  customerName?: string
-  horses?: { horseId: EntityId; horseName: string }[]
+  const list = z
+    .array(dossierSummarySchema)
+    .parse(body.complianceDossiers ?? body.items ?? []);
+  const current = toSummary(body);
+  if (
+    !current &&
+    !list.length &&
+    body.isInitialized !== false &&
+    body.items === undefined &&
+    body.complianceDossiers === undefined
+  )
+    throw new ComplianceApiError("DOSSIER_RESPONSE_INVALID");
+  const candidates = [current, ...list].filter(
+    (item): item is ComplianceDossierSummary => item !== null,
+  );
+  return (
+    candidates.find((item) => item.dossierType === "MAIN") ??
+    candidates[0] ??
+    null
+  );
 }
 
 export const dossierService = {
@@ -72,16 +134,16 @@ export const dossierService = {
    */
   async getBookingForApply(bookingId: EntityId): Promise<ApplyBooking> {
     if (useComplianceMocks && !useFlow2HttpMocks) return bookingService.getBooking(bookingId)
-    const payload = await api.get<{ value?: ApprovedBookingPayload } & Partial<ApprovedBookingPayload>>(`bookings/approved/${bookingId}`)
-    const booking = (payload.value ?? payload) as ApprovedBookingPayload
+    const payload = await api.get<unknown>(`bookings/approved/${bookingId}`)
+    const booking = z.object({ isSuccess: z.literal(true), code: z.number().int().min(200).max(299), value: approvedBookingDetailSchema }).parse(payload).value
     return {
       bookingId: booking.bookingId,
       bookingCode: booking.bookingCode,
       status: booking.status,
       originCountry: booking.originCountry,
       destinationCountry: booking.destinationCountry,
-      customer: { fullName: booking.customer?.fullName ?? booking.customerName ?? "—" },
-      horses: (booking.horses ?? []).map((horse) => ({ horseId: horse.horseId, horseName: horse.horseName })),
+      customer: { fullName: booking.customer.fullName },
+      horses: booking.horses.map((horse) => ({ horseId: horse.horseId, horseName: horse.horseName })),
     }
   },
 
@@ -110,56 +172,133 @@ export const dossierService = {
     }
   },
 
-  /** D2, plus D3 for the custom lines when a template is used (D2 cannot carry both, see the contract). */
+  /** D2 receives requirement items; D3 retains individually scoped custom additions. */
   async createDossier(input: CreateDossierInput): Promise<CreateDossierResult> {
-    const { bookingId, dossierTemplateId, selectedTemplateItemIds, customRequirements } = input
-    const fromTemplate = dossierTemplateId !== undefined
+    const {
+      bookingId,
+      dossierTemplateId,
+      selectedTemplateItemIds,
+      customRequirements,
+    } = input;
+    const fromTemplate = dossierTemplateId !== undefined;
 
     if (useComplianceMocks && !useFlow2HttpMocks) {
-      await wait(400)
-      const booking = await bookingService.getBooking(bookingId)
-      if (booking.status !== "APPROVED") throw new ComplianceApiError("BOOKING_NOT_APPROVED")
-      if (mockDossiers.has(String(bookingId))) throw new ComplianceApiError("DOSSIER_ALREADY_EXISTS")
-      if (!fromTemplate && !customRequirements.length) throw new ComplianceApiError("TEMPLATE_OR_MANUAL_REQUIRED")
+      await wait(400);
+      const booking = await bookingService.getBooking(bookingId);
+      if (booking.status !== "APPROVED")
+        throw new ComplianceApiError("BOOKING_NOT_APPROVED");
+      if (mockDossiers.has(String(bookingId)))
+        throw new ComplianceApiError("DOSSIER_ALREADY_EXISTS");
+      if (!fromTemplate && !customRequirements.length)
+        throw new ComplianceApiError("TEMPLATE_OR_MANUAL_REQUIRED");
 
-      let generated = customRequirements.length
+      let generated = customRequirements.length;
       if (fromTemplate) {
-        const template = await templateService.getTemplate(dossierTemplateId)
-        const chosen = template.items.filter((item) => selectedTemplateItemIds.some((id) => String(id) === String(item.dossierTemplateItemId)))
-        if (!chosen.length) throw new ComplianceApiError("TEMPLATE_ITEM_INVALID")
-        generated += chosen.reduce((sum, item) => sum + (item.appliesPerHorse ? booking.horses.length : 1), 0)
+        const template = await templateService.getTemplate(dossierTemplateId);
+        const chosen = template.items.filter((item) =>
+          selectedTemplateItemIds.some(
+            (id) =>
+              String(id) ===
+              String(item.dossierTemplateItemId ?? `seq-${item.sequenceNo}`),
+          ),
+        );
+        if (!chosen.length)
+          throw new ComplianceApiError("TEMPLATE_ITEM_INVALID");
+        generated += chosen.reduce(
+          (sum, item) =>
+            sum + (item.appliesPerHorse ? booking.horses.length : 1),
+          0,
+        );
       }
 
-      const complianceDossierId = 501 + mockDossiers.size
-      const dossier: ComplianceDossierSummary = { complianceDossierId, dossierCode: `CD-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${7000 + mockDossiers.size}`, status: "IN_PREPARATION", dossierType: "MAIN" }
-      mockDossiers.set(String(bookingId), dossier)
-      return { ...dossier, generatedRequirementCount: generated, failedCustomCount: 0 }
+      const complianceDossierId = 501 + mockDossiers.size;
+      const dossier: ComplianceDossierSummary = {
+        complianceDossierId,
+        dossierCode: `CD-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${7000 + mockDossiers.size}`,
+        status: "IN_PREPARATION",
+        dossierType: "MAIN",
+      };
+      mockDossiers.set(String(bookingId), dossier);
+      return {
+        ...dossier,
+        generatedRequirementCount: generated,
+        failedCustomCount: 0,
+      };
     }
 
-    const body = fromTemplate
-      ? { dossierTemplateId, selectedTemplateItemIds }
-      : { manualRequirements: customRequirements.map(toDossierRequirementBody) }
-    const payload = await api.post<unknown>(`bookings/${bookingId}/compliance-dossier`, body)
-    const envelope = payload as { value?: unknown; data?: { value?: unknown } }
-    const created = (envelope.value ?? envelope.data?.value ?? payload) as Partial<CreateDossierResult>
-    if (!created.complianceDossierId) throw new ComplianceApiError("DOSSIER_CREATE_RESPONSE_INVALID")
+    if (
+      !fromTemplate &&
+      customRequirements.some((item) => item.horseId !== null || item.dueDate)
+    ) {
+      throw new Error(
+        "The current dossier initialization API cannot preserve a specific horse or due date. Use a template, then add these requirements from the dossier page.",
+      );
+    }
+    const body = initializationRequestSchema.parse({
+      dossierTemplateId,
+      items: fromTemplate
+        ? input.initializationItems
+        : customRequirements.map((item) => ({
+            complianceRequirementId: item.complianceRequirementId,
+            isMandatory: item.isMandatory,
+            appliesPerHorse: false,
+            instruction: item.instruction,
+          })),
+    });
+    let payload: unknown;
+    try {
+      payload = await api.post<unknown>(
+        `bookings/${bookingId}/compliance-dossier`,
+        body,
+      );
+    } catch (error) {
+      const failure = error as {
+        response?: { status?: number };
+        cause?: { response?: { status?: number } };
+      };
+      const status =
+        failure.response?.status ?? failure.cause?.response?.status;
+      if (status === undefined || status >= 500)
+        throw new ComplianceApiError("DOSSIER_CREATE_OUTCOME_UNKNOWN", {
+          cause: error,
+          backendMessage:
+            "The creation outcome is unknown. Do not submit again; reload and check whether the dossier was created.",
+        });
+      throw error;
+    }
+    const parsed = createdDossierEnvelopeSchema.safeParse(payload);
+    if (!parsed.success || parsed.data.value.bookingId !== String(bookingId)) {
+      throw new ComplianceApiError("DOSSIER_CREATE_OUTCOME_UNKNOWN", {
+        backendMessage:
+          "The creation response cannot be verified. Do not submit again; reload and check the dossier.",
+      });
+    }
+    const created = parsed.data.value;
 
-    let failedCustomCount = 0
-    let addedCustom = 0
+    let failedCustomCount = 0;
+    let addedCustom = 0;
     if (fromTemplate) {
       for (const draft of customRequirements) {
         try {
-          await api.post(`compliance-dossiers/${created.complianceDossierId}/requirements`, toDossierRequirementBody(draft))
-          addedCustom += 1
+          const added = await api.post<unknown>(
+            `compliance-dossiers/${created.complianceDossierId}/requirements`,
+            toDossierRequirementBody(draft),
+          );
+          z.object({
+            isSuccess: z.literal(true),
+            code: z.literal(201),
+            value: z.object({ dossierRequirementId: z.string().min(1) }),
+          }).parse(added);
+          addedCustom += 1;
         } catch {
-          failedCustomCount += 1
+          failedCustomCount += 1;
         }
       }
     }
     return {
       ...created,
-      generatedRequirementCount: (created.generatedRequirementCount ?? 0) + addedCustom,
+      generatedRequirementCount: created.requirements.length + addedCustom,
       failedCustomCount,
-    } as CreateDossierResult
+    };
   },
-}
+};

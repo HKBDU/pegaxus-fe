@@ -1,4 +1,5 @@
 import { normalizeRole } from "@/features/auth/access-control";
+import { z } from "zod";
 import type {
   ComplianceDocumentDetail,
   DocumentReviewError,
@@ -170,6 +171,15 @@ export function mapDocumentReviewError(error: unknown): DocumentReviewError {
     }) ?? {};
   const data = response.response?.data;
   const status = response.response?.status ?? response.status;
+  if (status === undefined || status >= 500 || error instanceof z.ZodError)
+    return {
+      code: "MUTATION_OUTCOME_UNKNOWN",
+      message:
+        "The operation outcome cannot be confirmed. Do not submit again. Reload and check the latest dossier and document data before continuing.",
+      backendMessage: data?.message ?? response.message,
+      refresh: true,
+      outcomeUnknown: true,
+    };
   const code =
     data?.errorCode ??
     data?.value?.errorCode ??

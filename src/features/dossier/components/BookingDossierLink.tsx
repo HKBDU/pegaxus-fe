@@ -9,6 +9,12 @@ import { cn } from "@/lib/utils"
  */
 export function BookingDossierLink({ bookingId, className }: { bookingId: string; className?: string }) {
   const query = useDossierByBooking(bookingId)
+  if (query.isError)
+    return (
+      <span role="status" className="text-xs text-muted-foreground">
+        Dossier information could not be loaded.
+      </span>
+    );
   const dossiers = query.data ?? []
   if (!dossiers.length) return null
 
