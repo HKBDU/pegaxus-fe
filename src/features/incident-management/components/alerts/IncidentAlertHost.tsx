@@ -5,6 +5,7 @@ import { ROLE_ROUTES } from "@/app/route-config"
 import { useMarkNotificationRead } from "@/features/notification/hooks"
 import { resolveNotificationPath, type AppNotification } from "@/shared/realtime"
 
+import { useAlertsDrawerStore } from "../../alerts-drawer-store"
 import { incidentRoutes } from "../../constants"
 import { useIncidentViewer } from "../../hooks/useViewer"
 import { installMockAlertTrigger } from "../../mock"
@@ -24,7 +25,8 @@ export function IncidentAlertHost() {
   const { principal, isManager, isCoordinator, isAdminStaff, isCrew } = useIncidentViewer()
   const alerts = useIncidentAlerts()
   const markRead = useMarkNotificationRead()
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const drawerOpen = useAlertsDrawerStore((state) => state.open)
+  const setDrawerOpen = useAlertsDrawerStore((state) => state.setOpen)
   const [modalSeen, setModalSeen] = useState<ReadonlySet<string>>(new Set())
   const { active, incident } = alerts
 

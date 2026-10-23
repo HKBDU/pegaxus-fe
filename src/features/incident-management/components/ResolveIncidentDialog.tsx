@@ -84,7 +84,7 @@ export function ResolveIncidentDialog({ incident, open, onOpenChange, mode, onRe
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-h-[92dvh] gap-3 overflow-y-auto rounded-[2px] border-slate-200 bg-white p-4 text-slate-900 sm:max-w-xl">
-        <DialogHeader className="gap-0.5 pr-6">
+        <DialogHeader className="gap-0.5 pr-6 text-left">
           <DialogTitle className="m-0! font-heading text-base! leading-5! font-semibold! tracking-normal! text-slate-900">
             {isManager ? "Confirm cost settlement & resolve incident" : "Mark incident as resolved"}
           </DialogTitle>
@@ -206,7 +206,7 @@ export function ResolveIncidentDialog({ incident, open, onOpenChange, mode, onRe
 
         {error ? <IncidentErrorAlert error={error} onReload={() => { close(false); onReload() }} /> : null}
 
-        <DialogFooter className="gap-1.5 sm:justify-end">
+        <DialogFooter className="gap-1.5 sm:justify-end [&>button]:h-10 sm:[&>button]:h-8">
           <button type="button" className={`${actionButtonClass} ${outlineButtonClass}`} onClick={() => close(false)} disabled={mutation.isPending}>
             Close
           </button>

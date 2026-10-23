@@ -25,7 +25,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
   return (
     <div className="min-w-0">
       <dt className="text-[10px] font-medium uppercase tracking-[0.08em] opacity-75">{label}</dt>
-      <dd className="m-0 truncate text-xs font-medium">{children}</dd>
+      <dd className="m-0 line-clamp-2 break-words text-xs font-medium leading-4">{children}</dd>
     </div>
   )
 }
@@ -35,14 +35,14 @@ export function EmergencyAlertBanner({ alert, incident, more, muted, soundBlocke
   const urgent = alert.priority === "URGENT"
   const isHold = alert.referenceType === "IncidentHold"
   const buttonClass = cn(
-    "inline-flex h-8 items-center gap-1.5 rounded-[2px] border px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
+    "inline-flex h-9 items-center gap-1.5 rounded-[2px] border px-3 sm:h-8 font-heading text-[11px] font-semibold uppercase tracking-[0.04em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
     urgent ? "border-white/60 text-white hover:bg-white/15" : "border-slate-900/40 text-slate-950 hover:bg-black/10",
   )
 
   return (
     <div
       role={urgent ? "alert" : "status"}
-      className={cn("relative z-[60] border-b-4 px-3 py-2.5 sm:px-6", urgent ? "border-red-950 bg-red-700 text-white" : "border-amber-700 bg-amber-400 text-slate-950")}
+      className={cn("relative z-10 border-b-4 px-3 py-2.5 sm:px-6", urgent ? "border-red-950 bg-red-700 text-white" : "border-amber-700 bg-amber-400 text-slate-950")}
     >
       {urgent ? <span aria-hidden="true" className="pointer-events-none absolute inset-0 animate-pulse bg-white/10 motion-reduce:animate-none" /> : null}
       <div className="relative mx-auto flex max-w-[1152px] flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -54,19 +54,24 @@ export function EmergencyAlertBanner({ alert, incident, more, muted, soundBlocke
               {more > 0 ? <span className="ml-2 rounded-full bg-black/25 px-2 py-0.5 text-[10px] normal-case tracking-normal">+{more} more</span> : null}
             </p>
             {incident && !isHold ? (
-              <dl className="m-0 mt-1 grid grid-cols-2 gap-x-5 gap-y-1 sm:grid-cols-3 xl:grid-cols-5">
-                <Fact label="Transport">{incident.transport?.transportCode}</Fact>
-                <Fact label="Category / severity">
-                  {INCIDENT_CATEGORY_OPTIONS[incident.category].label} · {INCIDENT_SEVERITY_OPTIONS[incident.severity].label}
-                </Fact>
-                <Fact label="Reported by">
-                  {incident.reportedBy.fullName} ({roleLabel(incident.reportedBy.role)}){incident.reportedBy.phone ? ` · ${incident.reportedBy.phone}` : ""}
-                </Fact>
-                <Fact label="Location">
-                  <MapPin className="mr-1 inline size-3" aria-hidden="true" />
-                  {placeLine(incident.location)}
-                </Fact>
-              </dl>
+              <>
+                <p className="m-0 mt-0.5 text-xs font-medium sm:hidden">
+                  {INCIDENT_CATEGORY_OPTIONS[incident.category].label} · {INCIDENT_SEVERITY_OPTIONS[incident.severity].label} · {incident.transport?.transportCode}
+                </p>
+                <dl className="m-0 mt-1 hidden grid-cols-2 gap-x-5 gap-y-1 sm:grid sm:grid-cols-4">
+                  <Fact label="Transport">{incident.transport?.transportCode}</Fact>
+                  <Fact label="Category / severity">
+                    {INCIDENT_CATEGORY_OPTIONS[incident.category].label} · {INCIDENT_SEVERITY_OPTIONS[incident.severity].label}
+                  </Fact>
+                  <Fact label="Reported by">
+                    {incident.reportedBy.fullName} ({roleLabel(incident.reportedBy.role)}){incident.reportedBy.phone ? ` · ${incident.reportedBy.phone}` : ""}
+                  </Fact>
+                  <Fact label="Location">
+                    <MapPin className="mr-1 inline size-3" aria-hidden="true" />
+                    {placeLine(incident.location)}
+                  </Fact>
+                </dl>
+              </>
             ) : (
               <p className="m-0 mt-0.5 line-clamp-2 text-xs leading-4 opacity-90">{alert.message}</p>
             )}

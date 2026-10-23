@@ -16,7 +16,7 @@ export default function IncidentLocationMap({ location }: { location: NonNullabl
   if (!locations.length) return null
   return (
     // MapViewer sizes itself to 87vh; here it fills this smaller box instead.
-    <div className="h-[240px] sm:h-[280px] [&>div]:h-full! [&>div]:min-h-0!">
+    <div className="h-[210px] sm:h-[280px] [&>div]:h-full! [&>div]:min-h-0!">
       <MapViewer locations={locations} mode="view" />
     </div>
   )

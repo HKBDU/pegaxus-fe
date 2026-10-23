@@ -21,7 +21,7 @@ export function EmergencyAlertModal({ incident, open, canReroute, onView, onRero
   const gps = coordinates(incident.location)
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onDismiss()}>
-      <DialogContent showCloseButton={false} className="gap-3 overflow-hidden rounded-[2px] border-red-300 bg-white p-0 sm:max-w-lg">
+      <DialogContent showCloseButton={false} className="max-h-[92dvh] gap-3 overflow-y-auto rounded-[2px] border-red-300 bg-white p-0 sm:max-w-lg">
         <DialogHeader className="gap-1 bg-red-700 px-4 py-3 text-white">
           <DialogTitle className="m-0! flex items-center gap-2 font-heading text-base! leading-5! font-bold! uppercase tracking-[0.04em]! text-white">
             <Siren className="size-5 animate-pulse motion-reduce:animate-none" aria-hidden="true" />
@@ -31,26 +31,26 @@ export function EmergencyAlertModal({ incident, open, canReroute, onView, onRero
         </DialogHeader>
 
         <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2.5 px-4">
-          <div><dt className={fieldLabelClass}>Incident code</dt><dd className="m-0 text-sm font-semibold">{incident.incidentCode}</dd></div>
-          <div><dt className={fieldLabelClass}>Transport</dt><dd className="m-0 text-xs">{incident.transport?.transportCode}</dd></div>
+          <div><dt className={fieldLabelClass}>Incident code</dt><dd className="m-0 text-base font-bold text-slate-900">{incident.incidentCode}</dd></div>
+          <div><dt className={fieldLabelClass}>Transport</dt><dd className="m-0 text-sm font-semibold leading-5 text-slate-900">{incident.transport?.transportCode}</dd></div>
           <div><dt className={fieldLabelClass}>Category</dt><dd className="m-0"><CategoryBadge category={incident.category} /></dd></div>
           <div><dt className={fieldLabelClass}>Severity</dt><dd className="m-0"><SeverityBadge severity={incident.severity} /></dd></div>
           <div className="col-span-2">
             <dt className={fieldLabelClass}>Reported by</dt>
-            <dd className="m-0 text-xs">{incident.reportedBy.fullName} ({roleLabel(incident.reportedBy.role)}){incident.reportedBy.phone ? ` · ${incident.reportedBy.phone}` : ""}</dd>
+            <dd className="m-0 text-sm font-semibold leading-5 text-slate-900">{incident.reportedBy.fullName} ({roleLabel(incident.reportedBy.role)}){incident.reportedBy.phone ? ` · ${incident.reportedBy.phone}` : ""}</dd>
           </div>
           <div className="col-span-2">
             <dt className={fieldLabelClass}>Location</dt>
-            <dd className="m-0 text-xs">{placeLine(incident.location)}{gps ? <span className="text-gray-500"> ({gps})</span> : null}</dd>
+            <dd className="m-0 text-sm font-semibold leading-5 text-slate-900">{placeLine(incident.location)}{gps ? <span className="text-gray-500"> ({gps})</span> : null}</dd>
           </div>
-          <div className="col-span-2"><dt className={fieldLabelClass}>Reported</dt><dd className="m-0 text-xs">{timeAgo(incident.reportedAt, new Date(incident.serverTime).getTime())}</dd></div>
+          <div className="col-span-2"><dt className={fieldLabelClass}>Reported</dt><dd className="m-0 text-sm font-semibold leading-5 text-slate-900">{timeAgo(incident.reportedAt, new Date(incident.serverTime).getTime())}</dd></div>
           <div className="col-span-2">
             <dt className={fieldLabelClass}>Quick summary</dt>
-            <dd className="m-0 text-xs leading-5 text-gray-800"><strong>{incident.title}.</strong> {incident.description}</dd>
+            <dd className="m-0 text-sm leading-6 text-gray-800"><strong>{incident.title}.</strong> {incident.description}</dd>
           </div>
         </dl>
 
-        <DialogFooter className="gap-1.5 border-t border-slate-200 bg-[#faf9f6] px-4 py-3 sm:justify-end">
+        <DialogFooter className="flex-col-reverse gap-1.5 border-t border-slate-200 bg-[#faf9f6] px-4 py-3 sm:flex-row sm:justify-end [&>button]:h-10 sm:[&>button]:h-8">
           <button type="button" className={`${actionButtonClass} ${outlineButtonClass}`} onClick={onDismiss}>Dismiss to banner</button>
           {canReroute ? (
             <button type="button" className={`${actionButtonClass} ${outlineButtonClass}`} onClick={onReroute}>

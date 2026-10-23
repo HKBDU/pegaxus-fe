@@ -24,7 +24,7 @@ export default function CustomerIncidentPage() {
   if (query.isError && isNotFound(query.error)) return <NotFoundPage />
 
   return (
-    <div className="booking-page-shell min-h-[70dvh] bg-[#f4f2ed] px-5 pt-5 pb-8 font-sans sm:px-6 lg:px-10">
+    <div className="booking-page-shell min-h-[70dvh] bg-[#f4f2ed] px-4 pt-5 pb-8 font-sans sm:px-6 lg:px-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         <div className="mb-3">
           <PageHeader

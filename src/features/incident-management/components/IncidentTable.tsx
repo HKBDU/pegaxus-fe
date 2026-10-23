@@ -20,6 +20,7 @@ import { incidentRoutes } from "../constants"
 import { useIncidentViewer } from "../hooks/useViewer"
 import type { IncidentListItem, IncidentListParams } from "../types"
 import { formatDate, formatTime, placeLine, roleLabel } from "../utils"
+import { IncidentCardList } from "./IncidentCardList"
 import { IncidentFilters } from "./IncidentFilters"
 
 interface RowActionsProps {
@@ -188,7 +189,7 @@ export function IncidentTable({ items, params, meta, isLoading, onFilterChange, 
         table={table}
         isLoading={isLoading}
         className="gap-2.5"
-        containerClassName="booking-panel overflow-x-auto"
+        containerClassName="booking-panel hidden overflow-x-auto md:block"
         headerClassName="bg-[#e9e6de]"
         headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
         rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60"
@@ -196,7 +197,8 @@ export function IncidentTable({ items, params, meta, isLoading, onFilterChange, 
         emptyMessage="No incidents match the current filters."
         footer={<TablePagination meta={meta} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />}
       >
-        <IncidentFilters params={params} onChange={onFilterChange} viewOptions={<DataTableViewOptions table={table} />} />
+        <IncidentFilters params={params} onChange={onFilterChange} viewOptions={<div className="hidden md:block"><DataTableViewOptions table={table} /></div>} />
+        <IncidentCardList items={items} isLoading={isLoading} />
       </DataTable>
     </div>
   )

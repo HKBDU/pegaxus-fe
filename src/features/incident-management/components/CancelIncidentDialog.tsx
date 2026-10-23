@@ -69,7 +69,7 @@ export function CancelIncidentDialog({ incident, open, onOpenChange, onReload }:
             <TriangleAlert className="size-3.5" />
           </AlertDialogMedia>
           <div className="grid gap-0.5">
-            <AlertDialogTitle className="m-0! font-heading text-base! leading-5! font-semibold! tracking-normal! text-slate-900">
+            <AlertDialogTitle className="col-auto! m-0! font-heading text-base! leading-5! font-semibold! tracking-normal! text-slate-900">
               Cancel incident {incident.incidentCode}?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs leading-4 text-slate-600">
@@ -111,7 +111,7 @@ export function CancelIncidentDialog({ incident, open, onOpenChange, onReload }:
 
         {error ? <IncidentErrorAlert error={error} onReload={() => { close(false); onReload() }} /> : null}
 
-        <AlertDialogFooter className="gap-1.5">
+        <AlertDialogFooter className="gap-1.5 [&>button]:h-10 sm:[&>button]:h-8">
           <AlertDialogCancel size="sm" className="h-8 rounded-[2px] border-slate-300 bg-white px-3 text-xs font-normal text-slate-700 shadow-none" disabled={cancel.isPending}>
             Keep incident
           </AlertDialogCancel>

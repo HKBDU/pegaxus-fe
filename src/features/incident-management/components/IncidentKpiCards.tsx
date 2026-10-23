@@ -16,8 +16,8 @@ interface CardProps {
 
 function KpiCard({ label, value, hint, icon: Icon, tone, loading }: CardProps) {
   return (
-    <div className="booking-panel booking-panel-hover flex items-center gap-3 rounded-[2px] border bg-white px-4 py-3">
-      <span className={cn("grid size-9 shrink-0 place-items-center rounded-[2px]", tone)}>
+    <div className="booking-panel booking-panel-hover flex items-center gap-2.5 rounded-[2px] border bg-white px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
+      <span className={cn("hidden size-9 shrink-0 place-items-center sm:grid rounded-[2px]", tone)}>
         <Icon className="size-[18px]" aria-hidden="true" />
       </span>
       <div className="min-w-0">
@@ -34,7 +34,7 @@ export function IncidentKpiCards() {
   const kpis = useIncidentKpis()
   const loading = kpis.isLoading
   return (
-    <section aria-label="Incident summary" className="booking-stagger grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+    <section aria-label="Incident summary" className="booking-stagger grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-4">
       <KpiCard loading={loading} label="Total open incidents" value={kpis.open} hint={kpis.total === undefined ? "Reported + pending" : `of ${kpis.total} total`} icon={ShieldAlert} tone="bg-amber-50 text-amber-600" />
       <KpiCard loading={loading} label="Critical" value={kpis.critical} hint="Open and needs action now" icon={AlertOctagon} tone="bg-red-50 text-red-600" />
       <KpiCard loading={loading} label="Pending cost approvals" value={kpis.pendingCost} hint="Waiting for a decision" icon={ReceiptText} tone="bg-sky-50 text-sky-600" />

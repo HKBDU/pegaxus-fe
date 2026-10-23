@@ -47,3 +47,11 @@ export const INCIDENT_ERROR_MESSAGES: Record<string, string> = {
 }
 
 export const ALERT_NOTIFICATION_TYPES = new Set(["INCIDENT", "HORSE_HEALTH", "ROUTE", "EMERGENCY_COST"])
+
+/** Left-edge colour per severity (list cards and the crew header). */
+export const severityEdge: Record<string, string> = {
+  CRITICAL: "border-l-red-600",
+  HIGH: "border-l-orange-500",
+  MEDIUM: "border-l-amber-400",
+  LOW: "border-l-slate-400",
+}

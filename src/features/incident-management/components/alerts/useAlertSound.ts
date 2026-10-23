@@ -2,24 +2,55 @@ import { useEffect, useState } from "react"
 
 type AudioCtor = typeof AudioContext
 
-const BEEP_EVERY_MS = 1200
+const SIREN_EVERY_MS = 1800
 
-/** Two short tones; no audio file needed. */
-function beep(context: AudioContext) {
+/**
+ * Emergency siren, no audio file needed: two rising-and-falling wails (a harsh sawtooth with a square sub-layer) followed by
+ * three sharp beeps. It is loud on purpose; the compressor keeps the layers from clipping.
+ */
+function siren(context: AudioContext) {
   const now = context.currentTime
-  ;[880, 660].forEach((frequency, index) => {
+  const master = context.createGain()
+  master.gain.value = 0.9
+  const compressor = context.createDynamicsCompressor()
+  master.connect(compressor).connect(context.destination)
+
+  const tone = (type: OscillatorType, peak: number, start: number, length: number, shape: (osc: OscillatorNode) => void) => {
     const oscillator = context.createOscillator()
     const gain = context.createGain()
-    oscillator.type = "square"
-    oscillator.frequency.value = frequency
-    const start = now + index * 0.22
+    oscillator.type = type
+    shape(oscillator)
     gain.gain.setValueAtTime(0.0001, start)
-    gain.gain.exponentialRampToValueAtTime(0.12, start + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18)
-    oscillator.connect(gain).connect(context.destination)
+    gain.gain.exponentialRampToValueAtTime(peak, start + 0.03)
+    gain.gain.setValueAtTime(peak, start + length - 0.05)
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + length)
+    oscillator.connect(gain).connect(master)
     oscillator.start(start)
-    oscillator.stop(start + 0.2)
-  })
+    oscillator.stop(start + length + 0.02)
+  }
+
+  // Wail: 600 Hz up to 1300 Hz and back, twice.
+  for (let wail = 0; wail < 2; wail++) {
+    const start = now + wail * 0.55
+    tone("sawtooth", 0.55, start, 0.52, (osc) => {
+      osc.frequency.setValueAtTime(600, start)
+      osc.frequency.linearRampToValueAtTime(1300, start + 0.26)
+      osc.frequency.linearRampToValueAtTime(600, start + 0.52)
+    })
+    tone("square", 0.2, start, 0.52, (osc) => {
+      osc.frequency.setValueAtTime(300, start)
+      osc.frequency.linearRampToValueAtTime(650, start + 0.26)
+      osc.frequency.linearRampToValueAtTime(300, start + 0.52)
+    })
+  }
+
+  // Three sharp beeps right after the wails.
+  for (let beep = 0; beep < 3; beep++) {
+    const start = now + 1.15 + beep * 0.2
+    tone("square", 0.5, start, 0.12, (osc) => {
+      osc.frequency.value = 1480
+    })
+  }
 }
 
 /**
@@ -38,7 +69,7 @@ export function useAlertSound(playing: boolean) {
     let cancelled = false
 
     const tick = () => {
-      if (context.state === "running") beep(context)
+      if (context.state === "running") siren(context)
     }
     const unlock = () => {
       void context.resume().then(() => {
@@ -48,7 +79,7 @@ export function useAlertSound(playing: boolean) {
 
     unlock()
     tick()
-    timer = window.setInterval(tick, BEEP_EVERY_MS)
+    timer = window.setInterval(tick, SIREN_EVERY_MS)
     window.addEventListener("pointerdown", unlock)
     window.addEventListener("keydown", unlock)
 
