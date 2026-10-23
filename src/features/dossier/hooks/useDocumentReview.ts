@@ -16,6 +16,7 @@ export function useDocumentReview(
   onPendingChange?: (pending: boolean) => void,
 ) {
   const client = useQueryClient();
+  const outcomeUnknown = useRef(false);
   const guard = useRef(
     createRequestAttemptGuard((state) => onPendingChange?.(state.isRunning)),
   );
@@ -33,8 +34,10 @@ export function useDocumentReview(
         input.requirementId,
       ),
     onError: (error, input) => {
+      const mapped = mapDocumentReviewError(error);
+      if (mapped.outcomeUnknown) outcomeUnknown.current = true;
       if (
-        mapDocumentReviewError(error).refresh ||
+        mapped.refresh ||
         (error as { response?: { status?: number } }).response?.status === 409
       )
         return invalidateComplianceDocument(
@@ -46,6 +49,8 @@ export function useDocumentReview(
     },
   });
   const review = (input: DocumentReviewInput | RevokeDocumentReviewInput) => {
+    if (outcomeUnknown.current)
+      return Promise.resolve({ started: false } as const);
     guard.current.reset();
     return guard.current.run(() => mutation.mutateAsync(input));
   };

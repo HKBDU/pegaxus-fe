@@ -42,12 +42,7 @@ export type DashboardSort =
   | "status:desc"
 
 /** Dossier overview contract used by both the dashboard and document workflow. */
-export type DossierOverview = Omit<
-  z.infer<typeof dossierOverviewSchema>,
-  "openedAt"
-> & {
-  openedAt: string | null;
-};
+export type DossierOverview = z.infer<typeof dossierOverviewSchema>;
 export type DossierRequirement = z.infer<typeof dossierRequirementSchema>;
 export type DossierRequirementStatus = z.infer<
   typeof dossierRequirementStatusSchema
@@ -122,6 +117,7 @@ export type DocumentReviewError = {
   message: string;
   backendMessage?: string;
   refresh: boolean;
+  outcomeUnknown?: boolean;
 };
 export type UploadDocumentError = {
   code: string;

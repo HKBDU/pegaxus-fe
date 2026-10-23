@@ -25,7 +25,7 @@ type UploadDocumentMetadata = {
   uploadNote?: string;
 };
 
-// Mock data uses numeric identifiers; the real API uses opaque string IDs (the BE does not require UUID/GUID format).
+// Mock data uses numeric identifiers; the FE preserves real API IDs as opaque strings.
 // Keep the parsed contract compatible with both existing mock helpers and real responses.
 const entityId: z.ZodType<any> = z.union([
   z.number().int().positive(),
@@ -154,6 +154,16 @@ export const dossierSiblingSchema = z.object({
   status: z.string(),
 });
 
+export const dossierLifecycleFields = {
+  openedAt: timestamp.nullish(),
+  readyForSubmissionAt: timestamp.nullish(),
+  approvedAt: timestamp.nullish(),
+  rejectedAt: timestamp.nullish(),
+  closedAt: timestamp.nullish(),
+  rejectionReason: z.string().nullish(),
+  note: z.string().nullish(),
+};
+
 export const dossierOverviewSchema = z.object({
   complianceDossierId: entityId,
   dossierCode: z.string(),
@@ -163,13 +173,7 @@ export const dossierOverviewSchema = z.object({
   bookingId: entityId,
   bookingCode: z.string(),
   status: dossierStatusSchema,
-  openedAt: timestamp.nullable(),
-  readyForSubmissionAt: timestamp.nullable(),
-  approvedAt: timestamp.nullable(),
-  rejectedAt: timestamp.nullable(),
-  closedAt: timestamp.nullable(),
-  rejectionReason: z.string().nullable(),
-  note: z.string().nullable(),
+  ...dossierLifecycleFields,
   writeLocked: z.boolean(),
   writeLockReason: z.string().nullable(),
   progressPercent: z.number(),
@@ -200,7 +204,7 @@ export const dossierOverviewSchema = z.object({
 export const documentRequestSummarySchema = z.object({
   documentRequestId: entityId,
   requestCode: z.string(),
-  requestType: z.string().nullable().default(null),
+  requestType: z.string().nullish(),
   message: z.string(),
   dueDate: date.nullable(),
   status: z.string().optional(),
@@ -226,7 +230,7 @@ export const dossierRequirementSchema = z.object({
       complianceDocumentId: entityId,
       documentCode: z.string(),
       status: complianceDocumentStatusSchema,
-      latestVersionNo: z.number().int().positive(),
+      latestVersionNo: z.number().int().positive().nullable(),
     })
     .nullable(),
   requirementCode: z.string().optional(),
@@ -309,8 +313,8 @@ export const uploadDocumentEnvelopeSchema = z.object({
 export const documentVersionFileSchema = z.object({
   fileName: z.string(),
   fileUrl: z.string(),
-  mimeType: z.string(),
-  fileSizeBytes: z.number().nonnegative(),
+  mimeType: z.string().nullable(),
+  fileSizeBytes: z.number().nonnegative().nullable(),
   sortOrder: z.number().int().nonnegative(),
   documentAttachmentId: entityId.nullable().optional(),
 });
@@ -318,7 +322,10 @@ export const documentReviewSummarySchema = z.object({
   documentReviewId: entityId,
   result: z.string(),
   reviewComment: z.string().nullable(),
-  reviewedBy: z.object({ accountId: entityId, fullName: z.string() }),
+  reviewedBy: z.object({
+    accountId: entityId,
+    fullName: z.string().optional(),
+  }),
   reviewedAt: timestamp,
 });
 export const documentVersionSchema = z.object({
@@ -666,8 +673,8 @@ export const createDocumentSubmissionSchema = (
       validateMetadataDates(value, context, validUntil, plannedDepartureDate);
     });
 
-// The BE does not require UUID/GUID format, so any non-empty string is accepted (empty only means "no id in the URL").
-export const dossierIdSchema = z.string();
+// Reject missing route IDs without duplicating the backend GUID route constraint.
+export const dossierIdSchema = z.string().min(1);
 export const dossierRequirementsParamsSchema = z.object({
   status: dossierRequirementStatusSchema.optional(),
   horseId: entityId.optional(),

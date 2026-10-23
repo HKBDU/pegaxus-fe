@@ -17,6 +17,12 @@ export function getDossierFilePreview(
     ? objectUrl
     : getDocumentFileHref(file.fileUrl);
   if (!href) return { kind: "fallback", reason: "File link unavailable" };
+  if (file.fileSizeBytes === null)
+    return {
+      kind: "fallback",
+      href,
+      reason: "File size is not available. Use Open File to inspect it.",
+    };
   if (file.mimeType === "application/pdf") {
     return file.fileSizeBytes <= MAX_PDF_FILE_SIZE
       ? { kind: "pdf", href }

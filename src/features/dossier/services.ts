@@ -2,7 +2,7 @@ import type { AxiosRequestConfig } from "axios"
 
 import apiClient from "@/lib/axios"
 import { z } from "zod"
-import { mapBackendDossierOverview as mapActualOverview, mapBackendRequirement, mapBackendRequirementDetail, mapBackendDocumentVersions, overviewDtoSchema, protectedPreviewUrl, serializeDocumentMetadata, serializeDocumentSubmission, unwrapBackendValue } from "./lib/backend-contract"
+import { mapBackendDossierOverview as mapActualOverview, mapBackendRequirement, mapBackendRequirementDetail, mapBackendDocumentVersions, overviewDtoSchema, protectedPreviewUrl, serializeDocumentMetadata, serializeDocumentSubmission, unwrapBackendValue, backendReminderEnvelopeSchema } from "./lib/backend-contract"
 import {
   dossierIdSchema,
   dossierRequirementsParamsSchema,
@@ -276,7 +276,7 @@ const documentServiceMethods = {
       `${ENDPOINT}/${id}/missing-document-reminders`,
       reminder,
     );
-    const response = payload as { value: { requirements: unknown[] } };
+    const response = backendReminderEnvelopeSchema.parse(payload);
     return missingDocumentReminderEnvelopeSchema.parse({
       ...response,
       value: {
@@ -356,10 +356,7 @@ const documentServiceMethods = {
         document: item.document
           ? {
               ...item.document,
-              latestVersionNo: Math.max(
-                1,
-                ...item.document.versions.map((version) => version.versionNo),
-              ),
+              latestVersionNo: item.document.versions.length ? Math.max(...item.document.versions.map((version) => version.versionNo)) : null,
             }
           : null,
       })),
@@ -529,18 +526,21 @@ const documentServiceMethods = {
         await apiClient.get<unknown, unknown>(`bookings/${dossierIdSchema.parse(bookingId)}/compliance-dossier`, { signal }),
       );
     } catch (error) {
-      if ((error as { response?: { status?: number } }).response?.status === 404) return [];
+      const response = (error as { response?: { status?: number; data?: { errorCode?: string } } }).response;
+      if (response?.status === 404 && response.data?.errorCode === "DOSSIER_NOT_FOUND") return [];
       throw error;
     }
-    const rows = Array.isArray((value as { items?: unknown })?.items)
-      ? (value as { items: unknown[] }).items
-      : value && typeof value === "object"
-        ? [value]
-        : [];
-    const links = rows.flatMap((row) => {
-      const parsed = bookingDossierLinkSchema.safeParse(row);
-      return parsed.success ? [parsed.data] : [];
-    });
+    const list = z.object({ items: z.array(bookingDossierLinkSchema) }).safeParse(value);
+    let links: BookingDossierLink[];
+    if (list.success) {
+      links = list.data.items;
+    } else {
+      const overview = overviewDtoSchema.parse(value);
+      if (!overview.isInitialized) return [];
+      const current = bookingDossierLinkSchema.parse(overview);
+      links = z.array(bookingDossierLinkSchema).parse(overview.complianceDossiers ?? [current]);
+      if (!links.some((item) => item.complianceDossierId === current.complianceDossierId)) links.push(current);
+    }
     return links.sort((a, b) => Number(b.dossierType === "MAIN") - Number(a.dossierType === "MAIN"));
   },
 };

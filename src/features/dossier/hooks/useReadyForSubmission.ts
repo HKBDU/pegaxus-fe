@@ -27,19 +27,23 @@ export async function invalidateDossierReadiness(
 export function useReadyForSubmission() {
   const client = useQueryClient();
   const guard = useRef(createRequestAttemptGuard());
+  const outcomeUnknown = useRef(false);
   const mutation = useMutation({
     mutationFn: (dossierId: string) => loadMarkReadyForSubmission(dossierId),
     retry: false,
     onSuccess: (_response, dossierId) =>
       invalidateDossierReadiness(client, dossierId),
     onError: (error, dossierId) => {
-      if (mapDocumentReviewError(error).refresh)
-        return invalidateDossierReadiness(client, dossierId);
+      const mapped = mapDocumentReviewError(error);
+      if (mapped.outcomeUnknown) outcomeUnknown.current = true;
+      if (mapped.refresh) return invalidateDossierReadiness(client, dossierId);
     },
   });
   return {
     ...mutation,
     markReady: (dossierId: string) => {
+      if (outcomeUnknown.current)
+        return Promise.resolve({ started: false } as const);
       guard.current.reset();
       return guard.current.run(() => mutation.mutateAsync(dossierId));
     },

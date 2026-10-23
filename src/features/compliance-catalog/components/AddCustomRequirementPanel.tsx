@@ -17,13 +17,18 @@ import { Textarea } from "@/shared/components/ui/textarea"
 const NOTES_LIMIT = 500
 const labelClass = "text-xs font-medium leading-4 text-slate-700"
 
+function dueDateFromDays(days: string) {
+  return new Date(Date.now() + Number(days) * 86400000).toISOString().slice(0, 10)
+}
+
 const customRequirementSchema = z
   .object({
     complianceRequirementId: z.string().min(1, "Select a requirement"),
     scope: z.enum(["TRIP", "HORSE"]),
     horseId: z.string(),
     isMandatory: z.boolean(),
-    leadTimeDays: z.string().min(1, "Enter lead time days"),
+    leadTimeDays: z.string().regex(/^\d+$/, "Enter a whole number of days").refine((value) => Number(value) <= 3650, "Lead time must be between 0 and 3650 days"),
+    dueDate: z.union([z.literal(""), z.iso.date()]),
     instruction: z.string().trim().max(NOTES_LIMIT, `Notes are limited to ${NOTES_LIMIT} characters`),
   })
   .superRefine((values, context) => {
@@ -40,6 +45,7 @@ const defaultValues: CustomRequirementValues = {
   horseId: "",
   isMandatory: true,
   leadTimeDays: "5",
+  dueDate: "",
   instruction: "",
 }
 
@@ -91,7 +97,7 @@ export const AddCustomRequirementPanel = forwardRef<HTMLDivElement, AddCustomReq
       horseId: horse ? horse.horseId : null,
       horseName: horse ? horse.horseName : null,
       isMandatory: values.isMandatory,
-      dueDate: values.leadTimeDays ? new Date(Date.now() + Number(values.leadTimeDays) * 86400000).toISOString().slice(0, 10) : undefined,
+      dueDate: values.dueDate || dueDateFromDays(values.leadTimeDays),
       instruction: values.instruction || undefined,
     })
     if (error) {
@@ -255,7 +261,7 @@ export const AddCustomRequirementPanel = forwardRef<HTMLDivElement, AddCustomReq
             />
             <FormField
               control={form.control}
-              name="leadTimeDays"
+              name="dueDate"
               render={({ field }) => (
                 <FormItem className="gap-1.5">
                   <FormLabel className={labelClass}>Due date</FormLabel>
