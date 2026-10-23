@@ -23,26 +23,43 @@ export function createMapTraversal(
   let definition = "";
   let disposed = false;
   let measurable = true;
-  const simplified = state.reducedMotion || innerHeight < 560;
-  const skip = section.querySelector<HTMLButtonElement>("[data-map-skip]");
+  const simplified = state.reducedMotion;
   let waiting = false;
   let bypassed = false;
-  let target = state.mapProgress;
-  let direction = 0;
   let lastY = scrollY;
-  let inputAt = 0;
-  let holdAt = 0;
-  let previousTime = performance.now();
   let touchY = 0;
+  let reverseInput = false;
+  let correctedY: number | undefined;
+  let pin:
+    | {
+        top: number;
+        placeholder: HTMLDivElement;
+        styles: {
+          style: CSSStyleDeclaration;
+          property: string;
+          value: string;
+          priority: string;
+        }[];
+      }
+    | undefined;
   let navigationUntil =
     location.hash && location.hash !== "#movement"
       ? performance.now() + 1500
       : 0;
   const boundary = () =>
-    section.getBoundingClientRect().bottom + scrollY - innerHeight;
+    pin?.top ?? section.getBoundingClientRect().top + scrollY;
   const release = () => {
     waiting = false;
-    if (skip) skip.hidden = true;
+    if (pin) {
+      pin.styles.forEach(({ style, property, value, priority }) => {
+        if (value) style.setProperty(property, value, priority);
+        else style.removeProperty(property);
+      });
+      pin.placeholder.remove();
+      pin = undefined;
+    }
+    section.removeAttribute("data-map-pinned");
+    Object.assign(state, { mapRunning: false });
   };
   const failOpen = () => {
     bypassed = true;
@@ -109,7 +126,7 @@ export function createMapTraversal(
       if (waiting) failOpen();
       return;
     }
-    const progress = simplified ? 1 : state.mapProgress;
+    const progress = state.mapProgress;
     const index = progress * (samples.length - 1);
     const first = Math.min(samples.length - 2, Math.floor(index));
     const fraction = index - first;
@@ -151,45 +168,100 @@ export function createMapTraversal(
     else dash?.pause();
   };
   const beginHold = () => {
-    if (waiting) return;
-    waiting = true;
-    holdAt = performance.now();
-    if (skip) skip.hidden = false;
-    // One boundary correction per downward attempt, never a scrollTo ticker.
+    if (!waiting) {
+      const rect = section.getBoundingClientRect();
+      const placeholder = document.createElement("div");
+      placeholder.setAttribute("aria-hidden", "true");
+      placeholder.style.height = `${rect.height}px`;
+      const changes: [CSSStyleDeclaration, string, string][] = [
+        [document.documentElement.style, "overflow-y", "hidden"],
+        [document.body.style, "overflow-y", "hidden"],
+        [section.style, "position", "fixed"],
+        [section.style, "top", "0px"],
+        [section.style, "left", `${rect.left}px`],
+        [section.style, "width", `${rect.width}px`],
+        [section.style, "height", `${Math.max(rect.height, innerHeight)}px`],
+        [section.style, "box-sizing", "border-box"],
+        [section.style, "z-index", "5"],
+      ];
+      pin = {
+        top: rect.top + scrollY,
+        placeholder,
+        styles: changes.map(([style, property]) => ({
+          style,
+          property,
+          value: style.getPropertyValue(property),
+          priority: style.getPropertyPriority(property),
+        })),
+      };
+      // Preserve document flow while the Map itself covers the viewport.
+      section.before(placeholder);
+      changes.forEach(([style, property, value]) =>
+        style.setProperty(property, value, "important"),
+      );
+      section.setAttribute("data-map-pinned", "");
+      waiting = true;
+    }
     const end = boundary();
     // A correction after native momentum is not a user reversing direction.
-    lastY = Math.round(end);
-    window.scrollTo({ top: end, behavior: "instant" });
+    if (Math.abs(scrollY - end) > 1) {
+      correctedY = Math.round(end);
+      lastY = correctedY;
+      window.scrollTo({ top: end, behavior: "instant" });
+    }
+  };
+  const advance = (amount: number) => {
+    if (amount <= 0 || bypassed || document.hidden || state.mapProgress >= 1)
+      return;
+    const now = performance.now();
+    // Require sustained forward scrolling and limit jumps from large input events.
+    const step = Math.min(0.02, amount / (innerHeight * 3.4));
+    const elapsed = Math.min(80, Math.max(16, now - state.mapUpdatedAt)) / 1000;
+    Object.assign(state, {
+      mapProgress: Math.min(1, state.mapProgress + step),
+      mapUpdatedAt: now,
+      mapRunRate: Math.min(2, (step * 5.5) / elapsed),
+      mapRunning: !simplified && state.inMap,
+    });
+    if (state.mapProgress >= 1) release();
+    project();
+    state.invalidate?.();
   };
   const constrain = (amount: number) => {
+    if (amount !== 0) navigationUntil = 0;
     if (amount < 0) {
-      direction = -1;
+      reverseInput = true;
+      correctedY = undefined;
       release();
       return false;
     }
+    if (amount > 0) reverseInput = false;
     if (
       amount === 0 ||
-      simplified ||
       bypassed ||
       state.mapProgress >= 1 ||
       document.hidden ||
       performance.now() < navigationUntil
     )
       return false;
-    const end = boundary();
-    // A resize can move the exit just above the current native scroll position.
-    const atVisibleExit =
-      state.inMap && section.getBoundingClientRect().bottom > 0;
-    if (
-      (scrollY <= end + 2 || lastY <= end + 2 || atVisibleExit) &&
-      scrollY + amount > end
-    ) {
-      direction = 1;
-      inputAt = performance.now();
-      beginHold();
+    if (waiting) {
+      advance(amount);
       return true;
     }
-    return waiting;
+    const end = boundary();
+    // A resize can move the entry just above the current native scroll position.
+    const atVisibleEntry =
+      state.inMap && section.getBoundingClientRect().bottom > 0;
+    if (
+      (scrollY <= end + 2 || lastY <= end + 2 || atVisibleEntry) &&
+      scrollY + amount > end
+    ) {
+      const remaining = Math.max(0, end - scrollY);
+      beginHold();
+      advance(amount - remaining);
+      return true;
+    }
+    return false;
   };
   const wheel = (event: WheelEvent) => {
     if (event.ctrlKey || event.defaultPrevented) return;
@@ -233,6 +305,11 @@ export function createMapTraversal(
   const touchStart = (event: TouchEvent) => {
     touchY = event.touches[0]?.clientY ?? 0;
   };
+  const pointerStart = () => {
+    reverseInput = false;
+    correctedY = undefined;
+    navigationUntil = 0;
+  };
   const touchMove = (event: TouchEvent) => {
     if (event.touches.length !== 1) return;
     const next = event.touches[0].clientY;
@@ -250,93 +327,84 @@ export function createMapTraversal(
   };
   const scroll = () => {
     const y = scrollY;
+    if (correctedY !== undefined && Math.abs(y - correctedY) <= 1) {
+      correctedY = undefined;
+      lastY = y;
+      return;
+    }
     const amount = y - lastY;
     if (amount !== 0) {
-      direction = Math.sign(amount);
-      inputAt = performance.now();
       if (amount < 0) release();
       const end = boundary();
-      if (
+      const forward =
         amount > 0 &&
-        lastY <= end + 2 &&
-        y > end + 2 &&
-        !simplified &&
+        !reverseInput &&
         !bypassed &&
-        state.mapProgress < 1 &&
         !document.hidden &&
-        performance.now() >= navigationUntil
-      )
+        performance.now() >= navigationUntil;
+      if (
+        forward &&
+        (lastY <= end + 2 || waiting) &&
+        y >= end &&
+        state.mapProgress < 1
+      ) {
+        const travelled = y - Math.max(lastY, end);
         beginHold();
+        advance(travelled);
+      }
     }
     lastY = scrollY;
-    target = Math.max(
-      0,
-      Math.min(
-        0.92,
-        0.92 * (1 - (boundary() - scrollY) / (innerHeight * 0.85)),
-      ),
-    );
   };
   const visibility = () => {
-    if (document.hidden) failOpen();
+    if (document.hidden) release();
   };
-  const skipWait = () => {
-    Object.assign(state, { mapProgress: 1, mapRunning: false });
-    release();
+  const resizePin = () => {
+    if (!pin) return;
+    const rect = pin.placeholder.getBoundingClientRect();
+    pin.top = rect.top + scrollY;
+    section.style.setProperty("left", `${rect.left}px`, "important");
+    section.style.setProperty("width", `${rect.width}px`, "important");
+    section.style.setProperty(
+      "height",
+      `${Math.max(rect.height, innerHeight)}px`,
+      "important",
+    );
+    beginHold();
     project();
     state.invalidate?.();
   };
   const tick = () => {
     const now = performance.now();
-    const delta = Math.min(0.05, (now - previousTime) / 1000);
-    previousTime = now;
     const rect = section.getBoundingClientRect();
-    if (
-      waiting &&
-      (document.hidden ||
-        now - holdAt > 10000 ||
-        (now - holdAt > 1500 && now - state.mapFrameAt > 1500))
-    )
-      failOpen();
     const moving =
+      state.mapRunning &&
       !simplified &&
       !bypassed &&
       !document.hidden &&
       state.inMap &&
-      now - state.mapFrameAt < 500 &&
       state.mapProgress < 1 &&
-      (waiting ||
-        (direction > 0 && now - inputAt < 160 && target > state.mapProgress));
-    if (moving) {
-      Object.assign(state, {
-        mapProgress: Math.min(
-          waiting ? 1 : target,
-          state.mapProgress + delta / 5.5,
-        ),
-        mapUpdatedAt: now,
-        mapRunRate: 1,
-      });
-    }
-    Object.assign(state, { mapRunning: moving && state.mapProgress < 1 });
-    if (state.mapProgress >= 1) release();
+      now - state.mapUpdatedAt < 80;
+    const stopped = state.mapRunning && !moving;
+    Object.assign(state, { mapRunning: moving });
     if (waiting && (rect.top > innerHeight || rect.bottom < 0)) release();
     project();
-    if (moving) state.invalidate?.();
+    if (stopped) state.invalidate?.();
   };
-  if (!simplified) {
-    window.addEventListener("wheel", wheel, { passive: false });
-    window.addEventListener("keydown", keyboard);
-    window.addEventListener("touchstart", touchStart, { passive: true });
-    window.addEventListener("touchmove", touchMove, { passive: false });
-    window.addEventListener("scroll", scroll, { passive: true });
-    window.addEventListener("hashchange", navigate);
-    window.addEventListener("popstate", navigate);
-    document.addEventListener("click", anchor, true);
-    document.addEventListener("visibilitychange", visibility);
-    skip?.addEventListener("click", skipWait);
-    gsap.ticker.add(tick);
-  }
-  if (simplified) Object.assign(state, { mapProgress: 1, mapRunning: false });
+  window.addEventListener("wheel", wheel, { passive: false, capture: true });
+  window.addEventListener("keydown", keyboard, true);
+  window.addEventListener("touchstart", touchStart, { passive: true });
+  window.addEventListener("pointerdown", pointerStart, true);
+  window.addEventListener("touchmove", touchMove, {
+    passive: false,
+    capture: true,
+  });
+  window.addEventListener("scroll", scroll, { passive: true });
+  window.addEventListener("resize", resizePin, { passive: true });
+  window.addEventListener("hashchange", navigate);
+  window.addEventListener("popstate", navigate);
+  document.addEventListener("click", anchor, true);
+  document.addEventListener("visibilitychange", visibility);
+  gsap.ticker.add(tick);
   return {
     update() {
       project();
@@ -345,16 +413,17 @@ export function createMapTraversal(
       disposed = true;
       release();
       gsap.ticker.remove(tick);
-      window.removeEventListener("wheel", wheel);
-      window.removeEventListener("keydown", keyboard);
+      window.removeEventListener("wheel", wheel, true);
+      window.removeEventListener("keydown", keyboard, true);
       window.removeEventListener("touchstart", touchStart);
-      window.removeEventListener("touchmove", touchMove);
+      window.removeEventListener("pointerdown", pointerStart, true);
+      window.removeEventListener("touchmove", touchMove, true);
       window.removeEventListener("scroll", scroll);
+      window.removeEventListener("resize", resizePin);
       window.removeEventListener("hashchange", navigate);
       window.removeEventListener("popstate", navigate);
       document.removeEventListener("click", anchor, true);
       document.removeEventListener("visibilitychange", visibility);
-      skip?.removeEventListener("click", skipWait);
       dash?.kill();
       Object.assign(state, { mapRunning: false });
       section.removeAttribute("data-traversal");

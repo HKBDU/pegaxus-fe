@@ -1,9 +1,13 @@
 import {
+  Component,
   lazy,
   Suspense,
+  useCallback,
   useLayoutEffect,
   useRef,
+  useState,
   type MouseEvent,
+  type ReactNode,
 } from "react";
 import { useLandingStory } from "../../hooks/useLandingStory";
 import { LandingNavbar } from "./LandingNavbar";
@@ -16,11 +20,39 @@ import { GlobalMovementSection } from "./GlobalMovementSection";
 import { ReliabilitySection } from "./ReliabilitySection";
 import { FinalCtaSection } from "./FinalCtaSection";
 import { LandingFooter } from "./LandingFooter";
+import { HorseLoader } from "./HorseLoader";
 import "../../landing.css";
 
 import { MarqueeBand } from "./MarqueeBand";
 
 const HorseExperience = lazy(() => import("./HorseExperience"));
+
+class HorseSceneBoundary extends Component<
+  { children: ReactNode; onUnavailable: () => void },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    this.props.onUnavailable();
+  }
+  render() {
+    return this.state.failed ? (
+      <div
+        className="landing-experience landing-scene-fallback"
+        aria-hidden="true"
+      >
+        <span className="landing-eyebrow">THE JOURNEY CONTINUES</span>
+        <p>Movement, with purpose.</p>
+        <small>3D preview unavailable. Explore the story below.</small>
+      </div>
+    ) : (
+      this.props.children
+    );
+  }
+}
 
 export function PegaxusLanding() {
   const root = useRef<HTMLDivElement>(null);
@@ -43,10 +75,12 @@ export function PegaxusLanding() {
       else html.style.removeProperty("--landing-scrollbar-gap");
     };
   }, []);
-  const { scene, active, scrolled, horsePresent } = useLandingStory(
+  const { scene, active, scrolled, horsePresent, revealHero } = useLandingStory(
     root,
     canvasLayer,
   );
+  const [pending, setPending] = useState(true);
+  const ready = useCallback(() => setPending(false), []);
   const navigateSection = (event: MouseEvent<HTMLDivElement>) => {
     if (
       event.defaultPrevented ||
@@ -88,22 +122,17 @@ export function PegaxusLanding() {
         Skip to content
       </a>
       <LandingNavbar active={active} scrolled={scrolled} />
-      <Suspense
-        fallback={
-          <div
-            className="landing-experience landing-scene-fallback"
-            aria-hidden="true"
-          >
-            <p>Preparing the journey</p>
-          </div>
-        }
-      >
-        <HorseExperience
-          story={scene}
-          canvasLayer={canvasLayer}
-          horsePresent={horsePresent}
-        />
-      </Suspense>
+      <HorseLoader pending={pending} onReveal={revealHero} />
+      <HorseSceneBoundary onUnavailable={ready}>
+        <Suspense fallback={null}>
+          <HorseExperience
+            story={scene}
+            canvasLayer={canvasLayer}
+            horsePresent={horsePresent}
+            onReady={ready}
+          />
+        </Suspense>
+      </HorseSceneBoundary>
       <div className="landing-story">
         <HeroSection />
         <MarqueeBand />

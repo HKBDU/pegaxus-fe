@@ -1,6 +1,8 @@
 import {
   HERO_APPROACH_DISTANCE,
   HERO_YAW,
+  JOURNEY_PORTRAIT_YAW,
+  JOURNEY_RUN_YAW,
   type HeroPhase,
   type HorseMotion,
 } from "./horse-animation";
@@ -35,11 +37,23 @@ export type LandingSceneState = HorseShot & {
   inJourney: boolean;
   inMap: boolean;
   heroCompleted: boolean;
+  heroIntroReady: boolean;
+  heroRevealTime: number;
+  heroContacts: number;
+  heroWalkLoops: number;
+  heroCameraReady: boolean;
+  heroHoof: { x: number; y: number; z: number };
+  hoofPulses: { x: number; y: number; z: number; born: number }[];
+  horseFrameAt: number;
+  journeyPhase: "WAITING" | "RUNNING" | "STOPPING" | "SETTLING" | "POSE_READY";
   journeyCompleted: boolean;
   journeyTravel: number;
   journeyDistance: number;
   journeyReady: boolean;
   journeyTime: number;
+  journeyOffsetX: number;
+  journeyOffsetZ: number;
+  journeyYaw: number;
   mapProgress: number;
   mapScreenX: number;
   mapScreenY: number;
@@ -89,11 +103,10 @@ export function getHorseShots(profile: StoryProfile, reduced: boolean) {
     horsePresence: 1,
     horseX: compact ? 0 : -2.5,
     horseY: -1.15,
-    horseScale: compact ? 0.86 : 0.84,
-    // The camera reveals a lateral portrait, not another Hero approach.
-    horseYaw: 0.28,
-    cameraZ: 9.8,
-    motion: reduced ? "idle" : "walk",
+    horseScale: 1.02,
+    horseYaw: JOURNEY_PORTRAIT_YAW,
+    cameraZ: 10.5,
+    motion: reduced ? "idle" : "run",
   };
   shots.movement = {
     ...home,
@@ -127,11 +140,28 @@ export function createLandingStory(
     inJourney: false,
     inMap: false,
     heroCompleted: false,
+    heroIntroReady: false,
+    heroRevealTime: 0,
+    heroContacts: 0,
+    heroWalkLoops: 0,
+    heroCameraReady: false,
+    heroHoof: { x: home.horseX, y: home.horseY + 0.1, z: home.horseZ },
+    hoofPulses: Array.from({ length: 6 }, () => ({
+      x: 0,
+      y: 0,
+      z: 0,
+      born: -Infinity,
+    })),
+    horseFrameAt: 0,
+    journeyPhase: "WAITING",
     journeyCompleted: false,
     journeyTravel: 0,
     journeyDistance: 0,
     journeyReady: false,
     journeyTime: 0,
+    journeyOffsetX: 0,
+    journeyOffsetZ: 0,
+    journeyYaw: JOURNEY_RUN_YAW,
     mapProgress: 0,
     mapScreenX: 0,
     mapScreenY: 0,

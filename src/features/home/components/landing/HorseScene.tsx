@@ -18,10 +18,10 @@ import {
   type DirectionalLight,
   type HemisphereLight,
   type PointLight,
-  type ShaderMaterial,
 } from "three";
 import type { LandingSceneState } from "../../lib/horse-story";
-import { HERO_APPROACH_DISTANCE } from "../../lib/horse-animation";
+import { getHeroRevealProgress } from "../../lib/horse-animation";
+import { HoofContactLights } from "./HoofContactLights";
 
 export function HorseScene({
   story,
@@ -40,8 +40,8 @@ export function HorseScene({
   const ambient = useRef<HemisphereLight>(null);
   const fill = useRef<DirectionalLight>(null);
   const hoofLight = useRef<PointLight>(null);
-  const glow = useRef<ShaderMaterial>(null);
   const revision = useRef(-1);
+  const heroAnchorReady = useRef(false);
   const invalidate = useThree((state) => state.invalidate);
   const canvas = useThree((state) => state.gl.domElement);
   useEffect(() => {
@@ -73,39 +73,25 @@ export function HorseScene({
       ray: new Ray(),
       ground: new Plane(new Vector3(0, 1, 0), 0),
       cameraPath: new CatmullRomCurve3([
-        new Vector3(-0.75, 0.35, 1.9),
-        new Vector3(-0.65, 0.7, 2.3),
-        new Vector3(-0.7, 1.6, 3.1),
-        new Vector3(-0.95, 2.2, 4.1),
-        new Vector3(0, 1.65, 6.1),
-        new Vector3(0, 1.1, 8.8),
+        new Vector3(0.2, 0.5, 3.2),
+        new Vector3(0.1, 0.85, 3.6),
+        new Vector3(0, 1.45, 4.2),
+        new Vector3(0, 2.1, 4.8),
+        new Vector3(0, 1.45, 5.5),
+        new Vector3(0, 0.9, 7),
       ]),
       lookPath: new CatmullRomCurve3([
-        new Vector3(-0.75, 0.18, 0),
-        new Vector3(-0.65, 0.5, 0),
-        new Vector3(-0.7, 1.15, 0),
-        new Vector3(-0.95, 1.9, 0),
-        new Vector3(-0.15, 1.4, 0),
+        new Vector3(0, 0.25, 0),
+        new Vector3(0, 0.5, 0),
+        new Vector3(0, 1.2, 0),
+        new Vector3(0, 1.85, 0),
+        new Vector3(0, 1.3, 0),
         new Vector3(0, 1.05, 0),
       ]),
       cameraPoint: new Vector3(),
-      heroCameraPath: new CatmullRomCurve3([
-        new Vector3(0, -0.5, 0.35),
-        new Vector3(0, -0.25, 0.15),
-        new Vector3(0, 0.55, -0.2),
-        new Vector3(0, 0.35, -0.08),
-        new Vector3(0, 0, 0),
-      ]),
-      heroLookPath: new CatmullRomCurve3([
-        new Vector3(0, -0.18, 0),
-        new Vector3(0, -0.1, 0),
-        new Vector3(0, 0.18, 0),
-        new Vector3(0, 0.1, 0),
-        new Vector3(0, 0, 0),
-      ]),
       heroCameraOffset: new Vector3(),
       heroLookOffset: new Vector3(),
-      glowUniforms: { strength: { value: 0 } },
+      heroAnchor: new Vector3(),
     }),
     [],
   );
@@ -115,7 +101,11 @@ export function HorseScene({
     const delta = Math.min(elapsed, 0.05);
     const snap = revision.current !== state.shotVersion;
     revision.current = state.shotVersion;
-    const alpha = snap || state.reducedMotion ? 1 : 1 - Math.exp(-10 * delta);
+    const alpha =
+      snap || state.reducedMotion
+        ? 1
+        : 1 - Math.exp(-(state.inHero ? 7 : 10) * delta);
+    if (!state.inHero) heroAnchorReady.current = false;
     const parallax =
       state.inHero &&
       state.heroPhase === "FINAL_POSE" &&
@@ -136,20 +126,24 @@ export function HorseScene({
     if (snap || !parallax) scratch.pointer.set(0, 0, 0);
     const tiltX = scratch.pointer.x * 0.12;
     const tiltY = scratch.pointer.y * 0.07;
-    const reveal = state.inJourney ? Math.min(1, state.journeyTime / 6.2) : 1;
+    const reveal =
+      state.inHero && !state.reducedMotion
+        ? getHeroRevealProgress(state.heroRevealTime)
+        : 1;
     const light = reveal * reveal * (3 - 2 * reveal);
     if (ambient.current)
-      ambient.current.intensity = state.inJourney ? 0.24 + light * 1.1 : 1.6;
+      ambient.current.intensity = state.inHero ? 0.2 + light * 1.4 : 1.6;
     if (fill.current)
-      fill.current.intensity = state.inJourney ? 0.06 + light * 0.4 : 0.65;
-    if (hoofLight.current)
-      hoofLight.current.intensity = state.inJourney
-        ? 0.15 + Math.sin(Math.min(1, state.journeyTime / 1.8) * Math.PI) * 0.45
-        : 0;
-    if (glow.current)
-      glow.current.uniforms.strength.value = state.inJourney
-        ? 0.04 + (1 - light) * 0.05
-        : 0;
+      fill.current.intensity = state.inHero ? 0.05 + light * 0.6 : 0.65;
+    if (hoofLight.current) {
+      hoofLight.current.intensity =
+        state.inHero && !state.reducedMotion ? 0.25 * (1 - light) : 0;
+      hoofLight.current.position.set(
+        state.heroHoof.x,
+        state.heroHoof.y + 0.2,
+        state.heroHoof.z + 0.2,
+      );
+    }
     if (rim.current) {
       scratch.rimPos.set(
         -4 + scratch.pointer.x * 0.7,
@@ -158,7 +152,9 @@ export function HorseScene({
       );
       rim.current.position.lerp(scratch.rimPos, damp);
       rim.current.intensity +=
-        ((state.inJourney ? 0.2 + light * 1.9 : state.rimLight) -
+        ((state.inHero
+          ? 0.25 + light * (state.rimLight - 0.25)
+          : state.rimLight) -
           rim.current.intensity) *
         alpha;
     }
@@ -170,7 +166,9 @@ export function HorseScene({
       );
       key.current.position.lerp(scratch.keyPos, damp);
       key.current.intensity +=
-        ((state.inJourney ? 0.32 + light * 3 : state.keyLight) -
+        ((state.inHero
+          ? 0.5 + light * (state.keyLight - 0.5)
+          : state.keyLight) -
           key.current.intensity) *
         alpha;
     }
@@ -235,8 +233,7 @@ export function HorseScene({
         (state.inHero
           ? state.introX
           : state.inJourney
-            ? (state.journeyDistance - state.journeyTravel) *
-              Math.cos(state.horseYaw)
+            ? state.journeyOffsetX
             : 0) -
         position.x) *
       composition;
@@ -246,12 +243,11 @@ export function HorseScene({
         (state.inHero
           ? state.introZ
           : state.inJourney
-            ? -(state.journeyDistance - state.journeyTravel) *
-              Math.sin(state.horseYaw)
+            ? state.journeyOffsetZ
             : 0) -
         position.z) *
       composition;
-    scratch.yaw.set(0, state.horseYaw, 0);
+    scratch.yaw.set(0, state.inJourney ? state.journeyYaw : state.horseYaw, 0);
     scratch.rotation.setFromEuler(scratch.yaw);
     world.current.quaternion.slerp(scratch.rotation, composition);
     world.current.scale.setScalar(
@@ -259,72 +255,105 @@ export function HorseScene({
         (state.horseScale - world.current.scale.x) * composition,
     );
     if (state.inJourney && camera instanceof PerspectiveCamera) {
-      const t =
-        state.reducedMotion || state.journeyCompleted
-          ? 1
-          : Math.max(0, Math.min(1, (state.journeyTime - 1.1) / 6.5));
-      const eased = t * t * (3 - 2 * t);
-      scratch.cameraPath.getPoint(eased, scratch.cameraPoint);
-      scratch.lookPath.getPoint(eased, scratch.target);
       const compact = state.profile !== "desktop";
-      const distance = compact ? Math.max(6.6, 6 / camera.aspect) : 8;
-      scratch.cameraPoint.setZ((scratch.cameraPoint.z * distance) / 8.8);
+      const distance = compact ? Math.max(6.4, 5.3 / camera.aspect) : 6.5;
+      const trackX = framedX + state.journeyOffsetX * 0.35;
+      scratch.cameraPoint.set(
+        trackX,
+        position.y + (compact ? 1.23 : 1.1),
+        distance + state.journeyOffsetZ * 0.35,
+      );
+      scratch.target.set(
+        trackX,
+        position.y + (compact ? 1.18 : 1.05),
+        position.z * 0.4,
+      );
       const shift = compact
         ? 0
-        : scratch.cameraPoint.z *
+        : (scratch.cameraPoint.z - position.z) *
           Math.tan((camera.fov * Math.PI) / 360) *
           camera.aspect *
           0.46;
-      scratch.cameraPoint.add(position);
       scratch.cameraPoint.setX(scratch.cameraPoint.x + shift);
-      scratch.target.add(position).setX(scratch.target.x + shift);
-      // The shot clock owns this spline; extra camera damping would lag the hoof framing.
+      scratch.target.setX(scratch.target.x + shift);
       camera.position.copy(scratch.cameraPoint);
       scratch.look.copy(scratch.target);
       camera.lookAt(scratch.look);
       return;
     }
-    scratch.heroCameraOffset.set(0, 0, 0);
-    scratch.heroLookOffset.set(0, 0, 0);
     if (
       state.inHero &&
       !state.reducedMotion &&
-      (state.heroPhase === "LOADING" || state.heroPhase === "APPROACH")
+      !state.heroCameraReady &&
+      camera instanceof PerspectiveCamera
     ) {
       const compact = state.profile !== "desktop";
-      const distance = compact ? 0.65 : HERO_APPROACH_DISTANCE;
-      // Follow actual approach travel; settle before the first hoof scrape.
-      const progress = Math.max(
-        0,
-        Math.min(
-          1,
-          (1 - Math.hypot(state.introX, state.introZ) / distance) / 0.85,
-        ),
-      );
+      const progress = getHeroRevealProgress(state.heroRevealTime);
       const eased = progress * progress * (3 - 2 * progress);
-      scratch.heroCameraPath.getPoint(eased, scratch.heroCameraOffset);
-      scratch.heroLookPath.getPoint(eased, scratch.heroLookOffset);
-      if (compact) {
-        scratch.heroCameraOffset.multiplyScalar(0.6);
-        scratch.heroLookOffset.multiplyScalar(0.6);
-      }
+      scratch.cameraPath.getPoint(eased, scratch.cameraPoint);
+      scratch.lookPath.getPoint(eased, scratch.target);
+      scratch.heroCameraOffset.set(
+        state.heroHoof.x,
+        state.heroHoof.y,
+        state.heroHoof.z,
+      );
+      scratch.heroLookOffset.copy(position);
+      scratch.heroCameraOffset.lerp(scratch.heroLookOffset, eased);
+      const initial = !heroAnchorReady.current || !state.heroIntroReady;
+      if (initial) scratch.heroAnchor.copy(scratch.heroCameraOffset);
+      else
+        scratch.heroAnchor.lerp(
+          scratch.heroCameraOffset,
+          1 - Math.exp(-5 * delta),
+        );
+      heroAnchorReady.current = true;
+      scratch.cameraPoint.add(scratch.heroAnchor);
+      scratch.target.add(scratch.heroAnchor);
+      const shift = compact
+        ? 0
+        : (scratch.cameraPoint.z - position.z) *
+          Math.tan((camera.fov * Math.PI) / 360) *
+          camera.aspect *
+          0.46;
+      scratch.cameraPoint.setX(scratch.cameraPoint.x - shift);
+      scratch.target.setX(scratch.target.x - shift);
+      const settle = Math.min(1, Math.max(0, (progress - 0.64) / 0.36));
+      const blend = settle * settle * (3 - 2 * settle);
+      scratch.cameraPoint.lerp(
+        scratch.heroCameraOffset.set(
+          state.cameraX,
+          state.cameraY,
+          state.cameraZ,
+        ),
+        blend,
+      );
+      scratch.target.lerp(
+        scratch.heroLookOffset.set(state.targetX, state.targetY, state.targetZ),
+        blend,
+      );
+      camera.position.lerp(scratch.cameraPoint, initial ? 1 : alpha);
+      scratch.look.lerp(scratch.target, initial ? 1 : alpha);
+      camera.lookAt(scratch.look);
+      if (progress >= 1) Object.assign(state, { heroCameraReady: true });
+      return;
     }
     camera.position.x += (state.cameraX + tiltX - camera.position.x) * alpha;
-    camera.position.y +=
-      (state.cameraY + tiltY + scratch.heroCameraOffset.y - camera.position.y) *
-      alpha;
-    camera.position.z +=
-      (state.cameraZ + scratch.heroCameraOffset.z - camera.position.z) * alpha;
-    scratch.target.set(
-      state.targetX,
-      state.targetY + scratch.heroLookOffset.y,
-      state.targetZ,
-    );
+    camera.position.y += (state.cameraY + tiltY - camera.position.y) * alpha;
+    camera.position.z += (state.cameraZ - camera.position.z) * alpha;
+    scratch.target.set(state.targetX, state.targetY, state.targetZ);
     scratch.look.lerp(scratch.target, alpha);
     camera.lookAt(scratch.look);
   });
   return (
     <>
+      <HoofContactLights story={story} />
+      <pointLight
+        ref={hoofLight}
+        color="#F39200"
+        intensity={0}
+        distance={3}
+        decay={2}
+      />
       <hemisphereLight ref={ambient} args={["#f4efe6", "#272522", 1.6]} />
       <directionalLight
         ref={key}
@@ -354,25 +383,6 @@ export function HorseScene({
           story.current.horseZ + story.current.introZ,
         ]}
       >
-        <pointLight
-          ref={hoofLight}
-          position={[-0.65, 0.45, 0.4]}
-          color="#F39200"
-          intensity={0}
-          distance={3}
-          decay={2}
-        />
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-0.65, 0.008, 0]}>
-          <planeGeometry args={[1.5, 1.1]} />
-          <shaderMaterial
-            ref={glow}
-            transparent
-            depthWrite={false}
-            uniforms={scratch.glowUniforms}
-            vertexShader="varying vec2 lightUv; void main() { lightUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }"
-            fragmentShader="uniform float strength; varying vec2 lightUv; void main() { float pool = 1.0 - smoothstep(0.0, 0.5, length(lightUv - 0.5)); gl_FragColor = vec4(0.953, 0.573, 0.0, pool * pool * strength); }"
-          />
-        </mesh>
         <mesh
           rotation={[-Math.PI / 2, 0, 0]}
           position={[0, 0.006, 0]}

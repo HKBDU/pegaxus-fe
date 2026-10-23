@@ -1,58 +1,47 @@
 import {
-  Component,
   Suspense,
   useCallback,
   useEffect,
   useLayoutEffect,
   useState,
-  type ReactNode,
   type RefObject,
 } from "react";
 import { Canvas } from "@react-three/fiber";
 import { HorseModel } from "./HorseModel";
 import { HorseScene } from "./HorseScene";
-import { HorseLoader } from "./HorseLoader";
 import type { LandingSceneState } from "../../hooks/useLandingStory";
 
-class HorseSceneBoundary extends Component<
-  { children: ReactNode },
-  { failed: boolean }
-> {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  render() {
-    return this.state.failed ? (
-      <div className="landing-scene-fallback">
-        <span className="landing-eyebrow">THE JOURNEY CONTINUES</span>
-        <p>Movement, with purpose.</p>
-        <small>3D preview unavailable. Explore the story below.</small>
-      </div>
-    ) : (
-      this.props.children
-    );
-  }
+function HorseUnavailable({ onReady }: { onReady: () => void }) {
+  useEffect(onReady, [onReady]);
+  return (
+    <div className="landing-scene-fallback">
+      <p>Movement, with purpose.</p>
+      <small>WebGL unavailable. Explore the journey below.</small>
+    </div>
+  );
 }
 
 export default function HorseExperience({
   story,
   canvasLayer,
   horsePresent,
+  onReady,
 }: {
   story: RefObject<LandingSceneState>;
   canvasLayer: RefObject<HTMLDivElement | null>;
   horsePresent: boolean;
+  onReady: () => void;
 }) {
-  const [pending, setPending] = useState(true);
   const [failed, setFailed] = useState(false);
   const [quality, setQuality] = useState(() => ({
     compact: matchMedia("(max-width: 1023px)").matches,
     reduced: matchMedia("(prefers-reduced-motion: reduce)").matches,
     visible: !document.hidden,
   }));
-  const ready = useCallback(() => setPending(false), []);
-  const contextLost = useCallback(() => setFailed(true), []);
+  const contextLost = useCallback(() => {
+    setFailed(true);
+    onReady();
+  }, [onReady]);
   useEffect(() => {
     const compact = matchMedia("(max-width: 1023px)");
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -101,55 +90,47 @@ export default function HorseExperience({
   }, [canvasLayer, story]);
   return (
     <div className="landing-experience" ref={canvasLayer} aria-hidden="true">
-      <HorseSceneBoundary>
-        {failed ? (
-          <div className="landing-scene-fallback">
-            <p>Movement, with purpose.</p>
-            <small>
-              3D preview unavailable. All navigation remains available.
-            </small>
-          </div>
-        ) : (
-          <div className="landing-canvas-layer">
-            <Canvas
-              camera={{ position: [0, 0.45, 6.9], fov: 32, near: 0.1, far: 40 }}
-              dpr={lowPower ? 1 : [1, 1.5]}
-              frameloop={
-                !quality.visible || !horsePresent
-                  ? "never"
-                  : quality.reduced
-                    ? "demand"
-                    : "always"
-              }
-              gl={{
-                antialias: !lowPower,
-                alpha: true,
-                powerPreference: lowPower ? "low-power" : "high-performance",
-              }}
-              fallback={
-                <div className="landing-scene-fallback">
-                  <p>Movement, with purpose.</p>
-                  <small>WebGL unavailable. Explore the journey below.</small>
-                </div>
-              }
-              onCreated={({ gl }) => {
-                gl.setClearColor("#111311", 0);
-              }}
-            >
-              <Suspense fallback={null}>
-                <HorseScene
-                  story={story}
-                  lowPower={lowPower}
-                  onContextLost={contextLost}
-                >
-                  <HorseModel story={story} onReady={ready} />
-                </HorseScene>
-              </Suspense>
-            </Canvas>
-            <HorseLoader pending={pending} />
-          </div>
-        )}
-      </HorseSceneBoundary>
+      {failed ? (
+        <div className="landing-scene-fallback">
+          <p>Movement, with purpose.</p>
+          <small>
+            3D preview unavailable. All navigation remains available.
+          </small>
+        </div>
+      ) : (
+        <div className="landing-canvas-layer">
+          <Canvas
+            camera={{ position: [0, 0.45, 6.9], fov: 32, near: 0.1, far: 40 }}
+            dpr={lowPower ? 1 : [1, 1.5]}
+            frameloop={
+              !quality.visible || !horsePresent
+                ? "never"
+                : quality.reduced
+                  ? "demand"
+                  : "always"
+            }
+            gl={{
+              antialias: !lowPower,
+              alpha: true,
+              powerPreference: lowPower ? "low-power" : "high-performance",
+            }}
+            fallback={<HorseUnavailable onReady={onReady} />}
+            onCreated={({ gl }) => {
+              gl.setClearColor("#111311", 0);
+            }}
+          >
+            <Suspense fallback={null}>
+              <HorseScene
+                story={story}
+                lowPower={lowPower}
+                onContextLost={contextLost}
+              >
+                <HorseModel story={story} onReady={onReady} />
+              </HorseScene>
+            </Suspense>
+          </Canvas>
+        </div>
+      )}
     </div>
   );
 }

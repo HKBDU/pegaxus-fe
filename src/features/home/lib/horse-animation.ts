@@ -7,13 +7,27 @@ export type HeroPhase =
 export const HERO_APPROACH_DISTANCE = 1.2;
 // The original rig faces −X. This yaw aims forward and modestly toward the copy.
 export const HERO_YAW = 0.92;
-// Measured planted-hoof travel per SlowWalk cycle, in the original rig's units.
-export const JOURNEY_STRIDE = 1.388;
-export const JOURNEY_STEP_CLIP = "HorseALL_JourneyStep";
-export const JOURNEY_REVEAL_DURATION = 7.6;
+export const JOURNEY_STOP_CLIP = "HorseALL_RunToStop";
+export const JOURNEY_RUN_YAW = 1.05;
+export const JOURNEY_PORTRAIT_YAW = 2.11;
+export const HERO_HOOF_EXTENSION = 2;
+const HERO_RISE_DURATION = 3.6;
+export const HERO_REVEAL_DURATION = HERO_RISE_DURATION + HERO_HOOF_EXTENSION;
+export const HERO_WALK_CYCLES = 2;
+export const HERO_WALK_REVEAL_END = HERO_REVEAL_DURATION * 0.82;
 export const HERO_CALM_CLIP = "HorseALL_IdleEars_Calm";
 export const HERO_STANDING_TIME = 0;
 export const HERO_SCRAPE_CLIP = "HorseALL_HoofScrape2";
+
+export function getHeroRevealProgress(time: number) {
+  // Add two seconds only to the low first 16%; preserve the remaining rise pace.
+  if (time >= HERO_REVEAL_DURATION) return 1;
+  const lowDuration = HERO_RISE_DURATION * 0.16;
+  const elapsed = Math.min(HERO_REVEAL_DURATION, Math.max(0, time));
+  return elapsed < lowDuration + HERO_HOOF_EXTENSION
+    ? (elapsed / (lowDuration + HERO_HOOF_EXTENSION)) * 0.16
+    : (elapsed - HERO_HOOF_EXTENSION) / HERO_RISE_DURATION;
+}
 
 export function getLocomotionPhase(
   time: number,
@@ -52,6 +66,8 @@ export function assertHorseAnimations(clips: readonly { name: string }[]) {
   }
   if (!names.has(HERO_SCRAPE_CLIP))
     throw new Error(`Missing horse animation: ${HERO_SCRAPE_CLIP}`);
+  if (!names.has(JOURNEY_STOP_CLIP))
+    throw new Error(`Missing horse animation: ${JOURNEY_STOP_CLIP}`);
 }
 
 export function transitionHorseAction(

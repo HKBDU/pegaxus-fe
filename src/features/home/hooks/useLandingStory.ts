@@ -1,4 +1,4 @@
-import { useRef, useState, type RefObject } from "react";
+import { useCallback, useRef, useState, type RefObject } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
@@ -22,6 +22,11 @@ export function useLandingStory(
   const [active, setActive] = useState<LandingChapter>("home");
   const [scrolled, setScrolled] = useState(false);
   const [horsePresent, setHorsePresent] = useState(true);
+  const revealHero = useCallback(() => {
+    const state = scene.current;
+    Object.assign(state, { heroIntroReady: true });
+    state.invalidate?.();
+  }, []);
   useGSAP(
     () => {
       const element = root.current;
@@ -76,11 +81,20 @@ export function useLandingStory(
           initialMapAnchor.current = false;
           const previous = {
             heroCompleted: state.heroCompleted,
+            heroIntroReady: state.heroIntroReady,
             heroPhase: state.heroPhase,
+            heroRevealTime: state.heroRevealTime,
+            heroCameraReady: state.heroCameraReady,
+            heroContacts: state.heroContacts,
+            heroWalkLoops: state.heroWalkLoops,
             journeyCompleted: state.journeyCompleted,
+            journeyPhase: state.journeyPhase,
             journeyTravel: state.journeyTravel,
             journeyDistance: state.journeyDistance,
             journeyTime: state.journeyTime,
+            journeyOffsetX: state.journeyOffsetX,
+            journeyOffsetZ: state.journeyOffsetZ,
+            journeyYaw: state.journeyYaw,
             mapProgress: state.mapProgress,
             mapViewportTop: state.mapViewportTop,
             invalidate: state.invalidate,
@@ -126,47 +140,60 @@ export function useLandingStory(
                 .from(
                   journey.querySelector("[data-journey-headline]"),
                   { opacity: 0, y: 12, duration: 0.8 },
-                  1.4,
+                  0.15,
                 )
                 .from(
                   journey.querySelector("h2 em"),
                   { opacity: 0, duration: 0.9 },
-                  5.7,
+                  0.35,
                 )
                 .from(
                   journey.querySelector(".landing-lead"),
                   { opacity: 0, y: 12, duration: 0.65 },
-                  6.3,
+                  0.55,
                 )
                 .from(
                   journey.querySelectorAll(".landing-stage-line li"),
                   { opacity: 0, y: 10, duration: 0.5, stagger: 0.1 },
-                  6.5,
+                  0.7,
                 )
                 .from(
                   journey.querySelector(".landing-caption"),
                   { opacity: 0, duration: 0.5 },
-                  7.1,
+                  1.1,
                 );
           let journeyVisibleAt = 0;
           let textFallback = false;
+          let textStarted = false;
+          let presentationLayer: HTMLDivElement | null = null;
           const syncJourneyText = () => {
-            if (!state.inJourney || !journeyText) return;
+            if (canvasLayer.current !== presentationLayer) {
+              presentationLayer = canvasLayer.current;
+              requestUpdate();
+            }
+            if (!journeyText) return;
+            if (!state.inJourney || !state.journeyReady) {
+              journeyVisibleAt = 0;
+              journeyText.pause();
+              return;
+            }
             if (!journeyVisibleAt && state.journeyReady)
               journeyVisibleAt = performance.now();
             if (
               journeyVisibleAt &&
               performance.now() - journeyVisibleAt > 5000 &&
-              state.journeyTime === 0
+              performance.now() - state.horseFrameAt > 1500
             )
               textFallback = true;
-            journeyText.time(
-              textFallback || state.journeyCompleted
-                ? journeyText.duration()
-                : state.journeyTime,
-            );
+            if (textFallback || previous.journeyCompleted)
+              journeyText.progress(1).pause();
+            else if (state.journeyPhase === "POSE_READY") {
+              if (!textStarted) {
+                textStarted = true;
+                journeyText.play(0);
+              } else journeyText.play();
+            }
           };
-          gsap.ticker.add(syncJourneyText);
           const progressFill = element.querySelector<HTMLElement>(
             ".landing-scroll-progress > span",
           );
@@ -228,6 +255,11 @@ export function useLandingStory(
             }
             const layer = canvasLayer.current;
             if (layer) layer.dataset.shot = nextShot;
+            if (layer && inJourney)
+              layer.style.setProperty(
+                "--journey-stage-height",
+                Math.min(journeyRect.height, innerHeight - 76) + "px",
+              );
             const stageTop =
               layer?.getBoundingClientRect().top ??
               (inMap || profile === "desktop" ? 0 : 75);
@@ -241,8 +273,10 @@ export function useLandingStory(
               ? rect.top
               : inMap
                 ? 0
-                : Math.max(0, rect.top - stageTop) +
-                  Math.min(0, rect.bottom - stageTop - stageHeight);
+                : inJourney && profile !== "desktop"
+                  ? rect.top - stageTop
+                  : Math.max(0, rect.top - stageTop) +
+                    Math.min(0, rect.bottom - stageTop - stageHeight);
             const clipTop = Math.max(
               0,
               Math.min(stageHeight, rect.top - stageTop),
@@ -278,7 +312,11 @@ export function useLandingStory(
                 "px " +
                 (inJourney && profile === "desktop" ? "48% " : "0 ") +
                 clipBottom +
-                "px 0)";
+                "px " +
+                (inHero && profile === "desktop" && !state.heroCameraReady
+                  ? "50%"
+                  : "0") +
+                ")";
               layer.style.opacity = present ? "1" : "0";
             }
             traversal.update();
@@ -317,6 +355,7 @@ export function useLandingStory(
               }
             });
           };
+          gsap.ticker.add(syncJourneyText);
 
           sections.forEach((section) => {
             ScrollTrigger.create({
@@ -504,5 +543,5 @@ export function useLandingStory(
     },
     { scope: root, dependencies: [root, canvasLayer] },
   );
-  return { scene, active, scrolled, horsePresent };
+  return { scene, active, scrolled, horsePresent, revealHero };
 }
