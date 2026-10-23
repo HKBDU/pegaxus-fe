@@ -13,7 +13,7 @@ import { ReadOnlyRecord } from "../components/ReadOnlyRecord"
 import { RecordSummary } from "../components/RecordSummary"
 import { ReloadDialog } from "../components/ReloadDialog"
 import { StatusBadge } from "../components/StatusBadge"
-import { handoverPaths, HANDOVER_GEOFENCE_METERS, type HandoverAudience } from "../constants"
+import { handoverPaths, HANDOVER_GEOFENCE_ENFORCED, HANDOVER_GEOFENCE_METERS, type HandoverAudience } from "../constants"
 import { useCancelHandover, useCompleteHandover, useHandoverRecord, useReloadHandover, useStartHandover, useTransportSegments } from "../hooks/useHandovers"
 import { HandoverApiError } from "../services"
 import type { CompleteInput, HandoverRecord } from "../types"
@@ -109,8 +109,8 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
               mobile={mobile}
               pending={complete.isPending}
               // The BE sends the point to check (HO5 `geofence`, null for OTHER); OT4 only gives a hint when it is missing.
-              target={shown.geofence ? { ...shown.geofence, name: shown.location.locationName ?? undefined } : segments.data ? handoverPoint(shown, segments.data.segments) : null}
-              geofenced={Boolean(shown.geofence)}
+              target={!HANDOVER_GEOFENCE_ENFORCED ? null : shown.geofence ? { ...shown.geofence, name: shown.location.locationName ?? undefined } : segments.data ? handoverPoint(shown, segments.data.segments) : null}
+              geofenced={HANDOVER_GEOFENCE_ENFORCED && Boolean(shown.geofence)}
               onSubmit={submitComplete}
               onBack={() => navigate(back)}
               submitError={complete.error}

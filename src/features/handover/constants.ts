@@ -52,6 +52,15 @@ export const LIMITS = { partyName: 200, contactName: 150, contactPhone: 30, loca
 /** Radius used for the hint when the record carries no `geofence` (the BE value, `TrackingOptions.GeofenceRadiusMeters`, wins). */
 export const HANDOVER_GEOFENCE_METERS = 500
 
+/**
+ * DEMO SWITCH for the 500 m rule on [Complete handover record] (HO5).
+ *  - `true`  : the rule is on. The "Position check" panel is shown and [Complete] waits until the phone is inside the radius.
+ *  - `false` : the rule is off in the app. No panel and no waiting; the position is still read and sent with HO5.
+ * The BE has the same rule (`422 NOT_IN_HANDOVER_RADIUS`, radius `Tracking:GeofenceRadiusMeters`), so with the real BE it
+ * must be relaxed too, e.g. set the BE setting `Tracking__GeofenceRadiusMeters` to a huge value while demoing.
+ */
+export const HANDOVER_GEOFENCE_ENFORCED = false
+
 /** Every handover of a transport fits in one page: one per boundary plus the cancelled ones. */
 export const LIST_PAGE_SIZE = 100
 export const TABLE_PAGE_SIZE = 8
