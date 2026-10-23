@@ -7,101 +7,315 @@ import {
   INCIDENT_STATUS,
   VEHICLE_INCIDENT_TYPE,
   HORSE_INCIDENT_TYPE,
-} from '@/shared/constants/incident'
+} from "@/shared/constants/incident";
 import type {
+  AddHorseDetailsRequest,
   CustomerIncidentView,
   EmergencyCostRequest,
+  HorseHealthIncidentRequest,
+  IncidentAction,
   IncidentDetail,
   IncidentSummary,
-} from '@/shared/types/incident'
+  RaiseSeverityRequest,
+  SupplementVehicleRequest,
+  VehicleIncidentRequest,
+  VeterinaryOutcomeRequest,
+} from "@/shared/types/incident";
 
-const operator = { id: 'usr-001', name: 'Alex Morgan', role: 'OPERATOR' as const, phone: '+84123456789' }
-const driver = { id: 'usr-002', name: 'Jordan Lee', role: 'DRIVER' as const, phone: '+84987654321' }
+const transport = (id: string) => ({
+  transportId: id,
+  transportCode: id,
+  status: "IN_TRANSIT",
+  bookingCode: `BK-${id}`,
+});
+const reporter = {
+  employeeId: "EMP-001",
+  employeeCode: "DRV-001",
+  fullName: "Jordan Lee",
+  role: "DRIVER" as const,
+  phone: "+84987654321",
+};
+const summary = (
+  incidentReportId: string,
+  category: IncidentSummary["category"],
+  severity: IncidentSummary["severity"],
+  status: IncidentSummary["status"],
+  title: string,
+): IncidentSummary => ({
+  incidentReportId,
+  incidentCode: `INC-20261020-${incidentReportId}`,
+  transport: transport(`TR-${incidentReportId}`),
+  category,
+  severity,
+  status,
+  title,
+  occurredAt: "2026-10-20T08:00:00Z",
+  reportedAt: "2026-10-20T08:15:00Z",
+  location: { description: "Ninh Binh" },
+  reportedBy: reporter,
+  vehicle: {
+    vehicleId: `VH-${incidentReportId}`,
+    vehicleCode: `VH-${incidentReportId}`,
+    licensePlate: "51A-123.45",
+  },
+  horses: [],
+  emergencySettlementRequired: false,
+  costRequestCount: 0,
+  pendingCostCount: 0,
+  approvedTotal: 0,
+  updatedAt: "2026-10-20T08:30:00Z",
+});
 
 export const incidentMockSummaries: IncidentSummary[] = [
-  {
-    id: 'IN1', bookingId: 'BK-1001', category: INCIDENT_CATEGORY.VEHICLE, severity: INCIDENT_SEVERITY.HIGH,
-    status: INCIDENT_STATUS.REPORTED, title: 'Vehicle engine failure', reportedAt: '2026-10-20T08:15:00Z',
-    lastUpdatedAt: '2026-10-20T08:30:00Z', availableActions: [INCIDENT_ACTION.SUPPLEMENT_VEHICLE, INCIDENT_ACTION.PROPOSE_REROUTE, INCIDENT_ACTION.RAISE_SEVERITY],
-  },
-  {
-    id: 'IN2', bookingId: 'BK-1002', category: INCIDENT_CATEGORY.HORSE_HEALTH, severity: INCIDENT_SEVERITY.CRITICAL,
-    status: INCIDENT_STATUS.PENDING, title: 'Horse requires veterinary attention', reportedAt: '2026-10-20T09:00:00Z',
-    lastUpdatedAt: '2026-10-20T09:45:00Z', availableActions: [INCIDENT_ACTION.FOLLOW_UP_HORSE, INCIDENT_ACTION.REQUEST_COST, INCIDENT_ACTION.HOLD_ROUTE],
-  },
-  {
-    id: 'IN3', bookingId: 'BK-1003', category: INCIDENT_CATEGORY.BOTH, severity: INCIDENT_SEVERITY.HIGH,
-    status: INCIDENT_STATUS.PENDING, title: 'Collision affecting horse transport', reportedAt: '2026-10-19T14:20:00Z',
-    lastUpdatedAt: '2026-10-19T15:10:00Z', availableActions: [INCIDENT_ACTION.SUPPLEMENT_VEHICLE, INCIDENT_ACTION.ADD_HORSE_DETAIL, INCIDENT_ACTION.REQUEST_COST],
-  },
-  {
-    id: 'IN4', bookingId: 'BK-1004', category: INCIDENT_CATEGORY.ROUTE_CHANGE, severity: INCIDENT_SEVERITY.MEDIUM,
-    status: INCIDENT_STATUS.REPORTED, title: 'Route change required', reportedAt: '2026-10-18T11:00:00Z',
-    lastUpdatedAt: '2026-10-18T11:30:00Z', availableActions: [INCIDENT_ACTION.PROPOSE_REROUTE, INCIDENT_ACTION.ESCALATE_REROUTE],
-  },
-  {
-    id: 'IN5', bookingId: 'BK-1005', category: INCIDENT_CATEGORY.VEHICLE, severity: INCIDENT_SEVERITY.LOW,
-    status: INCIDENT_STATUS.RESOLVED, title: 'Tire damage repaired', reportedAt: '2026-10-17T07:00:00Z',
-    lastUpdatedAt: '2026-10-17T10:00:00Z', availableActions: [INCIDENT_ACTION.SELF_RESOLVE],
-  },
-  {
-    id: 'IN6', bookingId: 'BK-1006', category: INCIDENT_CATEGORY.HORSE_HEALTH, severity: INCIDENT_SEVERITY.MEDIUM,
-    status: INCIDENT_STATUS.CANCELLED, title: 'Possible dehydration ruled out', reportedAt: '2026-10-16T12:00:00Z',
-    lastUpdatedAt: '2026-10-16T13:00:00Z', availableActions: [],
-  },
-  {
-    id: 'IN7', bookingId: 'BK-1007', category: INCIDENT_CATEGORY.VEHICLE, severity: INCIDENT_SEVERITY.CRITICAL,
-    status: INCIDENT_STATUS.PENDING, title: 'Temperature control failure', reportedAt: '2026-10-21T06:30:00Z',
-    lastUpdatedAt: '2026-10-21T06:45:00Z', availableActions: [INCIDENT_ACTION.SUPPLEMENT_VEHICLE, INCIDENT_ACTION.HOLD_ROUTE, INCIDENT_ACTION.ESCALATE_REROUTE],
-  },
-]
+  summary(
+    "IN1",
+    INCIDENT_CATEGORY.VEHICLE,
+    INCIDENT_SEVERITY.HIGH,
+    INCIDENT_STATUS.REPORTED,
+    "Vehicle engine failure",
+  ),
+  summary(
+    "IN2",
+    INCIDENT_CATEGORY.HORSE_HEALTH,
+    INCIDENT_SEVERITY.CRITICAL,
+    INCIDENT_STATUS.PENDING,
+    "Horse requires veterinary attention",
+  ),
+  summary(
+    "IN3",
+    INCIDENT_CATEGORY.BOTH,
+    INCIDENT_SEVERITY.CRITICAL,
+    INCIDENT_STATUS.PENDING,
+    "Collision affecting horse transport",
+  ),
+];
 
 const pendingCost: EmergencyCostRequest = {
-  id: 'COST-001', incidentId: 'IN2', category: EMERGENCY_COST_CATEGORY.VETERINARY,
-  description: 'Emergency veterinary examination', amount: 3_500_000, currency: 'VND',
-  status: EMERGENCY_COST_STATUS.PENDING, requestedBy: operator,
-  requestedAt: '2026-10-20T09:30:00Z', lastUpdatedAt: '2026-10-20T09:30:00Z',
-}
-
-export const incidentMockDetails: IncidentDetail[] = [
-  {
-    ...incidentMockSummaries[0], description: 'The transport vehicle has stopped after an engine failure.', reportedBy: driver,
-    vehicle: { type: VEHICLE_INCIDENT_TYPE.ENGINE_FAILURE, vehicleId: 'VH-001', vehiclePlateNumber: '51A-123.45', location: 'Ninh Binh', notes: 'Vehicle cannot continue safely.' },
+  emergencyCostRequestId: "COST-001",
+  requestCode: "ECR-20261020-0001",
+  incident: {
+    incidentReportId: "IN2",
+    incidentCode: "INC-20261020-IN2",
+    category: INCIDENT_CATEGORY.HORSE_HEALTH,
+    severity: INCIDENT_SEVERITY.CRITICAL,
+    status: INCIDENT_STATUS.PENDING,
+    transportId: "TR-IN2",
   },
-  {
-    ...incidentMockSummaries[1], description: 'The horse shows signs of respiratory distress and needs immediate assessment.', reportedBy: driver,
-    horse: { type: HORSE_INCIDENT_TYPE.RESPIRATORY_ISSUE, horseId: 'HR-002', horseName: 'Silver Comet', symptoms: 'Rapid breathing', veterinarianId: 'VET-009' },
-    costs: [pendingCost],
+  category: EMERGENCY_COST_CATEGORY.VETERINARY,
+  description: "Emergency veterinary examination",
+  justification: "Urgent horse assessment",
+  requestedAmount: 3_500_000,
+  approvedAmount: null,
+  currency: "VND",
+  status: EMERGENCY_COST_STATUS.PENDING,
+  requestedBy: reporter,
+  decision: null,
+  requestedAt: "2026-10-20T09:30:00Z",
+  cancelledAt: null,
+  cancellationReason: null,
+  invoiceRequired: false,
+  createdAt: "2026-10-20T09:30:00Z",
+  updatedAt: "2026-10-20T09:30:00Z",
+};
+const actions: Record<string, IncidentAction[]> = {
+  IN1: [INCIDENT_ACTION.SUPPLEMENT_VEHICLE, INCIDENT_ACTION.RAISE_SEVERITY],
+  IN2: [INCIDENT_ACTION.FOLLOW_UP_HORSE, INCIDENT_ACTION.REQUEST_COST],
+  IN3: [INCIDENT_ACTION.SUPPLEMENT_VEHICLE, INCIDENT_ACTION.ADD_HORSE_DETAIL],
+};
+const baseDetail = (item: IncidentSummary): IncidentDetail => ({
+  ...item,
+  description: "The transport requires immediate attention.",
+  immediateAction: "Moved to a safe location.",
+  resolutionSummary: null,
+  resolvedAt: null,
+  cancelledAt: null,
+  cancellationReason: null,
+  vehicleDetail:
+    item.category === INCIDENT_CATEGORY.HORSE_HEALTH
+      ? null
+      : {
+          vehicleIncidentDetailId: `VID-${item.incidentReportId}`,
+          vehicle: {
+            vehicleId: item.vehicle?.vehicleId ?? "VH-001",
+            vehicleCode: "VH-001",
+            licensePlate: "51A-123.45",
+            status: "IN_SERVICE",
+          },
+          incidentType: VEHICLE_INCIDENT_TYPE.ENGINE_FAILURE,
+          vehicleCondition: null,
+          damageDescription: null,
+          repairNote: "Vehicle cannot continue safely.",
+          vehicleOperable: false,
+          repairRequired: true,
+          towingRequired: true,
+          replacementVehicleRequired: false,
+          estimatedRepairCost: null,
+          estimatedRepairHours: null,
+          driverSafetyStatus: null,
+          cargoConditionNote: null,
+          updatedAt: item.updatedAt,
+        },
+  horseDetails:
+    item.category === INCIDENT_CATEGORY.VEHICLE
+      ? []
+      : [
+          {
+            horseHealthIncidentDetailId: `HID-${item.incidentReportId}`,
+            horse: { horseId: "HR-002", horseName: "Silver Comet" },
+            incidentType: HORSE_INCIDENT_TYPE.RESPIRATORY_ISSUE,
+            conditionDescription: "Rapid breathing",
+            symptoms: "Rapid breathing",
+            bodyTemperatureCelsius: null,
+            heartRateBpm: null,
+            respiratoryRateBpm: null,
+            firstAidProvided: null,
+            veterinarianRequired: true,
+            veterinarianContactedAt: null,
+            isolationRequired: false,
+            veterinarianInstruction: null,
+            medicationGiven: null,
+            outcomeNote: null,
+            horseTransportable: null,
+            vitalWarnings: [],
+            updatedAt: item.updatedAt,
+          },
+        ],
+  photos: [
+    {
+      photoId: "PHOTO-001",
+      photoUrl: "/mock/incident-engine.jpg",
+      caption: "Engine condition",
+      sortOrder: 0,
+    },
+  ],
+  photoCount: 1,
+  costRequests: item.incidentReportId === "IN2" ? [pendingCost] : [],
+  costSummary: {
+    requestedTotal: item.incidentReportId === "IN2" ? 3_500_000 : 0,
+    approvedTotal: 0,
+    pendingCount: item.incidentReportId === "IN2" ? 1 : 0,
+    currency: "VND",
   },
-  {
-    ...incidentMockSummaries[2], description: 'A road collision caused damage to the vehicle and minor horse distress.', reportedBy: driver,
-    vehicle: { type: VEHICLE_INCIDENT_TYPE.ACCIDENT, vehicleId: 'VH-003', location: 'Da Nang' },
-    horse: { type: HORSE_INCIDENT_TYPE.STRESS, horseId: 'HR-003', horseName: 'Blue Wind', symptoms: 'Restlessness' },
-  },
-  {
-    ...incidentMockSummaries[3], description: 'The planned route is temporarily unavailable due to a road closure.', reportedBy: operator,
-  },
-  {
-    ...incidentMockSummaries[4], description: 'The damaged tire was replaced and the vehicle passed its safety check.', reportedBy: driver,
-    vehicle: { type: VEHICLE_INCIDENT_TYPE.TIRE_DAMAGE, vehicleId: 'VH-005', vehiclePlateNumber: '30F-555.55' },
-  },
-  {
-    ...incidentMockSummaries[6], description: 'The vehicle temperature control system is not maintaining the required range.', reportedBy: driver,
-    vehicle: { type: VEHICLE_INCIDENT_TYPE.TEMPERATURE_CONTROL_FAILURE, vehicleId: 'VH-007', location: 'Hue' },
-  },
-]
-
+  routeChanges: [],
+  hold: null,
+  canResolve: false,
+  availableActions: actions[item.incidentReportId] ?? [],
+  serverTime: item.updatedAt,
+  createdAt: item.reportedAt,
+});
+export const incidentMockDetails = incidentMockSummaries.map(baseDetail);
 export const incidentMockCustomer: CustomerIncidentView = {
-  id: 'IN2', bookingId: 'BK-1002', category: INCIDENT_CATEGORY.HORSE_HEALTH, severity: INCIDENT_SEVERITY.CRITICAL,
-  status: INCIDENT_STATUS.PENDING, title: 'Horse requires veterinary attention',
-  description: 'The horse is receiving immediate veterinary attention.', reportedAt: '2026-10-20T09:00:00Z',
-  lastUpdatedAt: '2026-10-20T09:45:00Z',
-  costsHidden: true, contactPhoneHidden: true,
-}
-
+  id: "IN2",
+  bookingId: "BK-IN2",
+  category: INCIDENT_CATEGORY.HORSE_HEALTH,
+  severity: INCIDENT_SEVERITY.CRITICAL,
+  status: INCIDENT_STATUS.PENDING,
+  title: "Horse requires veterinary attention",
+  description: "The horse is receiving immediate veterinary attention.",
+  reportedAt: "2026-10-20T09:00:00Z",
+  lastUpdatedAt: "2026-10-20T09:45:00Z",
+  costsHidden: true,
+  contactPhoneHidden: true,
+};
 export const incidentMocks = {
   summaries: incidentMockSummaries,
   details: incidentMockDetails,
   customer: incidentMockCustomer,
   pendingCost,
-} as const
+} as const;
+
+export const incidentRequestMocks: {
+  vehicle: VehicleIncidentRequest;
+  horseHealth: HorseHealthIncidentRequest;
+  addHorseDetails: AddHorseDetailsRequest;
+  supplementVehicle: SupplementVehicleRequest;
+  veterinaryOutcome: VeterinaryOutcomeRequest;
+  raiseSeverity: RaiseSeverityRequest;
+} = {
+  vehicle: {
+    transportId: "TR-IN1",
+    vehicleId: "VH-IN1",
+    category: INCIDENT_CATEGORY.VEHICLE,
+    incidentType: VEHICLE_INCIDENT_TYPE.ENGINE_FAILURE,
+    severity: INCIDENT_SEVERITY.HIGH,
+    title: "Engine failure during transport",
+    description: "Engine stopped during the current transport.",
+    vehicleOperable: false,
+    emergencySettlementRequired: false,
+    occurredAt: "2026-10-20T08:00:00Z",
+    photoFiles: [{ publicId: "upload-vehicle-001" }],
+  },
+  horseHealth: {
+    transportId: "TR-IN2",
+    severity: INCIDENT_SEVERITY.CRITICAL,
+    emergencySettlementRequired: true,
+    occurredAt: "2026-10-20T08:00:00Z",
+    horses: [
+      {
+        horseId: "HR-002",
+        incidentType: HORSE_INCIDENT_TYPE.RESPIRATORY_ISSUE,
+        conditionDescription:
+          "The horse has rapid breathing and visible distress.",
+        veterinarianRequired: true,
+        isolationRequired: false,
+      },
+    ],
+  },
+  addHorseDetails: {
+    horses: [
+      {
+        horseId: "HR-003",
+        incidentType: HORSE_INCIDENT_TYPE.STRESS,
+        conditionDescription:
+          "The horse is restless after the vehicle collision.",
+        veterinarianRequired: false,
+        isolationRequired: false,
+      },
+    ],
+  },
+  supplementVehicle: {
+    lastUpdatedAt: "2026-10-20T08:30:00Z",
+    repairNote: "Recovery team is on site.",
+  },
+  veterinaryOutcome: {
+    lastUpdatedAt: "2026-10-20T09:00:00Z",
+    outcomeNote: "Veterinarian completed the follow-up examination.",
+    horseTransportable: false,
+  },
+  raiseSeverity: {
+    lastUpdatedAt: "2026-10-20T08:30:00Z",
+    severity: INCIDENT_SEVERITY.CRITICAL,
+    reason: "The engine fire risk has increased and the vehicle cannot move.",
+  },
+};
+
+export const incidentResponseMocks = {
+  loading: { status: "loading" as const },
+  success: {
+    isSuccess: true,
+    code: 201,
+    message: "Incident created successfully",
+    value: incidentMockDetails[0],
+  },
+  validationError: {
+    isSuccess: false,
+    code: 400,
+    errorCode: "VALIDATION_ERROR",
+    message: "The incident request is invalid",
+    errors: [{ field: "description", message: "Description is required" }],
+  },
+  conflictError: {
+    isSuccess: false,
+    code: 409,
+    errorCode: "INCIDENT_MODIFIED",
+    message: "The incident was just modified. Please reload the page",
+    errors: [],
+  },
+  offlineError: {
+    isSuccess: false,
+    code: 0,
+    errorCode: "NETWORK_ERROR",
+    message: "Unable to reach the incident service",
+    errors: [],
+  },
+} as const;

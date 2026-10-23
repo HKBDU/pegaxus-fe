@@ -1,16 +1,17 @@
 import {
   ArrowLeftRight,
+  CarFront,
   FileText,
-  Flag,
+  HeartPulse,
   Navigation,
-  Siren,
   Truck,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, type To } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 import { useDriverLocationSession } from "@/features/location-sharing/hooks/useDriverLocationSession";
 import { driverLocationSharingPath } from "@/features/location-sharing/navigation";
+import { incidentPaths } from "@/shared/constants/incident";
 
 import { CREW_ACTION_LABELS, HORSE_HEALTH_ROUTES } from "../constants";
 import type { AssignedTransport } from "../types";
@@ -19,13 +20,15 @@ function ActionButton({
   icon: Icon,
   label,
   to,
+  state,
   disabled,
   disabledReason,
   tone = "neutral",
 }: {
   icon: typeof FileText;
   label: string;
-  to?: string;
+  to?: To;
+  state?: unknown;
   disabled?: boolean;
   disabledReason?: string;
   tone?: "accent" | "neutral" | "danger";
@@ -60,7 +63,7 @@ function ActionButton({
       </button>
     );
   return (
-    <Link to={to} className={className}>
+    <Link to={to} state={state} className={className}>
       {content}
     </Link>
   );
@@ -104,9 +107,12 @@ export function CrewHomeActions({
           />
         )}
         <ActionButton
-          icon={Siren}
-          label={CREW_ACTION_LABELS.incident}
-          disabled
+          icon={CarFront}
+          label="Report Transport Incident"
+          to={incidentPaths.newVehicle()}
+          state={{ transportId: transport.transportId }}
+          disabled={transport.status !== "IN_TRANSIT"}
+          disabledReason="Available after departure"
           tone="danger"
         />
         <ActionButton
@@ -114,7 +120,15 @@ export function CrewHomeActions({
           label={CREW_ACTION_LABELS.viewTransport}
           to={HORSE_HEALTH_ROUTES.transportDetail(transport.transportId)}
         />
-        <ActionButton icon={Flag} label="Report" disabled />
+        <ActionButton
+          icon={HeartPulse}
+          label="Report Horse Incident"
+          to={incidentPaths.newHorseHealth()}
+          state={{ transportId: transport.transportId }}
+          disabled={transport.status !== "IN_TRANSIT"}
+          disabledReason="Available after departure"
+          tone="danger"
+        />
         <ActionButton
           icon={ArrowLeftRight}
           label={CREW_ACTION_LABELS.handover}
