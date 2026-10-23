@@ -81,13 +81,22 @@ export function useLandingStory(
           initialMapAnchor.current = false;
           const previous = {
             heroCompleted: state.heroCompleted,
+            heroLifecycle: state.heroLifecycle,
+            heroEffectTime: state.heroEffectTime,
             heroIntroReady: state.heroIntroReady,
             heroPhase: state.heroPhase,
             heroRevealTime: state.heroRevealTime,
             heroCameraReady: state.heroCameraReady,
             heroContacts: state.heroContacts,
             heroWalkLoops: state.heroWalkLoops,
+            heroHoof: state.heroHoof,
+            hoofPulses: state.hoofPulses,
+            introX: state.introX,
+            introZ: state.introZ,
             journeyCompleted: state.journeyCompleted,
+            journeyLifecycle: state.journeyLifecycle,
+            journeyStopProgress: state.journeyStopProgress,
+            journeyTextTime: state.journeyTextTime,
             journeyPhase: state.journeyPhase,
             journeyTravel: state.journeyTravel,
             journeyDistance: state.journeyDistance,
@@ -107,9 +116,6 @@ export function useLandingStory(
               (navigator.hardwareConcurrency > 0 &&
                 navigator.hardwareConcurrency <= 4),
           });
-          // A breakpoint change never restarts a partially played gait in another composition.
-          if (state.heroPhase !== "LOADING")
-            Object.assign(state, { heroCompleted: true, introX: 0, introZ: 0 });
           const shots = getHorseShots(profile, reduced);
           if (resumeJourney || resumeMap)
             Object.assign(
@@ -165,18 +171,61 @@ export function useLandingStory(
           let journeyVisibleAt = 0;
           let textFallback = false;
           let textStarted = false;
+          let journeyWasActive = false;
+          let departureMotion = -1;
+          let departurePortrait = -1;
           let presentationLayer: HTMLDivElement | null = null;
           const syncJourneyText = () => {
             if (canvasLayer.current !== presentationLayer) {
               presentationLayer = canvasLayer.current;
               requestUpdate();
             }
+            if (journey.dataset.lifecycle !== state.journeyLifecycle)
+              journey.dataset.lifecycle = state.journeyLifecycle;
+            if (journey.dataset.phase !== state.journeyPhase)
+              journey.dataset.phase = state.journeyPhase;
+            const motion =
+              state.journeyPhase === "RUNNING"
+                ? 1
+                : state.journeyPhase === "STOPPING"
+                  ? 1 - state.journeyStopProgress
+                  : 0;
+            const portrait =
+              state.journeyPhase === "STOPPING"
+                ? state.journeyStopProgress
+                : state.journeyPhase === "SETTLING" ||
+                    state.journeyPhase === "POSE_READY"
+                  ? 1
+                  : 0;
+            if (departureMotion !== motion) {
+              departureMotion = motion;
+              journey.style.setProperty(
+                "--departure-motion",
+                motion.toFixed(3),
+              );
+            }
+            if (departurePortrait !== portrait) {
+              departurePortrait = portrait;
+              journey.style.setProperty(
+                "--departure-portrait",
+                portrait.toFixed(3),
+              );
+            }
             if (!journeyText) return;
-            if (!state.inJourney || !state.journeyReady) {
+            if (
+              !state.inJourney ||
+              !state.journeyReady ||
+              !state.visible ||
+              state.journeyLifecycle === "SUSPENDED"
+            ) {
               journeyVisibleAt = 0;
+              journeyWasActive = false;
               journeyText.pause();
+              Object.assign(state, { journeyTextTime: journeyText.time() });
               return;
             }
+            const reentered = !journeyWasActive;
+            journeyWasActive = true;
             if (!journeyVisibleAt && state.journeyReady)
               journeyVisibleAt = performance.now();
             if (
@@ -185,14 +234,19 @@ export function useLandingStory(
               performance.now() - state.horseFrameAt > 1500
             )
               textFallback = true;
-            if (textFallback || previous.journeyCompleted)
+            if (
+              textFallback ||
+              previous.journeyCompleted ||
+              (reentered && textStarted && state.journeyCompleted)
+            )
               journeyText.progress(1).pause();
             else if (state.journeyPhase === "POSE_READY") {
               if (!textStarted) {
                 textStarted = true;
-                journeyText.play(0);
+                journeyText.play(state.journeyTextTime);
               } else journeyText.play();
             }
+            Object.assign(state, { journeyTextTime: journeyText.time() });
           };
           const progressFill = element.querySelector<HTMLElement>(
             ".landing-scroll-progress > span",
@@ -234,12 +288,6 @@ export function useLandingStory(
                   ? "map"
                   : "none";
             if (currentShot !== nextShot) {
-              if (currentShot === "home" && !inHero)
-                Object.assign(state, {
-                  heroCompleted: true,
-                  introX: 0,
-                  introZ: 0,
-                });
               currentShot = nextShot;
               Object.assign(
                 state,
@@ -297,13 +345,17 @@ export function useLandingStory(
                 clipTop < stageHeight * 0.12 &&
                 clipBottom < stageHeight * 0.12 &&
                 offset < stageHeight * 0.12,
+              heroReady:
+                inHero &&
+                present &&
+                Math.min(heroRect.bottom, innerHeight) -
+                  Math.max(heroRect.top, stageTop) >=
+                  Math.min(heroRect.height, stageHeight) * 0.5,
             });
-            if (inHero && !present)
-              Object.assign(state, {
-                heroCompleted: true,
-                introX: 0,
-                introZ: 0,
-              });
+            if (!state.heroReady && state.heroLifecycle === "PLAYING")
+              Object.assign(state, { heroLifecycle: "SUSPENDED" });
+            if (!state.journeyReady && state.journeyLifecycle === "PLAYING")
+              Object.assign(state, { journeyLifecycle: "SUSPENDED" });
             if (layer) {
               layer.style.setProperty("--scene-offset-y", offset + "px");
               layer.style.clipPath =
@@ -504,6 +556,13 @@ export function useLandingStory(
           };
           const visibility = () => {
             Object.assign(state, { visible: !document.hidden });
+            if (document.hidden) {
+              if (state.heroLifecycle === "PLAYING")
+                Object.assign(state, { heroLifecycle: "SUSPENDED" });
+              if (state.journeyLifecycle === "PLAYING")
+                Object.assign(state, { journeyLifecycle: "SUSPENDED" });
+            }
+            syncJourneyText();
             clearPointer();
             traversal.update();
             requestUpdate();
@@ -520,6 +579,12 @@ export function useLandingStory(
           updatePresentation();
           return () => {
             disposed = true;
+            if (journeyText)
+              Object.assign(state, { journeyTextTime: journeyText.time() });
+            journey.removeAttribute("data-lifecycle");
+            journey.removeAttribute("data-phase");
+            journey.style.removeProperty("--departure-motion");
+            journey.style.removeProperty("--departure-portrait");
             cancelAnimationFrame(frame);
             cancelAnimationFrame(refreshFrame);
             resize.disconnect();

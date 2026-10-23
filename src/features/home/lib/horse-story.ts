@@ -9,6 +9,8 @@ import {
 import { HORSE_CHAPTERS, type LandingChapter } from "./landing-navigation";
 
 export type StoryProfile = "desktop" | "tablet" | "mobile";
+export type SectionLifecycle =
+  "NOT_STARTED" | "PLAYING" | "SUSPENDED" | "COMPLETED";
 export type HorseShot = {
   horsePresence: number;
   horseX: number;
@@ -37,6 +39,9 @@ export type LandingSceneState = HorseShot & {
   inJourney: boolean;
   inMap: boolean;
   heroCompleted: boolean;
+  heroLifecycle: SectionLifecycle;
+  heroReady: boolean;
+  heroEffectTime: number;
   heroIntroReady: boolean;
   heroRevealTime: number;
   heroContacts: number;
@@ -47,6 +52,9 @@ export type LandingSceneState = HorseShot & {
   horseFrameAt: number;
   journeyPhase: "WAITING" | "RUNNING" | "STOPPING" | "SETTLING" | "POSE_READY";
   journeyCompleted: boolean;
+  journeyLifecycle: SectionLifecycle;
+  journeyStopProgress: number;
+  journeyTextTime: number;
   journeyTravel: number;
   journeyDistance: number;
   journeyReady: boolean;
@@ -140,6 +148,9 @@ export function createLandingStory(
     inJourney: false,
     inMap: false,
     heroCompleted: false,
+    heroLifecycle: "NOT_STARTED",
+    heroReady: false,
+    heroEffectTime: 0,
     heroIntroReady: false,
     heroRevealTime: 0,
     heroContacts: 0,
@@ -155,6 +166,9 @@ export function createLandingStory(
     horseFrameAt: 0,
     journeyPhase: "WAITING",
     journeyCompleted: false,
+    journeyLifecycle: "NOT_STARTED",
+    journeyStopProgress: 0,
+    journeyTextTime: 0,
     journeyTravel: 0,
     journeyDistance: 0,
     journeyReady: false,

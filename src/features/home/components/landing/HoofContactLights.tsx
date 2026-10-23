@@ -22,7 +22,7 @@ export function HoofContactLights({
     state.hoofPulses.forEach((pulse, index) => {
       const mesh = meshes.current[index];
       if (!mesh) return;
-      const age = (performance.now() - pulse.born) / 1250;
+      const age = (state.heroEffectTime - pulse.born) / 1250;
       mesh.visible =
         state.inHero &&
         state.visible &&

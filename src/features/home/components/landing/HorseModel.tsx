@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { useAnimations, useGLTF } from "@react-three/drei";
 import {
   AnimationMixer,
+  AnimationClip,
   AnimationUtils,
   Box3,
   LoopOnce,
@@ -40,7 +41,28 @@ import {
 useGLTF.preload(horseUrl, false, false, extendHorseLoader);
 
 // A client-side route remount is not a new page-load experience.
-const heroExperience = { started: false };
+const heroExperience = { completed: false };
+const HERO_IDLE = `${HERO_CALM_CLIP}_Hero`;
+const JOURNEY_IDLE = `${HERO_CALM_CLIP}_Journey`;
+const JOURNEY_RUN = `${HORSE_CLIPS.run}_Journey`;
+type Owner = "hero" | "journey" | "map" | "none";
+type Blend = {
+  previous: AnimationAction;
+  next: AnimationAction;
+  elapsed: number;
+  duration: number;
+};
+type PlaybackSnapshot = {
+  current: AnimationAction | null;
+  settle: number;
+  blend: Blend | null;
+  actions: {
+    action: AnimationAction;
+    time: number;
+    weight: number;
+    paused: boolean;
+  }[];
+};
 
 export function HorseModel({
   story,
@@ -122,18 +144,36 @@ export function HorseModel({
     const source = animations.find((clip) => clip.name === HORSE_CLIPS.idle)!;
     // Only the verified calm 0–2.5s; the original clip later rears.
     const calm = AnimationUtils.subclip(source, HERO_CALM_CLIP, 0, 75, 30);
-    return [...animations, calm];
+    const run = animations.find((clip) => clip.name === HORSE_CLIPS.run)!;
+    // Independent action identities share immutable tracks, not another model/rig.
+    return [
+      ...animations,
+      calm,
+      new AnimationClip(HERO_IDLE, calm.duration, calm.tracks, calm.blendMode),
+      new AnimationClip(
+        JOURNEY_IDLE,
+        calm.duration,
+        calm.tracks,
+        calm.blendMode,
+      ),
+      new AnimationClip(JOURNEY_RUN, run.duration, run.tracks, run.blendMode),
+    ];
   }, [animations]);
   const { actions, mixer } = useAnimations(presentationClips, scene);
   const current = useRef<AnimationAction | null>(null);
   const controller = useRef<{
-    finish: (immediate?: boolean) => void;
-    enterStory: () => void;
     settleMap: () => void;
+    synchronize: (delta: number) => void;
   } | null>(null);
   const previousShot = useRef("");
   const previousVersion = useRef(-1);
   const settle = useRef(0);
+  const owner = useRef<Owner>("none");
+  const ownerChanged = useRef(false);
+  const blend = useRef<Blend | null>(null);
+  const snapshots = useRef<
+    Partial<Record<"hero" | "journey", PlaybackSnapshot>>
+  >({});
   const readyFrame = useRef(false);
   const journeyPose = useRef({ x: 0, z: 0, yaw: 0 });
   const hoofTracking = useMemo(
@@ -149,15 +189,21 @@ export function HorseModel({
 
   useLayoutEffect(() => {
     const state = story.current;
-    const returningToLanding =
-      heroExperience.started && state.heroPhase === "LOADING";
-    Object.assign(heroExperience, { started: true });
     const play = (name: string, once = false, paused = false) => {
-      const next = actions[name];
+      const actionName =
+        name === HERO_CALM_CLIP && owner.current === "hero"
+          ? HERO_IDLE
+          : name === HERO_CALM_CLIP && owner.current === "journey"
+            ? JOURNEY_IDLE
+            : name === HORSE_CLIPS.run && owner.current === "journey"
+              ? JOURNEY_RUN
+              : name;
+      const next = actions[actionName];
       if (!next) throw new Error("Missing horse action: " + name);
       const previous = current.current;
       for (const action of Object.values(actions)) {
-        if (action && action !== previous && action !== next) action.stop();
+        if (action?.enabled && action !== previous && action !== next)
+          action.stop();
       }
       next
         .stopFading()
@@ -172,8 +218,14 @@ export function HorseModel({
             ? 0.16
             : 0.5
           : 0.22;
-        previous.stopFading().setEffectiveWeight(1).fadeOut(duration);
-        next.fadeIn(duration);
+        previous.stopFading().setEffectiveWeight(1);
+        if (owner.current === "hero" || owner.current === "journey") {
+          next.setEffectiveWeight(0);
+          blend.current = { previous, next, elapsed: 0, duration };
+        } else {
+          previous.fadeOut(duration);
+          next.fadeIn(duration);
+        }
       }
       next.play();
       if (name === HERO_CALM_CLIP)
@@ -186,11 +238,15 @@ export function HorseModel({
     };
     const finish = (immediate = false) => {
       if (immediate || state.reducedMotion) {
-        mixer.stopAllAction();
+        for (const action of Object.values(actions))
+          if (action?.enabled) action.stop();
         current.current = null;
+        blend.current = null;
       }
+      Object.assign(heroExperience, { completed: true });
       Object.assign(state, {
         heroCompleted: true,
+        heroLifecycle: "COMPLETED",
         heroPhase: "FINAL_POSE",
         introX: 0,
         introZ: 0,
@@ -201,7 +257,6 @@ export function HorseModel({
       if (immediate || state.reducedMotion) mixer.update(0);
     };
     const enterStory = () => {
-      mixer.stopAllAction();
       current.current = null;
       if (state.inMap) {
         play(
@@ -223,25 +278,24 @@ export function HorseModel({
         (frame.run.distance + frame.stop.distance) *
         frame.scale *
         state.horseScale;
-      const done = state.journeyCompleted || state.reducedMotion;
-      const phase = done
-        ? "POSE_READY"
-        : state.journeyPhase === "WAITING"
-          ? "RUNNING"
-          : state.journeyPhase;
+      const done = state.journeyCompleted;
+      const phase = done ? "POSE_READY" : state.journeyPhase;
       Object.assign(state, {
         journeyDistance: distance,
         journeyTravel: done ? distance : state.journeyTravel,
         journeyPhase: phase,
         journeyCompleted: done,
       });
-      const moving = phase === "RUNNING" || phase === "STOPPING";
+      const moving =
+        phase === "WAITING" || phase === "RUNNING" || phase === "STOPPING";
       const action = play(
-        phase === "RUNNING"
-          ? HORSE_CLIPS.run
-          : phase === "STOPPING"
-            ? JOURNEY_STOP_CLIP
-            : HERO_CALM_CLIP,
+        state.reducedMotion
+          ? HERO_CALM_CLIP
+          : phase === "RUNNING" || phase === "WAITING"
+            ? HORSE_CLIPS.run
+            : phase === "STOPPING"
+              ? JOURNEY_STOP_CLIP
+              : HERO_CALM_CLIP,
         moving,
         state.reducedMotion || moving,
       );
@@ -276,19 +330,10 @@ export function HorseModel({
       if (current.current) current.current.paused = true;
       play(HERO_CALM_CLIP, false, state.reducedMotion);
     };
-    controller.current = { finish, enterStory, settleMap };
-    previousShot.current = state.inHero
-      ? "hero"
-      : state.inJourney
-        ? "journey"
-        : state.inMap
-          ? "map"
-          : "none";
-    previousVersion.current = state.shotVersion;
     const completed = ({ action }: { action: AnimationAction }) => {
       if (action !== current.current || state.reducedMotion) return;
       if (!state.inHero) {
-        if (state.inJourney && action === actions[HORSE_CLIPS.run]) {
+        if (state.inJourney && action === actions[JOURNEY_RUN]) {
           Object.assign(state, { journeyPhase: "STOPPING", journeyTime: 0 });
           play(JOURNEY_STOP_CLIP, true).setEffectiveTimeScale(0.9);
         } else if (state.inJourney && action === actions[JOURNEY_STOP_CLIP]) {
@@ -299,6 +344,7 @@ export function HorseModel({
             journeyOffsetX: 0,
             journeyOffsetZ: 0,
             journeyYaw: JOURNEY_PORTRAIT_YAW,
+            journeyStopProgress: 1,
           });
           play(HERO_CALM_CLIP);
         }
@@ -341,15 +387,11 @@ export function HorseModel({
     };
     mixer.addEventListener("finished", completed);
     mixer.addEventListener("loop", looped);
-    if (
-      state.heroCompleted ||
-      state.reducedMotion ||
-      !state.inHero ||
-      returningToLanding
-    ) {
-      finish(true);
-      if (!state.inHero) enterStory();
-    } else {
+    const enterHero = () => {
+      if (state.heroCompleted || heroExperience.completed) {
+        finish(true);
+        return;
+      }
       const distance =
         frame.walk.distance * HERO_WALK_CYCLES * frame.scale * state.horseScale;
       Object.assign(state, {
@@ -358,10 +400,122 @@ export function HorseModel({
         introX: distance * Math.cos(state.horseYaw),
         introZ: -distance * Math.sin(state.horseYaw),
       });
-      play(HORSE_CLIPS.walk, true)
+      play(HORSE_CLIPS.walk, true, true)
         .setLoop(LoopRepeat, HERO_WALK_CYCLES)
         .setEffectiveTimeScale(0.85);
-    }
+    };
+    const synchronize = (elapsed: number) => {
+      ownerChanged.current = false;
+      const next: Owner = state.inHero
+        ? "hero"
+        : state.inJourney
+          ? "journey"
+          : state.inMap
+            ? "map"
+            : "none";
+      if (
+        previousShot.current !== next ||
+        previousVersion.current !== state.shotVersion
+      ) {
+        ownerChanged.current = true;
+        const previous = owner.current;
+        if (previous === "hero" || previous === "journey") {
+          const lifecycle =
+            previous === "hero" ? "heroLifecycle" : "journeyLifecycle";
+          if (state[lifecycle] === "PLAYING")
+            Object.assign(state, { [lifecycle]: "SUSPENDED" });
+          snapshots.current[previous] = {
+            current: current.current,
+            settle: settle.current,
+            blend: blend.current,
+            actions: Object.values(actions).flatMap((action) =>
+              action?.enabled && action.isScheduled()
+                ? [
+                    {
+                      action,
+                      time: action.time,
+                      weight: action.getEffectiveWeight(),
+                      paused: action.paused,
+                    },
+                  ]
+                : [],
+            ),
+          };
+          for (const { action } of snapshots.current[previous]!.actions) {
+            action.stopFading().setEffectiveWeight(0);
+            Object.assign(action, { enabled: false, paused: true });
+          }
+        } else {
+          for (const action of Object.values(actions))
+            if (action?.enabled) action.stop();
+        }
+        current.current = null;
+        blend.current = null;
+        settle.current = 0;
+        owner.current = next;
+        const saved =
+          next === "hero" || next === "journey"
+            ? snapshots.current[next]
+            : undefined;
+        if (saved) {
+          current.current = saved.current;
+          settle.current = saved.settle;
+          blend.current = saved.blend;
+          for (const { action, time, weight, paused } of saved.actions) {
+            Object.assign(action, { enabled: true, time, paused });
+            action.setEffectiveWeight(weight);
+          }
+          // oxlint-disable-next-line react/immutability -- restore an external Three.js pose.
+          mixer.update(0);
+        } else if (next === "hero") enterHero();
+        else if (next !== "none") enterStory();
+        previousShot.current = next;
+        previousVersion.current = state.shotVersion;
+      }
+      const cinematic = next === "hero" || next === "journey";
+      const ready =
+        state.visible &&
+        state.heroIntroReady &&
+        (next === "hero" ? state.heroReady : state.journeyReady);
+      if (cinematic) {
+        const lifecycle =
+          next === "hero" ? "heroLifecycle" : "journeyLifecycle";
+        if (ready) {
+          if (state.reducedMotion && state[lifecycle] !== "COMPLETED") {
+            if (next === "hero") finish(true);
+            else {
+              for (const action of Object.values(actions))
+                if (action?.enabled) action.stop();
+              Object.assign(state, {
+                journeyLifecycle: "COMPLETED",
+                journeyCompleted: true,
+                journeyPhase: "POSE_READY",
+                journeyStopProgress: 1,
+              });
+              enterStory();
+            }
+          } else if (state[lifecycle] !== "COMPLETED")
+            Object.assign(state, { [lifecycle]: "PLAYING" });
+          if (next === "journey" && state.journeyPhase === "WAITING")
+            Object.assign(state, { journeyPhase: "RUNNING" });
+          if (current.current && !state.reducedMotion)
+            current.current.paused = false;
+        } else if (state[lifecycle] === "PLAYING")
+          Object.assign(state, { [lifecycle]: "SUSPENDED" });
+      }
+      // Runs before Drei's mixer callback: an inactive owner never gets a stray frame.
+      // oxlint-disable-next-line react/immutability -- external Three.js mixer clock.
+      mixer.timeScale = cinematic
+        ? ready && !state.reducedMotion
+          ? Math.min(1, 0.05 / Math.max(elapsed, 0.001))
+          : 0
+        : next === "map" && state.visible
+          ? 1
+          : 0;
+    };
+    controller.current = { settleMap, synchronize };
+    previousShot.current = "";
+    synchronize(0);
     // A deep link outside Hero may intentionally have no running Canvas frames.
     if (!state.inHero && !readyFrame.current) {
       readyFrame.current = true;
@@ -381,6 +535,8 @@ export function HorseModel({
       controller.current = null;
     };
   }, [actions, mixer, onReady, story, frame]);
+
+  useFrame((_frame, elapsed) => controller.current?.synchronize(elapsed), -1);
 
   useFrame((_frame, elapsed) => {
     const state = story.current;
@@ -405,28 +561,27 @@ export function HorseModel({
       mixer.timeScale = 0;
       return;
     }
-    const shot = state.inHero
-      ? "hero"
-      : state.inJourney
-        ? "journey"
-        : state.inMap
-          ? "map"
-          : "none";
-    if (
-      previousShot.current !== shot ||
-      previousVersion.current !== state.shotVersion
-    ) {
-      controller.current?.finish(true);
-      if (!state.inHero) controller.current?.enterStory();
-      previousShot.current = shot;
-      previousVersion.current = state.shotVersion;
+    const cinematicPlaying =
+      state.visible &&
+      (state.inHero ? state.heroReady : state.inJourney && state.journeyReady);
+    if (cinematicPlaying && state.inHero)
+      Object.assign(state, {
+        heroEffectTime: state.heroEffectTime + delta * 1000,
+      });
+    if (cinematicPlaying && blend.current) {
+      const transition = blend.current;
+      transition.elapsed = Math.min(
+        transition.duration,
+        transition.elapsed + delta,
+      );
+      const progress = transition.elapsed / transition.duration;
+      transition.previous.setEffectiveWeight(1 - progress);
+      transition.next.setEffectiveWeight(progress);
+      if (progress >= 1) {
+        transition.previous.stop();
+        blend.current = null;
+      }
     }
-    if (
-      (state.reducedMotion || state.heroCompleted) &&
-      state.inHero &&
-      state.heroPhase !== "FINAL_POSE"
-    )
-      controller.current?.finish(true);
     if (state.inMap && current.current) {
       Object.assign(state, { mapFrameAt: performance.now() });
       if (state.mapProgress >= 1 || state.reducedMotion) {
@@ -490,6 +645,9 @@ export function HorseModel({
         journeyOffsetX: journeyPose.current.x * frame.scale * state.horseScale,
         journeyOffsetZ: journeyPose.current.z * frame.scale * state.horseScale,
         journeyYaw: journeyPose.current.yaw,
+        journeyStopProgress: stopping
+          ? current.current.time / frame.stop.duration
+          : 0,
       });
     }
     if (
@@ -502,9 +660,15 @@ export function HorseModel({
         Object.assign(state, {
           journeyPhase: "POSE_READY",
           journeyCompleted: true,
+          journeyLifecycle: "COMPLETED",
         });
     }
-    if (state.inHero && state.heroPhase === "APPROACH" && state.visible) {
+    if (
+      state.inHero &&
+      state.heroPhase === "APPROACH" &&
+      cinematicPlaying &&
+      !ownerChanged.current
+    ) {
       scene.updateWorldMatrix(true, true);
       frame.feet.forEach((foot, index) => {
         const track = hoofTracking[index];
@@ -528,7 +692,7 @@ export function HorseModel({
             x: track.point.x,
             y: state.horseY + 0.012,
             z: track.point.z,
-            born: performance.now(),
+            born: state.heroEffectTime,
           });
           Object.assign(state, { heroContacts: state.heroContacts + 1 });
         }
@@ -561,15 +725,17 @@ export function HorseModel({
       });
     }
     // At most one outgoing action during the short blend; no hidden loops.
-    if (state.visible) settle.current += delta;
+    if (state.visible && (state.inMap || cinematicPlaying))
+      settle.current += delta;
     if (settle.current >= (state.inJourney ? 0.52 : 0.24)) {
       for (const action of Object.values(actions))
-        if (action && action !== current.current && action.isScheduled())
+        if (
+          action?.enabled &&
+          action !== current.current &&
+          action.isScheduled()
+        )
           action.stop();
     }
-    // oxlint-disable-next-line react/immutability -- external Three.js object.
-    mixer.timeScale =
-      state.visible && (!state.inJourney || state.journeyReady) ? 1 : 0;
     if (state.reducedMotion) mixer.update(0);
   });
   return (

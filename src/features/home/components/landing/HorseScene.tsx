@@ -23,6 +23,17 @@ import type { LandingSceneState } from "../../lib/horse-story";
 import { getHeroRevealProgress } from "../../lib/horse-animation";
 import { HoofContactLights } from "./HoofContactLights";
 
+type PresentationSnapshot = {
+  position: Vector3;
+  rotation: Quaternion;
+  scale: Vector3;
+  camera: Vector3;
+  look: Vector3;
+  anchor: Vector3;
+  anchorReady: boolean;
+  lights: number[];
+};
+
 export function HorseScene({
   story,
   children,
@@ -42,6 +53,10 @@ export function HorseScene({
   const hoofLight = useRef<PointLight>(null);
   const revision = useRef(-1);
   const heroAnchorReady = useRef(false);
+  const previousPresentation = useRef<"hero" | "journey" | null>(null);
+  const presentations = useRef<
+    Partial<Record<"hero" | "journey", PresentationSnapshot>>
+  >({});
   const invalidate = useThree((state) => state.invalidate);
   const canvas = useThree((state) => state.gl.domElement);
   useEffect(() => {
@@ -98,11 +113,63 @@ export function HorseScene({
   useFrame(({ camera, size }, elapsed) => {
     if (!world.current) return;
     const state = story.current;
+    const presentation = state.inHero
+      ? "hero"
+      : state.inJourney
+        ? "journey"
+        : null;
+    let restored = false;
+    if (previousPresentation.current !== presentation) {
+      const lights = [
+        ambient.current,
+        key.current,
+        rim.current,
+        fill.current,
+        hoofLight.current,
+      ];
+      const previous = previousPresentation.current;
+      if (previous)
+        presentations.current[previous] = {
+          position: world.current.position.clone(),
+          rotation: world.current.quaternion.clone(),
+          scale: world.current.scale.clone(),
+          camera: camera.position.clone(),
+          look: scratch.look.clone(),
+          anchor: scratch.heroAnchor.clone(),
+          anchorReady: heroAnchorReady.current,
+          lights: lights.map((light) => light?.intensity ?? 0),
+        };
+      const saved = presentation
+        ? presentations.current[presentation]
+        : undefined;
+      if (saved) {
+        world.current.position.copy(saved.position);
+        world.current.quaternion.copy(saved.rotation);
+        world.current.scale.copy(saved.scale);
+        camera.position.copy(saved.camera);
+        scratch.look.copy(saved.look);
+        scratch.heroAnchor.copy(saved.anchor);
+        heroAnchorReady.current = saved.anchorReady;
+        lights.forEach((light, index) => {
+          if (light) light.intensity = saved.lights[index];
+        });
+        camera.lookAt(scratch.look);
+        restored = true;
+      }
+      previousPresentation.current = presentation;
+    }
+    if (
+      (!presentation && !state.inMap) ||
+      !state.visible ||
+      (presentation === "hero" && state.heroLifecycle === "SUSPENDED") ||
+      (presentation === "journey" && state.journeyLifecycle === "SUSPENDED")
+    )
+      return;
     const delta = Math.min(elapsed, 0.05);
     const snap = revision.current !== state.shotVersion;
     revision.current = state.shotVersion;
     const alpha =
-      snap || state.reducedMotion
+      (snap && !restored) || state.reducedMotion
         ? 1
         : 1 - Math.exp(-(state.inHero ? 7 : 10) * delta);
     if (!state.inHero) heroAnchorReady.current = false;

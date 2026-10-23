@@ -7,6 +7,25 @@ export function JourneySection() {
       className="landing-chapter landing-journey"
       aria-labelledby="journey-title"
     >
+      <div className="landing-departure-stage" aria-hidden="true">
+        <span className="landing-departure-atmosphere" />
+        <svg viewBox="0 0 640 700" focusable="false">
+          <path
+            className="landing-departure-gate is-rear"
+            d="M147 616V190L326 102L506 190V616L478 630V210L326 136L175 210V630Z"
+          />
+          <path
+            className="landing-departure-gate"
+            d="M61 657V137L316 20L579 137V657L542 674V163L316 59L98 163V674Z"
+          />
+          <path
+            className="landing-departure-edge"
+            d="M98 326V163L316 59L542 163V326"
+          />
+        </svg>
+        <span className="landing-departure-sweep" />
+        <span className="landing-departure-spotlight" />
+      </div>
       <div className="landing-journey-perspective" aria-hidden="true">
         <span />
         <span />

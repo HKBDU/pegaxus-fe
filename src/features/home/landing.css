@@ -454,6 +454,89 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
 .landing-journey-perspective span:nth-child(3) {
   inset: 40%;
 }
+.landing-departure-stage {
+  position: absolute;
+  inset: 5% 50% 6% 2%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: clip;
+  isolation: isolate;
+}
+.landing-departure-stage svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0.8;
+}
+.landing-departure-gate {
+  fill: #20231f;
+  fill-opacity: 0.5;
+  stroke: #42443c;
+  stroke-opacity: 0.65;
+  stroke-width: 1;
+}
+.landing-departure-gate.is-rear {
+  fill: #171b18;
+  stroke-opacity: 0.4;
+  opacity: 0.65;
+}
+.landing-departure-edge {
+  fill: none;
+  stroke: #f39200;
+  stroke-opacity: 0.22;
+  stroke-width: 1;
+}
+.landing-departure-atmosphere,
+.landing-departure-sweep,
+.landing-departure-spotlight {
+  position: absolute;
+  inset: 0;
+}
+.landing-departure-atmosphere {
+  background:
+    radial-gradient(ellipse at 52% 75%, #9697800c, transparent 60%),
+    radial-gradient(ellipse at 52% 35%, #f3920009, transparent 65%);
+}
+.landing-departure-sweep {
+  opacity: var(--departure-motion, 0);
+}
+.landing-departure-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 26% -45% 24%;
+  background: linear-gradient(
+    180deg,
+    transparent 30%,
+    #f3920010 47%,
+    #f3920036 50%,
+    #f3920010 53%,
+    transparent 70%
+  );
+  animation: landing-departure-sweep 1.8s ease-in-out infinite paused;
+}
+.landing-journey[data-lifecycle="PLAYING"][data-phase="RUNNING"]
+  .landing-departure-sweep::after,
+.landing-journey[data-lifecycle="PLAYING"][data-phase="STOPPING"]
+  .landing-departure-sweep::after {
+  animation-play-state: running;
+}
+.landing-departure-spotlight {
+  opacity: var(--departure-portrait, 0);
+  background: radial-gradient(
+    ellipse at 52% 49%,
+    #f5dfb01c,
+    #f3920007 42%,
+    transparent 70%
+  );
+}
+@keyframes landing-departure-sweep {
+  from {
+    transform: translateX(-45%);
+  }
+  to {
+    transform: translateX(45%);
+  }
+}
 .pegaxus-landing figure {
   overflow: hidden;
 }
@@ -1282,6 +1365,10 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   .landing-journey > .landing-copy {
     max-width: 680px;
     margin: 0 auto;
+  }
+  .landing-departure-stage {
+    inset: 0 0 auto;
+    height: 46svh;
   }
   .landing-movement {
     height: 100svh;
