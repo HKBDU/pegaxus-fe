@@ -15,7 +15,8 @@ export function JourneySection() {
       <div className="landing-copy" data-reveal>
         <p className="landing-eyebrow">02 / The departure</p>
         <h2 id="journey-title">
-          Every great journey begins with <em>a single step.</em>
+          <span data-journey-headline>Every great journey begins with </span>
+          <em>a single step.</em>
         </h2>
         <p className="landing-lead">
           Before a border is crossed, there is a horse to prepare. A route to

@@ -27,6 +27,33 @@ export function useLandingStory(
       const element = root.current;
       if (!element) return;
       const mm = gsap.matchMedia();
+      let viewportPosition = { x: scrollX, y: scrollY };
+      let mediaPosition: { x: number; y: number } | undefined;
+      const trackPosition = () => {
+        if (!mediaPosition) viewportPosition = { x: scrollX, y: scrollY };
+      };
+      const rememberPosition = () => {
+        mediaPosition = viewportPosition;
+      };
+      const restorePosition = () => {
+        const position = mediaPosition;
+        mediaPosition = undefined;
+        if (position && (scrollX !== position.x || scrollY !== position.y))
+          window.scrollTo({
+            left: position.x,
+            top: position.y,
+            behavior: "instant",
+          });
+      };
+      // GSAP may clear recorded scroll positions while rebuilding media contexts.
+      // These lifecycle methods exist in the installed GSAP runtime but lack typings.
+      const mediaEvents = gsap as typeof gsap & {
+        addEventListener(type: string, listener: () => void): void;
+        removeEventListener(type: string, listener: () => void): void;
+      };
+      mediaEvents.addEventListener("matchMediaInit", rememberPosition);
+      mediaEvents.addEventListener("matchMedia", restorePosition);
+      window.addEventListener("scroll", trackPosition, { passive: true });
       mm.add(
         {
           desktop: "(min-width: 1024px)",
@@ -53,7 +80,9 @@ export function useLandingStory(
             journeyCompleted: state.journeyCompleted,
             journeyTravel: state.journeyTravel,
             journeyDistance: state.journeyDistance,
+            journeyTime: state.journeyTime,
             mapProgress: state.mapProgress,
+            mapViewportTop: state.mapViewportTop,
             invalidate: state.invalidate,
             shotVersion: state.shotVersion + 1,
           };
@@ -85,6 +114,59 @@ export function useLandingStory(
           const journey = sections[1];
           const map = element.querySelector<HTMLElement>("#movement")!;
           const traversal = createMapTraversal(map, state);
+          const journeyText = reduced
+            ? null
+            : gsap
+                .timeline({ paused: true })
+                .from(
+                  journey.querySelector(".landing-eyebrow"),
+                  { opacity: 0, y: 8, duration: 0.45 },
+                  0,
+                )
+                .from(
+                  journey.querySelector("[data-journey-headline]"),
+                  { opacity: 0, y: 12, duration: 0.8 },
+                  1.4,
+                )
+                .from(
+                  journey.querySelector("h2 em"),
+                  { opacity: 0, duration: 0.9 },
+                  5.7,
+                )
+                .from(
+                  journey.querySelector(".landing-lead"),
+                  { opacity: 0, y: 12, duration: 0.65 },
+                  6.3,
+                )
+                .from(
+                  journey.querySelectorAll(".landing-stage-line li"),
+                  { opacity: 0, y: 10, duration: 0.5, stagger: 0.1 },
+                  6.5,
+                )
+                .from(
+                  journey.querySelector(".landing-caption"),
+                  { opacity: 0, duration: 0.5 },
+                  7.1,
+                );
+          let journeyVisibleAt = 0;
+          let textFallback = false;
+          const syncJourneyText = () => {
+            if (!state.inJourney || !journeyText) return;
+            if (!journeyVisibleAt && state.journeyReady)
+              journeyVisibleAt = performance.now();
+            if (
+              journeyVisibleAt &&
+              performance.now() - journeyVisibleAt > 5000 &&
+              state.journeyTime === 0
+            )
+              textFallback = true;
+            journeyText.time(
+              textFallback || state.journeyCompleted
+                ? journeyText.duration()
+                : state.journeyTime,
+            );
+          };
+          gsap.ticker.add(syncJourneyText);
           const progressFill = element.querySelector<HTMLElement>(
             ".landing-scroll-progress > span",
           );
@@ -94,10 +176,8 @@ export function useLandingStory(
           let frame = 0;
           let refreshFrame = 0;
           let disposed = false;
-          let restorePending = resumeJourney || resumeMap;
 
           const updatePresentation = () => {
-            if (restorePending) return;
             const viewportProfile =
               innerWidth >= 1024
                 ? "desktop"
@@ -133,8 +213,6 @@ export function useLandingStory(
                   introX: 0,
                   introZ: 0,
                 });
-              if (currentShot === "journey")
-                Object.assign(state, { journeyCompleted: true });
               currentShot = nextShot;
               Object.assign(
                 state,
@@ -163,7 +241,7 @@ export function useLandingStory(
               ? rect.top
               : inMap
                 ? 0
-                : Math.max(0, rect.top) +
+                : Math.max(0, rect.top - stageTop) +
                   Math.min(0, rect.bottom - stageTop - stageHeight);
             const clipTop = Math.max(
               0,
@@ -176,6 +254,7 @@ export function useLandingStory(
             const present =
               nextShot !== "none" && clipTop + clipBottom < stageHeight;
             Object.assign(state, {
+              mapViewportTop: inMap ? mapRect.top : state.mapViewportTop,
               stageOffsetY: offset,
               clipTop,
               clipBottom,
@@ -194,7 +273,12 @@ export function useLandingStory(
             if (layer) {
               layer.style.setProperty("--scene-offset-y", offset + "px");
               layer.style.clipPath =
-                "inset(" + clipTop + "px 0 " + clipBottom + "px)";
+                "inset(" +
+                clipTop +
+                "px " +
+                (inJourney && profile === "desktop" ? "48% " : "0 ") +
+                clipBottom +
+                "px 0)";
               layer.style.opacity = present ? "1" : "0";
             }
             traversal.update();
@@ -229,15 +313,6 @@ export function useLandingStory(
               refreshFrame = 0;
               if (!disposed) {
                 ScrollTrigger.refresh();
-                if (restorePending) {
-                  restorePending = false;
-                  if (resumeJourney)
-                    window.scrollTo({
-                      top: journey.getBoundingClientRect().top + scrollY,
-                      behavior: "instant",
-                    });
-                  if (resumeMap) traversal.restore(previous.mapProgress);
-                }
                 updatePresentation();
               }
             });
@@ -259,18 +334,6 @@ export function useLandingStory(
             });
             if (reduced) return;
             if (section.id === "journey") {
-              gsap.from(section.querySelectorAll(".landing-stage-line li"), {
-                y: 14,
-                opacity: 0,
-                stagger: 0.14,
-                duration: 0.65,
-                ease: "power2.out",
-                scrollTrigger: {
-                  trigger: section.querySelector(".landing-stage-line"),
-                  start: "top 92%",
-                  once: true,
-                },
-              });
               gsap.fromTo(
                 section.querySelector(".landing-journey-perspective"),
                 { opacity: 0.15, y: 35 },
@@ -319,7 +382,7 @@ export function useLandingStory(
                 },
               });
             const copy = section.querySelector("[data-reveal]");
-            if (copy)
+            if (copy && section.id !== "journey")
               gsap.from(copy.children, {
                 opacity: 0,
                 y: 24,
@@ -415,16 +478,14 @@ export function useLandingStory(
           const resize = new ResizeObserver(refresh);
           resize.observe(element);
           void document.fonts.ready.then(refresh);
-          if (restorePending) {
-            if (canvasLayer.current) canvasLayer.current.style.opacity = "0";
-            refresh();
-          } else updatePresentation();
+          updatePresentation();
           return () => {
             disposed = true;
             cancelAnimationFrame(frame);
             cancelAnimationFrame(refreshFrame);
             resize.disconnect();
             traversal.destroy();
+            gsap.ticker.remove(syncJourneyText);
             window.removeEventListener("scroll", requestUpdate);
             window.removeEventListener("resize", refresh);
             window.removeEventListener("pointermove", pointer);
@@ -434,7 +495,12 @@ export function useLandingStory(
           };
         },
       );
-      return () => mm.revert();
+      return () => {
+        mediaEvents.removeEventListener("matchMediaInit", rememberPosition);
+        mediaEvents.removeEventListener("matchMedia", restorePosition);
+        window.removeEventListener("scroll", trackPosition);
+        mm.revert();
+      };
     },
     { scope: root, dependencies: [root, canvasLayer] },
   );

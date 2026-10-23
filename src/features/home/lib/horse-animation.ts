@@ -9,7 +9,8 @@ export const HERO_APPROACH_DISTANCE = 1.2;
 export const HERO_YAW = 0.92;
 // Measured planted-hoof travel per SlowWalk cycle, in the original rig's units.
 export const JOURNEY_STRIDE = 1.388;
-export const JOURNEY_WALK_CYCLES = 2;
+export const JOURNEY_STEP_CLIP = "HorseALL_JourneyStep";
+export const JOURNEY_REVEAL_DURATION = 7.6;
 export const HERO_CALM_CLIP = "HorseALL_IdleEars_Calm";
 export const HERO_STANDING_TIME = 0;
 export const HERO_SCRAPE_CLIP = "HorseALL_HoofScrape2";

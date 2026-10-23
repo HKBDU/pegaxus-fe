@@ -409,6 +409,24 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
 .landing-journey > .landing-copy {
   grid-column: 2;
 }
+.landing-map-skip {
+  position: absolute;
+  right: 2rem;
+  bottom: 0.35rem;
+  z-index: 4;
+  border: 0;
+  background: transparent;
+  color: var(--landing-muted);
+  font: 0.65rem var(--sans);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  padding: 0.55rem;
+  cursor: pointer;
+}
+.landing-map-skip:focus-visible {
+  outline: 1px solid #f39200;
+  outline-offset: 2px;
+}
 .landing-journey-perspective {
   position: absolute;
   inset: 15% 50% 8% -10%;
@@ -804,6 +822,7 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   min-height: 650px;
   padding-block: 6rem 2rem;
   background: #171917;
+  overflow: clip;
 }
 .landing-movement > .landing-copy {
   display: grid;
@@ -838,6 +857,8 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   height: 100%;
   display: block;
   overflow: visible;
+  transform: scale(1.15);
+  transform-origin: center;
 }
 .landing-map-land {
   fill-opacity: 0.1;
@@ -1239,6 +1260,7 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   }
   .landing-movement .landing-journey-map svg {
     height: 100%;
+    transform: translateY(1.5rem) scale(1.15);
   }
   .landing-journey-perspective {
     inset: 3rem -15% auto;
@@ -1322,6 +1344,9 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   }
 }
 @media (max-width: 480px) {
+  #movement .landing-map-stops [data-map-stop]:last-child text {
+    transform: translate(-12px, 48px);
+  }
   .landing-map-stops text {
     font-size: 32px;
   }

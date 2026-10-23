@@ -39,7 +39,7 @@ export type LandingSceneState = HorseShot & {
   journeyTravel: number;
   journeyDistance: number;
   journeyReady: boolean;
-  journeyFramed: boolean;
+  journeyTime: number;
   mapProgress: number;
   mapScreenX: number;
   mapScreenY: number;
@@ -49,6 +49,8 @@ export type LandingSceneState = HorseShot & {
   mapUpdatedAt: number;
   mapRunRate: number;
   mapHorseHeight: number;
+  mapFrameAt: number;
+  mapViewportTop: number;
   heroPhase: HeroPhase;
   shotVersion: number;
   invalidate?: () => void;
@@ -85,12 +87,12 @@ export function getHorseShots(profile: StoryProfile, reduced: boolean) {
   shots.journey = {
     ...home,
     horsePresence: 1,
-    horseX: compact ? 0 : -1.7,
-    horseY: -1.2,
-    horseScale: compact ? 1.05 : 0.94,
-    // −X is forward: this heading advances screen-right and toward the camera.
-    horseYaw: Math.PI - 1.2,
-    cameraZ: compact ? 6.6 : 7.6,
+    horseX: compact ? 0 : -2.5,
+    horseY: -1.15,
+    horseScale: compact ? 0.86 : 0.84,
+    // The camera reveals a lateral portrait, not another Hero approach.
+    horseYaw: 0.28,
+    cameraZ: 9.8,
     motion: reduced ? "idle" : "walk",
   };
   shots.movement = {
@@ -129,7 +131,7 @@ export function createLandingStory(
     journeyTravel: 0,
     journeyDistance: 0,
     journeyReady: false,
-    journeyFramed: false,
+    journeyTime: 0,
     mapProgress: 0,
     mapScreenX: 0,
     mapScreenY: 0,
@@ -139,6 +141,8 @@ export function createLandingStory(
     mapUpdatedAt: 0,
     mapRunRate: 1,
     mapHorseHeight: 70,
+    mapFrameAt: 0,
+    mapViewportTop: 0,
     heroPhase: "LOADING",
     shotVersion: 0,
     stageOffsetY: 0,
