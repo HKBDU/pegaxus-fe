@@ -345,25 +345,25 @@ export function DocumentReviewDialog({
             requirement.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={pending || refreshing || query.isFetching}
-            onClick={() => void refresh()}
-            className="rounded-[2px]"
-          >
-            {refreshing || query.isFetching
-              ? "Refreshing…"
-              : "Refresh Review Data"}
-          </Button>
-        </div>
         {error ? (
           <div
             role="alert"
             className="rounded-[2px] border border-red-200 bg-red-50 p-3 text-xs text-red-700"
           >
             <p>{error.message}</p>
+            {error.refresh ? (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pending || refreshing || query.isFetching}
+                onClick={() => void refresh()}
+                className="mt-2 rounded-[2px]"
+              >
+                {refreshing || query.isFetching
+                  ? "Loading latest data…"
+                  : "Load latest review data"}
+              </Button>
+            ) : null}
             <details className="mt-2">
               <summary>Technical details</summary>
               <p className="mt-1 break-words">

@@ -67,7 +67,7 @@ export function getSegmentImpact(
       detail: "Completed PRIMARY leg; retained when return is activated.",
       highlighted: false,
     };
-  if (segment.status === "PENDING")
+  if (segment.status === "PLANNED" || segment.status === "PENDING")
     return {
       kind: "remaining",
       label: "Remaining planned leg",

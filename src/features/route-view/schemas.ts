@@ -8,6 +8,7 @@ import { employeeBriefSchema } from "@/features/transport-plan/schemas";
 
 export const routePlanIdSchema = z.union([entityIdSchema, z.number()]).transform(String);
 export const routeTypeSchema = z.enum(["PRIMARY", "BACKUP", "RETURN"]);
+const responseTimestamp = z.iso.datetime({ offset: true });
 const transportModeSchema = z.enum(["ROAD", "SEA", "AIR"]);
 // Tolerant timestamp parser: accepts ISO strings with or without offset, Date objects
 const timestamp = z.union([z.iso.datetime({ offset: true }), z.date()]).transform((val) => {
@@ -44,12 +45,12 @@ const providerSchema = z.object({
   supportedModes: z.array(transportModeSchema),
 });
 export const routeSegmentSchema = z.object({
-  routePlanRouteId: z.union([entityIdSchema, z.number()]).transform(String),
+  routePlanRouteId: z.string().min(1),
   sequenceNo: z.number().int().positive(),
   routeType: routeTypeSchema,
   route: z
     .object({
-      routeId: z.union([entityIdSchema, z.number()]).transform(String),
+      routeId: z.string().min(1),
       routeCode: z.string(),
       routeName: text,
       transportMode: transportModeSchema,
@@ -58,11 +59,11 @@ export const routeSegmentSchema = z.object({
     }),
   fromLocation: routeLocationSchema,
   toLocation: routeLocationSchema,
-  plannedDepartureAt: timestamp.nullable(),
-  plannedArrivalAt: timestamp.nullable(),
+  plannedDepartureAt: responseTimestamp.nullable(),
+  plannedArrivalAt: responseTimestamp.nullable(),
   actualDepartureAt: timestamp.nullable().optional().transform((v) => v ?? null),
   actualArrivalAt: timestamp.nullable().optional().transform((v) => v ?? null),
-  status: z.string().min(1),
+  status: z.enum(["PLANNED", "IN_TRANSIT", "COMPLETED", "PENDING", "IN_PROGRESS"]),
   dwellAfterMinutes: z
     .union([z.number(), z.null(), z.undefined()])
     .transform((v) => (typeof v === "number" ? v : null)),
@@ -106,13 +107,13 @@ export const routeLegalReviewSchema = z.object({
   reviewedAt: timestamp.nullable().optional().transform((v) => v ?? null),
 });
 export const routePlanDetailSchema = z.object({
-  routePlanId: z.union([entityIdSchema, z.number()]).transform(String),
+  routePlanId: z.string().min(1),
   routePlanCode: z.string(),
-  transportPlanId: z.union([entityIdSchema, z.number()]).transform(String),
-  bookingId: z.union([entityIdSchema, z.number()]).transform(String),
+  transportPlanId: z.string().min(1),
+  bookingId: z.string().min(1),
   bookingCode: z.string(),
   routeType: routeTypeSchema,
-  status: z.union([routePlanStatusSchema, z.string().min(1)]),
+  status: routePlanStatusSchema,
   isCrossBorder: z.boolean(),
   totalDistanceKm: z.number().nonnegative(),
   estimatedDurationMinutes: durationMinutes,
@@ -123,21 +124,21 @@ export const routePlanDetailSchema = z.object({
   legalReview: routeLegalReviewSchema.nullable().optional().transform((v) => v ?? null),
   replacesSequenceNo: replacesSequenceNoSchema,
   routeNote: text,
-  createdAt: timestamp,
-  updatedAt: timestamp,
+  createdAt: responseTimestamp,
+  updatedAt: responseTimestamp,
 });
 export const routePlanSummarySchema = z.object({
-  routePlanId: z.union([entityIdSchema, z.number()]).transform(String),
+  routePlanId: z.string().min(1),
   routePlanCode: z.string(),
   routeType: routeTypeSchema,
-  status: z.union([routePlanStatusSchema, z.string().min(1)]),
+  status: routePlanStatusSchema,
   totalDistanceKm: z.number().nonnegative(),
   estimatedDurationMinutes: durationMinutes,
   isPersonnelComplete: z.boolean(),
   segmentCount: z.number().int().nonnegative(),
   replacesSequenceNo: replacesSequenceNoSchema,
   routeNote: text,
-  updatedAt: timestamp,
+  updatedAt: responseTimestamp,
 });
 export const routePlansSchema = z.object({
   items: z.array(routePlanSummarySchema),

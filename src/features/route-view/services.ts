@@ -198,7 +198,9 @@ export const routeViewService = {
     signal?.throwIfAborted();
     const payload = await apiClient.get<unknown, unknown>(path, { signal });
     signal?.throwIfAborted();
-    return routePlanDetailSchema.parse(readEnvelope(payload));
+    return routePlanDetailSchema.refine((route) => route.routePlanId.toLowerCase() === id.toLowerCase(), {
+      message: "The route response does not match the requested route.",
+    }).parse(readEnvelope(payload));
   },
   async exportPdf(id: string, signal?: AbortSignal): Promise<Blob> {
     const path = routePath(id);

@@ -1,5 +1,4 @@
 import { Outlet, useLocation, useParams } from "react-router-dom";
-import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useTransportOverview } from "../hooks/useTransportOverview";
 import { useTransportProgressRefresh } from "../hooks/useTransportProgressRefresh";
 import { transportViewFromPath } from "../navigation";
@@ -25,8 +24,6 @@ export function TransportDetailLayout({
   const { pathname } = useLocation();
   useTransportProgressRefresh(transportId);
   const view = transportViewFromPath(pathname);
-  const queryClient = useQueryClient();
-  const fetching = useIsFetching() > 0;
   const metadata = useTransportOverview(
     transportId,
     bookingId,
@@ -55,9 +52,6 @@ export function TransportDetailLayout({
           bookingCode={overview?.booking.bookingCode}
           status={overview?.transport.status}
           view={view}
-          busy={fetching}
-          online={metadata.online}
-          onRefresh={() => void queryClient.refetchQueries({ type: "active" })}
         />
         {!missingContext ? (
           <TransportTabs

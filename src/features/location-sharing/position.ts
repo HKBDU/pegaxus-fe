@@ -14,16 +14,16 @@ export function isFreshObservation(timestamp: number, now: number) {
   );
 }
 
-// Browser optional metadata must not become fabricated zero values.
-function measurement(
+const roundMeasurement = (value: number, scale: number) =>
+  Number(value.toFixed(scale));
+
+function optionalMeasurement(
   value: number | null,
   limits: { min: number; max: number; scale: number },
 ) {
-  return value !== null &&
-    Number.isFinite(value) &&
-    value >= limits.min &&
-    value <= limits.max
-    ? Number(value.toFixed(limits.scale))
+  return value !== null && Number.isFinite(value) &&
+    value >= limits.min && value <= limits.max
+    ? roundMeasurement(value, limits.scale)
     : undefined;
 }
 
@@ -33,21 +33,17 @@ export function locationFromPosition(
 ): DriverLocationRequest | null {
   if (!isFreshObservation(position.timestamp, now)) return null;
   const { latitude, longitude, speed, heading, accuracy } = position.coords;
-  const lat = measurement(latitude, VALIDATION_LIMITS.latitude);
-  const lon = measurement(longitude, VALIDATION_LIMITS.longitude);
-  if (lat === undefined || lon === undefined) return null;
-  const speedKmh = measurement(
-    speed === null ? null : speed * 3.6,
-    VALIDATION_LIMITS.trackingSpeedKmh,
-  );
-  const headingDegrees = measurement(heading, VALIDATION_LIMITS.headingDegrees);
-  const accuracyMeters = measurement(
-    accuracy,
-    VALIDATION_LIMITS.trackingAccuracyMeters,
-  );
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+      latitude < VALIDATION_LIMITS.latitude.min || latitude > VALIDATION_LIMITS.latitude.max ||
+      longitude < VALIDATION_LIMITS.longitude.min || longitude > VALIDATION_LIMITS.longitude.max)
+    return null;
+  const speedKmh = optionalMeasurement(speed === null ? null : speed * 3.6, VALIDATION_LIMITS.trackingSpeedKmh);
+  const headingDegrees = optionalMeasurement(heading, VALIDATION_LIMITS.headingDegrees);
+  const accuracyMeters = optionalMeasurement(accuracy, VALIDATION_LIMITS.trackingAccuracyMeters);
   const request = {
-    latitude: lat,
-    longitude: lon,
+    // Serialize the measured point at BE precision; never clamp invalid input or alter its timestamp.
+    latitude: roundMeasurement(latitude, VALIDATION_LIMITS.coordinateScale),
+    longitude: roundMeasurement(longitude, VALIDATION_LIMITS.coordinateScale),
     recordedAt: new Date(position.timestamp).toISOString(),
     ...(speedKmh !== undefined ? { speedKmh } : {}),
     ...(headingDegrees !== undefined ? { headingDegrees } : {}),
