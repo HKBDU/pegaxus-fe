@@ -190,157 +190,17 @@ export const routeViewService = {
       `/transport-plans/${encodeURIComponent(id)}/route-plans`,
       { params: query, signal },
     );
-    const unwrapped = readEnvelope(payload);
-    const rawItems = Array.isArray(unwrapped)
-      ? unwrapped
-      : Array.isArray((unwrapped as any)?.items)
-        ? (unwrapped as any).items
-        : Array.isArray((unwrapped as any)?.data)
-          ? (unwrapped as any).data
-          : [];
-    const normalized = {
-      items: rawItems.map((item: any) => ({
-        ...item,
-        routePlanId: String(item?.routePlanId ?? item?.id ?? ""),
-        routePlanCode: String(item?.routePlanCode ?? item?.code ?? ""),
-        segmentCount:
-          typeof item?.segmentCount === "number"
-            ? item.segmentCount
-            : Array.isArray(item?.segments)
-              ? item.segments.length
-              : 0,
-        updatedAt: item?.updatedAt
-          ? String(item.updatedAt)
-          : new Date().toISOString(),
-      })),
-    };
-    const parsed = routePlansSchema.safeParse(normalized);
-    if (!parsed.success) {
-      console.error(
-        "routePlansSchema validation error:",
-        parsed.error.issues,
-        "raw payload:",
-        unwrapped,
-      );
-      return {
-        items: rawItems.map((item: any, idx: number) => ({
-          routePlanId: String(item?.routePlanId ?? item?.id ?? `fallback-${idx}`),
-          routePlanCode: String(item?.routePlanCode ?? item?.code ?? "—"),
-          routeType: (item?.routeType as any) ?? "PRIMARY",
-          status: (item?.status as any) ?? "DRAFT",
-          totalDistanceKm: Number(item?.totalDistanceKm) || 0,
-          estimatedDurationMinutes: Number(item?.estimatedDurationMinutes) || 0,
-          isPersonnelComplete: Boolean(item?.isPersonnelComplete),
-          segmentCount:
-            typeof item?.segmentCount === "number"
-              ? item.segmentCount
-              : Array.isArray(item?.segments)
-                ? item.segments.length
-                : 0,
-          replacesSequenceNo: null,
-          routeNote: item?.routeNote ?? null,
-          updatedAt: item?.updatedAt ? String(item.updatedAt) : new Date().toISOString(),
-        })),
-      };
-    }
-    return parsed.data;
+    signal?.throwIfAborted();
+    return routePlansSchema.parse(readEnvelope(payload));
   },
   async getRoute(id: string, signal?: AbortSignal): Promise<RoutePlanDetail> {
     const path = routePath(id);
     signal?.throwIfAborted();
     const payload = await apiClient.get<unknown, unknown>(path, { signal });
-    const unwrapped = readEnvelope(payload);
-    const raw =
-      typeof unwrapped === "object" && unwrapped !== null
-        ? (unwrapped as any)
-        : {};
-    const normalized = {
-      ...raw,
-      routePlanId: String(raw.routePlanId ?? raw.id ?? id),
-      routePlanCode: String(raw.routePlanCode ?? raw.code ?? ""),
-      createdAt: raw.createdAt ? String(raw.createdAt) : new Date().toISOString(),
-      updatedAt: raw.updatedAt ? String(raw.updatedAt) : new Date().toISOString(),
-    };
-    const parsed = routePlanDetailSchema.safeParse(normalized);
-    if (!parsed.success) {
-      console.error(
-        "routePlanDetailSchema validation error:",
-        parsed.error.issues,
-        "raw payload:",
-        unwrapped,
-      );
-      if (typeof unwrapped === "object" && unwrapped !== null) {
-        const item = unwrapped as any;
-        return {
-          routePlanId: String(item.routePlanId ?? item.id ?? id),
-          routePlanCode: String(item.routePlanCode ?? item.code ?? "—"),
-          transportPlanId: String(item.transportPlanId ?? ""),
-          bookingId: String(item.bookingId ?? ""),
-          bookingCode: String(item.bookingCode ?? "—"),
-          routeType: (item.routeType as any) ?? "PRIMARY",
-          status: (item.status as any) ?? "DRAFT",
-          isCrossBorder: Boolean(item.isCrossBorder),
-          totalDistanceKm: Number(item.totalDistanceKm) || 0,
-          estimatedDurationMinutes: Number(item.estimatedDurationMinutes) || 0,
-          plannedDepartureAt: item.plannedDepartureAt ? String(item.plannedDepartureAt) : null,
-          plannedArrivalAt: item.plannedArrivalAt ? String(item.plannedArrivalAt) : null,
-          segments: Array.isArray(item.segments)
-            ? item.segments.map((seg: any, idx: number) => ({
-                routePlanRouteId: String(seg?.routePlanRouteId ?? seg?.id ?? `seg-${idx}`),
-                sequenceNo: Number(seg?.sequenceNo) || idx + 1,
-                routeType: (seg?.routeType as any) ?? "PRIMARY",
-                route: seg?.route ?? {
-                  routeId: "",
-                  routeCode: "",
-                  routeName: null,
-                  transportMode: "ROAD" as const,
-                  distanceKm: 0,
-                  estimatedDurationMinutes: 0,
-                },
-                fromLocation: seg?.fromLocation ?? {
-                  locationId: "",
-                  locationName: "Unknown Location",
-                  locationType: null,
-                  city: null,
-                  country: null,
-                  latitude: null,
-                  longitude: null,
-                },
-                toLocation: seg?.toLocation ?? {
-                  locationId: "",
-                  locationName: "Unknown Location",
-                  locationType: null,
-                  city: null,
-                  country: null,
-                  latitude: null,
-                  longitude: null,
-                },
-                plannedDepartureAt: seg?.plannedDepartureAt ? String(seg.plannedDepartureAt) : new Date().toISOString(),
-                plannedArrivalAt: seg?.plannedArrivalAt ? String(seg.plannedArrivalAt) : new Date().toISOString(),
-                actualDepartureAt: seg?.actualDepartureAt ? String(seg.actualDepartureAt) : null,
-                actualArrivalAt: seg?.actualArrivalAt ? String(seg.actualArrivalAt) : null,
-                status: (seg?.status as any) ?? "PENDING",
-                dwellAfterMinutes:
-                  typeof seg?.dwellAfterMinutes === "number" ? seg.dwellAfterMinutes : null,
-                isOutsourced: Boolean(seg?.isOutsourced),
-                vehicles: Array.isArray(seg?.vehicles) ? seg.vehicles : [],
-                outsourcing: seg?.outsourcing ?? null,
-                driver: seg?.driver ?? null,
-                escort: seg?.escort ?? null,
-                note: seg?.note ?? null,
-              }))
-            : [],
-          isPersonnelComplete: Boolean(item.isPersonnelComplete),
-          legalReview: item.legalReview ?? null,
-          replacesSequenceNo: null,
-          routeNote: item.routeNote ?? null,
-          createdAt: item.createdAt ? String(item.createdAt) : new Date().toISOString(),
-          updatedAt: item.updatedAt ? String(item.updatedAt) : new Date().toISOString(),
-        };
-      }
-      throw parsed.error;
-    }
-    return parsed.data;
+    signal?.throwIfAborted();
+    return routePlanDetailSchema.refine((route) => route.routePlanId.toLowerCase() === id.toLowerCase(), {
+      message: "The route response does not match the requested route.",
+    }).parse(readEnvelope(payload));
   },
   async exportPdf(id: string, signal?: AbortSignal): Promise<Blob> {
     const path = routePath(id);

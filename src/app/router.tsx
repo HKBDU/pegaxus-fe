@@ -38,6 +38,10 @@ import {
 } from "@/features/horse-health";
 import { incidentRoutes } from "@/features/incident-report";
 import { ongoingTransportRoutes } from "@/features/ongoing-transport";
+import {
+  emergencyCostRoutes,
+  emergencyRerouteRoutes,
+} from "@/features/incident-response";
 import TestPage from "@/Test";
 
 import LogoutPage from "@/features/auth/pages/LogoutPage";
@@ -181,6 +185,8 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  ...emergencyCostRoutes,
+  ...emergencyRerouteRoutes,
   {
     element: (
       <DriverLocationSession>

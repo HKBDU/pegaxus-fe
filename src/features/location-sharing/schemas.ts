@@ -94,7 +94,7 @@ export const arrivalBoundarySchema = z.object({
   existingHandover: z
     .object({
       handoverRecordId: z.string(),
-      status: z.enum(["PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]),
+status: z.enum(["PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]),
     })
     .nullable(),
 });

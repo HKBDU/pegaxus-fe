@@ -10,6 +10,8 @@ import { approvedBookingKeys } from "@/features/transport-plan/hooks/useApproved
 import { transportPlanKeys } from "@/features/transport-plan/hooks/useTransportPlans";
 import { getApiErrorInfo } from "@/features/transport-plan/services";
 import { dossierKeys } from "@/features/dossier/hooks/useDossier";
+import { requirementKeys } from "@/features/compliance-catalog/hooks/useDossierRequirements";
+import type { ApprovedBookingDetail } from "@/features/transport-plan/types";
 import { vehicleKeys } from "@/features/fleet/hooks/useVehicles";
 import { personnelKeys } from "@/features/personnel/hooks";
 import { executeEmergencyAction, routeViewService } from "../services";
@@ -31,6 +33,7 @@ export type EmergencyContext = {
   activeRoutes: RoutePlanSummary[];
   primaryRoute?: RoutePlanSummary;
   dossierId?: string;
+  legalDossier?: NonNullable<ApprovedBookingDetail["complianceDossier"]>;
   horseCount?: number;
   transportId: string;
   extraDossierStatus?: string;
@@ -91,6 +94,12 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
     booking.data.transport?.transportId ===
       transport.data.transport.transportId;
   if (ready && !error && !loading && matches && routes.data) {
+    const legalDossier =
+      plan.routeType === "RETURN"
+        ? booking.data!.complianceDossiers.find(
+            (dossier) => dossier.dossierType === "EXTRA",
+          )
+        : booking.data!.complianceDossier;
     data = {
       workspace: {
         principal,
@@ -116,6 +125,9 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
           route.routeType === "PRIMARY" && route.status !== "CANCELLED",
       ),
       dossierId: booking.data!.complianceDossier?.complianceDossierId,
+      legalDossier: legalDossier?.complianceDossierId.trim()
+        ? legalDossier
+        : undefined,
       horseCount: transport.data!.booking.totalHorses,
       transportId: transport.data!.transport.transportId,
       extraDossierStatus: booking.data!.complianceDossiers.find(
@@ -183,6 +195,9 @@ export async function refreshEmergencyQueries(
           }),
           client.invalidateQueries({ queryKey: ["approved-bookings", "list"] }),
           client.invalidateQueries({
+            queryKey: dossierKeys.booking(plan.bookingId),
+          }),
+          client.invalidateQueries({
             queryKey: personnelKeys.plan(plan.transportPlanId),
           }),
           client.invalidateQueries({
@@ -201,6 +216,16 @@ export async function refreshEmergencyQueries(
                 }),
                 client.invalidateQueries({
                   queryKey: dossierKeys.requirementsRoot(dossierId),
+                }),
+                client.invalidateQueries({
+                  queryKey: requirementKeys.ofDossier(dossierId),
+                }),
+                client.invalidateQueries({
+                  queryKey: dossierKeys.all,
+                  predicate: (query) =>
+                    query.queryKey[1] === "dashboard" ||
+                    (query.queryKey[1] === "audit" &&
+                      query.queryKey[2] === dossierId),
                 }),
               ]
             : []),
