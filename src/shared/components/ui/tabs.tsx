@@ -56,11 +56,12 @@ export function TabsTrigger({
       type="button"
       role="tab"
       aria-selected={active}
+      data-state={active ? "active" : "inactive"}
       variant="ghost"
       className={cn(
-        "h-8 rounded-[2px] border border-transparent px-3 text-xs font-semibold uppercase tracking-wide",
+        "h-8 rounded-[2px] border border-transparent px-3 text-xs font-semibold uppercase tracking-wide transition-colors",
         active
-          ? "bg-[#17191c] text-white shadow-sm hover:bg-[#30343a] hover:text-white"
+          ? "!bg-[#17191c] !text-white shadow-sm hover:!bg-[#30343a] hover:!text-white"
           : "text-slate-600 hover:border-[#d9d3c7] hover:bg-[#f7f3ea] hover:text-[#17191c]",
         className,
       )}

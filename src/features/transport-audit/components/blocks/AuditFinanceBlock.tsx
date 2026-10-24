@@ -1,4 +1,3 @@
-import { Badge } from "@/shared/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -9,97 +8,230 @@ import {
 } from "@/shared/components/ui/table";
 import { MoneyText } from "@/features/invoice/components/MoneyText";
 import type { AuditFinanceData } from "../../types";
-import { BlockCard } from "./block-utils";
+import { BlockCard, StatusPill } from "./block-utils";
+import { formatAuditDateTime } from "../../utils";
+
 export function AuditFinanceBlock({ data }: { data?: AuditFinanceData }) {
-  if (!data) return <BlockCard title="Finance" empty />;
+  if (!data) return <BlockCard title="Financial Settlement" empty />;
+
   const summary = data.summary;
+  const invoices = data.invoices ?? [];
+  const emergencyExpenses = data.emergencyExpenses ?? [];
+
   return (
-    <div className="space-y-4">
-      <BlockCard title="Settlement summary" empty={!summary}>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {summary
-            ? Object.entries(summary)
-                .filter(([key]) => key !== "currency")
-                .map(([key, value]) => (
-                  <div key={key}>
-                    <p className="text-[10px] uppercase text-slate-500">
-                      {key.replaceAll(/([A-Z])/g, " $1")}
-                    </p>
-                    <MoneyText
-                      amount={Number(value)}
-                      currency="VND"
-                      className="text-sm font-semibold"
-                    />
-                  </div>
-                ))
-            : null}
-        </div>
-      </BlockCard>
+    <div className="space-y-3.5">
       <BlockCard
-        title="Emergency expenses"
-        empty={!data.emergencyExpenses?.length}
+        title="Settlement Summary & Ledger Balance"
+        empty={!summary}
+        action={
+          summary ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-slate-500">Gross Settlement:</span>
+              <MoneyText
+                amount={summary.totalPaidAmount ?? 0}
+                currency="VND"
+                className="font-mono text-xs font-bold text-slate-900"
+              />
+            </div>
+          ) : undefined
+        }
       >
-        {data.emergencyExpenses?.length ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Approved by</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.emergencyExpenses.map((expense) => (
-                <TableRow key={expense.expenseId}>
-                  <TableCell className="font-mono">
-                    {expense.expenseCode}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{expense.category}</Badge>
-                  </TableCell>
-                  <TableCell>{expense.reason}</TableCell>
-                  <TableCell>
-                    <MoneyText amount={expense.amount} currency="VND" />
-                  </TableCell>
-                  <TableCell>{expense.approvedBy ?? "—"}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        {summary ? (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-[2px] border border-slate-200 bg-slate-50/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Base Freight Fare
+              </p>
+              <div className="mt-1 flex items-baseline justify-between">
+                <MoneyText
+                  amount={summary.baseFareAmount ?? 0}
+                  currency="VND"
+                  className="font-mono text-base font-bold text-slate-900"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-[2px] border border-slate-200 bg-slate-50/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Cross-Border / Transit Surcharges
+              </p>
+              <div className="mt-1 flex items-baseline justify-between">
+                <MoneyText
+                  amount={
+                    (summary.ferryChunnelFee ?? 0) +
+                    (summary.bcpQuarantineFee ?? 0) +
+                    (summary.insuranceFee ?? 0)
+                  }
+                  currency="VND"
+                  className="font-mono text-base font-semibold text-slate-800"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-[2px] border border-slate-200 bg-slate-50/60 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                Emergency & Route Expenses
+              </p>
+              <div className="mt-1 flex items-baseline justify-between">
+                <MoneyText
+                  amount={summary.emergencyCost ?? 0}
+                  currency="VND"
+                  className="font-mono text-base font-semibold text-amber-700"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-[2px] border border-amber-300 bg-amber-500/[0.04] p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                Total Dossier Value
+              </p>
+              <div className="mt-1 flex items-baseline justify-between">
+                <MoneyText
+                  amount={summary.totalPaidAmount ?? 0}
+                  currency="VND"
+                  className="font-mono text-lg font-bold text-[#f39200]"
+                />
+              </div>
+            </div>
+          </div>
         ) : null}
       </BlockCard>
-      <BlockCard title="Invoices" empty={!data.invoices.length}>
-        {data.invoices.length ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Issued</TableHead>
-                <TableHead>Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.invoices.map((invoice) => (
-                <TableRow key={invoice.invoiceId}>
-                  <TableCell className="font-mono">
-                    {invoice.invoiceNumber}
-                  </TableCell>
-                  <TableCell>{invoice.type}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{invoice.status}</Badge>
-                  </TableCell>
-                  <TableCell>{invoice.issuedAt ?? "—"}</TableCell>
-                  <TableCell>
-                    <MoneyText amount={invoice.totalAmount} currency="VND" />
-                  </TableCell>
+
+      <BlockCard
+        title="Emergency Route Disbursements"
+        empty={!emergencyExpenses.length}
+        action={
+          emergencyExpenses.length ? (
+            <span className="text-xs text-amber-700 font-medium">
+              {emergencyExpenses.length} disbursement logged
+            </span>
+          ) : (
+            <span className="text-xs text-emerald-600 font-medium">
+              No unplanned expenses
+            </span>
+          )
+        }
+      >
+        {emergencyExpenses.length ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-[#e6e2d9] bg-[#faf8f5]/60 hover:bg-[#faf8f5]/60">
+                  <TableHead className="h-8 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Disbursement Code
+                  </TableHead>
+                  <TableHead className="h-8 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Category
+                  </TableHead>
+                  <TableHead className="h-8 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Justification / Reason
+                  </TableHead>
+                  <TableHead className="h-8 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Amount (VND)
+                  </TableHead>
+                  <TableHead className="h-8 text-right text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Approver
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {emergencyExpenses.map((expense) => (
+                  <TableRow
+                    key={expense.expenseId}
+                    className="border-b border-slate-100 hover:bg-amber-500/[0.02]"
+                  >
+                    <TableCell className="py-2.5 font-mono text-xs font-semibold text-slate-900">
+                      {expense.expenseCode}
+                    </TableCell>
+                    <TableCell className="py-2.5">
+                      <StatusPill tone="warning">{expense.category}</StatusPill>
+                    </TableCell>
+                    <TableCell className="py-2.5 text-xs text-slate-700">
+                      {expense.reason}
+                    </TableCell>
+                    <TableCell className="py-2.5 font-mono text-xs font-bold text-slate-900">
+                      <MoneyText amount={expense.amount} currency="VND" />
+                    </TableCell>
+                    <TableCell className="py-2.5 text-right text-xs text-slate-600">
+                      {expense.approvedBy ?? "System Auto"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : null}
+      </BlockCard>
+
+      <BlockCard
+        title="Associated Billing & Invoices"
+        empty={!invoices.length}
+        action={
+          <span className="text-xs text-slate-500">
+            {invoices.length} {invoices.length === 1 ? "invoice" : "invoices"}
+          </span>
+        }
+      >
+        {invoices.length ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-[#e6e2d9] bg-[#faf8f5]/60 hover:bg-[#faf8f5]/60">
+                  <TableHead className="h-8 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Invoice No.
+                  </TableHead>
+                  <TableHead className="h-8 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Billing Type
+                  </TableHead>
+                  <TableHead className="h-8 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Payment Status
+                  </TableHead>
+                  <TableHead className="h-8 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Issue Date
+                  </TableHead>
+                  <TableHead className="h-8 text-right text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                    Invoice Total
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoices.map((invoice) => {
+                  const isPaid =
+                    invoice.status === "PAID" || invoice.status === "SETTLED";
+
+                  return (
+                    <TableRow
+                      key={invoice.invoiceId}
+                      className="border-b border-slate-100 hover:bg-amber-500/[0.02]"
+                    >
+                      <TableCell className="py-2.5 font-mono text-xs font-semibold text-slate-900">
+                        {invoice.invoiceNumber}
+                      </TableCell>
+                      <TableCell className="py-2.5">
+                        <StatusPill tone="info">{invoice.type}</StatusPill>
+                      </TableCell>
+                      <TableCell className="py-2.5">
+                        <StatusPill tone={isPaid ? "success" : "warning"}>
+                          {invoice.status}
+                        </StatusPill>
+                      </TableCell>
+                      <TableCell className="py-2.5 text-xs text-slate-600">
+                        {invoice.issuedAt
+                          ? formatAuditDateTime(invoice.issuedAt)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="py-2.5 text-right font-mono text-xs font-bold text-slate-900">
+                        <MoneyText
+                          amount={invoice.totalAmount}
+                          currency="VND"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         ) : null}
       </BlockCard>
     </div>

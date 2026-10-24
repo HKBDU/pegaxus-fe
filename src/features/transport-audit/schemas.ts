@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { TransportArchiveResponse } from "./types";
 export const auditTimelineItemSchema = z.object({
   id: z.coerce.string(),
   type: z.string().catch("EVENT"),
@@ -223,43 +224,113 @@ export const auditFinanceSchema = z.object({
     })
     .optional(),
 });
-const itemSchema = z.object({
-  transportId: z.union([z.string(), z.number()]),
-  transportCode: z.string(),
-  bookingId: z.union([z.string(), z.number()]).optional(),
-  bookingCode: z.string().optional(),
-  customerName: z.string().optional(),
-  horseCount: z.number().optional(),
-  completedAt: z.string().nullish(),
-  status: z.string(),
-  claimCount: z.number().optional(),
-  incidentCount: z.number().optional(),
-});
-const metaSchema = z.object({
-  totalItems: z.number().catch(0),
-  totalPages: z.number().catch(0),
-  itemsPerPage: z.number().catch(20),
-  currentPage: z.number().catch(1),
-  hasPreviousPage: z.boolean().catch(false),
-  hasNextPage: z.boolean().catch(false),
-});
-export const archiveResponseSchema = z.preprocess(
+const itemSchema = z.preprocess(
   (raw) => {
-    if (raw && typeof raw === "object") {
-      const obj = raw as Record<string, unknown>;
-      if ("value" in obj && obj.value !== undefined && obj.value !== null) {
-        return obj.value;
-      }
-    }
-    return raw;
+    if (!raw || typeof raw !== "object") return {};
+    const r = raw as Record<string, unknown>;
+    return {
+      transportId: String(r.transportId ?? r.TransportId ?? r.id ?? r.Id ?? ""),
+      transportCode: String(r.transportCode ?? r.TransportCode ?? r.code ?? r.Code ?? "—"),
+      bookingId: r.bookingId ?? r.BookingId,
+      bookingCode: r.bookingCode ?? r.BookingCode,
+      customerName: r.customerName ?? r.CustomerName,
+      horseCount: typeof r.horseCount === "number" ? r.horseCount : (typeof r.HorseCount === "number" ? r.HorseCount : undefined),
+      completedAt: r.completedAt ?? r.CompletedAt,
+      status: String(r.status ?? r.Status ?? "COMPLETED"),
+      claimCount: typeof r.claimCount === "number" ? r.claimCount : (typeof r.ClaimCount === "number" ? r.ClaimCount : undefined),
+      incidentCount: typeof r.incidentCount === "number" ? r.incidentCount : (typeof r.IncidentCount === "number" ? r.IncidentCount : undefined),
+    };
   },
-  z
-    .object({ items: z.array(itemSchema).catch([]), meta: metaSchema })
-    .or(
-      z
-        .object({ data: z.array(itemSchema).catch([]), meta: metaSchema })
-        .transform(({ data, meta }) => ({ items: data, meta })),
-    ),
+  z.object({
+    transportId: z.string(),
+    transportCode: z.string(),
+    bookingId: z.union([z.string(), z.number()]).optional(),
+    bookingCode: z.string().optional(),
+    customerName: z.string().optional(),
+    horseCount: z.number().optional(),
+    completedAt: z.string().nullish(),
+    status: z.string(),
+    claimCount: z.number().optional(),
+    incidentCount: z.number().optional(),
+  }),
+);
+
+const metaSchema = z.object({
+  totalItems: z.number(),
+  totalPages: z.number(),
+  itemsPerPage: z.number(),
+  currentPage: z.number(),
+  hasPreviousPage: z.boolean(),
+  hasNextPage: z.boolean(),
+});
+
+export const archiveResponseSchema: z.ZodType<TransportArchiveResponse> = z.preprocess(
+  (raw) => {
+    if (!raw || typeof raw !== "object") {
+      return {
+        items: [],
+        meta: {
+          totalItems: 0,
+          totalPages: 0,
+          itemsPerPage: 20,
+          currentPage: 1,
+          hasPreviousPage: false,
+          hasNextPage: false,
+        },
+      };
+    }
+    const r = raw as Record<string, unknown>;
+    const target = (r.value && typeof r.value === "object" ? r.value : r) as Record<string, unknown>;
+
+    const rawList = Array.isArray(target)
+      ? target
+      : (target.items ?? target.Items ?? target.data ?? target.Data ?? []);
+    const items = Array.isArray(rawList) ? rawList : [];
+
+    const rawMeta = (target.meta ?? target.Meta) as Record<string, unknown> | undefined;
+    const totalItems =
+      Number(
+        rawMeta?.totalItems ??
+          target.totalCount ??
+          target.TotalCount ??
+          target.totalItems ??
+          target.TotalItems ??
+          items.length,
+      ) || 0;
+    const itemsPerPage =
+      Number(rawMeta?.itemsPerPage ?? target.pageSize ?? target.PageSize ?? 20) || 20;
+    const currentPage =
+      Number(rawMeta?.currentPage ?? target.pageIndex ?? target.PageIndex ?? 1) || 1;
+    const totalPages =
+      Number(
+        rawMeta?.totalPages ??
+          target.totalPages ??
+          target.TotalPages ??
+          Math.max(1, Math.ceil(totalItems / itemsPerPage)),
+      ) || 1;
+    const hasPreviousPage = Boolean(
+      rawMeta?.hasPreviousPage ?? currentPage > 1,
+    );
+    const hasNextPage = Boolean(
+      rawMeta?.hasNextPage ?? currentPage < totalPages,
+    );
+
+    return {
+      items,
+      meta: {
+        totalItems,
+        totalPages,
+        itemsPerPage,
+        currentPage,
+        hasPreviousPage,
+        hasNextPage,
+      },
+    };
+  },
+  z.object({
+    items: z.array(itemSchema),
+    meta: metaSchema,
+  }),
 );
 export const auditResponseSchema = z.preprocess(
   (raw) => {
@@ -271,9 +342,50 @@ export const auditResponseSchema = z.preprocess(
       const transport = (
         target.transport && typeof target.transport === "object"
           ? target.transport
-          : {}
+          : target.Transport && typeof target.Transport === "object"
+            ? target.Transport
+            : {}
       ) as Record<string, unknown>;
       return {
+        transportId:
+          target.transportId ??
+          target.TransportId ??
+          transport.transportId ??
+          transport.TransportId,
+        transportCode:
+          target.transportCode ??
+          target.TransportCode ??
+          transport.transportCode ??
+          transport.TransportCode,
+        status:
+          target.status ??
+          target.Status ??
+          transport.status ??
+          transport.Status,
+        completedAt:
+          target.completedAt ??
+          target.CompletedAt ??
+          transport.completedAt ??
+          transport.CompletedAt,
+        originCountry:
+          target.originCountry ??
+          target.OriginCountry ??
+          transport.originCountry ??
+          transport.OriginCountry,
+        destinationCountry:
+          target.destinationCountry ??
+          target.DestinationCountry ??
+          transport.destinationCountry ??
+          transport.DestinationCountry,
+        viewMode: target.viewMode ?? target.ViewMode,
+        timeline: target.timeline ?? target.Timeline ?? [],
+        booking: target.booking ?? target.Booking,
+        horses: target.horses ?? target.Horses,
+        routing: target.routing ?? target.Routing,
+        compliance: target.compliance ?? target.Compliance,
+        operations: target.operations ?? target.Operations,
+        finance: target.finance ?? target.Finance,
+        epod: target.epod ?? target.Epod,
         ...transport,
         ...target,
       };

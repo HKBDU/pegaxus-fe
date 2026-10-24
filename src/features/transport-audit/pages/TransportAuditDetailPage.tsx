@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/features/auth/store";
 import { canAccess } from "@/features/auth/access-control";
 import { PageHeader } from "@/shared/components/PageHeader";
@@ -53,10 +54,10 @@ export default function TransportAuditDetailPage() {
   )?.transportArchiveList;
   const backHref = archiveParams
     ? `/admin/transport-archive?${new URLSearchParams(
-        Object.entries(archiveParams)
-          .filter(([, value]) => value !== undefined)
-          .map(([key, value]) => [key, String(value)]),
-      ).toString()}`
+      Object.entries(archiveParams)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => [key, String(value)]),
+    ).toString()}`
     : "/admin/transport-archive";
   if (query.isPending) return <LoadingState />;
   if (query.isError)
@@ -80,49 +81,125 @@ export default function TransportAuditDetailPage() {
       { replace: true },
     );
   return (
-    <main className="min-h-screen bg-[#f4f2ed] px-5 py-8 lg:px-10">
-      <div className="mx-auto max-w-[1280px] space-y-6">
+    <main className="min-h-screen bg-[#f4f2ed] px-3 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1280px] space-y-3.5">
         <PageHeader title="AUDIT DOSSIER" backHref={backHref} />
         <AuditOverviewHeader
           audit={audit}
           onExport={() => setExportOpen(true)}
+          onPreviewEpod={() =>
+            audit.epod?.downloadUrl
+              ? setDocumentDrawer({
+                open: true,
+                title: `e-POD — ${audit.transportCode}`,
+                url: audit.epod.downloadUrl,
+              })
+              : undefined
+          }
         />
         <Tabs
           value={activeTab}
           onValueChange={handleTabChange}
-          className="space-y-4"
+          className="space-y-3"
         >
-          <TabsList className="flex h-auto flex-wrap gap-1 rounded-[2px] border border-slate-200 bg-white p-1">
-            {[
-              "timeline",
-              ...availableSections.map((section) => section.id),
-            ].map((tab) => (
-              <TabsTrigger
-                key={tab}
-                value={tab}
-                className="text-xs font-semibold uppercase"
-              >
-                {tab === "timeline"
-                  ? "Timeline"
-                  : availableSections.find((section) => section.id === tab)
-                      ?.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="sticky top-[10px] z-20 -mx-1 px-1 py-0.5 bg-[#f4f2ed]/95 backdrop-blur-md">
+            <TabsList className="flex h-auto w-full flex-wrap gap-1 rounded-[2px] border border-[#343b49] bg-[#171b24] p-1.5 shadow-[0_8px_20px_rgba(23,25,28,0.18)]">
+              {[
+                {
+                  id: "timeline",
+                  label: "Timeline",
+                  count: audit.timeline.length,
+                },
+                {
+                  id: "horses",
+                  label: "Horses & Health",
+                  count: audit.horses?.horses.length,
+                },
+                { id: "booking", label: "Booking" },
+                { id: "routing", label: "Routing & Waypoints" },
+                {
+                  id: "compliance",
+                  label: "Compliance & Customs",
+                  count: audit.compliance?.dossiers.length,
+                },
+                {
+                  id: "operations",
+                  label: "Operations & Handovers",
+                  count: audit.operations?.handovers.length,
+                },
+                ...(isManager
+                  ? [{ id: "finance", label: "Financial Settlement" }]
+                  : []),
+              ]
+                .filter(
+                  (tab) =>
+                    tab.id === "timeline" ||
+                    availableSections.some((s) => s.id === tab.id),
+                )
+                .map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <TabsTrigger
+                      key={tab.id}
+                      value={tab.id}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-[2px] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-colors",
+                        isActive
+                          ? "!bg-[#f39200] !text-[#17191c] shadow-sm"
+                          : "text-slate-200 hover:bg-[#f39200] hover:text-[#17191c]",
+                      )}
+                    >
+                      <span
+                        className={
+                          isActive ? "text-[#17191c]" : "text-slate-100"
+                        }
+                      >
+                        {tab.label}
+                      </span>
+                      {tab.count !== undefined ? (
+                        <span
+                          className={cn(
+                            "rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none",
+                            isActive
+                              ? "bg-black/10 text-[#17191c]"
+                              : "bg-white/15 text-slate-100",
+                          )}
+                        >
+                          {tab.count}
+                        </span>
+                      ) : null}
+                    </TabsTrigger>
+                  );
+                })}
+            </TabsList>
+          </div>
+
           <TabsContent
             value="timeline"
-            className="rounded-[2px] border bg-white p-6"
+            className="rounded-[2px] border border-[#e6e2d9] bg-white p-4 sm:p-5 shadow-xs"
           >
-            <h2 className="mb-4 text-base font-bold uppercase">
-              Unified audit timeline
-            </h2>
+            <div className="mb-4 flex items-center justify-between border-b border-[#e6e2d9] pb-3">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                  Unified Chronological Audit Trail
+                </h2>
+                <p className="text-[11px] text-slate-500">
+                  Verified immutable event log across handovers, status changes,
+                  and checkpoints.
+                </p>
+              </div>
+              <span className="text-xs font-semibold text-slate-500">
+                {audit.timeline.length}{" "}
+                {audit.timeline.length === 1 ? "event" : "events"}
+              </span>
+            </div>
             <AuditTimeline items={audit.timeline} publicOnly={!isManager} />
-          </TabsContent>
-          <TabsContent value="booking">
-            <AuditBookingBlock data={audit.booking} />
           </TabsContent>
           <TabsContent value="horses">
             <AuditHorsesBlock data={audit.horses} />
+          </TabsContent>
+          <TabsContent value="booking">
+            <AuditBookingBlock data={audit.booking} />
           </TabsContent>
           <TabsContent value="routing">
             <AuditRoutingBlock data={audit.routing} isManager={isManager} />

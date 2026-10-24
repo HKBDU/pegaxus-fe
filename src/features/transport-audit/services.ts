@@ -29,23 +29,32 @@ const parse = <T>(value: unknown, schema: { parse: (v: unknown) => T }) =>
   schema.parse(unwrap(value));
 
 function toArchiveQueryParams(params: TransportArchiveQuery) {
-  return {
-    Search: params.search?.trim() || undefined,
-    CompletedFrom: params.completedFrom || undefined,
-    CompletedTo: params.completedTo || undefined,
-    OriginCountry: params.originCountry || undefined,
-    DestinationCountry: params.destinationCountry || undefined,
-    PageIndex: params.pageIndex,
-    PageSize: params.pageSize,
-    // CamelCase fallback
-    search: params.search?.trim() || undefined,
-    completedFrom: params.completedFrom || undefined,
-    completedTo: params.completedTo || undefined,
-    originCountry: params.originCountry || undefined,
-    destinationCountry: params.destinationCountry || undefined,
-    pageIndex: params.pageIndex,
-    pageSize: params.pageSize,
-  };
+  const query: Record<string, unknown> = {};
+  if (params.search?.trim()) {
+    query.Search = params.search.trim();
+  }
+  if (params.completedFrom) {
+    query.CompletedFrom = params.completedFrom;
+  }
+  if (params.completedTo) {
+    query.CompletedTo = params.completedTo;
+  }
+  if (params.originCountry) {
+    query.OriginCountry = params.originCountry;
+  }
+  if (params.destinationCountry) {
+    query.DestinationCountry = params.destinationCountry;
+  }
+  if (params.pageIndex !== undefined) {
+    query.PageIndex = params.pageIndex;
+  }
+  if (params.pageSize !== undefined) {
+    query.PageSize = params.pageSize;
+  }
+  if (params.status === "CANCELLED" || params.status === "ALL") {
+    query.IncludeCancelled = true;
+  }
+  return query;
 }
 
 export const transportAuditService = {
@@ -70,12 +79,12 @@ export const transportAuditService = {
       await apiClient.get(
         `/transports/${encodeURIComponent(transportId)}/audit`,
         {
-          params: blocks ? { Blocks: blocks, blocks } : undefined,
+          params: blocks ? { Blocks: blocks } : undefined,
           signal,
         },
       ),
       auditResponseSchema,
-    );
+    ) as unknown as TransportAuditFull;
   },
   async createExport(
     transportId: string,
