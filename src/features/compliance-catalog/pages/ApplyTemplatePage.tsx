@@ -24,8 +24,9 @@ import { PageHeader } from "@/shared/components/PageHeader"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard"
 import type { EntityId } from "@/shared/types"
+import { dossierDetail } from "@/app/route-config"
 
-const AFTER_CREATE_PATH = (dossierId: EntityId) => `/compliance-dossiers/${dossierId}/details`
+const AFTER_CREATE_PATH = (dossierId: EntityId) => dossierDetail(dossierId, "TRANSPORT_SPECIALIST")
 
 const outlineButtonClass =
   "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[2px] border border-slate-300 bg-white px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-60"
@@ -103,7 +104,7 @@ export default function ApplyTemplatePage() {
 
   useEffect(() => {
     if (existingQuery.data) {
-      navigate(`/compliance-dossiers/${existingQuery.data.complianceDossierId}/details`, { replace: true })
+      navigate(AFTER_CREATE_PATH(existingQuery.data.complianceDossierId), { replace: true })
     }
   }, [existingQuery.data, navigate])
 
