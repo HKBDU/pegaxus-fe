@@ -37,12 +37,13 @@ import {
   horseHealthTabRoutes,
 } from "@/features/horse-health";
 import { incidentRoutes } from "@/features/incident-report";
+import { transportAuditRoutes } from "@/features/transport-audit";
 import { ongoingTransportRoutes } from "@/features/ongoing-transport";
 import {
   emergencyCostRoutes,
   emergencyRerouteRoutes,
 } from "@/features/incident-response";
-import TestPage from "@/Test";
+import TestPage from "../Test";
 
 import LogoutPage from "@/features/auth/pages/LogoutPage";
 
@@ -185,6 +186,7 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  ...transportAuditRoutes,
   ...emergencyCostRoutes,
   ...emergencyRerouteRoutes,
   {
@@ -1018,7 +1020,7 @@ export const router = createBrowserRouter([
     ? [
         // BEGIN TEMP UC-38 LOCAL PREVIEW — remove only this route object after testing.
         {
-          path: "/__dev/horse-health/photo-capture",
+          path: "/__dev/transport-audit",
           element: <TestPage />,
         },
         {
