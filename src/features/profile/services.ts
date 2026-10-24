@@ -26,20 +26,10 @@ function normalizeProfile(profile: Profile): Profile {
 }
 
 async function updateProfileRequest(url: string, input: UpdateProfileRequest) {
-    const formData = new FormData()
-
-    if (input.fullName !== undefined) formData.append("FullName", input.fullName)
-    if (input.email !== undefined) formData.append("Email", input.email)
-    if (input.dob !== undefined) formData.append("DateOfBirth", input.dob)
-    if (input.phone !== undefined) formData.append("Phone", input.phone)
-    if (input.address !== undefined) formData.append("Address", input.address)
-    if (input.country !== undefined) formData.append("Country", input.country)
-    if (input.customerCode !== undefined) formData.append("CustomerCode", input.customerCode)
-    if (input.role !== undefined) formData.append("Role", input.role)
-    if (input.status !== undefined) formData.append("Status", input.status)
-    if (input.workStatus !== undefined) formData.append("WorkStatus", input.workStatus)
-    if (input.avatar !== undefined) formData.append("Avatar", input.avatar)
-
-    const response = await apiClient.patch(url, formData) as unknown as ApiResponse<Profile>
+    const { avatar, ...profileFields } = input
+    const payload = avatar && !(avatar instanceof File)
+      ? { ...profileFields, avatar }
+      : profileFields
+    const response = await apiClient.patch(url, payload) as unknown as ApiResponse<Profile>
     return response.value
 }

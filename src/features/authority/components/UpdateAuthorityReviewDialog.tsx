@@ -41,6 +41,7 @@ import {
 import { formatFileSize, matchesAcceptedType } from "@/shared/components/file-uploader/utils";
 import { cn } from "@/lib/utils";
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
+import { presignedUpload } from "@/shared/utils/presigned";
 import { useAuthoritySubmissionDetail, useUpdateAuthorityReview } from "../hooks";
 import type { AuthorityDecision } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
@@ -222,12 +223,16 @@ export function UpdateAuthorityReviewDialog({
     }
 
     try {
+      const decisionFilePublicId = await presignedUpload.upload({
+        file: decisionFile!,
+        entity: "attachment",
+      });
       await mutation.mutateAsync({
         decision,
         permitNumber: decision === "APPROVED" ? permitNumber.trim() : undefined,
         permitIssuedDate: decision === "APPROVED" ? permitIssuedDate : undefined,
         permitExpiryDate: decision === "APPROVED" ? permitExpiryDate : undefined,
-        decisionFile: decisionFile!,
+        decisionFile: { publicId: decisionFilePublicId },
         rejectionReason: decision === "REJECTED" ? rejectionReason.trim() : undefined,
         decisionNote: decision === "RETURNED" ? informationRequested.trim() : decisionNote.trim(),
         revisionDueDate: decision === "RETURNED" ? revisionDueDate : undefined,

@@ -153,7 +153,7 @@ export function RecordAuthoritySubmissionDialog({
         submissionMethod,
         submittedAt: `${submissionDate}T00:00:00.000Z`,
         isRequired,
-        proofFiles,
+        proofFile: uploadedIds[0] ? { publicId: uploadedIds[0] } : undefined,
         decisionNote,
       });
       onRecorded?.();
@@ -266,10 +266,9 @@ export function RecordAuthoritySubmissionDialog({
                 entity="attachment"
                 accept={ACCEPTED_PROOF_TYPES}
                 maxSize={MAX_PROOF_SIZE}
-                maxFiles={10}
-                multiple
+                maxFiles={1}
                 title="Upload submission receipt"
-                hint="PDF, JPG, or PNG · up to 10 MB per file · multiple files supported"
+                hint="PDF, JPG, or PNG · up to 10 MB"
                 onUploaded={({ publicId, file }) =>
                   filesRef.current.set(publicId, file)
                 }

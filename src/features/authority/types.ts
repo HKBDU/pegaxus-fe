@@ -20,7 +20,7 @@ export interface RecordAuthoritySubmissionInput {
   submissionReference: string
   submittedAt: string
   isRequired: boolean
-  proofFiles: File[]
+  proofFile?: { publicId: string } | null
   submissionMethod?: string
   decisionNote?: string
 }
@@ -55,7 +55,7 @@ export interface UpdateAuthorityReviewInput {
   permitNumber?: string
   permitIssuedDate?: string
   permitExpiryDate?: string
-  decisionFile: File
+  decisionFile: { publicId: string }
   decisionNote?: string
   rejectionReason?: string
   revisionDueDate?: string
