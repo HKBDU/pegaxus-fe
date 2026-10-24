@@ -47,6 +47,13 @@ export default function CreateContingencyRoutePage() {
             plan.routeType === "PRIMARY" &&
             plan.status !== "CANCELLED",
         );
+        if (!primarySummary || primarySummary.status !== "DRAFT") {
+          setPrimaryRoutes([]);
+          setError(
+            "BACKUP must be created during the PRIMARY draft phase. It cannot be created after PRIMARY is approved.",
+          );
+          return;
+        }
         let primary = primarySummary;
         if (primary && (!primary.segments || primary.segments.length === 0)) {
           try {

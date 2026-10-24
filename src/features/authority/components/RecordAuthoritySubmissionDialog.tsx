@@ -269,7 +269,7 @@ export function RecordAuthoritySubmissionDialog({
                 maxFiles={10}
                 multiple
                 title="Upload submission receipt"
-                hint="PDF, JPG, or PNG · up to 5 MB per file · multiple files supported"
+                hint="PDF, JPG, or PNG · up to 10 MB per file · multiple files supported"
                 onUploaded={({ publicId, file }) =>
                   filesRef.current.set(publicId, file)
                 }

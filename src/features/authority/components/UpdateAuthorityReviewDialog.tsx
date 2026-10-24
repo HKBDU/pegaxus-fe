@@ -159,7 +159,7 @@ export function UpdateAuthorityReviewDialog({
     if (!decisionFile) {
       next.decisionFile = "Official authority decision document is required.";
     } else if (decisionFile.size > MAX_FILE_SIZE) {
-      next.decisionFile = "File size exceeds the 5MB limit.";
+      next.decisionFile = "File size exceeds the 10MB limit.";
     }
 
     if (decision === "APPROVED") {
@@ -584,7 +584,7 @@ export function UpdateAuthorityReviewDialog({
                       Or drag and drop file here
                     </p>
                     <p className="mt-1 text-[11px] text-slate-400">
-                      Accepted format: PDF, JPG, JPEG, PNG (Max 5MB)
+                Accepted format: PDF, JPG, JPEG, PNG (Max 10MB)
                     </p>
                     <input
                       ref={fileInputRef}

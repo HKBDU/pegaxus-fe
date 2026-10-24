@@ -463,6 +463,7 @@ const documentServiceMethods = {
       .parse(unwrapBackendValue(payload))
       .map(mapBackendRequirement);
   },
+  /** INVALID / DISABLED: Flow 2 does not define a revoke-review endpoint. */
   async revokeDocumentReview(input: RevokeDocumentReviewInput) {
     const review = z
       .object({

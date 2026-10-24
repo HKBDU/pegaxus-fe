@@ -174,7 +174,13 @@ export function mapBackendDossierOverview(payload: unknown) {
   const mandatory = requirements.filter(
     (requirement) => requirement.isMandatory,
   );
-  const statusLocked = ["SUBMITTED", "PENDING", "APPROVED", "CLOSED"].includes(
+  const statusLocked = [
+    "READY_FOR_SUBMISSION",
+    "SUBMITTED",
+    "PENDING",
+    "APPROVED",
+    "CLOSED",
+  ].includes(
     value.status,
   );
   const bookingLocked = ["CANCELLED", "REJECTED"].includes(
