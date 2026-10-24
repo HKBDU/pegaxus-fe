@@ -919,30 +919,36 @@ export function RoutePlanBuilder({
     action: CreateRoutePlanRequest["action"],
   ): CreateRoutePlanRequest {
     const payloadRoutes = isBackup
-      ? [
-          ...readonlyPrimaryRoutes.map((route) => ({
-            route,
-            routeType: "PRIMARY" as const,
-            plannedDepartureAt: plan.departureAt,
-            plannedArrivalAt: plan.arrivalAt,
-            vehicleIds: undefined,
-            outsourcing: undefined,
-          })),
-          ...segments.map((segment) => ({
-            route: segment.route,
-            routeType: "BACKUP" as const,
-            plannedDepartureAt: segment.plannedDepartureAt || plan.departureAt,
-            plannedArrivalAt: segment.plannedArrivalAt || plan.arrivalAt,
-            vehicleIds: segment.vehicleIds,
-            outsourcing:
-              segment.arrangement === "OUTSOURCED" && segment.provider
-                ? {
-                    transportProviderId: segment.provider.transportProviderId,
-                    note: segment.note,
-                  }
-                : undefined,
-          })),
-        ]
+      ? continuity.effectiveRoutes.map((route) => {
+          const backupSegment = segments.find((segment) => segment.route === route);
+          return backupSegment
+            ? {
+                route,
+                routeType: "BACKUP" as const,
+                plannedDepartureAt:
+                  backupSegment.plannedDepartureAt || plan.departureAt,
+                plannedArrivalAt:
+                  backupSegment.plannedArrivalAt || plan.arrivalAt,
+                vehicleIds: backupSegment.vehicleIds,
+                outsourcing:
+                  backupSegment.arrangement === "OUTSOURCED" &&
+                  backupSegment.provider
+                    ? {
+                        transportProviderId:
+                          backupSegment.provider.transportProviderId,
+                        note: backupSegment.note,
+                      }
+                    : undefined,
+              }
+            : {
+                route,
+                routeType: "PRIMARY" as const,
+                plannedDepartureAt: plan.departureAt,
+                plannedArrivalAt: plan.arrivalAt,
+                vehicleIds: undefined,
+                outsourcing: undefined,
+              };
+        })
       : segments.map((segment) => ({
           route: segment.route,
           routeType,
