@@ -5,6 +5,7 @@ import { getRoutePlan, getRoutePlans, getTransportPlan } from "../services";
 import { adaptTransportPlan, loadAllLocations, loadAllRoutes, toMapLocation, toMapRoute, type TransportPlanApiValue } from "../api-adapters";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 import type { RoutePlan, RouteSegment } from "../types";
+import { ongoingTransportService } from "@/features/ongoing-transport/services";
 
 export default function CreateReturnRoutePage() {
   const { transportPlanId } = useParams<{ transportPlanId: string }>();
@@ -24,11 +25,33 @@ export default function CreateReturnRoutePage() {
       getRoutePlans(transportPlanId),
     ])
       .then(async ([plan, locationResult, routeResult, routePlanResult]) => {
-        const locations = locationResult.flatMap((item) => {
+        let locations = locationResult.flatMap((item) => {
           const location = toMapLocation(item);
           return location ? [location] : [];
         });
         const metadata = adaptTransportPlan(plan as TransportPlanApiValue, locations);
+        let currentLocation: MapLocation | undefined;
+        const transportId = (plan as TransportPlanApiValue).transportId ??
+          (plan as TransportPlanApiValue).transport?.transportId;
+        if (transportId != null) {
+          try {
+            const tracking = await ongoingTransportService.tracking(String(transportId));
+            if (tracking.truck) {
+              currentLocation = {
+                id: `dynamic-current-${transportId}`,
+                name: "Current vehicle location",
+                type: "OTHER",
+                city: "",
+                country: "",
+                latitude: tracking.truck.latitude,
+                longitude: tracking.truck.longitude,
+              };
+              locations = [currentLocation, ...locations];
+            }
+          } catch (trackingErr) {
+            console.warn("Could not load current tracking coordinate for return route:", trackingErr);
+          }
+        }
 
         const fullRoutePlans: RoutePlan[] = await Promise.all(
           (routePlanResult?.items ?? []).map(async (rp) => {
@@ -69,6 +92,13 @@ export default function CreateReturnRoutePage() {
           routePlanRoutes,
           metadata: {
             ...metadata,
+            ...(currentLocation
+              ? {
+                  from: currentLocation,
+                  isFromResolved: true,
+                  unresolvedOriginAddress: undefined,
+                }
+              : {}),
           },
         });
       })

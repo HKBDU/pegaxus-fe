@@ -9,6 +9,7 @@ import {
   ongoingTransportQuerySchema,
   transportOverviewSchema,
   transportSegmentsSchema,
+  trackingSnapshotSchema,
 } from "./schemas";
 import { isOngoingTransportMockMode } from "./source";
 import type {
@@ -40,6 +41,18 @@ export const buildOngoingTransportQuery = (params: OngoingTransportParams) =>
   ongoingTransportQuerySchema.parse(params);
 
 export const ongoingTransportService = {
+  async tracking(transportId: string, signal?: AbortSignal) {
+    signal?.throwIfAborted();
+    const response = await apiClient.get<unknown, unknown>(
+      `/transports/${encodeURIComponent(transportId)}/tracking`,
+      { signal },
+    );
+    signal?.throwIfAborted();
+    const envelope = ongoingTransportEnvelopeSchema.parse(response);
+    if (!envelope.isSuccess)
+      throw new OngoingTransportApiError(envelope.code, envelope.errorCode, envelope.message);
+    return trackingSnapshotSchema.parse(envelope.value);
+  },
   async segments(
     transportId: string,
     _audience: TransportAudience,

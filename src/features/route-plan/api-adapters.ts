@@ -63,6 +63,8 @@ export function toMapRoute(item: RouteMaster, locations: MapLocation[]): MapRout
 }
 
 export type TransportPlanApiValue = {
+  transportId?: string | number;
+  transport?: { transportId?: string | number } | null;
   planCode?: string;
   bookingCode?: string;
   isCrossBorder?: boolean;

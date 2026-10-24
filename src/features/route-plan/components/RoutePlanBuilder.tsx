@@ -192,7 +192,9 @@ export function RoutePlanBuilder({
   );
 
   const [returnOrigin, setReturnOrigin] = useState<MapLocation | null>(
-    () => initialRoutes[0]?.fromLocation ?? null,
+    () =>
+      initialRoutes[0]?.fromLocation ??
+      (isReturn ? (metadata?.from ?? null) : null),
   );
 
   const fallbackFrom =
@@ -1082,6 +1084,7 @@ export function RoutePlanBuilder({
               locations={locations}
               onFromChange={(loc) => {
                 setCustomFrom(loc);
+                if (isReturn) setReturnOrigin(loc);
                 void checkAndPersistLocation(loc);
               }}
               onToChange={(loc) => {
