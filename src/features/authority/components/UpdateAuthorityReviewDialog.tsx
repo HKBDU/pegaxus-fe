@@ -46,7 +46,7 @@ import type { AuthorityDecision } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
 
 const ACCEPTED_FILE_TYPES = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 type Errors = Partial<
   Record<
@@ -122,14 +122,14 @@ export function UpdateAuthorityReviewDialog({
     if (!matchesAcceptedType(file, ACCEPTED_FILE_TYPES)) {
       setErrors((prev) => ({
         ...prev,
-        decisionFile: "Invalid format. Accepted: PDF, JPG, JPEG, PNG (Max 5MB).",
+        decisionFile: "Invalid format. Accepted: PDF, JPG, JPEG, PNG (Max 10MB).",
       }));
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
       setErrors((prev) => ({
         ...prev,
-        decisionFile: "File size exceeds the 5MB limit. Please upload a smaller file.",
+        decisionFile: "File size exceeds the 10MB limit. Please upload a smaller file.",
       }));
       return;
     }

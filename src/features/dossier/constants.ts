@@ -6,8 +6,8 @@ import type {
   DossierRequirementsParams,
 } from "./types";
 
-// The current presigned signature endpoint accepts 5 MiB, unlike the older multipart contract.
-export const UPLOAD_MAX_FILE_BYTES = 5 * 1024 * 1024;
+// Flow 2 BR-039 allows up to 10 MB per compliance document file.
+export const UPLOAD_MAX_FILE_BYTES = 10 * 1024 * 1024;
 export const UPLOAD_ACCEPTED_MIME_TYPES = [
   "application/pdf",
   "image/jpeg",

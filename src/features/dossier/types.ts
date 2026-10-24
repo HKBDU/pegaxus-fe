@@ -103,7 +103,7 @@ export type SendMissingDocumentReminderInput = {
   reminder: MissingDocumentReminderInput;
 };
 export type ApproveDocumentInput = {
-  documentId?: string;
+  documentId: string;
   versionId: string | number;
   dossierId: string;
   requirementId: string | number;
@@ -145,14 +145,14 @@ export type UploadDocumentInput = {
   metadata: UploadDocumentMetadata;
 };
 export type SubmitDocumentVersionInput = {
-  documentId?: string;
+  documentId: string;
   dossierId: string;
   requirementId: string | number;
   files: DossierUploadedAssetRef[];
   metadata: UploadDocumentMetadata;
 };
 export type UpdateDocumentMetadataInput = {
-  documentId?: string;
+  documentId: string;
   dossierId: string;
   requirementId: string | number;
   changes: Partial<

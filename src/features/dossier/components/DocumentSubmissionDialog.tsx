@@ -592,7 +592,7 @@ export function DocumentSubmissionDialog({
                         disabled={pending || noRetry || !eligible}
                         onStateChange={changeUploadState}
                         title="Upload document files"
-                        hint="PDF, JPG, JPEG, PNG · Max 5 MiB per file"
+                        hint="PDF, JPG, JPEG, PNG · Max 10 MB per file"
                         onReject={() => {
                           if (
                             activeUploadScope.current !== uploadScope ||
@@ -600,7 +600,7 @@ export function DocumentSubmissionDialog({
                           )
                             return;
                           setFileError(
-                            "Some files were rejected. Use PDF, JPG, JPEG, or PNG files of 5 MiB or smaller.",
+                            "Some files were rejected. Use PDF, JPG, JPEG, or PNG files of 10 MB or smaller.",
                           );
                         }}
                       />

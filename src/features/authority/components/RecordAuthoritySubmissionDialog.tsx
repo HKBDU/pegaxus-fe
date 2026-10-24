@@ -29,7 +29,7 @@ import type { AuthoritySubmissionStatus } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
 
 const ACCEPTED_PROOF_TYPES = "application/pdf,image/jpeg,image/png";
-const MAX_PROOF_SIZE = 5 * 1024 * 1024;
+const MAX_PROOF_SIZE = 10 * 1024 * 1024;
 type Errors = Partial<
   Record<
     | "authorityName"

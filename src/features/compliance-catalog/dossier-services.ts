@@ -25,38 +25,34 @@ const toDossierRequirementBody = (draft: CustomRequirementDraft) => ({
   instruction: draft.instruction || undefined,
 })
 
-const initializationItemSchema = z.object({
-  complianceRequirementId: z.string().min(1),
+const manualRequirementSchema = z.object({
+  complianceRequirementId: z.union([z.string().min(1), z.number().int().positive()]),
+  horseId: z.union([z.string(), z.number()]).nullable(),
   isMandatory: z.boolean(),
-  appliesPerHorse: z.boolean(),
+  dueDate: z.string().optional(),
   instruction: z.string().nullish(),
 });
 const initializationRequestSchema = z.object({
-  dossierTemplateId: z.string().min(1).optional(),
-  items: z
-    .array(initializationItemSchema)
-    .min(1)
-    .refine(
-      (items) =>
-        new Set(items.map((item) => item.complianceRequirementId)).size ===
-        items.length,
-      "Each ComplianceRequirement must appear only once in the initialization request.",
-    ),
+  dossierTemplateId: z.union([z.string().min(1), z.number().int().positive()]).optional(),
+  selectedTemplateItemIds: z.array(z.union([z.string(), z.number()])).optional(),
+  manualRequirements: z.array(manualRequirementSchema).optional(),
+}).superRefine((value, ctx) => {
+  const fromTemplate = value.dossierTemplateId !== undefined;
+  if (fromTemplate && !value.selectedTemplateItemIds?.length)
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Template items are required." });
+  if (!fromTemplate && !value.manualRequirements?.length)
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Manual requirements are required." });
 });
 const createdDossierEnvelopeSchema = z.object({
   isSuccess: z.literal(true),
   code: z.literal(201),
   message: z.string(),
   value: z.object({
-    complianceDossierId: z.string().min(1),
+    complianceDossierId: z.union([z.string().min(1), z.number().int().positive()]),
     dossierCode: z.string().min(1),
     dossierType: z.literal("MAIN"),
-    bookingId: z.string().min(1),
-    transportId: z.string().min(1),
     status: z.literal("DRAFT"),
-    requirements: z.array(
-      z.object({ dossierRequirementId: z.string().min(1) }),
-    ).min(1),
+    generatedRequirementCount: z.number().int().nonnegative(),
   }),
 });
 
@@ -133,7 +129,19 @@ export const dossierService = {
    * Specialist would get a 404; AB2 (GET /bookings/approved/{id}) is scoped to the assigned staff instead.
    */
   async getBookingForApply(bookingId: EntityId): Promise<ApplyBooking> {
-    if (useComplianceMocks && !useFlow2HttpMocks) return bookingService.getBooking(bookingId)
+    if (useComplianceMocks && !useFlow2HttpMocks) {
+      const booking = await bookingService.getBooking(bookingId)
+      return {
+        bookingId: booking.bookingId,
+        bookingCode: booking.bookingCode,
+        status: booking.status,
+        originCountry: booking.originCountry,
+        destinationCountry: booking.destinationCountry,
+        transportId: booking.transport?.transportId ?? null,
+        customer: booking.customer,
+        horses: booking.horses,
+      }
+    }
     const payload = await api.get<unknown>(`bookings/approved/${bookingId}`)
     const booking = z.object({ isSuccess: z.literal(true), code: z.number().int().min(200).max(299), value: approvedBookingDetailSchema }).parse(payload).value
     return {
@@ -142,6 +150,7 @@ export const dossierService = {
       status: booking.status,
       originCountry: booking.originCountry,
       destinationCountry: booking.destinationCountry,
+      transportId: booking.transport?.transportId ?? null,
       customer: { fullName: booking.customer.fullName },
       horses: booking.horses.map((horse) => ({ horseId: horse.horseId, horseName: horse.horseName })),
     }
@@ -176,6 +185,7 @@ export const dossierService = {
   async createDossier(input: CreateDossierInput): Promise<CreateDossierResult> {
     const {
       bookingId,
+      transportId,
       dossierTemplateId,
       selectedTemplateItemIds,
       customRequirements,
@@ -215,7 +225,7 @@ export const dossierService = {
       const dossier: ComplianceDossierSummary = {
         complianceDossierId,
         dossierCode: `CD-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${7000 + mockDossiers.size}`,
-        status: "IN_PREPARATION",
+        status: "DRAFT",
         dossierType: "MAIN",
       };
       mockDossiers.set(String(bookingId), dossier);
@@ -226,29 +236,15 @@ export const dossierService = {
       };
     }
 
-    if (
-      !fromTemplate &&
-      customRequirements.some((item) => item.horseId !== null || item.dueDate)
-    ) {
-      throw new Error(
-        "The current dossier initialization API cannot preserve a specific horse or due date. Use a template, then add these requirements from the dossier page.",
-      );
-    }
     const body = initializationRequestSchema.parse({
-      dossierTemplateId,
-      items: fromTemplate
-        ? input.initializationItems
-        : customRequirements.map((item) => ({
-            complianceRequirementId: item.complianceRequirementId,
-            isMandatory: item.isMandatory,
-            appliesPerHorse: false,
-            instruction: item.instruction,
-          })),
+      ...(fromTemplate
+        ? { dossierTemplateId, selectedTemplateItemIds }
+        : { manualRequirements: customRequirements.map(toDossierRequirementBody) }),
     });
     let payload: unknown;
     try {
       payload = await api.post<unknown>(
-        `bookings/${bookingId}/compliance-dossier`,
+        `transports/${transportId}/compliance-dossier`,
         body,
       );
     } catch (error) {
@@ -267,7 +263,7 @@ export const dossierService = {
       throw error;
     }
     const parsed = createdDossierEnvelopeSchema.safeParse(payload);
-    if (!parsed.success || parsed.data.value.bookingId !== String(bookingId)) {
+    if (!parsed.success) {
       throw new ComplianceApiError("DOSSIER_CREATE_OUTCOME_UNKNOWN", {
         backendMessage:
           "The creation response cannot be verified. Do not submit again; reload and check the dossier.",
@@ -297,7 +293,7 @@ export const dossierService = {
     }
     return {
       ...created,
-      generatedRequirementCount: created.requirements.length + addedCustom,
+      generatedRequirementCount: created.generatedRequirementCount + addedCustom,
       failedCustomCount,
     };
   },
