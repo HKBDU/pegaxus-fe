@@ -68,6 +68,7 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
 }
 
 const adminHeaderRoutes = [
+  { path: "/admin/transports/:transportId/financial-summary", label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "FINANCIAL SUMMARY" },
   { path: "/admin/emergency-costs/new", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "NEW COST REQUEST" },
   { path: "/admin/emergency-costs/:emergencyCostRequestId", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "COST REQUEST DETAILS" },
   { path: "/admin/emergency-costs", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "" },

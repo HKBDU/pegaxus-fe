@@ -38,6 +38,7 @@ import {
 } from "@/features/horse-health";
 import { incidentRoutes } from "@/features/incident-report";
 import { ongoingTransportRoutes } from "@/features/ongoing-transport";
+import { financialReportRoutes } from "@/features/financial-report";
 import {
   emergencyCostRoutes,
   emergencyRerouteRoutes,
@@ -187,6 +188,7 @@ const bookingHistoryPage = (
 export const router = createBrowserRouter([
   ...emergencyCostRoutes,
   ...emergencyRerouteRoutes,
+  ...financialReportRoutes,
   {
     element: (
       <DriverLocationSession>
