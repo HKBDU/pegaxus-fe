@@ -224,7 +224,8 @@ export function DocumentSubmissionDialog({
       expiryDate: detail.expiryDate ?? "",
       uploadNote: "",
     });
-  }, [detail, reset]);
+    void form.trigger();
+  }, [detail, form, reset]);
 
   // Capture once per document; a background refetch must not rebase unsaved input.
   if (detail && documentBaseline?.documentId !== detail.complianceDocumentId) {
