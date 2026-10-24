@@ -111,6 +111,12 @@ export function getPostLoginPath(
 
 const adminHeaderRoutes = [
   {
+    path: "/admin/transports/:transportId/financial-summary",
+    label: "ONGOING TRANSPORTS",
+    href: ROLE_ROUTES.ongoingTransports,
+    title: "FINANCIAL SUMMARY",
+  },
+  {
     path: "/admin/transports/:transportId/audit",
     label: "TRANSPORT ARCHIVE",
     href: ROLE_ROUTES.transportArchive,

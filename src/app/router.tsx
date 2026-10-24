@@ -39,6 +39,7 @@ import {
 import { incidentRoutes } from "@/features/incident-report";
 import { transportAuditRoutes } from "@/features/transport-audit";
 import { ongoingTransportRoutes } from "@/features/ongoing-transport";
+import { financialReportRoutes } from "@/features/financial-report";
 import {
   emergencyCostRoutes,
   emergencyRerouteRoutes,
@@ -189,6 +190,7 @@ export const router = createBrowserRouter([
   ...transportAuditRoutes,
   ...emergencyCostRoutes,
   ...emergencyRerouteRoutes,
+  ...financialReportRoutes,
   {
     element: (
       <DriverLocationSession>
