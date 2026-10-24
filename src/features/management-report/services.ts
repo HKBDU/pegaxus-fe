@@ -11,7 +11,8 @@ import {
   type LookupKind,
   type ReportFilters,
 } from "./schemas";
-import { reportParams } from "./filters";
+import { reportParams, incidentReportParams } from "./filters";
+import { incidentClaimReportSchema, type IncidentFilters } from "./schemas";
 
 export class ReportError extends Error {
   readonly code: string;
@@ -148,6 +149,35 @@ export async function getOnTimeReport(
   }
 }
 
+export async function getIncidentClaimReport(
+  filters: IncidentFilters,
+  scope: string,
+  signal: AbortSignal,
+) {
+  try {
+    assertReportAccess(scope, signal);
+    const payload = await apiClient.get<unknown, unknown>(
+      "/reports/incident-claim-frequency",
+      { params: incidentReportParams(filters), signal },
+    );
+    assertReportAccess(scope, signal);
+    const report = incidentClaimReportSchema.parse(unwrapReport(payload));
+    if (
+      report.period.dateFrom !== filters.dateFrom ||
+      report.period.dateTo !== filters.dateTo ||
+      report.pageIndex !== filters.pageIndex ||
+      report.pageSize !== filters.pageSize
+    )
+      throw new ReportError(
+        "CONTRACT_MISMATCH",
+        "The response period or pagination does not match the requested report.",
+      );
+    return report;
+  } catch (error) {
+    throw reportError(error);
+  }
+}
+
 const paging = {
   pageIndex: z.number().int().positive(),
   pageSize: z.number().int().positive(),
@@ -188,6 +218,18 @@ const drivers = z.object({
     }),
   ),
 });
+const vehicles = z.object({
+  ...paging,
+  items: z.array(
+    z.object({
+      vehicleId: guidSchema,
+      vehicleCode: z.string(),
+      vehicleName: z.string().nullable(),
+      licensePlate: z.string().nullable(),
+      status: z.string(),
+    }),
+  ),
+});
 export async function getReportLookup(
   kind: LookupKind,
   search: string,
@@ -202,7 +244,9 @@ export async function getReportLookup(
         ? "/routes"
         : kind === "provider"
           ? "/transport-providers"
-          : "/employees";
+          : kind === "vehicle"
+            ? "/vehicles"
+            : "/employees";
     const payload = await apiClient.get<unknown, unknown>(path, {
       params: {
         search: search || undefined,
@@ -231,6 +275,16 @@ export async function getReportLookup(
         items: result.items.map((item) => ({
           id: item.transportProviderId,
           label: `${item.providerName} · ${item.providerCode} (${item.status})`,
+        })),
+      };
+    }
+    if (kind === "vehicle") {
+      const result = vehicles.parse(value);
+      return {
+        ...result,
+        items: result.items.map((item) => ({
+          id: item.vehicleId,
+          label: `${item.vehicleCode}${item.licensePlate ? ` · ${item.licensePlate}` : ""} (${item.status})`,
         })),
       };
     }

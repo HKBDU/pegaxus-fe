@@ -1,4 +1,9 @@
-import { reportFiltersSchema, type ReportFilters } from "./schemas";
+import {
+  reportFiltersSchema,
+  incidentFiltersSchema,
+  type IncidentFilters,
+  type ReportFilters,
+} from "./schemas";
 
 export const reportPath = "/admin/reports/on-time-delivery";
 export const filterKeys = [
@@ -36,10 +41,17 @@ export function defaultFilters(now = new Date()): ReportFilters {
 }
 
 export function readFilters(params: URLSearchParams) {
-  const defaults = defaultFilters();
+  const raw = readFilterValues(params, defaultFilters(), filterKeys);
+  return { raw, parsed: reportFiltersSchema.safeParse(raw) };
+}
+function readFilterValues(
+  params: URLSearchParams,
+  defaults: Record<string, string | number>,
+  keys: readonly string[],
+) {
   const explicitDates = params.has("dateFrom") || params.has("dateTo");
   const raw = Object.fromEntries(
-    filterKeys.map((key) => [
+    keys.map((key) => [
       key,
       params.get(key) ??
         (explicitDates && (key === "dateFrom" || key === "dateTo")
@@ -49,12 +61,19 @@ export function readFilters(params: URLSearchParams) {
   );
   for (const key of ["pageIndex", "pageSize"])
     raw[key] = /^\d+$/.test(String(raw[key])) ? Number(raw[key]) : NaN;
-  return { raw, parsed: reportFiltersSchema.safeParse(raw) };
+  return raw;
 }
 
 export function writeFilters(current: URLSearchParams, filters: ReportFilters) {
+  return writeFilterValues(current, filters, filterKeys);
+}
+function writeFilterValues(
+  current: URLSearchParams,
+  filters: Record<string, string | number>,
+  keys: readonly string[],
+) {
   const next = new URLSearchParams(current);
-  for (const key of filterKeys) {
+  for (const key of keys) {
     const value = filters[key];
     if (value === "") next.delete(key);
     else next.set(key, String(value));
@@ -67,8 +86,15 @@ export function reportParams(
   exportFormat?: "xlsx" | "pdf",
 ) {
   const parsed = reportFiltersSchema.parse(filters);
+  return serializeReportParams(parsed, filterKeys, exportFormat);
+}
+function serializeReportParams(
+  parsed: Record<string, string | number>,
+  keys: readonly string[],
+  exportFormat?: "xlsx" | "pdf",
+) {
   const params: Record<string, string | number> = {};
-  for (const key of filterKeys) {
+  for (const key of keys) {
     if (exportFormat && (key === "pageIndex" || key === "pageSize")) continue;
     if (parsed[key] !== "") params[key] = parsed[key];
   }
@@ -82,6 +108,84 @@ export function cohortKey(filters: ReportFilters) {
     pageSize: _size,
     sortBy: _sort,
     bucket: _bucket,
+    ...cohort
+  } = filters;
+  return JSON.stringify(cohort);
+}
+
+export const incidentFilterKeys = [
+  "dateFrom",
+  "dateTo",
+  "originCountry",
+  "destinationCountry",
+  "routeId",
+  "transportProviderId",
+  "incidentCategory",
+  "severity",
+  "vehicleId",
+  "horseId",
+  "claimType",
+  "sortBy",
+  "pageIndex",
+  "pageSize",
+] as const;
+export function defaultIncidentFilters(now = new Date()): IncidentFilters {
+  const {
+    dateFrom,
+    dateTo,
+    originCountry,
+    destinationCountry,
+    routeId,
+    transportProviderId,
+    pageIndex,
+    pageSize,
+  } = defaultFilters(now);
+  return {
+    dateFrom,
+    dateTo,
+    originCountry,
+    destinationCountry,
+    routeId,
+    transportProviderId,
+    pageIndex,
+    pageSize,
+    incidentCategory: "",
+    severity: "",
+    vehicleId: "",
+    horseId: "",
+    claimType: "",
+    sortBy: "occurredAt:desc",
+  };
+}
+export function readIncidentFilters(params: URLSearchParams) {
+  const raw = readFilterValues(
+    params,
+    defaultIncidentFilters(),
+    incidentFilterKeys,
+  );
+  return { raw, parsed: incidentFiltersSchema.safeParse(raw) };
+}
+export function writeIncidentFilters(
+  current: URLSearchParams,
+  filters: IncidentFilters,
+) {
+  return writeFilterValues(current, filters, incidentFilterKeys);
+}
+export function incidentReportParams(
+  filters: IncidentFilters,
+  exportFormat?: "xlsx" | "pdf",
+) {
+  return serializeReportParams(
+    incidentFiltersSchema.parse(filters),
+    incidentFilterKeys,
+    exportFormat,
+  );
+}
+export function incidentCohortKey(filters: IncidentFilters) {
+  const {
+    pageIndex: _page,
+    pageSize: _size,
+    sortBy: _sort,
     ...cohort
   } = filters;
   return JSON.stringify(cohort);

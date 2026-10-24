@@ -10,8 +10,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/shared/components/ui/select";
-import type { ReportFilters as Filters } from "../schemas";
+import {
+  incidentCategorySchema,
+  severitySchema,
+  claimTypeSchema,
+  type IncidentFilters,
+  type ReportFilters as Filters,
+} from "../schemas";
 import { LookupFilter } from "./LookupFilter";
+import { CsvFilter } from "./CsvFilter";
 
 const countries = getCountryDataList().sort((a, b) =>
   a.name.localeCompare(b.name),
@@ -23,14 +30,28 @@ export function ReportFilters({
   onReset,
   errors,
   disabled,
+  variant = "on-time-delivery",
 }: {
   draft: Record<string, string | number>;
-  onChange: (key: keyof Filters, value: string) => void;
+  onChange: (key: keyof Filters | keyof IncidentFilters, value: string) => void;
   onApply: () => void;
   onReset: () => void;
   errors: string[];
   disabled: boolean;
+  variant?: "on-time-delivery" | "incident-claim-frequency";
 }) {
+  const lookupFields =
+    variant === "incident-claim-frequency"
+      ? ([
+          ["routeId", "Route", "route"],
+          ["transportProviderId", "Provider", "provider"],
+          ["vehicleId", "Vehicle", "vehicle"],
+        ] as const)
+      : ([
+          ["routeId", "Route", "route"],
+          ["transportProviderId", "Provider", "provider"],
+          ["driverEmployeeId", "Driver", "driver"],
+        ] as const);
   const control =
     "h-9 w-full rounded-[2px] border-slate-200 bg-white text-sm shadow-none";
   return (
@@ -94,13 +115,7 @@ export function ReportFilters({
             />
           </div>
         ))}
-        {(
-          [
-            ["routeId", "Route", "route"],
-            ["transportProviderId", "Provider", "provider"],
-            ["driverEmployeeId", "Driver", "driver"],
-          ] as const
-        ).map(([key, label, kind]) => (
+        {lookupFields.map(([key, label, kind]) => (
           <div key={key} className="min-w-0 space-y-1.5">
             <Label htmlFor={`report-${key}`} className="text-xs">
               {label}
@@ -113,23 +128,73 @@ export function ReportFilters({
             />
           </div>
         ))}
-        <div className="min-w-0 space-y-1.5">
-          <Label htmlFor="report-trend" className="text-xs">
-            Trend grouping
-          </Label>
-          <Select
-            value={String(draft.trendBy)}
-            onValueChange={(value) => onChange("trendBy", value)}
-          >
-            <SelectTrigger id="report-trend" className={control}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="WEEK">Week</SelectItem>
-              <SelectItem value="MONTH">Month</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {variant === "on-time-delivery" ? (
+          <div className="min-w-0 space-y-1.5">
+            <Label htmlFor="report-trend" className="text-xs">
+              Trend grouping
+            </Label>
+            <Select
+              value={String(draft.trendBy)}
+              onValueChange={(value) => onChange("trendBy", value)}
+            >
+              <SelectTrigger id="report-trend" className={control}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="WEEK">Week</SelectItem>
+                <SelectItem value="MONTH">Month</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <>
+            {(
+              [
+                [
+                  "incidentCategory",
+                  "Incident categories",
+                  incidentCategorySchema.options,
+                ],
+                ["severity", "Severity", severitySchema.options],
+                ["claimType", "Claim types", claimTypeSchema.options],
+              ] as const
+            ).map(([key, label, options]) => (
+              <div key={key} className="min-w-0 space-y-1.5">
+                <Label htmlFor={`report-${key}`} className="text-xs">
+                  {label}
+                </Label>
+                <CsvFilter
+                  id={`report-${key}`}
+                  label={label}
+                  options={options}
+                  value={String(draft[key])}
+                  onChange={(value) => onChange(key, value)}
+                />
+              </div>
+            ))}
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="report-horse-id" className="text-xs">
+                Horse ID (optional)
+              </Label>
+              <Input
+                id="report-horse-id"
+                value={String(draft.horseId)}
+                onChange={(event) =>
+                  onChange("horseId", event.target.value.trim())
+                }
+                placeholder="Known horse GUID"
+                className={control}
+                aria-describedby="report-horse-hint"
+              />
+              <p
+                id="report-horse-hint"
+                className="m-0 text-[11px] text-slate-500"
+              >
+                Use an existing horse’s ID.
+              </p>
+            </div>
+          </>
+        )}
       </div>
       <datalist id="report-countries">
         {countries.map((country) => (

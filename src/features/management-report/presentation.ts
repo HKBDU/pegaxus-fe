@@ -1,6 +1,18 @@
 import type { OnTimeReport } from "./schemas";
 
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
+export const reportLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .replace(/^./, (first) => first.toUpperCase());
+const vnd = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "VND",
+  maximumFractionDigits: 0,
+});
+export const reportMoney = (value: number | null) =>
+  value === null ? "—" : vnd.format(value);
 export const reportNumber = (value: number | null) =>
   value === null ? "—" : number.format(value);
 export const reportRate = (value: number | null) =>
@@ -28,7 +40,12 @@ export const causeLabels = {
   ROUTE_CHANGE: "Route change",
   UNKNOWN: "Unknown",
 };
-export function reportMeta(report: OnTimeReport) {
+export function reportMeta(
+  report: Pick<
+    OnTimeReport,
+    "pageIndex" | "pageSize" | "totalItems" | "totalPages"
+  >,
+) {
   return {
     currentPage: report.pageIndex,
     itemsPerPage: report.pageSize,

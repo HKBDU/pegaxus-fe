@@ -1,6 +1,4 @@
-import { useEffect, useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
-import { Download } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
 import { Button } from "@/shared/components/ui/button";
@@ -9,90 +7,36 @@ import { ReportFilters } from "../components/ReportFilters";
 import { PerformanceOverview } from "../components/PerformanceOverview";
 import { ReportCharts } from "../components/ReportCharts";
 import { TransportReportTable } from "../components/TransportReportTable";
-import { defaultFilters, readFilters, writeFilters } from "../filters";
+import { ReportExportActions } from "../components/ReportExportActions";
+import { useOnTimeFilterState } from "../filter-state";
 import {
   useOnTimeDeliveryReport,
   useReportAccess,
   useReportExport,
 } from "../hooks";
-import { reportFiltersSchema, type ReportFilters as Filters } from "../schemas";
+import type { ReportFilters as Filters } from "../schemas";
 import { reportError, terminalReportError } from "../services";
 import { reportNumber, reportTime } from "../presentation";
 
 function ReportWorkspace() {
-  const [params, setParams] = useSearchParams();
   const location = useLocation();
-  const { raw, parsed } = readFilters(params);
-  const applied = parsed.success ? parsed.data : null;
-  const draftKey = JSON.stringify([
-    raw.dateFrom,
-    raw.dateTo,
-    raw.originCountry,
-    raw.destinationCountry,
-    raw.routeId,
-    raw.transportProviderId,
-    raw.driverEmployeeId,
-    raw.trendBy,
-  ]);
-  const [form, setForm] = useState({ key: draftKey, values: raw });
-  const [errors, setErrors] = useState<string[]>([]);
-  if (form.key !== draftKey) {
-    setForm({ key: draftKey, values: raw });
-    if (errors.length) setErrors([]);
-  }
-  const draft = form.key === draftKey ? form.values : raw;
+  const state = useOnTimeFilterState();
+  const { raw, applied, draft } = state;
   const query = useOnTimeDeliveryReport(applied);
   const exporting = useReportExport();
-  useEffect(() => {
-    if (!params.has("dateFrom") && !params.has("dateTo") && parsed.success)
-      setParams(writeFilters(params, parsed.data), { replace: true });
-  }, [params, parsed, setParams]);
 
   function change(update: Partial<Filters>) {
     if (!applied || exporting.pending) return;
-    const next = reportFiltersSchema.safeParse({ ...applied, ...update });
-    if (next.success) setParams(writeFilters(params, next.data));
+    state.change(update);
   }
   function apply() {
-    const result = reportFiltersSchema.safeParse({
-      ...draft,
-      pageIndex: 1,
-      pageSize: applied?.pageSize ?? raw.pageSize,
-      bucket: applied?.bucket ?? raw.bucket,
-      sortBy: applied?.sortBy ?? raw.sortBy,
-    });
-    if (!result.success) {
-      setErrors(
-        result.error.issues.map(
-          (issue) => `${issue.path.join(".")}: ${issue.message}`,
-        ),
-      );
-      return;
-    }
-    setErrors([]);
-    const next = result.data;
-    if (
-      applied &&
-      JSON.stringify({ ...next, pageIndex: applied.pageIndex }) ===
-        JSON.stringify(applied)
-    )
-      next.pageIndex = applied.pageIndex;
-    if (applied && JSON.stringify(next) === JSON.stringify(applied)) {
-      void query.refetch();
-      return;
-    }
-    setParams(writeFilters(params, next));
+    state.apply(() => void query.refetch());
   }
   const failure = query.error ? reportError(query.error) : null;
   const report = query.data;
   const blocked = [failure, exporting.error].find(
     (error) => error && terminalReportError(error),
   );
-  const urlErrors = parsed.success
-    ? []
-    : parsed.error.issues.map(
-        (issue) => `${issue.path.join(".")}: ${issue.message}`,
-      );
   const busy = Boolean(exporting.pending);
   const returnUrl = location.pathname + location.search;
   return (
@@ -102,27 +46,13 @@ function ReportWorkspace() {
         backHref="/admin"
         backLabel="Workspace"
         action={
-          <div className="flex max-w-full flex-wrap gap-2">
-            {(["xlsx", "pdf"] as const).map((format) => (
-              <Button
-                type="button"
-                key={format}
-                variant="outline"
-                disabled={!applied || busy || Boolean(blocked)}
-                onClick={() => {
-                  if (applied) void exporting.download(applied, format);
-                }}
-                className="h-9 rounded-[2px]"
-              >
-                <Download aria-hidden="true" className="size-4" />
-                {exporting.pending === format
-                  ? "Exporting…"
-                  : format === "xlsx"
-                    ? "Export XLSX"
-                    : "Export PDF"}
-              </Button>
-            ))}
-          </div>
+          <ReportExportActions
+            pending={exporting.pending}
+            disabled={!applied || busy || Boolean(blocked)}
+            onExport={(format) => {
+              if (applied) void exporting.download(applied, format);
+            }}
+          />
         }
       />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-500">
@@ -135,20 +65,10 @@ function ReportWorkspace() {
       </div>
       <ReportFilters
         draft={draft}
-        onChange={(key, value) =>
-          setForm((current) => ({
-            ...current,
-            values: { ...current.values, [key]: value },
-          }))
-        }
+        onChange={state.edit}
         onApply={apply}
-        onReset={() => {
-          setErrors([]);
-          const defaults = defaultFilters();
-          setForm({ key: draftKey, values: defaults });
-          setParams(writeFilters(params, defaults));
-        }}
-        errors={errors.length ? errors : urlErrors}
+        onReset={state.reset}
+        errors={state.errors}
         disabled={busy}
       />
       {exporting.error && !blocked ? (

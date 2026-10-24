@@ -1,20 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import { useAuthStore } from "@/features/auth/store";
 import { canAccess } from "@/features/auth/access-control";
-import { cohortKey } from "./filters";
+import { cohortKey, incidentCohortKey } from "./filters";
 import {
   getOnTimeReport,
+  getIncidentClaimReport,
   reportScope,
   hasReportAccess,
   reportError,
   type ReportError,
 } from "./services";
-import { exportOnTimeReport, saveReportFile } from "./export";
+import {
+  exportOnTimeReport,
+  exportIncidentClaimReport,
+  saveReportFile,
+} from "./export";
 import {
   reportFiltersSchema,
   onTimeReportSchema,
+  incidentFiltersSchema,
+  incidentClaimReportSchema,
   type ReportFilters,
+  type IncidentFilters,
   type ExportFormat,
 } from "./schemas";
 
@@ -30,14 +39,23 @@ export function useReportAccess() {
     sessionVersion,
   };
 }
-export function useOnTimeDeliveryReport(filters: ReportFilters | null) {
+function useManagementReport<F, T>(
+  filters: F | null,
+  definition: {
+    type: "on-time-delivery" | "incident-claim-frequency";
+    filterSchema: z.ZodType<F>;
+    responseSchema: z.ZodType<T>;
+    cohort: (filters: F) => string;
+    read: (filters: F, scope: string, signal: AbortSignal) => Promise<T>;
+  },
+) {
   const { allowed, scope } = useReportAccess();
   const client = useQueryClient();
   const query = useQuery({
-    queryKey: ["management-report", scope, "on-time-delivery", filters],
+    queryKey: ["management-report", scope, definition.type, filters],
     queryFn: ({ signal }) => {
       if (!filters) throw new Error("Valid filters are required.");
-      return getOnTimeReport(filters, scope, signal);
+      return definition.read(filters, scope, signal);
     },
     enabled: allowed && filters !== null,
     retry: false,
@@ -46,11 +64,11 @@ export function useOnTimeDeliveryReport(filters: ReportFilters | null) {
     staleTime: 60000,
     placeholderData: (previous, previousQuery) => {
       const old = previousQuery?.queryKey[3];
-      const parsed = reportFiltersSchema.safeParse(old);
+      const parsed = definition.filterSchema.safeParse(old);
       if (!filters || previousQuery?.queryKey[1] !== scope || !parsed.success)
         return undefined;
       // Keep charts only for changes that leave the report-wide cohort unchanged.
-      return cohortKey(parsed.data) === cohortKey(filters)
+      return definition.cohort(parsed.data) === definition.cohort(filters)
         ? previous
         : undefined;
     },
@@ -60,19 +78,21 @@ export function useOnTimeDeliveryReport(filters: ReportFilters | null) {
       ? client
           .getQueryCache()
           .findAll({
-            queryKey: ["management-report", scope, "on-time-delivery"],
+            queryKey: ["management-report", scope, definition.type],
           })
           .filter((cached) => {
-            const parsed = reportFiltersSchema.safeParse(cached.queryKey[3]);
+            const parsed = definition.filterSchema.safeParse(
+              cached.queryKey[3],
+            );
             return (
               cached.state.status === "success" &&
               parsed.success &&
-              cohortKey(parsed.data) === cohortKey(filters)
+              definition.cohort(parsed.data) === definition.cohort(filters)
             );
           })
           .sort((a, b) => b.state.dataUpdatedAt - a.state.dataUpdatedAt)[0]
       : undefined;
-  const previous = onTimeReportSchema.safeParse(sameCohort?.state.data);
+  const previous = definition.responseSchema.safeParse(sameCohort?.state.data);
   const fallback = previous.success ? previous.data : undefined;
   return {
     ...query,
@@ -81,7 +101,33 @@ export function useOnTimeDeliveryReport(filters: ReportFilters | null) {
     scope,
   };
 }
-export function useReportExport() {
+export function useOnTimeDeliveryReport(filters: ReportFilters | null) {
+  return useManagementReport(filters, {
+    type: "on-time-delivery",
+    filterSchema: reportFiltersSchema,
+    responseSchema: onTimeReportSchema,
+    cohort: cohortKey,
+    read: getOnTimeReport,
+  });
+}
+export function useIncidentClaimReport(filters: IncidentFilters | null) {
+  return useManagementReport(filters, {
+    type: "incident-claim-frequency",
+    filterSchema: incidentFiltersSchema,
+    responseSchema: incidentClaimReportSchema,
+    cohort: incidentCohortKey,
+    read: getIncidentClaimReport,
+  });
+}
+
+function useReportFileExport<F>(
+  send: (
+    filters: F,
+    format: ExportFormat,
+    scope: string,
+    signal: AbortSignal,
+  ) => Promise<{ blob: Blob; filename: string }>,
+) {
   const { scope } = useReportAccess();
   const controller = useRef<AbortController | null>(null);
   const [pending, setPending] = useState<ExportFormat | null>(null);
@@ -96,7 +142,7 @@ export function useReportExport() {
       stop();
     };
   }, [scope]);
-  async function download(filters: ReportFilters, format: ExportFormat) {
+  async function download(filters: F, format: ExportFormat) {
     if (controller.current) return;
     const current = new AbortController();
     controller.current = current;
@@ -104,12 +150,7 @@ export function useReportExport() {
     setError(null);
     setCompleted("");
     try {
-      const file = await exportOnTimeReport(
-        filters,
-        format,
-        scope,
-        current.signal,
-      );
+      const file = await send(filters, format, scope, current.signal);
       if (current.signal.aborted || !hasReportAccess(scope)) return;
       saveReportFile(file);
       setCompleted(`Download started: ${file.filename}`);
@@ -124,4 +165,10 @@ export function useReportExport() {
     }
   }
   return { pending, error, completed, download };
+}
+export function useReportExport() {
+  return useReportFileExport(exportOnTimeReport);
+}
+export function useIncidentReportExport() {
+  return useReportFileExport(exportIncidentClaimReport);
 }

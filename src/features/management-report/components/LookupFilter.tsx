@@ -40,8 +40,7 @@ export function LookupFilter({
     staleTime: 300000,
     refetchOnWindowFocus: false,
   });
-  const caption =
-    kind === "route" ? "route" : kind === "provider" ? "provider" : "driver";
+  const caption = kind;
   const selected =
     chosen?.id === value
       ? chosen.label

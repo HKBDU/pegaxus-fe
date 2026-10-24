@@ -1,11 +1,12 @@
 import { isAxiosError } from "axios";
 import { z } from "zod";
 import apiClient from "@/lib/axios";
-import { reportParams } from "./filters";
+import { reportParams, incidentReportParams } from "./filters";
 import {
   envelopeSchema,
   type ExportFormat,
   type ReportFilters,
+  type IncidentFilters,
 } from "./schemas";
 import {
   assertReportAccess,
@@ -79,19 +80,25 @@ async function binaryError(payload: unknown): Promise<ReportError | null> {
   }
 }
 
-export async function exportOnTimeReport(
-  filters: ReportFilters,
+async function exportReport(
+  selection:
+    | { reportType: "on-time-delivery"; filters: ReportFilters }
+    | { reportType: "incident-claim-frequency"; filters: IncidentFilters },
   format: ExportFormat,
   scope: string,
   signal: AbortSignal,
 ) {
+  const { filters, reportType } = selection;
   try {
     assertReportAccess(scope, signal);
     // Capture binary metadata before the shared response interceptor unwraps response.data.
     const payload = await apiClient.get<unknown, unknown>(
-      "/reports/on-time-delivery/export",
+      `/reports/${reportType}/export`,
       {
-        params: reportParams(filters, format),
+        params:
+          selection.reportType === "on-time-delivery"
+            ? reportParams(selection.filters, format)
+            : incidentReportParams(selection.filters, format),
         responseType: "blob",
         signal,
         transformResponse: [
@@ -135,7 +142,7 @@ export async function exportOnTimeReport(
       blob: result.binary,
       filename: downloadName(
         result.disposition,
-        `on-time-delivery-${filters.dateFrom}_${filters.dateTo}.${format}`,
+        `${reportType}-${filters.dateFrom}_${filters.dateTo}.${format}`,
         format,
       ),
     };
@@ -146,6 +153,33 @@ export async function exportOnTimeReport(
     }
     throw reportError(error);
   }
+}
+
+export function exportOnTimeReport(
+  filters: ReportFilters,
+  format: ExportFormat,
+  scope: string,
+  signal: AbortSignal,
+) {
+  return exportReport(
+    { reportType: "on-time-delivery", filters },
+    format,
+    scope,
+    signal,
+  );
+}
+export function exportIncidentClaimReport(
+  filters: IncidentFilters,
+  format: ExportFormat,
+  scope: string,
+  signal: AbortSignal,
+) {
+  return exportReport(
+    { reportType: "incident-claim-frequency", filters },
+    format,
+    scope,
+    signal,
+  );
 }
 
 export function saveReportFile(file: { blob: Blob; filename: string }) {
