@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RoutePlanBuilder, type RoutePlanBuilderMetadata } from "../components/RoutePlanBuilder";
-import { getRoutePlan, getRoutePlans, getTransportPlan } from "../services";
+import { createLocation, getRoutePlan, getRoutePlans, getTransportPlan } from "../services";
 import { adaptTransportPlan, loadAllLocations, loadAllRoutes, toMapLocation, toMapRoute, type TransportPlanApiValue } from "../api-adapters";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 import type { RoutePlan, RouteSegment } from "../types";
@@ -24,37 +24,71 @@ export default function CreateReturnRoutePage() {
       loadAllRoutes(),
       getRoutePlans(transportPlanId),
     ])
-      .then(async ([plan, locationResult, routeResult, routePlanResult]) => {
+      .then(async ([rawPlan, locationResult, routeResult, routePlanResult]) => {
+        const plan = rawPlan as TransportPlanApiValue;
+        const routePlans = routePlanResult?.items ?? [];
+        const primary = routePlans.find(
+          (routePlan) =>
+            routePlan.routeType === "PRIMARY" && routePlan.status === "ACTIVE",
+        );
+        const hasOpenReturn = routePlans.some(
+          (routePlan) =>
+            routePlan.routeType === "RETURN" && routePlan.status !== "CANCELLED",
+        );
+        const mainDossier =
+          plan.complianceDossiers?.find((dossier) => dossier.dossierType === "MAIN") ??
+          plan.complianceDossier;
+        if (String(plan.status).toUpperCase() !== "APPROVED") {
+          throw new Error("Return route requires an approved Transport Plan.");
+        }
+        if (String(plan.transport?.status).toUpperCase() !== "IN_TRANSIT") {
+          throw new Error("Return route is only available while the transport is in transit.");
+        }
+        if (mainDossier?.status !== "APPROVED") {
+          throw new Error("Return route requires an approved MAIN compliance dossier.");
+        }
+        if (!primary) {
+          throw new Error("Return route requires an ACTIVE PRIMARY route.");
+        }
+        if (hasOpenReturn) {
+          throw new Error("A non-cancelled RETURN route already exists for this transport.");
+        }
         let locations = locationResult.flatMap((item) => {
           const location = toMapLocation(item);
           return location ? [location] : [];
         });
-        const metadata = adaptTransportPlan(plan as TransportPlanApiValue, locations);
+        const metadata = adaptTransportPlan(plan, locations);
         let currentLocation: MapLocation | undefined;
-        const transportId = (plan as TransportPlanApiValue).transportId ??
-          (plan as TransportPlanApiValue).transport?.transportId;
-        if (transportId != null) {
-          try {
-            const tracking = await ongoingTransportService.tracking(String(transportId));
-            if (tracking.truck) {
-              currentLocation = {
-                id: `dynamic-current-${transportId}`,
-                name: "Current vehicle location",
-                type: "OTHER",
-                city: "",
-                country: "",
-                latitude: tracking.truck.latitude,
-                longitude: tracking.truck.longitude,
-              };
-              locations = [currentLocation, ...locations];
-            }
-          } catch (trackingErr) {
-            console.warn("Could not load current tracking coordinate for return route:", trackingErr);
+        const transportId = plan.transportId ?? plan.transport?.transportId;
+        if (transportId == null) {
+          throw new Error("Transport identity is missing; unable to resolve the current GPS location.");
+        }
+        try {
+          const tracking = await ongoingTransportService.tracking(String(transportId));
+          if (!tracking.truck) throw new Error("GPS position is unavailable for this transport.");
+          const createdLocation = await createLocation({
+            locationName: `RETURN GPS origin ${new Date().toISOString()}`,
+            locationType: "OTHER",
+            locationNote: `Created from live GPS coordinates for RETURN route of transport ${transportId}.`,
+            latitude: tracking.truck.latitude,
+            longitude: tracking.truck.longitude,
+          });
+          if (createdLocation?.locationId == null) {
+            throw new Error("The GPS location was created without a locationId.");
           }
+          currentLocation = toMapLocation(createdLocation) ?? undefined;
+          if (!currentLocation) throw new Error("The GPS location could not be created.");
+          locations = [currentLocation, ...locations];
+        } catch (trackingErr) {
+          throw new Error(
+            trackingErr instanceof Error
+              ? trackingErr.message
+              : "Unable to create the current GPS location for the return route.",
+          );
         }
 
         const fullRoutePlans: RoutePlan[] = await Promise.all(
-          (routePlanResult?.items ?? []).map(async (rp) => {
+          routePlans.map(async (rp) => {
             if (rp.segments && rp.segments.length > 0) return rp as RoutePlan;
             try {
               return (await getRoutePlan(rp.routePlanId)) as RoutePlan;

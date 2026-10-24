@@ -13,6 +13,7 @@ type RoutePlanEndpointsStepProps = {
   from: MapLocation;
   to: MapLocation;
   returnMode?: boolean;
+  lockEndpoints?: boolean;
   locations?: MapLocation[];
   onFromChange?: (location: MapLocation) => void;
   onToChange?: (location: MapLocation) => void;
@@ -26,6 +27,7 @@ export function RoutePlanEndpointsStep({
   from,
   to,
   returnMode = false,
+  lockEndpoints = false,
   locations = [],
   onFromChange,
   onToChange,
@@ -41,6 +43,7 @@ export function RoutePlanEndpointsStep({
           <label className="grid gap-2 text-sm font-semibold">
             Current location / return origin
             <Select
+              disabled={returnMode}
               value={String(from.id) === "unknown-location" ? "" : String(from.id)}
               onValueChange={(val) => {
                 const location = locations.find((item) => String(item.id) === val);
@@ -59,7 +62,7 @@ export function RoutePlanEndpointsStep({
               </SelectContent>
             </Select>
             <span className="font-normal text-muted-foreground">
-              RC selects the location where the transport currently is.
+              Current location is created from live GPS coordinates and cannot be changed manually.
             </span>
           </label>
         </div>
@@ -71,6 +74,7 @@ export function RoutePlanEndpointsStep({
           isResolved={isFromResolved}
           unresolvedAddress={unresolvedOriginAddress}
           locations={locations}
+          locked={lockEndpoints}
           onSelect={onFromChange}
         />
       )}
@@ -81,12 +85,16 @@ export function RoutePlanEndpointsStep({
         isResolved={isToResolved}
         unresolvedAddress={unresolvedDestinationAddress}
         locations={locations}
+        locked={lockEndpoints || returnMode}
+        lockedMessage={returnMode ? "Locked to the PRIMARY route origin." : undefined}
         onSelect={onToChange}
       />
       <p className="text-sm text-muted-foreground lg:col-span-2">
         {returnMode
           ? "Destination is the Transport Plan origin. Return origin is selected from existing locations."
-          : "Origin and destination come from the approved Transport Plan. You can adjust the exact facility if needed."}
+          : lockEndpoints
+            ? "Origin and destination are locked to the PRIMARY route anchors."
+            : "Origin and destination come from the approved Transport Plan. You can adjust the exact facility if needed."}
       </p>
     </div>
   );
@@ -99,6 +107,8 @@ function EndpointCard({
   isResolved = true,
   unresolvedAddress,
   locations = [],
+  locked = false,
+  lockedMessage,
   onSelect,
 }: {
   label: string;
@@ -107,6 +117,8 @@ function EndpointCard({
   isResolved?: boolean;
   unresolvedAddress?: string;
   locations?: MapLocation[];
+  locked?: boolean;
+  lockedMessage?: string;
   onSelect?: (loc: MapLocation) => void;
 }) {
   return (
@@ -125,7 +137,7 @@ function EndpointCard({
           </div>
         </div>
 
-        {!isResolved && (
+        {!locked && !isResolved && (
           <div className="rounded-[2px] border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
             <div className="flex items-center gap-1.5 font-semibold">
               <AlertCircle className="size-4 text-amber-600" />
@@ -158,6 +170,11 @@ function EndpointCard({
               </Select>
             </label>
           </div>
+        )}
+        {locked && (
+          <p className="text-xs font-medium text-slate-600">
+            {lockedMessage ?? "Locked to the PRIMARY route anchors."}
+          </p>
         )}
       </CardContent>
     </Card>

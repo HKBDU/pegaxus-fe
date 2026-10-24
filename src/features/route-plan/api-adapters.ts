@@ -64,8 +64,9 @@ export function toMapRoute(item: RouteMaster, locations: MapLocation[]): MapRout
 
 export type TransportPlanApiValue = {
   transportId?: string | number;
-  transport?: { transportId?: string | number } | null;
+  transport?: { transportId?: string | number; status?: string | number } | null;
   planCode?: string;
+  status?: string | number;
   bookingCode?: string;
   isCrossBorder?: boolean;
   plannedStartAt?: string;
@@ -73,6 +74,9 @@ export type TransportPlanApiValue = {
   booking?: { bookingCode?: string; originAddress?: string; originCountry?: string; originLocationId?: string | number; destinationAddress?: string; destinationCountry?: string; destinationLocationId?: string | number; isInternational?: boolean };
   originLocationId?: string | number;
   destinationLocationId?: string | number;
+  complianceDossier?: { status?: string } | null;
+  complianceDossiers?: Array<{ status?: string; dossierType?: string | null }>;
+  routePlans?: Array<{ routeType?: string; status?: string | number }>;
 };
 
 function resolveLocation(locations: MapLocation[], id: string | number | undefined, address: string | undefined) {

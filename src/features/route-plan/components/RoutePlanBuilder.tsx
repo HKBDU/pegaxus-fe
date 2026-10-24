@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, ShieldAlert, ShieldCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -120,6 +121,7 @@ export function RoutePlanBuilder({
   vehicles: initialVehicles,
   edit,
 }: RoutePlanBuilderProps) {
+  const navigate = useNavigate();
   const [step, setStep] = useState<WizardStep>(0);
   const [, setMode] = useState<MapMode>("buildPlan");
   const [locations, setLocations] = useState<MapLocation[]>(initialLocations);
@@ -276,6 +278,7 @@ export function RoutePlanBuilder({
   const [buildMessage, setBuildMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [routeNote, setRouteNote] = useState(initialRouteNote);
   const [updateReason, setUpdateReason] = useState("");
   const [locationSearch, setLocationSearch] = useState("");
@@ -824,11 +827,6 @@ export function RoutePlanBuilder({
   }
 
   async function selectMapLocation(location: MapLocation) {
-    if (isReturn) {
-      setReturnOrigin(location);
-      setBuildMessage(`Return origin selected: ${location.name}.`);
-      return;
-    }
     if (!sourceLocation) {
       setSourceLocation(location);
       setBuildMessage(`Source selected: ${location.name}. Please choose a destination.`);
@@ -997,6 +995,7 @@ export function RoutePlanBuilder({
   }
 
   async function save(action: CreateRoutePlanRequest["action"]) {
+    if (isSaving) return;
     setSaveError(null);
     setSaveNotice(null);
     if (!segments.length) {
@@ -1007,6 +1006,19 @@ export function RoutePlanBuilder({
       setSaveError(continuity.message ?? "Route segments are not continuous.");
       return;
     }
+    if (action === "SUBMIT_FOR_LEGAL_REVIEW") {
+      const internalSegmentsWithoutVehicles = segments.filter(
+        (segment) =>
+          segment.arrangement === "INTERNAL" &&
+          !segment.vehicleIds?.length,
+      );
+      if (internalSegmentsWithoutVehicles.length > 0) {
+        setSaveError(
+          "Assign at least one vehicle to every internal segment before submitting for legal review.",
+        );
+        return;
+      }
+    }
     if (isBackup && !primaryAvailable) {
       setSaveError(
         "A valid PRIMARY route plan is required before creating a backup route.",
@@ -1014,13 +1026,16 @@ export function RoutePlanBuilder({
       return;
     }
     if ((isBackup || isReturn) && routeNote.trim().length < 10) {
-      setSaveError("Backup reason must be at least 10 characters.");
+      setSaveError(
+        `${isReturn ? "Return" : "Backup"} reason must be at least 10 characters.`,
+      );
       return;
     }
     if (edit && !updateReason.trim()) {
       setSaveError("Update reason is required.");
       return;
     }
+    setIsSaving(true);
     try {
       // Pre-save check: ensure all locations in segments have feasible road coordinates in the backend
       for (const seg of segments) {
@@ -1043,16 +1058,19 @@ export function RoutePlanBuilder({
       } else {
         await createRoutePlan(transportPlanId, toPayload(action));
       }
-      setSaveNotice(
+      const successMessage =
         action === "SAVE_DRAFT"
           ? "Draft saved successfully."
-          : "Submitted for legal review.",
-      );
+          : "Submitted for legal review.";
+      toast.success(successMessage);
+      navigate(ROLE_ROUTES.routePlans);
     } catch (error) {
       const mapped = getRoutePlanError(error);
       setSaveError(mapped.code === "VEHICLE_SCHEDULE_CONFLICT"
         ? "This vehicle is already assigned to another Transport during this time slot. Choose another vehicle or adjust the route time."
         : mapped.message);
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -1081,6 +1099,7 @@ export function RoutePlanBuilder({
               from={plan.from}
               to={plan.to}
               returnMode={isReturn}
+              lockEndpoints={isBackup}
               locations={locations}
               onFromChange={(loc) => {
                 setCustomFrom(loc);
@@ -1721,17 +1740,23 @@ export function RoutePlanBuilder({
                 <div className="flex flex-wrap gap-2">
                   <Button
                     className="rounded-[2px]"
+                    disabled={isSaving}
                     onClick={() => void save("SAVE_DRAFT")}
                   >
-                    Save Draft
+                    {isSaving ? (
+                      <><Loader2 className="size-4 animate-spin" /> Saving...</>
+                    ) : "Save Draft"}
                   </Button>
                   {!isReturn && (
                     <Button
                       variant="outline"
                       className="rounded-[2px]"
+                      disabled={isSaving}
                       onClick={() => void save("SUBMIT_FOR_LEGAL_REVIEW")}
                     >
-                      Submit for legal review
+                      {isSaving ? (
+                        <><Loader2 className="size-4 animate-spin" /> Submitting...</>
+                      ) : "Submit for legal review"}
                     </Button>
                   )}
                 </div>
