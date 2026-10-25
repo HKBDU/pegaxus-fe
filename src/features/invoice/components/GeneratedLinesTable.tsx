@@ -32,8 +32,8 @@ export function GeneratedLinesTable({ items, isLoading, hint }: GeneratedLinesTa
       <div className="p-3">
         <div className="booking-panel overflow-x-auto">
           <Table className="min-w-[760px]">
-            <TableHeader className="bg-[#e9e6de]">
-              <TableRow>
+            <TableHeader className="bg-[#e9e6de] [&_tr]:border-b-0">
+              <TableRow className="border-b-0 hover:bg-transparent">
                 {HEADERS.map((header) => (
                   <TableHead key={header} scope="col" className={cn("h-10 whitespace-nowrap px-2 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600", header === "Qty" || header === "Unit price" || header === "Amount" ? "text-right" : "text-left")}>
                     {header}

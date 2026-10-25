@@ -236,7 +236,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                       <FileText className="size-4 text-[#ef8f00]" aria-hidden="true" />
                       Invoice details
                     </h3>
-                    <div className="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-3">
+                    <div className="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-2">
                       <div>
                         <label className={fieldLabelClass} htmlFor="invoice-type">Invoice type <span className="text-red-500">*</span></label>
                         <Select value={selectedType ?? ""} onValueChange={(value) => pickType(value as InvoiceType)} disabled={isEdit || isSaving}>
@@ -248,11 +248,6 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                             })}
                           </SelectContent>
                         </Select>
-                      </div>
-                      <div>
-                        <p className={fieldLabelClass}>Currency</p>
-                        {/* VND is the only supported currency, so there is nothing to choose. */}
-                        <div id="invoice-currency" className={`${controlClass} flex items-center bg-[#f7f6f3] text-gray-700`}>{INVOICE_CURRENCY_LABELS.VND}</div>
                       </div>
                       <div>
                         <label className={fieldLabelClass} htmlFor="invoice-due-date">{dateLabel} <span className="text-red-500">*</span></label>
@@ -291,6 +286,12 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                         {errors.dueDate || errors.dueTime ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.dueDate?.message ?? errors.dueTime?.message}</p> : null}
                       </div>
 
+                      <div>
+                        <p className={fieldLabelClass}>Currency</p>
+                        {/* VND is the only supported currency, so there is nothing to choose. */}
+                        <div id="invoice-currency" className={`${controlClass} flex items-center bg-[#f7f6f3] text-gray-700`}>{INVOICE_CURRENCY_LABELS.VND}</div>
+                      </div>
+
                       {selectedType === INVOICE_TYPE.QUOTATION ? (
                         <div>
                           <label className={fieldLabelClass} htmlFor="invoice-transit-days">Transit days</label>
@@ -311,26 +312,26 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                         </div>
                       ) : null}
 
-                      <div className="min-h-4 text-[11px] leading-4 text-gray-500 sm:col-span-3 sm:-mt-2">
+                      <div className="min-h-4 text-[11px] leading-4 text-gray-500 sm:col-span-2 sm:-mt-2">
                         {suggestionQuery.isFetching && !isEdit ? <span role="status">Checking the booking...</span> : null}
                         {!suggestionQuery.isFetching || isEdit ? (selectedType ? INVOICE_TYPE_HINTS[selectedType] : "Quotation, Deposit, Final, Supplementary or Credit note.") : null}
                       </div>
                       {depositBlocked && activeDeposit ? (
-                        <div className="flex gap-2 border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:col-span-3" role="alert">
+                        <div className="flex gap-2 border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:col-span-2" role="alert">
                           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                           <p>This booking already has a deposit invoice ({activeDeposit.invoiceNumber}). Cancel it first to create another one.</p>
                         </div>
                       ) : null}
                       {precheckError ? (
-                        <div className="flex gap-2 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:col-span-3" role="alert">
+                        <div className="flex gap-2 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:col-span-2" role="alert">
                           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                           <p>{getInvoiceErrorMessage(precheckError, "Unable to check this booking. Try another type or reload.")}</p>
                         </div>
                       ) : null}
 
-                      <div className="sm:col-span-3">
+                      <div className="sm:col-span-2">
                         <label className={fieldLabelClass} htmlFor="invoice-note">Notes</label>
-                        <Textarea id="invoice-note" rows={2} placeholder="Add any additional notes for this invoice..." className="min-h-[60px] rounded-none border-[#d8d5cb] text-sm shadow-none" {...register("note")} />
+                        <Textarea id="invoice-note" rows={2} placeholder="Add any additional notes for this invoice..." className="field-sizing-fixed h-[60px] min-h-[60px] resize-none overflow-y-auto rounded-none border-[#d8d5cb] text-sm shadow-none" {...register("note")} />
                       </div>
                     </div>
                   </section>
