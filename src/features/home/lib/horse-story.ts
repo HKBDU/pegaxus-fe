@@ -1,12 +1,16 @@
 import {
   HERO_APPROACH_DISTANCE,
   HERO_YAW,
+  JOURNEY_PORTRAIT_YAW,
+  JOURNEY_RUN_YAW,
   type HeroPhase,
   type HorseMotion,
 } from "./horse-animation";
 import { HORSE_CHAPTERS, type LandingChapter } from "./landing-navigation";
 
 export type StoryProfile = "desktop" | "tablet" | "mobile";
+export type SectionLifecycle =
+  "NOT_STARTED" | "PLAYING" | "SUSPENDED" | "COMPLETED";
 export type HorseShot = {
   horsePresence: number;
   horseX: number;
@@ -35,11 +39,29 @@ export type LandingSceneState = HorseShot & {
   inJourney: boolean;
   inMap: boolean;
   heroCompleted: boolean;
+  heroLifecycle: SectionLifecycle;
+  heroReady: boolean;
+  heroEffectTime: number;
+  heroIntroReady: boolean;
+  heroRevealTime: number;
+  heroContacts: number;
+  heroWalkLoops: number;
+  heroCameraReady: boolean;
+  heroHoof: { x: number; y: number; z: number };
+  hoofPulses: { x: number; y: number; z: number; born: number }[];
+  horseFrameAt: number;
+  journeyPhase: "WAITING" | "RUNNING" | "STOPPING" | "SETTLING" | "POSE_READY";
   journeyCompleted: boolean;
+  journeyLifecycle: SectionLifecycle;
+  journeyStopProgress: number;
+  journeyTextTime: number;
   journeyTravel: number;
   journeyDistance: number;
   journeyReady: boolean;
-  journeyFramed: boolean;
+  journeyTime: number;
+  journeyOffsetX: number;
+  journeyOffsetZ: number;
+  journeyYaw: number;
   mapProgress: number;
   mapScreenX: number;
   mapScreenY: number;
@@ -49,6 +71,8 @@ export type LandingSceneState = HorseShot & {
   mapUpdatedAt: number;
   mapRunRate: number;
   mapHorseHeight: number;
+  mapFrameAt: number;
+  mapViewportTop: number;
   heroPhase: HeroPhase;
   shotVersion: number;
   invalidate?: () => void;
@@ -85,13 +109,12 @@ export function getHorseShots(profile: StoryProfile, reduced: boolean) {
   shots.journey = {
     ...home,
     horsePresence: 1,
-    horseX: compact ? 0 : -1.7,
-    horseY: -1.2,
-    horseScale: compact ? 1.05 : 0.94,
-    // −X is forward: this heading advances screen-right and toward the camera.
-    horseYaw: Math.PI - 1.2,
-    cameraZ: compact ? 6.6 : 7.6,
-    motion: reduced ? "idle" : "walk",
+    horseX: compact ? 0 : -2.5,
+    horseY: -1.15,
+    horseScale: 1.02,
+    horseYaw: JOURNEY_PORTRAIT_YAW,
+    cameraZ: 10.5,
+    motion: reduced ? "idle" : "run",
   };
   shots.movement = {
     ...home,
@@ -125,11 +148,34 @@ export function createLandingStory(
     inJourney: false,
     inMap: false,
     heroCompleted: false,
+    heroLifecycle: "NOT_STARTED",
+    heroReady: false,
+    heroEffectTime: 0,
+    heroIntroReady: false,
+    heroRevealTime: 0,
+    heroContacts: 0,
+    heroWalkLoops: 0,
+    heroCameraReady: false,
+    heroHoof: { x: home.horseX, y: home.horseY + 0.1, z: home.horseZ },
+    hoofPulses: Array.from({ length: 6 }, () => ({
+      x: 0,
+      y: 0,
+      z: 0,
+      born: -Infinity,
+    })),
+    horseFrameAt: 0,
+    journeyPhase: "WAITING",
     journeyCompleted: false,
+    journeyLifecycle: "NOT_STARTED",
+    journeyStopProgress: 0,
+    journeyTextTime: 0,
     journeyTravel: 0,
     journeyDistance: 0,
     journeyReady: false,
-    journeyFramed: false,
+    journeyTime: 0,
+    journeyOffsetX: 0,
+    journeyOffsetZ: 0,
+    journeyYaw: JOURNEY_RUN_YAW,
     mapProgress: 0,
     mapScreenX: 0,
     mapScreenY: 0,
@@ -139,6 +185,8 @@ export function createLandingStory(
     mapUpdatedAt: 0,
     mapRunRate: 1,
     mapHorseHeight: 70,
+    mapFrameAt: 0,
+    mapViewportTop: 0,
     heroPhase: "LOADING",
     shotVersion: 0,
     stageOffsetY: 0,

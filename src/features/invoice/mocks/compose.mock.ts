@@ -245,10 +245,10 @@ function precheck(bookingId: string, type: InvoiceType) {
   return { booking, deposits }
 }
 
-function validate(payload: { dueDate: string; items: InvoiceItemPayload[] }, booking: MockBooking) {
+function validate(payload: { dueDate: string; items?: InvoiceItemPayload[] }, booking: MockBooking) {
   const errors: { field: string; message: string }[] = []
-  if (!payload.dueDate || payload.dueDate < todayIsoDate()) errors.push({ field: "dueDate", message: "Due date cannot be in the past" })
-  payload.items.forEach((item, index) => {
+  if (!payload.dueDate || payload.dueDate < todayIsoDate()) errors.push({ field: "dueDate", message: "Due date cannot be in the past" });
+  (payload.items ?? []).forEach((item, index) => {
     if (!(item.quantity > 0) || !(item.price > 0)) {
       errors.push({ field: `items[${index}].quantity`, message: "Quantity and unit price must be greater than 0" })
     }
@@ -304,6 +304,8 @@ export async function mockGetSuggestion(bookingId: string, type: InvoiceType): P
     currency: deposits[0]?.currency ?? null,
     isPaymentRequired: type !== "QUOTATION",
     items: depositDeductionLines(deposits),
+    pricing: null,
+    isLocked: false,
   }
 }
 
@@ -319,8 +321,8 @@ export async function mockCreateInvoice(bookingId: string, payload: CreateInvoic
   const { booking, deposits } = precheck(bookingId, payload.type)
   validate(payload, booking)
   const invoice = buildInvoice({
-    booking, type: payload.type, status: "DRAFT", currency: "VND", dueDate: payload.dueDate, note: payload.note ?? null,
-    items: toItems(payload.items, booking), number: nextNumber(), depositSource: deposits,
+    booking, type: payload.type, status: "DRAFT", currency: "VND", dueDate: payload.dueDate.slice(0, 10), note: payload.note ?? null,
+    items: toItems(payload.items ?? [], booking), number: nextNumber(), depositSource: deposits,
   })
   invoices().push(invoice)
   save()
@@ -341,8 +343,8 @@ export async function mockUpdateInvoice(invoiceId: string, payload: UpdateInvoic
     ? invoices().filter((invoice) => invoice.booking.bookingId === booking.bookingId && invoice.type === "DEPOSIT" && invoice.status === "PAID")
     : []
   const updated = buildInvoice({
-    booking, type: current.type, status: "DRAFT", currency: "VND", dueDate: payload.dueDate, note: payload.note ?? null,
-    items: toItems(payload.items, booking, current.items), number: current.invoiceNumber, depositSource: deposits, base: current,
+    booking, type: current.type, status: "DRAFT", currency: "VND", dueDate: payload.dueDate.slice(0, 10), note: payload.note ?? null,
+    items: toItems(payload.items ?? [], booking, current.items), number: current.invoiceNumber, depositSource: deposits, base: current,
   })
   invoices()[index] = updated
   save()

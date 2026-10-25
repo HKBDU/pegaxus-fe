@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { canAccess } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
+import { REPORT_DATA_SOURCE } from "@/lib/report-mode";
 import {
   transportIdSchema,
   type FinancialReport,
@@ -20,7 +21,11 @@ export function useFinancialAccess() {
   return {
     allowed:
       signedIn && canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }),
-    scope: JSON.stringify([principal?.id ?? null, sessionVersion]),
+    scope: JSON.stringify([
+      principal?.id ?? null,
+      sessionVersion,
+      REPORT_DATA_SOURCE,
+    ]),
   };
 }
 

@@ -90,7 +90,7 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
   }
 
   const needsReload = errorCode === "INVOICE_MODIFIED" || errorCode === "INVALID_INVOICE_STATUS"
-  const needsEdit = errorCode === "DEPOSIT_DEDUCTION_CHANGED" || errorCode === "EMPTY_INVOICE_ITEMS" || errorCode === "INVOICE_TOTAL_NOT_POSITIVE"
+  const needsEdit = errorCode === "DEPOSIT_DEDUCTION_CHANGED" || errorCode === "INVOICE_SOURCE_CHANGED" || errorCode === "EMPTY_INVOICE_ITEMS" || errorCode === "INVOICE_TOTAL_NOT_POSITIVE"
 
   return (
     <Dialog open={open} onOpenChange={close}>

@@ -20,6 +20,9 @@ export function GlobalMovementSection() {
         </p>
       </div>
       <JourneyMap />
+      <button type="button" className="landing-map-skip" data-map-skip hidden>
+        Skip route animation
+      </button>
       <p className="landing-map-caption">
         Symbolic journey · Illustrative route, not live tracking or service
         coverage.

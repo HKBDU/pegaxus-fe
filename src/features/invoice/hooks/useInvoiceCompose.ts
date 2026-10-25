@@ -18,8 +18,8 @@ export const invoiceKeys = {
     [...invoiceKeys.all, "detail", invoiceId] as const,
   booking: (bookingId: string) =>
     [...invoiceKeys.all, "booking", bookingId] as const,
-  suggestion: (bookingId: string, type: InvoiceType | undefined) =>
-    [...invoiceKeys.all, "suggestion", bookingId, type ?? ""] as const,
+  suggestion: (bookingId: string, type: InvoiceType | undefined, transitDays?: number) =>
+    [...invoiceKeys.all, "suggestion", bookingId, type ?? "", transitDays ?? ""] as const,
 };
 
 export function useInvoice(invoiceId: string | undefined) {
@@ -51,20 +51,26 @@ export function useInvoiceBookingContext(bookingId: string | undefined) {
   });
 }
 
-/** IV1, called as soon as the manager picks a type. Its errors (R3, R4, R6) are shown on the form. */
+/**
+ * IV1, called as soon as the manager picks a type. Its errors (R3, R4, R6, QUOTATION_REQUIRED, PENDING_EMERGENCY_COSTS)
+ * are shown on the form. `transitDays` re-prices a QUOTATION; the previous answer stays on screen while it reloads.
+ */
 export function useInvoiceSuggestion(
   bookingId: string | undefined,
   type: InvoiceType | undefined,
+  transitDays?: number,
 ) {
   return useQuery({
-    queryKey: invoiceKeys.suggestion(bookingId ?? "", type),
+    queryKey: invoiceKeys.suggestion(bookingId ?? "", type, transitDays),
     queryFn: () =>
-      invoiceService.getSuggestion(bookingId ?? "", type as InvoiceType),
+      invoiceService.getSuggestion(bookingId ?? "", type as InvoiceType, transitDays),
     enabled: Boolean(bookingId && type),
     staleTime: 0,
     gcTime: 0,
     retry: false,
     refetchOnWindowFocus: false,
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[3] === type ? previous : undefined,
   });
 }
 

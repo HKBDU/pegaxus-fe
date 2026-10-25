@@ -279,7 +279,17 @@ export interface ApiEnvelope<T> {
   value: T
 }
 
-/** IV1 response: precheck result plus the read-only deposit deduction lines of a FINAL. */
+/** Inputs the server used to build the lines of a QUOTATION, DEPOSIT or FINAL (IV1 `pricing`). */
+export interface InvoicePricing {
+  version: string
+  horseCount: number
+  transitDays: number | null
+  vehicleTier: string | null
+  depositRatePercent: number
+  taxRatePercent: number
+}
+
+/** IV1 response: precheck result plus the lines the server builds for QUOTATION, DEPOSIT and FINAL (deposit deductions included). */
 export interface InvoiceSuggestion {
   bookingId: string
   bookingCode: string
@@ -291,6 +301,9 @@ export interface InvoiceSuggestion {
   currency: InvoiceCurrency | null
   isPaymentRequired: boolean
   items: InvoiceItem[]
+  pricing: InvoicePricing | null
+  /** true = the server builds the lines, the client must not send `items`. */
+  isLocked: boolean
 }
 
 /** IV7 response. */
@@ -328,18 +341,28 @@ export interface InvoiceItemPayload {
   note: string | null
 }
 
+/** `items` is left out for QUOTATION, DEPOSIT and FINAL: the server builds those lines (INVOICE_ITEMS_GENERATED otherwise). */
 export interface CreateInvoicePayload {
   type: InvoiceType
+  /** Full ISO datetime (UTC): the BE rejects a datetime in the past. */
   dueDate: string
   note?: string
-  items: InvoiceItemPayload[]
+  transitDays?: number
+  items?: InvoiceItemPayload[]
 }
 
 export interface UpdateInvoicePayload {
   lastUpdatedAt: string
   dueDate: string
   note?: string
-  items: InvoiceItemPayload[]
+  transitDays?: number
+  items?: InvoiceItemPayload[]
+}
+
+/** What the claim screen hands to the invoice form through `location.state.prefill` (P2.1.4). */
+export interface InvoicePrefill {
+  type: InvoiceType
+  items: { itemType: string; description: string; quantity: number; price: number | null; note?: string }[]
 }
 
 export interface ApiFieldError {
