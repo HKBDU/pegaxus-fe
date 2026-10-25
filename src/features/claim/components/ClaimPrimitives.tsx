@@ -60,11 +60,12 @@ export function SectionTitle({ children, tone = "primary", className }: { childr
   )
 }
 
+/** Label on the left, value on the right (the InfoRow of Booking Details). */
 export function Field({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
   return (
-    <div className={cn("min-w-0", className)}>
-      <dt className="font-heading text-[11px] font-medium uppercase leading-4 tracking-[0.06em] text-gray-500">{label}</dt>
-      <dd className="mt-0.5 min-w-0 whitespace-pre-line break-words text-xs leading-5 text-gray-900">{children || "—"}</dd>
+    <div className={cn("grid grid-cols-[minmax(0,4fr)_minmax(0,8fr)] items-baseline", className)}>
+      <dt className="pr-2 font-heading text-[11px] font-medium uppercase leading-4 tracking-[0.06em] text-gray-500">{label}</dt>
+      <dd className="min-w-0 whitespace-pre-line break-words text-xs leading-5 text-gray-800">{children || "—"}</dd>
     </div>
   )
 }

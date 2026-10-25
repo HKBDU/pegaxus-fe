@@ -55,7 +55,7 @@ export default function CustomerClaimDetailPage() {
 
             <section className={cn(panelClass, "p-4")} aria-label="Progress">
               <CardTitle>Progress</CardTitle>
-              <div className="mt-3">
+              <div className="mt-2.5">
                 <ClaimProgress claim={claim} />
               </div>
               {claim.status === "CANCELLED" && claim.cancellationReason ? (
@@ -66,35 +66,37 @@ export default function CustomerClaimDetailPage() {
             {claim.resolution ? (
               <section className={cn(panelClass, "p-4")} aria-label="Outcome">
                 <CardTitle>{claim.status === "REJECTED" ? "Decision" : "Outcome"}</CardTitle>
-                <dl className="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-3">
+                <dl className="mt-3 space-y-1.5">
                   <Field label="Resolution type">{RESOLUTION_TYPE_LABELS[claim.resolution.resolutionType]}</Field>
                   <Field label="Approved compensation">{money(claim.resolution.approvedCompensationAmount)}</Field>
                   <Field label="Decided at">{formatInvoiceDateTime(claim.resolution.resolvedAt)}</Field>
-                  <Field label="Summary" className="sm:col-span-3">{claim.resolution.resolutionSummary}</Field>
+                  <Field label="Summary">{claim.resolution.resolutionSummary}</Field>
                 </dl>
               </section>
             ) : null}
 
-            <section className={cn(panelClass, "p-4")} aria-label="Claim information">
-              <CardTitle>Claim information</CardTitle>
-              <dl className="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-3">
-                <Field label="Title" className="sm:col-span-3"><span className="font-semibold">{claim.title}</span></Field>
-                <Field label="Description" className="sm:col-span-2">{claim.description}</Field>
-                <Field label="Requested compensation"><span className="text-sm font-semibold">{money(claim.requestedCompensationAmount)}</span></Field>
-                <Field label="Your note" className="sm:col-span-3">{claim.customerNote}</Field>
-                <Field label="Evidence note" className="sm:col-span-3">{claim.evidenceNote}</Field>
-              </dl>
-            </section>
+            <div className="grid items-stretch gap-2.5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+              <section className={cn(panelClass, "p-4")} aria-label="Claim information">
+                <CardTitle>Claim information</CardTitle>
+                <dl className="mt-3 space-y-1.5">
+                  <Field label="Title">{claim.title}</Field>
+                  <Field label="Description">{claim.description}</Field>
+                  <Field label="Requested compensation">{money(claim.requestedCompensationAmount)}</Field>
+                  <Field label="Booking">{claim.booking.bookingCode}</Field>
+                  <Field label="Your note">{claim.customerNote}</Field>
+                  <Field label="Evidence note">{claim.evidenceNote}</Field>
+                </dl>
+              </section>
 
-            <section className={cn(panelClass, "p-4")} aria-label="Delivery record">
-              <CardTitle>Delivery record</CardTitle>
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 lg:grid-cols-4">
-                <Field label="Handover code">{claim.handover.handoverCode}</Field>
-                <Field label="Transport">{claim.transport.transportCode}</Field>
-                <Field label="Booking">{claim.booking.bookingCode}</Field>
-                <Field label="Signed at">{formatInvoiceDateTime(claim.handover.completedAt)}</Field>
-              </dl>
-            </section>
+              <section className={cn(panelClass, "p-4")} aria-label="Delivery record">
+                <CardTitle>Delivery record</CardTitle>
+                <dl className="mt-3 space-y-1.5">
+                  <Field label="Handover code">{claim.handover.handoverCode}</Field>
+                  <Field label="Transport">{claim.transport.transportCode}</Field>
+                  <Field label="Signed at">{formatInvoiceDateTime(claim.handover.completedAt)}</Field>
+                </dl>
+              </section>
+            </div>
           </div>
         ) : null}
       </div>

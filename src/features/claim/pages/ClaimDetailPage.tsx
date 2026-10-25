@@ -66,10 +66,12 @@ export default function ClaimDetailPage() {
             <ClaimSummaryStrip claim={claim} />
             <section aria-label="Progress" className={cn(panelClass, "p-4")}>
               <CardTitle>Progress</CardTitle>
-              <div className="mt-3"><ClaimProgress claim={claim} /></div>
+              <div className="mt-2.5"><ClaimProgress claim={claim} /></div>
             </section>
-            <ClaimInformationCard claim={claim} />
-            <ClaimHandoverCard claim={claim} />
+            <div className="grid items-stretch gap-2.5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+              <ClaimInformationCard claim={claim} />
+              <ClaimHandoverCard claim={claim} />
+            </div>
             {claim.billing ? <ClaimBillingPanel billing={claim.billing} /> : null}
             <ClaimOutcomeCard claim={claim} />
           </div>

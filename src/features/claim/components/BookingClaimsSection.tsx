@@ -31,7 +31,7 @@ export function SubmitClaimAction({ bookingId, className, onlyFirst = false }: {
   if (onlyFirst && data.claimCount > 0) return null
   return (
     <Link to={customerClaimNew(bookingId)} className={className}>
-      Submit claim
+      Create claim
     </Link>
   )
 }

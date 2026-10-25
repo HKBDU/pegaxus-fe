@@ -16,9 +16,9 @@ export function ClaimBillingPanel({ billing }: { billing: ClaimBilling }) {
   return (
     <section aria-label="Final settlement invoice" className={cn(panelClass, "p-4")}>
       <CardTitle>Final settlement invoice</CardTitle>
-      <div className="mt-3 space-y-3">
+      <div className="mt-3 space-y-2.5">
         {invoice ? (
-          <dl className="grid gap-x-4 gap-y-3 sm:grid-cols-4">
+          <dl className="space-y-1.5">
             <Field label="Invoice code">
               <Link to={invoiceDetail(invoice.invoiceId)} className="font-semibold text-primary underline-offset-2 hover:underline">{invoice.invoiceNumber}</Link>
             </Field>

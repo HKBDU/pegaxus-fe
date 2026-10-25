@@ -169,7 +169,7 @@ export function ClaimSubmitForm({ disabled, submitting, error, cancelHref, onSub
             <Link to={cancelHref}>Cancel</Link>
           </Button>
           <Button type="submit" className={primaryButtonClass} disabled={disabled || submitting}>
-            {submitting ? "Submitting..." : "Submit claim"}
+            {submitting ? "Creating..." : "Create claim"}
           </Button>
         </div>
       </div>

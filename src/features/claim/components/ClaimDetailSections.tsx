@@ -22,16 +22,16 @@ export function ClaimInformationCard({ claim }: { claim: Claim }) {
   return (
     <section aria-label="Claim information" className={cn(panelClass, "p-4")}>
       <CardTitle>Claim information</CardTitle>
-      <dl className="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-3">
+      <dl className="mt-3 space-y-1.5">
         <Field label="Customer">{claim.customer.name}</Field>
         <Field label="Booking">{claim.booking.bookingCode}</Field>
-        <Field label="Requested compensation"><span className="text-sm font-semibold">{money(claim.requestedCompensationAmount)}</span></Field>
-        <Field label="Title" className="sm:col-span-3"><span className="font-semibold">{claim.title}</span></Field>
-        <Field label="Description" className="sm:col-span-3">{claim.description}</Field>
-        <Field label="Customer note" className="sm:col-span-3">{claim.customerNote}</Field>
-        <Field label="Evidence note" className="sm:col-span-3">{claim.evidenceNote}</Field>
+        <Field label="Requested compensation">{money(claim.requestedCompensationAmount)}</Field>
         <Field label="Review started">{formatInvoiceDateTime(claim.reviewedAt)}</Field>
-        {claim.status === "CANCELLED" ? <Field label="Cancellation reason" className="sm:col-span-2">{claim.cancellationReason}</Field> : null}
+        <Field label="Title">{claim.title}</Field>
+        <Field label="Description">{claim.description}</Field>
+        <Field label="Customer note">{claim.customerNote}</Field>
+        <Field label="Evidence note">{claim.evidenceNote}</Field>
+        {claim.status === "CANCELLED" ? <Field label="Cancellation reason">{claim.cancellationReason}</Field> : null}
       </dl>
     </section>
   )
@@ -43,20 +43,20 @@ export function ClaimHandoverCard({ claim }: { claim: Claim }) {
   return (
     <section aria-label="Delivery record" className={cn(panelClass, "p-4")}>
       <CardTitle>Delivery record</CardTitle>
-      <dl className="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="mt-3 space-y-1.5">
         <Field label="Handover code">{handover.handoverCode}</Field>
         <Field label="Transport">{claim.transport.transportCode}</Field>
         <Field label="Signed at">{formatInvoiceDateTime(handover.completedAt)}</Field>
         <Field label="e-POD signature">{handover.senderSignatureUrl && handover.receiverSignatureUrl ? "Signed digitally" : "Signature incomplete"}</Field>
-        <Field label="Horse condition note (delivery)" className="sm:col-span-2">{handover.horseConditionNote}</Field>
-        <Field label="Discrepancy note" className="sm:col-span-2">{handover.discrepancyNote}</Field>
-        {claim.pickupHandover ? <Field label="Horse condition note (pickup)" className="sm:col-span-4">{claim.pickupHandover.horseConditionNote}</Field> : null}
+        <Field label="Horse condition note (delivery)">{handover.horseConditionNote}</Field>
+        <Field label="Discrepancy note">{handover.discrepancyNote}</Field>
+        {claim.pickupHandover ? <Field label="Horse condition note (pickup)">{claim.pickupHandover.horseConditionNote}</Field> : null}
         {claim.healthLogSummary ? (
-          <Field label="Health logs" className="sm:col-span-2">
+          <Field label="Health logs">
             {claim.healthLogSummary.totalCount} entries, {claim.healthLogSummary.abnormalCount} abnormal · last {formatInvoiceDateTime(claim.healthLogSummary.lastCheckedAt)}
           </Field>
         ) : null}
-        <Field label="Incidents on this transport" className="sm:col-span-2">
+        <Field label="Incidents on this transport">
           {claim.incidents?.length ? (
             <ul className="space-y-0.5">
               {claim.incidents.map((incident) => (
@@ -79,13 +79,13 @@ export function ClaimOutcomeCard({ claim }: { claim: Claim }) {
   return (
     <section aria-label="Outcome" className={cn(panelClass, "p-4")}>
       <CardTitle>{claim.status === "REJECTED" ? "Decision" : "Outcome"}</CardTitle>
-      <dl className="mt-3 grid gap-x-4 gap-y-3 sm:grid-cols-3">
+      <dl className="mt-3 space-y-1.5">
         <Field label="Resolution type">{RESOLUTION_TYPE_LABELS[resolution.resolutionType]}</Field>
         <Field label="Approved compensation">{money(resolution.approvedCompensationAmount)}</Field>
         <Field label="Decided at">{formatInvoiceDateTime(resolution.resolvedAt)}</Field>
-        <Field label="Summary" className="sm:col-span-3">{resolution.resolutionSummary}</Field>
-        <Field label="Corrective action" className="sm:col-span-3">{resolution.correctiveAction}</Field>
-        <Field label="Internal note" className="sm:col-span-3">{resolution.internalNote}</Field>
+        <Field label="Summary">{resolution.resolutionSummary}</Field>
+        <Field label="Corrective action">{resolution.correctiveAction}</Field>
+        <Field label="Internal note">{resolution.internalNote}</Field>
       </dl>
     </section>
   )
