@@ -1,12 +1,15 @@
 import { z } from "zod"
-import { invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts, DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_TYPE } from "@/features/invoice/constants"
-import type { CreateInvoicePayload, Invoice, InvoiceItemPayload, UpdateInvoicePayload } from "@/features/invoice/types"
+import { invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts, DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_TYPE, TRANSIT_DAYS_RANGE, isGeneratedInvoiceType } from "@/features/invoice/constants"
+import type { CreateInvoicePayload, Invoice, InvoiceItemPayload, InvoicePrefill, UpdateInvoicePayload } from "@/features/invoice/types"
 import { parseWholeNumber, todayIsoDate } from "@/features/invoice/utils"
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits"
 
 export const invoiceIdSchema = z.string();
 const date = z.iso.date();
 const timestamp = z.iso.datetime({ offset: true });
+// The BE stores the due date as a UTC datetime (e.g. 2026-10-29T23:59:59+00:00). The UI treats it as a calendar date:
+// keep the UTC day so a viewer east of UTC does not see the next day.
+const dueDate = z.union([date, timestamp]).transform((value) => value.slice(0, 10));
 const text = z.string().nullable();
 // The app is VND-only: an older row stored in another currency is still read, and shown as VND.
 const currency = z.string().transform((): "VND" => "VND");
@@ -76,7 +79,7 @@ export const invoiceListItemSchema = z.object({
   customerName: z.string(),
   totalAmount: amount,
   currency,
-  dueDate: date.nullable(),
+  dueDate: dueDate.nullable(),
   issuedAt: timestamp.nullable(),
   paidAt: timestamp.nullable(),
   createdAt: timestamp,
@@ -111,7 +114,7 @@ export const invoiceDetailSchema = z.object({
   status: invoiceStatusSchema,
   isPaymentRequired: z.boolean(),
   invoiceDate: date,
-  dueDate: date.nullable(),
+  dueDate: dueDate.nullable(),
   currency,
   note: text,
   // P-01/P-02 are not usable yet; never substitute Receipt.paymentMethod here.
@@ -234,6 +237,14 @@ export const invoiceFormSchema = z.object({
     .refine((value) => value >= todayIsoDate(), "Due date cannot be before today")
     .refine((value) => value <= maxFutureDateIso(), `Due date must be within ${VALIDATION_LIMITS.dateWindowYears} years from today`),
   note: z.string().max(VALIDATION_LIMITS.noteMaxLength, `Note must be at most ${VALIDATION_LIMITS.noteMaxLength} characters`),
+  /** QUOTATION only. "" = let the server derive it from the booking dates. */
+  transitDays: z.string().superRefine((value, ctx) => {
+    if (!value.trim()) return
+    const days = parseWholeNumber(value)
+    if (Number.isNaN(days) || days < TRANSIT_DAYS_RANGE.min || days > TRANSIT_DAYS_RANGE.max)
+      ctx.addIssue({ code: "custom", message: `Enter a whole number from ${TRANSIT_DAYS_RANGE.min} to ${TRANSIT_DAYS_RANGE.max}` })
+  }),
+  /** Only the types the client types the lines of (SUPPLEMENTARY, CREDIT_NOTE); QUOTATION, DEPOSIT and FINAL leave it empty. */
   items: z.array(invoiceItemFormSchema),
 })
 
@@ -244,13 +255,17 @@ export function emptyItem(): InvoiceItemFormValues {
   return { itemType: "TRANSPORT_FEE", description: "", quantity: "1", price: "", horseId: "", note: "" }
 }
 
-/** Fills the form from a saved draft (edit mode). The deposit deduction lines are not form rows, the server regenerates them. */
+/**
+ * Fills the form from a saved draft (edit mode). Generated types (QUOTATION, DEPOSIT, FINAL) have no editable rows: the
+ * server rebuilds the lines on every save. The deposit deduction lines are never form rows either.
+ */
 export function invoiceToFormValues(invoice: Invoice): InvoiceFormValues {
   return {
     type: invoice.type,
     dueDate: invoice.dueDate,
     note: invoice.note ?? "",
-    items: invoice.items
+    transitDays: "",
+    items: isGeneratedInvoiceType(invoice.type) ? [] : invoice.items
       .filter((item) => !item.isDepositDeduction)
       .map((item) => ({
         invoiceItemId: item.invoiceItemId ?? undefined,
@@ -276,21 +291,50 @@ function toItemPayload(item: InvoiceItemFormValues): InvoiceItemPayload {
   }
 }
 
+/** The picker gives a calendar day; the BE wants a datetime that is not in the past, so the day is closed at its end (UTC). */
+export function toDueDateTime(day: string) {
+  return `${day}T23:59:59Z`
+}
+
+/** The server builds the lines of QUOTATION, DEPOSIT and FINAL: they send `transitDays` (QUOTATION) but never `items`. */
+function lineFields(values: InvoiceFormValues) {
+  if (isGeneratedInvoiceType(values.type)) {
+    const days = parseWholeNumber(values.transitDays)
+    return values.type === INVOICE_TYPE.QUOTATION && !Number.isNaN(days) ? { transitDays: days } : {}
+  }
+  return { items: values.items.map(toItemPayload) }
+}
+
 /** `payment` and `itemDate` are left out on purpose: pending P-01 to P-03, the BE ignores them. */
 export function toCreatePayload(values: InvoiceFormValues): CreateInvoicePayload {
   return {
     type: values.type,
-    dueDate: values.dueDate,
+    dueDate: toDueDateTime(values.dueDate),
     ...(values.note.trim() ? { note: values.note.trim() } : {}),
-    items: values.items.map(toItemPayload),
+    ...lineFields(values),
   }
 }
 
 export function toUpdatePayload(values: InvoiceFormValues, lastUpdatedAt: string): UpdateInvoicePayload {
   return {
     lastUpdatedAt,
-    dueDate: values.dueDate,
+    dueDate: toDueDateTime(values.dueDate),
     ...(values.note.trim() ? { note: values.note.trim() } : {}),
-    items: values.items.map(toItemPayload),
+    ...lineFields(values),
+  }
+}
+
+/** Opens the form from a claim (credit note) or a financial summary (final): the lines of generated types are ignored. */
+export function prefillToFormValues(prefill: InvoicePrefill): Partial<InvoiceFormValues> {
+  return {
+    type: prefill.type,
+    items: isGeneratedInvoiceType(prefill.type) ? [] : prefill.items.map((item) => ({
+      itemType: (Object.values(INVOICE_ITEM_TYPE) as string[]).includes(item.itemType) ? (item.itemType as InvoiceItemFormValues["itemType"]) : "OTHER",
+      description: item.description,
+      quantity: String(item.quantity),
+      price: item.price === null ? "" : String(item.price),
+      horseId: "",
+      note: item.note ?? "",
+    })),
   }
 }

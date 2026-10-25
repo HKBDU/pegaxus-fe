@@ -1,5 +1,5 @@
 import { format, parseISO, isValid } from "date-fns"
-import { INVOICE_TAX_RATE_PERCENT, PAYMENT_ERROR_CODES, CANCELLATION_REASON_MIN_LENGTH, PAYMENT_METHOD_VALUES, PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH } from "@/features/invoice/constants"
+import { INVOICE_TAX_RATE_PERCENT, TRANSIT_DAYS_RANGE, PAYMENT_ERROR_CODES, CANCELLATION_REASON_MIN_LENGTH, PAYMENT_METHOD_VALUES, PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH } from "@/features/invoice/constants"
 import type { InvoiceItem, InvoiceSummary, PaymentErrorCode, PaymentErrorState, Invoice, RecordPaymentPayload } from "@/features/invoice/types"
 import type { InvoiceCurrency } from "@/features/invoice/constants"
 import { z } from "zod"
@@ -65,22 +65,30 @@ export function parseWholeNumber(value: string) {
   return Number(normalized)
 }
 
+/** Trip length typed on a QUOTATION: a whole number in the BE range, otherwise undefined (the server then derives it from the booking dates). */
+export function parseTransitDays(value: string) {
+  const days = parseWholeNumber(value)
+  return Number.isNaN(days) || days < TRANSIT_DAYS_RANGE.min || days > TRANSIT_DAYS_RANGE.max ? undefined : days
+}
+
 /**
  * Estimate shown while the draft is being edited (contract R8): subtotal of the manual lines, 20% tax,
- * deposit deduction added after tax. The server recomputes everything, this number is never sent.
+ * deposit deduction added after tax. The server recomputes everything, this number is never sent. IV1 returns no totals,
+ * so the form adds the lines it shows; a credit note carries no tax (`taxRatePercent` 0).
  */
 export function estimateSummary(
   lines: { quantity: number; price: number }[],
   depositDeductionItems: Pick<InvoiceItem, "total">[],
+  taxRatePercent: number = INVOICE_TAX_RATE_PERCENT,
 ): InvoiceSummary {
   const subtotal = roundMoney(lines.reduce((sum, line) => sum + (Number.isFinite(line.quantity * line.price) ? roundMoney(line.quantity * line.price) : 0), 0))
-  const tax = roundMoney((subtotal * INVOICE_TAX_RATE_PERCENT) / 100)
+  const tax = roundMoney((subtotal * taxRatePercent) / 100)
   const depositDeduction = roundMoney(depositDeductionItems.reduce((sum, item) => sum + item.total, 0))
   return {
     subtotal,
     discount: 0,
     tax,
-    taxRatePercent: INVOICE_TAX_RATE_PERCENT,
+    taxRatePercent,
     depositDeduction,
     grandTotal: roundMoney(subtotal + tax + depositDeduction),
   }

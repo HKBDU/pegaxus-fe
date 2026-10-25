@@ -22,6 +22,7 @@ export const ROLE_ROUTES = {
   mapAssets: "/admin/map-assets",
   personnelAssignment: "/admin/personnel-assignment",
   invoices: "/admin/invoices",
+  claims: "/admin/claims",
   incidents: "/admin/incidents",
   notifications: "/notifications",
   crew: "/crew",
@@ -36,6 +37,10 @@ export const returnRouteCreate = (transportPlanId: string) => `${ROLE_ROUTES.rou
 export const invoiceDetail = (invoiceId: string) => `${ROLE_ROUTES.invoices}/${encodeURIComponent(invoiceId)}`
 export const invoiceEdit = (invoiceId: string) => `${invoiceDetail(invoiceId)}/edit`
 export const invoiceCreate = (bookingId: string) => `${ROLE_ROUTES.invoices}/new/${encodeURIComponent(bookingId)}`
+
+export const claimDetail = (claimId: string) => `${ROLE_ROUTES.claims}/${encodeURIComponent(claimId)}`
+export const customerClaimNew = (bookingId: string) => `/bookings/${encodeURIComponent(bookingId)}/claims/new`
+export const customerClaimDetail = (bookingId: string, claimId: string) => `/bookings/${encodeURIComponent(bookingId)}/claims/${encodeURIComponent(claimId)}`
 
 export const personnelAssignmentPath = (transportPlanId: string) => `${ROLE_ROUTES.personnelAssignment}/${encodeURIComponent(transportPlanId)}`
 
@@ -114,6 +119,8 @@ const adminHeaderRoutes = [
   { path: ROLE_ROUTES.invoices, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "" },
   { path: `${ROLE_ROUTES.incidents}/:incidentReportId`, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "INCIDENT DETAILS" },
   { path: ROLE_ROUTES.incidents, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "" },
+  { path: `${ROLE_ROUTES.claims}/:claimId`, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "" },
+  { path: ROLE_ROUTES.claims, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "" },
   { path: "/admin/ongoing-transports/:transportId/gps", label: "ONGOING TRANSPORTS", href: "/admin/ongoing-transports", title: "LIVE GPS TRACKING" },
   { path: `${ROLE_ROUTES.personnelAssignment}/:transportPlanId`, label: "TRANSPORT PLANS", href: "/admin/transport-plans", title: "PERSONNEL ASSIGNMENT" },
   ...["profile", "staff", "transport-plans", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
