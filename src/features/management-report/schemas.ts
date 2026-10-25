@@ -305,3 +305,77 @@ export const incidentClaimReportSchema = z.object({
 });
 export type IncidentFilters = z.infer<typeof incidentFiltersSchema>;
 export type IncidentClaimReport = z.infer<typeof incidentClaimReportSchema>;
+
+export const transitDelaySchema = z.enum(["EARLY", "LATE_OVER_1_DAY"]);
+export const transitSortSchema = z.enum([
+  "actualDays:asc",
+  "actualDays:desc",
+  "deltaDays:asc",
+  "deltaDays:desc",
+]);
+export const transitRangeSchema = z.enum([
+  "<=-1",
+  "(-1,0]",
+  "(0,1]",
+  "(1,2]",
+  ">2",
+]);
+export const transitFiltersSchema = z
+  .object({
+    dateFrom: filterShape.dateFrom,
+    dateTo: filterShape.dateTo,
+    originCountry: filterShape.originCountry,
+    destinationCountry: filterShape.destinationCountry,
+    routeId: filterShape.routeId,
+    transportProviderId: filterShape.transportProviderId,
+    delayFilter: z.union([z.literal(""), transitDelaySchema]),
+    sortBy: transitSortSchema,
+    pageIndex: filterShape.pageIndex,
+    pageSize: filterShape.pageSize,
+  })
+  .superRefine(validateReportWindow);
+
+export const transitTimeReportSchema = z.object({
+  period: onTimeReportSchema.shape.period,
+  generatedAt: time,
+  kpi: z.object({
+    totalTransports: metric(count, integer),
+    avgActualDays: metric(signed),
+    avgDelayDays: metric(signed),
+    accuracyRatio: metric(signed),
+  }),
+  distribution: z
+    .array(z.object({ range: transitRangeSchema, count }))
+    .length(5)
+    .refine((rows) => new Set(rows.map((row) => row.range)).size === 5),
+  routeBenchmark: z.array(
+    z.object({
+      originCountry: z.string(),
+      destinationCountry: z.string(),
+      total: count,
+      avgActualDays: signed,
+      avgEstimatedDays: signed,
+      avgDeltaDays: signed,
+    }),
+  ),
+  excluded: z.object({ count, reasons: z.record(z.string(), count) }),
+  items: z.array(
+    z.object({
+      transportId: guidSchema,
+      transportCode: z.string(),
+      originCountry: z.string(),
+      destinationCountry: z.string(),
+      actualDepartureAt: time,
+      actualArrivalAt: time,
+      estimatedDays: signed,
+      actualDays: signed,
+      deltaDays: signed,
+    }),
+  ),
+  pageIndex: onTimeReportSchema.shape.pageIndex,
+  pageSize: onTimeReportSchema.shape.pageSize,
+  totalItems: count,
+  totalPages: count,
+});
+export type TransitFilters = z.infer<typeof transitFiltersSchema>;
+export type TransitTimeReport = z.infer<typeof transitTimeReportSchema>;

@@ -15,6 +15,7 @@ import {
   severitySchema,
   claimTypeSchema,
   type IncidentFilters,
+  type TransitFilters,
   type ReportFilters as Filters,
 } from "../schemas";
 import { LookupFilter } from "./LookupFilter";
@@ -33,12 +34,15 @@ export function ReportFilters({
   variant = "on-time-delivery",
 }: {
   draft: Record<string, string | number>;
-  onChange: (key: keyof Filters | keyof IncidentFilters, value: string) => void;
+  onChange: (
+    key: keyof Filters | keyof IncidentFilters | keyof TransitFilters,
+    value: string,
+  ) => void;
   onApply: () => void;
   onReset: () => void;
   errors: string[];
   disabled: boolean;
-  variant?: "on-time-delivery" | "incident-claim-frequency";
+  variant?: "on-time-delivery" | "incident-claim-frequency" | "transit-time";
 }) {
   const lookupFields =
     variant === "incident-claim-frequency"
@@ -47,11 +51,16 @@ export function ReportFilters({
           ["transportProviderId", "Provider", "provider"],
           ["vehicleId", "Vehicle", "vehicle"],
         ] as const)
-      : ([
-          ["routeId", "Route", "route"],
-          ["transportProviderId", "Provider", "provider"],
-          ["driverEmployeeId", "Driver", "driver"],
-        ] as const);
+      : variant === "transit-time"
+        ? ([
+            ["routeId", "Route", "route"],
+            ["transportProviderId", "Provider", "provider"],
+          ] as const)
+        : ([
+            ["routeId", "Route", "route"],
+            ["transportProviderId", "Provider", "provider"],
+            ["driverEmployeeId", "Driver", "driver"],
+          ] as const);
   const control =
     "h-9 w-full rounded-[2px] border-slate-200 bg-white text-sm shadow-none";
   return (
@@ -146,7 +155,7 @@ export function ReportFilters({
               </SelectContent>
             </Select>
           </div>
-        ) : (
+        ) : variant === "incident-claim-frequency" ? (
           <>
             {(
               [
@@ -194,7 +203,7 @@ export function ReportFilters({
               </p>
             </div>
           </>
-        )}
+        ) : null}
       </div>
       <datalist id="report-countries">
         {countries.map((country) => (

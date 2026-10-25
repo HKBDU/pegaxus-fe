@@ -8,10 +8,16 @@ import {
   envelopeSchema,
   guidSchema,
   onTimeReportSchema,
+  transitTimeReportSchema,
+  type TransitFilters,
   type LookupKind,
   type ReportFilters,
 } from "./schemas";
-import { reportParams, incidentReportParams } from "./filters";
+import {
+  reportParams,
+  incidentReportParams,
+  transitReportParams,
+} from "./filters";
 import { incidentClaimReportSchema, type IncidentFilters } from "./schemas";
 
 export class ReportError extends Error {
@@ -162,6 +168,35 @@ export async function getIncidentClaimReport(
     );
     assertReportAccess(scope, signal);
     const report = incidentClaimReportSchema.parse(unwrapReport(payload));
+    if (
+      report.period.dateFrom !== filters.dateFrom ||
+      report.period.dateTo !== filters.dateTo ||
+      report.pageIndex !== filters.pageIndex ||
+      report.pageSize !== filters.pageSize
+    )
+      throw new ReportError(
+        "CONTRACT_MISMATCH",
+        "The response period or pagination does not match the requested report.",
+      );
+    return report;
+  } catch (error) {
+    throw reportError(error);
+  }
+}
+
+export async function getTransitTimeReport(
+  filters: TransitFilters,
+  scope: string,
+  signal: AbortSignal,
+) {
+  try {
+    assertReportAccess(scope, signal);
+    const payload = await apiClient.get<unknown, unknown>(
+      "/reports/transit-time",
+      { params: transitReportParams(filters), signal },
+    );
+    assertReportAccess(scope, signal);
+    const report = transitTimeReportSchema.parse(unwrapReport(payload));
     if (
       report.period.dateFrom !== filters.dateFrom ||
       report.period.dateTo !== filters.dateTo ||

@@ -1,6 +1,8 @@
 import {
   reportFiltersSchema,
   incidentFiltersSchema,
+  transitFiltersSchema,
+  type TransitFilters,
   type IncidentFilters,
   type ReportFilters,
 } from "./schemas";
@@ -186,6 +188,68 @@ export function incidentCohortKey(filters: IncidentFilters) {
     pageIndex: _page,
     pageSize: _size,
     sortBy: _sort,
+    ...cohort
+  } = filters;
+  return JSON.stringify(cohort);
+}
+
+export const transitFilterKeys = [
+  "dateFrom",
+  "dateTo",
+  "originCountry",
+  "destinationCountry",
+  "routeId",
+  "transportProviderId",
+  "delayFilter",
+  "sortBy",
+  "pageIndex",
+  "pageSize",
+] as const;
+export function defaultTransitFilters(now = new Date()): TransitFilters {
+  const shared = defaultFilters(now);
+  return {
+    dateFrom: shared.dateFrom,
+    dateTo: shared.dateTo,
+    originCountry: shared.originCountry,
+    destinationCountry: shared.destinationCountry,
+    routeId: shared.routeId,
+    transportProviderId: shared.transportProviderId,
+    pageIndex: shared.pageIndex,
+    pageSize: shared.pageSize,
+    delayFilter: "",
+    sortBy: "deltaDays:desc",
+  };
+}
+export function readTransitFilters(params: URLSearchParams) {
+  const raw = readFilterValues(
+    params,
+    defaultTransitFilters(),
+    transitFilterKeys,
+  );
+  return { raw, parsed: transitFiltersSchema.safeParse(raw) };
+}
+export function writeTransitFilters(
+  current: URLSearchParams,
+  filters: TransitFilters,
+) {
+  return writeFilterValues(current, filters, transitFilterKeys);
+}
+export function transitReportParams(
+  filters: TransitFilters,
+  exportFormat?: "xlsx" | "pdf",
+) {
+  return serializeReportParams(
+    transitFiltersSchema.parse(filters),
+    transitFilterKeys,
+    exportFormat,
+  );
+}
+export function transitCohortKey(filters: TransitFilters) {
+  const {
+    pageIndex: _page,
+    pageSize: _size,
+    sortBy: _sort,
+    delayFilter: _delay,
     ...cohort
   } = filters;
   return JSON.stringify(cohort);

@@ -1,12 +1,17 @@
 import { isAxiosError } from "axios";
 import { z } from "zod";
 import apiClient from "@/lib/axios";
-import { reportParams, incidentReportParams } from "./filters";
+import {
+  reportParams,
+  incidentReportParams,
+  transitReportParams,
+} from "./filters";
 import {
   envelopeSchema,
   type ExportFormat,
   type ReportFilters,
   type IncidentFilters,
+  type TransitFilters,
 } from "./schemas";
 import {
   assertReportAccess,
@@ -83,7 +88,8 @@ async function binaryError(payload: unknown): Promise<ReportError | null> {
 async function exportReport(
   selection:
     | { reportType: "on-time-delivery"; filters: ReportFilters }
-    | { reportType: "incident-claim-frequency"; filters: IncidentFilters },
+    | { reportType: "incident-claim-frequency"; filters: IncidentFilters }
+    | { reportType: "transit-time"; filters: TransitFilters },
   format: ExportFormat,
   scope: string,
   signal: AbortSignal,
@@ -98,7 +104,9 @@ async function exportReport(
         params:
           selection.reportType === "on-time-delivery"
             ? reportParams(selection.filters, format)
-            : incidentReportParams(selection.filters, format),
+            : selection.reportType === "incident-claim-frequency"
+              ? incidentReportParams(selection.filters, format)
+              : transitReportParams(selection.filters, format),
         responseType: "blob",
         signal,
         transformResponse: [
@@ -176,6 +184,20 @@ export function exportIncidentClaimReport(
 ) {
   return exportReport(
     { reportType: "incident-claim-frequency", filters },
+    format,
+    scope,
+    signal,
+  );
+}
+
+export function exportTransitTimeReport(
+  filters: TransitFilters,
+  format: ExportFormat,
+  scope: string,
+  signal: AbortSignal,
+) {
+  return exportReport(
+    { reportType: "transit-time", filters },
     format,
     scope,
     signal,

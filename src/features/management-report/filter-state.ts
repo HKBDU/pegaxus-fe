@@ -10,8 +10,16 @@ import {
   writeIncidentFilters,
   filterKeys,
   incidentFilterKeys,
+  defaultTransitFilters,
+  readTransitFilters,
+  writeTransitFilters,
+  transitFilterKeys,
 } from "./filters";
-import { reportFiltersSchema, incidentFiltersSchema } from "./schemas";
+import {
+  reportFiltersSchema,
+  incidentFiltersSchema,
+  transitFiltersSchema,
+} from "./schemas";
 
 function useReportFilterState<
   F extends Record<string, string | number> & { pageIndex: number },
@@ -124,5 +132,15 @@ export function useIncidentFilterState() {
     defaults: defaultIncidentFilters,
     keys: incidentFilterKeys,
     detailKeys: ["pageIndex", "pageSize", "sortBy"],
+  });
+}
+export function useTransitFilterState() {
+  return useReportFilterState({
+    read: readTransitFilters,
+    schema: transitFiltersSchema,
+    write: writeTransitFilters,
+    defaults: defaultTransitFilters,
+    keys: transitFilterKeys,
+    detailKeys: ["pageIndex", "pageSize", "sortBy", "delayFilter"],
   });
 }

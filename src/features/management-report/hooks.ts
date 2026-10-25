@@ -3,10 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useAuthStore } from "@/features/auth/store";
 import { canAccess } from "@/features/auth/access-control";
-import { cohortKey, incidentCohortKey } from "./filters";
+import { cohortKey, incidentCohortKey, transitCohortKey } from "./filters";
 import {
   getOnTimeReport,
   getIncidentClaimReport,
+  getTransitTimeReport,
   reportScope,
   hasReportAccess,
   reportError,
@@ -15,6 +16,7 @@ import {
 import {
   exportOnTimeReport,
   exportIncidentClaimReport,
+  exportTransitTimeReport,
   saveReportFile,
 } from "./export";
 import {
@@ -22,6 +24,9 @@ import {
   onTimeReportSchema,
   incidentFiltersSchema,
   incidentClaimReportSchema,
+  transitFiltersSchema,
+  transitTimeReportSchema,
+  type TransitFilters,
   type ReportFilters,
   type IncidentFilters,
   type ExportFormat,
@@ -42,7 +47,7 @@ export function useReportAccess() {
 function useManagementReport<F, T>(
   filters: F | null,
   definition: {
-    type: "on-time-delivery" | "incident-claim-frequency";
+    type: "on-time-delivery" | "incident-claim-frequency" | "transit-time";
     filterSchema: z.ZodType<F>;
     responseSchema: z.ZodType<T>;
     cohort: (filters: F) => string;
@@ -120,6 +125,16 @@ export function useIncidentClaimReport(filters: IncidentFilters | null) {
   });
 }
 
+export function useTransitTimeReport(filters: TransitFilters | null) {
+  return useManagementReport(filters, {
+    type: "transit-time",
+    filterSchema: transitFiltersSchema,
+    responseSchema: transitTimeReportSchema,
+    cohort: transitCohortKey,
+    read: getTransitTimeReport,
+  });
+}
+
 function useReportFileExport<F>(
   send: (
     filters: F,
@@ -171,4 +186,7 @@ export function useReportExport() {
 }
 export function useIncidentReportExport() {
   return useReportFileExport(exportIncidentClaimReport);
+}
+export function useTransitReportExport() {
+  return useReportFileExport(exportTransitTimeReport);
 }

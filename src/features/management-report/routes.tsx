@@ -9,7 +9,26 @@ const OnTimeDeliveryPage = lazy(() => import("./pages/OnTimeDeliveryPage"));
 const IncidentClaimReportPage = lazy(
   () => import("./pages/IncidentClaimReportPage"),
 );
+const TransitTimePage = lazy(() => import("./pages/TransitTimePage"));
 export const managementReportRoutes: RouteObject[] = [
+  {
+    path: "/admin/reports/transit-time",
+    element: (
+      <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
+        <AdminLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TransitTimePage />
+          </Suspense>
+        ),
+      },
+    ],
+  },
   {
     path: "/admin/reports/incident-claim-frequency",
     element: (
