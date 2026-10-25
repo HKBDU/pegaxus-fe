@@ -56,7 +56,7 @@ function metadataFromPlan(plan: RoutePlan): RoutePlanBuilderMetadata {
   return {
     planCode: plan.routePlanCode,
     bookingCode: plan.bookingCode,
-    routeType: plan.routeType === "RETURN" ? "PRIMARY" : plan.routeType,
+    routeType: plan.routeType,
     status: plan.status,
     scope: plan.isCrossBorder ? "International" : "Domestic",
     departureAt: plan.plannedDepartureAt,
@@ -174,7 +174,7 @@ export default function EditRoutePlanPage() {
     <RoutePlanBuilder
       key={plan.routePlanId}
       transportPlanId={plan.transportPlanId}
-      routeType={plan.routeType === "RETURN" ? "PRIMARY" : plan.routeType}
+      routeType={plan.routeType}
       metadata={metadataFromPlan(plan)}
       initialRoutes={initialRoutes}
       initialRouteNote={plan.routeNote ?? ""}

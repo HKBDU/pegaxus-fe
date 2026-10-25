@@ -52,7 +52,7 @@ export function mapUploadDocumentError(error: unknown): UploadDocumentError {
   )
     return { code, message: data.message, field: "expiryDate" };
   if (code === "FILE_TOO_LARGE" || status === 413)
-    return { code, message: "Each file must be 5 MiB or smaller." };
+    return { code, message: "Each file must be 10 MB or smaller." };
   if (code === "INVALID_FILE_TYPE")
     return {
       code,

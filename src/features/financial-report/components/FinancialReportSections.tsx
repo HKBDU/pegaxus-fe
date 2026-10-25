@@ -17,6 +17,7 @@ import {
 } from "@/shared/components/ui/table";
 import type { FinancialReport } from "../schemas";
 import { financialLabel, financialMoney } from "../presentation";
+import { PricingBreakdown } from "./PricingBreakdown";
 
 const issues: Record<string, string> = {
   PAID_WITHOUT_RECEIPT: "Paid invoice without a confirmed receipt",
@@ -114,8 +115,7 @@ export function ReconciliationSection({ report }: { report: FinancialReport }) {
           <div className="rounded-[2px] border border-slate-200">
             <Table className="min-w-[620px] text-xs">
               <TableCaption className="sr-only">
-                Backend reconciliation of invoices and confirmed receipts, in
-                VND
+                Reconciliation of invoices and confirmed receipts, in VND
               </TableCaption>
               <TableHeader className="bg-stone-100">
                 <TableRow>
@@ -172,7 +172,7 @@ export function SuggestedItemsTable({ report }: { report: FinancialReport }) {
           <Badge variant="outline">Read-only</Badge>
         </div>
         <p className="m-0 text-xs text-slate-500">
-          Reference figures only. FINAL invoice lines are generated from the
+          Reference figures only. Final invoice lines are generated from the
           issued quotation by the billing service.
         </p>
       </CardHeader>
@@ -214,45 +214,7 @@ export function SuggestedItemsTable({ report }: { report: FinancialReport }) {
                       <p className="m-0 break-words font-medium text-slate-900">
                         {item.description}
                       </p>
-                      <details className="mt-2">
-                        <summary className="w-fit cursor-pointer rounded-[2px] text-primary outline-none focus-visible:ring-2 focus-visible:ring-primary/30">
-                          Pricing basis & sources
-                        </summary>
-                        <dl className="mt-2 space-y-1 text-[11px] text-slate-500">
-                          {Object.entries(item.basis).map(([key, value]) => (
-                            <div key={key} className="min-w-0">
-                              <dt className="font-medium">{key}</dt>
-                              <dd className="m-0 whitespace-pre-wrap break-all">
-                                {value === null
-                                  ? "—"
-                                  : typeof value === "string"
-                                    ? value
-                                    : JSON.stringify(value)}
-                              </dd>
-                            </div>
-                          ))}
-                        </dl>
-                        {!Object.keys(item.basis).length ? (
-                          <p className="my-1 text-slate-500">
-                            No additional pricing basis.
-                          </p>
-                        ) : null}
-                        <ul className="mt-2 list-none space-y-1 p-0 text-[11px] text-slate-500">
-                          {item.sourceRefs.map((source, sourceIndex) => (
-                            <li
-                              key={`${source.type}-${source.id}-${sourceIndex}`}
-                              className="break-all"
-                            >
-                              {source.type}: {source.id}
-                            </li>
-                          ))}
-                        </ul>
-                        {!item.sourceRefs.length ? (
-                          <p className="my-1 text-slate-500">
-                            No source references.
-                          </p>
-                        ) : null}
-                      </details>
+                      <PricingBreakdown item={item} />
                     </TableCell>
                     <TableCell className="max-w-40 whitespace-normal px-3 align-top">
                       {financialLabel(item.itemType)}

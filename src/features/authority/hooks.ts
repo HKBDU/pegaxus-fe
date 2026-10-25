@@ -1,10 +1,17 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getAuthoritySubmissionDetail, listAuthoritySubmissions, recordAuthoritySubmission, updateAuthorityReview } from './services'
 import type { RecordAuthoritySubmissionInput, UpdateAuthorityReviewInput } from './types'
 
 export function useRecordAuthoritySubmission(dossierId: string) {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: RecordAuthoritySubmissionInput) => recordAuthoritySubmission(dossierId, input),
+    onSuccess: () => {
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['authoritySubmissions', dossierId] }),
+        queryClient.invalidateQueries({ queryKey: ['dossier'] }),
+      ])
+    },
   })
 }
 
@@ -13,8 +20,16 @@ export function useAuthoritySubmissions(dossierId: string) {
 }
 
 export function useUpdateAuthorityReview(submissionId: string) {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (input: UpdateAuthorityReviewInput) => updateAuthorityReview(submissionId, input),
+    onSuccess: () => {
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['authoritySubmissions'] }),
+        queryClient.invalidateQueries({ queryKey: ['authoritySubmission', submissionId] }),
+        queryClient.invalidateQueries({ queryKey: ['dossier'] }),
+      ])
+    },
   })
 }
 

@@ -15,6 +15,7 @@ import {
   readyForSubmissionEnvelopeSchema,
   missingDocumentReminderSchema,
   missingDocumentReminderEnvelopeSchema,
+  complianceDocumentEnvelopeSchema,
 } from "./schemas"
 import { bookingDossierLinkSchema, type BookingDossierLink } from "./schemas"
 import type { EntityId, PaginationMeta } from "@/shared/types"
@@ -273,7 +274,7 @@ const documentServiceMethods = {
     const id = dossierIdSchema.parse(input.dossierId);
     const reminder = missingDocumentReminderSchema.parse(input.reminder);
     const payload = await apiClient.post<unknown, unknown>(
-      `${ENDPOINT}/${id}/missing-document-reminders`,
+      `${ENDPOINT}/${id}/requirements/reminders`,
       reminder,
     );
     const response = backendReminderEnvelopeSchema.parse(payload);
@@ -288,9 +289,10 @@ const documentServiceMethods = {
 
   async reviewComplianceDocument(input: DocumentReviewInput) {
     const versionId = dossierIdSchema.parse(String(input.versionId));
-    const { result, ...review } = documentReviewSchema.parse(input.review);
+    const documentId = dossierIdSchema.parse(String(input.documentId));
+    const review = documentReviewSchema.parse(input.review);
     const payload = await apiClient.post<unknown, unknown>(
-      `${requirementEndpoint(input.dossierId, input.requirementId)}/versions/${versionId}/${result === "APPROVED" ? "approve" : "reject"}`,
+      `compliance-documents/${encodeURIComponent(documentId)}/versions/${encodeURIComponent(versionId)}/reviews`,
       review,
     );
     return documentReviewEnvelopeSchema.parse(payload);
@@ -298,7 +300,7 @@ const documentServiceMethods = {
 
   async markReadyForSubmission(dossierId: string) {
     const id = dossierIdSchema.parse(dossierId);
-    const payload = await apiClient.post<unknown, unknown>(
+    const payload = await apiClient.patch<unknown, unknown>(
       `${ENDPOINT}/${id}/ready-for-submission`,
     );
     return readyForSubmissionEnvelopeSchema.parse(payload);
@@ -380,28 +382,24 @@ const documentServiceMethods = {
   },
 
   async getComplianceDocument(
-    _documentId: string,
+    documentId: string,
     signal?: AbortSignal,
-    dossierId?: string,
-    requirementId?: string,
   ) {
-    if (!dossierId || !requirementId)
-      throw new Error("DOSSIER_REQUIREMENT_CONTEXT_REQUIRED");
-    const requirement = await dossierService.getRequirement(
-      dossierId,
-      requirementId,
-      signal,
+    const id = dossierIdSchema.parse(String(documentId));
+    const payload = await apiClient.get<unknown, unknown>(
+      `compliance-documents/${encodeURIComponent(id)}`,
+      { signal },
     );
-    if (!requirement.document) throw new Error("DOCUMENT_NOT_FOUND");
-    return requirement.document;
+    return complianceDocumentEnvelopeSchema.parse(payload).value;
   },
 
   async submitDocumentVersion(input: SubmitDocumentVersionInput) {
+    const documentId = dossierIdSchema.parse(String(input.documentId));
     const metadata = createSubmitDocumentVersionSchema(null).parse(
       input.metadata,
     );
     const payload = await apiClient.post<unknown, unknown>(
-      `${requirementEndpoint(input.dossierId, input.requirementId)}/document/versions`,
+      `compliance-documents/${encodeURIComponent(documentId)}/versions`,
       serializeDocumentSubmission(input.files, metadata),
       { timeout: 120_000 },
     );
@@ -419,11 +417,12 @@ const documentServiceMethods = {
   },
 
   async updateComplianceDocumentMetadata(input: UpdateDocumentMetadataInput) {
+    const documentId = dossierIdSchema.parse(String(input.documentId));
     const changes = createUpdateDocumentMetadataSchema(null).parse(
       input.changes,
     );
     const payload = await apiClient.patch<unknown, unknown>(
-      `${requirementEndpoint(input.dossierId, input.requirementId)}/document/metadata`,
+      `compliance-documents/${encodeURIComponent(documentId)}`,
       serializeDocumentMetadata(changes),
     );
     return updateDocumentMetadataEnvelopeSchema.parse(payload).value;
@@ -464,6 +463,7 @@ const documentServiceMethods = {
       .parse(unwrapBackendValue(payload))
       .map(mapBackendRequirement);
   },
+  /** INVALID / DISABLED: Flow 2 does not define a revoke-review endpoint. */
   async revokeDocumentReview(input: RevokeDocumentReviewInput) {
     const review = z
       .object({

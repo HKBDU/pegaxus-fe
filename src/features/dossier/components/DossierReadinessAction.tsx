@@ -19,8 +19,10 @@ import type { DocumentReviewError, DossierOverview } from "../types";
 
 export function DossierReadinessAction({
   dossier,
+  onCompleted,
 }: {
   dossier: DossierOverview;
+  onCompleted?: () => void;
 }) {
   const role = useDossierRole("TRANSPORT_SPECIALIST");
   const eligible = canMarkReadyForSubmission(role, dossier);
@@ -37,6 +39,7 @@ export function DossierReadinessAction({
       if (!attempt.started) return;
       toast.success(attempt.value.message);
       setOpen(false);
+      onCompleted?.();
     } catch (failure) {
       const mapped = mapDocumentReviewError(failure);
       setError(mapped);

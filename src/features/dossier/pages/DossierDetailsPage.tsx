@@ -117,7 +117,25 @@ export default function DossierDetailsPage() {
         ) : query.data ? (
           <>
             <DossierOverview dossier={query.data} />
-            <DossierReadinessAction dossier={query.data} />
+            {query.data.status === "DRAFT" ? (
+              <div
+                role="status"
+                className="rounded-[2px] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+              >
+                <p className="m-0 font-semibold">
+                  Document upload is not open yet.
+                </p>
+                <p className="m-0 mt-1">
+                  This dossier is waiting for the Transport Specialist to
+                  complete route feasibility review (RP7). Uploading
+                  documents will open after the review is approved.
+                </p>
+              </div>
+            ) : null}
+            <DossierReadinessAction
+              dossier={query.data}
+              onCompleted={() => setActiveSection("authority")}
+            />
             <div className="border-b border-gray-200">
               <div
                 role="tablist"

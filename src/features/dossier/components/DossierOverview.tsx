@@ -50,6 +50,7 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
   const hasProof = proofs.some(([, proof]) => proof != null);
   const progress = Math.max(0, Math.min(100, dossier.progressPercent));
   const siblings = dossier.complianceDossiers ?? [];
+  const extraDossier = siblings.find((item) => item.dossierType === "EXTRA");
   const lockMessage =
     dossier.writeLockReason === "BOOKING_CHANGE_IN_PROGRESS"
       ? "Booking changes are in progress. Editing is temporarily locked."
@@ -60,6 +61,34 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
 
   return (
     <div className="space-y-3">
+      {extraDossier ? (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-[2px] border border-orange-300 bg-orange-50 px-4 py-3 text-sm text-orange-950"
+        >
+          <div>
+            <p className="m-0 font-semibold">
+              Emergency return dossier EXTRA is active for this transport.
+            </p>
+            <p className="m-0 mt-1 text-xs text-orange-800">
+              Review the EXTRA dossier before return-route activation. MAIN and
+              EXTRA are separate compliance dossiers.
+            </p>
+          </div>
+          {String(dossier.complianceDossierId) !==
+          String(extraDossier.complianceDossierId) ? (
+            <button
+              type="button"
+              onClick={() =>
+                navigate(dossierDetail(extraDossier.complianceDossierId, role))
+              }
+              className="rounded-[2px] border border-orange-400 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-orange-900 hover:bg-orange-100 focus-visible:outline-2 focus-visible:outline-orange-700"
+            >
+              Open EXTRA dossier
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {dossier.writeLocked ? (
         <div
           role="status"
@@ -111,7 +140,7 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
                                 dossierDetail(item.complianceDossierId, role),
                               )
                             }
-                            className="rounded-[2px] border border-slate-300 px-1.5 py-0.5 font-heading text-[0.65rem] font-semibold uppercase tracking-[0.06em] text-slate-700 transition-colors hover:bg-amber-50 disabled:border-primary disabled:bg-amber-50 disabled:text-slate-900"
+                            className="rounded-[2px] border border-slate-300 px-2 py-1 font-heading text-[0.7rem] font-semibold uppercase tracking-[0.06em] text-slate-700 transition-colors hover:bg-amber-50 disabled:border-primary disabled:bg-amber-50 disabled:text-slate-900"
                           >
                             {item.dossierType ?? item.dossierCode}
                           </button>

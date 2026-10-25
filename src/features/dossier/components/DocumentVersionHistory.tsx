@@ -20,6 +20,10 @@ import { DocumentFilesPreview } from "./DocumentFilesPreview";
 import { DocumentRequestComments } from "./DocumentRequestComments";
 import { RevokeDocumentReviewDialog } from "./RevokeDocumentReviewDialog";
 
+// INVALID FEATURE: Flow 2 has no revoke-review endpoint. Keep legacy code for
+// audit/reference, but this flag must remain false until the contract changes.
+const REVOKE_REVIEW_FEATURE_ENABLED = false;
+
 function VersionFiles({ files }: { files: DocumentVersion["files"] }) {
   const [open, setOpen] = useState(false);
   return (
@@ -296,7 +300,8 @@ export function DocumentDetailsDialog({
                 }
               />
             ))}
-            {role === "TRANSPORT_SPECIALIST" &&
+            {REVOKE_REVIEW_FEATURE_ENABLED &&
+            role === "TRANSPORT_SPECIALIST" &&
             !dossier.writeLocked &&
             ["IN_PREPARATION", "REJECTED", "READY_FOR_SUBMISSION"].includes(
               dossier.status,
@@ -307,7 +312,7 @@ export function DocumentDetailsDialog({
                 Revoke Approval
               </Button>
             ) : null}
-            {revokeOpen ? (
+            {REVOKE_REVIEW_FEATURE_ENABLED && revokeOpen ? (
               <RevokeDocumentReviewDialog
                 dossierId={dossierId}
                 requirementId={requirementId}

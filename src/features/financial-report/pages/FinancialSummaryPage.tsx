@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
+import { REPORT_MOCK_MODE } from "@/lib/report-mode";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
@@ -16,6 +17,7 @@ import {
 } from "@/shared/components/ui/dialog";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { FinancialNoteEditor } from "../components/FinancialNoteEditor";
+import { FinancialDemoNotice } from "../components/FinancialDemoNotice";
 import {
   FinancialOverview,
   ReconciliationSection,
@@ -110,6 +112,7 @@ function LoadedReport({
   }
 
   async function refresh() {
+    if (REPORT_MOCK_MODE) return;
     if (!editable || busy || api.query.isFetching || draft.needsReview) return;
     setOperationError(null);
     setFeedback("");
@@ -123,6 +126,7 @@ function LoadedReport({
   }
 
   async function save() {
+    if (REPORT_MOCK_MODE) return;
     if (
       !editable ||
       busy ||
@@ -177,7 +181,11 @@ function LoadedReport({
             variant={report.isStale ? "default" : "outline"}
             onClick={() => void refresh()}
             disabled={
-              !editable || busy || api.query.isFetching || draft.needsReview
+              REPORT_MOCK_MODE ||
+              !editable ||
+              busy ||
+              api.query.isFetching ||
+              draft.needsReview
             }
             className="h-auto min-h-10 max-w-full whitespace-normal rounded-[2px] text-left"
           >
@@ -195,7 +203,7 @@ function LoadedReport({
             [
               ["Generated", report.generatedAt],
               ["Updated", report.updatedAt],
-              ["Server time", report.serverTime],
+              ["As of", report.serverTime],
             ] as const
           ).map(([label, value]) => (
             <div key={label}>
@@ -238,6 +246,7 @@ function LoadedReport({
       <ReconciliationSection report={report} />
       <SuggestedItemsTable report={report} />
       <FinancialNoteEditor
+        demo={REPORT_MOCK_MODE}
         draft={draft}
         editable={Boolean(editable)}
         busy={busy}
@@ -249,7 +258,7 @@ function LoadedReport({
         onReview={() => void reload()}
       />
       <p className="m-0 text-xs text-slate-500">
-        FINAL invoice creation is unavailable from this summary. Suggested fees
+        Final invoice creation is unavailable from this summary. Suggested fees
         are reference figures only.
       </p>
       <Dialog open={conflictOpen} onOpenChange={setConflictOpen}>
@@ -302,9 +311,16 @@ function FinancialWorkspace({ transportId }: { transportId: string }) {
     <main className="mx-auto w-full min-w-0 max-w-7xl space-y-4 px-4 py-6 sm:px-6">
       <PageHeader
         title="Financial summary"
-        backHref={`${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(transportId)}`}
-        backLabel="Transport details"
+        backHref={
+          REPORT_MOCK_MODE
+            ? "/admin/reports/on-time-delivery"
+            : `${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(transportId)}`
+        }
+        backLabel={
+          REPORT_MOCK_MODE ? "Management reports" : "Transport details"
+        }
       />
+      <FinancialDemoNotice />
       {api.query.data ? (
         <LoadedReport report={api.query.data} api={api} />
       ) : api.query.isPending ? (

@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import { MOCK_CUSTOMER_PROFILE, MOCK_EMPLOYEE_PROFILE } from "@/features/profile/constants/profile.mock"
 import { profileApi } from "@/features/profile/services"
 import type { Profile, UpdateProfileRequest } from "@/features/profile/types"
+import { presignedUpload } from "@/shared/utils/presigned"
 
 export function useProfile(customerId?: string) {
   const location = useLocation()
@@ -51,7 +52,7 @@ export function useProfile(customerId?: string) {
           return {
             ...currentProfile,
             ...profileFields,
-            avatarUrl: avatar ? URL.createObjectURL(avatar) : currentProfile.avatarUrl,
+            avatarUrl: avatar instanceof File ? URL.createObjectURL(avatar) : currentProfile.avatarUrl,
             updatedAt: new Date().toISOString(),
           }
         })
@@ -64,7 +65,18 @@ export function useProfile(customerId?: string) {
         throw new Error("Backend does not expose a customer profile update endpoint")
       }
 
-      await profileApi.updateMe(input)
+      const apiInput: UpdateProfileRequest = input.avatar instanceof File
+        ? {
+            ...input,
+            avatar: {
+              publicId: await presignedUpload.upload({
+                file: input.avatar,
+                entity: "avatar",
+              }),
+            },
+          }
+        : input
+      await profileApi.updateMe(apiInput)
 
       // PATCH responses may not contain the complete profile. Reload the
       // canonical representation so every field shown by the page is fresh.

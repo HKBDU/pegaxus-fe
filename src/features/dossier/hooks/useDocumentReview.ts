@@ -21,6 +21,7 @@ export function useDocumentReview(
     createRequestAttemptGuard((state) => onPendingChange?.(state.isRunning)),
   );
   const mutation = useMutation({
+    // INVALID / DISABLED legacy branch: revoke review is not in the Flow 2 contract.
     mutationFn: (input: DocumentReviewInput | RevokeDocumentReviewInput) =>
       "reviewId" in input
         ? dossierService.revokeDocumentReview(input)

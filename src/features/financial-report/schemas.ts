@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-export const transportIdSchema = z
-  .string()
-  .regex(
-    /^(?!00000000-0000-0000-0000-000000000000$)[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i,
-    "A valid transport GUID is required.",
-  );
+export const transportIdSchema = z.string();
 export const financialAmountSchema = z
   .number()
   .finite()

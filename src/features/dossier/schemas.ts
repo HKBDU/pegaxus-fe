@@ -76,7 +76,7 @@ export const dossierUploadedAssetSchema = z.object({
     .number()
     .int()
     .nonnegative()
-    .max(UPLOAD_MAX_FILE_BYTES, "Each file must be 5 MiB or smaller."),
+    .max(UPLOAD_MAX_FILE_BYTES, "Each file must be 10 MB or smaller."),
 });
 export const dossierUploadedAssetsSchema = z
   .array(dossierUploadedAssetSchema)
@@ -428,13 +428,7 @@ const backendReviewValue = z.object({
 export const approveDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const rejectDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const documentReviewEnvelopeSchema = envelope(backendReviewValue);
-export const readyForSubmissionEnvelopeSchema = envelope(
-  z.object({
-    complianceDossierId: entityId,
-    status: dossierStatusSchema,
-    readyForSubmissionAt: timestamp.nullable(),
-  }),
-);
+export const readyForSubmissionEnvelopeSchema = envelope(z.null());
 export const submitDocumentVersionEnvelopeSchema = z.union([
   envelope(
     z.object({
