@@ -39,6 +39,7 @@ export const invoiceEdit = (invoiceId: string) => `${invoiceDetail(invoiceId)}/e
 export const invoiceCreate = (bookingId: string) => `${ROLE_ROUTES.invoices}/new/${encodeURIComponent(bookingId)}`
 
 export const claimDetail = (claimId: string) => `${ROLE_ROUTES.claims}/${encodeURIComponent(claimId)}`
+export const claimResolve = (claimId: string) => `${claimDetail(claimId)}/resolve`
 export const customerClaimNew = (bookingId: string) => `/bookings/${encodeURIComponent(bookingId)}/claims/new`
 export const customerClaimDetail = (bookingId: string, claimId: string) => `/bookings/${encodeURIComponent(bookingId)}/claims/${encodeURIComponent(claimId)}`
 
@@ -119,7 +120,8 @@ const adminHeaderRoutes = [
   { path: ROLE_ROUTES.invoices, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "" },
   { path: `${ROLE_ROUTES.incidents}/:incidentReportId`, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "INCIDENT DETAILS" },
   { path: ROLE_ROUTES.incidents, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "" },
-  { path: `${ROLE_ROUTES.claims}/:claimId`, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "" },
+  { path: `${ROLE_ROUTES.claims}/:claimId/resolve`, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "RESOLVE CLAIM" },
+  { path: `${ROLE_ROUTES.claims}/:claimId`, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "CLAIM DETAILS" },
   { path: ROLE_ROUTES.claims, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "" },
   { path: "/admin/ongoing-transports/:transportId/gps", label: "ONGOING TRANSPORTS", href: "/admin/ongoing-transports", title: "LIVE GPS TRACKING" },
   { path: `${ROLE_ROUTES.personnelAssignment}/:transportPlanId`, label: "TRANSPORT PLANS", href: "/admin/transport-plans", title: "PERSONNEL ASSIGNMENT" },

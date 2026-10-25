@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { canAccess } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
-import { EmptyState, ErrorState } from "@/shared/components/common";
+import { ErrorState } from "@/shared/components/common";
 import { invoiceIdSchema } from "@/features/invoice/schemas";
 import { useBookingInvoices } from "@/features/invoice/hooks/useInvoices";
 import {
@@ -83,8 +83,6 @@ export function BookingInvoiceList({
           message={error.message}
           onRetry={error.retryable ? () => void query.refetch() : undefined}
         />
-      ) : query.data?.totalItems === 0 && !query.isFetching ? (
-        <EmptyState message="No invoices have been submitted for this booking." />
       ) : (
         <InvoiceTable
           items={query.data?.items ?? []}

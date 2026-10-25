@@ -9,12 +9,14 @@ import { AdminLayout } from "@/shared/layouts/AdminLayout"
 import { MainLayout } from "@/shared/layouts/MainLayout"
 
 const ClaimListPage = lazy(() => import("./pages/ClaimListPage"))
+const ClaimDetailPage = lazy(() => import("./pages/ClaimDetailPage"))
+const ClaimResolvePage = lazy(() => import("./pages/ClaimResolvePage"))
 const CustomerClaimNewPage = lazy(() => import("./pages/CustomerClaimNewPage"))
 const CustomerClaimDetailPage = lazy(() => import("./pages/CustomerClaimDetailPage"))
 
 const page = (element: ReactNode) => <Suspense fallback={<LoadingState />}>{element}</Suspense>
 
-/** Flow 6 claims (UC-63, UC-64): the manager list + detail modal, and the customer form and detail. */
+/** Flow 6 claims (UC-63, UC-64): the manager list, detail and resolve pages, and the customer form and detail. */
 export const claimRoutes: RouteObject[] = [
   {
     path: "/admin/claims",
@@ -25,7 +27,8 @@ export const claimRoutes: RouteObject[] = [
     ),
     children: [
       { index: true, element: page(<ClaimListPage />) },
-      { path: ":claimId", element: page(<ClaimListPage />) },
+      { path: ":claimId", element: page(<ClaimDetailPage />) },
+      { path: ":claimId/resolve", element: page(<ClaimResolvePage />) },
     ],
   },
   {

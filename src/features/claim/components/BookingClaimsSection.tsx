@@ -18,12 +18,17 @@ const CUSTOMER_LIST = { pageIndex: 1, pageSize: 20, sortBy: "submittedAt:desc" }
 const HEADERS = ["Claim code", "Type", "Status", "Requested", "Approved", "Submitted", ""] as const
 const money = (amount: number | null | undefined) => (amount == null ? "—" : formatMoney(amount))
 
-/** Booking Details header button of H8a: shown only while CL1 says the customer can still file a claim. */
-export function SubmitClaimAction({ bookingId, className }: { bookingId: string; className?: string }) {
+/**
+ * Button that opens the claim form, shown only while CL1 says the customer can still file a claim. The claim page carries
+ * it; the Booking Details header carries it only until a first claim exists (`onlyFirst`), so a booking without claims
+ * still has a way in.
+ */
+export function SubmitClaimAction({ bookingId, className, onlyFirst = false }: { bookingId: string; className?: string; onlyFirst?: boolean }) {
   const eligibility = useClaimEligibility(bookingId)
   const data = eligibility.data
   const remaining = useRemainingSeconds(data?.remainingSeconds, eligibility.dataUpdatedAt)
   if (!data?.canSubmit || remaining === 0) return null
+  if (onlyFirst && data.claimCount > 0) return null
   return (
     <Link to={customerClaimNew(bookingId)} className={className}>
       Submit claim
@@ -33,7 +38,7 @@ export function SubmitClaimAction({ bookingId, className }: { bookingId: string;
 
 /**
  * H8a: the "Handover & Claims" block of Booking Details (customer only). CL1 runs the countdown and says why a claim
- * cannot be filed; CL3 with `bookingId` lists the claims of this booking. The Submit button lives in the page header.
+ * cannot be filed; CL3 with `bookingId` lists the claims of this booking. The Submit button lives on the claim page.
  */
 export function BookingClaimsSection({ bookingId, highlightClaimId }: { bookingId: string; highlightClaimId?: string }) {
   const navigate = useNavigate()

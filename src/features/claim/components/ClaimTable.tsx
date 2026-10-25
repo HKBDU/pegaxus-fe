@@ -94,7 +94,7 @@ export function ClaimTable({ items, meta, isLoading, filtered, params, search, o
               <DropdownMenuContent align="end" sideOffset={2} className="w-40 min-w-0 rounded-[2px] border-slate-200 p-0.5 shadow-md">
                 <DropdownMenuItem className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem]" onSelect={() => onOpen(row.original.claimId)}>
                   <Eye className="size-3.5 text-slate-600" />
-                  View &amp; process
+                  View details
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

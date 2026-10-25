@@ -193,26 +193,35 @@ export function InvoiceTable({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={headers.length}>
-                  <EmptyState
-                    message={
-                      filtered
-                        ? "No invoices match these filters."
-                        : "No invoices are available yet."
-                    }
-                  />
+                <TableCell
+                  colSpan={headers.length}
+                  className={embedded ? "h-10 px-4 py-0 text-center text-[13px] text-gray-500" : undefined}
+                >
+                  {embedded ? (
+                    "No invoices have been submitted for this booking."
+                  ) : (
+                    <EmptyState
+                      message={
+                        filtered
+                          ? "No invoices match these filters."
+                          : "No invoices are available yet."
+                      }
+                    />
+                  )}
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
+      {embedded && meta.totalItems === 0 ? null : (
       <TablePagination
         meta={meta}
         onPageChange={onPageChange}
         onPageSizeChange={onPageSizeChange}
         pageSizeAriaLabel="Invoices per page"
       />
+      )}
     </div>
   );
 }

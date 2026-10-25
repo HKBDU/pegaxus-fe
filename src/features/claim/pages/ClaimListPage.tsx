@@ -1,9 +1,8 @@
 import { useCallback } from "react"
-import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { claimDetail, ROLE_ROUTES } from "@/app/route-config"
 import { canAccess } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
-import { ClaimResolutionDialog } from "@/features/claim/components/ClaimResolutionDialog"
 import { ClaimTable } from "@/features/claim/components/ClaimTable"
 import { getClaimErrorMessage } from "@/features/claim/errors"
 import { useClaims } from "@/features/claim/hooks"
@@ -17,12 +16,11 @@ const FILTER_KEYS = ["claimType", "status", "submittedFrom", "submittedTo", "sea
 const DEFAULT_PAGE_SIZE = 10
 
 /**
- * screen §10A + §10B (Logistics Manager). The detail is a modal over the list: the route `/admin/claims/:claimId`
- * (also the target of the "new claim" notification) opens the list with that claim's modal.
+ * screen §10A (Logistics Manager). A row opens the claim page (`/admin/claims/:claimId`, also the target of the
+ * "new claim" notification); the list keeps its filters in the URL and hands them to that page for the way back.
  */
 export default function ClaimListPage() {
   const principal = useAuthStore((state) => state.principal)
-  const { claimId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const [url, setUrl] = useSearchParams()
@@ -60,7 +58,7 @@ export default function ClaimListPage() {
     ? { currentPage: query.data.pageIndex, itemsPerPage: query.data.pageSize, totalItems: query.data.totalItems, totalPages: query.data.totalPages, hasPreviousPage: query.data.pageIndex > 1, hasNextPage: query.data.pageIndex < query.data.totalPages }
     : { currentPage: params.pageIndex, itemsPerPage: params.pageSize, totalItems: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false }
 
-  const openClaim = useCallback((id: string) => navigate({ pathname: claimDetail(id), search: location.search }), [navigate, location.search])
+  const openClaim = useCallback((id: string) => navigate(claimDetail(id), { state: { listSearch: location.search } }), [navigate, location.search])
 
   if (!allowed) return <ErrorState message="Only Logistics Managers can access claims." />
 
@@ -88,7 +86,6 @@ export default function ClaimListPage() {
           />
         )}
       </div>
-      {claimId ? <ClaimResolutionDialog claimId={claimId} onClose={() => navigate({ pathname: ROLE_ROUTES.claims, search: location.search })} /> : null}
     </div>
   )
 }

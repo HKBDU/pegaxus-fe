@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Button } from "@/shared/components/ui/button"
+import { SubmitClaimAction } from "@/features/claim/components/BookingClaimsSection"
 import { CancelClaimDialog } from "@/features/claim/components/CancelClaimDialog"
 import { ClaimProgress } from "@/features/claim/components/ClaimProgress"
-import { CardTitle, ClaimStatusBadge, ClaimTypeBadge, dangerButtonClass, Field, panelClass, SummaryCell } from "@/features/claim/components/ClaimPrimitives"
+import { CardTitle, ClaimStatusBadge, ClaimTypeBadge, dangerButtonClass, Field, panelClass, primaryButtonClass, SummaryCell } from "@/features/claim/components/ClaimPrimitives"
 import { RESOLUTION_TYPE_LABELS } from "@/features/claim/constants"
 import { getClaimErrorMessage } from "@/features/claim/errors"
 import { useClaim } from "@/features/claim/hooks"
@@ -28,11 +29,14 @@ export default function CustomerClaimDetailPage() {
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <PageHeader title="CLAIM DETAILS" backHref={backHref} backLabel="BACK TO BOOKING" />
-          {claim?.availableActions.includes("CANCEL") ? (
-            <div className="flex w-full sm:w-auto sm:shrink-0 sm:pb-0.5">
-              <Button type="button" variant="outline" className={cn(dangerButtonClass, "flex-1 sm:flex-none")} onClick={() => setCancelOpen(true)}>
-                Cancel claim
-              </Button>
+          {claim ? (
+            <div className="flex w-full flex-row items-center gap-2 sm:w-auto sm:shrink-0 sm:pb-0.5">
+              {claim.availableActions.includes("CANCEL") ? (
+                <Button type="button" variant="outline" className={cn(dangerButtonClass, "flex-1 sm:flex-none")} onClick={() => setCancelOpen(true)}>
+                  Cancel claim
+                </Button>
+              ) : null}
+              <SubmitClaimAction bookingId={bookingId} className={cn(primaryButtonClass, "inline-flex flex-1 items-center justify-center sm:flex-none")} />
             </div>
           ) : null}
         </div>

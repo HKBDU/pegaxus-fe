@@ -150,7 +150,7 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                   status={booking.status}
                 />
               ) : null}
-              {audience === "customer" && booking.transport ? (
+              {audience === "customer" && booking.transport?.status === "IN_TRANSIT" ? (
                 <Link
                   to={`/bookings/${encodeURIComponent(String(booking.bookingId))}/transports/${encodeURIComponent(String(booking.transport.transportId))}`}
                   className={cn(actionButtonClass, outlineButtonClass)}
@@ -159,7 +159,7 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                 </Link>
               ) : null}
               {audience === "customer" && booking.transport ? (
-                <SubmitClaimAction bookingId={String(booking.bookingId)} className={cn(actionButtonClass, outlineButtonClass)} />
+                <SubmitClaimAction onlyFirst bookingId={String(booking.bookingId)} className={cn(actionButtonClass, outlineButtonClass)} />
               ) : null}
               {audience === "customer" && (booking.status === "APPROVED" || booking.status === "CANCELLED") ? (
                 <BookingDossierLink bookingId={String(booking.bookingId)} className={cn(actionButtonClass, outlineButtonClass)} />
