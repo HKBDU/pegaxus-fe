@@ -1,6 +1,7 @@
 import { isAxiosError } from "axios";
 import { z } from "zod";
 import apiClient from "@/lib/axios";
+import { REPORT_MOCK_MODE } from "@/lib/report-mode";
 import {
   reportParams,
   incidentReportParams,
@@ -75,7 +76,7 @@ async function binaryError(payload: unknown): Promise<ReportError | null> {
       ? envelopeError(envelope.data, parsed.data.status)
       : new ReportError(
           "INVALID_EXPORT",
-          "The export service returned an unexpected JSON response.",
+          "The export service returned an unexpected response. No file was downloaded.",
         );
   } catch {
     return new ReportError(
@@ -97,6 +98,11 @@ async function exportReport(
   const { filters, reportType } = selection;
   try {
     assertReportAccess(scope, signal);
+    if (REPORT_MOCK_MODE)
+      throw new ReportError(
+        "DEMO_MODE",
+        "Exports are unavailable in demo mode. Switch to live reporting to download a report.",
+      );
     // Capture binary metadata before the shared response interceptor unwraps response.data.
     const payload = await apiClient.get<unknown, unknown>(
       `/reports/${reportType}/export`,

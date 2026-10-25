@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { REPORT_MOCK_MODE } from "@/lib/report-mode";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { TablePagination } from "@/shared/components/common/TablePagination";
 import { Badge } from "@/shared/components/ui/badge";
@@ -109,7 +110,7 @@ export function TransportReportTable({
           </div>
           <div className="min-w-0 flex-1 space-y-1 sm:w-48 sm:flex-none">
             <Label htmlFor="report-sort" className="text-xs">
-              Server sorting
+              Sort by
             </Label>
             <Select
               value={filters.sortBy}
@@ -215,13 +216,17 @@ export function TransportReportTable({
               {report.items.map((item) => (
                 <TableRow key={item.transportId} className="even:bg-stone-50">
                   <TableCell className="px-3 py-3 font-medium">
-                    <Link
-                      to={`${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(item.transportId)}`}
-                      state={{ from: returnUrl }}
-                      className="text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
-                    >
-                      {item.transportCode}
-                    </Link>
+                    {REPORT_MOCK_MODE ? (
+                      <span>{item.transportCode}</span>
+                    ) : (
+                      <Link
+                        to={`${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(item.transportId)}`}
+                        state={{ from: returnUrl }}
+                        className="text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+                      >
+                        {item.transportCode}
+                      </Link>
+                    )}
                   </TableCell>
                   <TableCell className="px-3">{item.bookingCode}</TableCell>
                   <TableCell className="max-w-52 whitespace-normal px-3">

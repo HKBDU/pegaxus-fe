@@ -1,4 +1,5 @@
 import { Download } from "lucide-react";
+import { REPORT_MOCK_MODE } from "@/lib/report-mode";
 import { Button } from "@/shared/components/ui/button";
 import type { ExportFormat } from "../schemas";
 
@@ -18,8 +19,10 @@ export function ReportExportActions({
           type="button"
           key={format}
           variant="outline"
-          disabled={disabled}
-          onClick={() => onExport(format)}
+          disabled={disabled || REPORT_MOCK_MODE}
+          onClick={() => {
+            if (!REPORT_MOCK_MODE) onExport(format);
+          }}
           className="h-9 rounded-[2px]"
         >
           <Download aria-hidden="true" className="size-4" />

@@ -8,6 +8,7 @@ import { PerformanceOverview } from "../components/PerformanceOverview";
 import { ReportCharts } from "../components/ReportCharts";
 import { TransportReportTable } from "../components/TransportReportTable";
 import { ReportExportActions } from "../components/ReportExportActions";
+import { ReportModeNotice } from "../components/ReportModeNotice";
 import { useOnTimeFilterState } from "../filter-state";
 import {
   useOnTimeDeliveryReport,
@@ -55,6 +56,7 @@ function ReportWorkspace() {
           />
         }
       />
+      <ReportModeNotice />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-500">
         <p className="m-0">
           Analyze delivery punctuality, trends and SLA performance.

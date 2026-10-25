@@ -1,6 +1,8 @@
 import { isAxiosError, isCancel } from "axios";
 import { z } from "zod";
 import apiClient from "@/lib/axios";
+import { REPORT_MOCK_MODE, REPORT_DATA_SOURCE } from "@/lib/report-mode";
+import { reportLabel, reportFilterLabel } from "./presentation";
 import { env } from "@/lib/env";
 import { canAccess } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
@@ -37,6 +39,7 @@ export function reportScope() {
     env.API_URL,
     state.principal?.id ?? null,
     state.sessionVersion,
+    REPORT_DATA_SOURCE,
   ]);
 }
 export function hasReportAccess(scope: string) {
@@ -61,7 +64,7 @@ export function reportError(error: unknown): ReportError {
   if (error instanceof z.ZodError)
     return new ReportError(
       "CONTRACT_MISMATCH",
-      "Report data does not match the expected contract. Contact support before continuing.",
+      "The report data could not be verified. Contact support before continuing.",
     );
   if (
     isCancel(error) ||
@@ -108,7 +111,7 @@ export function envelopeError(
         : [
             value.message,
             ...(value.errors ?? []).map(
-              (field) => `${field.field}: ${field.message}`,
+              (field) => `${reportFilterLabel(field.field)}: ${field.message}`,
             ),
           ].join(" ");
   return new ReportError(code, message, status);
@@ -133,12 +136,17 @@ export async function getOnTimeReport(
 ) {
   try {
     assertReportAccess(scope, signal);
-    const payload = await apiClient.get<unknown, unknown>(
-      "/reports/on-time-delivery",
-      { params: reportParams(filters), signal },
-    );
+    const value =
+      import.meta.env.DEV && REPORT_MOCK_MODE
+        ? (await import("./mocks/on-time")).getOnTimeDemo(filters)
+        : unwrapReport(
+            await apiClient.get<unknown, unknown>("/reports/on-time-delivery", {
+              params: reportParams(filters),
+              signal,
+            }),
+          );
     assertReportAccess(scope, signal);
-    const report = onTimeReportSchema.parse(unwrapReport(payload));
+    const report = onTimeReportSchema.parse(value);
     if (
       report.period.dateFrom !== filters.dateFrom ||
       report.period.dateTo !== filters.dateTo ||
@@ -162,12 +170,17 @@ export async function getIncidentClaimReport(
 ) {
   try {
     assertReportAccess(scope, signal);
-    const payload = await apiClient.get<unknown, unknown>(
-      "/reports/incident-claim-frequency",
-      { params: incidentReportParams(filters), signal },
-    );
+    const value =
+      import.meta.env.DEV && REPORT_MOCK_MODE
+        ? (await import("./mocks/incident-claim")).getIncidentClaimDemo(filters)
+        : unwrapReport(
+            await apiClient.get<unknown, unknown>(
+              "/reports/incident-claim-frequency",
+              { params: incidentReportParams(filters), signal },
+            ),
+          );
     assertReportAccess(scope, signal);
-    const report = incidentClaimReportSchema.parse(unwrapReport(payload));
+    const report = incidentClaimReportSchema.parse(value);
     if (
       report.period.dateFrom !== filters.dateFrom ||
       report.period.dateTo !== filters.dateTo ||
@@ -191,12 +204,17 @@ export async function getTransitTimeReport(
 ) {
   try {
     assertReportAccess(scope, signal);
-    const payload = await apiClient.get<unknown, unknown>(
-      "/reports/transit-time",
-      { params: transitReportParams(filters), signal },
-    );
+    const value =
+      import.meta.env.DEV && REPORT_MOCK_MODE
+        ? (await import("./mocks/transit-time")).getTransitDemo(filters)
+        : unwrapReport(
+            await apiClient.get<unknown, unknown>("/reports/transit-time", {
+              params: transitReportParams(filters),
+              signal,
+            }),
+          );
     assertReportAccess(scope, signal);
-    const report = transitTimeReportSchema.parse(unwrapReport(payload));
+    const report = transitTimeReportSchema.parse(value);
     if (
       report.period.dateFrom !== filters.dateFrom ||
       report.period.dateTo !== filters.dateTo ||
@@ -282,17 +300,21 @@ export async function getReportLookup(
           : kind === "vehicle"
             ? "/vehicles"
             : "/employees";
-    const payload = await apiClient.get<unknown, unknown>(path, {
-      params: {
-        search: search || undefined,
-        pageIndex,
-        pageSize: 20,
-        ...(kind === "driver" ? { role: "DRIVER" } : {}),
-      },
-      signal,
-    });
+    const value =
+      import.meta.env.DEV && REPORT_MOCK_MODE
+        ? (await import("./mocks/data")).getDemoLookup(kind, search, pageIndex)
+        : unwrapReport(
+            await apiClient.get<unknown, unknown>(path, {
+              params: {
+                search: search || undefined,
+                pageIndex,
+                pageSize: 20,
+                ...(kind === "driver" ? { role: "DRIVER" } : {}),
+              },
+              signal,
+            }),
+          );
     assertReportAccess(scope, signal);
-    const value = unwrapReport(payload);
     if (kind === "route") {
       const result = routes.parse(value);
       return {
@@ -309,7 +331,7 @@ export async function getReportLookup(
         ...result,
         items: result.items.map((item) => ({
           id: item.transportProviderId,
-          label: `${item.providerName} · ${item.providerCode} (${item.status})`,
+          label: `${item.providerName} · ${item.providerCode} (${reportLabel(item.status)})`,
         })),
       };
     }
@@ -319,7 +341,7 @@ export async function getReportLookup(
         ...result,
         items: result.items.map((item) => ({
           id: item.vehicleId,
-          label: `${item.vehicleCode}${item.licensePlate ? ` · ${item.licensePlate}` : ""} (${item.status})`,
+          label: `${item.vehicleCode}${item.licensePlate ? ` · ${item.licensePlate}` : ""} (${reportLabel(item.status)})`,
         })),
       };
     }
@@ -328,7 +350,7 @@ export async function getReportLookup(
       ...result,
       items: result.items.map((item) => ({
         id: item.employeeId,
-        label: `${item.fullName} · ${item.employeeCode} (${item.workingStatus})`,
+        label: `${item.fullName} · ${item.employeeCode} (${reportLabel(item.workingStatus)})`,
       })),
     };
   } catch (error) {

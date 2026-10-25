@@ -255,7 +255,7 @@ export function ReportCharts({ report }: { report: OnTimeReport }) {
       </ChartPanel>
       <ChartPanel
         title="Main delay causes"
-        note="Backend-inferred cause for delayed transports, not a recorded diagnosis."
+        note="Inferred from reported incidents; this is not a recorded diagnosis."
       >
         {causes.some((cause) => cause.count > 0) ? (
           <ChartContainer config={series}>

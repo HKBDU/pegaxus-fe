@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { REPORT_MOCK_MODE } from "@/lib/report-mode";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { TablePagination } from "@/shared/components/common/TablePagination";
 import { Button } from "@/shared/components/ui/button";
@@ -111,7 +112,7 @@ export function TransitDetailsTable({
           </div>
           <div className="min-w-0 flex-1 basis-48 space-y-1 sm:w-52 sm:flex-none">
             <Label htmlFor="transit-sort" className="text-xs">
-              Server sorting
+              Sort by
             </Label>
             <Select
               value={filters.sortBy}
@@ -219,13 +220,17 @@ export function TransitDetailsTable({
               {report.items.map((item) => (
                 <TableRow key={item.transportId} className="even:bg-stone-50">
                   <TableCell className="px-3 py-3 font-medium">
-                    <Link
-                      to={`${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(item.transportId)}`}
-                      state={{ from: returnUrl }}
-                      className="text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
-                    >
-                      {item.transportCode}
-                    </Link>
+                    {REPORT_MOCK_MODE ? (
+                      <span>{item.transportCode}</span>
+                    ) : (
+                      <Link
+                        to={`${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(item.transportId)}`}
+                        state={{ from: returnUrl }}
+                        className="text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+                      >
+                        {item.transportCode}
+                      </Link>
+                    )}
                   </TableCell>
                   <TableCell className="max-w-60 whitespace-normal break-words px-3">
                     {item.originCountry} → {item.destinationCountry}

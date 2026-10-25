@@ -29,7 +29,7 @@ export function PerformanceOverview({ report }: { report: OnTimeReport }) {
           : kpi.onTimeRate.change > 0
             ? "text-emerald-700"
             : "text-amber-800",
-      help: "Backend classification: on time includes arrivals up to 60 minutes after the planned end.",
+      help: "On time includes arrivals up to 60 minutes after the planned end.",
     },
     {
       label: "Avg delivery deviation",

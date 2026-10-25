@@ -19,6 +19,7 @@ import {
   IncidentDetailsTable,
 } from "../components/IncidentTables";
 import { ReportExportActions } from "../components/ReportExportActions";
+import { ReportModeNotice } from "../components/ReportModeNotice";
 
 function IncidentWorkspace() {
   const state = useIncidentFilterState();
@@ -47,6 +48,7 @@ function IncidentWorkspace() {
           />
         }
       />
+      <ReportModeNotice />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-500">
         <p className="m-0">
           Operational incidents, claims and approved emergency costs.

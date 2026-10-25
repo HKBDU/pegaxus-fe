@@ -188,10 +188,8 @@ export function ReportFilters({
               <Input
                 id="report-horse-id"
                 value={String(draft.horseId)}
-                onChange={(event) =>
-                  onChange("horseId", event.target.value.trim())
-                }
-                placeholder="Known horse GUID"
+                onChange={(event) => onChange("horseId", event.target.value)}
+                placeholder="Known horse reference ID"
                 className={control}
                 aria-describedby="report-horse-hint"
               />

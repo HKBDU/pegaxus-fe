@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { REPORT_MOCK_MODE } from "@/lib/report-mode";
 import { incidentPaths } from "@/shared/constants/incident";
 import { TablePagination } from "@/shared/components/common/TablePagination";
 import { Badge } from "@/shared/components/ui/badge";
@@ -62,8 +63,8 @@ export function VehicleReliability({
         <div className="min-w-0 rounded-[2px] border border-slate-200">
           <Table className="min-w-[540px] text-xs">
             <TableCaption className="sr-only">
-              Vehicle incidents and repair-required counts in backend order; no
-              maintenance prediction
+              Vehicle incidents and repair-required counts; no maintenance
+              prediction
             </TableCaption>
             <TableHeader className="bg-stone-100">
               <TableRow>
@@ -255,16 +256,20 @@ export function IncidentDetailsTable({
                   className="even:bg-stone-50"
                 >
                   <TableCell className="px-3 py-3 font-medium">
-                    <Link
-                      to={incidentPaths.detail(
-                        "LM",
-                        encodeURIComponent(incident.incidentReportId),
-                      )}
-                      state={{ from: returnUrl }}
-                      className="text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
-                    >
-                      {incident.incidentCode}
-                    </Link>
+                    {REPORT_MOCK_MODE ? (
+                      <span>{incident.incidentCode}</span>
+                    ) : (
+                      <Link
+                        to={incidentPaths.detail(
+                          "LM",
+                          encodeURIComponent(incident.incidentReportId),
+                        )}
+                        state={{ from: returnUrl }}
+                        className="text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+                      >
+                        {incident.incidentCode}
+                      </Link>
+                    )}
                   </TableCell>
                   <TableCell className="px-3">
                     {reportTime(incident.occurredAt).replace(" UTC", "")}

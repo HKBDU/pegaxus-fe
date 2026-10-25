@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-export const guidSchema = z
-  .string()
-  .regex(
-    /^(?!00000000-0000-0000-0000-000000000000$)[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i,
-    "Enter a valid non-empty GUID.",
-  );
+export const guidSchema = z.string();
 export const dateSchema = z.iso.date();
 const integer = z.number().finite().refine(Number.isSafeInteger);
 const count = integer.refine((value) => value >= 0);
@@ -24,16 +19,16 @@ export const sortSchema = z.enum([
   "completedAt:asc",
   "completedAt:desc",
 ]);
-const optionalGuid = z.union([z.literal(""), guidSchema]);
+const optionalId = z.string().optional().default("");
 
 export const filterShape = {
   dateFrom: dateSchema,
   dateTo: dateSchema,
   originCountry: z.string().trim().max(100),
   destinationCountry: z.string().trim().max(100),
-  routeId: optionalGuid,
-  transportProviderId: optionalGuid,
-  driverEmployeeId: optionalGuid,
+  routeId: optionalId,
+  transportProviderId: optionalId,
+  driverEmployeeId: optionalId,
   trendBy: z.enum(["WEEK", "MONTH"]),
   bucket: z.union([z.literal(""), bucketSchema]),
   sortBy: sortSchema,
@@ -225,7 +220,7 @@ function csvSelection(options: readonly string[]) {
     if (parts.some((value) => !options.includes(value))) {
       context.addIssue({
         code: "custom",
-        message: `Choose only ${options.join(", ")}.`,
+        message: "Choose one or more options from the list.",
       });
       return z.NEVER;
     }
@@ -243,8 +238,8 @@ export const incidentFiltersSchema = z
     incidentCategory: csvSelection(incidentCategorySchema.options),
     severity: csvSelection(severitySchema.options),
     claimType: csvSelection(claimTypeSchema.options),
-    vehicleId: optionalGuid,
-    horseId: optionalGuid,
+    vehicleId: optionalId,
+    horseId: optionalId,
     sortBy: incidentSortSchema,
     pageIndex: filterShape.pageIndex,
     pageSize: filterShape.pageSize,

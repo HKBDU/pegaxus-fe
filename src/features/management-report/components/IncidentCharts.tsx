@@ -195,7 +195,7 @@ export function IncidentCharts({ report }: { report: IncidentClaimReport }) {
           value: item.count,
           color: categories[item.category],
         }))}
-        note="BOTH is one distinct category; it is not added again to Vehicle or Horse health."
+        note="Combined vehicle and horse-health incidents are counted once as a separate category."
       />
       <BreakdownChart
         title="Incident severity"

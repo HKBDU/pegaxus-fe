@@ -35,7 +35,7 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
       format: reportRate,
       change: (value: number | null) =>
         value === null ? "—" : `${signedNumber(value)} pp`,
-      help: "Backend share of completed transports with at least one eligible live incident. Associated incident dates may fall outside the period.",
+      help: "Share of completed transports with at least one eligible live incident. Associated incident dates may fall outside the period.",
     },
     {
       label: "Total claims",
@@ -50,7 +50,7 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
       format: reportRate,
       change: (value: number | null) =>
         value === null ? "—" : `${signedNumber(value)} pp`,
-      help: "Backend share of completed transports with at least one eligible claim. This is not total claims divided by completed transports.",
+      help: "Share of completed transports with at least one eligible claim. This is not total claims divided by completed transports.",
     },
     {
       label: "Approved emergency cost",

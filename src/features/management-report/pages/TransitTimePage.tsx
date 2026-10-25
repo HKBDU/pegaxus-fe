@@ -13,6 +13,7 @@ import { reportError, terminalReportError } from "../services";
 import { reportTime } from "../presentation";
 import { ReportFilters } from "../components/ReportFilters";
 import { ReportExportActions } from "../components/ReportExportActions";
+import { ReportModeNotice } from "../components/ReportModeNotice";
 import { TransitOverview } from "../components/TransitOverview";
 import { TransitCharts } from "../components/TransitCharts";
 import {
@@ -48,6 +49,7 @@ function TransitWorkspace() {
           />
         }
       />
+      <ReportModeNotice />
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-500">
         <p className="m-0">
           Compare actual transport duration against estimated duration.

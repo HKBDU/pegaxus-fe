@@ -2,10 +2,37 @@ import type { OnTimeReport } from "./schemas";
 
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 export const reportLabel = (value: string) =>
-  value
-    .toLowerCase()
-    .replaceAll("_", " ")
-    .replace(/^./, (first) => first.toUpperCase());
+  value === "BOTH"
+    ? "Vehicle & horse health"
+    : value
+        .replace(/([a-z\d])([A-Z])/g, "$1 $2")
+        .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2")
+        .toLowerCase()
+        .replaceAll("_", " ")
+        .replace(/^./, (first) => first.toUpperCase());
+
+const filterLabels: Readonly<Record<string, string>> = {
+  dateFrom: "From date",
+  dateTo: "To date",
+  originCountry: "Origin country",
+  destinationCountry: "Destination country",
+  routeId: "Route",
+  transportProviderId: "Provider",
+  driverEmployeeId: "Driver",
+  trendBy: "Trend grouping",
+  bucket: "Delivery category",
+  sortBy: "Sorting",
+  pageIndex: "Page",
+  pageSize: "Rows per page",
+  incidentCategory: "Incident categories",
+  severity: "Severity",
+  claimType: "Claim types",
+  vehicleId: "Vehicle",
+  horseId: "Horse",
+  delayFilter: "Duration deviation",
+};
+export const reportFilterLabel = (key: string) =>
+  Object.hasOwn(filterLabels, key) ? filterLabels[key] : reportLabel(key);
 const vnd = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "VND",

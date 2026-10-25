@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { reportFilterLabel } from "./presentation";
 import type { z } from "zod";
 import {
   defaultFilters,
@@ -68,7 +69,8 @@ function useReportFilterState<
     if (!result.success) {
       setErrors(
         result.error.issues.map(
-          (issue) => `${issue.path.join(".")}: ${issue.message}`,
+          (issue) =>
+            `${reportFilterLabel(String(issue.path[0] ?? "Filters"))}: ${issue.code === "custom" ? issue.message : "Enter a valid value or choose an option from the list."}`,
         ),
       );
       return;
@@ -96,7 +98,8 @@ function useReportFilterState<
   const urlErrors = parsed.success
     ? []
     : parsed.error.issues.map(
-        (issue) => `${issue.path.join(".")}: ${issue.message}`,
+        (issue) =>
+          `${reportFilterLabel(String(issue.path[0] ?? "Filters"))}: ${issue.code === "custom" ? issue.message : "Enter a valid value or choose an option from the list."}`,
       );
   return {
     raw,

@@ -65,7 +65,9 @@ export function LookupFilter({
           className="h-9 w-full min-w-0 justify-between rounded-[2px] px-3 text-left font-normal"
         >
           <span className="truncate">
-            {value ? (selected ?? value) : `Any ${caption}`}
+            {value
+              ? (selected ?? `Selected ${caption} · …${value.slice(-6)}`)
+              : `Any ${caption}`}
           </span>
           <ChevronsUpDown aria-hidden="true" className="size-3.5 shrink-0" />
         </Button>
@@ -166,12 +168,12 @@ export function LookupFilter({
           </summary>
           <p className="my-2">
             Deleted or reclassified records may not appear in the catalog. Enter
-            a known GUID to retain the historical filter.
+            a known reference ID to retain the historical filter.
           </p>
           <Input
-            aria-label={`Historical ${caption} GUID`}
+            aria-label={`Historical ${caption} reference ID`}
             value={value}
-            onChange={(event) => onChange(event.target.value.trim())}
+            onChange={(event) => onChange(event.target.value)}
             className="rounded-[2px] text-xs"
           />
         </details>
