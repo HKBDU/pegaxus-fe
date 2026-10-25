@@ -1,17 +1,34 @@
 import { z } from "zod";
 import { dossierIdSchema, dossierRequirementsParamsSchema } from "./schemas";
-import type { DocumentReviewInput, DossierLoadErrorKind, DossierRequirementsParams, DossierSourceKind, SendMissingDocumentReminderInput, SubmitDocumentVersionInput, UpdateDocumentMetadataInput, UploadDocumentInput } from "./types";
+import type {
+  DocumentReviewInput,
+  DossierLoadErrorKind,
+  DossierRequirementsParams,
+  DossierSourceKind,
+  SendMissingDocumentReminderInput,
+  SubmitDocumentVersionInput,
+  UpdateDocumentMetadataInput,
+  UploadDocumentInput,
+} from "./types";
 
-export async function loadMissingDossierRequirements(dossierId: string, signal?: AbortSignal) {
+export async function loadMissingDossierRequirements(
+  dossierId: string,
+  signal?: AbortSignal,
+) {
   const id = dossierIdSchema.parse(dossierId);
   const { dossierService } = await import("./services");
   return dossierService.getMissingRequirements(id, signal);
 }
 
-export async function loadMissingRequirementReminder(input: SendMissingDocumentReminderInput) {
+export async function loadMissingRequirementReminder(
+  input: SendMissingDocumentReminderInput,
+) {
   const id = dossierIdSchema.parse(input.dossierId);
   const { dossierService } = await import("./services");
-  return dossierService.sendMissingRequirementReminder({ ...input, dossierId: id });
+  return dossierService.sendMissingRequirementReminder({
+    ...input,
+    dossierId: id,
+  });
 }
 
 export async function loadDocumentReview(input: DocumentReviewInput) {
@@ -25,7 +42,10 @@ export async function loadMarkReadyForSubmission(dossierId: string) {
   return dossierService.markReadyForSubmission(id);
 }
 
-export function resolveDossierSource(_isDev: boolean, _flag: string | undefined): DossierSourceKind {
+export function resolveDossierSource(
+  _isDev: boolean,
+  _flag: string | undefined,
+): DossierSourceKind {
   return "api";
 }
 
@@ -34,7 +54,10 @@ export const dossierSourceKind = resolveDossierSource(
   import.meta.env.VITE_DOSSIER_API_MOCKS,
 );
 
-export async function loadDossierOverview(dossierId: string, signal?: AbortSignal) {
+export async function loadDossierOverview(
+  dossierId: string,
+  signal?: AbortSignal,
+) {
   signal?.throwIfAborted();
   const { dossierService } = await import("./services");
   return dossierService.getOverview(dossierId, signal);
@@ -56,29 +79,51 @@ export async function loadUploadDocument(input: UploadDocumentInput) {
   return dossierService.uploadComplianceDocument(input);
 }
 
-export async function loadComplianceDocument(documentId: string, signal?: AbortSignal, dossierId?: string, requirementId?: string) {
+export async function loadComplianceDocument(
+  documentId: string,
+  signal?: AbortSignal,
+  _dossierId?: string,
+  _requirementId?: string,
+) {
   signal?.throwIfAborted();
   const { dossierService } = await import("./services");
-  return dossierService.getComplianceDocument(documentId, signal, dossierId, requirementId);
+  return dossierService.getComplianceDocument(
+    documentId,
+    signal,
+  );
 }
 
-export async function loadSubmitDocumentVersion(input: SubmitDocumentVersionInput) {
+export async function loadSubmitDocumentVersion(
+  input: SubmitDocumentVersionInput,
+) {
   const { dossierService } = await import("./services");
   return dossierService.submitDocumentVersion(input);
 }
 
-export async function loadUpdateDocumentMetadata(input: UpdateDocumentMetadataInput) {
+export async function loadUpdateDocumentMetadata(
+  input: UpdateDocumentMetadataInput,
+) {
   const { dossierService } = await import("./services");
   return dossierService.updateComplianceDocumentMetadata(input);
 }
 
 export function getDossierLoadErrorKind(error: unknown): DossierLoadErrorKind {
   if (error instanceof z.ZodError) return "contract";
-  const response = (error as { response?: { status?: number; data?: { errorCode?: string } }; status?: number }) ?? {};
+  const response =
+    (error as {
+      response?: { status?: number; data?: { errorCode?: string } };
+      status?: number;
+    }) ?? {};
   const status = response.response?.status ?? response.status;
   const code = response.response?.data?.errorCode;
   if (status === 401) return "unauthorized";
   if (status === 403 || code === "FORBIDDEN") return "forbidden";
-  if (status === 404 || code === "DOSSIER_NOT_FOUND" || code === "NOT_FOUND" || (error as { message?: string })?.message === "DOSSIER_NOT_INITIALIZED") return "not-found";
+  if (
+    status === 404 ||
+    code === "DOSSIER_NOT_FOUND" ||
+    code === "NOT_FOUND" ||
+    (error as { message?: string })?.message === "DOSSIER_NOT_INITIALIZED"
+  )
+    return "not-found";
   return "load";
 }

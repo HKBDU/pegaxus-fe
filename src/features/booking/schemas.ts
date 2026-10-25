@@ -1,13 +1,18 @@
 import { z } from "zod"
 import { addDays, addMonths, format, parseISO } from "date-fns"
 
+import { COUNTRY_MESSAGE, isBookingCountry } from "@/features/booking/lib/place"
 import { BOOKING_STATUSES } from "@/features/booking/types"
+
+// The BE stores coordinates as decimal(10,4); a missing or out-of-range value is rejected with INVALID_COORDINATES.
+const latitudeSchema = (message: string) => z.number({ error: message }).min(-90, message).max(90, message)
+const longitudeSchema = (message: string) => z.number({ error: message }).min(-180, message).max(180, message)
 
 const optionalText = (max: number) => z.string().trim().max(max)
 
 const DATE_FORMAT = "yyyy-MM-dd"
 
-export const bookingIdSchema = z.string().uuid()
+export const bookingIdSchema = z.string()
 
 export function getBookingDepartureDateRange(now = new Date()) {
   const utcToday = parseISO(now.toISOString().slice(0, 10))
@@ -26,14 +31,14 @@ export const bookingFiltersSchema = z.object({
 
 export const bookingFormSchema = z
   .object({
-    originAddress: z.string().trim().min(3, "Enter the pickup address").max(500),
-    originCountry: z.string().trim().min(2, "Enter the pickup country").max(100),
-    originState: z.string(),
-    originCity: z.string(),
-    destinationAddress: z.string().trim().min(3, "Enter the destination address").max(500),
-    destinationCountry: z.string().trim().min(2, "Enter the destination country").max(100),
-    destinationState: z.string(),
-    destinationCity: z.string(),
+    originAddress: z.string().trim().min(3, "Pick the pickup point on the map").max(500),
+    originCountry: z.string().trim().min(2, "Pick the pickup point on the map").max(100).refine(isBookingCountry, COUNTRY_MESSAGE),
+    originLatitude: latitudeSchema("Pick the pickup point on the map"),
+    originLongitude: longitudeSchema("Pick the pickup point on the map"),
+    destinationAddress: z.string().trim().min(3, "Pick the destination point on the map").max(500),
+    destinationCountry: z.string().trim().min(2, "Pick the destination point on the map").max(100).refine(isBookingCountry, COUNTRY_MESSAGE),
+    destinationLatitude: latitudeSchema("Pick the destination point on the map"),
+    destinationLongitude: longitudeSchema("Pick the destination point on the map"),
     requestedDepartureDate: z.string().min(1, "Choose a departure date"),
     requestedArrivalDate: z.string(),
     specialRequirements: optionalText(1000),
@@ -41,7 +46,7 @@ export const bookingFormSchema = z
     horses: z
       .array(
         z.object({
-          horseId: z.union([z.string().min(1), z.number().int().positive()]),
+          horseId: z.union([z.string(), z.number()]),
           specialHandlingNotes: optionalText(500),
         }),
       )

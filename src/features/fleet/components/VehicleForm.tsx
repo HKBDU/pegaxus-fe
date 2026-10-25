@@ -8,13 +8,14 @@ import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { VehicleStatusBadge } from "@/features/fleet/components/VehicleBadges"
 import { actionButtonClass, FormCard, formControlClass, formLabelClass, outlineButtonClass, primaryButtonClass } from "@/features/fleet/components/DetailParts"
-import { EQUIPMENT_PRESETS, VEHICLE_CAPACITY_MAX, VEHICLE_CAPACITY_MIN } from "@/features/fleet/constants/fleet.constants"
+import { EQUIPMENT_PRESETS, ROAD_VEHICLE_TYPE_OPTIONS, VEHICLE_CAPACITY_MAX, VEHICLE_CAPACITY_MIN } from "@/features/fleet/constants/fleet.constants"
 import { toVehicleDefaults } from "@/features/fleet/vehicle-form"
 import { vehicleFormSchema, type VehicleFormValues } from "@/features/fleet/schemas"
 import { type Vehicle } from "@/features/fleet/types"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form"
 import { Input } from "@/shared/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
 
 export type VehicleFormMode = "create" | "edit"
@@ -36,7 +37,7 @@ function Locked({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-type TextName = "vehicleCode" | "vehicleName" | "licensePlate" | "vehicleType" | "manufacturer" | "model" | "registrationNumber" | "insuranceNumber"
+type TextName = "vehicleName" | "licensePlate" | "manufacturer" | "model" | "registrationNumber" | "insuranceNumber"
 
 function TextField({ control, name, label, placeholder, required }: { control: Control<VehicleFormValues>; name: TextName; label: string; placeholder: string; required?: boolean }) {
   return (
@@ -55,6 +56,40 @@ function TextField({ control, name, label, placeholder, required }: { control: C
           <FormMessage className="text-xs" />
         </FormItem>
       )}
+    />
+  )
+}
+
+const NO_TYPE = "__none__"
+
+/** The vehicle type is picked from the fixed list; a type stored by older data stays selectable. */
+function VehicleTypeField({ control }: { control: Control<VehicleFormValues> }) {
+  return (
+    <FormField
+      control={control}
+      name="vehicleType"
+      render={({ field }) => {
+        const options = field.value && !ROAD_VEHICLE_TYPE_OPTIONS.includes(field.value) ? [field.value, ...ROAD_VEHICLE_TYPE_OPTIONS] : ROAD_VEHICLE_TYPE_OPTIONS
+        return (
+          <FormItem className="gap-1">
+            <FormLabel className={formLabelClass}>Vehicle type</FormLabel>
+            <Select value={field.value || NO_TYPE} onValueChange={(value) => field.onChange(value === NO_TYPE ? "" : value)}>
+              <FormControl>
+                <SelectTrigger className={cn(formControlClass, "justify-between")} onBlur={field.onBlur}>
+                  <SelectValue placeholder="Select vehicle type" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent className="rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md">
+                <SelectItem value={NO_TYPE} className="h-7 rounded-[2px] text-xs">Not specified</SelectItem>
+                {options.map((type) => (
+                  <SelectItem key={type} value={type} className="h-7 rounded-[2px] text-xs">{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormMessage className="text-xs" />
+          </FormItem>
+        )
+      }}
     />
   )
 }
@@ -117,14 +152,22 @@ export function VehicleForm({ mode, vehicle, isSaving = false, cancelHref, onSub
         <fieldset disabled={isSaving} className="m-0 grid min-w-0 gap-2.5 border-0 p-0">
           <div className="grid gap-2.5 lg:grid-cols-2">
             <FormCard title="Basic information">
-              {isEdit ? <Locked label="Vehicle code">{vehicle?.vehicleCode}</Locked> : <TextField control={form.control} name="vehicleCode" label="Vehicle code" placeholder="e.g., FL-RD-25" required />}
+              {/* The BE generates the vehicle code, so there is nothing to type: it is shown once the vehicle exists. */}
+              {isEdit ? <Locked label="Vehicle code">{vehicle?.vehicleCode}</Locked> : null}
               <TextField control={form.control} name="vehicleName" label="Vehicle name" placeholder="e.g., Pegaxus Titan Cruiser" />
               {isEdit ? <Locked label="Current status">{vehicle ? <VehicleStatusBadge status={vehicle.status} /> : null}</Locked> : null}
               <TextField control={form.control} name="licensePlate" label="License plate / registration no." placeholder="e.g., 29C-882.14" required />
+              <FormField control={form.control} name="country" render={({ field }) => (
+                <FormItem className="gap-1">
+                  <FormLabel className={formLabelClass}>Current country</FormLabel>
+                  <FormControl><Input {...field} value={field.value ?? ""} maxLength={2} placeholder="e.g., FR" className={formControlClass} /></FormControl>
+                  <FormMessage className="text-xs" />
+                </FormItem>
+              )} />
             </FormCard>
 
             <FormCard title="Specifications & technical">
-              <TextField control={form.control} name="vehicleType" label="Vehicle type" placeholder="e.g., Semi-Trailer Livestock Transporter" />
+              <VehicleTypeField control={form.control} />
               <TextField control={form.control} name="manufacturer" label="Manufacturer" placeholder="e.g., Volvo, Scania, MAN" />
               <TextField control={form.control} name="model" label="Series / model" placeholder="e.g., FH16 EquiTrek" />
               <FormField

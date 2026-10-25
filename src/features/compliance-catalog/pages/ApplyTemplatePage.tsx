@@ -24,8 +24,9 @@ import { PageHeader } from "@/shared/components/PageHeader"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard"
 import type { EntityId } from "@/shared/types"
+import { dossierDetail } from "@/app/route-config"
 
-const AFTER_CREATE_PATH = (dossierId: EntityId) => `/compliance-dossiers/${dossierId}/details`
+const AFTER_CREATE_PATH = (dossierId: EntityId) => dossierDetail(dossierId, "TRANSPORT_SPECIALIST")
 
 const outlineButtonClass =
   "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[2px] border border-slate-300 bg-white px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-900 transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-60"
@@ -74,6 +75,7 @@ export default function ApplyTemplatePage() {
   const [initializedFor, setInitializedFor] = useState<EntityId | null>(null)
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
   const [customs, setCustoms] = useState<CustomRequirementDraft[]>([])
+  const [creationUncertain, setCreationUncertain] = useState(false)
 
   const templateQuery = useDossierTemplate(mode === "template" ? (templateId ?? undefined) : undefined)
   const template = mode === "template" ? (templateQuery.data ?? null) : null
@@ -86,15 +88,23 @@ export default function ApplyTemplatePage() {
   )
   const categoryOf = useCallback((id: EntityId) => categoryById.get(String(id)) ?? null, [categoryById])
 
+  const isMandatoryRoute = useMemo(() => {
+    const origin = booking?.originCountry?.trim().toLowerCase()
+    const destination = booking?.destinationCountry?.trim().toLowerCase()
+    if (!origin || !destination) return true
+    const ukIe = new Set(["united kingdom", "uk", "gb", "great britain", "ireland", "ie"])
+    return ukIe.has(origin) || ukIe.has(destination)
+  }, [booking?.destinationCountry, booking?.originCountry])
+
   const finalRows = useMemo(
-    () => buildFinalRows(template?.items ?? [], selectedItemIds, customs, booking?.horses ?? [], categoryOf),
-    [booking?.horses, categoryOf, customs, selectedItemIds, template],
+    () => buildFinalRows(template?.items ?? [], selectedItemIds, customs, booking?.horses ?? [], categoryOf, isMandatoryRoute),
+    [booking?.horses, categoryOf, customs, isMandatoryRoute, selectedItemIds, template],
   )
   const counts = useMemo(() => countRows(finalRows), [finalRows])
 
   useEffect(() => {
     if (existingQuery.data) {
-      navigate(`/compliance-dossiers/${existingQuery.data.complianceDossierId}/details`, { replace: true })
+      navigate(AFTER_CREATE_PATH(existingQuery.data.complianceDossierId), { replace: true })
     }
   }, [existingQuery.data, navigate])
 
@@ -141,33 +151,59 @@ export default function ApplyTemplatePage() {
   }
 
   const confirm = async () => {
-    if (!booking) return
+    if (!booking || creationUncertain) return
+    if (!booking.transportId) {
+      toast.error("This booking has no transport. ComplianceDossier cannot be initialized.")
+      return
+    }
+    const transportId = booking.transportId
     try {
       const guarded = await attempt.run(() =>
         createDossier.mutateAsync({
           bookingId: booking.bookingId,
-          dossierTemplateId: mode === "template" ? (template?.dossierTemplateId ?? undefined) : undefined,
-          selectedTemplateItemIds: (template?.items ?? []).filter((item) => selectedItemIds.has(templateItemKey(item))).map((item) => item.dossierTemplateItemId as EntityId),
+          transportId,
+          dossierTemplateId:
+            mode === "template"
+              ? (template?.dossierTemplateId ?? undefined)
+              : undefined,
+          selectedTemplateItemIds: (template?.items ?? [])
+            .filter((item) => selectedItemIds.has(templateItemKey(item)))
+            .map(templateItemKey),
           customRequirements: customs,
         }),
-      )
-      if (!guarded.started) return
+      );
+      if (!guarded.started) return;
       if (!guarded.value.complianceDossierId) {
-        throw new Error("DOSSIER_CREATE_RESPONSE_INVALID")
+        throw new Error("DOSSIER_CREATE_RESPONSE_INVALID");
       }
-      toast.success("ComplianceDossier initialized successfully. DossierRequirements generated for customer.")
+      toast.success(
+        "ComplianceDossier initialized successfully. DossierRequirements generated for customer.",
+      );
       if (guarded.value.failedCustomCount > 0) {
-        toast.warning(`${guarded.value.failedCustomCount} custom requirement(s) could not be added. Add them again from the dossier page.`)
+        toast.warning(
+          `${guarded.value.failedCustomCount} custom requirement(s) could not be confirmed. Review the dossier before adding them again.`,
+        );
       }
-      navigate(AFTER_CREATE_PATH(guarded.value.complianceDossierId))
+      navigate(AFTER_CREATE_PATH(guarded.value.complianceDossierId));
     } catch (error) {
-      const code = error instanceof Error ? error.message : ""
-      // The booking changed behind our back: re-read it so the page shows the real state instead of a stale wizard.
-      if (code === "BOOKING_NOT_APPROVED" || code === "DOSSIER_ALREADY_EXISTS" || code === "BOOKING_CHANGE_IN_PROGRESS" || code === "DOSSIER_CLOSED") {
-        void bookingQuery.refetch()
-        void existingQuery.refetch()
+      const code = error instanceof Error ? error.message : "";
+      if (code === "DOSSIER_CREATE_OUTCOME_UNKNOWN") {
+        setCreationUncertain(true);
+        void existingQuery.refetch();
       }
-      toast.error(getDossierErrorMessage(error, "Unable to create the ComplianceDossier"))
+      // The booking changed behind our back: re-read it so the page shows the real state instead of a stale wizard.
+      if (
+        code === "BOOKING_NOT_APPROVED" ||
+        code === "DOSSIER_ALREADY_EXISTS" ||
+        code === "BOOKING_CHANGE_IN_PROGRESS" ||
+        code === "DOSSIER_CLOSED"
+      ) {
+        void bookingQuery.refetch();
+        void existingQuery.refetch();
+      }
+      toast.error(
+        getDossierErrorMessage(error, "Unable to create the ComplianceDossier"),
+      );
     }
   }
 
@@ -294,12 +330,17 @@ export default function ApplyTemplatePage() {
       {step === 3 ? (
         <>
           <ReviewDossierStep booking={booking} template={template} rows={finalRows} counts={counts} />
+          {creationUncertain && (
+            <p role="alert" className="mt-4 text-sm text-red-700">
+              Creation could not be confirmed. Do not submit again. Reload and check the existing dossier before continuing.
+            </p>
+          )}
           <div className="mt-6 flex items-center justify-between gap-2 border-t border-slate-200 pt-4">
             <button type="button" className={outlineButtonClass} disabled={isCreating} onClick={() => setStep(2)}>
               <ArrowLeft className="size-3.5" />
               Back to customize
             </button>
-            <button type="button" className={primaryButtonClass} disabled={isCreating || attempt.isBlocked || noRequirements} onClick={() => void confirm()}>
+            <button type="button" className={primaryButtonClass} disabled={isCreating || attempt.isBlocked || noRequirements || creationUncertain} onClick={() => void confirm()}>
               <Check className="size-3.5" />
               {isCreating ? "Creating..." : attempt.isBlocked ? "Please wait..." : "Confirm & create ComplianceDossier"}
             </button>

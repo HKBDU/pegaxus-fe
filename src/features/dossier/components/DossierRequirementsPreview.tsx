@@ -47,9 +47,17 @@ import {
   updateDossierRequirementFilters,
 } from "../constants";
 import { useDossierRequirements } from "../hooks/useDossier";
-import { dossierRequirementStatusSchema, dossierRequirementsParamsSchema } from "../schemas";
+import {
+  dossierRequirementStatusSchema,
+  dossierRequirementsParamsSchema,
+} from "../schemas";
 import { getDossierLoadErrorKind } from "../source";
-import type { DossierHorseOption, DossierOverview, DossierRequirement, DossierRequirementsParams } from "../types";
+import type {
+  DossierHorseOption,
+  DossierOverview,
+  DossierRequirement,
+  DossierRequirementsParams,
+} from "../types";
 import { DossierStatusBadge } from "./DossierStatusBadge";
 import { DocumentSubmissionDialog } from "./DocumentSubmissionDialog";
 import { DocumentDetailsDialog } from "./DocumentVersionHistory";
@@ -73,11 +81,20 @@ function RequirementRowActions({
   dossier: DossierOverview;
   onAction: (item: DossierRequirement, label: string) => void;
 }) {
-  const labels = role === "CUSTOMER"
-    ? getCustomerDocumentActions(dossier, item)
-    : getDossierRequirementActionLabels(role, item.status, Boolean(item.document))
-      .filter((label) => label !== "Review Document" || canOpenDocumentReview(role, dossier, item));
-  if (item.openRequest?.status === "OPEN" && !labels.includes("View Request")) labels.push("View Request");
+  const labels =
+    role === "CUSTOMER"
+      ? getCustomerDocumentActions(dossier, item)
+      : getDossierRequirementActionLabels(
+          role,
+          item.status,
+          Boolean(item.document),
+        ).filter(
+          (label) =>
+            label !== "Review Document" ||
+            canOpenDocumentReview(role, dossier, item),
+        );
+  if (item.openRequest?.status === "OPEN" && !labels.includes("View Request"))
+    labels.push("View Request");
 
   return (
     <DropdownMenu>
@@ -102,15 +119,25 @@ function RequirementRowActions({
           </DropdownMenuItem>
         ) : null}
         {labels.map((label) => {
-          const actionEnabled = label === "View Requirement" ||
+          const actionEnabled =
+            label === "View Requirement" ||
             (label === "View Request" && item.openRequest?.status === "OPEN") ||
-            ((label === "Request Missing Document" || label === "Send Reminder Again") &&
-              canSendMissingDocumentReminder(role, dossier) && isMissingDossierRequirement(item)) ||
-            (label === "Upload Document" && canUploadInitialDocument(role, dossier, item)) ||
-            (label === "Review Document" && canOpenDocumentReview(role, dossier, item)) ||
-            (Boolean(item.document) && (label === "View Document" || label === "View Version History" ||
-              label === "View Review Result" || label === "View Review History" || label === "View Request" ||
-              (role === "CUSTOMER" && (label === "Edit Document" || label === "Update Document"))));
+            ((label === "Request Missing Document" ||
+              label === "Send Reminder Again") &&
+              canSendMissingDocumentReminder(role, dossier) &&
+              isMissingDossierRequirement(item)) ||
+            (label === "Upload Document" &&
+              canUploadInitialDocument(role, dossier, item)) ||
+            (label === "Review Document" &&
+              canOpenDocumentReview(role, dossier, item)) ||
+            (Boolean(item.document) &&
+              (label === "View Document" ||
+                label === "View Version History" ||
+                label === "View Review Result" ||
+                label === "View Review History" ||
+                label === "View Request" ||
+                (role === "CUSTOMER" &&
+                  (label === "Edit Document" || label === "Update Document"))));
           const Icon = label.startsWith("Upload")
             ? Upload
             : label.startsWith("Edit")
@@ -125,7 +152,11 @@ function RequirementRowActions({
               key={label}
               disabled={!actionEnabled}
               onSelect={actionEnabled ? () => onAction(item, label) : undefined}
-              title={actionEnabled ? undefined : `${label} is unavailable in the current dossier state`}
+              title={
+                actionEnabled
+                  ? undefined
+                  : `${label} is unavailable in the current dossier state`
+              }
               className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem] data-[disabled]:opacity-100"
             >
               <Icon className="size-3.5" />
@@ -206,12 +237,16 @@ export function RequirementTable({
                 {row.original.document.documentCode}
               </span>
               <span className="mt-1 block text-[0.68rem] text-slate-400">
-                Version {row.original.document.latestVersionNo}
+                {row.original.document.latestVersionNo === null
+                  ? "No version available"
+                  : `Version ${row.original.document.latestVersionNo}`}
               </span>
             </div>
           ) : (
             <div className="space-y-1.5">
-              <span className="block text-xs text-slate-500">No document submitted</span>
+              <span className="block text-xs text-slate-500">
+                No document submitted
+              </span>
               {canUploadInitialDocument(role, dossier, row.original) ? (
                 <Button
                   type="button"
@@ -230,7 +265,12 @@ export function RequirementTable({
         id: "actions",
         header: "ACTIONS",
         cell: ({ row }) => (
-          <RequirementRowActions item={row.original} role={role} dossier={dossier} onAction={onAction} />
+          <RequirementRowActions
+            item={row.original}
+            role={role}
+            dossier={dossier}
+            onAction={onAction}
+          />
         ),
       },
     ],
@@ -276,30 +316,54 @@ function RequirementGroup({
     <div>
       <div className="flex items-center gap-2 rounded-t-[2px]x bg-white px-4 py-3">
         <Icon aria-hidden="true" className="size-4 text-primary" />
-        <h3 className="m-0! font-heading text-sm! font-semibold! uppercase text-gray-900!">{title}</h3>
-        <span className="text-xs text-gray-500">{items.length} on this page</span>
+        <h3 className="m-0! font-heading text-sm! font-semibold! uppercase text-gray-900!">
+          {title}
+        </h3>
+        <span className="text-xs text-gray-500">
+          {items.length} on this page
+        </span>
       </div>
-      <RequirementTable items={items} role={role} dossier={dossier} onAction={onAction} />
+      <RequirementTable
+        items={items}
+        role={role}
+        dossier={dossier}
+        onAction={onAction}
+      />
     </div>
   );
 }
 
-export function DossierRequirementFilters({ params, horses, onChange }: {
+export function DossierRequirementFilters({
+  params,
+  horses,
+  onChange,
+}: {
   params: DossierRequirementsParams;
   horses: readonly DossierHorseOption[];
-  onChange: (filters: Pick<DossierRequirementsParams, "status" | "horseId" | "sortBy">) => void;
+  onChange: (
+    filters: Pick<DossierRequirementsParams, "status" | "horseId" | "sortBy">,
+  ) => void;
 }) {
   return (
-    <div role="toolbar" aria-label="Requirement filters" className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+    <div
+      role="toolbar"
+      aria-label="Requirement filters"
+      className="flex w-full flex-wrap items-center gap-2 sm:w-auto"
+    >
       <div className="w-full sm:w-44 [&>button]:w-full">
         <DataTableRadioFilter
           title="Status"
           value={params.status ?? "ALL"}
           options={dossierRequirementStatusOptions}
           hideTitleWhenFiltered
-          onValueChange={(status) => onChange({
-            status: status === "ALL" ? undefined : dossierRequirementStatusSchema.parse(status),
-          })}
+          onValueChange={(status) =>
+            onChange({
+              status:
+                status === "ALL"
+                  ? undefined
+                  : dossierRequirementStatusSchema.parse(status),
+            })
+          }
         />
       </div>
       <div className="w-full sm:w-44 [&>button]:w-full">
@@ -309,9 +373,16 @@ export function DossierRequirementFilters({ params, horses, onChange }: {
           value={params.horseId === undefined ? "ALL" : String(params.horseId)}
           options={getDossierHorseFilterOptions(horses)}
           hideTitleWhenFiltered
-          onValueChange={(horseId) => onChange({
-            horseId: horseId === "ALL" ? undefined : dossierRequirementsParamsSchema.shape.horseId.parse(horseId),
-          })}
+          onValueChange={(horseId) =>
+            onChange({
+              horseId:
+                horseId === "ALL"
+                  ? undefined
+                  : dossierRequirementsParamsSchema.shape.horseId.parse(
+                      horseId,
+                    ),
+            })
+          }
         />
       </div>
       <div className="w-full sm:w-44 [&>button]:w-full">
@@ -321,7 +392,12 @@ export function DossierRequirementFilters({ params, horses, onChange }: {
           defaultValue="createdAt:asc"
           options={dossierRequirementSortOptions}
           hideTitleWhenFiltered
-          onValueChange={(sortBy) => onChange({ sortBy: dossierRequirementsParamsSchema.shape.sortBy.parse(sortBy) })}
+          onValueChange={(sortBy) =>
+            onChange({
+              sortBy:
+                dossierRequirementsParamsSchema.shape.sortBy.parse(sortBy),
+            })
+          }
         />
       </div>
     </div>
@@ -341,35 +417,80 @@ export function DossierRequirementsPreview({
   plannedDepartureDate?: string;
   documentsOnly?: boolean;
 }) {
-  const [submission, setSubmission] = useState<{ requirement: DossierRequirement; mode: SubmissionMode } | null>(null);
+  const [submission, setSubmission] = useState<{
+    requirement: DossierRequirement;
+    mode: SubmissionMode;
+  } | null>(null);
   const [viewDocumentId, setViewDocumentId] = useState<string | null>(null);
-  const [viewRequirement, setViewRequirement] = useState<DossierRequirement | null>(null);
-  const [reviewRequirement, setReviewRequirement] = useState<DossierRequirement | null>(null);
-  const [detailsRequirement, setDetailsRequirement] = useState<DossierRequirement | null>(null);
-  const [reminder, setReminder] = useState<{ requirementId?: string | number } | null>(null);
-  const [documentView, setDocumentView] = useState<"details" | "request" | "history">("details");
+  const [viewRequirement, setViewRequirement] =
+    useState<DossierRequirement | null>(null);
+  const [reviewRequirement, setReviewRequirement] =
+    useState<DossierRequirement | null>(null);
+  const [detailsRequirement, setDetailsRequirement] =
+    useState<DossierRequirement | null>(null);
+  const [reminder, setReminder] = useState<{
+    requirementId?: string | number;
+  } | null>(null);
+  const [documentView, setDocumentView] = useState<
+    "details" | "request" | "history"
+  >("details");
   const onAction = (item: DossierRequirement, label: string) => {
-    if (label === "View Requirement") { setDetailsRequirement(item); return; }
-    if (label === "Request Missing Document" || label === "Send Reminder Again") {
-      if (canSendMissingDocumentReminder(role, dossier) && isMissingDossierRequirement(item)) setReminder({ requirementId: item.dossierRequirementId });
+    if (label === "View Requirement") {
+      setDetailsRequirement(item);
+      return;
+    }
+    if (
+      label === "Request Missing Document" ||
+      label === "Send Reminder Again"
+    ) {
+      if (
+        canSendMissingDocumentReminder(role, dossier) &&
+        isMissingDossierRequirement(item)
+      )
+        setReminder({ requirementId: item.dossierRequirementId });
       return;
     }
     if (label === "Review Document") {
       setReviewRequirement(item);
       return;
     }
-    if (label === "View Document" || label === "View Version History" || label === "View Review Result" || label === "View Review History" || label === "View Request") {
-      if (label === "View Request" && !item.document) { setDetailsRequirement(item); return; }
+    if (
+      label === "View Document" ||
+      label === "View Version History" ||
+      label === "View Review Result" ||
+      label === "View Review History" ||
+      label === "View Request"
+    ) {
+      if (label === "View Request" && !item.document) {
+        setDetailsRequirement(item);
+        return;
+      }
       if (item.document) {
         setViewRequirement(item);
         setViewDocumentId(String(item.document.complianceDocumentId));
-        setDocumentView(label === "View Request" ? "request" : label === "View Document" ? "details" : "history");
+        setDocumentView(
+          label === "View Request"
+            ? "request"
+            : label === "View Document"
+              ? "details"
+              : "history",
+        );
       }
       return;
     }
-    if (label === "Upload Document" && !canUploadInitialDocument(role, dossier, item)) return;
-    const mode: SubmissionMode | null = label === "Upload Document" ? "initial"
-      : label === "Edit Document" ? "edit" : label === "Update Document" ? "update" : null;
+    if (
+      label === "Upload Document" &&
+      !canUploadInitialDocument(role, dossier, item)
+    )
+      return;
+    const mode: SubmissionMode | null =
+      label === "Upload Document"
+        ? "initial"
+        : label === "Edit Document"
+          ? "edit"
+          : label === "Update Document"
+            ? "update"
+            : null;
     if (mode) setSubmission({ requirement: item, mode });
   };
   const [storedParams, setParams] = useState<DossierRequirementsParams>(
@@ -380,12 +501,23 @@ export function DossierRequirementsPreview({
   if (params !== storedParams) setParams(params);
   const role = useDossierRole();
   const remindersAllowed = canSendMissingDocumentReminder(role, dossier);
-  const missingQuery = useMissingDossierRequirements(dossierId, remindersAllowed);
+  const missingQuery = useMissingDossierRequirements(
+    dossierId,
+    remindersAllowed,
+  );
   const query = useDossierRequirements(dossierId, params);
   const result = query.data;
-  const viewedRequirement = result?.items.find((item) => item.dossierRequirementId === viewRequirement?.dossierRequirementId) ?? viewRequirement;
-  const canUpdateViewedDocument = role === "CUSTOMER" && viewedRequirement &&
-    getCustomerDocumentActions(dossier, viewedRequirement).includes("Update Document");
+  const viewedRequirement =
+    result?.items.find(
+      (item) =>
+        item.dossierRequirementId === viewRequirement?.dossierRequirementId,
+    ) ?? viewRequirement;
+  const canUpdateViewedDocument =
+    role === "CUSTOMER" &&
+    viewedRequirement &&
+    getCustomerDocumentActions(dossier, viewedRequirement).includes(
+      "Update Document",
+    );
   const visibleItems = result?.items ?? [];
   const tripItems = visibleItems.filter((item) => item.horseId === null);
   const horseGroups = new Map<
@@ -429,22 +561,46 @@ export function DossierRequirementsPreview({
             {documentsOnly ? "Documents / Reviews" : "Dossier requirements"}
           </h2>
           <p className="mt-1 text-xs text-gray-500">
-            {documentsOnly ? "Document submissions, missing documents, reviews and version history from the current requirements page." : "Trip-level and horse-specific requirements from the current page."}
+            {documentsOnly
+              ? "Document submissions, missing documents, reviews and version history from the current requirements page."
+              : "Trip-level and horse-specific requirements from the current page."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-        <DossierRequirementFilters
-          params={params}
-          horses={horses}
-          onChange={(filters) => setParams((current) => updateDossierRequirementFilters(current, filters))}
-        />
-        {remindersAllowed && (missingQuery.isPending || missingQuery.isError || Boolean(missingQuery.data?.length)) ? (
-          <Button type="button" size="sm" variant="outline" className="h-8 rounded-[2px] text-xs" disabled={missingQuery.isPending}
-            onClick={() => setReminder({})}><ClipboardList className="size-3.5" />{missingQuery.isPending ? "Loading missing requirements…" : "Request Missing Documents"}</Button>
-        ) : null}
+          <DossierRequirementFilters
+            params={params}
+            horses={horses}
+            onChange={(filters) =>
+              setParams((current) =>
+                updateDossierRequirementFilters(current, filters),
+              )
+            }
+          />
+          {remindersAllowed &&
+          (missingQuery.isPending ||
+            missingQuery.isError ||
+            Boolean(missingQuery.data?.length)) ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-[2px] text-xs"
+              disabled={missingQuery.isPending}
+              onClick={() => setReminder({})}
+            >
+              <ClipboardList className="size-3.5" />
+              {missingQuery.isPending
+                ? "Loading missing requirements…"
+                : "Request Missing Documents"}
+            </Button>
+          ) : null}
         </div>
       </div>
-      {remindersAllowed && missingQuery.data?.length === 0 ? <p className="text-xs text-slate-500">No missing requirements need a reminder.</p> : null}
+      {remindersAllowed && missingQuery.data?.length === 0 ? (
+        <p className="text-xs text-slate-500">
+          No missing requirements need a reminder.
+        </p>
+      ) : null}
       {query.isPending ? (
         <LoadingState />
       ) : errorKind ? (
@@ -471,7 +627,10 @@ export function DossierRequirementsPreview({
               aria-label="Horse-specific requirements"
             >
               <h3 className="m-0! flex items-center gap-2 font-heading text-base! font-bold! uppercase text-gray-900! pb-2">
-                <ChessKnight aria-hidden="true" className="size-4 text-primary" />
+                <ChessKnight
+                  aria-hidden="true"
+                  className="size-4 text-primary"
+                />
                 Horse-specific requirements
               </h3>
               {[...horseGroups.entries()].map(([horseId, group]) => (
@@ -519,38 +678,87 @@ export function DossierRequirementsPreview({
           key={submission.requirement.dossierRequirementId}
           dossier={dossier}
           requirement={submission.requirement}
-          plannedDepartureDate={dossier.bookingSummary.requestedDepartureDate ?? undefined}
+          plannedDepartureDate={
+            dossier.bookingSummary.requestedDepartureDate ?? undefined
+          }
           role={role}
           onClose={() => setSubmission(null)}
         />
       ) : (
         <DocumentSubmissionDialog
-          key={submission ? `${submission.mode}-${submission.requirement.dossierRequirementId}` : "closed"}
+          key={
+            submission
+              ? `${submission.mode}-${submission.requirement.dossierRequirementId}`
+              : "closed"
+          }
           dossier={dossier}
           requirement={submission?.requirement ?? null}
           mode={submission?.mode ?? "edit"}
-          plannedDepartureDate={plannedDepartureDate ?? dossier.bookingSummary.requestedDepartureDate ?? undefined}
+          plannedDepartureDate={
+            plannedDepartureDate ??
+            dossier.bookingSummary.requestedDepartureDate ??
+            undefined
+          }
           role={role}
           onClose={() => setSubmission(null)}
         />
       )}
-      <DocumentDetailsDialog documentId={viewDocumentId} onClose={() => setViewDocumentId(null)}
-        dossierId={dossierId} requirementId={String(viewedRequirement?.dossierRequirementId ?? "")} dossier={dossier} role={role}
+      <DocumentDetailsDialog
+        documentId={viewDocumentId}
+        onClose={() => setViewDocumentId(null)}
+        dossierId={dossierId}
+        requirementId={String(viewedRequirement?.dossierRequirementId ?? "")}
+        dossier={dossier}
+        role={role}
         view={documentView}
-        onUpdate={canUpdateViewedDocument && viewedRequirement ? () => {
-          setViewDocumentId(null);
-          setSubmission({ requirement: viewedRequirement, mode: "update" });
-        } : undefined} />
+        onUpdate={
+          canUpdateViewedDocument && viewedRequirement
+            ? () => {
+                setViewDocumentId(null);
+                setSubmission({
+                  requirement: viewedRequirement,
+                  mode: "update",
+                });
+              }
+            : undefined
+        }
+      />
       {reviewRequirement ? (
         <DocumentReviewDialog
           dossier={dossier}
-          requirement={result?.items.find((item) => item.dossierRequirementId === reviewRequirement.dossierRequirementId) ?? reviewRequirement}
+          requirement={
+            result?.items.find(
+              (item) =>
+                item.dossierRequirementId ===
+                reviewRequirement.dossierRequirementId,
+            ) ?? reviewRequirement
+          }
           role={role}
           onClose={() => setReviewRequirement(null)}
         />
       ) : null}
-      {detailsRequirement ? <DossierRequirementDetailsDialog dossierId={dossierId} role={role} requirement={result?.items.find((item) => item.dossierRequirementId === detailsRequirement.dossierRequirementId) ?? detailsRequirement} onClose={() => setDetailsRequirement(null)} /> : null}
-      {reminder ? <RequestMissingDocumentsDialog dossier={dossier} role={role} initialRequirementId={reminder.requirementId} onClose={() => setReminder(null)} /> : null}
+      {detailsRequirement ? (
+        <DossierRequirementDetailsDialog
+          dossierId={dossierId}
+          role={role}
+          requirement={
+            result?.items.find(
+              (item) =>
+                item.dossierRequirementId ===
+                detailsRequirement.dossierRequirementId,
+            ) ?? detailsRequirement
+          }
+          onClose={() => setDetailsRequirement(null)}
+        />
+      ) : null}
+      {reminder ? (
+        <RequestMissingDocumentsDialog
+          dossier={dossier}
+          role={role}
+          initialRequirementId={reminder.requirementId}
+          onClose={() => setReminder(null)}
+        />
+      ) : null}
     </section>
   );
 }

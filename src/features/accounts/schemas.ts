@@ -11,16 +11,13 @@ const phoneSchema = z
   .string()
   .trim()
   .min(1, "Phone is required.")
-  .regex(
-    /^\+?[0-9\s().-]+$/,
-    "Please enter a valid phone number.",
-  )
+  .regex(/^\+?[0-9\s().-]+$/, "Please enter a valid phone number.")
   .transform((value) => value.replace(/[\s().-]/g, ""))
   .refine(
     (value) => /^\+?[1-9]\d{7,14}$/.test(value),
     "Enter a valid phone number (8–15 digits, e.g. +33123456789).",
   );
-const entityId = z.union([z.number().int().positive(), z.string().min(1)]);
+const entityId = z.string();
 export const employeeSchema = z.object({
   employeeId: entityId,
   accountId: entityId,
@@ -66,7 +63,9 @@ export const createEmployeeSchema = z.object({
   role: z.enum(employeeRoles, { error: "Select a role." }),
 });
 export const updateEmploymentSchema = z.object({
-  accountStatus: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"], { error: "Select an account status." }),
+  accountStatus: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"], {
+    error: "Select an account status.",
+  }),
   role: z.enum(employeeRoles, { error: "Select a role." }),
   workingStatus: z.enum(["ACTIVE", "INACTIVE"], {
     error: "Select a working status.",

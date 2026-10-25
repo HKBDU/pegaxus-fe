@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { RouteGeometry } from "@/shared/utils/map";
 
 export type MapLocation = {
@@ -16,7 +17,11 @@ export type MapLocation = {
 };
 
 export type LocationAction = "EDIT" | "DELETE";
-export type MapMode = "view" | "addLocation" | "addRoute" | "buildPlan";
+/**
+ * `pickPoint`: a user picks a start/end point by click or search (Booking form). It never reads or writes saved
+ * locations; the start/end markers come from `buildStartLocation` / `buildEndLocation`.
+ */
+export type MapMode = "view" | "addLocation" | "addRoute" | "buildPlan" | "pickPoint";
 /** @deprecated Use MapMode. Kept as a source-compatible alias for consumers. */
 export type SelectionMode = MapMode;
 
@@ -99,6 +104,8 @@ export type MapViewerProps = {
   onRouteSelect?: (route: MapRoute) => void;
   buildStartLocation?: MapLocation | null;
   buildEndLocation?: MapLocation | null;
+  /** Extra react-map-gl layers/markers drawn on top of the built-in ones (for example a moving vehicle). */
+  children?: ReactNode;
 };
 
 export type ValidatedRouteGeometry = RouteGeometry | null;

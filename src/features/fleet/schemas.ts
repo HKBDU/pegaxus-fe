@@ -3,18 +3,33 @@ import { z } from "zod"
 import { PROVIDER_NOTE_MAX, VEHICLE_CAPACITY_MAX, VEHICLE_CAPACITY_MIN } from "@/features/fleet/constants/fleet.constants"
 import { MANUAL_VEHICLE_STATUSES, TRANSPORT_MODES } from "@/features/fleet/types"
 import { todayIso } from "@/features/fleet/utils"
+import {
+  PHONE_MESSAGE,
+  VALIDATION_LIMITS,
+  isIso2CountryCodeValid,
+  isPhoneValid,
+} from "@/shared/constants/validation-limits"
 
 const optionalText = (max: number, label: string) => z.string().trim().max(max, `${label} must be at most ${max} characters.`)
 
-/** Expiry dates are optional but, when given, must be in the future (UC-44 EXC-03). */
+function maxFutureDateIso(years = VALIDATION_LIMITS.dateWindowYears): string {
+  const date = new Date()
+  date.setFullYear(date.getFullYear() + years)
+  return date.toISOString().slice(0, 10)
+}
+
+/** Expiry dates are optional but, when given, must be in the future and within 10 years (UC-44 EXC-03). */
 const futureDate = (label: string) =>
   z
     .string()
     .refine((value) => !value || value > todayIso(), `${label} must be in the future.`)
+    .refine(
+      (value) => !value || value <= maxFutureDateIso(),
+      `${label} must be within ${VALIDATION_LIMITS.dateWindowYears} years from today.`,
+    )
 
 export const vehicleFormSchema = z
   .object({
-    vehicleCode: z.string().trim().min(1, "Vehicle code is required.").max(50, "Vehicle code must be at most 50 characters."),
     vehicleName: optionalText(200, "Vehicle name"),
     transportMode: z.enum(TRANSPORT_MODES),
     licensePlate: optionalText(50, "License plate"),
@@ -31,7 +46,8 @@ export const vehicleFormSchema = z
     insuranceNumber: optionalText(100, "Insurance policy no."),
     insuranceExpiryDate: futureDate("Insurance expiration date"),
     equipmentTags: z.array(z.string()),
-    equipmentNotes: z.string(),
+    equipmentNotes: z.string().trim().max(VALIDATION_LIMITS.noteMaxLength, `Special equipment must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`),
+    country: z.string().trim().toUpperCase().refine((value) => !value || isIso2CountryCodeValid(value), "Country must be a 2-letter ISO code."),
   })
   .superRefine((values, ctx) => {
     if (values.transportMode === "ROAD" && !values.licensePlate.trim()) {
@@ -51,15 +67,18 @@ export type VehicleStatusFormValues = z.infer<typeof vehicleStatusSchema>
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export const providerFormSchema = z.object({
-  providerCode: z.string().trim().min(1, "Provider code is required.").max(50, "Provider code must be at most 50 characters."),
   providerName: z.string().trim().min(1, "Provider name is required.").max(200, "Provider name must be at most 200 characters."),
   taxCode: z.string().trim().min(1, "Tax code / VAT number is required.").max(100, "Tax code must be at most 100 characters."),
   supportedModes: z.array(z.enum(TRANSPORT_MODES)).min(1, "Select at least one service type."),
   contactName: optionalText(150, "Business representative"),
-  phone: optionalText(30, "Hotline"),
+  phone: z
+    .string()
+    .trim()
+    .max(30, "Hotline must be at most 30 characters.")
+    .refine(isPhoneValid, PHONE_MESSAGE),
   email: z.string().trim().max(255, "Email must be at most 255 characters.").refine((value) => !value || emailPattern.test(value), "Enter a valid email address."),
   address: optionalText(500, "Address"),
-  country: optionalText(100, "Country"),
+  country: optionalText(100, "Country").refine(isIso2CountryCodeValid, "Country must be a 2-letter ISO code."),
   note: z.string().max(PROVIDER_NOTE_MAX, `Note must be at most ${PROVIDER_NOTE_MAX} characters.`),
 })
 

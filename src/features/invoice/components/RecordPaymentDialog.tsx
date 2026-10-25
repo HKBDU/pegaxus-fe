@@ -1,19 +1,22 @@
 import { useState } from "react"
 import { Button } from "@/shared/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/shared/components/ui/dialog"
+import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
-import { INVOICE_ACTION, INVOICE_TYPE, PAYMENT_METHOD, type PaymentMethod } from "@/features/invoice/constants"
+import { TimePicker } from "@/shared/components/ui/time-picker"
+import { INVOICE_ACTION, INVOICE_TYPE, PAYMENT_METHOD } from "@/features/invoice/constants"
 import type { RecordPaymentDialogProps } from "@/features/invoice/types"
 import { useRecordPayment } from "@/features/invoice/hooks/useRecordPayment"
 import { mapPaymentError, formatPaymentAmount, toPaymentTimestamp, validateRecordPayment } from "@/features/invoice/utils"
 
-function localDateTimeValue() {
+/** Local "yyyy-MM-dd" and "HH:mm" of now, the values of the date and time pickers. */
+function localDateAndTime() {
   const date = new Date()
   const offset = date.getTimezoneOffset() * 60_000
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+  const [day, time] = new Date(date.getTime() - offset).toISOString().slice(0, 16).split("T")
+  return { day, time }
 }
 
 export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialogProps) {
@@ -21,18 +24,18 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
   const isQuotation = invoice.type === INVOICE_TYPE.QUOTATION
   const mutation = useRecordPayment()
   const [open, setOpen] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHOD.CASH)
   const [transactionReference, setTransactionReference] = useState('')
-  const [paidAt, setPaidAt] = useState(localDateTimeValue)
+  const [paidDay, setPaidDay] = useState(() => localDateAndTime().day)
+  const [paidTime, setPaidTime] = useState(() => localDateAndTime().time)
   const [note, setNote] = useState('')
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
 
   if (!canRecord || isQuotation) return null
 
   function resetForm() {
-    setPaymentMethod(PAYMENT_METHOD.CASH)
     setTransactionReference('')
-    setPaidAt(localDateTimeValue())
+    setPaidDay(localDateAndTime().day)
+    setPaidTime(localDateAndTime().time)
     setNote('')
     setValidationMessage(null)
     mutation.reset()
@@ -47,9 +50,9 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
     event.preventDefault()
     const payload = {
       amount: invoice.summary.grandTotal,
-      currency: invoice.currency,
-      paymentMethod,
-      paidAt: paidAt ? toPaymentTimestamp(paidAt) : undefined,
+      // The Logistics Manager only records cash received in person; other methods come in through online payment.
+      paymentMethod: PAYMENT_METHOD.CASH,
+      paidAt: paidDay ? toPaymentTimestamp(`${paidDay}T${paidTime || '00:00'}`) : undefined,
       transactionReference: transactionReference || undefined,
       note: note || undefined,
     }
@@ -94,21 +97,8 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
             <Input id="record-payment-amount" value={formatPaymentAmount(invoice.summary.grandTotal, invoice.currency)} readOnly />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="record-payment-currency">Currency</Label>
-            <Input id="record-payment-currency" value={invoice.currency} readOnly />
-          </div>
-          <div className="grid gap-2">
             <Label htmlFor="record-payment-method">Payment method</Label>
-            <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}>
-              <SelectTrigger id="record-payment-method" className="w-full">
-                <SelectValue placeholder="Select a payment method" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={PAYMENT_METHOD.CASH}>Cash</SelectItem>
-                <SelectItem value={PAYMENT_METHOD.BANK_TRANSFER}>Bank transfer</SelectItem>
-                <SelectItem value={PAYMENT_METHOD.OTHER}>Other</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input id="record-payment-method" value="Cash" readOnly />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="record-payment-reference">Transaction reference</Label>
@@ -122,7 +112,18 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
           </div>
           <div className="grid gap-2">
             <Label htmlFor="record-payment-paid-at">Paid at</Label>
-            <Input id="record-payment-paid-at" type="datetime-local" value={paidAt} onChange={(event) => setPaidAt(event.target.value)} />
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,9rem)] gap-2">
+              <DatePicker
+                id="record-payment-paid-at"
+                value={paidDay}
+                onChange={setPaidDay}
+                maxDate={localDateAndTime().day}
+                displayFormat="dd/MM/yyyy"
+                placeholder="Pick a date"
+                className="h-9 w-full justify-between rounded-[2px] text-left font-normal"
+              />
+              <TimePicker aria-label="Paid at time" value={paidTime} onChange={setPaidTime} />
+            </div>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="record-payment-note">Note</Label>

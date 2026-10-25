@@ -7,6 +7,7 @@ export const ROLE_ROUTES = {
   managerHome: "/admin",
   approvedBookings: "/admin/approved-bookings",
   transportPlans: "/admin/transport-plans",
+  ongoingTransports: "/admin/ongoing-transports",
   managerUsers: "/admin/users",
   managerCreateUser: "/admin/users/new",
   customerHorses: "/my-horses",
@@ -21,7 +22,11 @@ export const ROLE_ROUTES = {
   mapAssets: "/admin/map-assets",
   personnelAssignment: "/admin/personnel-assignment",
   invoices: "/admin/invoices",
+  claims: "/admin/claims",
+  transportArchive: "/admin/transport-archive",
+  incidents: "/admin/incidents",
   notifications: "/notifications",
+  crew: "/crew",
 } as const
 
 export const routePlanDetail = (routePlanId: string) => `${ROLE_ROUTES.routePlans}/${encodeURIComponent(routePlanId)}`
@@ -34,6 +39,15 @@ export const invoiceDetail = (invoiceId: string) => `${ROLE_ROUTES.invoices}/${e
 export const invoiceEdit = (invoiceId: string) => `${invoiceDetail(invoiceId)}/edit`
 export const invoiceCreate = (bookingId: string) => `${ROLE_ROUTES.invoices}/new/${encodeURIComponent(bookingId)}`
 
+export const claimDetail = (claimId: string) => `${ROLE_ROUTES.claims}/${encodeURIComponent(claimId)}`
+export const claimResolve = (claimId: string) => `${claimDetail(claimId)}/resolve`
+export const customerClaimNew = (bookingId: string) => `/bookings/${encodeURIComponent(bookingId)}/claims/new`
+export const customerClaimDetail = (bookingId: string, claimId: string) => `/bookings/${encodeURIComponent(bookingId)}/claims/${encodeURIComponent(claimId)}`
+
+export const transportArchive = () => ROLE_ROUTES.transportArchive
+export const transportAudit = (transportId: string) => `/admin/transports/${encodeURIComponent(transportId)}/audit`
+export const customerTransportHistory = (bookingId: string, transportId: string) =>
+  `/bookings/${encodeURIComponent(bookingId)}/transports/${encodeURIComponent(transportId)}/history`
 export const personnelAssignmentPath = (transportPlanId: string) => `${ROLE_ROUTES.personnelAssignment}/${encodeURIComponent(transportPlanId)}`
 
 export const accountDetail = (id: string | number) => `${ROLE_ROUTES.managerUsers}/${encodeURIComponent(id)}`
@@ -58,10 +72,25 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
   if (normalizeRole(role) === "FLEET_ROUTE_COORDINATOR" && safePath === ROLE_ROUTES.home) {
     return ROLE_ROUTES.vehicles
   }
+  if (["DRIVER", "ESCORT"].includes(normalizeRole(role)) && safePath === ROLE_ROUTES.home) {
+    return ROLE_ROUTES.crew
+  }
   return safePath
 }
 
 const adminHeaderRoutes = [
+  { path: "/admin/reports/transit-time", label: "REPORTS & ANALYTICS", href: "/admin/reports/transit-time", title: "TRANSIT TIME & DELAY BENCHMARK" },
+  { path: "/admin/reports/incident-claim-frequency", label: "REPORTS & ANALYTICS", href: "/admin/reports/incident-claim-frequency", title: "INCIDENT & CLAIM FREQUENCY" },
+  { path: "/admin/reports/on-time-delivery", label: "REPORTS & ANALYTICS", href: "/admin/reports/on-time-delivery", title: "ON-TIME DELIVERY" },
+  { path: "/admin/transports/:transportId/financial-summary", label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "FINANCIAL SUMMARY" },
+  { path: "/admin/transports/:transportId/audit", label: "TRANSPORT ARCHIVE", href: ROLE_ROUTES.transportArchive, title: "AUDIT DOSSIER" },
+  { path: ROLE_ROUTES.transportArchive, label: "TRANSPORT ARCHIVE", href: ROLE_ROUTES.transportArchive, title: "" },
+  { path: "/admin/emergency-costs/new", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "NEW COST REQUEST" },
+  { path: "/admin/emergency-costs/:emergencyCostRequestId", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "COST REQUEST DETAILS" },
+  { path: "/admin/emergency-costs", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "" },
+  { path: `${ROLE_ROUTES.ongoingTransports}/:transportId/segments`, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "ROUTE TRACKING" },
+  { path: `${ROLE_ROUTES.ongoingTransports}/:transportId`, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "TRANSPORT OVERVIEW" },
+  { path: ROLE_ROUTES.ongoingTransports, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "" },
   { path: `${ROLE_ROUTES.vehicles}/new`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "ADD NEW VEHICLE" },
   { path: `${ROLE_ROUTES.vehicles}/:vehicleId/edit`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "EDIT VEHICLE" },
   { path: `${ROLE_ROUTES.vehicles}/:vehicleId`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "VEHICLE DETAILS" },
@@ -73,6 +102,9 @@ const adminHeaderRoutes = [
   { path: ROLE_ROUTES.transportPlans, label: "TRANSPORT PLANS", href: ROLE_ROUTES.transportPlans, title: "" },
   { path: `${ROLE_ROUTES.approvedBookings}/:bookingId`, label: "APPROVED BOOKINGS", href: ROLE_ROUTES.approvedBookings, title: "APPROVED BOOKING DETAILS" },
   { path: ROLE_ROUTES.approvedBookings, label: "APPROVED BOOKINGS", href: ROLE_ROUTES.approvedBookings, title: "" },
+  { path: "/admin/ongoing-transports/:transportId/handovers/new", label: "HANDOVER RECORDS", href: "/admin/ongoing-transports", title: "START HANDOVER" },
+  { path: "/admin/ongoing-transports/:transportId/handovers/:handoverId", label: "HANDOVER RECORDS", href: "/admin/ongoing-transports", title: "HANDOVER RECORD" },
+  { path: "/admin/ongoing-transports/:transportId/handovers", label: "HANDOVER RECORDS", href: "/admin/ongoing-transports", title: "" },
   { path: `${ROLE_ROUTES.managerDossiers}/:dossierId`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "COMPLIANCE DOSSIER" },
   { path: `${ROLE_ROUTES.complianceDossiers}/:dossierId/details`, label: "DOSSIER TRACKING", href: ROLE_ROUTES.complianceDossiers, title: "COMPLIANCE DOSSIER" },
   { path: ROLE_ROUTES.managerCreateUser, label: "USERS", href: ROLE_ROUTES.managerUsers, title: "CREATE EMPLOYEE ACCOUNT" },
@@ -96,6 +128,12 @@ const adminHeaderRoutes = [
   { path: `${ROLE_ROUTES.invoices}/:invoiceId/edit`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "EDIT INVOICE" },
   { path: `${ROLE_ROUTES.invoices}/:invoiceId`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "INVOICE DETAILS" },
   { path: ROLE_ROUTES.invoices, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "" },
+  { path: `${ROLE_ROUTES.incidents}/:incidentReportId`, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "INCIDENT DETAILS" },
+  { path: ROLE_ROUTES.incidents, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "" },
+  { path: `${ROLE_ROUTES.claims}/:claimId/resolve`, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "RESOLVE CLAIM" },
+  { path: `${ROLE_ROUTES.claims}/:claimId`, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "CLAIM DETAILS" },
+  { path: ROLE_ROUTES.claims, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "" },
+  { path: "/admin/ongoing-transports/:transportId/gps", label: "ONGOING TRANSPORTS", href: "/admin/ongoing-transports", title: "LIVE GPS TRACKING" },
   { path: `${ROLE_ROUTES.personnelAssignment}/:transportPlanId`, label: "TRANSPORT PLANS", href: "/admin/transport-plans", title: "PERSONNEL ASSIGNMENT" },
   ...["profile", "staff", "transport-plans", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
 ]
@@ -107,5 +145,7 @@ export function getAdminHeaderContext(pathname: string) {
 export const CUSTOMER_ONLY: AccessPolicy = { anyRole: ["CUSTOMER"] }
 export const APPROVED_BOOKINGS_ACCESS: AccessPolicy = { anyRole: ["FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
 export const TRANSPORT_PLANS_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
+export const ONGOING_TRANSPORT_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
+export const INCIDENT_ADMIN_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
 export const LOGISTICS_MANAGER_READ: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER"] }
 export const PROFILE_ROLES: AccessPolicy = { anyRole: ["CUSTOMER", "LOGISTICS_MANAGER", "TRANSPORT_SPECIALIST", "FLEET_ROUTE_COORDINATOR", "DRIVER", "ESCORT"] }

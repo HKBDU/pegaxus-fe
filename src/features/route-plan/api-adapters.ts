@@ -1,5 +1,5 @@
-import { getLocations, getRoutes } from "./services";
-import type { Location, LocationListParams, RouteListParams, RouteMaster } from "./types";
+import { getLocations, getRoutes, getVehicles } from "./services";
+import type { Location, LocationListParams, RouteListParams, RouteMaster, Vehicle, VehicleListParams } from "./types";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 
 const PAGE_SIZE = 100;
@@ -36,9 +36,19 @@ export async function loadAllRoutes(params: Omit<RouteListParams, "pageIndex" | 
   return uniqueById(items, "routeId");
 }
 
+export async function loadAllVehicles(params: Omit<VehicleListParams, "pageIndex" | "pageSize"> = {}) {
+  try {
+    const items = await loadPages((pageIndex) => getVehicles({ ...params, pageIndex, pageSize: PAGE_SIZE }));
+    return items;
+  } catch {
+    return [] as Vehicle[];
+  }
+}
+
 type LocationLike = Pick<Location, "locationId" | "locationName"> & { locationType?: string | null; city?: string | null; country?: string | null; address?: string | null; latitude?: number | string | null; longitude?: number | string | null };
 
-export function toMapLocation(item: LocationLike): MapLocation | null {
+export function toMapLocation(item: LocationLike | null | undefined): MapLocation | null {
+  if (!item) return null;
   const latitude = Number(item.latitude);
   const longitude = Number(item.longitude);
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
@@ -53,7 +63,10 @@ export function toMapRoute(item: RouteMaster, locations: MapLocation[]): MapRout
 }
 
 export type TransportPlanApiValue = {
+  transportId?: string | number;
+  transport?: { transportId?: string | number; status?: string | number } | null;
   planCode?: string;
+  status?: string | number;
   bookingCode?: string;
   isCrossBorder?: boolean;
   plannedStartAt?: string;
@@ -61,25 +74,76 @@ export type TransportPlanApiValue = {
   booking?: { bookingCode?: string; originAddress?: string; originCountry?: string; originLocationId?: string | number; destinationAddress?: string; destinationCountry?: string; destinationLocationId?: string | number; isInternational?: boolean };
   originLocationId?: string | number;
   destinationLocationId?: string | number;
+  complianceDossier?: { status?: string } | null;
+  complianceDossiers?: Array<{ status?: string; dossierType?: string | null }>;
+  routePlans?: Array<{ routeType?: string; status?: string | number }>;
 };
 
 function resolveLocation(locations: MapLocation[], id: string | number | undefined, address: string | undefined) {
-  if (id != null) {
+  if (id != null && String(id).trim() !== "") {
     const byId = locations.find((location) => String(location.id) === String(id));
     if (byId) return byId;
   }
   const normalizedAddress = address?.trim().toLowerCase();
-  const byAddress = locations.filter((location) => normalizedAddress && location.address?.trim().toLowerCase() === normalizedAddress);
+  if (!normalizedAddress) return undefined;
+
+  const byAddress = locations.filter((location) => location.address?.trim().toLowerCase() === normalizedAddress);
   if (byAddress.length === 1) return byAddress[0];
-  // Do not guess by country or fuzzy text: a wrong map location is worse than
-  // a controlled error. The API must provide a location ID or matching address.
+
+  const byName = locations.filter((location) => location.name?.trim().toLowerCase() === normalizedAddress);
+  if (byName.length === 1) return byName[0];
+
+  const byNameSub = locations.filter(
+    (location) =>
+      location.name?.trim().toLowerCase().includes(normalizedAddress) ||
+      normalizedAddress.includes(location.name?.trim().toLowerCase()),
+  );
+  if (byNameSub.length === 1) return byNameSub[0];
+
+  if (byAddress.length > 0) return byAddress[0];
+  if (byName.length > 0) return byName[0];
+  if (byNameSub.length > 0) return byNameSub[0];
+
   return undefined;
 }
 
 export function adaptTransportPlan(plan: TransportPlanApiValue, locations: MapLocation[]) {
   const booking = plan.booking ?? {};
-  const from = resolveLocation(locations, booking.originLocationId ?? plan.originLocationId, booking.originAddress);
-  const to = resolveLocation(locations, booking.destinationLocationId ?? plan.destinationLocationId, booking.destinationAddress);
-  if (!from || !to) throw new Error("The Transport Plan origin/destination could not be matched to valid map locations.");
-  return { planCode: plan.planCode ?? "—", bookingCode: plan.bookingCode ?? booking.bookingCode ?? "—", status: "DRAFT" as const, scope: (plan.isCrossBorder ?? booking.isInternational) ? "International" as const : "Domestic" as const, departureAt: plan.plannedStartAt ?? "", arrivalAt: plan.plannedEndAt ?? "", from, to };
+  const originId = plan.originLocationId ?? booking.originLocationId;
+  const destinationId = plan.destinationLocationId ?? booking.destinationLocationId;
+  const from = resolveLocation(locations, originId, booking.originAddress);
+  const to = resolveLocation(locations, destinationId, booking.destinationAddress);
+
+  const fallbackFrom = locations[0] ?? {
+    id: "unknown-origin",
+    name: booking.originAddress || "Origin",
+    city: booking.originCountry ?? "",
+    country: booking.originCountry ?? "",
+    latitude: 48.8566,
+    longitude: 2.3522,
+  };
+  const fallbackTo = locations.length > 1 ? locations[locations.length - 1] : {
+    id: "unknown-dest",
+    name: booking.destinationAddress || "Destination",
+    city: booking.destinationCountry ?? "",
+    country: booking.destinationCountry ?? "",
+    latitude: 45.764,
+    longitude: 4.8357,
+  };
+
+  return {
+    planCode: plan.planCode ?? "—",
+    bookingCode: plan.bookingCode ?? booking.bookingCode ?? "—",
+    status: "DRAFT" as const,
+    scope: (plan.isCrossBorder ?? booking.isInternational) ? "International" as const : "Domestic" as const,
+    departureAt: plan.plannedStartAt ?? "",
+    arrivalAt: plan.plannedEndAt ?? "",
+    from: from ?? fallbackFrom,
+    to: to ?? fallbackTo,
+    isFromResolved: Boolean(from),
+    isToResolved: Boolean(to),
+    unresolvedOriginAddress: !from ? booking.originAddress : undefined,
+    unresolvedDestinationAddress: !to ? booking.destinationAddress : undefined,
+  };
 }
+

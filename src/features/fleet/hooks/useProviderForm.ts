@@ -12,7 +12,6 @@ import { getFleetErrorCode, getFleetErrorMessage } from "@/features/fleet/utils"
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard"
 
 const emptyValues: ProviderFormValues = {
-  providerCode: "",
   providerName: "",
   taxCode: "",
   supportedModes: [],
@@ -27,7 +26,6 @@ const emptyValues: ProviderFormValues = {
 function toDefaults(provider: Provider | null): ProviderFormValues {
   if (!provider) return emptyValues
   return {
-    providerCode: provider.providerCode,
     providerName: provider.providerName,
     taxCode: provider.taxCode ?? "",
     supportedModes: provider.supportedModes,
@@ -44,7 +42,6 @@ const optional = (value: string) => value.trim() || undefined
 
 function toPayload(values: ProviderFormValues): ProviderPayload {
   return {
-    providerCode: values.providerCode.trim(),
     providerName: values.providerName.trim(),
     supportedModes: values.supportedModes,
     taxCode: values.taxCode.trim(),
@@ -59,7 +56,7 @@ function toPayload(values: ProviderFormValues): ProviderPayload {
 
 /**
  * Form state + save of a transport provider (SCR-F3-021, UC-41), shared by the create popup and the edit page.
- * providerCode is immutable on edit (PV4). `onSaved` runs after a successful save; `onStale` after PROVIDER_MODIFIED.
+ * The BE generates providerCode (immutable, shown read-only on edit). `onSaved` runs after a successful save; `onStale` after PROVIDER_MODIFIED.
  */
 export function useProviderForm(provider: Provider | null, { enabled = true, onSaved, onStale }: { enabled?: boolean; onSaved: (saved: "created" | "updated") => void; onStale?: () => void }) {
   const queryClient = useQueryClient()
@@ -78,8 +75,7 @@ export function useProviderForm(provider: Provider | null, { enabled = true, onS
       const guarded = await attempt.run(async () => {
         const payload = toPayload(values)
         if (provider) {
-          const { providerCode: _providerCode, ...rest } = payload
-          await updateProvider.mutateAsync({ id: provider.transportProviderId, payload: { ...rest, lastUpdatedAt: provider.updatedAt } })
+          await updateProvider.mutateAsync({ id: provider.transportProviderId, payload: { ...payload, lastUpdatedAt: provider.updatedAt } })
         } else {
           await createProvider.mutateAsync(payload)
         }
@@ -91,7 +87,6 @@ export function useProviderForm(provider: Provider | null, { enabled = true, onS
       attempt.reset()
       const code = getFleetErrorCode(error)
       const message = getFleetErrorMessage(error, "Unable to save this provider.")
-      if (code === "PROVIDER_CODE_DUPLICATED") return void form.setError("providerCode", { message }, { shouldFocus: true })
       if (code === "TAX_CODE_DUPLICATED") return void form.setError("taxCode", { message }, { shouldFocus: true })
       if (code === "PROVIDER_MODIFIED") {
         void queryClient.invalidateQueries({ queryKey: providerKeys.lists() })

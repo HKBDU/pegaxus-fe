@@ -3,6 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { ASSIGNABLE_PAGE_SIZE } from "@/features/personnel/constants"
 import { personnelService } from "@/features/personnel/services"
 import type {
+  AssignableFilters,
   AssignableRole,
   Phase1AssignPayload,
   Phase1ChangePayload,
@@ -16,7 +17,8 @@ export const personnelKeys = {
   assignments: (transportPlanId: string) => [...personnelKeys.all, "assignments", transportPlanId] as const,
   primaryRoute: (transportPlanId: string) => [...personnelKeys.all, "primary-route", transportPlanId] as const,
   routePlan: (routePlanId: string) => [...personnelKeys.all, "route-plan", routePlanId] as const,
-  assignable: (role: AssignableRole, from?: string, to?: string) => [...personnelKeys.all, "assignable", role, from ?? "", to ?? ""] as const,
+  assignable: (role: AssignableRole, from?: string, to?: string, planId?: string, filters?: AssignableFilters) =>
+    [...personnelKeys.all, "assignable", role, from ?? "", to ?? "", planId ?? "", filters?.search ?? "", filters?.country ?? ""] as const,
 }
 
 export function useTransportPlanSummary(transportPlanId: string) {
@@ -56,15 +58,25 @@ export function useRoutePlanSummary(routePlanId: string | null | undefined) {
 }
 
 /** PS6 dropdown source. Drivers and escorts need the segment window, TS / RC do not. */
-export function useAssignableEmployees(role: AssignableRole, window: { from?: string; to?: string } = {}, enabled = true) {
+export function useAssignableEmployees(
+  role: AssignableRole,
+  window: { from?: string; to?: string } = {},
+  enabled = true,
+  /** Drivers / escorts: the plan being assigned (PS6 does not treat its own segments as busy). */
+  transportPlanId?: string,
+  filters: AssignableFilters = {},
+) {
   const needsWindow = role === "DRIVER" || role === "ESCORT"
   return useQuery({
-    queryKey: personnelKeys.assignable(role, window.from, window.to),
+    queryKey: personnelKeys.assignable(role, window.from, window.to, transportPlanId, filters),
     queryFn: () =>
       personnelService.assignable({
         role,
         availableFrom: needsWindow ? window.from : undefined,
         availableTo: needsWindow ? window.to : undefined,
+        transportPlanId: needsWindow ? transportPlanId : undefined,
+        search: filters.search,
+        country: filters.country,
         pageIndex: 1,
         pageSize: ASSIGNABLE_PAGE_SIZE,
       }),

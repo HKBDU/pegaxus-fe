@@ -23,6 +23,7 @@ export function useClearanceDossierContext(dossierId: string | null) {
     queryFn: () => getDossierContext(dossierId!),
     enabled: dossierId != null,
     staleTime: 60_000,
+    retry: false,
   })
 }
 

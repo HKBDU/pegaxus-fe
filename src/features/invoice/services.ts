@@ -9,66 +9,135 @@ import { InvoiceApiError } from "@/features/invoice/errors"
 import { mockCreateInvoice, mockGetBookingContext, mockGetInvoice, mockGetSuggestion, mockIssueInvoice, mockUpdateInvoice } from "@/features/invoice/mocks/compose.mock"
 import type { AxiosError } from "axios"
 
-// ---- from view/services.ts ----
 export class InvoiceReadError extends Error {
-  readonly errorCode: string
-  constructor(errorCode: string, message: string) { super(message); this.errorCode = errorCode }
+  readonly errorCode: string;
+  constructor(errorCode: string, message: string) {
+    super(message);
+    this.errorCode = errorCode;
+  }
 }
 function readEnvelope(response: unknown) {
-  const envelope = invoiceEnvelopeSchema.parse(response)
-  if (!envelope.isSuccess) throw new InvoiceReadError(envelope.errorCode || "INVOICE_READ_FAILED", envelope.message || "Unable to load invoices.")
-  return envelope.value
+  const envelope = invoiceEnvelopeSchema.parse(response);
+  if (!envelope.isSuccess)
+    throw new InvoiceReadError(
+      envelope.errorCode || "INVOICE_READ_FAILED",
+      envelope.message || "Unable to load invoices.",
+    );
+  return envelope.value;
 }
 export function invoicePaginationMeta(page: InvoicePage): PaginationMeta {
-  return { currentPage: page.pageIndex, itemsPerPage: page.pageSize, totalItems: page.totalItems, totalPages: page.totalPages,
-    hasPreviousPage: page.pageIndex > 1, hasNextPage: page.pageIndex < page.totalPages }
+  return {
+    currentPage: page.pageIndex,
+    itemsPerPage: page.pageSize,
+    totalItems: page.totalItems,
+    totalPages: page.totalPages,
+    hasPreviousPage: page.pageIndex > 1,
+    hasNextPage: page.pageIndex < page.totalPages,
+  };
 }
 export const invoiceViewService = {
   async list(params: InvoiceQueryParams, signal?: AbortSignal) {
-    const query = invoiceQuerySchema.parse(params)
-    signal?.throwIfAborted()
-    const response = !import.meta.env.PROD && isInvoiceMockMode()
-      ? (await import("./mocks/invoice.mock")).invoiceMock.list(query)
-      : await apiClient.get<unknown, unknown>("/invoices", { params: query, signal })
-    return invoicePageSchema.parse(readEnvelope(response))
+    const query = invoiceQuerySchema.parse(params);
+    signal?.throwIfAborted();
+    const response =
+      !import.meta.env.PROD && isInvoiceMockMode()
+        ? (await import("./mocks/invoice.mock")).invoiceMock.list(query)
+        : await apiClient.get<unknown, unknown>("/invoices", {
+            params: query,
+            signal,
+          });
+    return invoicePageSchema.parse(readEnvelope(response));
   },
-  async bookingList(bookingId: string, params: BookingInvoiceQueryParams, signal?: AbortSignal) {
-    const id = invoiceIdSchema.parse(bookingId), query = bookingInvoiceQuerySchema.parse(params)
-    signal?.throwIfAborted()
-    const response = !import.meta.env.PROD && isInvoiceMockMode()
-      ? (await import("./mocks/invoice.mock")).invoiceMock.bookingList(id, query)
-      : await apiClient.get<unknown, unknown>(`/bookings/${encodeURIComponent(id)}/invoices`, { params: query, signal })
-    return invoicePageSchema.parse(readEnvelope(response))
+  async bookingList(
+    bookingId: string,
+    params: BookingInvoiceQueryParams,
+    signal?: AbortSignal,
+  ) {
+    const id = invoiceIdSchema.parse(bookingId),
+      query = bookingInvoiceQuerySchema.parse(params);
+    signal?.throwIfAborted();
+    const response =
+      !import.meta.env.PROD && isInvoiceMockMode()
+        ? (await import("./mocks/invoice.mock")).invoiceMock.bookingList(
+            id,
+            query,
+          )
+        : await apiClient.get<unknown, unknown>(
+            `/bookings/${encodeURIComponent(id)}/invoices`,
+            { params: query, signal },
+          );
+    return invoicePageSchema.parse(readEnvelope(response));
   },
   async detail(invoiceId: string, signal?: AbortSignal) {
-    const id = invoiceIdSchema.parse(invoiceId)
-    signal?.throwIfAborted()
-    const response = !import.meta.env.PROD && isInvoiceMockMode()
-      ? (await import("./mocks/invoice.mock")).invoiceMock.detail(id)
-      : await apiClient.get<unknown, unknown>(`/invoices/${encodeURIComponent(id)}`, { signal })
-    return invoiceDetailSchema.parse(readEnvelope(response))
+    const id = invoiceIdSchema.parse(invoiceId);
+    signal?.throwIfAborted();
+    const response =
+      !import.meta.env.PROD && isInvoiceMockMode()
+        ? (await import("./mocks/invoice.mock")).invoiceMock.detail(id)
+        : await apiClient.get<unknown, unknown>(
+            `/invoices/${encodeURIComponent(id)}`,
+            { signal },
+          );
+    return invoiceDetailSchema.parse(readEnvelope(response));
   },
   async statusHistory(invoiceId: string, signal?: AbortSignal) {
-    const id = invoiceIdSchema.parse(invoiceId)
-    signal?.throwIfAborted()
-    const response = !import.meta.env.PROD && isInvoiceMockMode()
-      ? (await import("./mocks/invoice.mock")).invoiceMock.statusHistory(id)
-      : await apiClient.get<unknown, unknown>(`/invoices/${encodeURIComponent(id)}/status-history`, { signal })
-    return invoiceStatusHistorySchema.parse(readEnvelope(response))
-      .sort((a, b) => Date.parse(a.changedAt) - Date.parse(b.changedAt))
+    const id = invoiceIdSchema.parse(invoiceId);
+    signal?.throwIfAborted();
+    const response =
+      !import.meta.env.PROD && isInvoiceMockMode()
+        ? (await import("./mocks/invoice.mock")).invoiceMock.statusHistory(id)
+        : await apiClient.get<unknown, unknown>(
+            `/invoices/${encodeURIComponent(id)}/status-history`,
+            { signal },
+          );
+    return invoiceStatusHistorySchema
+      .parse(readEnvelope(response))
+      .sort((a, b) => Date.parse(a.changedAt) - Date.parse(b.changedAt));
   },
-}
+};
 export function getInvoiceError(error: unknown) {
-  const data = isAxiosError(error) ? error.response?.data as { errorCode?: string; message?: string } | undefined : undefined
-  const code = error instanceof InvoiceReadError ? error.errorCode : data?.errorCode
-  const message = error instanceof InvoiceReadError ? error.message : data?.message
-  if (code === "UNAUTHORIZED") return { message: "Your session has expired. Please sign in again.", retryable: false }
-  if (code === "FORBIDDEN") return { message: message || "You do not have permission to view these invoices.", retryable: false }
-  if (code === "INVOICE_NOT_FOUND") return { message: "Invoice not found or unavailable to your account.", retryable: false }
-  if (code === "BOOKING_NOT_FOUND") return { message: "Booking not found or unavailable to your account.", retryable: false }
-  if (code === "INVALID_SORT_PARAMETER" || code === "VALIDATION_ERROR") return { message: message || "Check the invoice filters and try again.", retryable: false }
-  if (error instanceof z.ZodError) return { message: "The invoice response does not match the expected API contract.", retryable: false }
-  return { message: message || "Unable to load invoices. Please try again.", retryable: true }
+  const data = isAxiosError(error)
+    ? (error.response?.data as
+        { errorCode?: string; message?: string } | undefined)
+    : undefined;
+  const code =
+    error instanceof InvoiceReadError ? error.errorCode : data?.errorCode;
+  const message =
+    error instanceof InvoiceReadError ? error.message : data?.message;
+  if (code === "UNAUTHORIZED")
+    return {
+      message: "Your session has expired. Please sign in again.",
+      retryable: false,
+    };
+  if (code === "FORBIDDEN")
+    return {
+      message: message || "You do not have permission to view these invoices.",
+      retryable: false,
+    };
+  if (code === "INVOICE_NOT_FOUND")
+    return {
+      message: "Invoice not found or unavailable to your account.",
+      retryable: false,
+    };
+  if (code === "BOOKING_NOT_FOUND")
+    return {
+      message: "Booking not found or unavailable to your account.",
+      retryable: false,
+    };
+  if (code === "INVALID_SORT_PARAMETER" || code === "VALIDATION_ERROR")
+    return {
+      message: message || "Check the invoice filters and try again.",
+      retryable: false,
+    };
+  if (error instanceof z.ZodError)
+    return {
+      message: "The invoice response does not match the expected API contract.",
+      retryable: false,
+    };
+  return {
+    message: message || "Unable to load invoices. Please try again.",
+    retryable: true,
+  };
 }
 
 // ---- from compose/services.ts ----
@@ -95,6 +164,11 @@ async function call<T>(request: Promise<unknown>): Promise<T> {
 
 const enc = encodeURIComponent
 
+/** The BE answers `dueDate` as a UTC datetime; the UI works with the calendar day (same rule as the zod read schemas). */
+function withDueDay(invoice: Invoice): Invoice {
+  return invoice.dueDate ? { ...invoice, dueDate: invoice.dueDate.slice(0, 10) } : invoice
+}
+
 interface BookingDetailResponse {
   bookingId: string
   bookingCode: string
@@ -118,27 +192,27 @@ export const invoiceService = {
   },
 
   /** IV1: prechecks the invoice type and previews the deposit deduction lines of a FINAL. */
-  async getSuggestion(bookingId: string, type: InvoiceType): Promise<InvoiceSuggestion> {
+  async getSuggestion(bookingId: string, type: InvoiceType, transitDays?: number): Promise<InvoiceSuggestion> {
     if (useInvoiceMocks) return mockGetSuggestion(bookingId, type)
-    return call<InvoiceSuggestion>(apiClient.get(`bookings/${enc(bookingId)}/invoices/suggestion`, { params: { type } }))
+    return call<InvoiceSuggestion>(apiClient.get(`bookings/${enc(bookingId)}/invoices/suggestion`, { params: { type, transitDays } }))
   },
 
   /** IV6: loads a draft for editing. */
   async getInvoice(invoiceId: string): Promise<Invoice> {
     if (useInvoiceMocks) return mockGetInvoice(invoiceId)
-    return call<Invoice>(apiClient.get(`invoices/${enc(invoiceId)}`))
+    return withDueDay(await call<Invoice>(apiClient.get(`invoices/${enc(invoiceId)}`)))
   },
 
-  /** IV2 */
+  /** IV2: QUOTATION, DEPOSIT and FINAL send no `items`; the answer carries the lines the server built. */
   async createInvoice(bookingId: string, payload: CreateInvoicePayload): Promise<Invoice> {
     if (useInvoiceMocks) return mockCreateInvoice(bookingId, payload)
-    return call<Invoice>(apiClient.post(`bookings/${enc(bookingId)}/invoices`, payload))
+    return withDueDay(await call<Invoice>(apiClient.post(`bookings/${enc(bookingId)}/invoices`, payload)))
   },
 
-  /** IV3: `items` replaces the whole list; `lastUpdatedAt` is the `updatedAt` of the last read. */
+  /** IV3: `lastUpdatedAt` is the `updatedAt` of the last read. For generated types the server rebuilds the lines. */
   async updateInvoice(invoiceId: string, payload: UpdateInvoicePayload): Promise<Invoice> {
     if (useInvoiceMocks) return mockUpdateInvoice(invoiceId, payload)
-    return call<Invoice>(apiClient.put(`invoices/${enc(invoiceId)}`, payload))
+    return withDueDay(await call<Invoice>(apiClient.put(`invoices/${enc(invoiceId)}`, payload)))
   },
 
   /** IV7 */

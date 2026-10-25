@@ -1,4 +1,5 @@
 import {
+  Archive,
   CarFront,
   ClipboardCheck,
   FileStack,
@@ -7,7 +8,9 @@ import {
   House,
   LogOut,
   MapPin,
+  MessageSquareWarning,
   ThumbsUp,
+  TriangleAlert,
   Truck,
   UserRound,
   UsersRound,
@@ -18,7 +21,7 @@ import { NavLink, useLocation } from "react-router-dom"
 import logo from "@/assets/logo-dark.png"
 import { canAccess } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
-import { APPROVED_BOOKINGS_ACCESS, ROLE_ROUTES } from "@/app/route-config"
+import { APPROVED_BOOKINGS_ACCESS, INCIDENT_ADMIN_ACCESS, ONGOING_TRANSPORT_ACCESS, ROLE_ROUTES } from "@/app/route-config"
 import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu"
 import { cn } from "@/lib/utils"
 import type { AdminSidebarMenuProps, AdminSidebarProviderProps } from "@/shared/types/type"
@@ -33,11 +36,17 @@ import {
   SidebarProvider,
 } from "@/shared/components/ui/sidebar"
 
+const incidentsItem = { label: "Incidents", href: ROLE_ROUTES.incidents, icon: TriangleAlert }
+
 const primaryItems = [
   { label: "Dashboard", href: "/admin", icon: House },
   { label: "Transport Requests", href: "/admin/transport-requests", icon: Truck },
   { label: "Transport Plans", href: ROLE_ROUTES.transportPlans, icon: MapPin },
+  { label: "Ongoing Transports", href: ROLE_ROUTES.ongoingTransports, icon: Truck },
+  incidentsItem,
   { label: "Invoices", href: ROLE_ROUTES.invoices, icon: FileText },
+  { label: "Claims", href: ROLE_ROUTES.claims, icon: MessageSquareWarning },
+  { label: "Transport Archive & Audit", href: ROLE_ROUTES.transportArchive, icon: Archive },
   { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
   { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
   { label: "Users", href: "/admin/users", icon: UsersRound },
@@ -110,6 +119,8 @@ export function AdminSidebar() {
   const isRouteCoordinator = canAccess(principal, { anyRole: ["FLEET_ROUTE_COORDINATOR"] })
   const items = isManager ? primaryItems : [
     ...(canAccess(principal, APPROVED_BOOKINGS_ACCESS) ? [approvedBookingsItem] : []),
+    ...(canAccess(principal, ONGOING_TRANSPORT_ACCESS) ? [{ label: "Ongoing Transports", href: ROLE_ROUTES.ongoingTransports, icon: Truck }] : []),
+    ...(canAccess(principal, INCIDENT_ADMIN_ACCESS) ? [incidentsItem] : []),
     ...(isRouteCoordinator ? routeCoordinatorItems : staffPrimaryItems),
   ]
 

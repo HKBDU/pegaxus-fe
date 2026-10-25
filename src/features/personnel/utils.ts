@@ -27,6 +27,19 @@ export function formatDuration(minutes: number | null | undefined) {
   return rest ? `${hours}h ${rest}m` : `${hours}h`
 }
 
+/** ISO-2 in upper case, or null when the value is empty or not a 2-letter code (then nothing can be compared, R18). */
+export function normalizeCountry(value: string | null | undefined) {
+  const code = value?.trim().toUpperCase()
+  return code && /^[A-Z]{2}$/.test(code) ? code : null
+}
+
+/** True only when both countries are known and differ: the R18 case where the manager is asked to confirm. */
+export function isOtherCountry(personCountry: string | null | undefined, segmentCountry: string | null | undefined) {
+  const person = normalizeCountry(personCountry)
+  const segment = normalizeCountry(segmentCountry)
+  return Boolean(person && segment && person !== segment)
+}
+
 export function employeeLabel(employee: Pick<EmployeeBrief, "employeeCode" | "fullName">) {
   return `${employee.employeeCode} — ${employee.fullName}`
 }
@@ -71,6 +84,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   ROUTE_PLAN_NOT_FOUND: "Route plan not found.",
   SEGMENT_NOT_FOUND: "Route segment not found.",
   EMPLOYEE_NOT_FOUND: "Employee not found.",
+  INVALID_DATE_RANGE: "The time window of this segment is invalid, so available people cannot be listed.",
+  INVALID_COUNTRY: "The country filter must be a 2-letter country code.",
   PLAN_LOCKED: "Assignments cannot be changed once the transport is in progress, completed or cancelled.",
   DEPOSIT_REQUIRED: "The customer's deposit must be paid before the Transport Specialist and Route Coordinator can be assigned.",
   PHASE1_ALREADY_ASSIGNED: "Phase 1 has already been assigned. Please reload the page and use Change instead.",
@@ -120,6 +135,8 @@ export function overlapWindow(left: { from: string; to: string }, right: { from:
 
 /** One row of the phase 2 table / dialogs: PS2 assignment fields + RP3 location and distance details. */
 export interface SegmentRow extends Phase2Segment {
+  /** `fromLocation.country` of the segment (ISO-2), for the other-country warning. */
+  fromCountry: string | null
   fromName: string
   toName: string
   distanceKm: number | null
@@ -137,6 +154,7 @@ export function buildSegmentRows(phase2Segments: Phase2Segment[], routeSegments:
       const info = byId.get(segment.routePlanRouteId)
       return {
         ...segment,
+        fromCountry: info?.fromLocation.country ?? null,
         fromName: info ? [info.fromLocation.locationName, info.fromLocation.country].filter(Boolean).join(", ") : `Segment ${segment.sequenceNo}`,
         toName: info ? [info.toLocation.locationName, info.toLocation.country].filter(Boolean).join(", ") : "—",
         distanceKm: info?.route?.distanceKm ?? null,

@@ -46,6 +46,7 @@ export function MapViewer({
   onRouteSelect,
   buildStartLocation,
   buildEndLocation,
+  children,
 }: MapViewerProps) {
   const viewport = useRef<MapViewportHandle>(null);
   const popupHideTimer = useRef<number | null>(null);
@@ -75,7 +76,16 @@ export function MapViewer({
   );
 
   useEffect(() => {
-    if (allBounds) viewport.current?.fitBounds(allBounds);
+    if (!allBounds) return;
+    // Locations present at the first render are fitted before the map instance exists: retry for a moment.
+    let frame = 0;
+    let attempts = 0;
+    const fit = () => {
+      if (viewport.current?.fitBounds(allBounds) || attempts++ > 120) return;
+      frame = requestAnimationFrame(fit);
+    };
+    fit();
+    return () => cancelAnimationFrame(frame);
   }, [allBounds]);
 
   useEffect(() => {
@@ -156,7 +166,7 @@ export function MapViewer({
           Loading locations...
         </div>
       )}
-      {!loading && !validLocations.length && (
+      {!loading && !validLocations.length && mode !== "pickPoint" && (
         <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded bg-white px-3 py-2 text-sm shadow">
           No valid locations to display.
         </div>
@@ -194,8 +204,8 @@ export function MapViewer({
         <LocationMarkers
           locations={validLocations}
           selectedLocation={state.selectedLocation}
-          startLocation={mode === "buildPlan" ? buildStartLocation : null}
-          endLocation={mode === "buildPlan" ? buildEndLocation : null}
+          startLocation={mode === "buildPlan" || mode === "pickPoint" ? buildStartLocation : null}
+          endLocation={mode === "buildPlan" || mode === "pickPoint" ? buildEndLocation : null}
           onSelect={(location) => selectLocation(location)}
           onHover={handleMarkerHover}
         />
@@ -205,6 +215,7 @@ export function MapViewer({
           geoJson={routeGeoJson}
         />
         {preview && <RoutePreviewLayer geometry={preview.geometry} />}
+        {children}
       </MapViewport>
       {popupLocation && (
         <LocationPopup

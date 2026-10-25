@@ -17,7 +17,8 @@ export const dossierKeys = {
   booking: (id: string) => ["dossier", dossierSourceKind, "booking", id] as const,
 }
 
-const retryLoad = (failures: number, error: unknown) => failures < 1 && getDossierLoadErrorKind(error) === "load"
+const retryLoad = (failures: number, error: unknown) =>
+  failures < 1 && getDossierLoadErrorKind(error) === "load";
 
 export function useDossierDashboard(params: DashboardParams) {
   return useQuery({
@@ -34,28 +35,39 @@ export function useExportDashboard() {
 }
 
 export function useDossierOverview(id: EntityId | string | undefined) {
-  const normalizedId = id === undefined ? "" : String(id)
-  const invalidId = !dossierIdSchema.safeParse(normalizedId).success
+  const normalizedId = id === undefined ? "" : String(id);
+  const invalidId = !dossierIdSchema.safeParse(normalizedId).success;
   const query = useQuery({
     queryKey: dossierKeys.overview(normalizedId),
     queryFn: ({ signal }) => loadDossierOverview(normalizedId, signal),
     enabled: !invalidId,
     retry: retryLoad,
-  })
-  return { ...query, invalidId }
+  });
+  return { ...query, invalidId };
 }
 
-export function useDossierRequirements(id: string, params: DossierRequirementsParams, enabled = true) {
+export function useDossierRequirements(
+  id: string,
+  params: DossierRequirementsParams,
+  enabled = true,
+) {
   return useQuery({
     queryKey: dossierKeys.requirements(id, params),
     queryFn: ({ signal }) => loadDossierRequirements(id, params, signal),
     enabled: enabled && dossierIdSchema.safeParse(id).success,
     retry: retryLoad,
-  })
+  });
 }
 
+/** D1: the dossiers the viewer may open for a booking (empty until one exists / is visible). */
 export function useDossierByBooking(bookingId: string, enabled = true) {
-  return useQuery({ queryKey: dossierKeys.booking(bookingId), queryFn: ({ signal }) => dossierService.getDossierByBooking(bookingId, signal), enabled: enabled && dossierIdSchema.safeParse(bookingId).success, retry: retryLoad });
+  return useQuery({
+    queryKey: dossierKeys.booking(bookingId),
+    queryFn: ({ signal }) =>
+      dossierService.getDossierByBooking(bookingId, signal),
+    enabled: enabled && dossierIdSchema.safeParse(bookingId).success,
+    retry: retryLoad,
+  });
 }
 
 export function useAuditHistory(id: EntityId | undefined, params: AuditParams) {

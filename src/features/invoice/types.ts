@@ -9,7 +9,6 @@ export type { InvoiceAction, InvoiceCurrency, InvoiceHistoryType, InvoiceItemTyp
 // ---- from shared/types.ts ----
 export type RecordPaymentPayload = {
   amount: number
-  currency: InvoiceCurrency
   paymentMethod: PaymentMethod
   paidAt?: string
   transactionReference?: string
@@ -187,45 +186,50 @@ export type InvoiceListItem = {
   updatedAt: string
 }
 
-// ---- from view/types.ts ----
 // Read side (IV4, IV5, IV6, IV10). The zod schemas in schemas.ts validate the responses against these shapes.
-export type InvoiceDetail = Omit<Invoice, "dueDate"> & { dueDate: string | null }
+export type InvoiceDetail = Omit<Invoice, "dueDate"> & {
+  dueDate: string | null;
+};
 
 export type InvoicePage = {
-  items: InvoiceListItem[]
-  pageIndex: number
-  pageSize: number
-  totalItems: number
-  totalPages: number
-}
+  items: InvoiceListItem[];
+  pageIndex: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+};
 
 export type BookingInvoiceQueryParams = {
-  pageIndex: number
-  pageSize: number
-  type?: InvoiceType
-  status?: InvoiceStatus
-  sortBy: (typeof invoiceSorts)[number]
-}
+  pageIndex: number;
+  pageSize: number;
+  type?: InvoiceType;
+  status?: InvoiceStatus;
+  sortBy: (typeof invoiceSorts)[number];
+};
 
 export type InvoiceQueryParams = BookingInvoiceQueryParams & {
-  search?: string
-  bookingId?: string
-  transportPlanId?: string
-  issuedFrom?: string
-  issuedTo?: string
-  dueFrom?: string
-  dueTo?: string
-}
+  search?: string;
+  bookingId?: string;
+  transportPlanId?: string;
+  issuedFrom?: string;
+  issuedTo?: string;
+  dueFrom?: string;
+  dueTo?: string;
+};
 
 export type InvoiceStatusHistoryEvent = {
-  historyId: string
-  type: InvoiceHistoryType
-  previousStatus: InvoiceStatus | null
-  newStatus: InvoiceStatus
-  reason: string | null
-  changedBy: { accountId: string | null; fullName: string; role: string | null }
-  changedAt: string
-}
+  historyId: string;
+  type: InvoiceHistoryType;
+  previousStatus: InvoiceStatus | null;
+  newStatus: InvoiceStatus;
+  reason: string | null;
+  changedBy: {
+    accountId: string | null;
+    fullName: string;
+    role: string | null;
+  };
+  changedAt: string;
+};
 
 // ---- from payment/types.ts ----
 export type CancelInvoiceInput = {
@@ -275,7 +279,17 @@ export interface ApiEnvelope<T> {
   value: T
 }
 
-/** IV1 response: precheck result plus the read-only deposit deduction lines of a FINAL. */
+/** Inputs the server used to build the lines of a QUOTATION, DEPOSIT or FINAL (IV1 `pricing`). */
+export interface InvoicePricing {
+  version: string
+  horseCount: number
+  transitDays: number | null
+  vehicleTier: string | null
+  depositRatePercent: number
+  taxRatePercent: number
+}
+
+/** IV1 response: precheck result plus the lines the server builds for QUOTATION, DEPOSIT and FINAL (deposit deductions included). */
 export interface InvoiceSuggestion {
   bookingId: string
   bookingCode: string
@@ -287,6 +301,9 @@ export interface InvoiceSuggestion {
   currency: InvoiceCurrency | null
   isPaymentRequired: boolean
   items: InvoiceItem[]
+  pricing: InvoicePricing | null
+  /** true = the server builds the lines, the client must not send `items`. */
+  isLocked: boolean
 }
 
 /** IV7 response. */
@@ -324,20 +341,28 @@ export interface InvoiceItemPayload {
   note: string | null
 }
 
+/** `items` is left out for QUOTATION, DEPOSIT and FINAL: the server builds those lines (INVOICE_ITEMS_GENERATED otherwise). */
 export interface CreateInvoicePayload {
   type: InvoiceType
-  currency: InvoiceCurrency
+  /** Full ISO datetime (UTC): the BE rejects a datetime in the past. */
   dueDate: string
   note?: string
-  items: InvoiceItemPayload[]
+  transitDays?: number
+  items?: InvoiceItemPayload[]
 }
 
 export interface UpdateInvoicePayload {
   lastUpdatedAt: string
-  currency: InvoiceCurrency
   dueDate: string
   note?: string
-  items: InvoiceItemPayload[]
+  transitDays?: number
+  items?: InvoiceItemPayload[]
+}
+
+/** What the claim screen hands to the invoice form through `location.state.prefill` (P2.1.4). */
+export interface InvoicePrefill {
+  type: InvoiceType
+  items: { itemType: string; description: string; quantity: number; price: number | null; note?: string }[]
 }
 
 export interface ApiFieldError {

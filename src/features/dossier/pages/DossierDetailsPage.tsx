@@ -57,10 +57,17 @@ export default function DossierDetailsPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // `?tab=audit` lets the old /audit-history link open straight on its tab of this single page.
-  const requestedTab = sections.find(({ id }) => id === searchParams.get("tab"))?.id;
-  const [activeSection, setActiveSection] = useState<SectionId>(requestedTab ?? "requirements");
+  const requestedTab = sections.find(
+    ({ id }) => id === searchParams.get("tab"),
+  )?.id;
+  const [activeSection, setActiveSection] = useState<SectionId>(
+    requestedTab ?? "requirements",
+  );
   const role = useDossierRole();
-  const visibleSections = role === "CUSTOMER" ? sections.filter(({ id }) => id === "requirements" || id === "documents") : sections;
+  const visibleSections =
+    role === "CUSTOMER"
+      ? sections.filter(({ id }) => id !== "audit")
+      : sections;
   const query = useDossierOverview(dossierId);
   return (
     <div className="booking-page-shell min-w-0 px-5 py-6 font-sans sm:px-6 lg:px-10">
@@ -69,7 +76,17 @@ export default function DossierDetailsPage() {
           <div className="min-w-0">
             <button
               type="button"
-              onClick={() => navigate(role === "TRANSPORT_SPECIALIST" ? ROLE_ROUTES.complianceDossiers : query.data?.bookingId ? `${role === "LOGISTICS_MANAGER" ? "/admin/transport-requests" : "/bookings"}/${encodeURIComponent(String(query.data.bookingId))}` : role === "LOGISTICS_MANAGER" ? "/admin/transport-requests" : "/bookings")}
+              onClick={() =>
+                navigate(
+                  role === "TRANSPORT_SPECIALIST"
+                    ? ROLE_ROUTES.complianceDossiers
+                    : query.data?.bookingId
+                      ? `${role === "LOGISTICS_MANAGER" ? "/admin/transport-requests" : "/bookings"}/${encodeURIComponent(String(query.data.bookingId))}`
+                      : role === "LOGISTICS_MANAGER"
+                        ? "/admin/transport-requests"
+                        : "/bookings",
+                )
+              }
               className="inline-flex items-center gap-[6px] pt-2 text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase hover:underline focus-visible:outline-2 focus-visible:outline-ring"
             >
               <ArrowLeft aria-hidden="true" className="size-3.5" /> Back to
@@ -100,7 +117,25 @@ export default function DossierDetailsPage() {
         ) : query.data ? (
           <>
             <DossierOverview dossier={query.data} />
-            <DossierReadinessAction dossier={query.data} />
+            {query.data.status === "DRAFT" ? (
+              <div
+                role="status"
+                className="rounded-[2px] border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+              >
+                <p className="m-0 font-semibold">
+                  Document upload is not open yet.
+                </p>
+                <p className="m-0 mt-1">
+                  This dossier is waiting for the Transport Specialist to
+                  complete route feasibility review (RP7). Uploading
+                  documents will open after the review is approved.
+                </p>
+              </div>
+            ) : null}
+            <DossierReadinessAction
+              dossier={query.data}
+              onCompleted={() => setActiveSection("authority")}
+            />
             <div className="border-b border-gray-200">
               <div
                 role="tablist"
@@ -131,12 +166,16 @@ export default function DossierDetailsPage() {
             >
               {activeSection === "requirements" && role !== "CUSTOMER" ? (
                 <DossierRequirementsPanel />
-              ) : activeSection === "requirements" || activeSection === "documents" ? (
+              ) : activeSection === "requirements" ||
+                activeSection === "documents" ? (
                 <DossierRequirementsPreview
                   dossierId={dossierId}
                   horses={query.data.bookingSummary.horses}
                   dossier={query.data}
-                  plannedDepartureDate={query.data.bookingSummary.requestedDepartureDate ?? undefined}
+                  plannedDepartureDate={
+                    query.data.bookingSummary.requestedDepartureDate ??
+                    undefined
+                  }
                   documentsOnly={activeSection === "documents"}
                 />
               ) : activeSection === "authority" ? (

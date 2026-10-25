@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RoutePlanBuilder, type RoutePlanBuilderMetadata } from "../components/RoutePlanBuilder";
-import { getRoutePlans, getTransportPlan } from "../services";
+import { getRoutePlan, getRoutePlans, getTransportPlan } from "../services";
 import { adaptTransportPlan, loadAllLocations, loadAllRoutes, toMapLocation, toMapRoute, type TransportPlanApiValue } from "../api-adapters";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 
@@ -30,7 +30,7 @@ export default function CreateContingencyRoutePage() {
       loadAllLocations(),
       loadAllRoutes(),
     ])
-      .then(([transportPlan, result, locationItems, routeItems]) => {
+      .then(async ([transportPlan, result, locationItems, routeItems]) => {
         if (!active) return;
         const mapLocations = locationItems.flatMap((item) => {
           const value = toMapLocation(item);
@@ -42,31 +42,45 @@ export default function CreateContingencyRoutePage() {
           return value ? [value] : [];
         }));
         setMetadata(adaptTransportPlan(transportPlan as TransportPlanApiValue, mapLocations));
-        const primary = result.items.find(
+        const primarySummary = (result?.items ?? []).find(
           (plan) =>
             plan.routeType === "PRIMARY" &&
-            plan.status !== "CANCELLED" &&
-            plan.segments.length > 0,
+            plan.status !== "CANCELLED",
         );
+        if (!primarySummary || primarySummary.status !== "DRAFT") {
+          setPrimaryRoutes([]);
+          setError(
+            "BACKUP must be created during the PRIMARY draft phase. It cannot be created after PRIMARY is approved.",
+          );
+          return;
+        }
+        let primary = primarySummary;
+        if (primary && (!primary.segments || primary.segments.length === 0)) {
+          try {
+            primary = await getRoutePlan(primary.routePlanId);
+          } catch {
+          }
+        }
+        if (!active) return;
         const routes =
-          primary?.segments.flatMap((segment) => {
-            const from = toMapLocation(segment.fromLocation);
-            const to = toMapLocation(segment.toLocation);
+          (primary?.segments ?? []).flatMap((segment) => {
+            const from = toMapLocation(segment?.fromLocation);
+            const to = toMapLocation(segment?.toLocation);
             if (!from || !to) return [];
             return [
               {
-                id: segment.route.routeId,
-                name: segment.route.routeName,
-                transportMode: segment.route.transportMode,
+                id: segment.route?.routeId ?? segment.routePlanRouteId,
+                name: segment.route?.routeName ?? "Primary Segment",
+                transportMode: segment.route?.transportMode ?? "ROAD",
                 fromLocation: from,
                 toLocation: to,
-                distanceKm: segment.route.distanceKm,
-                durationMinutes: segment.route.estimatedDurationMinutes,
+                distanceKm: segment.route?.distanceKm ?? 0,
+                durationMinutes: segment.route?.estimatedDurationMinutes ?? 0,
                 isOutsourced: segment.isOutsourced,
                 readonly: true,
               },
             ];
-          }) ?? [];
+          });
         setPrimaryRoutes(routes);
         if (!routes.length)
           setError(

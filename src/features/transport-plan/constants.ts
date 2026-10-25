@@ -1,18 +1,56 @@
-import type { ApprovedBookingsQueryParams, TransportPlansQueryParams } from "./types"
-import { approvedBookingsQuerySchema, dossierStatusSchema, routePlanStatusSchema, transportPlanStatusSchema } from "./schemas"
+import type {
+  ApprovedBookingsQueryParams,
+  TransportPlansQueryParams,
+} from "./types";
+import {
+  REJECTED_BY_MANAGER,
+  ROUTE_PLAN_STATUS_LABELS,
+} from "@/shared/constants/route-plan-status";
+import {
+  approvedBookingsQuerySchema,
+  dossierStatusSchema,
+  routePlanStatusSchema,
+  transportPlanStatusSchema,
+} from "./schemas";
 
 export const initialApprovedBookingParams: ApprovedBookingsQueryParams = {
-  pageIndex: 1, pageSize: 20, search: "", sortBy: "requestedDepartureDate:asc",
-}
+  pageIndex: 1,
+  pageSize: 20,
+  search: "",
+  sortBy: "requestedDepartureDate:asc",
+};
 export const scopeOptions = [
   { value: "ALL", label: "All scopes" },
   { value: "false", label: "Domestic" },
   { value: "true", label: "International" },
-]
-export const formatStatusLabel = (value: string) => value.toLowerCase().replaceAll("_", " ").replace(/^./, (letter) => letter.toUpperCase())
-export const routeStatusOptions = [{ value: "ALL", label: "All route statuses" }, ...routePlanStatusSchema.options.map((value) => ({ value, label: formatStatusLabel(value) }))]
-export const dossierStatusOptions = [{ value: "ALL", label: "All dossier statuses" }, ...dossierStatusSchema.options.map((value) => ({ value, label: formatStatusLabel(value) }))]
-export const presenceOptions = [{ value: "ALL", label: "All" }, { value: "true", label: "Exists" }, { value: "false", label: "Not created" }]
+];
+export const formatStatusLabel = (value: string) =>
+  value
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .replace(/^./, (letter) => letter.toUpperCase());
+export const routeStatusOptions = [
+  { value: "ALL", label: "All route statuses" },
+  ...routePlanStatusSchema.options.map((value) => ({
+    value,
+    label:
+      value === REJECTED_BY_MANAGER
+        ? ROUTE_PLAN_STATUS_LABELS[value]
+        : formatStatusLabel(value),
+  })),
+];
+export const dossierStatusOptions = [
+  { value: "ALL", label: "All dossier statuses" },
+  ...dossierStatusSchema.options.map((value) => ({
+    value,
+    label: formatStatusLabel(value),
+  })),
+];
+export const presenceOptions = [
+  { value: "ALL", label: "All" },
+  { value: "true", label: "Exists" },
+  { value: "false", label: "Not created" },
+];
 export const sortOptions = [
   { value: "requestedDepartureDate:asc", label: "Departure: earliest" },
   { value: "requestedDepartureDate:desc", label: "Departure: latest" },
@@ -20,47 +58,87 @@ export const sortOptions = [
   { value: "approvedAt:desc", label: "Approval: newest" },
   { value: "createdAt:asc", label: "Created: oldest" },
   { value: "createdAt:desc", label: "Created: newest" },
-]
+];
 
 export function changeApprovedBookingFilters(
   current: ApprovedBookingsQueryParams,
   patch: Partial<Omit<ApprovedBookingsQueryParams, "pageIndex">>,
 ): ApprovedBookingsQueryParams {
-  return { ...current, ...patch, pageIndex: 1 }
+  return { ...current, ...patch, pageIndex: 1 };
 }
 
 export function hasApprovedBookingFilters(params: ApprovedBookingsQueryParams) {
-  return Boolean(params.search?.trim() || params.isInternational != null || params.transportPlanStatus || params.routePlanStatus ||
-    params.hasRoutePlan != null || params.hasTransportPlan != null || params.hasComplianceDossier != null || params.complianceDossierStatus || params.departureFrom || params.departureTo)
+  return Boolean(
+    params.search?.trim() ||
+    params.isInternational != null ||
+    params.transportPlanStatus ||
+    params.routePlanStatus ||
+    params.hasRoutePlan != null ||
+    params.hasTransportPlan != null ||
+    params.hasComplianceDossier != null ||
+    params.complianceDossierStatus ||
+    params.departureFrom ||
+    params.departureTo,
+  );
 }
 
 export function buildDepartureRange(from: string, to: string) {
-  const range = approvedBookingsQuerySchema.parse({ ...initialApprovedBookingParams, departureFrom: from || undefined, departureTo: to || undefined })
-  return { departureFrom: range.departureFrom, departureTo: range.departureTo }
+  const range = approvedBookingsQuerySchema.parse({
+    ...initialApprovedBookingParams,
+    departureFrom: from || undefined,
+    departureTo: to || undefined,
+  });
+  return { departureFrom: range.departureFrom, departureTo: range.departureTo };
 }
 
 export const initialTransportPlanParams: TransportPlansQueryParams = {
-  pageIndex: 1, pageSize: 20, search: "", sortBy: "createdAt:desc",
-}
-export const emptyPlanForm = { plannedStartAt: "", plannedEndAt: "", estimatedDistanceKm: "", estimatedDurationMinutes: "", planningNote: "", updateReason: "" }
+  pageIndex: 1,
+  pageSize: 20,
+  search: "",
+  sortBy: "createdAt:desc",
+};
+export const emptyPlanForm = {
+  originLocationId: "",
+  destinationLocationId: "",
+  plannedStartAt: "",
+  plannedEndAt: "",
+  estimatedDistanceKm: "",
+  estimatedDurationMinutes: "",
+  planningNote: "",
+  updateReason: "",
+};
 export const workspaceLabels = {
   manager: { list: "Transport Management", workspace: "Management Workspace" },
-  coordinator: { list: "Assigned Transports", workspace: "Route Coordinator Workspace" },
-  specialist: { list: "Assigned Transports", workspace: "Transport Specialist Workspace" },
-} as const
+  coordinator: {
+    list: "Assigned Transports",
+    workspace: "Route Coordinator Workspace",
+  },
+  specialist: {
+    list: "Assigned Transports",
+    workspace: "Transport Specialist Workspace",
+  },
+} as const;
 export const transportPlanStatusOptions = [
   { value: "ALL", label: "All statuses" },
-  ...transportPlanStatusSchema.options.map((value) => ({ value, label: formatStatusLabel(value) })),
-]
+  ...transportPlanStatusSchema.options.map((value) => ({
+    value,
+    label: formatStatusLabel(value),
+  })),
+];
 export const transportPlanSortOptions = [
   { value: "createdAt:desc", label: "Newest created" },
   { value: "createdAt:asc", label: "Oldest created" },
   { value: "plannedStartAt:asc", label: "Start: earliest" },
   { value: "plannedStartAt:desc", label: "Start: latest" },
-]
-export function changeTransportPlanFilters(current: TransportPlansQueryParams, patch: Partial<Omit<TransportPlansQueryParams, "pageIndex">>): TransportPlansQueryParams {
-  return { ...current, ...patch, pageIndex: 1 }
+];
+export function changeTransportPlanFilters(
+  current: TransportPlansQueryParams,
+  patch: Partial<Omit<TransportPlansQueryParams, "pageIndex">>,
+): TransportPlansQueryParams {
+  return { ...current, ...patch, pageIndex: 1 };
 }
 export function hasTransportPlanFilters(params: TransportPlansQueryParams) {
-  return Boolean(params.search?.trim() || params.status || params.routePlanStatus)
+  return Boolean(
+    params.search?.trim() || params.status || params.routePlanStatus,
+  );
 }

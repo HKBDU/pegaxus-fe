@@ -4,7 +4,7 @@ export interface EuCountry {
   name: string
 }
 
-/** The only countries offered in the Country dropdown (the 27 EU member states). */
+/** The countries offered in the Country dropdown (EU member states and United Kingdom). */
 export const EU_COUNTRIES: readonly EuCountry[] = [
   { isoCode: "AT", name: "Austria" },
   { isoCode: "BE", name: "Belgium" },
@@ -33,17 +33,22 @@ export const EU_COUNTRIES: readonly EuCountry[] = [
   { isoCode: "SI", name: "Slovenia" },
   { isoCode: "ES", name: "Spain" },
   { isoCode: "SE", name: "Sweden" },
+  { isoCode: "GB", name: "United Kingdom" },
 ]
-
 
 export function findEuCountryByName(name: string | undefined): EuCountry | undefined {
   const normalized = name?.trim().toLowerCase()
   if (!normalized) return undefined
-  // The API also accepts "Czech Republic" for Czechia.
-  const alias = normalized === "czech republic" ? "czechia" : normalized
+  // Handle aliases: Czech Republic -> Czechia, UK / Great Britain -> United Kingdom
+  let alias = normalized
+  if (alias === "czech republic") alias = "czechia"
+  else if (alias === "uk" || alias === "gb" || alias === "great britain") alias = "united kingdom"
   return EU_COUNTRIES.find((country) => country.name.toLowerCase() === alias)
 }
 
 export function findEuCountryByCode(code: string | undefined): EuCountry | undefined {
-  return EU_COUNTRIES.find((country) => country.isoCode === code)
+  const upper = code?.trim().toUpperCase()
+  if (!upper) return undefined
+  if (upper === "UK") return EU_COUNTRIES.find((country) => country.isoCode === "GB")
+  return EU_COUNTRIES.find((country) => country.isoCode === upper)
 }

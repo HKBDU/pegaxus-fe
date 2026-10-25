@@ -104,6 +104,7 @@ export interface VehicleBrief {
   licensePlate: string | null;
   transportMode: TransportMode;
   capacityHorses: number;
+  country: string | null;
 }
 
 export interface Vehicle extends VehicleBrief {
@@ -197,6 +198,8 @@ export interface RoutePlan {
 
 export interface RouteSegmentInput {
   sequenceNo: number;
+  /** BACKUP plans contain both the copied PRIMARY prefix/suffix and the replacement segments. */
+  routeType?: RouteType;
   routeId?: string;
   fromLocationId?: string;
   toLocationId?: string;
@@ -300,6 +303,8 @@ export interface VehicleListParams extends MasterListParams {
   minCapacity?: number;
   availableFrom?: string;
   availableTo?: string;
+  transportPlanId?: string;
+  country?: string;
 }
 
 export interface ProviderListParams extends MasterListParams {

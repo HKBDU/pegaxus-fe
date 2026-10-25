@@ -25,7 +25,7 @@ function EditProviderForm({ provider }: { provider: Provider }) {
     <Form {...form}>
       <form onSubmit={submit} noValidate>
         <fieldset disabled={isSaving} className="m-0 min-w-0 border-0 p-0">
-          <ProviderFormSections form={form} isEdit />
+          <ProviderFormSections form={form} isEdit providerCode={provider.providerCode} />
         </fieldset>
         <div className="mt-3 flex justify-end gap-2">
           <Link to={detailPath} className={cn(actionButtonClass, outlineButtonClass)}>

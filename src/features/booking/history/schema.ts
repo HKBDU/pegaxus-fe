@@ -1,15 +1,15 @@
 import { z } from "zod";
 
-export const bookingHistoryBookingIdSchema = z.string().uuid();
+export const bookingHistoryBookingIdSchema = z.string();
 
 export const changedBySchema = z.object({
-  accountId: z.string().uuid(),
+  accountId: z.string(),
   fullName: z.string(),
   role: z.string(),
 });
 
 export const bookingHistoryItemSchema = z.object({
-  historyId: z.string().uuid(),
+  historyId: z.string(),
   action: z.string().min(1),
   previousStatus: z.string().min(1).nullable(),
   newStatus: z.string().min(1),

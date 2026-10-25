@@ -32,7 +32,9 @@ export function DeleteAccountDialog({
   const confirm = async () => {
     if (!account) return;
     try {
-      const result = await attempt.run(() => mutation.mutateAsync(account.employeeId));
+      const result = await attempt.run(() =>
+        mutation.mutateAsync(account.employeeId),
+      );
       if (!result.started) return;
       toast.success("Employee account deleted successfully.");
       onClose();
@@ -95,7 +97,11 @@ export function DeleteAccountDialog({
             }}
             className="h-8 rounded-[2px] bg-red-600 px-3 text-xs font-normal text-white shadow-none hover:bg-red-700"
           >
-            {isPending ? "Deleting..." : attempt.isBlocked ? "Please wait..." : "Delete Account"}
+            {isPending
+              ? "Deleting..."
+              : attempt.isBlocked
+                ? "Please wait..."
+                : "Delete Account"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

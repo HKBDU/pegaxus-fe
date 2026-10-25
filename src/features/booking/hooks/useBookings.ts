@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
 
 import { acquireEditLock, forgetEditLock, scheduleEditRelease } from "@/features/booking/editLock"
@@ -14,6 +14,12 @@ import type {
   HorseListParams,
 } from "@/features/booking/types"
 
+/** B5 takes a point's latitude and longitude together or not at all, so a half-filled pair is never sent. */
+function pairOf<Side extends "origin" | "destination">(side: Side, latitude: number | undefined, longitude: number | undefined) {
+  if (typeof latitude !== "number" || typeof longitude !== "number") return {}
+  return { [`${side}Latitude`]: latitude, [`${side}Longitude`]: longitude } as Record<`${Side}Latitude` | `${Side}Longitude`, number>
+}
+
 export const bookingKeys = {
   all: ["bookings"] as const,
   lists: () => [...bookingKeys.all, "list"] as const,
@@ -22,6 +28,14 @@ export const bookingKeys = {
   // String(id): the route gives "1024" while mock data uses 1024; both must hit the same cache entry.
   detail: (id: EntityId) => [...bookingKeys.details(), String(id)] as const,
   availableHorses: (params: HorseListParams) => [...bookingKeys.all, "available-horses", params] as const,
+}
+
+/** Re-reads the booking and the lists after a decision and waits for it, so the status on screen is already the new one. */
+function refreshBooking(queryClient: QueryClient, bookingId: EntityId) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: bookingKeys.detail(bookingId) }),
+    queryClient.invalidateQueries({ queryKey: bookingKeys.lists() }),
+  ])
 }
 
 export function useBookings(params: BookingListParams) {
@@ -80,8 +94,10 @@ export function useUpdateBooking() {
         lastUpdatedAt: booking.updatedAt,
         originAddress: values.originAddress,
         originCountry: values.originCountry,
+        ...pairOf("origin", values.originLatitude, values.originLongitude),
         destinationAddress: values.destinationAddress,
         destinationCountry: values.destinationCountry,
+        ...pairOf("destination", values.destinationLatitude, values.destinationLongitude),
         requestedDepartureDate: values.requestedDepartureDate,
         requestedArrivalDate: values.requestedArrivalDate || undefined,
         specialRequirements: values.specialRequirements || undefined,
@@ -150,10 +166,7 @@ export function useCancelBooking() {
   return useMutation({
     mutationFn: ({ bookingId, reason }: { bookingId: EntityId; reason: string }) =>
       bookingService.cancelBooking(bookingId, reason),
-    onSuccess: (_, variables) => {
-      void queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.bookingId) })
-      void queryClient.invalidateQueries({ queryKey: bookingKeys.lists() })
-    },
+    onSuccess: (_, variables) => refreshBooking(queryClient, variables.bookingId),
   })
 }
 
@@ -161,10 +174,9 @@ export function useApproveBooking() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (bookingId: EntityId) => bookingService.approveBooking(bookingId),
-    onSuccess: (_, bookingId) => {
+    onSuccess: async (_, bookingId) => {
       void queryClient.invalidateQueries({ queryKey: approvedBookingKeys.detail(bookingId) })
-      void queryClient.invalidateQueries({ queryKey: bookingKeys.detail(bookingId) })
-      void queryClient.invalidateQueries({ queryKey: bookingKeys.lists() })
+      await refreshBooking(queryClient, bookingId)
     },
   })
 }
@@ -174,9 +186,6 @@ export function useRejectBooking() {
   return useMutation({
     mutationFn: ({ bookingId, reason }: { bookingId: EntityId; reason: string }) =>
       bookingService.rejectBooking(bookingId, reason),
-    onSuccess: (_, variables) => {
-      void queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.bookingId) })
-      void queryClient.invalidateQueries({ queryKey: bookingKeys.lists() })
-    },
+    onSuccess: (_, variables) => refreshBooking(queryClient, variables.bookingId),
   })
 }

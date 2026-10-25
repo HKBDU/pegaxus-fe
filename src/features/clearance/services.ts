@@ -30,20 +30,20 @@ export async function submitCustomsClearanceProof(
   dossierId: string,
   params: SubmitCustomsClearanceProofRequest,
 ): Promise<SubmitCustomsClearanceProofResponse> {
-  const form = new FormData()
-  form.append('customsPortName', params.customsPortName)
-  if (params.locationId != null) form.append('locationId', String(params.locationId))
-  if (params.mrnNumber) form.append('mrnNumber', params.mrnNumber)
-  if (params.customsLane) form.append('customsLane', params.customsLane)
-  if (params.isHeld != null) form.append('isHeld', String(params.isHeld))
-  if (params.quickNote) form.append('quickNote', params.quickNote)
-  params.files.forEach((file) => form.append('files', file))
+  const payload = {
+    customsPortName: params.customsPortName || undefined,
+    locationId: params.locationId != null ? String(params.locationId) : undefined,
+    mrnNumber: params.mrnNumber || undefined,
+    customsLane: params.customsLane || undefined,
+    isHeld: params.isHeld ?? false,
+    quickNote: params.quickNote || undefined,
+    files: params.files,
+  }
 
   const res = await callApi(
     apiClient.post<unknown, ApiEnvelope<SubmitCustomsClearanceProofResponse>>(
       `/compliance-dossiers/${encodeURIComponent(dossierId)}/customs-clearance-proofs`,
-      form,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
+      payload,
     ),
   )
   return unwrap(res)
@@ -62,10 +62,19 @@ export async function finalizeCustomsClearanceProof(
   proofId: string,
   payload: FinalizeCustomsClearanceProofRequest,
 ): Promise<FinalizeCustomsClearanceProofResponse> {
+  const formData = new FormData()
+  if (payload.action) formData.append('Action', payload.action)
+  if (payload.mrnNumber) formData.append('MrnNumber', payload.mrnNumber)
+  if (payload.customsLane) formData.append('CustomsLane', payload.customsLane)
+  if (payload.ataCarnetExpiryDate) formData.append('AtaCarnetExpiryDate', payload.ataCarnetExpiryDate)
+  if (payload.status) formData.append('Status', payload.status)
+  if (payload.verificationNote) formData.append('VerificationNote', payload.verificationNote)
+  if (payload.rejectionReason) formData.append('RejectionReason', payload.rejectionReason)
+
   const res = await callApi(
     apiClient.patch<unknown, ApiEnvelope<FinalizeCustomsClearanceProofResponse>>(
       `/customs-clearance-proofs/${encodeURIComponent(proofId)}/finalize`,
-      payload,
+      formData,
     ),
   )
   return unwrap(res)

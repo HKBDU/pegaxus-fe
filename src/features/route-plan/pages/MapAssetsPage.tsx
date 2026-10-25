@@ -73,6 +73,8 @@ const EU_COUNTRY_CODES = new Set([
   "si",
   "es",
   "se",
+  "gb",
+  "uk",
 ]);
 
 const EU_SEARCH_RECT = "rect:-31,71,45,34";
@@ -97,7 +99,7 @@ async function searchGeoapifyLocationPlaces(
     { signal },
   );
   if (!response.ok) {
-    throw new Error("Không thể tìm địa điểm trên Geoapify.");
+    throw new Error("Unable to find places on Geoapify.");
   }
 
   const body = (await response.json()) as {
@@ -310,7 +312,7 @@ export default function MapAssetsPage() {
       })
       .catch((error) =>
         toast.error(
-          getApiErrorMessage(error, "Không thể tải dữ liệu Location/Route."),
+          getApiErrorMessage(error, "Unable to load location/route data."),
         ),
       );
   }, []);
@@ -370,7 +372,7 @@ export default function MapAssetsPage() {
           toast.error(
             error instanceof Error
               ? error.message
-              : "Không thể tìm địa điểm trên Geoapify.",
+              : "Unable to find places on Geoapify.",
           );
         }
       } finally {
@@ -427,7 +429,7 @@ export default function MapAssetsPage() {
         setNearbyError(
           error instanceof Error
             ? error.message
-            : "Không thể tìm POI gần điểm đã chọn.",
+            : "Unable to find POIs near the selected point.",
         );
       }
     } finally {
@@ -456,8 +458,8 @@ export default function MapAssetsPage() {
         : {
             id: `local-${Date.now()}`,
             name: "New location",
-            latitude: pickedPoint.latitude,
-            longitude: pickedPoint.longitude,
+            latitude: Number(pickedPoint.latitude.toFixed(4)),
+            longitude: Number(pickedPoint.longitude.toFixed(4)),
           };
       setLocationEditor({ mode: "add", location });
       setNearbyOpen(false);
@@ -465,7 +467,7 @@ export default function MapAssetsPage() {
       setNearbyError(
         error instanceof Error
           ? error.message
-          : "Không thể lấy địa chỉ điểm đã chọn.",
+          : "Unable to retrieve address for the selected point.",
       );
     } finally {
       setNearbyLoading(false);
@@ -765,7 +767,7 @@ export default function MapAssetsPage() {
               searchLoading={searchLoading}
               searchEmptyMessage={
                 mapMode === "addLocation"
-                  ? "Can not find any location in EU."
+                  ? "Can not find any location in EU or UK."
                   : "Can not find any location."
               }
               onSearchChange={handleSearchChange}
@@ -778,7 +780,7 @@ export default function MapAssetsPage() {
               }}
               mode={mapMode}
               onModeChange={(mode) => {
-                setMapMode(mode === "buildPlan" ? "view" : mode);
+                setMapMode(mode === "buildPlan" || mode === "pickPoint" ? "view" : mode);
                 searchAbort.current?.abort();
                 setSearchLoading(false);
                 setSearchOptions(mode === "addLocation" ? [] : locations);
@@ -967,7 +969,7 @@ export default function MapAssetsPage() {
                       ` · ${Math.round(place.distanceMeters)} m`}
                   </span>
                   <span className="block text-xs text-slate-500">
-                    {place.latitude.toFixed(6)}, {place.longitude.toFixed(6)}
+                    {place.latitude.toFixed(4)}, {place.longitude.toFixed(4)}
                   </span>
                 </button>
               ))}

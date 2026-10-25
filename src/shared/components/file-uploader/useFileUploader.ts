@@ -6,12 +6,12 @@ import {
 } from '@/shared/utils/presigned'
 import { DEFAULT_UPLOAD_ERRORS } from './constants'
 import { createUploadId, describeFileRejection, formatFileSize, matchesAcceptedType } from './utils'
-import type { FileRejection, FileUploaderProps, UploadItem } from './types'
+import type { FileRejection, FileUploaderProps, FileUploaderSnapshot, UploadItem } from './types'
 
 type UploadOptions = Pick<
   FileUploaderProps,
   'entity' | 'accept' | 'maxSize' | 'maxFiles' | 'multiple' | 'disabled' |
-  'concurrency' | 'onUploaded' | 'onChange' | 'onError' | 'onReject' | 'errorMessages'
+  'concurrency' | 'onUploaded' | 'onChange' | 'onStateChange' | 'onError' | 'onReject' | 'errorMessages'
 >
 
 export function useFileUploader({
@@ -24,33 +24,62 @@ export function useFileUploader({
   concurrency = 3,
   onUploaded,
   onChange,
+  onStateChange,
   onError,
   onReject,
   errorMessages,
 }: UploadOptions) {
   const [items, setItems] = useState<UploadItem[]>([])
+  // Submit must see selection changes synchronously, before React effects run.
+  const itemsRef = useRef<UploadItem[]>([])
+  const revision = useRef(0)
+  const selectionLocked = useRef(false)
+  const active = useRef(true)
   const [rejections, setRejections] = useState<string[]>([])
   const started = useRef(new Set<string>())
   const controllers = useRef(new Map<string, AbortController>())
   const progressTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
-  const callbacks = useRef({ onUploaded, onChange, onError, onReject })
-  callbacks.current = { onUploaded, onChange, onError, onReject }
+  const callbacks = useRef({ onUploaded, onChange, onStateChange, onError, onReject })
+  callbacks.current = { onUploaded, onChange, onStateChange, onError, onReject }
 
-  const patchItem = useCallback((id: string, next: Partial<UploadItem>) => {
-    setItems((current) => current.map((item) => item.id === id ? { ...item, ...next } : item))
+  const getSnapshot = useCallback((): FileUploaderSnapshot => ({
+    revision: revision.current,
+    items: itemsRef.current.map((item) => ({ ...item, progress: { ...item.progress } })),
+  }), [])
+
+  const publishItems = useCallback((next: UploadItem[], notify = true) => {
+    itemsRef.current = next
+    revision.current += 1
+    setItems(next)
+    if (notify) callbacks.current.onStateChange?.(getSnapshot())
+  }, [getSnapshot])
+
+  const lockCompletedSelection = useCallback((expectedRevision: number) => {
+    if (!active.current || selectionLocked.current || revision.current !== expectedRevision ||
+      !itemsRef.current.length || itemsRef.current.some((item) => item.status !== 'success' || !item.publicId?.trim())) return false
+    selectionLocked.current = true
+    return true
   }, [])
 
+  const patchItem = useCallback((id: string, next: Partial<UploadItem>) => {
+    if (!active.current || !itemsRef.current.some((item) => item.id === id)) return
+    publishItems(itemsRef.current.map((item) => item.id === id ? { ...item, ...next } : item),
+      next.status !== undefined || next.publicId !== undefined)
+  }, [publishItems])
+
   const remove = useCallback((id: string) => {
+    if (!active.current || selectionLocked.current) return
     controllers.current.get(id)?.abort()
     controllers.current.delete(id)
     const timer = progressTimers.current.get(id)
     if (timer) clearTimeout(timer)
     progressTimers.current.delete(id)
     started.current.delete(id)
-    setItems((current) => current.filter((item) => item.id !== id))
-  }, [])
+    publishItems(itemsRef.current.filter((item) => item.id !== id))
+  }, [publishItems])
 
   const uploadItem = useCallback(async (item: UploadItem) => {
+    if (!active.current || selectionLocked.current || !itemsRef.current.some((entry) => entry.id === item.id && entry.status === 'queued')) return
     const controller = new AbortController()
     controllers.current.set(item.id, controller)
     patchItem(item.id, { status: 'uploading', errorCode: undefined, errorMessage: undefined })
@@ -60,8 +89,11 @@ export function useFileUploader({
         file: item.file,
         entity,
         signal: controller.signal,
-        onProgress: (progress) => patchItem(item.id, { progress }),
+        onProgress: (progress) => {
+          if (!controller.signal.aborted && controllers.current.get(item.id) === controller) patchItem(item.id, { progress })
+        },
       })
+      if (!active.current || controller.signal.aborted || controllers.current.get(item.id) !== controller || !itemsRef.current.some((entry) => entry.id === item.id)) return
       patchItem(item.id, { status: 'success', publicId, progress: { stage: 'completed', percent: 100 }, progressVisible: true })
       const timer = setTimeout(() => {
         patchItem(item.id, { progressVisible: false })
@@ -70,19 +102,32 @@ export function useFileUploader({
       progressTimers.current.set(item.id, timer)
       callbacks.current.onUploaded?.({ publicId, file: item.file })
     } catch (error) {
+      if (!active.current || controller.signal.aborted || controllers.current.get(item.id) !== controller) return
       const code = isPresignedUploadError(error) ? error.code : PRESIGNED_UPLOAD_ERROR_CODES.UNKNOWN
       if (code === PRESIGNED_UPLOAD_ERROR_CODES.UPLOAD_CANCELLED) return
       const message = errorMessages?.[code] ?? DEFAULT_UPLOAD_ERRORS[code] ?? DEFAULT_UPLOAD_ERRORS[PRESIGNED_UPLOAD_ERROR_CODES.UNKNOWN]
       patchItem(item.id, { status: 'error', errorCode: code, errorMessage: message })
       callbacks.current.onError?.({ file: item.file, code })
     } finally {
-      controllers.current.delete(item.id)
+      if (controllers.current.get(item.id) === controller) controllers.current.delete(item.id)
     }
   }, [entity, errorMessages, patchItem])
 
   useEffect(() => {
-    let slots = Math.max(1, concurrency) - items.filter((item) => item.status === 'uploading').length
-    for (const item of items) {
+    active.current = true
+    const activeControllers = controllers.current
+    const activeProgressTimers = progressTimers.current
+    callbacks.current.onStateChange?.(getSnapshot())
+    return () => {
+      active.current = false
+      activeControllers.forEach((controller) => controller.abort())
+      activeProgressTimers.forEach((timer) => clearTimeout(timer))
+    }
+  }, [getSnapshot])
+
+  useEffect(() => {
+    let slots = Math.max(1, concurrency) - itemsRef.current.filter((item) => item.status === 'uploading').length
+    for (const item of itemsRef.current) {
       if (slots <= 0) break
       if (item.status === 'queued' && !started.current.has(item.id)) {
         started.current.add(item.id)
@@ -108,17 +153,12 @@ export function useFileUploader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [successKey])
 
-  useEffect(() => () => {
-    controllers.current.forEach((controller) => controller.abort())
-    progressTimers.current.forEach((timer) => clearTimeout(timer))
-  }, [])
-
   const addFiles = useCallback((incoming: File[]) => {
-    if (disabled || incoming.length === 0) return
+    if (!active.current || selectionLocked.current || disabled || incoming.length === 0) return
     const rejected: FileRejection[] = []
     const accepted: File[] = []
     const pool = multiple ? incoming : incoming.slice(0, 1)
-    let room = multiple && maxFiles ? maxFiles - items.length : Infinity
+    let room = multiple && maxFiles ? maxFiles - itemsRef.current.length : Infinity
 
     for (const file of pool) {
       if (!matchesAcceptedType(file, accept)) rejected.push(describeFileRejection(file, 'file type is not supported.'))
@@ -145,13 +185,14 @@ export function useFileUploader({
       controllers.current.forEach((controller) => controller.abort())
       controllers.current.clear()
       started.current.clear()
-      setItems(created)
+      publishItems(created)
     } else {
-      setItems((current) => [...current, ...created])
+      publishItems([...itemsRef.current, ...created])
     }
-  }, [accept, disabled, items.length, maxFiles, maxSize, multiple])
+  }, [accept, disabled, maxFiles, maxSize, multiple, publishItems])
 
   const retry = useCallback((id: string) => {
+    if (!active.current || selectionLocked.current || !itemsRef.current.some((item) => item.id === id && item.status === 'error')) return
     started.current.delete(id)
     const timer = progressTimers.current.get(id)
     if (timer) clearTimeout(timer)
@@ -159,5 +200,5 @@ export function useFileUploader({
     patchItem(id, { status: 'queued', progress: { stage: 'signing', percent: 0 }, progressVisible: true })
   }, [patchItem])
 
-  return { items, rejections, addFiles, remove, retry }
+  return { items, rejections, addFiles, remove, retry, getSnapshot, lockCompletedSelection }
 }

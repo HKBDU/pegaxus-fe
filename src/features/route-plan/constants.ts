@@ -19,4 +19,6 @@ export const ROUTE_PLAN_ERROR_MESSAGES: Record<string, string> = {
   ROUTE_PLAN_MODIFIED: 'Route plan changed. Reload and try again.',
   DOSSIER_LOCKED: 'The compliance dossier no longer allows a backup route.',
   IDENTICAL_CONTINGENCY_ROUTE: 'Backup route must differ from the primary route.',
+  BCP_REQUIRED: 'A cross-border transport requires at least one border control point (BCP).',
+  MAP_PROVIDER_ERROR: 'Map provider could not find a suitable road for one of the locations.',
 }

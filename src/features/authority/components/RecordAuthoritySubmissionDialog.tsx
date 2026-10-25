@@ -5,6 +5,7 @@ import { normalizeRole } from "@/features/auth/access-control";
 import FileUploader from "@/shared/components/FileUploader";
 import { Field } from "@/shared/components/Field";
 import { Button } from "@/shared/components/ui/button";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { DatePicker } from "@/shared/components/ui/date-picker";
 import {
   Dialog,
@@ -22,15 +23,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
+import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 import { useRecordAuthoritySubmission } from "../hooks";
 import type { AuthoritySubmissionStatus } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
 
 const ACCEPTED_PROOF_TYPES = "application/pdf,image/jpeg,image/png";
-const MAX_PROOF_SIZE = 5 * 1024 * 1024;
+const MAX_PROOF_SIZE = 10 * 1024 * 1024;
 type Errors = Partial<
   Record<
-    "authorityName" | "submissionReference" | "submissionDate" | "proofFiles",
+    | "authorityName"
+    | "submissionReference"
+    | "submissionDate"
+    | "decisionNote"
+    | "proofFiles"
+    | "submissionMethod",
     string
   >
 >;
@@ -64,6 +71,8 @@ export function RecordAuthoritySubmissionDialog({
   const [open, setOpen] = useState(false);
   const [authorityName, setAuthorityName] = useState("");
   const [submissionReference, setSubmissionReference] = useState("");
+  const [submissionMethod, setSubmissionMethod] = useState("ONLINE_PORTAL");
+  const [isRequired, setIsRequired] = useState(true);
   const [submissionDate, setSubmissionDate] = useState(today());
   const [decisionNote, setDecisionNote] = useState("");
   const [errors, setErrors] = useState<Errors>({});
@@ -81,6 +90,8 @@ export function RecordAuthoritySubmissionDialog({
   const reset = () => {
     setAuthorityName("");
     setSubmissionReference("");
+    setSubmissionMethod("ONLINE_PORTAL");
+    setIsRequired(true);
     setSubmissionDate(today());
     setDecisionNote("");
     setUploadedIds([]);
@@ -100,21 +111,49 @@ export function RecordAuthoritySubmissionDialog({
         "This ComplianceDossier is not ready for an authority submission.",
       );
     const next: Errors = {};
-    if (!authorityName.trim())
+    if (!authorityName.trim()) {
       next.authorityName = "Authority Portal is required.";
-    if (!submissionReference.trim())
+    } else if (authorityName.trim().length > 200) {
+      next.authorityName = "Authority Portal must not exceed 200 characters.";
+    }
+
+    if (!submissionReference.trim()) {
       next.submissionReference = "Submission Reference is required.";
-    if (!submissionDate) next.submissionDate = "Submission Date is required.";
-    if (!proofFiles.length)
-      next.proofFiles = "At least one proof file is required.";
+    } else if (submissionReference.trim().length > 150) {
+      next.submissionReference = "Submission Reference must not exceed 150 characters.";
+    }
+
+    if (!submissionDate) {
+      next.submissionDate = "Submission Date is required.";
+    } else {
+      const date = new Date(submissionDate);
+      const now = new Date();
+      now.setHours(23, 59, 59, 999);
+      if (date > now) {
+        next.submissionDate = "Submission date must not be in the future.";
+      } else {
+        const minDate = new Date();
+        minDate.setFullYear(minDate.getFullYear() - VALIDATION_LIMITS.dateWindowYears);
+        minDate.setHours(0, 0, 0, 0);
+        if (date < minDate) {
+          next.submissionDate = `Submission date must be within the last ${VALIDATION_LIMITS.dateWindowYears} years.`;
+        }
+      }
+    }
+
+    if (decisionNote.trim().length > VALIDATION_LIMITS.noteMaxLength) {
+      next.decisionNote = `Decision note must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
+    }
+
     if (Object.keys(next).length) return setErrors(next);
     try {
       await mutation.mutateAsync({
         authorityName,
         submissionReference,
+        submissionMethod,
         submittedAt: `${submissionDate}T00:00:00.000Z`,
-        isRequired: true,
-        proofFiles,
+        isRequired,
+        proofFile: uploadedIds[0] ? { publicId: uploadedIds[0] } : undefined,
         decisionNote,
       });
       onRecorded?.();
@@ -195,6 +234,18 @@ export function RecordAuthoritySubmissionDialog({
               />
             </Field>
           </div>
+          <Field label="Submission Method *">
+            <select value={submissionMethod} onChange={(event) => setSubmissionMethod(event.target.value)} className="h-9 w-full rounded-[2px] border border-input bg-background px-3 text-sm">
+              <option value="ONLINE_PORTAL">Online portal</option>
+              <option value="EMAIL">Email</option>
+              <option value="IN_PERSON">In person</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </Field>
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <Checkbox checked={isRequired} onCheckedChange={(checked) => setIsRequired(Boolean(checked))} aria-label="Mandatory submission" />
+            Mandatory authority submission
+          </label>
           <Field label="Submission Date *" error={errors.submissionDate}>
             <DatePicker
               className={errors.submissionDate ? "border-red-500" : ""}
@@ -205,7 +256,7 @@ export function RecordAuthoritySubmissionDialog({
               }}
             />
           </Field>
-          <Field label="Proof *" error={errors.proofFiles}>
+          <Field label="Proof files (optional)" error={errors.proofFiles}>
             <div
               className={
                 errors.proofFiles ? "rounded border border-red-500 p-1" : ""
@@ -215,10 +266,9 @@ export function RecordAuthoritySubmissionDialog({
                 entity="attachment"
                 accept={ACCEPTED_PROOF_TYPES}
                 maxSize={MAX_PROOF_SIZE}
-                maxFiles={10}
-                multiple
+                maxFiles={1}
                 title="Upload submission receipt"
-                hint="PDF, JPG, or PNG · up to 5 MB per file · multiple files supported"
+                hint="PDF, JPG, or PNG · up to 10 MB"
                 onUploaded={({ publicId, file }) =>
                   filesRef.current.set(publicId, file)
                 }

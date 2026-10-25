@@ -1,33 +1,48 @@
 import apiClient from '@/lib/axios'
 import type {
   ApiEnvelope,
+  AuthoritySubmissionDetail,
   RecordAuthoritySubmissionInput,
   RecordAuthoritySubmissionResult,
   UpdateAuthorityReviewInput,
   UpdateAuthorityReviewResult,
+  AuthoritySubmissionSummary,
 } from './types'
+
+export async function listAuthoritySubmissions(dossierId: string): Promise<AuthoritySubmissionSummary[]> {
+  const response = await apiClient.get<unknown, ApiEnvelope<{ items: AuthoritySubmissionSummary[] }>>(
+    `/compliance-dossiers/${encodeURIComponent(dossierId)}/authority-submissions`,
+  )
+  if (!response.isSuccess) throw new Error(response.message)
+  return response.value?.items ?? []
+}
 
 export async function recordAuthoritySubmission(
   dossierId: string,
   input: RecordAuthoritySubmissionInput,
 ): Promise<RecordAuthoritySubmissionResult> {
-  const formData = new FormData()
-  formData.append('authorityName', input.authorityName.trim())
-  formData.append('submissionReference', input.submissionReference.trim())
-  formData.append('submittedAt', input.submittedAt)
-  formData.append('isRequired', String(input.isRequired))
-
-  // The API contract names this field proofFile. Repeating the field preserves
-  // that contract while allowing the UI to attach multiple receipt images/PDFs.
-  input.proofFiles.forEach((file) => formData.append('proofFile', file, file.name))
-  if (input.decisionNote?.trim()) formData.append('decisionNote', input.decisionNote.trim())
-
   const response = await apiClient.post<unknown, ApiEnvelope<RecordAuthoritySubmissionResult>>(
     `/compliance-dossiers/${encodeURIComponent(dossierId)}/authority-submissions`,
-    formData,
+    {
+      ...input,
+      authorityName: input.authorityName.trim(),
+      submissionReference: input.submissionReference.trim(),
+      submissionMethod: input.submissionMethod?.trim() || undefined,
+      decisionNote: input.decisionNote?.trim() || undefined,
+    },
   )
 
   if (!response.isSuccess) throw new Error(response.message)
+  return response.value
+}
+
+export async function getAuthoritySubmissionDetail(
+  submissionId: string,
+): Promise<AuthoritySubmissionDetail> {
+  const response = await apiClient.get<unknown, ApiEnvelope<AuthoritySubmissionDetail>>(
+    `/authority-submissions/${encodeURIComponent(submissionId)}`,
+  )
+  if (!response.isSuccess || !response.value) throw new Error(response.message)
   return response.value
 }
 
@@ -35,21 +50,12 @@ export async function updateAuthorityReview(
   submissionId: string,
   input: UpdateAuthorityReviewInput,
 ): Promise<UpdateAuthorityReviewResult> {
-  const formData = new FormData()
-  formData.append('decision', input.decision)
-  if (input.permitNumber?.trim()) formData.append('permitNumber', input.permitNumber.trim())
-  if (input.permitIssuedDate) formData.append('permitIssuedDate', input.permitIssuedDate)
-  if (input.permitExpiryDate) formData.append('permitExpiryDate', input.permitExpiryDate)
-  formData.append('decisionFile', input.decisionFile, input.decisionFile.name)
-  if (input.decisionNote?.trim()) formData.append('decisionNote', input.decisionNote.trim())
-  if (input.rejectionReason?.trim()) formData.append('rejectionReason', input.rejectionReason.trim())
-  if (input.revisionDueDate) formData.append('revisionDueDate', input.revisionDueDate)
-
   const response = await apiClient.patch<unknown, ApiEnvelope<UpdateAuthorityReviewResult>>(
     `/authority-submissions/${encodeURIComponent(submissionId)}/decision`,
-    formData,
+    input,
   )
 
   if (!response.isSuccess) throw new Error(response.message)
   return response.value
 }
+

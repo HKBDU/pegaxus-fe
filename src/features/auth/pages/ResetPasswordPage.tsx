@@ -3,7 +3,12 @@ import { getAuthApiError } from "../services";
 import { LoaderCircle } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import { Link, Navigate, useLocation } from "react-router-dom";
-import { resetPasswordSchema, resetPasswordRouteStateSchema, type ResetPasswordFormValues, type ResetPasswordRouteState } from "../schema";
+import {
+  resetPasswordSchema,
+  resetPasswordRouteStateSchema,
+  type ResetPasswordFormValues,
+  type ResetPasswordRouteState,
+} from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
   AuthPasswordFormField,
@@ -12,7 +17,10 @@ import {
 import { useResetPasswordMutation } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
-import { PasswordMatchHint, PasswordRequirements } from "../components/PasswordRequirements";
+import {
+  PasswordMatchHint,
+  PasswordRequirements,
+} from "../components/PasswordRequirements";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 
 const otpErrors: Record<string, string> = {
@@ -44,15 +52,21 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
   });
   const attempt = useFormRequestAttemptGuard(form);
   const password = useWatch({ control: form.control, name: "newPassword" });
-  const confirmation = useWatch({ control: form.control, name: "confirmPassword" });
-  const isPending = mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
+  const confirmation = useWatch({
+    control: form.control,
+    name: "confirmPassword",
+  });
+  const isPending =
+    mutation.isPending || attempt.isRunning || form.formState.isSubmitting;
 
   async function submit(values: ResetPasswordFormValues) {
     if (attempt.isBlocked) return;
     form.clearErrors("root");
 
     try {
-      const result = await attempt.run(() => mutation.mutateAsync({ email, otp, ...values }));
+      const result = await attempt.run(() =>
+        mutation.mutateAsync({ email, otp, ...values }),
+      );
       if (result.started) form.reset();
     } catch (error) {
       const apiError = getAuthApiError(error);
@@ -94,7 +108,9 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
         });
       } else if (!hasFieldError) {
         form.setError("root.server", {
-          message: apiError?.message ?? "Unable to reset your password. Please try again.",
+          message:
+            apiError?.message ??
+            "Unable to reset your password. Please try again.",
         });
       }
     } finally {
@@ -145,7 +161,10 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
             placeholder="Re-enter your new password"
             disabled={isPending}
           />
-          <PasswordMatchHint password={password ?? ""} confirmation={confirmation ?? ""} />
+          <PasswordMatchHint
+            password={password ?? ""}
+            confirmation={confirmation ?? ""}
+          />
           {form.formState.errors.root?.server && (
             <div role="alert" className="space-y-2 text-sm text-red-700">
               <p>{form.formState.errors.root.server.message}</p>
@@ -168,7 +187,11 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
                 className="size-5 animate-spin"
               />
             )}
-            {isPending ? "Resetting..." : attempt.isBlocked ? "Please wait..." : "Reset password"}
+            {isPending
+              ? "Resetting..."
+              : attempt.isBlocked
+                ? "Please wait..."
+                : "Reset password"}
           </Button>
         </form>
       </Form>

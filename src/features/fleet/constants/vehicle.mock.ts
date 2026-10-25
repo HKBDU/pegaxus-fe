@@ -41,6 +41,7 @@ const row = (
   specialEquipment,
   createdAt: "2026-08-01T03:00:00Z",
   updatedAt,
+  country: "FR",
 })
 
 export const MOCK_VEHICLES: MockVehicleRow[] = [

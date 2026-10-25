@@ -1,5 +1,5 @@
 import { format, parseISO, isValid } from "date-fns"
-import { INVOICE_TAX_RATE_PERCENT, PAYMENT_ERROR_CODES, CANCELLATION_REASON_MIN_LENGTH, PAYMENT_CURRENCY_VALUES, PAYMENT_METHOD_VALUES, PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH } from "@/features/invoice/constants"
+import { INVOICE_TAX_RATE_PERCENT, TRANSIT_DAYS_RANGE, PAYMENT_ERROR_CODES, CANCELLATION_REASON_MIN_LENGTH, PAYMENT_METHOD_VALUES, PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH } from "@/features/invoice/constants"
 import type { InvoiceItem, InvoiceSummary, PaymentErrorCode, PaymentErrorState, Invoice, RecordPaymentPayload } from "@/features/invoice/types"
 import type { InvoiceCurrency } from "@/features/invoice/constants"
 import { z } from "zod"
@@ -12,14 +12,15 @@ type MockEnvironment = { PROD?: boolean; VITE_INVOICE_API_MOCKS?: string }
  * on by default in development; set VITE_INVOICE_API_MOCKS=false to call the real API. Never on in a production build.
  */
 export function isInvoiceMockMode(env: MockEnvironment = import.meta.env) {
-  return env.PROD !== true && env.VITE_INVOICE_API_MOCKS !== "false"
+  return env.PROD !== true && env.VITE_INVOICE_API_MOCKS === "true"
 }
 
-// ---- from view/format.ts ----
 export function invoiceDate(value?: string | null) {
-  if (!value) return "—"
-  const parsed = parseISO(value)
-  return isValid(parsed) ? format(parsed, value.length === 10 ? "dd MMM yyyy" : "dd MMM yyyy, HH:mm") : "—"
+  if (!value) return "—";
+  const parsed = parseISO(value);
+  return isValid(parsed)
+    ? format(parsed, value.length === 10 ? "dd MMM yyyy" : "dd MMM yyyy, HH:mm")
+    : "—";
 }
 
 // ---- from compose/utils.ts ----
@@ -64,22 +65,30 @@ export function parseWholeNumber(value: string) {
   return Number(normalized)
 }
 
+/** Trip length typed on a QUOTATION: a whole number in the BE range, otherwise undefined (the server then derives it from the booking dates). */
+export function parseTransitDays(value: string) {
+  const days = parseWholeNumber(value)
+  return Number.isNaN(days) || days < TRANSIT_DAYS_RANGE.min || days > TRANSIT_DAYS_RANGE.max ? undefined : days
+}
+
 /**
  * Estimate shown while the draft is being edited (contract R8): subtotal of the manual lines, 20% tax,
- * deposit deduction added after tax. The server recomputes everything, this number is never sent.
+ * deposit deduction added after tax. The server recomputes everything, this number is never sent. IV1 returns no totals,
+ * so the form adds the lines it shows; a credit note carries no tax (`taxRatePercent` 0).
  */
 export function estimateSummary(
   lines: { quantity: number; price: number }[],
   depositDeductionItems: Pick<InvoiceItem, "total">[],
+  taxRatePercent: number = INVOICE_TAX_RATE_PERCENT,
 ): InvoiceSummary {
   const subtotal = roundMoney(lines.reduce((sum, line) => sum + (Number.isFinite(line.quantity * line.price) ? roundMoney(line.quantity * line.price) : 0), 0))
-  const tax = roundMoney((subtotal * INVOICE_TAX_RATE_PERCENT) / 100)
+  const tax = roundMoney((subtotal * taxRatePercent) / 100)
   const depositDeduction = roundMoney(depositDeductionItems.reduce((sum, item) => sum + item.total, 0))
   return {
     subtotal,
     discount: 0,
     tax,
-    taxRatePercent: INVOICE_TAX_RATE_PERCENT,
+    taxRatePercent,
     depositDeduction,
     grandTotal: roundMoney(subtotal + tax + depositDeduction),
   }
@@ -88,13 +97,14 @@ export function estimateSummary(
 // ---- from payment/utils/payment.error.ts ----
 const PAYMENT_ERROR_MESSAGES: Record<PaymentErrorCode, string> = {
   PARTIAL_PAYMENT_NOT_SUPPORTED: 'Only full payment of the invoice total is accepted.',
-  CURRENCY_MISMATCH: 'Payment currency must match the invoice currency.',
   UNPAYABLE_INVOICE_TYPE: 'This invoice type cannot be paid.',
   INVALID_INVOICE_STATUS: 'This invoice cannot be paid in its current status.',
   INVOICE_HAS_PAYMENT: 'This invoice has a confirmed payment. Contact accounting for a refund process.',
   PAYMENT_IN_PROGRESS: 'A payment for this invoice is being processed.',
   VALIDATION_ERROR: 'Check the payment details and try again.',
   PAYMENT_GATEWAY_ERROR: 'Payment gateway is unavailable. Please try again later.',
+  UNSUPPORTED_PAYMENT_AMOUNT: 'SePay only accepts a whole VND amount. This invoice total has decimals, so ask the Logistics Manager to correct the invoice.',
+  UNSUPPORTED_PAYMENT_CURRENCY: 'SePay only accepts VND payments.',
 }
 
 export function getPaymentErrorMessage(errorCode?: string, fallback?: string) {
@@ -138,6 +148,11 @@ export function formatPaymentAmount(amount: number, _currency?: InvoiceCurrency)
   }).format(amount)
 }
 
+/** SePay only takes a positive whole VND amount; the BE rejects anything else with UNSUPPORTED_PAYMENT_AMOUNT. */
+export function isPayableAmount(amount: number) {
+  return Number.isInteger(amount) && amount > 0
+}
+
 export function formatPaymentDate(value: string | null | undefined) {
   if (!value) return '—'
   const date = new Date(value)
@@ -170,14 +185,13 @@ export const cancellationSchema = z.object({
 
 export const recordPaymentSchema = z.object({
   amount: z.number().finite().int('Amount must be a whole number.').nonnegative(),
-  currency: z.enum(PAYMENT_CURRENCY_VALUES),
   paymentMethod: z.enum(PAYMENT_METHOD_VALUES),
   transactionReference: optionalText(PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH),
   paidAt: paidAt.optional(),
   note: z.string().trim().optional(),
 })
 
-export function createRecordPaymentSchema(grandTotal: number, currency: InvoiceCurrency) {
+export function createRecordPaymentSchema(grandTotal: number) {
   return recordPaymentSchema.superRefine((payload, context) => {
     if (payload.amount !== grandTotal) {
       context.addIssue({
@@ -186,18 +200,11 @@ export function createRecordPaymentSchema(grandTotal: number, currency: InvoiceC
         message: 'Amount must equal the invoice grand total.',
       })
     }
-    if (payload.currency !== currency) {
-      context.addIssue({
-        code: 'custom',
-        path: ['currency'],
-        message: 'Payment currency must match the invoice currency.',
-      })
-    }
   })
 }
 
 export function validateRecordPayment(payload: RecordPaymentPayload, invoice: Invoice) {
-  return createRecordPaymentSchema(invoice.summary.grandTotal, invoice.currency).safeParse(payload)
+  return createRecordPaymentSchema(invoice.summary.grandTotal).safeParse(payload)
 }
 
 export function validateCancellation(cancellationReason: string) {

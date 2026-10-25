@@ -3,7 +3,6 @@ import type { Vehicle, VehiclePayload } from "@/features/fleet/types"
 import { buildEquipment, parseEquipment } from "@/features/fleet/utils"
 
 const emptyValues: VehicleFormValues = {
-  vehicleCode: "",
   vehicleName: "",
   transportMode: "ROAD",
   licensePlate: "",
@@ -17,6 +16,7 @@ const emptyValues: VehicleFormValues = {
   insuranceExpiryDate: "",
   equipmentTags: [],
   equipmentNotes: "",
+  country: "",
 }
 
 /** Vehicle (or nothing, for create) to form values. */
@@ -24,7 +24,6 @@ export function toVehicleDefaults(vehicle?: Vehicle): VehicleFormValues {
   if (!vehicle) return emptyValues
   const equipment = parseEquipment(vehicle.specialEquipment)
   return {
-    vehicleCode: vehicle.vehicleCode,
     vehicleName: vehicle.vehicleName ?? "",
     transportMode: vehicle.transportMode,
     licensePlate: vehicle.licensePlate ?? "",
@@ -38,6 +37,7 @@ export function toVehicleDefaults(vehicle?: Vehicle): VehicleFormValues {
     insuranceExpiryDate: vehicle.insuranceExpiryDate ?? "",
     equipmentTags: equipment.tags,
     equipmentNotes: equipment.notes,
+    country: vehicle.country ?? "",
   }
 }
 
@@ -47,7 +47,6 @@ const optional = (value: string) => value.trim() || undefined
 /** Form values to the VH3 payload. */
 export function toVehiclePayload(values: VehicleFormValues): VehiclePayload {
   return {
-    vehicleCode: values.vehicleCode.trim(),
     vehicleName: optional(values.vehicleName),
     // Internal fleet is road-only: the mode is a constant, not a user choice.
     transportMode: "ROAD",
@@ -61,5 +60,6 @@ export function toVehiclePayload(values: VehicleFormValues): VehiclePayload {
     insuranceNumber: optional(values.insuranceNumber),
     insuranceExpiryDate: optional(values.insuranceExpiryDate),
     specialEquipment: buildEquipment(values.equipmentTags, values.equipmentNotes),
+    country: optional(values.country)?.toUpperCase(),
   }
 }

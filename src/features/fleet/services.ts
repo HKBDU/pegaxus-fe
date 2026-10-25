@@ -115,22 +115,17 @@ function findMockVehicle(id: string) {
   return row
 }
 
-function assertUniqueVehicle(payload: { vehicleCode?: string; licensePlate?: string }, ignoreId?: string) {
-  const code = payload.vehicleCode?.trim().toLowerCase()
+function assertUniqueVehicle(payload: { licensePlate?: string }, ignoreId?: string) {
   const plate = payload.licensePlate?.trim().toLowerCase()
   for (const item of mockVehicles) {
     if (item.vehicleId === ignoreId) continue
-    if (code && item.vehicleCode.toLowerCase() === code) throw new FleetApiError("VEHICLE_CODE_DUPLICATED")
-    if (plate && item.licensePlate?.toLowerCase() === plate) {
-      throw new FleetApiError(ignoreId ? "LICENSE_PLATE_DUPLICATED" : "VEHICLE_CODE_DUPLICATED")
-    }
+    if (plate && item.licensePlate?.toLowerCase() === plate) throw new FleetApiError("LICENSE_PLATE_DUPLICATED")
   }
 }
 
 function applyVehiclePayload(row: MockVehicleRow, payload: Partial<VehiclePayload>) {
   const nullable = (value: string | undefined) => (value && value.trim() ? value.trim() : null)
   Object.assign(row, {
-    ...(payload.vehicleCode ? { vehicleCode: payload.vehicleCode.trim() } : {}),
     vehicleName: nullable(payload.vehicleName),
     transportMode: payload.transportMode ?? row.transportMode,
     licensePlate: nullable(payload.licensePlate),
@@ -161,7 +156,8 @@ async function mockVehicleList(params: VehicleListParams): Promise<PaginatedResp
         (params.transportMode === "ALL" || vehicle.transportMode === params.transportMode) &&
         (params.status === "ALL" || vehicle.status === params.status) &&
         (params.vehicleType === "ALL" || vehicle.vehicleType === params.vehicleType) &&
-        (params.minCapacity === "ALL" || vehicle.capacityHorses >= params.minCapacity),
+        (params.minCapacity === "ALL" || vehicle.capacityHorses >= params.minCapacity) &&
+        (!params.country || vehicle.country === params.country.trim().toUpperCase()),
     )
   const [field, direction] = params.sortBy.split(":")
   list.sort((left, right) => {
@@ -191,6 +187,10 @@ export const vehicleService = {
           vehicleType: params.vehicleType,
           minCapacity: params.minCapacity,
           sortBy: params.sortBy,
+          availableFrom: params.availableFrom,
+          availableTo: params.availableTo,
+          transportPlanId: params.transportPlanId,
+          country: params.country?.trim().toUpperCase(),
         }),
       }),
     )
@@ -214,7 +214,8 @@ export const vehicleService = {
       const now = new Date().toISOString()
       const row: MockVehicleRow = {
         vehicleId: crypto.randomUUID(),
-        vehicleCode: payload.vehicleCode.trim(),
+        // The BE generates the code; the mock imitates it.
+        vehicleCode: `VEH-ROAD-${String(mockVehicles.length + 1).padStart(3, "0")}`,
         vehicleName: null,
         transportMode: payload.transportMode,
         licensePlate: null,
@@ -228,6 +229,7 @@ export const vehicleService = {
         insuranceNumber: null,
         insuranceExpiryDate: null,
         specialEquipment: null,
+        country: payload.country?.trim().toUpperCase() ?? null,
         createdAt: now,
         updatedAt: now,
       }
@@ -277,12 +279,10 @@ function findMockProvider(id: string) {
   return provider
 }
 
-function assertUniqueProvider(payload: { providerCode?: string; taxCode?: string }, ignoreId?: string) {
-  const code = payload.providerCode?.trim().toLowerCase()
+function assertUniqueProvider(payload: { taxCode?: string }, ignoreId?: string) {
   const tax = payload.taxCode?.trim().toLowerCase()
   for (const item of mockProviders) {
     if (item.transportProviderId === ignoreId) continue
-    if (code && item.providerCode.toLowerCase() === code) throw new FleetApiError("PROVIDER_CODE_DUPLICATED")
     if (tax && item.taxCode?.toLowerCase() === tax) throw new FleetApiError("TAX_CODE_DUPLICATED")
   }
 }
@@ -374,7 +374,8 @@ export const providerService = {
       const now = new Date().toISOString()
       const provider: Provider = {
         transportProviderId: crypto.randomUUID(),
-        providerCode: payload.providerCode.trim(),
+        // The BE generates the code; the mock imitates it.
+        providerCode: `PRV-${String(mockProviders.length + 1).padStart(3, "0")}`,
         providerName: payload.providerName.trim(),
         status: "ACTIVE",
         supportedModes: payload.supportedModes,

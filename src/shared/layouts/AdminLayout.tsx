@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom"
 
+import { IncidentAlertHost } from "@/features/incident-management/components/alerts/IncidentAlertHost"
 import { AdminHeader } from "@/shared/components/AdminHeader"
 import { AdminSidebarProvider } from "@/shared/components/AdminSidebar"
 import { SidebarInset } from "@/shared/components/ui/sidebar"
@@ -9,6 +10,7 @@ export function AdminLayout() {
     <AdminSidebarProvider>
       <SidebarInset className="min-w-0 bg-[#f4f2ed]">
         <div className="sticky top-0 z-50">
+          <IncidentAlertHost />
           <AdminHeader />
         </div>
         <Outlet />

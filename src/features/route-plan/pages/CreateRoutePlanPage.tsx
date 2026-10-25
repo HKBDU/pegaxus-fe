@@ -11,9 +11,16 @@ export default function CreateRoutePlanPage() {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (!transportPlanId) { setError("Transport Plan id is missing."); return; }
-    void Promise.all([getTransportPlan(transportPlanId), loadAllLocations(), loadAllRoutes()]).then(([plan, locationResult, routeResult]) => {
+    void Promise.all([getTransportPlan(transportPlanId), loadAllLocations(), loadAllRoutes()]).then(([rawPlan, locationResult, routeResult]) => {
+      const plan = rawPlan as TransportPlanApiValue;
+      if (String(plan.status).toUpperCase() !== "APPROVED") {
+        setError(
+          "This Transport Plan is not approved yet. The customer deposit must be paid before creating a primary route.",
+        );
+        return;
+      }
       const locations = locationResult.flatMap((item) => { const value = toMapLocation(item); return value ? [value] : []; });
-      const metadata = adaptTransportPlan(plan as TransportPlanApiValue, locations);
+      const metadata = adaptTransportPlan(plan, locations);
       setData({ locations, routes: routeResult.flatMap((item) => { const value = toMapRoute(item, locations); return value ? [value] : []; }), metadata });
     }).catch((e) => setError(e instanceof Error ? e.message : "Unable to load Transport Plan."));
   }, [transportPlanId]);

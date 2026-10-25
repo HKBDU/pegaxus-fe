@@ -1,0 +1,91 @@
+import { useCallback } from "react"
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
+import { claimDetail, ROLE_ROUTES } from "@/app/route-config"
+import { canAccess } from "@/features/auth/access-control"
+import { useAuthStore } from "@/features/auth/store"
+import { ClaimTable } from "@/features/claim/components/ClaimTable"
+import { getClaimErrorMessage } from "@/features/claim/errors"
+import { useClaims } from "@/features/claim/hooks"
+import { claimFilterSchema } from "@/features/claim/schemas"
+import type { ClaimQueryParams } from "@/features/claim/types"
+import { ErrorState } from "@/shared/components/common"
+import { PageHeader } from "@/shared/components/PageHeader"
+import { useDebounce } from "@/shared/hooks"
+
+const FILTER_KEYS = ["claimType", "status", "submittedFrom", "submittedTo", "search"] as const
+const DEFAULT_PAGE_SIZE = 10
+
+/**
+ * screen §10A (Logistics Manager). A row opens the claim page (`/admin/claims/:claimId`, also the target of the
+ * "new claim" notification); the list keeps its filters in the URL and hands them to that page for the way back.
+ */
+export default function ClaimListPage() {
+  const principal = useAuthStore((state) => state.principal)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [url, setUrl] = useSearchParams()
+
+  const parsed = claimFilterSchema.parse({
+    ...Object.fromEntries(["claimType", "status", "submittedFrom", "submittedTo", "search", "sortBy", "pageIndex", "pageSize"].flatMap((key) => (url.get(key) ? [[key, url.get(key)]] : []))),
+    pageSize: url.get("pageSize") ?? DEFAULT_PAGE_SIZE,
+  })
+  const params: ClaimQueryParams = {
+    ...parsed,
+    submittedFrom: url.get("submittedFrom") ?? undefined,
+    submittedTo: url.get("submittedTo") ?? undefined,
+  }
+  const search = url.get("search") ?? ""
+  const debounced = useDebounce(search, 300)
+  const waiting = search !== debounced
+  const allowed = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
+  const query = useClaims({ ...params, search: debounced }, allowed && !waiting)
+
+  const change = (patch: Partial<ClaimQueryParams>) =>
+    setUrl(
+      (current) => {
+        const next = new URLSearchParams(current)
+        for (const [key, value] of Object.entries(patch)) {
+          if (value === undefined || value === "") next.delete(key)
+          else next.set(key, String(value))
+        }
+        if (!Object.hasOwn(patch, "pageIndex")) next.set("pageIndex", "1")
+        return next
+      },
+      { replace: true },
+    )
+
+  const meta = query.data
+    ? { currentPage: query.data.pageIndex, itemsPerPage: query.data.pageSize, totalItems: query.data.totalItems, totalPages: query.data.totalPages, hasPreviousPage: query.data.pageIndex > 1, hasNextPage: query.data.pageIndex < query.data.totalPages }
+    : { currentPage: params.pageIndex, itemsPerPage: params.pageSize, totalItems: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false }
+
+  const openClaim = useCallback((id: string) => navigate(claimDetail(id), { state: { listSearch: location.search } }), [navigate, location.search])
+
+  if (!allowed) return <ErrorState message="Only Logistics Managers can access claims." />
+
+  return (
+    <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
+      <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
+        <PageHeader title="Claims" backHref={ROLE_ROUTES.managerHome} backLabel="Return to dashboard" showBack={false} />
+        {query.isError && !waiting ? (
+          <ErrorState message={getClaimErrorMessage(query.error, "Unable to load the claims.")} onRetry={() => void query.refetch()} />
+        ) : (
+          <ClaimTable
+            items={query.data?.items ?? []}
+            meta={meta}
+            isLoading={query.isPending || waiting}
+            filtered={FILTER_KEYS.some((key) => Boolean(url.get(key)))}
+            params={params}
+            search={search}
+            onSearchChange={(value) => change({ search: value })}
+            onFilterChange={change}
+            onOpen={openClaim}
+            onPageChange={(pageIndex) => {
+              if (!query.isFetching && !waiting) change({ pageIndex })
+            }}
+            onPageSizeChange={(pageSize) => change({ pageSize })}
+          />
+        )}
+      </div>
+    </div>
+  )
+}

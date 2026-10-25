@@ -1,4 +1,4 @@
-export const PRESIGNED_UPLOAD_ENTITIES = ["attachment"] as const
+export const PRESIGNED_UPLOAD_ENTITIES = ["attachment", "avatar"] as const
 
 export type PresignedUploadEntity = (typeof PRESIGNED_UPLOAD_ENTITIES)[number]
 
