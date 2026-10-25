@@ -13,7 +13,7 @@ import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/feat
 import { useBookingInvoices } from "@/features/invoice/hooks/useInvoices"
 import { invoiceFormSchema, invoiceToFormValues, prefillToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoicePrefill, InvoiceType } from "@/features/invoice/types"
-import { estimateSummary, formatMoney, parseTransitDays, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
+import { DEFAULT_DUE_TIME, estimateSummary, formatMoney, parseTransitDays, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
 import { useDebounce } from "@/shared/hooks"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
 import { Button } from "@/shared/components/ui/button"
@@ -22,8 +22,9 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/
 import { Input } from "@/shared/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
+import { TimePicker } from "@/shared/components/ui/time-picker"
 
-const DEFAULT_VALUES: InvoiceFormValues = { type: "QUOTATION", dueDate: "", note: "", transitDays: "", items: [] }
+const DEFAULT_VALUES: InvoiceFormValues = { type: "QUOTATION", dueDate: "", dueTime: DEFAULT_DUE_TIME, note: "", transitDays: "", items: [] }
 const fieldLabelClass = "mb-1 block font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-500"
 const controlClass = "h-9 w-full rounded-none border-[#d8d5cb] bg-white px-3 text-sm shadow-none"
 const panelClass = "border border-[#e5e2d9] bg-white"
@@ -255,23 +256,39 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                       </div>
                       <div>
                         <label className={fieldLabelClass} htmlFor="invoice-due-date">{dateLabel} <span className="text-red-500">*</span></label>
-                        <Controller
-                          control={control}
-                          name="dueDate"
-                          render={({ field }) => (
-                            <DatePicker
-                              id="invoice-due-date"
-                              value={field.value}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              minDate={todayIsoDate()}
-                              displayFormat="MMM dd, yyyy"
-                              placeholder="Pick a date"
-                              className={controlClass}
-                            />
-                          )}
-                        />
-                        {errors.dueDate ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.dueDate.message}</p> : null}
+                        <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
+                          <Controller
+                            control={control}
+                            name="dueDate"
+                            render={({ field }) => (
+                              <DatePicker
+                                id="invoice-due-date"
+                                value={field.value}
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                minDate={todayIsoDate()}
+                                displayFormat="MMM dd, yyyy"
+                                placeholder="Pick a date"
+                                className={controlClass}
+                              />
+                            )}
+                          />
+                          <Controller
+                            control={control}
+                            name="dueTime"
+                            render={({ field }) => (
+                              <TimePicker
+                                id="invoice-due-time"
+                                aria-label="Due time"
+                                value={field.value}
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                className={controlClass}
+                              />
+                            )}
+                          />
+                        </div>
+                        {errors.dueDate || errors.dueTime ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.dueDate?.message ?? errors.dueTime?.message}</p> : null}
                       </div>
 
                       {selectedType === INVOICE_TYPE.QUOTATION ? (
