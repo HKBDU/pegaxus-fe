@@ -1,4 +1,5 @@
 import {
+  Archive,
   CarFront,
   ClipboardCheck,
   FileStack,
@@ -45,6 +46,7 @@ const primaryItems = [
   incidentsItem,
   { label: "Invoices", href: ROLE_ROUTES.invoices, icon: FileText },
   { label: "Claims", href: ROLE_ROUTES.claims, icon: MessageSquareWarning },
+  { label: "Transport Archive & Audit", href: ROLE_ROUTES.transportArchive, icon: Archive },
   { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
   { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
   { label: "Users", href: "/admin/users", icon: UsersRound },

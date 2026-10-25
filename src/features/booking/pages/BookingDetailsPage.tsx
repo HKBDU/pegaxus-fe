@@ -12,6 +12,7 @@ import { formatBookingDate, formatSex } from "@/features/booking/utils"
 import { BookingClaimsSection, SubmitClaimAction } from "@/features/claim"
 import { BookingDossierLink } from "@/features/dossier"
 import { CustomerInvoicesTab } from "@/features/invoice"
+import { CustomerTransportAuditSummary } from "@/features/transport-audit/components/CustomerTransportAuditSummary"
 import { BookingTransportPlanAction } from "@/features/transport-plan/components/BookingTransportPlanAction"
 import { cn } from "@/lib/utils"
 import { ErrorState } from "@/shared/components/common"
@@ -324,6 +325,10 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                   <BookingClaimsSection bookingId={String(booking.bookingId)} highlightClaimId={claimId} />
                 </div>
               </section>
+            ) : null}
+
+            {audience === "customer" && booking.transport?.status === "COMPLETED" ? (
+              <CustomerTransportAuditSummary bookingId={String(booking.bookingId)} transportId={String(booking.transport.transportId)} />
             ) : null}
 
             {audience === "customer" && isPending ? (

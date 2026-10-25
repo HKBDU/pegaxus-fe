@@ -23,6 +23,7 @@ export const ROLE_ROUTES = {
   personnelAssignment: "/admin/personnel-assignment",
   invoices: "/admin/invoices",
   claims: "/admin/claims",
+  transportArchive: "/admin/transport-archive",
   incidents: "/admin/incidents",
   notifications: "/notifications",
   crew: "/crew",
@@ -43,6 +44,10 @@ export const claimResolve = (claimId: string) => `${claimDetail(claimId)}/resolv
 export const customerClaimNew = (bookingId: string) => `/bookings/${encodeURIComponent(bookingId)}/claims/new`
 export const customerClaimDetail = (bookingId: string, claimId: string) => `/bookings/${encodeURIComponent(bookingId)}/claims/${encodeURIComponent(claimId)}`
 
+export const transportArchive = () => ROLE_ROUTES.transportArchive
+export const transportAudit = (transportId: string) => `/admin/transports/${encodeURIComponent(transportId)}/audit`
+export const customerTransportHistory = (bookingId: string, transportId: string) =>
+  `/bookings/${encodeURIComponent(bookingId)}/transports/${encodeURIComponent(transportId)}/history`
 export const personnelAssignmentPath = (transportPlanId: string) => `${ROLE_ROUTES.personnelAssignment}/${encodeURIComponent(transportPlanId)}`
 
 export const accountDetail = (id: string | number) => `${ROLE_ROUTES.managerUsers}/${encodeURIComponent(id)}`
@@ -78,6 +83,8 @@ const adminHeaderRoutes = [
   { path: "/admin/reports/incident-claim-frequency", label: "REPORTS & ANALYTICS", href: "/admin/reports/incident-claim-frequency", title: "INCIDENT & CLAIM FREQUENCY" },
   { path: "/admin/reports/on-time-delivery", label: "REPORTS & ANALYTICS", href: "/admin/reports/on-time-delivery", title: "ON-TIME DELIVERY" },
   { path: "/admin/transports/:transportId/financial-summary", label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "FINANCIAL SUMMARY" },
+  { path: "/admin/transports/:transportId/audit", label: "TRANSPORT ARCHIVE", href: ROLE_ROUTES.transportArchive, title: "AUDIT DOSSIER" },
+  { path: ROLE_ROUTES.transportArchive, label: "TRANSPORT ARCHIVE", href: ROLE_ROUTES.transportArchive, title: "" },
   { path: "/admin/emergency-costs/new", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "NEW COST REQUEST" },
   { path: "/admin/emergency-costs/:emergencyCostRequestId", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "COST REQUEST DETAILS" },
   { path: "/admin/emergency-costs", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "" },
