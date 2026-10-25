@@ -1,0 +1,5 @@
+export const financialDemoIds = {
+  completed: "f6600000-0000-4000-8000-000000000001",
+  stale: "f6600000-0000-4000-8000-000000000002",
+  provisional: "f6600000-0000-4000-8000-000000000003",
+} as const;

@@ -19,6 +19,7 @@ export function FinancialNoteEditor({
   onChange,
   onSave,
   onReview,
+  demo = false,
 }: {
   draft: NoteDraft;
   editable: boolean;
@@ -29,6 +30,7 @@ export function FinancialNoteEditor({
   onChange: (text: string) => void;
   onSave: () => void;
   onReview: () => void;
+  demo?: boolean;
 }) {
   const tooLong = draft.text.length > 2000;
   const dirty = draft.text.trim() !== draft.baseline;
@@ -44,6 +46,7 @@ export function FinancialNoteEditor({
           onSubmit={(event) => {
             event.preventDefault();
             if (
+              !demo &&
               editable &&
               !busy &&
               !fetching &&
@@ -96,13 +99,15 @@ export function FinancialNoteEditor({
               id="financial-note-hint"
               className="m-0 max-w-lg text-xs text-slate-500"
             >
-              {!editable
-                ? "A current, completed, saved report is required to save a note."
-                : draft.needsReview
-                  ? "The report changed. Load the latest version and review it; your draft stays here."
-                  : dirty
-                    ? "You have unsaved changes. Empty text clears the saved note."
-                    : "Your note matches the saved report."}
+              {demo
+                ? "Demo notes stay in this page only. Saving requires live reporting."
+                : !editable
+                  ? "A current, completed, saved report is required to save a note."
+                  : draft.needsReview
+                    ? "The report changed. Load the latest version and review it; your draft stays here."
+                    : dirty
+                      ? "You have unsaved changes. Empty text clears the saved note."
+                      : "Your note matches the saved report."}
             </p>
             <div className="flex flex-wrap gap-2">
               {draft.needsReview ? (
@@ -119,6 +124,7 @@ export function FinancialNoteEditor({
               <Button
                 type="submit"
                 disabled={
+                  demo ||
                   !editable ||
                   busy ||
                   fetching ||

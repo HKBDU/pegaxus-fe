@@ -1,6 +1,7 @@
 import { isAxiosError, isCancel } from "axios";
 import { z } from "zod";
 import apiClient from "@/lib/axios";
+import { REPORT_MOCK_MODE, REPORT_DATA_SOURCE } from "@/lib/report-mode";
 import { canAccess } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
 import {
@@ -35,7 +36,11 @@ export function hasFinancialAccess(scope: string) {
     Boolean(state.accessToken) &&
     canAccess(state.principal, { anyRole: ["LOGISTICS_MANAGER"] }) &&
     scope ===
-      JSON.stringify([state.principal?.id ?? null, state.sessionVersion])
+      JSON.stringify([
+        state.principal?.id ?? null,
+        state.sessionVersion,
+        REPORT_DATA_SOURCE,
+      ])
   );
 }
 
@@ -54,7 +59,7 @@ export function financialError(error: unknown): FinancialReportError {
   if (error instanceof z.ZodError)
     return new FinancialReportError(
       "CONTRACT_MISMATCH",
-      "Financial data does not match the expected contract or exceeds safe numeric precision. Contact support before continuing.",
+      "The financial figures could not be verified. Contact support before continuing.",
     );
   if (
     isCancel(error) ||
@@ -149,12 +154,37 @@ async function requestReport(
 }
 
 export const financialReportService = {
-  get(
+  async get(
     id: string,
     allowProvisional: boolean,
     scope: string,
     signal?: AbortSignal,
   ) {
+    if (import.meta.env.DEV && REPORT_MOCK_MODE) {
+      try {
+        const transportId = transportIdSchema.parse(id);
+        assertAccess(scope, signal);
+        const { getFinancialDemo } = await import("./mocks/fixtures");
+        const value = getFinancialDemo(transportId);
+        assertAccess(scope, signal);
+        if (!value)
+          throw new FinancialReportError(
+            "TRANSPORT_NOT_FOUND",
+            "Select a sample transport from the demo choices above.",
+            404,
+          );
+        const report = financialReportSchema.parse(value);
+        if (report.isProvisional && !allowProvisional)
+          throw new FinancialReportError(
+            "TRANSPORT_NOT_COMPLETED",
+            "This sample transport is still in progress. Confirm to view provisional figures.",
+            409,
+          );
+        return report;
+      } catch (error) {
+        throw financialError(error);
+      }
+    }
     return requestReport(id, scope, signal, (path) =>
       apiClient.get<unknown, unknown>(path, {
         params: { allowProvisional },
@@ -163,6 +193,15 @@ export const financialReportService = {
     );
   },
   refresh(id: string, scope: string, signal?: AbortSignal) {
+    if (REPORT_MOCK_MODE) {
+      assertAccess(scope, signal);
+      return Promise.reject(
+        new FinancialReportError(
+          "DEMO_MODE",
+          "Refreshing financial figures is unavailable in demo mode.",
+        ),
+      );
+    }
     return requestReport(id, scope, signal, (path) =>
       apiClient.post<unknown, unknown>(`${path}/refresh`, undefined, {
         signal,
@@ -175,6 +214,15 @@ export const financialReportService = {
     scope: string,
     signal?: AbortSignal,
   ) {
+    if (REPORT_MOCK_MODE) {
+      assertAccess(scope, signal);
+      return Promise.reject(
+        new FinancialReportError(
+          "DEMO_MODE",
+          "Saving financial notes is unavailable in demo mode.",
+        ),
+      );
+    }
     return requestReport(id, scope, signal, (path) =>
       apiClient.patch<unknown, unknown>(
         path,
