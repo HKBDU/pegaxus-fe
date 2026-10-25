@@ -37,8 +37,8 @@ type FormValues = z.infer<typeof schema>
 function routeLabel(dossier?: ReturnType<typeof useClearanceDossierContext>['data']) {
   const summary = dossier?.bookingSummary
   if (!summary) return '—'
-  const origin = summary.originPort || `${summary.originCountry.toUpperCase()} PORT`
-  const destination = summary.destinationPort || `${summary.destinationCountry.toUpperCase()} TERMINAL`
+  const origin = summary.originPort || (summary.originCountry ? `${summary.originCountry.toUpperCase()} PORT` : 'ORIGIN PORT')
+  const destination = summary.destinationPort || (summary.destinationCountry ? `${summary.destinationCountry.toUpperCase()} TERMINAL` : 'DESTINATION TERMINAL')
   return `${origin} → ${destination}`
 }
 

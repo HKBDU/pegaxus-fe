@@ -7,6 +7,7 @@ import type { ComplianceCategory } from "@/features/compliance-catalog/types"
  * Booking on purpose: the Transport Specialist gets it from AB2, which has no customer or audit data.
  */
 export type ApplyBooking = Pick<Booking, "bookingId" | "bookingCode" | "status" | "originCountry" | "destinationCountry"> & {
+  transportId: EntityId | null
   customer: { fullName: string }
   horses: { horseId: EntityId; horseName: string }[]
 }
@@ -40,19 +41,14 @@ export interface CustomRequirementDraft {
 
 export interface CreateDossierInput {
   bookingId: EntityId
+  transportId: EntityId
   /** Missing = custom dossier without a template (UC-18 ALT-01). */
   dossierTemplateId?: EntityId
   selectedTemplateItemIds: EntityId[]
-  initializationItems: {
-    complianceRequirementId: EntityId
-    isMandatory: boolean
-    appliesPerHorse: boolean
-    instruction?: string | null
-  }[]
   customRequirements: CustomRequirementDraft[]
 }
 
-/** POST /bookings/{id}/compliance-dossier (D2). */
+/** POST /transports/{transportId}/compliance-dossier (D2). */
 export interface CreateDossierResult {
   complianceDossierId: EntityId
   dossierCode: string

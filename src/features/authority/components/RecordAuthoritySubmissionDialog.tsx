@@ -29,7 +29,7 @@ import type { AuthoritySubmissionStatus } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
 
 const ACCEPTED_PROOF_TYPES = "application/pdf,image/jpeg,image/png";
-const MAX_PROOF_SIZE = 5 * 1024 * 1024;
+const MAX_PROOF_SIZE = 10 * 1024 * 1024;
 type Errors = Partial<
   Record<
     | "authorityName"
@@ -153,7 +153,7 @@ export function RecordAuthoritySubmissionDialog({
         submissionMethod,
         submittedAt: `${submissionDate}T00:00:00.000Z`,
         isRequired,
-        proofFiles,
+        proofFile: uploadedIds[0] ? { publicId: uploadedIds[0] } : undefined,
         decisionNote,
       });
       onRecorded?.();
@@ -266,10 +266,9 @@ export function RecordAuthoritySubmissionDialog({
                 entity="attachment"
                 accept={ACCEPTED_PROOF_TYPES}
                 maxSize={MAX_PROOF_SIZE}
-                maxFiles={10}
-                multiple
+                maxFiles={1}
                 title="Upload submission receipt"
-                hint="PDF, JPG, or PNG · up to 5 MB per file · multiple files supported"
+                hint="PDF, JPG, or PNG · up to 10 MB"
                 onUploaded={({ publicId, file }) =>
                   filesRef.current.set(publicId, file)
                 }

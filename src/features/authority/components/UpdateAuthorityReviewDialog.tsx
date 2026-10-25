@@ -41,12 +41,13 @@ import {
 import { formatFileSize, matchesAcceptedType } from "@/shared/components/file-uploader/utils";
 import { cn } from "@/lib/utils";
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
+import { presignedUpload } from "@/shared/utils/presigned";
 import { useAuthoritySubmissionDetail, useUpdateAuthorityReview } from "../hooks";
 import type { AuthorityDecision } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
 
 const ACCEPTED_FILE_TYPES = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 type Errors = Partial<
   Record<
@@ -122,14 +123,14 @@ export function UpdateAuthorityReviewDialog({
     if (!matchesAcceptedType(file, ACCEPTED_FILE_TYPES)) {
       setErrors((prev) => ({
         ...prev,
-        decisionFile: "Invalid format. Accepted: PDF, JPG, JPEG, PNG (Max 5MB).",
+        decisionFile: "Invalid format. Accepted: PDF, JPG, JPEG, PNG (Max 10MB).",
       }));
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
       setErrors((prev) => ({
         ...prev,
-        decisionFile: "File size exceeds the 5MB limit. Please upload a smaller file.",
+        decisionFile: "File size exceeds the 10MB limit. Please upload a smaller file.",
       }));
       return;
     }
@@ -159,7 +160,7 @@ export function UpdateAuthorityReviewDialog({
     if (!decisionFile) {
       next.decisionFile = "Official authority decision document is required.";
     } else if (decisionFile.size > MAX_FILE_SIZE) {
-      next.decisionFile = "File size exceeds the 5MB limit.";
+      next.decisionFile = "File size exceeds the 10MB limit.";
     }
 
     if (decision === "APPROVED") {
@@ -222,12 +223,16 @@ export function UpdateAuthorityReviewDialog({
     }
 
     try {
+      const decisionFilePublicId = await presignedUpload.upload({
+        file: decisionFile!,
+        entity: "attachment",
+      });
       await mutation.mutateAsync({
         decision,
         permitNumber: decision === "APPROVED" ? permitNumber.trim() : undefined,
         permitIssuedDate: decision === "APPROVED" ? permitIssuedDate : undefined,
         permitExpiryDate: decision === "APPROVED" ? permitExpiryDate : undefined,
-        decisionFile: decisionFile!,
+        decisionFile: { publicId: decisionFilePublicId },
         rejectionReason: decision === "REJECTED" ? rejectionReason.trim() : undefined,
         decisionNote: decision === "RETURNED" ? informationRequested.trim() : decisionNote.trim(),
         revisionDueDate: decision === "RETURNED" ? revisionDueDate : undefined,
@@ -584,7 +589,7 @@ export function UpdateAuthorityReviewDialog({
                       Or drag and drop file here
                     </p>
                     <p className="mt-1 text-[11px] text-slate-400">
-                      Accepted format: PDF, JPG, JPEG, PNG (Max 5MB)
+                Accepted format: PDF, JPG, JPEG, PNG (Max 10MB)
                     </p>
                     <input
                       ref={fileInputRef}

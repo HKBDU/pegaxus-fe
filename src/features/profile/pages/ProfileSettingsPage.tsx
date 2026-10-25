@@ -17,6 +17,7 @@ import {
 } from "@/shared/constants/validation-limits"
 
 import { ACCOUNT_TYPE_LABELS } from "../constants/profile.constants"
+import { presignedUpload } from "@/shared/utils/presigned"
 import { useProfile } from "../hooks/useProfile"
 import { ProfileIdentityPanel, ProfileInfoCard, ProfileInlineField, ProfileSaveBar } from "../components"
 import type { EmailVerificationStatus, Profile, ProfilePageStateProps, UpdateProfileRequest } from "../types"
@@ -224,6 +225,21 @@ export function ProfileSettingsPage() {
       }
     }
 
+    let avatar: UpdateProfileRequest["avatar"]
+    if (currentDraft.avatar) {
+      try {
+        avatar = {
+          publicId: await presignedUpload.upload({
+            file: currentDraft.avatar,
+            entity: "avatar",
+          }),
+        }
+      } catch {
+        toast.error("Unable to upload avatar. Please try again.")
+        return
+      }
+    }
+
     const input: UpdateProfileRequest = {
       fullName: currentDraft.fullName.trim(),
       email: currentDraft.email.trim(),
@@ -231,7 +247,7 @@ export function ProfileSettingsPage() {
       address: currentDraft.address.trim() || undefined,
       country: currentDraft.country.trim() || undefined,
       dob: currentDraft.dob || undefined,
-      avatar: currentDraft.avatar ?? undefined,
+      avatar,
     }
     if (canManageOtherProfile) {
       input.role = currentDraft.role.trim() as UpdateProfileRequest["role"]

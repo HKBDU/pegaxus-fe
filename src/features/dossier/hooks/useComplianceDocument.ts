@@ -158,13 +158,7 @@ export function useComplianceDocument(
         dossierId,
         requirementId,
       ),
-    enabled: Boolean(
-      documentId &&
-      dossierId &&
-      requirementId &&
-      dossierIdSchema.safeParse(dossierId).success &&
-      dossierIdSchema.safeParse(requirementId).success,
-    ),
+    enabled: Boolean(documentId && dossierIdSchema.safeParse(documentId).success),
     retry: false,
   });
 }

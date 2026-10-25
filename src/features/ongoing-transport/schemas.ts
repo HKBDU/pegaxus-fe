@@ -94,6 +94,27 @@ export const ongoingTransportEnvelopeSchema = z.object({
   value: z.unknown(),
 });
 
+export const trackingSnapshotSchema = z.object({
+  serverTime: timestampSchema,
+  transportId: z.string(),
+  transportStatus: ongoingTransportStatusSchema,
+  plannedRoute: z.object({
+    segments: z.array(z.unknown()),
+  }),
+  nextStop: z.unknown().nullable(),
+  etaAt: timestampSchema.nullable(),
+  plannedRemainingDistanceKm: z.number().nullable(),
+  truck: z.object({
+    latitude: z.number(),
+    longitude: z.number(),
+    headingDegrees: z.number().nullable().optional(),
+    speedKmh: z.number().nullable().optional(),
+    accuracyMeters: z.number().nullable().optional(),
+    recordedAt: timestampSchema,
+    routePlanRouteId: z.string().nullable().optional(),
+  }).nullable(),
+});
+
 const locationBriefSchema = z.object({
   locationId: z.string(),
   locationName: z.string(),

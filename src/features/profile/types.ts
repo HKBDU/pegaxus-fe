@@ -60,7 +60,7 @@ export type UpdateProfileRequest = {
   status?: AccountStatus
   employeeCode?: string
   workStatus?: string
-  avatar?: File
+  avatar?: File | { publicId: string }
 }
 
 export type ProfileFormErrors = Partial<Record<"email" | "fullName" | "phone" | "address", string>>

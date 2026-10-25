@@ -17,6 +17,24 @@ function samePoint(
   );
 }
 
+function sameRoute(left: MapRoute, right: MapRoute) {
+  const leftId = left.id == null ? "" : String(left.id);
+  const rightId = right.id == null ? "" : String(right.id);
+  if (leftId && rightId && leftId === rightId) return true;
+  return (
+    String(left.fromLocation?.id) === String(right.fromLocation?.id) &&
+    String(left.toLocation?.id) === String(right.toLocation?.id) &&
+    (left.transportMode ?? "ROAD") === (right.transportMode ?? "ROAD")
+  );
+}
+
+function sameRouteChain(left: MapRoute[], right: MapRoute[]) {
+  return (
+    left.length === right.length &&
+    left.every((route, index) => sameRoute(route, right[index]))
+  );
+}
+
 function validateChain(
   routes: MapRoute[],
   originId: string | number,
@@ -63,12 +81,27 @@ export function buildEffectiveBackupRoute(
       message: "Add at least one backup segment.",
       effectiveRoutes: [],
     };
+  const primaryChain = validateChain(primary, originId, destinationId);
+  if (!primaryChain.valid) {
+    return {
+      valid: false,
+      message:
+        "The PRIMARY route must be anchored to the Transport Plan origin and destination.",
+      effectiveRoutes: primary,
+    };
+  }
   const backupChain = validateChain(
     backup,
     backup[0].fromLocation?.id ?? originId,
     backup.at(-1)?.toLocation?.id ?? destinationId,
   );
   if (!backupChain.valid) return backupChain;
+  if (sameRouteChain(primary, backup))
+    return {
+      valid: false,
+      message: "The BACKUP route must differ from the PRIMARY route.",
+      effectiveRoutes: backup,
+    };
 
   const backupStart = backup[0].fromLocation?.id;
   const backupEnd = backup.at(-1)?.toLocation?.id;

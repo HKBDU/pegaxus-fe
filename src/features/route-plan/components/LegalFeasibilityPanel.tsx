@@ -120,11 +120,6 @@ export function LegalFeasibilityPanel({
       setError("Assessment note is required when the route is not feasible.");
       return;
     }
-    if (status === "NOT FEASIBLE" && !blockedSegments.length) {
-      setError("Select at least one blocked segment.");
-      return;
-    }
-
     setIsPending(true);
     setError(null);
     try {
