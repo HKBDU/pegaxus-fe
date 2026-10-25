@@ -397,7 +397,8 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   opacity: 0.6;
 }
 .landing-journey {
-  min-height: max(105svh, 850px);
+  min-height: clamp(660px, 88svh, 820px);
+  padding-block: clamp(4.5rem, 8svh, 6rem);
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
   align-items: center;
@@ -408,6 +409,29 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
 }
 .landing-journey > .landing-copy {
   grid-column: 2;
+}
+.pegaxus-landing .landing-experience[data-shot="journey"] {
+  top: 76px;
+  bottom: auto;
+  height: var(--journey-stage-height, calc(100svh - 76px));
+}
+.landing-map-skip {
+  position: absolute;
+  right: 2rem;
+  bottom: 0.35rem;
+  z-index: 4;
+  border: 0;
+  background: transparent;
+  color: var(--landing-muted);
+  font: 0.65rem var(--sans);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  padding: 0.55rem;
+  cursor: pointer;
+}
+.landing-map-skip:focus-visible {
+  outline: 1px solid #f39200;
+  outline-offset: 2px;
 }
 .landing-journey-perspective {
   position: absolute;
@@ -429,6 +453,89 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
 }
 .landing-journey-perspective span:nth-child(3) {
   inset: 40%;
+}
+.landing-departure-stage {
+  position: absolute;
+  inset: 5% 50% 6% 2%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: clip;
+  isolation: isolate;
+}
+.landing-departure-stage svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0.8;
+}
+.landing-departure-gate {
+  fill: #20231f;
+  fill-opacity: 0.5;
+  stroke: #42443c;
+  stroke-opacity: 0.65;
+  stroke-width: 1;
+}
+.landing-departure-gate.is-rear {
+  fill: #171b18;
+  stroke-opacity: 0.4;
+  opacity: 0.65;
+}
+.landing-departure-edge {
+  fill: none;
+  stroke: #f39200;
+  stroke-opacity: 0.22;
+  stroke-width: 1;
+}
+.landing-departure-atmosphere,
+.landing-departure-sweep,
+.landing-departure-spotlight {
+  position: absolute;
+  inset: 0;
+}
+.landing-departure-atmosphere {
+  background:
+    radial-gradient(ellipse at 52% 75%, #9697800c, transparent 60%),
+    radial-gradient(ellipse at 52% 35%, #f3920009, transparent 65%);
+}
+.landing-departure-sweep {
+  opacity: var(--departure-motion, 0);
+}
+.landing-departure-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 26% -45% 24%;
+  background: linear-gradient(
+    180deg,
+    transparent 30%,
+    #f3920010 47%,
+    #f3920036 50%,
+    #f3920010 53%,
+    transparent 70%
+  );
+  animation: landing-departure-sweep 1.8s ease-in-out infinite paused;
+}
+.landing-journey[data-lifecycle="PLAYING"][data-phase="RUNNING"]
+  .landing-departure-sweep::after,
+.landing-journey[data-lifecycle="PLAYING"][data-phase="STOPPING"]
+  .landing-departure-sweep::after {
+  animation-play-state: running;
+}
+.landing-departure-spotlight {
+  opacity: var(--departure-portrait, 0);
+  background: radial-gradient(
+    ellipse at 52% 49%,
+    #f5dfb01c,
+    #f3920007 42%,
+    transparent 70%
+  );
+}
+@keyframes landing-departure-sweep {
+  from {
+    transform: translateX(-45%);
+  }
+  to {
+    transform: translateX(45%);
+  }
 }
 .pegaxus-landing figure {
   overflow: hidden;
@@ -804,6 +911,7 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   min-height: 650px;
   padding-block: 6rem 2rem;
   background: #171917;
+  overflow: clip;
 }
 .landing-movement > .landing-copy {
   display: grid;
@@ -838,6 +946,8 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   height: 100%;
   display: block;
   overflow: visible;
+  transform: scale(1.15);
+  transform-origin: center;
 }
 .landing-map-land {
   fill-opacity: 0.1;
@@ -891,6 +1001,10 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   top: 0;
   bottom: 0;
   height: 100svh;
+}
+.pegaxus-landing:has(#movement[data-map-pinned])
+  .landing-experience[data-shot="map"] {
+  z-index: 6;
 }
 .landing-reliability {
   display: grid;
@@ -1001,42 +1115,75 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   color: var(--landing-muted);
   font-size: 0.68rem;
 }
-.landing-loader {
+.pegaxus-landing .landing-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  transition: visibility 0s 1.05s;
+}
+.landing-loader-panel {
   position: absolute;
-  top: 43%;
-  left: 66%;
-  width: min(240px, 33%);
+  inset: 0;
+  transition: transform 1s cubic-bezier(0.76, 0, 0.24, 1);
+}
+.landing-loader-panel.is-left {
+  clip-path: polygon(0 0, 56.1% 0, 44.1% 100%, 0 100%);
+  background: linear-gradient(125deg, #101210 20%, #20221c);
+}
+.landing-loader-panel.is-right {
+  clip-path: polygon(56% 0, 100% 0, 100% 100%, 44% 100%);
+  background: linear-gradient(125deg, #1b1d18, #101210 80%);
+}
+.landing-loader-brand {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 1.3rem;
   padding: 1.5rem;
-  background: #171917e8;
-  border: 1px solid var(--landing-line);
+  text-align: center;
+  transition:
+    opacity 0.25s,
+    transform 0.35s;
 }
-.landing-loader .landing-eyebrow {
-  margin-bottom: 0.6rem;
-  font-size: 0.55rem;
-}
-.landing-loader p {
+.landing-loader-brand .landing-eyebrow {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: clamp(0.5rem, 1.2vw, 0.65rem);
+  letter-spacing: 0.24em;
 }
-.landing-loader.is-loaded {
+.landing-loader-brand p {
+  margin: 0;
+  font: 500 clamp(3rem, 10vw, 7rem)/1 var(--heading);
+  letter-spacing: 0.06em;
+  color: var(--landing-ivory);
+}
+.landing-loader-rule {
+  width: clamp(4rem, 12vw, 8rem);
+  height: 1px;
+  background: var(--landing-orange);
+  box-shadow: 0 0 18px #f3920040;
+}
+.landing-loader-caption {
+  color: var(--landing-muted);
+  font: 0.6rem var(--mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.pegaxus-landing .landing-loader.is-loaded {
   visibility: hidden;
 }
-.landing-loader-track {
-  height: 2px;
-  background: #f4efe618;
-  margin-top: 1rem;
+.landing-loader.is-loaded .landing-loader-panel.is-left {
+  transform: translateX(-58%);
 }
-.landing-loader-track span {
-  display: block;
-  height: 100%;
-  background: var(--landing-orange);
+.landing-loader.is-loaded .landing-loader-panel.is-right {
+  transform: translateX(58%);
 }
-.landing-loader-percent {
-  display: block;
-  text-align: right;
-  margin-top: 0.5rem;
-  color: var(--landing-muted);
-  font: 0.55rem var(--mono);
+.landing-loader.is-loaded .landing-loader-brand {
+  opacity: 0;
+  transform: translateY(-12px);
 }
 .landing-scene-fallback {
   display: flex;
@@ -1208,11 +1355,20 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   }
   .landing-journey {
     display: block;
-    padding-top: 52svh;
+    padding-top: calc(46svh - 0.5rem);
+    padding-bottom: 3rem;
+  }
+  .pegaxus-landing .landing-experience[data-shot="journey"] {
+    top: 75px;
+    height: 46svh;
   }
   .landing-journey > .landing-copy {
     max-width: 680px;
     margin: 0 auto;
+  }
+  .landing-departure-stage {
+    inset: 0 0 auto;
+    height: 46svh;
   }
   .landing-movement {
     height: 100svh;
@@ -1239,6 +1395,7 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   }
   .landing-movement .landing-journey-map svg {
     height: 100%;
+    transform: translateY(1.5rem) scale(1.15);
   }
   .landing-journey-perspective {
     inset: 3rem -15% auto;
@@ -1310,18 +1467,15 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   .landing-footer-top > div:first-child {
     grid-column: 1 / -1;
   }
-  .landing-loader {
-    top: 40%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(240px, 80%);
-  }
   .landing-scene-fallback {
     align-items: center;
     padding: 1rem;
   }
 }
 @media (max-width: 480px) {
+  #movement .landing-map-stops [data-map-stop]:last-child text {
+    transform: translate(-12px, 48px);
+  }
   .landing-map-stops text {
     font-size: 32px;
   }
