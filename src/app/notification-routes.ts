@@ -1,6 +1,7 @@
 // Every feature registers where ITS notifications lead (see shared/realtime/notification-routes.ts).
 // A new feature adds one line here; importing the file is enough, each module registers itself.
 import "@/features/booking/notification-routes"
+import "@/features/claim/notification-routes"
 import "@/features/dossier/notification-routes"
 import "@/features/fleet/notification-routes"
 import "@/features/incident-management/notification-routes"

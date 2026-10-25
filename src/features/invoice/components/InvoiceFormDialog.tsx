@@ -4,23 +4,26 @@ import { useMemo, useState } from "react"
 import { Controller, FormProvider, useForm, useWatch, type FieldErrors, type Path } from "react-hook-form"
 import { toast } from "sonner"
 import { BillingSummaryCard } from "@/features/invoice/components/BillingSummaryCard"
+import { GeneratedLinesTable } from "@/features/invoice/components/GeneratedLinesTable"
 import { InvoiceLineItemsTable } from "@/features/invoice/components/InvoiceLineItemsTable"
 import { IssueInvoiceDialog } from "@/features/invoice/components/IssueInvoiceDialog"
-import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_STATUS, INVOICE_TYPE_HINTS, TRANSPORT_STATUS_LABELS, INVOICE_TYPE, INVOICE_TYPE_LABELS, initialInvoiceParams } from "@/features/invoice/constants"
+import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_STATUS, INVOICE_TAX_RATE_PERCENT, INVOICE_TYPE_HINTS, TRANSIT_DAYS_RANGE, TRANSPORT_STATUS_LABELS, INVOICE_TYPE, INVOICE_TYPE_LABELS, initialInvoiceParams, isGeneratedInvoiceType } from "@/features/invoice/constants"
 import { getInvoiceErrorCode, getInvoiceErrorMessage, InvoiceApiError } from "@/features/invoice/errors"
 import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/features/invoice/hooks/useInvoiceCompose"
 import { useBookingInvoices } from "@/features/invoice/hooks/useInvoices"
-import { invoiceFormSchema, invoiceToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
-import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoiceType } from "@/features/invoice/types"
-import { estimateSummary, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
+import { invoiceFormSchema, invoiceToFormValues, prefillToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
+import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoicePrefill, InvoiceType } from "@/features/invoice/types"
+import { estimateSummary, formatMoney, parseTransitDays, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
+import { useDebounce } from "@/shared/hooks"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
 import { Button } from "@/shared/components/ui/button"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/components/ui/dialog"
+import { Input } from "@/shared/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
 
-const DEFAULT_VALUES: InvoiceFormValues = { type: "QUOTATION", dueDate: "", note: "", items: [] }
+const DEFAULT_VALUES: InvoiceFormValues = { type: "QUOTATION", dueDate: "", note: "", transitDays: "", items: [] }
 const fieldLabelClass = "mb-1 block font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-500"
 const controlClass = "h-9 w-full rounded-none border-[#d8d5cb] bg-white px-3 text-sm shadow-none"
 const panelClass = "border border-[#e5e2d9] bg-white"
@@ -43,15 +46,17 @@ interface InvoiceFormDialogProps {
   onClose: (saved?: { invoiceId: string }, options?: { edit?: boolean }) => void
   /** Reload the draft after INVOICE_MODIFIED; the page refetches and remounts the form. */
   onReload?: () => void
+  /** Create mode only: type and lines handed over by another screen (a claim's credit note). */
+  prefill?: InvoicePrefill
 }
 
 /**
  * SCR-F6-003 as a modal (design: Create Invoice). Create calls IV2, edit calls IV3 with `lastUpdatedAt`.
  * "Save Draft" keeps the invoice as DRAFT; the primary button saves and then opens the issue confirmation (UC-68).
  */
-export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }: InvoiceFormDialogProps) {
+export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, prefill }: InvoiceFormDialogProps) {
   const isEdit = mode === "edit" && Boolean(invoice)
-  const [selectedType, setSelectedType] = useState<InvoiceType | null>(isEdit && invoice ? invoice.type : null)
+  const [selectedType, setSelectedType] = useState<InvoiceType | null>(isEdit && invoice ? invoice.type : (prefill?.type ?? null))
   const [formError, setFormError] = useState<string>()
   const [staleOpen, setStaleOpen] = useState(false)
   const [focusRow, setFocusRow] = useState<{ index: number; nonce: number } | null>(null)
@@ -64,32 +69,43 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
 
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
-    defaultValues: isEdit && invoice ? invoiceToFormValues(invoice) : DEFAULT_VALUES,
+    defaultValues: isEdit && invoice ? invoiceToFormValues(invoice) : { ...DEFAULT_VALUES, ...(prefill ? prefillToFormValues(prefill) : {}) },
     mode: "onTouched",
   })
   const { control, handleSubmit, setValue, setError, register, formState: { errors, isDirty } } = form
+  const [type, items, transitDaysInput] = useWatch({ control, name: ["type", "items", "transitDays"] })
+  const generated = isGeneratedInvoiceType(selectedType)
+  // The days re-price a QUOTATION through IV1; wait until typing stops and the number is valid.
+  const debouncedDays = useDebounce(transitDaysInput ?? "", 400)
+  const transitDays = selectedType === INVOICE_TYPE.QUOTATION ? parseTransitDays(debouncedDays) : undefined
 
   const depositsQuery = useBookingInvoices(booking.bookingId, DEPOSIT_LOOKUP, "manager")
   const activeDeposit = isEdit ? undefined : depositsQuery.data?.items.find((item) => item.status !== INVOICE_STATUS.CANCELLED)
   const depositBlocked = Boolean(activeDeposit) && selectedType === INVOICE_TYPE.DEPOSIT
 
   // IV1 only when creating: for an existing draft it would answer INVOICE_ALREADY_EXISTS about the draft itself.
-  const suggestionQuery = useInvoiceSuggestion(booking.bookingId, isEdit ? undefined : (selectedType ?? undefined))
+  const suggestionQuery = useInvoiceSuggestion(booking.bookingId, isEdit ? undefined : (selectedType ?? undefined), transitDays)
   const precheckError = suggestionQuery.isError ? suggestionQuery.error : null
-  const depositDeductionItems: InvoiceItem[] = useMemo(
-    () => (isEdit && invoice ? invoice.items.filter((item) => item.isDepositDeduction) : (suggestionQuery.data?.items ?? [])),
+  // QUOTATION, DEPOSIT and FINAL: the server builds the lines (IV1 while creating, the saved draft while editing), deposit deductions included.
+  const generatedItems: InvoiceItem[] = useMemo(
+    () => (isEdit && invoice ? invoice.items : (suggestionQuery.data?.items ?? [])),
     [isEdit, invoice, suggestionQuery.data],
   )
+  const depositDeductionItems = useMemo(() => generatedItems.filter((item) => item.isDepositDeduction), [generatedItems])
+  const generatedLines = useMemo(() => generatedItems.filter((item) => !item.isDepositDeduction), [generatedItems])
   const transportStatus = isEdit ? invoice?.transport?.status : suggestionQuery.data?.transportStatus
 
-  const [type, items] = useWatch({ control, name: ["type", "items"] })
-  const parsedLines = (items ?? []).map((item) => ({
-    label: item.description?.trim() || "Untitled line",
-    quantity: parseWholeNumber(item.quantity ?? ""),
-    price: parseWholeNumber(item.price ?? ""),
-    key: item.invoiceItemId ?? "",
-  }))
-  const estimate = estimateSummary(parsedLines, depositDeductionItems)
+  const parsedLines = generated
+    ? generatedLines.map((item) => ({ label: item.description, quantity: item.quantity, price: item.price, key: item.invoiceItemId ?? "" }))
+    : (items ?? []).map((item) => ({
+        label: item.description?.trim() || "Untitled line",
+        quantity: parseWholeNumber(item.quantity ?? ""),
+        price: parseWholeNumber(item.price ?? ""),
+        key: item.invoiceItemId ?? "",
+      }))
+  // IV1 answers no totals, so the form adds the lines itself; a credit note carries no tax.
+  const taxRatePercent = selectedType === INVOICE_TYPE.CREDIT_NOTE ? 0 : (suggestionQuery.data?.pricing?.taxRatePercent ?? invoice?.summary.taxRatePercent ?? INVOICE_TAX_RATE_PERCENT)
+  const estimate = estimateSummary(parsedLines, generated ? depositDeductionItems : [], taxRatePercent)
   const summaryLines = [
     ...parsedLines.flatMap((line, index) =>
       Number.isNaN(line.quantity) || Number.isNaN(line.price)
@@ -101,12 +117,15 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
   function pickType(next: InvoiceType) {
     setSelectedType(next)
     setValue("type", next, { shouldDirty: true })
+    // Rows typed for a manual type must not block (or be sent with) a type whose lines the server builds.
+    if (isGeneratedInvoiceType(next)) setValue("items", [])
     setFormError(undefined)
   }
 
   function applyApiError(error: unknown) {
     const code = getInvoiceErrorCode(error)
     if (code === "INVOICE_MODIFIED") return setStaleOpen(true)
+    if (code === "INVOICE_ITEMS_GENERATED") toast.error(getInvoiceErrorMessage(error))
     if (code === "INVOICE_LOCKED") {
       toast.error(getInvoiceErrorMessage(error))
       return onClose(invoice)
@@ -121,6 +140,10 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
 
   function afterSave(saved: Invoice, message: string, next: Intent) {
     toast.success(message)
+    // The server rebuilds generated lines on every save: say so when the amount differs from what the manager just saw.
+    const shown = isEdit && invoice ? invoice.summary.grandTotal : estimate.grandTotal
+    if (generated && saved.summary.grandTotal !== shown)
+      toast.warning(`The system recalculated this invoice: total ${formatMoney(shown)} → ${formatMoney(saved.summary.grandTotal)}.`)
     if (next === "issue") setIssueTarget(saved)
     else onClose(saved)
   }
@@ -251,6 +274,26 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                         {errors.dueDate ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.dueDate.message}</p> : null}
                       </div>
 
+                      {selectedType === INVOICE_TYPE.QUOTATION ? (
+                        <div>
+                          <label className={fieldLabelClass} htmlFor="invoice-transit-days">Transit days</label>
+                          <Input
+                            id="invoice-transit-days"
+                            inputMode="numeric"
+                            maxLength={2}
+                            disabled={isSaving}
+                            placeholder={suggestionQuery.data?.pricing?.transitDays ? `Auto: ${suggestionQuery.data.pricing.transitDays}` : "Auto from booking dates"}
+                            aria-invalid={Boolean(errors.transitDays)}
+                            className={controlClass}
+                            onKeyDown={(event) => { if ([".", ",", "e", "E", "+", "-"].includes(event.key)) event.preventDefault() }}
+                            {...register("transitDays")}
+                          />
+                          {errors.transitDays ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.transitDays.message}</p> : (
+                            <p className="mt-1 text-[11px] text-gray-500">{TRANSIT_DAYS_RANGE.min}–{TRANSIT_DAYS_RANGE.max} days. Empty = from booking dates.</p>
+                          )}
+                        </div>
+                      ) : null}
+
                       <div className="min-h-4 text-[11px] leading-4 text-gray-500 sm:col-span-3 sm:-mt-2">
                         {suggestionQuery.isFetching && !isEdit ? <span role="status">Checking the booking...</span> : null}
                         {!suggestionQuery.isFetching || isEdit ? (selectedType ? INVOICE_TYPE_HINTS[selectedType] : "Quotation, Deposit, Final, Supplementary or Credit note.") : null}
@@ -278,13 +321,21 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload }:
                   <BillingSummaryCard lines={summaryLines} summary={estimate} currency={DEFAULT_INVOICE_CURRENCY} />
                 </div>
 
-                <InvoiceLineItemsTable
-                  currency={DEFAULT_INVOICE_CURRENCY}
-                  horses={booking.horses}
-                  depositDeductionItems={depositDeductionItems}
-                  focusRow={focusRow}
-                  disabled={isSaving}
-                />
+                {generated ? (
+                  <GeneratedLinesTable
+                    items={generatedItems}
+                    isLoading={!isEdit && suggestionQuery.isFetching && !suggestionQuery.data}
+                    hint={isEdit ? "Rebuilt by the system every time the draft is saved." : "Built by the system from the booking. Amounts are final once the draft is saved."}
+                  />
+                ) : (
+                  <InvoiceLineItemsTable
+                    currency={DEFAULT_INVOICE_CURRENCY}
+                    horses={booking.horses}
+                    depositDeductionItems={[]}
+                    focusRow={focusRow}
+                    disabled={isSaving}
+                  />
+                )}
 
                 {formError ? <div className="border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{formError}</div> : null}
               </div>

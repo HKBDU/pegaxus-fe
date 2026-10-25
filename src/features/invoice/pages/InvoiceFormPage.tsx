@@ -2,12 +2,24 @@ import { useState } from "react"
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom"
 import { invoiceDetail, invoiceEdit, ROLE_ROUTES } from "@/app/route-config"
 import { InvoiceFormDialog } from "@/features/invoice/components/InvoiceFormDialog"
+import { INVOICE_TYPE } from "@/features/invoice/constants"
 import { getInvoiceErrorMessage } from "@/features/invoice/errors"
+import type { InvoicePrefill, InvoiceType } from "@/features/invoice/types"
 import { useInvoice, useInvoiceBookingContext } from "@/features/invoice/hooks/useInvoiceCompose"
 import { ErrorState, LoadingState } from "@/shared/components/common"
 
 interface InvoiceFormPageProps {
   mode: "create" | "edit"
+}
+
+/** `location.state` is untrusted (any caller, or a stale history entry): keep it only when it has the expected shape. */
+function readPrefill(state: unknown): InvoicePrefill | undefined {
+  const prefill = (state as { prefill?: Partial<InvoicePrefill> } | null)?.prefill
+  if (!prefill || !Object.values(INVOICE_TYPE).includes(prefill.type as InvoiceType) || !Array.isArray(prefill.items)) return undefined
+  const items = prefill.items.filter(
+    (item) => item && typeof item.description === "string" && Number.isFinite(item.quantity) && (item.price === null || Number.isFinite(item.price)),
+  )
+  return { type: prefill.type as InvoiceType, items }
 }
 
 /**
@@ -19,6 +31,8 @@ export default function InvoiceFormPage({ mode }: InvoiceFormPageProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const [reloadCount, setReloadCount] = useState(0)
+  // A claim (credit note) or a financial summary opens this form with `state.prefill`; no state, or a reload, gives an empty form.
+  const prefill = mode === "create" ? readPrefill(location.state) : undefined
 
   const invoiceQuery = useInvoice(mode === "edit" ? invoiceId : undefined)
   const targetBookingId = mode === "edit" ? invoiceQuery.data?.booking.bookingId : bookingId
@@ -58,6 +72,7 @@ export default function InvoiceFormPage({ mode }: InvoiceFormPageProps) {
           mode={mode}
           booking={bookingQuery.data}
           invoice={mode === "edit" ? invoiceQuery.data : undefined}
+          prefill={prefill}
           onClose={close}
           onReload={() => void reload()}
         />

@@ -9,6 +9,7 @@ import { CancelBookingDialog } from "@/features/booking/components/CancelBooking
 import { useBooking } from "@/features/booking/hooks"
 import type { BookingAudience } from "@/features/booking/types"
 import { formatBookingDate, formatSex } from "@/features/booking/utils"
+import { BookingClaimsSection, SubmitClaimAction } from "@/features/claim"
 import { BookingDossierLink } from "@/features/dossier"
 import { CustomerInvoicesTab } from "@/features/invoice"
 import { BookingTransportPlanAction } from "@/features/transport-plan/components/BookingTransportPlanAction"
@@ -93,8 +94,12 @@ function ScheduleBlock({ label, value, className }: { label: string; value: Reac
 export default function BookingDetailsPage({ audience = "customer" }: { audience?: BookingAudience }) {
   const { bookingId = "" } = useParams()
   // Invoice notifications deep-link here as /bookings/:id?invoiceId=...; the Invoices block scrolls into view and marks that row.
-  const invoiceId = useSearchParams()[0].get("invoiceId") ?? undefined
+  const [searchParams] = useSearchParams()
+  const invoiceId = searchParams.get("invoiceId") ?? undefined
+  // Claim notifications and "back" links from a claim arrive as ?claimId=...; the Handover & Claims block scrolls into view.
+  const claimId = searchParams.get("claimId") ?? undefined
   const invoicesSection = useRef<HTMLElement>(null)
+  const claimsSection = useRef<HTMLElement>(null)
   const bookingQuery = useBooking(bookingId)
   const booking = bookingQuery.data
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -105,7 +110,8 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
   const bookingLoaded = Boolean(booking)
   useEffect(() => {
     if (invoiceId && bookingLoaded) invoicesSection.current?.scrollIntoView({ block: "start" })
-  }, [invoiceId, bookingLoaded])
+    else if (claimId && bookingLoaded) claimsSection.current?.scrollIntoView({ block: "start" })
+  }, [invoiceId, claimId, bookingLoaded])
   const listPath = audience === "manager" ? "/admin/transport-requests" : "/bookings"
   const hasOutcome = Boolean(
     booking && (booking.assignedEmployee || booking.transport || booking.rejectionReason || booking.cancellationReason),
@@ -143,6 +149,17 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                   bookingId={booking.bookingId}
                   status={booking.status}
                 />
+              ) : null}
+              {audience === "customer" && booking.transport?.status === "IN_TRANSIT" ? (
+                <Link
+                  to={`/bookings/${encodeURIComponent(String(booking.bookingId))}/transports/${encodeURIComponent(String(booking.transport.transportId))}`}
+                  className={cn(actionButtonClass, outlineButtonClass)}
+                >
+                  Tracking
+                </Link>
+              ) : null}
+              {audience === "customer" && booking.transport ? (
+                <SubmitClaimAction onlyFirst bookingId={String(booking.bookingId)} className={cn(actionButtonClass, outlineButtonClass)} />
               ) : null}
               {audience === "customer" && (booking.status === "APPROVED" || booking.status === "CANCELLED") ? (
                 <BookingDossierLink bookingId={String(booking.bookingId)} className={cn(actionButtonClass, outlineButtonClass)} />
@@ -296,6 +313,15 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                 <CardTitle>Invoices</CardTitle>
                 <div className="mt-2.5">
                   <CustomerInvoicesTab bookingId={String(booking.bookingId)} highlightInvoiceId={invoiceId} />
+                </div>
+              </section>
+            ) : null}
+
+            {audience === "customer" && booking.transport ? (
+              <section ref={claimsSection} id="booking-claims" aria-label="Handover and claims" className={cn(panelClass, "scroll-mt-4 p-4")}>
+                <CardTitle>Handover &amp; Claims</CardTitle>
+                <div className="mt-2.5">
+                  <BookingClaimsSection bookingId={String(booking.bookingId)} highlightClaimId={claimId} />
                 </div>
               </section>
             ) : null}
