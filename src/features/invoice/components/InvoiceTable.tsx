@@ -29,6 +29,9 @@ import { InvoiceTypeBadge } from "@/features/invoice/components/InvoiceTypeBadge
 import { MoneyText } from "@/features/invoice/components/MoneyText";
 import { invoiceDate } from "@/features/invoice/utils";
 
+/** Booking Details shows invoices as pills, like the other badges of that page. */
+const PILL = "h-5 rounded-full px-2 py-0 text-[0.65rem] leading-none";
+
 export function InvoiceTable({
   items,
   meta,
@@ -78,10 +81,10 @@ export function InvoiceTable({
       : undefined;
   return (
     <div className="space-y-2.5" aria-busy={isLoading}>
-      <div className="booking-panel overflow-x-auto rounded-[2px] border bg-white">
+      <div className={embedded ? "overflow-x-auto border border-[#e5e2d9] bg-white" : "booking-panel overflow-x-auto rounded-[2px] border bg-white"}>
         <Table>
-          <TableHeader className="bg-[#e9e6de]">
-            <TableRow>
+          <TableHeader className={embedded ? "bg-[#f2efe8] [&_tr]:border-b-0" : "bg-[#e9e6de]"}>
+            <TableRow className={embedded ? "border-b-0 hover:bg-transparent" : undefined}>
               {headers.map((header) => (
                 <TableHead
                   key={header}
@@ -144,7 +147,7 @@ export function InvoiceTable({
                     </>
                   ) : null}
                   <TableCell className="text-left">
-                    <InvoiceTypeBadge type={item.type} />
+                    <InvoiceTypeBadge type={item.type} className={embedded ? PILL : undefined} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-right tabular-nums">
                     <MoneyText
@@ -153,7 +156,7 @@ export function InvoiceTable({
                     />
                   </TableCell>
                   <TableCell className="text-left">
-                    <InvoiceStatusBadge status={item.status} />
+                    <InvoiceStatusBadge status={item.status} className={embedded ? PILL : undefined} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-left">
                     {invoiceDate(item.dueDate)}

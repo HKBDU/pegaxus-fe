@@ -12,7 +12,7 @@ import { Input } from "@/shared/components/ui/input"
 import { MoneyInput } from "@/shared/components/ui/money-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
-import { controlClass, FieldError, fieldLabelClass, panelClass, primaryButtonClass, SectionTitle, textareaClass } from "@/features/claim/components/ClaimPrimitives"
+import { CardTitle, controlClass, FieldError, fieldLabelClass, outlineButtonClass, panelClass, primaryButtonClass, textareaClass } from "@/features/claim/components/ClaimPrimitives"
 
 interface ClaimSubmitFormProps {
   /** Closed claim window or no signed delivery record: the form stays visible but cannot be sent. */
@@ -47,14 +47,15 @@ export function ClaimSubmitForm({ disabled, submitting, error, cancelHref, onSub
       noValidate
       aria-label="Submit handover claim"
       onSubmit={handleSubmit((values) => onSubmit(toSubmitPayload(values)))}
-      className={cn(panelClass, "p-5 sm:p-6")}
+      className={cn(panelClass, "p-4")}
     >
-      <div className="space-y-5">
-        <div>
-          <SectionTitle>Claim incident details</SectionTitle>
-          <p className="mt-1 text-right font-heading text-[10px] font-bold uppercase tracking-[0.06em] text-[#a85f00]">* Indicates mandatory input</p>
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <CardTitle>Claim incident details</CardTitle>
+          <p className="text-[11px] text-gray-500"><span className="text-red-500">*</span> Required</p>
         </div>
 
+        <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className={fieldLabelClass} htmlFor="claim-type">Claim type <span className="text-red-500">*</span></label>
           <Controller
@@ -74,6 +75,27 @@ export function ClaimSubmitForm({ disabled, submitting, error, cancelHref, onSub
             )}
           />
           <FieldError message={errors.claimType?.message} />
+        </div>
+        <div>
+          <label className={fieldLabelClass} htmlFor="claim-amount">Proposed compensation (VND)</label>
+          <Controller
+            control={control}
+            name="requestedCompensationAmount"
+            render={({ field }) => (
+              <MoneyInput
+                id="claim-amount"
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                placeholder="Leave empty if pending negotiation"
+                className={controlClass}
+                disabled={disabled || submitting}
+                aria-invalid={Boolean(errors.requestedCompensationAmount)}
+              />
+            )}
+          />
+          <FieldError message={errors.requestedCompensationAmount?.message} />
+        </div>
         </div>
 
         <div>
@@ -97,7 +119,7 @@ export function ClaimSubmitForm({ disabled, submitting, error, cancelHref, onSub
           <label className={fieldLabelClass} htmlFor="claim-description">Detailed description <span className="text-red-500">*</span></label>
           <Textarea
             id="claim-description"
-            rows={5}
+            rows={4}
             placeholder="Describe the specific damage, discrepancies, or issues observed compared to the handover agreement..."
             className={textareaClass}
             disabled={disabled || submitting}
@@ -107,40 +129,11 @@ export function ClaimSubmitForm({ disabled, submitting, error, cancelHref, onSub
           <FieldError message={errors.description?.message} />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_140px]">
-          <div>
-            <label className={fieldLabelClass} htmlFor="claim-amount">Proposed compensation amount</label>
-            <Controller
-              control={control}
-              name="requestedCompensationAmount"
-              render={({ field }) => (
-                <MoneyInput
-                  id="claim-amount"
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  placeholder="Enter proposed amount (leave empty if pending negotiation)"
-                  className={controlClass}
-                  disabled={disabled || submitting}
-                  aria-invalid={Boolean(errors.requestedCompensationAmount)}
-                />
-              )}
-            />
-            <FieldError message={errors.requestedCompensationAmount?.message} />
-          </div>
-          <div>
-            <p className={fieldLabelClass}>Currency</p>
-            <div className={cn(controlClass, "flex items-center justify-between bg-[#f1efe9] font-semibold text-gray-800")}>
-              VND <span className="font-heading text-[10px] font-medium uppercase tracking-[0.06em] text-gray-500">Locked</span>
-            </div>
-          </div>
-        </div>
-
         <div>
           <label className={fieldLabelClass} htmlFor="claim-customer-note">Customer note &amp; resolution request</label>
           <Textarea
             id="claim-customer-note"
-            rows={3}
+            rows={2}
             placeholder="Specify your expectations, preferred solution, or requested response timeline..."
             className={textareaClass}
             disabled={disabled || submitting}
@@ -153,7 +146,7 @@ export function ClaimSubmitForm({ disabled, submitting, error, cancelHref, onSub
           <label className={fieldLabelClass} htmlFor="claim-evidence-note">Evidence &amp; documentation note</label>
           <Textarea
             id="claim-evidence-note"
-            rows={3}
+            rows={2}
             placeholder="List attached veterinary inspection reports, on-site incident photos, or external document links..."
             className={textareaClass}
             disabled={disabled || submitting}
@@ -172,7 +165,7 @@ export function ClaimSubmitForm({ disabled, submitting, error, cancelHref, onSub
         ) : null}
 
         <div className="flex items-center justify-end gap-2 pt-1">
-          <Button asChild type="button" variant="ghost" className="h-9 rounded-none px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em] text-gray-900">
+          <Button asChild type="button" variant="outline" className={outlineButtonClass}>
             <Link to={cancelHref}>Cancel</Link>
           </Button>
           <Button type="submit" className={primaryButtonClass} disabled={disabled || submitting}>

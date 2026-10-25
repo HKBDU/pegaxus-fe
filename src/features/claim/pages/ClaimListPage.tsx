@@ -1,8 +1,8 @@
+import { useCallback } from "react"
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { claimDetail, ROLE_ROUTES } from "@/app/route-config"
 import { canAccess } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
-import { ClaimFilters } from "@/features/claim/components/ClaimFilters"
 import { ClaimResolutionDialog } from "@/features/claim/components/ClaimResolutionDialog"
 import { ClaimTable } from "@/features/claim/components/ClaimTable"
 import { getClaimErrorMessage } from "@/features/claim/errors"
@@ -60,16 +60,14 @@ export default function ClaimListPage() {
     ? { currentPage: query.data.pageIndex, itemsPerPage: query.data.pageSize, totalItems: query.data.totalItems, totalPages: query.data.totalPages, hasPreviousPage: query.data.pageIndex > 1, hasNextPage: query.data.pageIndex < query.data.totalPages }
     : { currentPage: params.pageIndex, itemsPerPage: params.pageSize, totalItems: 0, totalPages: 0, hasPreviousPage: false, hasNextPage: false }
 
+  const openClaim = useCallback((id: string) => navigate({ pathname: claimDetail(id), search: location.search }), [navigate, location.search])
+
   if (!allowed) return <ErrorState message="Only Logistics Managers can access claims." />
 
   return (
     <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
       <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
-        <div>
-          <PageHeader title="Claims" backHref={ROLE_ROUTES.managerHome} backLabel="Return to dashboard" showBack={false} />
-          <p className="text-xs text-slate-500 sm:text-sm">Review customer claims, compare them with the delivery record and decide the outcome.</p>
-        </div>
-        <ClaimFilters params={params} search={search} onSearchChange={(value) => change({ search: value })} onChange={change} />
+        <PageHeader title="Claims" backHref={ROLE_ROUTES.managerHome} backLabel="Return to dashboard" showBack={false} />
         {query.isError && !waiting ? (
           <ErrorState message={getClaimErrorMessage(query.error, "Unable to load the claims.")} onRetry={() => void query.refetch()} />
         ) : (
@@ -78,8 +76,11 @@ export default function ClaimListPage() {
             meta={meta}
             isLoading={query.isPending || waiting}
             filtered={FILTER_KEYS.some((key) => Boolean(url.get(key)))}
-            search={location.search}
-            onOpen={(id) => navigate({ pathname: claimDetail(id), search: location.search })}
+            params={params}
+            search={search}
+            onSearchChange={(value) => change({ search: value })}
+            onFilterChange={change}
+            onOpen={openClaim}
             onPageChange={(pageIndex) => {
               if (!query.isFetching && !waiting) change({ pageIndex })
             }}

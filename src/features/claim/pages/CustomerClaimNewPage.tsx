@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 import { customerClaimDetail } from "@/app/route-config"
 import { ClaimCountdown, useRemainingSeconds } from "@/features/claim/components/ClaimCountdown"
-import { Field, panelClass, SectionTitle } from "@/features/claim/components/ClaimPrimitives"
+import { CardTitle, columnHeadClass, panelClass, SummaryCell } from "@/features/claim/components/ClaimPrimitives"
 import { ClaimSubmitForm } from "@/features/claim/components/ClaimSubmitForm"
 import { CLAIM_ERROR_MESSAGES } from "@/features/claim/constants"
 import { getClaimErrorCode, getClaimErrorMessage } from "@/features/claim/errors"
@@ -12,6 +12,7 @@ import { formatInvoiceDateTime } from "@/features/invoice/utils"
 import { cn } from "@/lib/utils"
 import { ErrorState, LoadingState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
 
 /** screen §9: the customer files a claim within 24 hours of the signed delivery record. */
 export default function CustomerClaimNewPage() {
@@ -37,8 +38,8 @@ export default function CustomerClaimNewPage() {
 
   return (
     <div className="min-h-[70dvh] bg-[#f4f2ed] px-5 pt-5 pb-8 sm:px-6 lg:px-10">
-      <div className="booking-page-enter mx-auto w-full max-w-[1152px] space-y-3">
-        <PageHeader title="Submit handover claim" backHref={backHref} backLabel="Return to booking" />
+      <div className="booking-page-enter mx-auto w-full max-w-[1152px] space-y-2.5">
+        <PageHeader title="SUBMIT HANDOVER CLAIM" backHref={backHref} backLabel="BACK TO BOOKING" />
 
         {eligibility.isLoading ? <LoadingState /> : null}
         {eligibility.isError ? (
@@ -47,31 +48,26 @@ export default function CustomerClaimNewPage() {
 
         {data ? (
           <>
-            <section aria-label="Handover manifest" className="overflow-hidden border border-gray-900">
-              <p className="flex items-center justify-between bg-gray-900 px-3 py-1.5 font-heading text-[10px] font-bold uppercase tracking-[0.08em] text-white">
-                <span className="flex items-center gap-2"><span aria-hidden="true" className="size-1.5 bg-[#ef8f00]" />Verified handover manifest data</span>
-                <span>{data.transport?.status === "COMPLETED" ? "Consignment discharged" : "Delivery pending"}</span>
-              </p>
-              <dl className="grid grid-cols-2 gap-px bg-[#e5e2d9] lg:grid-cols-5">
-                <ManifestCell label="Handover code" value={data.handover?.handoverCode} />
-                <ManifestCell label="Transport waybill" value={data.transport?.transportCode} />
-                <ManifestCell label="Master booking ID" value={data.booking.bookingCode} />
-                <ManifestCell label="Signed at" value={data.handover ? formatInvoiceDateTime(data.handover.completedAt) : undefined} />
-                <div className={cn("p-3", blocked ? "bg-red-50" : "bg-amber-50")}>
-                  <dt className="font-heading text-[10px] font-medium uppercase tracking-[0.06em] text-gray-500">Claim deadline</dt>
-                  <dd className="mt-0.5 text-sm font-semibold text-gray-900">{formatInvoiceDateTime(data.claimDeadline)}</dd>
+            <dl aria-label="Handover manifest" className={cn(panelClass, "grid grid-cols-2 gap-x-4 px-4 lg:grid-cols-5 lg:gap-x-0 lg:pr-0")}>
+              <SummaryCell first label="Handover code"><span className="font-semibold text-gray-900">{data.handover?.handoverCode ?? "—"}</span></SummaryCell>
+              <SummaryCell label="Transport">{data.transport?.transportCode ?? "—"}</SummaryCell>
+              <SummaryCell label="Booking">{data.booking.bookingCode}</SummaryCell>
+              <SummaryCell label="Signed at">{data.handover ? formatInvoiceDateTime(data.handover.completedAt) : "—"}</SummaryCell>
+              <SummaryCell label="Claim deadline">
+                <span className="flex flex-col">
+                  <span className="font-semibold text-gray-900">{formatInvoiceDateTime(data.claimDeadline)}</span>
                   <ClaimCountdown seconds={remaining} />
-                </div>
-              </dl>
-            </section>
+                </span>
+              </SummaryCell>
+            </dl>
 
             {blocked ? (
-              <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+              <div className="border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700" role="alert">
                 {CLAIM_ERROR_MESSAGES[blockedReason] ?? "A claim cannot be submitted for this booking."}
               </div>
             ) : null}
 
-            <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="grid items-start gap-2.5 lg:grid-cols-[minmax(0,1fr)_340px]">
               <ClaimSubmitForm
                 disabled={blocked}
                 submitting={submit.isPending}
@@ -92,23 +88,32 @@ export default function CustomerClaimNewPage() {
               />
 
               <aside aria-label="Booking horses" className={cn(panelClass, "p-4")}>
-                <SectionTitle>Equine subjects</SectionTitle>
-                {horses.isLoading ? <p className="mt-3 text-xs text-gray-500">Loading horses...</p> : null}
-                {horses.data?.length ? (
-                  <ul className="mt-3 space-y-3">
-                    {horses.data.map((horse) => (
-                      <li key={horse.horseId} className="border border-[#e5e2d9] bg-[#faf9f6] p-3">
-                        <dl className="space-y-1.5">
-                          <Field label="Horse">{horse.horseName}</Field>
-                          <Field label="Microchip">{horse.microchipNumber}</Field>
-                        </dl>
-                      </li>
-                    ))}
-                  </ul>
-                ) : horses.isSuccess ? (
-                  <p className="mt-3 text-xs text-gray-500">No horses are listed for this booking.</p>
-                ) : null}
-                <p className="mt-4 text-[11px] leading-4 text-gray-500">
+                <CardTitle>Racehorses</CardTitle>
+                <div className="mt-2.5 overflow-x-auto border border-[#e5e2d9]">
+                  <Table>
+                    <TableHeader className="bg-[#f2efe8] [&_tr]:border-b-0">
+                      <TableRow className="border-b-0 hover:bg-transparent">
+                        <TableHead className={columnHeadClass}>Horse</TableHead>
+                        <TableHead className={columnHeadClass}>Microchip</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {horses.isLoading ? (
+                        <TableRow className="h-10 hover:bg-transparent"><TableCell colSpan={2} className="px-2.5 py-0 text-xs text-gray-500">Loading horses...</TableCell></TableRow>
+                      ) : horses.data?.length ? (
+                        horses.data.map((horse, index) => (
+                          <TableRow key={horse.horseId} className={cn("h-11 border-slate-200 hover:bg-amber-50/60", index % 2 === 0 ? "bg-white" : "bg-[#f7f6f3]")}>
+                            <TableCell className="px-2.5 py-1.5 text-xs font-semibold text-gray-900">{horse.horseName}</TableCell>
+                            <TableCell className="px-2.5 py-1.5 font-mono text-xs text-gray-600">{horse.microchipNumber}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow className="h-10 hover:bg-transparent"><TableCell colSpan={2} className="px-2.5 py-0 text-center text-xs text-gray-500">No horses are listed for this booking.</TableCell></TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <p className="mt-3 text-[11px] leading-4 text-gray-500">
                   {data.claimCount > 0 ? `You already filed ${data.claimCount} claim${data.claimCount === 1 ? "" : "s"} for this booking. ` : ""}
                   Several claims can be filed for the same delivery, as long as the 24-hour window is open.
                 </p>
@@ -121,11 +126,3 @@ export default function CustomerClaimNewPage() {
   )
 }
 
-function ManifestCell({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <div className="bg-white p-3">
-      <dt className="font-heading text-[10px] font-medium uppercase tracking-[0.06em] text-gray-500">{label}</dt>
-      <dd className="mt-0.5 truncate text-sm font-semibold text-gray-900">{value || "—"}</dd>
-    </div>
-  )
-}
