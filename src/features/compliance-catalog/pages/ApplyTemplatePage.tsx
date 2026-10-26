@@ -156,12 +156,10 @@ export default function ApplyTemplatePage() {
       toast.error("This booking has no transport. ComplianceDossier cannot be initialized.")
       return
     }
-    const transportId = booking.transportId
     try {
       const guarded = await attempt.run(() =>
         createDossier.mutateAsync({
           bookingId: booking.bookingId,
-          transportId,
           dossierTemplateId:
             mode === "template"
               ? (template?.dossierTemplateId ?? undefined)

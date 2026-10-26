@@ -1,6 +1,6 @@
 import { z } from "zod"
-import { addDays, addMonths, format, parseISO } from "date-fns"
 
+import { DEPARTURE_TOO_SOON_MESSAGE, SAME_COUNTRY_MESSAGE, getDepartureRule } from "@/features/booking/lib/departure-rule"
 import { COUNTRY_MESSAGE, isBookingCountry } from "@/features/booking/lib/place"
 import { BOOKING_STATUSES } from "@/features/booking/types"
 
@@ -10,18 +10,7 @@ const longitudeSchema = (message: string) => z.number({ error: message }).min(-1
 
 const optionalText = (max: number) => z.string().trim().max(max)
 
-const DATE_FORMAT = "yyyy-MM-dd"
-
 export const bookingIdSchema = z.string()
-
-export function getBookingDepartureDateRange(now = new Date()) {
-  const utcToday = parseISO(now.toISOString().slice(0, 10))
-
-  return {
-    minDate: format(addDays(utcToday, 21), DATE_FORMAT),
-    maxDate: format(addMonths(utcToday, 2), DATE_FORMAT),
-  }
-}
 
 export const bookingFiltersSchema = z.object({
   search: z.string().trim().max(100, "Search is limited to 100 characters"),
@@ -65,15 +54,16 @@ export const bookingFormSchema = z
       }),
   })
   .superRefine((values, context) => {
-    if (values.requestedDepartureDate) {
-      const { minDate, maxDate } = getBookingDepartureDateRange()
-      if (values.requestedDepartureDate < minDate || values.requestedDepartureDate > maxDate) {
-        context.addIssue({
-          code: "custom",
-          message: "Departure date must be between 3 weeks and 2 months from today",
-          path: ["requestedDepartureDate"],
-        })
-      }
+    const rule = getDepartureRule(values.originCountry, values.destinationCountry)
+    if (rule.kind === "unsupported") {
+      context.addIssue({ code: "custom", message: SAME_COUNTRY_MESSAGE, path: ["destinationCountry"] })
+    }
+    if (values.requestedDepartureDate && values.requestedDepartureDate < rule.minDate) {
+      context.addIssue({
+        code: "custom",
+        message: DEPARTURE_TOO_SOON_MESSAGE[rule.kind],
+        path: ["requestedDepartureDate"],
+      })
     }
 
     if (
