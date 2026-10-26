@@ -41,7 +41,6 @@ export interface CustomRequirementDraft {
 
 export interface CreateDossierInput {
   bookingId: EntityId
-  transportId?: EntityId
   /** Missing = custom dossier without a template (UC-18 ALT-01). */
   dossierTemplateId?: EntityId
   selectedTemplateItemIds: EntityId[]
@@ -54,7 +53,7 @@ export interface CreateDossierInput {
   customRequirements: CustomRequirementDraft[]
 }
 
-/** POST /bookings/{bookingId}/compliance-dossier (D2). */
+/** POST /bookings/{bookingId}/compliance-dossier (D2): the deployed BE takes the booking id, not the transport id the contract names. */
 export interface CreateDossierResult {
   complianceDossierId: EntityId
   dossierCode: string

@@ -1,15 +1,15 @@
 import { z } from "zod"
 import { invoiceTypes, invoiceStatuses, invoiceHistoryTypes, invoiceItemTypes, invoiceActions, receiptStatuses, paymentMethods, invoiceSorts, DESCRIPTION_MAX_LENGTH, INVOICE_ITEM_TYPE, INVOICE_TYPE, TRANSIT_DAYS_RANGE, isGeneratedInvoiceType } from "@/features/invoice/constants"
 import type { CreateInvoicePayload, Invoice, InvoiceItemPayload, InvoicePrefill, UpdateInvoicePayload } from "@/features/invoice/types"
-import { parseWholeNumber, todayIsoDate } from "@/features/invoice/utils"
+import { DEFAULT_DUE_TIME, dueDateTimeToIso, parseWholeNumber, splitDueDateTime, todayIsoDate } from "@/features/invoice/utils"
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits"
 
 export const invoiceIdSchema = z.string();
 const date = z.iso.date();
 const timestamp = z.iso.datetime({ offset: true });
-// The BE stores the due date as a UTC datetime (e.g. 2026-10-29T23:59:59+00:00). The UI treats it as a calendar date:
-// keep the UTC day so a viewer east of UTC does not see the next day.
-const dueDate = z.union([date, timestamp]).transform((value) => value.slice(0, 10));
+// The BE answers the due date as a UTC datetime (e.g. 2026-10-29T10:30:00Z); an old date-only value is still accepted.
+// It is kept whole so the screens can show the local time.
+const dueDate = z.union([date, timestamp]);
 const text = z.string().nullable();
 // The app is VND-only: an older row stored in another currency is still read, and shown as VND.
 const currency = z.string().transform((): "VND" => "VND");
@@ -229,6 +229,8 @@ function maxFutureDateIso(years = VALIDATION_LIMITS.dateWindowYears): string {
   return d.toISOString().slice(0, 10)
 }
 
+const DUE_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
+
 export const invoiceFormSchema = z.object({
   type: z.enum(INVOICE_TYPE),
   dueDate: z
@@ -236,6 +238,8 @@ export const invoiceFormSchema = z.object({
     .min(1, "Due date is required")
     .refine((value) => value >= todayIsoDate(), "Due date cannot be before today")
     .refine((value) => value <= maxFutureDateIso(), `Due date must be within ${VALIDATION_LIMITS.dateWindowYears} years from today`),
+  /** Local clock time (`HH:mm`) of the due date. */
+  dueTime: z.string().regex(DUE_TIME_PATTERN, "Due time is required"),
   note: z.string().max(VALIDATION_LIMITS.noteMaxLength, `Note must be at most ${VALIDATION_LIMITS.noteMaxLength} characters`),
   /** QUOTATION only. "" = let the server derive it from the booking dates. */
   transitDays: z.string().superRefine((value, ctx) => {
@@ -246,6 +250,11 @@ export const invoiceFormSchema = z.object({
   }),
   /** Only the types the client types the lines of (SUPPLEMENTARY, CREDIT_NOTE); QUOTATION, DEPOSIT and FINAL leave it empty. */
   items: z.array(invoiceItemFormSchema),
+}).superRefine((values, ctx) => {
+  // Today is allowed, but the moment must not be in the past (R29: dueDate >= now).
+  if (values.dueDate !== todayIsoDate() || !DUE_TIME_PATTERN.test(values.dueTime)) return
+  if (new Date(`${values.dueDate}T${values.dueTime}:00`).getTime() < Date.now())
+    ctx.addIssue({ code: "custom", path: ["dueTime"], message: "Due time cannot be in the past" })
 })
 
 export type InvoiceFormValues = z.infer<typeof invoiceFormSchema>
@@ -262,7 +271,8 @@ export function emptyItem(): InvoiceItemFormValues {
 export function invoiceToFormValues(invoice: Invoice): InvoiceFormValues {
   return {
     type: invoice.type,
-    dueDate: invoice.dueDate,
+    dueDate: splitDueDateTime(invoice.dueDate).date,
+    dueTime: splitDueDateTime(invoice.dueDate).time,
     note: invoice.note ?? "",
     transitDays: "",
     items: isGeneratedInvoiceType(invoice.type) ? [] : invoice.items
@@ -291,9 +301,9 @@ function toItemPayload(item: InvoiceItemFormValues): InvoiceItemPayload {
   }
 }
 
-/** The picker gives a calendar day; the BE wants a datetime that is not in the past, so the day is closed at its end (UTC). */
-export function toDueDateTime(day: string) {
-  return `${day}T23:59:59Z`
+/** The pickers give a local day and time; the BE wants the instant (UTC, with its zone) and it must not be in the past. */
+export function toDueDateTime(day: string, time: string = DEFAULT_DUE_TIME) {
+  return dueDateTimeToIso(day, time)
 }
 
 /** The server builds the lines of QUOTATION, DEPOSIT and FINAL: they send `transitDays` (QUOTATION) but never `items`. */
@@ -309,7 +319,7 @@ function lineFields(values: InvoiceFormValues) {
 export function toCreatePayload(values: InvoiceFormValues): CreateInvoicePayload {
   return {
     type: values.type,
-    dueDate: toDueDateTime(values.dueDate),
+    dueDate: toDueDateTime(values.dueDate, values.dueTime),
     ...(values.note.trim() ? { note: values.note.trim() } : {}),
     ...lineFields(values),
   }
@@ -318,7 +328,7 @@ export function toCreatePayload(values: InvoiceFormValues): CreateInvoicePayload
 export function toUpdatePayload(values: InvoiceFormValues, lastUpdatedAt: string): UpdateInvoicePayload {
   return {
     lastUpdatedAt,
-    dueDate: toDueDateTime(values.dueDate),
+    dueDate: toDueDateTime(values.dueDate, values.dueTime),
     ...(values.note.trim() ? { note: values.note.trim() } : {}),
     ...lineFields(values),
   }

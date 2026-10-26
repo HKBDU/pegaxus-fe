@@ -58,6 +58,22 @@ export function todayIsoDate() {
   return format(new Date(), "yyyy-MM-dd")
 }
 
+/** The time a due date gets when the person only picks a day (the old date-only behaviour: end of day). */
+export const DEFAULT_DUE_TIME = "23:59"
+
+/** The BE's due-date instant as the local day and clock time the form edits. A date-only legacy value keeps the end of that day. */
+export function splitDueDateTime(value: string | null | undefined) {
+  const parsed = value ? parseISO(value) : null
+  if (!value || !parsed || !isValid(parsed)) return { date: "", time: DEFAULT_DUE_TIME }
+  if (value.length === 10) return { date: value, time: DEFAULT_DUE_TIME }
+  return { date: format(parsed, "yyyy-MM-dd"), time: format(parsed, "HH:mm") }
+}
+
+/** A local day and time as the UTC instant the BE expects (R29: always sent with a zone). */
+export function dueDateTimeToIso(day: string, time: string) {
+  return new Date(`${day}T${time}:00`).toISOString()
+}
+
 /** Whole numbers only (no sign, no decimals): SePay does not accept fractional amounts. NaN when invalid. */
 export function parseWholeNumber(value: string) {
   const normalized = value.trim()

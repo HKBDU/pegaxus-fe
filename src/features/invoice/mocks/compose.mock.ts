@@ -1,7 +1,7 @@
 import { INVOICE_TAX_RATE_PERCENT } from "@/features/invoice/constants"
 import { InvoiceApiError } from "@/features/invoice/errors"
 import type { CreateInvoicePayload, Invoice, InvoiceBookingContext, InvoiceItem, InvoiceItemPayload, InvoiceSuggestion, InvoiceType, IssuedInvoice, UpdateInvoicePayload } from "@/features/invoice/types"
-import { roundMoney, todayIsoDate } from "@/features/invoice/utils"
+import { roundMoney } from "@/features/invoice/utils"
 
 /**
  * In-memory stand-in for the Flow 6 API (IV1, IV2, IV3, IV6, IV7 and Flow 1 B8). It follows api-contract/flow6.md,
@@ -247,7 +247,7 @@ function precheck(bookingId: string, type: InvoiceType) {
 
 function validate(payload: { dueDate: string; items?: InvoiceItemPayload[] }, booking: MockBooking) {
   const errors: { field: string; message: string }[] = []
-  if (!payload.dueDate || payload.dueDate < todayIsoDate()) errors.push({ field: "dueDate", message: "Due date cannot be in the past" });
+  if (!payload.dueDate || Date.parse(payload.dueDate) < Date.now()) errors.push({ field: "dueDate", message: "Due date cannot be in the past" });
   (payload.items ?? []).forEach((item, index) => {
     if (!(item.quantity > 0) || !(item.price > 0)) {
       errors.push({ field: `items[${index}].quantity`, message: "Quantity and unit price must be greater than 0" })
@@ -321,7 +321,7 @@ export async function mockCreateInvoice(bookingId: string, payload: CreateInvoic
   const { booking, deposits } = precheck(bookingId, payload.type)
   validate(payload, booking)
   const invoice = buildInvoice({
-    booking, type: payload.type, status: "DRAFT", currency: "VND", dueDate: payload.dueDate.slice(0, 10), note: payload.note ?? null,
+    booking, type: payload.type, status: "DRAFT", currency: "VND", dueDate: payload.dueDate, note: payload.note ?? null,
     items: toItems(payload.items ?? [], booking), number: nextNumber(), depositSource: deposits,
   })
   invoices().push(invoice)
@@ -343,7 +343,7 @@ export async function mockUpdateInvoice(invoiceId: string, payload: UpdateInvoic
     ? invoices().filter((invoice) => invoice.booking.bookingId === booking.bookingId && invoice.type === "DEPOSIT" && invoice.status === "PAID")
     : []
   const updated = buildInvoice({
-    booking, type: current.type, status: "DRAFT", currency: "VND", dueDate: payload.dueDate.slice(0, 10), note: payload.note ?? null,
+    booking, type: current.type, status: "DRAFT", currency: "VND", dueDate: payload.dueDate, note: payload.note ?? null,
     items: toItems(payload.items ?? [], booking, current.items), number: current.invoiceNumber, depositSource: deposits, base: current,
   })
   invoices()[index] = updated

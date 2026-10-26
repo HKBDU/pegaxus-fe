@@ -152,12 +152,14 @@ export default function ApplyTemplatePage() {
 
   const confirm = async () => {
     if (!booking || creationUncertain) return
-    const transportId = booking.transportId ?? undefined
+    if (!booking.transportId) {
+      toast.error("This booking has no transport. ComplianceDossier cannot be initialized.")
+      return
+    }
     try {
       const guarded = await attempt.run(() =>
         createDossier.mutateAsync({
           bookingId: booking.bookingId,
-          transportId,
           dossierTemplateId:
             mode === "template"
               ? (template?.dossierTemplateId ?? undefined)
@@ -171,9 +173,9 @@ export default function ApplyTemplatePage() {
               complianceRequirementId: item.complianceRequirementId,
               isMandatory:
                 !isMandatoryRoute &&
-                ["QUARANTINE", "CUSTOMS"].includes(
-                  categoryOf(item.complianceRequirementId) ?? "",
-                )
+                  ["QUARANTINE", "CUSTOMS"].includes(
+                    categoryOf(item.complianceRequirementId) ?? "",
+                  )
                   ? false
                   : item.isMandatory,
               appliesPerHorse: item.appliesPerHorse,

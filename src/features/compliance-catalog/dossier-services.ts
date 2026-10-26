@@ -186,7 +186,6 @@ export const dossierService = {
   async createDossier(input: CreateDossierInput): Promise<CreateDossierResult> {
     const {
       bookingId,
-      transportId,
       dossierTemplateId,
       selectedTemplateItemIds,
       customRequirements,
@@ -240,11 +239,11 @@ export const dossierService = {
     const items = (input.initializationItems?.length
       ? input.initializationItems
       : customRequirements.map((item) => ({
-          complianceRequirementId: item.complianceRequirementId,
-          isMandatory: item.isMandatory,
-          appliesPerHorse: false,
-          instruction: item.instruction ?? null,
-        }))
+        complianceRequirementId: item.complianceRequirementId,
+        isMandatory: item.isMandatory,
+        appliesPerHorse: false,
+        instruction: item.instruction ?? null,
+      }))
     ).map((item) => ({
       complianceRequirementId: String(item.complianceRequirementId),
       isMandatory: Boolean(item.isMandatory),
@@ -261,7 +260,7 @@ export const dossierService = {
     let payload: unknown;
     try {
       payload = await api.post<unknown>(
-        `bookings/${encodeURIComponent(bookingId)}/compliance-dossier`,
+        `bookings/${bookingId}/compliance-dossier`,
         body,
       );
     } catch (error) {
