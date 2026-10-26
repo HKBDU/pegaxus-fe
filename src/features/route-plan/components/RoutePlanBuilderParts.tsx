@@ -174,6 +174,7 @@ export function SegmentCard({
   onVehicleChange,
   availableVehicles = [],
   routePlanId,
+  lastUpdatedAt,
 }: {
   segment: DraftSegment;
   index: number;
@@ -190,6 +191,7 @@ export function SegmentCard({
   onVehicleChange?: (vehicleIds: string[]) => void;
   availableVehicles?: Vehicle[];
   routePlanId?: string;
+  lastUpdatedAt?: string;
 }) {
   const [pendingVehicleId, setPendingVehicleId] = useState<string | null>(null);
   const principal = useAuthStore((state) => state.principal);
@@ -368,6 +370,7 @@ export function SegmentCard({
                       isOutsourced={segment.arrangement === "OUTSOURCED"}
                       currentProvider={segment.provider}
                       currentNote={segment.note}
+                      lastUpdatedAt={lastUpdatedAt ?? ""}
                       onChanged={(sel) => {
                         onOutsource(sel);
                         if (sel) onVehicleChange?.([]);
