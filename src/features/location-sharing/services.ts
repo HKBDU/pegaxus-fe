@@ -102,6 +102,15 @@ export const locationSharingService = {
     request: DriverLocationRequest,
     signal: AbortSignal,
   ) {
+    if (transportId === "demo") {
+      signal.throwIfAborted();
+      return {
+        serverTime: new Date().toISOString(),
+        accepted: true,
+        reason: null,
+        arrival: null,
+      };
+    }
     signal.throwIfAborted();
     const body = driverLocationRequestSchema.parse(request);
     const recordedAt = Date.parse(body.recordedAt);
@@ -133,6 +142,13 @@ export const locationSharingService = {
     return driverLocationAcceptedSchema.parse(readValue(response));
   },
   async permissionDenied(transportId: string, signal: AbortSignal) {
+    if (transportId === "demo") {
+      signal.throwIfAborted();
+      return {
+        serverTime: new Date().toISOString(),
+        notified: true,
+      };
+    }
     signal.throwIfAborted();
     const response = await apiClient.post<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/locations/permission-denied`,

@@ -45,6 +45,83 @@ function buildOverview(
     noData: noData ? item.horseCount : 0,
   };
   const serverTime = new Date().toISOString();
+  const FIXTURE_COORDINATES: Record<
+    string,
+    { latitude: number; longitude: number; city: string; country: string }
+  > = {
+    "Chantilly Stables": {
+      latitude: 49.1944,
+      longitude: 2.4858,
+      city: "Chantilly",
+      country: "France",
+    },
+    "Lille Rest Stop": {
+      latitude: 50.6292,
+      longitude: 3.0573,
+      city: "Lille",
+      country: "France",
+    },
+    "Calais BCP": {
+      latitude: 50.9513,
+      longitude: 1.8587,
+      city: "Calais",
+      country: "France",
+    },
+    "Dover Port": {
+      latitude: 51.1279,
+      longitude: 1.3134,
+      city: "Dover",
+      country: "United Kingdom",
+    },
+    "Newmarket Stables": {
+      latitude: 52.2435,
+      longitude: 0.4057,
+      city: "Newmarket",
+      country: "United Kingdom",
+    },
+    "Paris Airport": {
+      latitude: 49.0097,
+      longitude: 2.5479,
+      city: "Paris",
+      country: "France",
+    },
+    "London Airport": {
+      latitude: 51.47,
+      longitude: -0.4543,
+      city: "London",
+      country: "United Kingdom",
+    },
+    "Hanoi Equine Quarantine Facility": {
+      latitude: 21.0285,
+      longitude: 105.8544,
+      city: "Hanoi",
+      country: "Vietnam",
+    },
+    "Danang Transit Terminal": {
+      latitude: 16.0544,
+      longitude: 108.2022,
+      city: "Danang",
+      country: "Vietnam",
+    },
+  };
+
+  const fromInfo = segment
+    ? FIXTURE_COORDINATES[segment.fromLocationName] ?? {
+        latitude: 49.1944,
+        longitude: 2.4858,
+        city: "Chantilly",
+        country: "France",
+      }
+    : null;
+  const toInfo = segment
+    ? FIXTURE_COORDINATES[segment.toLocationName] ?? {
+        latitude: 50.6292,
+        longitude: 3.0573,
+        city: "Lille",
+        country: "France",
+      }
+    : null;
+
   return {
     serverTime,
     transport: {
@@ -89,20 +166,20 @@ function buildOverview(
           fromLocation: {
             locationId: id("00000065"),
             locationName: segment.fromLocationName,
-            locationType: null,
-            city: null,
-            country: "France",
-            latitude: null,
-            longitude: null,
+            locationType: "STABLE",
+            city: fromInfo?.city ?? "Chantilly",
+            country: fromInfo?.country ?? "France",
+            latitude: fromInfo?.latitude ?? 49.1944,
+            longitude: fromInfo?.longitude ?? 2.4858,
           },
           toLocation: {
             locationId: id("00000066"),
             locationName: segment.toLocationName,
-            locationType: null,
-            city: null,
-            country: "United Kingdom",
-            latitude: null,
-            longitude: null,
+            locationType: "REST_STOP",
+            city: toInfo?.city ?? "Lille",
+            country: toInfo?.country ?? "France",
+            latitude: toInfo?.latitude ?? 50.6292,
+            longitude: toInfo?.longitude ?? 3.0573,
           },
           distanceKm: outsourced ? null : 110.5,
           status: segment.status,
@@ -229,9 +306,10 @@ export async function getMockTransportOverview(
       "Development preview: network unavailable",
       "ERR_NETWORK",
     );
-  const item = ongoingTransportFixtures.find(
-    (transport) => transport.transportId === transportId,
-  );
+  const item =
+    ongoingTransportFixtures.find(
+      (transport) => transport.transportId === transportId,
+    ) ?? (transportId === "demo" ? ongoingTransportFixtures[0] : null);
   const failure = (code: number, errorCode: string, message: string) => ({
     isSuccess: false,
     code,

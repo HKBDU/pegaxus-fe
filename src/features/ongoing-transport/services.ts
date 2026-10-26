@@ -42,6 +42,10 @@ export const buildOngoingTransportQuery = (params: OngoingTransportParams) =>
 
 export const ongoingTransportService = {
   async tracking(transportId: string, signal?: AbortSignal) {
+    if (transportId === "demo" || transportId === "TR-2026-DEMO" || transportId === "TR-DEMO-0001") {
+      const mock = await (await import("../live-tracking/mock/service")).demoSnapshot(transportId);
+      return trackingSnapshotSchema.parse(mock);
+    }
     signal?.throwIfAborted();
     const response = await apiClient.get<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/tracking`,
@@ -59,6 +63,15 @@ export const ongoingTransportService = {
     _scenario: SegmentsScenario = "data",
     signal?: AbortSignal,
   ) {
+    if (transportId === "demo" || transportId === "TR-2026-DEMO" || transportId === "TR-DEMO-0001") {
+      const mock = await (await import("./mock/segments")).getMockTransportSegments(
+        "00000061-0000-4000-8000-000000000001",
+        _audience,
+        _scenario,
+        signal,
+      );
+      return transportSegmentsSchema.parse(mock.value);
+    }
     signal?.throwIfAborted();
     const response = await apiClient.get<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/segments`,
@@ -80,6 +93,15 @@ export const ongoingTransportService = {
     _scenario: OverviewScenario = "data",
     signal?: AbortSignal,
   ) {
+    if (transportId === "demo" || transportId === "TR-2026-DEMO" || transportId === "TR-DEMO-0001") {
+      const mock = await (await import("./mock/overview")).getMockTransportOverview(
+        "00000061-0000-4000-8000-000000000001",
+        audience,
+        _scenario,
+        signal,
+      );
+      return transportOverviewSchema.parse(mock.value);
+    }
     signal?.throwIfAborted();
     const response = await apiClient.get<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/overview`,

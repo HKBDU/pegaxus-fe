@@ -3,9 +3,7 @@ import { distanceMeters } from "../lib/geo"
 
 /**
  * DEV-ONLY DEMO of a whole trip (READY -> IN_TRANSIT -> COMPLETED) so the Tab GPS can be looked at while no real
- * transport is in transit. Not backend data. Opened with `?demo=1` on the GPS tab; never reachable in a production
- * build. Delete this folder and the four `isDemoMode()` branches (services.ts, streams.ts, GpsTabPage.tsx, constants.ts)
- * to remove it.
+ * transport is in transit. Not backend data. Opened with `?demo=1` or `transportId=demo` on the GPS tab.
  */
 export type DemoPhase = "READY" | "IN_TRANSIT" | "COMPLETED"
 
@@ -28,16 +26,18 @@ export interface DemoState {
   startedAt: number | null
   /** What the BE would hold in memory: the newest sample it received. */
   lastSample: DemoSample | null
+  speedKmh: number
+  isPaused: boolean
+  loop: boolean
+  signalLossSeconds: number
 }
 
 export const DEMO_TRANSPORT_CODE = "TR-DEMO-0001"
 export const DEMO_BOOKING_CODE = "REQ-DEMO-0001"
 /** Planned average speed, used for planned times and the planned ETA. */
 export const PLANNED_KMH = 70
-/** The demo vehicle covers this much per tick so a whole trip takes about 3.5 minutes (long enough to cut the signal for over 2 min). */
+/** The demo vehicle covers this much per tick so a whole trip runs smoothly. */
 export const TICK_MS = 1_500
-export const TICK_DISTANCE_M = 3_500
-const REPORTED_SPEED_KMH = 82
 
 interface Stop {
   id: string
@@ -50,10 +50,10 @@ interface Stop {
 }
 
 export const DEMO_STOPS: Stop[] = [
-  { id: "demo-stop-1", name: "Haras de Paris", type: "STABLE", city: "Paris", country: "FR", latitude: 48.8566, longitude: 2.3522 },
-  { id: "demo-stop-2", name: "Lille Rest Area", type: "REST_STOP", city: "Lille", country: "FR", latitude: 50.6292, longitude: 3.0573 },
-  { id: "demo-stop-3", name: "Brussels Border Gate", type: "BORDER_GATE", city: "Brussels", country: "BE", latitude: 50.8503, longitude: 4.3517 },
-  { id: "demo-stop-4", name: "The Hague Stables", type: "STABLE", city: "The Hague", country: "NL", latitude: 52.0705, longitude: 4.3007 },
+  { id: "demo-stop-1", name: "Hanoi Equine Quarantine Facility", type: "STABLE", city: "Hanoi", country: "VN", latitude: 21.0285, longitude: 105.8544 },
+  { id: "demo-stop-2", name: "Vinh Transit Rest Stop", type: "REST_STOP", city: "Vinh", country: "VN", latitude: 18.6796, longitude: 105.6813 },
+  { id: "demo-stop-3", name: "Hue Equine Inspection Gate", type: "BORDER_GATE", city: "Hue", country: "VN", latitude: 16.4637, longitude: 107.5909 },
+  { id: "demo-stop-4", name: "Danang Transit Terminal", type: "STABLE", city: "Danang", country: "VN", latitude: 16.0544, longitude: 108.2022 },
 ]
 
 export const DEMO_LEGS = DEMO_STOPS.slice(0, -1).map((from, index) => ({
@@ -63,7 +63,18 @@ export const DEMO_LEGS = DEMO_STOPS.slice(0, -1).map((from, index) => ({
   to: DEMO_STOPS[index + 1],
 }))
 
-let state: DemoState = { phase: "READY", silent: false, distanceM: 0, startedAt: null, lastSample: null }
+let state: DemoState = {
+  phase: "READY",
+  silent: false,
+  distanceM: 0,
+  startedAt: null,
+  lastSample: null,
+  speedKmh: 60,
+  isPaused: false,
+  loop: true,
+  signalLossSeconds: 0,
+}
+
 const listeners = new Set<() => void>()
 
 export const getDemoState = () => state
@@ -82,7 +93,7 @@ interface PathPoint {
   /** Meters from the start. */
   at: number
 }
-interface DemoPath {
+export interface DemoPath {
   points: PathPoint[]
   /** Distance at the end of each leg. */
   legEnds: number[]
@@ -103,7 +114,7 @@ export function loadDemoPath(): Promise<DemoPath> {
         const coordinates = route.geometry.type === "LineString" ? route.geometry.coordinates : route.geometry.coordinates.flat()
         if (coordinates.length > 1) line = coordinates.map(([longitude, latitude]) => ({ latitude, longitude }))
       } catch {
-        // Straight line: good enough for a demo.
+        // Straight line: fallback
       }
       for (const point of line) {
         const previous = points.at(-1)
@@ -150,10 +161,10 @@ export function positionAt(path: DemoPath, distanceM: number) {
   }
 }
 
-function sampleAt(path: DemoPath, distanceM: number): DemoSample {
+export function sampleAt(path: DemoPath, distanceM: number, speedOverride?: number): DemoSample {
   return {
     ...positionAt(path, distanceM),
-    speedKmh: REPORTED_SPEED_KMH,
+    speedKmh: speedOverride ?? state.speedKmh,
     accuracyMeters: 8,
     recordedAt: new Date().toISOString(),
     routePlanRouteId: DEMO_LEGS[legIndexAt(path, distanceM)].id,
@@ -162,34 +173,115 @@ function sampleAt(path: DemoPath, distanceM: number): DemoSample {
 
 export const demoActions = {
   start() {
-    if (state.phase !== "READY") return
-    setState({ phase: "IN_TRANSIT", silent: false, distanceM: 0, startedAt: Date.now(), lastSample: null })
+    if (state.phase !== "READY") {
+      setState({ isPaused: false })
+      return
+    }
+    setState({
+      phase: "IN_TRANSIT",
+      silent: false,
+      distanceM: 0,
+      startedAt: Date.now(),
+      lastSample: null,
+      isPaused: false,
+      signalLossSeconds: 0,
+    })
+  },
+  pause() {
+    setState({ isPaused: true })
+  },
+  resume() {
+    setState({ isPaused: false })
+  },
+  togglePause() {
+    setState({ isPaused: !state.isPaused })
+  },
+  setSpeed(speedKmh: number) {
+    setState({ speedKmh })
+  },
+  setLoop(loop: boolean) {
+    setState({ loop })
   },
   setSilent(silent: boolean) {
-    if (state.phase === "IN_TRANSIT") setState({ silent })
+    setState({ silent, signalLossSeconds: silent ? 0 : 0 })
+  },
+  async seekRatio(ratio: number) {
+    const path = await loadDemoPath()
+    const total = demoTotalMeters(path)
+    const distanceM = Math.min(Math.max(0, ratio * total), total)
+    const sample = sampleAt(path, distanceM)
+    setState({ distanceM, lastSample: sample })
+  },
+  async jumpNearEnd(metersBeforeEnd = 350) {
+    const path = await loadDemoPath()
+    const total = demoTotalMeters(path)
+    const distanceM = Math.max(0, total - metersBeforeEnd)
+    const sample = sampleAt(path, distanceM)
+    setState({
+      phase: "IN_TRANSIT",
+      distanceM,
+      lastSample: sample,
+      isPaused: false,
+    })
+  },
+  reset() {
+    setState({
+      phase: "READY",
+      silent: false,
+      distanceM: 0,
+      startedAt: null,
+      lastSample: null,
+      isPaused: false,
+      signalLossSeconds: 0,
+    })
   },
   async finish() {
     if (state.phase === "COMPLETED") return
     const path = await loadDemoPath()
     const end = demoTotalMeters(path)
-    setState({ phase: "COMPLETED", silent: false, distanceM: end, startedAt: state.startedAt ?? Date.now(), lastSample: sampleAt(path, end) })
+    setState({
+      phase: "COMPLETED",
+      silent: false,
+      distanceM: end,
+      startedAt: state.startedAt ?? Date.now(),
+      lastSample: sampleAt(path, end),
+      isPaused: false,
+    })
   },
 }
 
 /**
- * One tick of the simulated vehicle: drives on, and returns the sample it sends (null while it is silent, not moving,
+ * One tick of the simulated vehicle: drives on, and returns the sample it sends (null while it is silent, paused,
  * or when this tick ends the trip).
  */
 export async function advanceDemo(): Promise<DemoSample | null> {
-  if (state.phase !== "IN_TRANSIT") return null
-  const path = await loadDemoPath()
-  const distanceM = Math.min(state.distanceM + TICK_DISTANCE_M, demoTotalMeters(path))
-  const sample = sampleAt(path, distanceM)
-  if (distanceM >= demoTotalMeters(path)) {
-    // Arriving ends the trip: the final position is reported even if the signal had been cut.
-    setState({ phase: "COMPLETED", silent: false, distanceM, lastSample: sample })
-    return sample
+  if (state.phase !== "IN_TRANSIT" || state.isPaused) return null
+
+  // If silent, increment signal loss timer without emitting location
+  if (state.silent) {
+    setState({ signalLossSeconds: state.signalLossSeconds + Math.round(TICK_MS / 1000) })
+    return null
   }
-  setState({ distanceM, lastSample: state.silent ? state.lastSample : sample })
-  return state.silent ? null : sample
+
+  const path = await loadDemoPath()
+  const total = demoTotalMeters(path)
+  
+  // Calculate distance covered per tick dynamically based on speed
+  const distancePerTick = Math.max(200, Math.round((state.speedKmh / 60) * 2000))
+  let distanceM = state.distanceM + distancePerTick
+
+  if (distanceM >= total) {
+    if (state.loop) {
+      distanceM = 0
+    } else {
+      distanceM = total
+      const sample = sampleAt(path, distanceM)
+      setState({ phase: "COMPLETED", silent: false, distanceM, lastSample: sample })
+      return sample
+    }
+  }
+
+  const sample = sampleAt(path, distanceM)
+  setState({ distanceM, lastSample: sample })
+  return sample
 }

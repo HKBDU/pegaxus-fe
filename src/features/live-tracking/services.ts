@@ -66,11 +66,11 @@ const transportPath = (transportId: string) => `/transports/${encodeURIComponent
 export const trackingService = {
   /** GP1: planned route, next stop, planned ETA and the newest vehicle sample the BE holds in memory. */
   getSnapshot: (transportId: string, signal?: AbortSignal): Promise<TrackingSnapshot> =>
-    import.meta.env.DEV && isDemoMode() ? import("./mock/service").then((demo) => demo.demoSnapshot(transportId)) : read(`${transportPath(transportId)}/tracking`, trackingSnapshotSchema, signal),
+    import.meta.env.DEV && isDemoMode(transportId) ? import("./mock/service").then((demo) => demo.demoSnapshot(transportId)) : read(`${transportPath(transportId)}/tracking`, trackingSnapshotSchema, signal),
   /** OT4: every leg of the effective journey with distance, times, crew and provider (read only, shared contract). */
   getSegments: (transportId: string, signal?: AbortSignal): Promise<SegmentsResponse> =>
-    import.meta.env.DEV && isDemoMode() ? import("./mock/service").then((demo) => demo.demoSegments(transportId)) : read(`${transportPath(transportId)}/segments`, segmentsResponseSchema, signal),
+    import.meta.env.DEV && isDemoMode(transportId) ? import("./mock/service").then((demo) => demo.demoSegments(transportId)) : read(`${transportPath(transportId)}/segments`, segmentsResponseSchema, signal),
   /** OT3: transport code and status, horse welfare summary and active incidents. */
   getOverview: (transportId: string, signal?: AbortSignal): Promise<TransportOverview> =>
-    import.meta.env.DEV && isDemoMode() ? import("./mock/service").then((demo) => demo.demoOverview(transportId)) : read(`${transportPath(transportId)}/overview`, overviewSchema, signal),
+    import.meta.env.DEV && isDemoMode(transportId) ? import("./mock/service").then((demo) => demo.demoOverview(transportId)) : read(`${transportPath(transportId)}/overview`, overviewSchema, signal),
 }

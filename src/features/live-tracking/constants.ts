@@ -26,8 +26,14 @@ export const SNAPSHOT_REFRESH_MIN_MS = 10_000
 /** GP1 only answers for these Transport statuses (API contract 7.1). */
 export const TRACKING_TRANSPORT_STATUSES = ["READY", "IN_TRANSIT", "COMPLETED"] as const
 
-/** Dev only: `?demo=1` on the GPS tab shows a simulated trip instead of calling the BE (see mock/demo.ts). Always false in a build. */
-export const isDemoMode = () => import.meta.env.DEV && new URLSearchParams(window.location.search).get("demo") === "1"
+/** Dev only: `?demo=1` or transportId "demo" shows a simulated trip instead of calling the BE (see mock/demo.ts). Always false in a build. */
+export const isDemoMode = (transportId?: string) =>
+  import.meta.env.DEV &&
+  (new URLSearchParams(window.location.search).get("demo") === "1" ||
+    transportId === "demo" ||
+    transportId === "TR-2026-DEMO" ||
+    transportId === "TR-DEMO-0001" ||
+    Boolean(transportId && /demo/i.test(transportId)))
 
 export type TrackingAudience = "admin" | "customer"
 
