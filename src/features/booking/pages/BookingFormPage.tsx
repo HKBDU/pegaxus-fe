@@ -13,7 +13,9 @@ import { AddHorseDialog } from "@/features/booking/components/AddHorseDialog"
 import { bookingKeys } from "@/features/booking/hooks/useBookings"
 import type { Horse } from "@/features/horse/types"
 import { useAvailableHorses, useBookingEditLock, useBookingRequestGuard, useCreateBooking, useUpdateBooking } from "@/features/booking/hooks"
-import { bookingFormSchema, getBookingDepartureDateRange, type BookingFormSchemaValues } from "@/features/booking/schemas"
+import { DepartureDateGuide } from "@/features/booking/components/DepartureDateGuide"
+import { getDepartureRule } from "@/features/booking/lib/departure-rule"
+import { bookingFormSchema, type BookingFormSchemaValues } from "@/features/booking/schemas"
 import type { AvailableHorse, Booking, BookingFormValues } from "@/features/booking/types"
 import { formatSex, getBookingErrorMessage } from "@/features/booking/utils"
 import { cn } from "@/lib/utils"
@@ -151,6 +153,7 @@ function BookingSteps({ step, onStepChange }: { step: 1 | 2; onStepChange: (step
   )
 }
 
+// The message row is reserved (content-start + min height) so an error under one field never stretches or shifts its neighbour.
 function BookingField({
   control,
   name,
@@ -173,7 +176,7 @@ function BookingField({
       control={control}
       name={name}
       render={({ field }) => (
-        <FormItem className="gap-1">
+        <FormItem className="content-start gap-1">
           <FormLabel className={fieldLabelClass}>{label}</FormLabel>
           <FormControl>
             {type === "date" ? (
@@ -195,7 +198,9 @@ function BookingField({
               />
             )}
           </FormControl>
-          <FormMessage className="text-xs" />
+          <div className="min-h-8">
+            <FormMessage className="text-xs leading-4" />
+          </div>
         </FormItem>
       )}
     />
@@ -291,7 +296,6 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
   const [horseSorting, setHorseSorting] = useState<SortingState>([])
   const [horseTableHeight, setHorseTableHeight] = useState(0)
   const sideColumnRef = useRef<HTMLDivElement>(null)
-  const departureDateRange = getBookingDepartureDateRange()
   const debouncedHorseSearch = useDebounce(horseSearch, 300)
   const [activeHorseId, setActiveHorseId] = useState<EntityId | null>(booking?.horses[0]?.horseId ?? null)
   const [selectedHorseDetails, setSelectedHorseDetails] = useState<AvailableHorse[]>(booking?.horses ?? [])
@@ -305,6 +309,13 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
     defaultValues: toDefaultValues(booking),
   })
 
+  const [originCountry, destinationCountry] = form.watch(["originCountry", "destinationCountry"])
+  const departureRule = getDepartureRule(originCountry, destinationCountry)
+  const hasDepartureDate = Boolean(form.watch("requestedDepartureDate"))
+  // The earliest date depends on the route: re-check a date that was picked before the route changed.
+  useEffect(() => {
+    if (hasDepartureDate) void form.trigger(["requestedDepartureDate", "destinationCountry"])
+  }, [form, hasDepartureDate, originCountry, destinationCountry])
   const originPoint = readPoint(form, "origin")
   const destinationPoint = readPoint(form, "destination")
   const pointErrors = form.formState.errors
@@ -611,14 +622,14 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
               </div>
 
               <FormSection stacked title="Schedule" className="lg:col-start-1 lg:row-start-2">
+                <DepartureDateGuide originCountry={originCountry} destinationCountry={destinationCountry} />
                 <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                   <BookingField
                     control={form.control}
                     name="requestedDepartureDate"
                     label="Expected departure date *"
                     type="date"
-                    min={departureDateRange.minDate}
-                    max={departureDateRange.maxDate}
+                    min={departureRule.minDate}
                   />
                   <BookingField control={form.control} name="requestedArrivalDate" label="Expected arrival date" type="date" min={form.watch("requestedDepartureDate")} />
                 </div>

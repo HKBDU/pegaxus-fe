@@ -185,7 +185,6 @@ export const dossierService = {
   async createDossier(input: CreateDossierInput): Promise<CreateDossierResult> {
     const {
       bookingId,
-      transportId,
       dossierTemplateId,
       selectedTemplateItemIds,
       customRequirements,
@@ -244,7 +243,7 @@ export const dossierService = {
     let payload: unknown;
     try {
       payload = await api.post<unknown>(
-        `transports/${transportId}/compliance-dossier`,
+        `bookings/${bookingId}/compliance-dossier`,
         body,
       );
     } catch (error) {
