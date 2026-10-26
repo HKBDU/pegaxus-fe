@@ -2,7 +2,7 @@
 """
 Pegaxus Driver GPS Simulator Script (Standalone Python)
 ======================================================
-Mô phỏng tài xế gửi tọa độ GPS định kỳ 15s/lần theo API GP2 của Pegaxus Backend.
+Mô phỏng tài xế gửi tọa độ GPS định kỳ 2.5s/lần theo API GP2 của Pegaxus Backend.
 
 Yêu cầu:
   pip install requests
@@ -80,7 +80,7 @@ def main():
     parser.add_argument("--token", required=True, help="Driver JWT Token")
     parser.add_argument("--route", default=os.path.join(os.path.dirname(__file__), "sample_route.geojson"), help="Path to GeoJSON route")
     parser.add_argument("--speed", type=float, default=60.0, help="Vehicle speed in km/h (default: 60)")
-    parser.add_argument("--interval", type=int, default=15, help="Send interval in seconds (default: 15)")
+    parser.add_argument("--interval", type=float, default=2.5, help="Send interval in seconds (default: 2.5)")
     parser.add_argument("--loop", action="store_true", help="Loop the route continuously")
     parser.add_argument("--signal-loss", nargs=2, type=int, metavar=("START_SEC", "DURATION_SEC"), help="Simulate signal loss (e.g. --signal-loss 60 120)")
     args = parser.parse_args()

@@ -73,7 +73,7 @@ sequenceDiagram
 | **Protocol** | **HTTP/1.1 or HTTP/2 POST** (REST GP2 Contract) | **WebSocket via SignalR Core Hub** |
 | **Endpoint / Path** | `/api/v1/transports/{transportId}/locations` | `/hubs/transport-tracking` |
 | **Authentication** | `Authorization: Bearer <Driver_JWT>` | `Authorization: Bearer <Admin_JWT>` |
-| **Transmission Frequency**| Once every **15 seconds** (`SEND_INTERVAL_MS = 15_000`) | Immediate push upon server receipt of driver sample |
+| **Transmission Frequency**| Once every **2.5 seconds** (`SEND_INTERVAL_MS = 2_500`) | Immediate push upon server receipt of driver sample |
 | **Payload Structure** | ```json { "latitude": 21.0285, "longitude": 105.8544, "speedKmh": 60.0, "headingDegrees": 135.4, "accuracyMeters": 8.0, "recordedAt": "2026-10-26T06:00:00.000Z", "routePlanRouteId": "seg-01" } ``` | ```json { "transportId": "TR-DEMO-01", "latitude": 21.0285, "longitude": 105.8544, "speedKmh": 60.0, "headingDegrees": 135.4, "accuracyMeters": 8.0, "recordedAt": "2026-10-26T06:00:00.000Z", "routePlanRouteId": "seg-01" } ``` |
 
 ---
@@ -134,7 +134,7 @@ The simulation layer strictly obeys all Pegaxus backend contracts and anti-tampe
    - Backend requires `recordedAt` to be within **15 seconds** of the server clock (`SAMPLE_MAX_AGE_MS = 15_000`).
    - The simulator dynamically stamps each position with `new Date().toISOString()`, passing Axios `freshnessGuard` and backend validation without rejection.
 3. **Transmission Cadence & Anti-Spam**:
-   - [LocationSender](../sender.ts) enforces an exact 15-second timer (`SEND_INTERVAL_MS = 15_000`).
+   - [LocationSender](../sender.ts) enforces an exact 2.5-second timer (`SEND_INTERVAL_MS = 2_500`).
    - If a request is currently in-flight, subsequent transmissions are queued to prevent concurrent overlaps.
 4. **Driver Segment Lease & Geofencing**:
    - Requests are authenticated with the active driver's Bearer JWT.
