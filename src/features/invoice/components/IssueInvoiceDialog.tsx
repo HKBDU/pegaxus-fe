@@ -9,7 +9,7 @@ import { ISSUE_CONFIRMATION_TEXT } from "@/features/invoice/constants"
 import { getInvoiceErrorCode, getInvoiceErrorMessage } from "@/features/invoice/errors"
 import { invoiceKeys, useIssueInvoice } from "@/features/invoice/hooks/useInvoiceCompose"
 import type { Invoice, InvoiceType, IssuedInvoice } from "@/features/invoice/types"
-import { formatMoney } from "@/features/invoice/utils"
+import { formatMoney, invoiceDate } from "@/features/invoice/utils"
 import { Button } from "@/shared/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/components/ui/dialog"
 
@@ -127,7 +127,7 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
             </div>
             <div className="space-y-4">
               <Detail icon={<Calendar />} label="Invoice Date" value={day(invoice.invoiceDate)} />
-              <Detail icon={<Calendar />} label={invoice.type === "QUOTATION" ? "Valid Until" : "Due Date"} value={day(invoice.dueDate)} />
+              <Detail icon={<Calendar />} label={invoice.type === "QUOTATION" ? "Valid Until" : "Due Date"} value={invoiceDate(invoice.dueDate)} />
               <Detail
                 icon={<Coins />}
                 label={invoice.type === "QUOTATION" ? "Estimated Total" : "Total Amount"}

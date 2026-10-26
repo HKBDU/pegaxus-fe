@@ -13,7 +13,7 @@ import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/feat
 import { useBookingInvoices } from "@/features/invoice/hooks/useInvoices"
 import { invoiceFormSchema, invoiceToFormValues, prefillToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoicePrefill, InvoiceType } from "@/features/invoice/types"
-import { estimateSummary, formatMoney, parseTransitDays, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
+import { DEFAULT_DUE_TIME, estimateSummary, formatMoney, parseTransitDays, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
 import { useDebounce } from "@/shared/hooks"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
 import { Button } from "@/shared/components/ui/button"
@@ -22,8 +22,9 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/
 import { Input } from "@/shared/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
+import { TimePicker } from "@/shared/components/ui/time-picker"
 
-const DEFAULT_VALUES: InvoiceFormValues = { type: "QUOTATION", dueDate: "", note: "", transitDays: "", items: [] }
+const DEFAULT_VALUES: InvoiceFormValues = { type: "QUOTATION", dueDate: "", dueTime: DEFAULT_DUE_TIME, note: "", transitDays: "", items: [] }
 const fieldLabelClass = "mb-1 block font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-500"
 const controlClass = "h-9 w-full rounded-none border-[#d8d5cb] bg-white px-3 text-sm shadow-none"
 const panelClass = "border border-[#e5e2d9] bg-white"
@@ -235,7 +236,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                       <FileText className="size-4 text-[#ef8f00]" aria-hidden="true" />
                       Invoice details
                     </h3>
-                    <div className="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-3">
+                    <div className="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-2">
                       <div>
                         <label className={fieldLabelClass} htmlFor="invoice-type">Invoice type <span className="text-red-500">*</span></label>
                         <Select value={selectedType ?? ""} onValueChange={(value) => pickType(value as InvoiceType)} disabled={isEdit || isSaving}>
@@ -249,29 +250,46 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                         </Select>
                       </div>
                       <div>
+                        <label className={fieldLabelClass} htmlFor="invoice-due-date">{dateLabel} <span className="text-red-500">*</span></label>
+                        <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
+                          <Controller
+                            control={control}
+                            name="dueDate"
+                            render={({ field }) => (
+                              <DatePicker
+                                id="invoice-due-date"
+                                value={field.value}
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                minDate={todayIsoDate()}
+                                displayFormat="MMM dd, yyyy"
+                                placeholder="Pick a date"
+                                className={controlClass}
+                              />
+                            )}
+                          />
+                          <Controller
+                            control={control}
+                            name="dueTime"
+                            render={({ field }) => (
+                              <TimePicker
+                                id="invoice-due-time"
+                                aria-label="Due time"
+                                value={field.value}
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                                className={controlClass}
+                              />
+                            )}
+                          />
+                        </div>
+                        {errors.dueDate || errors.dueTime ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.dueDate?.message ?? errors.dueTime?.message}</p> : null}
+                      </div>
+
+                      <div>
                         <p className={fieldLabelClass}>Currency</p>
                         {/* VND is the only supported currency, so there is nothing to choose. */}
                         <div id="invoice-currency" className={`${controlClass} flex items-center bg-[#f7f6f3] text-gray-700`}>{INVOICE_CURRENCY_LABELS.VND}</div>
-                      </div>
-                      <div>
-                        <label className={fieldLabelClass} htmlFor="invoice-due-date">{dateLabel} <span className="text-red-500">*</span></label>
-                        <Controller
-                          control={control}
-                          name="dueDate"
-                          render={({ field }) => (
-                            <DatePicker
-                              id="invoice-due-date"
-                              value={field.value}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              minDate={todayIsoDate()}
-                              displayFormat="MMM dd, yyyy"
-                              placeholder="Pick a date"
-                              className={controlClass}
-                            />
-                          )}
-                        />
-                        {errors.dueDate ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.dueDate.message}</p> : null}
                       </div>
 
                       {selectedType === INVOICE_TYPE.QUOTATION ? (
@@ -294,26 +312,26 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                         </div>
                       ) : null}
 
-                      <div className="min-h-4 text-[11px] leading-4 text-gray-500 sm:col-span-3 sm:-mt-2">
+                      <div className="min-h-4 text-[11px] leading-4 text-gray-500 sm:col-span-2 sm:-mt-2">
                         {suggestionQuery.isFetching && !isEdit ? <span role="status">Checking the booking...</span> : null}
                         {!suggestionQuery.isFetching || isEdit ? (selectedType ? INVOICE_TYPE_HINTS[selectedType] : "Quotation, Deposit, Final, Supplementary or Credit note.") : null}
                       </div>
                       {depositBlocked && activeDeposit ? (
-                        <div className="flex gap-2 border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:col-span-3" role="alert">
+                        <div className="flex gap-2 border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:col-span-2" role="alert">
                           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                           <p>This booking already has a deposit invoice ({activeDeposit.invoiceNumber}). Cancel it first to create another one.</p>
                         </div>
                       ) : null}
                       {precheckError ? (
-                        <div className="flex gap-2 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:col-span-3" role="alert">
+                        <div className="flex gap-2 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:col-span-2" role="alert">
                           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                           <p>{getInvoiceErrorMessage(precheckError, "Unable to check this booking. Try another type or reload.")}</p>
                         </div>
                       ) : null}
 
-                      <div className="sm:col-span-3">
+                      <div className="sm:col-span-2">
                         <label className={fieldLabelClass} htmlFor="invoice-note">Notes</label>
-                        <Textarea id="invoice-note" rows={2} placeholder="Add any additional notes for this invoice..." className="min-h-[60px] rounded-none border-[#d8d5cb] text-sm shadow-none" {...register("note")} />
+                        <Textarea id="invoice-note" rows={2} placeholder="Add any additional notes for this invoice..." className="field-sizing-fixed h-[60px] min-h-[60px] resize-none overflow-y-auto rounded-none border-[#d8d5cb] text-sm shadow-none" {...register("note")} />
                       </div>
                     </div>
                   </section>
