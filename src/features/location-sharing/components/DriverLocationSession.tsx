@@ -18,10 +18,19 @@ import type { DriverTransportReadState } from "../types";
 const DEMO_ASSIGNMENT = {
   transportId: "demo",
   transportCode: "TR-2026-DEMO",
+  bookingCode: "BK-2026-DEMO",
+  complianceDossierId: null,
   status: "IN_TRANSIT" as const,
   myRole: "DRIVER" as const,
+  horseCount: 4,
+  departureAt: "2026-10-26T00:00:00.000Z",
+  etaAt: "2026-10-27T12:00:00.000Z",
   currentSegment: {
     routePlanRouteId: "seg-demo-01",
+    displayOrder: 1,
+    fromLocationName: "Hanoi Equine Quarantine Facility",
+    toLocationName: "Danang Transit Terminal",
+    status: "IN_TRANSIT" as const,
     isMine: true,
   },
 };
@@ -32,7 +41,7 @@ const DEMO_SEGMENT = {
   routePlanCode: "RP-DEMO",
   sequenceNo: 1,
   displayOrder: 1,
-  routeType: "DOMESTIC" as const,
+  routeType: "PRIMARY" as const,
   transportMode: "ROAD" as const,
   fromLocation: {
     locationId: "loc-hn",
@@ -53,7 +62,7 @@ const DEMO_SEGMENT = {
     longitude: 108.2022,
   },
   distanceKm: 760,
-  status: "IN_PROGRESS" as const,
+  status: "IN_TRANSIT" as const,
   isCurrent: true,
   plannedDepartureAt: "2026-10-26T00:00:00.000Z",
   plannedArrivalAt: "2026-10-27T12:00:00.000Z",

@@ -168,8 +168,29 @@ class MockGeolocationController {
         altitudeAccuracy: null,
         heading: (heading + 360) % 360,
         speed: speedMps,
+        toJSON: () => ({
+          latitude,
+          longitude,
+          accuracy: accuracyMeters,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: (heading + 360) % 360,
+          speed: speedMps,
+        }),
       },
       timestamp: Date.now(),
+      toJSON: () => ({
+        coords: {
+          latitude,
+          longitude,
+          accuracy: accuracyMeters,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: (heading + 360) % 360,
+          speed: speedMps,
+        },
+        timestamp: Date.now(),
+      }),
     };
 
     this.lastPosition = position;

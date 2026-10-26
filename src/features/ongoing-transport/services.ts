@@ -11,7 +11,6 @@ import {
   transportSegmentsSchema,
   trackingSnapshotSchema,
 } from "./schemas";
-import { isOngoingTransportMockMode } from "./source";
 import type {
   MockScenario,
   OngoingTransportParams,

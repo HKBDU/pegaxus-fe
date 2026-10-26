@@ -32,13 +32,16 @@ export function ProtectedRoute({
         expiresIn: 3600,
         user: {
           accountId: "demo-user-01",
-          email: "demo@pegaxus.com",
+            accountType: "EMPLOYEE",
+            customerId: null,
+            employeeId: "demo-user-01",
           fullName: "Alex Turner (Demo Lead)",
           role: "LOGISTICS_MANAGER",
-          status: "ACTIVE",
+            avatarUrl: null,
         },
         principal: {
           id: "demo-user-01",
+            email: "demo@pegaxus.com",
           displayName: "Alex Turner (Demo Lead)",
           roles: [
             "DRIVER",

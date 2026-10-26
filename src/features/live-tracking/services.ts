@@ -2,7 +2,6 @@ import { isAxiosError } from "axios"
 import { ZodError } from "zod"
 import apiClient from "@/lib/axios"
 import type { ZodType } from "zod"
-import { isDemoMode } from "./constants"
 import { apiEnvelopeSchema, overviewSchema, segmentsResponseSchema, trackingSnapshotSchema } from "./schemas"
 import type { SegmentsResponse, TrackingSnapshot, TransportOverview } from "./types"
 

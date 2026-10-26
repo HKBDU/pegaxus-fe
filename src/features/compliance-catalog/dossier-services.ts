@@ -25,24 +25,6 @@ const toDossierRequirementBody = (draft: CustomRequirementDraft) => ({
   instruction: draft.instruction || undefined,
 })
 
-const manualRequirementSchema = z.object({
-  complianceRequirementId: z.union([z.string().min(1), z.number().int().positive()]),
-  horseId: z.union([z.string(), z.number()]).nullable(),
-  isMandatory: z.boolean(),
-  dueDate: z.string().optional(),
-  instruction: z.string().nullish(),
-});
-const initializationRequestSchema = z.object({
-  dossierTemplateId: z.union([z.string().min(1), z.number().int().positive()]).optional(),
-  selectedTemplateItemIds: z.array(z.union([z.string(), z.number()])).optional(),
-  manualRequirements: z.array(manualRequirementSchema).optional(),
-}).superRefine((value, ctx) => {
-  const fromTemplate = value.dossierTemplateId !== undefined;
-  if (fromTemplate && !value.selectedTemplateItemIds?.length)
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Template items are required." });
-  if (!fromTemplate && !value.manualRequirements?.length)
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Manual requirements are required." });
-});
 const createdDossierEnvelopeSchema = z.object({
   isSuccess: z.literal(true),
   code: z.number().int().min(200).max(299),
