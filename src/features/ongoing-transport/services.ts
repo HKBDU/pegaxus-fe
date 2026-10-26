@@ -42,10 +42,6 @@ export const buildOngoingTransportQuery = (params: OngoingTransportParams) =>
 
 export const ongoingTransportService = {
   async tracking(transportId: string, signal?: AbortSignal) {
-    if (transportId === "demo" || transportId === "TR-2026-DEMO" || transportId === "TR-DEMO-0001") {
-      const mock = await (await import("../live-tracking/mock/service")).demoSnapshot(transportId);
-      return trackingSnapshotSchema.parse(mock);
-    }
     signal?.throwIfAborted();
     const response = await apiClient.get<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/tracking`,
@@ -63,15 +59,6 @@ export const ongoingTransportService = {
     _scenario: SegmentsScenario = "data",
     signal?: AbortSignal,
   ) {
-    if (transportId === "demo" || transportId === "TR-2026-DEMO" || transportId === "TR-DEMO-0001") {
-      const mock = await (await import("./mock/segments")).getMockTransportSegments(
-        "00000061-0000-4000-8000-000000000001",
-        _audience,
-        _scenario,
-        signal,
-      );
-      return transportSegmentsSchema.parse(mock.value);
-    }
     signal?.throwIfAborted();
     const response = await apiClient.get<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/segments`,
@@ -92,16 +79,7 @@ export const ongoingTransportService = {
     audience: TransportAudience,
     _scenario: OverviewScenario = "data",
     signal?: AbortSignal,
-  ) {
-    if (transportId === "demo" || transportId === "TR-2026-DEMO" || transportId === "TR-DEMO-0001") {
-      const mock = await (await import("./mock/overview")).getMockTransportOverview(
-        "00000061-0000-4000-8000-000000000001",
-        audience,
-        _scenario,
-        signal,
-      );
-      return transportOverviewSchema.parse(mock.value);
-    }
+  ): Promise<TransportOverview> {
     signal?.throwIfAborted();
     const response = await apiClient.get<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/overview`,
@@ -115,35 +93,29 @@ export const ongoingTransportService = {
         envelope.errorCode,
         envelope.message,
       );
+    const parsed = transportOverviewSchema.parse(envelope.value);
     const hideIncidents =
       audience === "customer" ||
       canAccess(useAuthStore.getState().principal, { anyRole: ["CUSTOMER"] });
-    return (
-      hideIncidents
-        ? transportOverviewSchema.extend({
-            activeIncidents: z
-              .unknown()
-              .transform((): TransportOverview["activeIncidents"] => []),
-          })
-        : transportOverviewSchema
-    ).parse(envelope.value);
+    if (hideIncidents) {
+      return {
+        ...parsed,
+        activeIncidents: [],
+      };
+    }
+    return parsed;
   },
   async list(
     params: OngoingTransportParams,
     signal?: AbortSignal,
-    scenario: MockScenario = "data",
+    _scenario: MockScenario = "data",
   ) {
     const query = buildOngoingTransportQuery(params);
     signal?.throwIfAborted();
-    const response =
-      !import.meta.env.PROD && isOngoingTransportMockMode()
-        ? await (
-            await import("./mock/service")
-          ).getMockOngoingTransports(query, scenario, signal)
-        : await apiClient.get<unknown, unknown>("/transports/ongoing", {
-            params: query,
-            signal,
-          });
+    const response = await apiClient.get<unknown, unknown>("/transports/ongoing", {
+      params: query,
+      signal,
+    });
     signal?.throwIfAborted();
     const envelope = ongoingTransportEnvelopeSchema.parse(response);
     if (!envelope.isSuccess)

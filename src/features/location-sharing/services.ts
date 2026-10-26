@@ -102,15 +102,6 @@ export const locationSharingService = {
     request: DriverLocationRequest,
     signal: AbortSignal,
   ) {
-    if (transportId === "demo") {
-      signal.throwIfAborted();
-      return {
-        serverTime: new Date().toISOString(),
-        accepted: true,
-        reason: null,
-        arrival: null,
-      };
-    }
     signal.throwIfAborted();
     const body = driverLocationRequestSchema.parse(request);
     const recordedAt = Date.parse(body.recordedAt);

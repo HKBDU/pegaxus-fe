@@ -41,14 +41,20 @@ export interface CustomRequirementDraft {
 
 export interface CreateDossierInput {
   bookingId: EntityId
-  transportId: EntityId
+  transportId?: EntityId
   /** Missing = custom dossier without a template (UC-18 ALT-01). */
   dossierTemplateId?: EntityId
   selectedTemplateItemIds: EntityId[]
+  initializationItems?: {
+    complianceRequirementId: EntityId
+    isMandatory: boolean
+    appliesPerHorse: boolean
+    instruction?: string | null
+  }[]
   customRequirements: CustomRequirementDraft[]
 }
 
-/** POST /transports/{transportId}/compliance-dossier (D2). */
+/** POST /bookings/{bookingId}/compliance-dossier (D2). */
 export interface CreateDossierResult {
   complianceDossierId: EntityId
   dossierCode: string

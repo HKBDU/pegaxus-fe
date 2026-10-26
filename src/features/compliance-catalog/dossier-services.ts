@@ -45,14 +45,15 @@ const initializationRequestSchema = z.object({
 });
 const createdDossierEnvelopeSchema = z.object({
   isSuccess: z.literal(true),
-  code: z.literal(201),
+  code: z.number().int().min(200).max(299),
   message: z.string(),
   value: z.object({
     complianceDossierId: z.union([z.string().min(1), z.number().int().positive()]),
     dossierCode: z.string().min(1),
-    dossierType: z.literal("MAIN"),
-    status: z.literal("DRAFT"),
-    generatedRequirementCount: z.number().int().nonnegative(),
+    dossierType: z.string().nullish(),
+    status: z.string().optional().default("DRAFT"),
+    generatedRequirementCount: z.number().int().nonnegative().optional(),
+    requirements: z.array(z.object({ dossierRequirementId: z.union([z.string(), z.number()]) })).optional(),
   }),
 });
 
@@ -236,15 +237,31 @@ export const dossierService = {
       };
     }
 
-    const body = initializationRequestSchema.parse({
-      ...(fromTemplate
-        ? { dossierTemplateId, selectedTemplateItemIds }
-        : { manualRequirements: customRequirements.map(toDossierRequirementBody) }),
-    });
+    const items = (input.initializationItems?.length
+      ? input.initializationItems
+      : customRequirements.map((item) => ({
+          complianceRequirementId: item.complianceRequirementId,
+          isMandatory: item.isMandatory,
+          appliesPerHorse: false,
+          instruction: item.instruction ?? null,
+        }))
+    ).map((item) => ({
+      complianceRequirementId: String(item.complianceRequirementId),
+      isMandatory: Boolean(item.isMandatory),
+      appliesPerHorse: Boolean(item.appliesPerHorse),
+      instruction: item.instruction || undefined,
+    }));
+
+    const body = {
+      ...(fromTemplate ? { dossierTemplateId: String(dossierTemplateId) } : {}),
+      items,
+      ...(fromTemplate && selectedTemplateItemIds?.length ? { selectedTemplateItemIds } : {}),
+    };
+
     let payload: unknown;
     try {
       payload = await api.post<unknown>(
-        `transports/${transportId}/compliance-dossier`,
+        `bookings/${encodeURIComponent(bookingId)}/compliance-dossier`,
         body,
       );
     } catch (error) {
@@ -291,9 +308,16 @@ export const dossierService = {
         }
       }
     }
+    const generatedCount =
+      (created.generatedRequirementCount ??
+        created.requirements?.length ??
+        items.length) + addedCustom;
     return {
-      ...created,
-      generatedRequirementCount: created.generatedRequirementCount + addedCustom,
+      complianceDossierId: created.complianceDossierId,
+      dossierCode: created.dossierCode,
+      status: created.status ?? "DRAFT",
+      dossierType: created.dossierType as any,
+      generatedRequirementCount: generatedCount,
       failedCustomCount,
     };
   },
