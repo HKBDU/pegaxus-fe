@@ -3,13 +3,12 @@ import {
   buildRouteData,
   positionAtDistance,
   addGpsJitter,
-  generateGeodesicRoute,
   parseGeoJsonToCoordinates,
   type RouteData,
   type InterpolatedPoint,
 } from "./engine";
 import { mockGeolocation } from "./mockGeolocation";
-import { previewGeoapifyRoute } from "@/shared/utils/map/routing";
+import { resolveRouteGeometry } from "@/shared/components/map/route-geometry-cache";
 
 export type SimulatorStatus = "idle" | "running" | "paused" | "completed";
 
@@ -150,25 +149,49 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
 
       setIsLoadingRoute(true);
       try {
-        const preview = await previewGeoapifyRoute(fromCoord, toCoord);
-        if (
-          preview.geometry.type === "LineString" &&
-          preview.geometry.coordinates.length >= 2
-        ) {
-          applyCoordinates(preview.geometry.coordinates, "segment");
+        // Use the same resolver/cache as the ongoing-transport map. If that map
+        // already loaded Geoapify's road geometry, the simulator follows the
+        // exact same polyline instead of creating a second route or a straight line.
+        const resolved = await resolveRouteGeometry({
+          id: "gps-simulator-segment",
+          name: `${from.locationName ?? "Origin"} to ${to.locationName ?? "Destination"}`,
+          transportMode: "ROAD",
+          fromLocation: {
+            id: "gps-simulator-from",
+            name: from.locationName ?? "Origin",
+            latitude: fromCoord.latitude,
+            longitude: fromCoord.longitude,
+          },
+          toLocation: {
+            id: "gps-simulator-to",
+            name: to.locationName ?? "Destination",
+            latitude: toCoord.latitude,
+            longitude: toCoord.longitude,
+          },
+        });
+        // `estimated` is the resolver's straight-line fallback. Never use it
+        // for GPS simulation: the vehicle must follow a real Geoapify road
+        // geometry or remain stopped until one can be loaded.
+        if (!resolved.estimated && resolved.line?.type === "LineString" && resolved.line.coordinates.length >= 2) {
+          applyCoordinates(resolved.line.coordinates, "segment");
           setIsLoadingRoute(false);
           return;
         }
+        routeDataRef.current = { coordinates: [], cumDistances: [], totalDistance: 0 };
+        setTotalDistance(0);
+        setDistanceTraveled(0);
+        setRouteSource("none");
       } catch (err) {
         console.warn(
-          "[GpsSimulator] Road preview failed, using geodesic fallback:",
+          "[GpsSimulator] Road geometry failed; simulator will remain stopped:",
           err,
         );
+        routeDataRef.current = { coordinates: [], cumDistances: [], totalDistance: 0 };
+        setTotalDistance(0);
+        setDistanceTraveled(0);
+        setRouteSource("none");
       }
 
-      // Fallback geodesic line
-      const fallback = generateGeodesicRoute(fromCoord, toCoord, 60);
-      applyCoordinates(fallback, "geodesic");
       setIsLoadingRoute(false);
     },
     [applyCoordinates],
