@@ -79,7 +79,7 @@ export const ongoingTransportService = {
     audience: TransportAudience,
     _scenario: OverviewScenario = "data",
     signal?: AbortSignal,
-  ) {
+  ): Promise<TransportOverview> {
     signal?.throwIfAborted();
     const response = await apiClient.get<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/overview`,
@@ -96,7 +96,7 @@ export const ongoingTransportService = {
     const hideIncidents =
       audience === "customer" ||
       canAccess(useAuthStore.getState().principal, { anyRole: ["CUSTOMER"] });
-    return (
+    const parsed = (
       hideIncidents
         ? transportOverviewSchema.extend({
             activeIncidents: z
@@ -105,6 +105,10 @@ export const ongoingTransportService = {
           })
         : transportOverviewSchema
     ).parse(envelope.value);
+    return {
+      ...parsed,
+      activeIncidents: parsed.activeIncidents ?? [],
+    };
   },
   async list(
     params: OngoingTransportParams,
