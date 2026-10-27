@@ -47,6 +47,7 @@ export type TransportPlanSummary = {
   scope: "International" | "Domestic";
   departureAt: string;
   arrivalAt: string;
+  requestedArrivalAt?: string | null;
   from: MapLocation;
   to: MapLocation;
 };
@@ -60,6 +61,7 @@ export type RoutePlanBuilderMetadata = Partial<
   isToResolved?: boolean;
   unresolvedOriginAddress?: string;
   unresolvedDestinationAddress?: string;
+  requestedArrivalAt?: string | null;
 };
 
 export type DraftSegment = {
