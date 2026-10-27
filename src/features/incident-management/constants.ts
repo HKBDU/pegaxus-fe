@@ -36,6 +36,7 @@ export const STATUS_FILTER_OPTIONS = [
 
 /** Message per BE `errorCode` (contract IN9-IN11); the UI branches on the code, never on the HTTP status. */
 export const INCIDENT_ERROR_MESSAGES: Record<string, string> = {
+  FORBIDDEN: "You do not have permission to do this.",
   INCIDENT_MODIFIED: "This incident was changed by someone else. Reload to see the latest version.",
   INVALID_INCIDENT_STATUS: "This incident can no longer be changed in its current status.",
   INVALID_TRANSPORT_STATUS: "The transport is not in a status that allows this action.",
@@ -44,6 +45,16 @@ export const INCIDENT_ERROR_MESSAGES: Record<string, string> = {
   HAS_APPROVED_EMERGENCY_COST: "An emergency cost was already approved, so the incident cannot be cancelled. Resolve it instead.",
   SETTLEMENT_NOT_CONFIRMED: "Confirm the emergency cost settlement before resolving.",
   NETWORK_ERROR: "Cannot reach the server. Check your connection and try again.",
+}
+
+/**
+ * What the driver or escort reads when cancelling their own report (IN10): a crew member can only cancel a REPORTED incident
+ * with no PENDING or APPROVED cost request, and the answer to every other case is to ask the Logistics Manager.
+ */
+export const CREW_CANCEL_ERROR_MESSAGES: Record<string, string> = {
+  INVALID_INCIDENT_STATUS: "This incident has already been taken over or closed. Ask the Logistics Manager to cancel it.",
+  HAS_OPEN_EMERGENCY_COSTS: "This incident has cost requests that are pending or approved, so you cannot cancel it. Ask the Logistics Manager to cancel this incident.",
+  HAS_APPROVED_EMERGENCY_COST: "An emergency cost was already approved, so you cannot cancel this incident. Ask the Logistics Manager.",
 }
 
 export const ALERT_NOTIFICATION_TYPES = new Set(["INCIDENT", "HORSE_HEALTH", "ROUTE", "EMERGENCY_COST"])

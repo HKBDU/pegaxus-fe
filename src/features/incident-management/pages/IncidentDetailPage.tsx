@@ -108,7 +108,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
       {canCancel ? (
         <button type="button" className={cn(actionButtonClass, dangerButtonClass)} onClick={() => setCancelOpen(true)}>
           <XCircle className="size-4" aria-hidden="true" />
-          Cancel incident
+          {isCrew ? "Cancel report" : "Cancel incident"}
         </button>
       ) : null}
     </>
@@ -166,7 +166,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
       {incident ? (
         <>
           <ResolveIncidentDialog incident={incident} mode={resolveMode} open={resolveOpen} onOpenChange={setResolveOpen} onReload={() => void query.refetch()} />
-          <CancelIncidentDialog incident={incident} open={cancelOpen} onOpenChange={setCancelOpen} onReload={() => void query.refetch()} />
+          <CancelIncidentDialog incident={incident} audience={audience} open={cancelOpen} onOpenChange={setCancelOpen} onReload={() => void query.refetch()} />
         </>
       ) : null}
     </div>
