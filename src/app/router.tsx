@@ -46,9 +46,8 @@ import {
   emergencyCostRoutes,
   emergencyRerouteRoutes,
 } from "@/features/incident-response";
-import TestPage from "../Test";
-
 import LogoutPage from "@/features/auth/pages/LogoutPage";
+import TestPage from "../Test";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
 const ManageUserAccountsPage = lazy(
@@ -189,6 +188,10 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  {
+    path: "/__dev/route-vehicle-incident",
+    element: <TestPage />,
+  },
   ...transportAuditRoutes,
   ...emergencyCostRoutes,
   ...emergencyRerouteRoutes,
@@ -1024,11 +1027,6 @@ export const router = createBrowserRouter([
   },
   ...(import.meta.env.DEV
     ? [
-        // BEGIN TEMP UC-38 LOCAL PREVIEW — remove only this route object after testing.
-        {
-          path: "/__dev/transport-audit",
-          element: <TestPage />,
-        },
         {
           path: "/__dev/flow3/route-plans/:routePlanId",
           element: (
