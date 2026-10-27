@@ -70,6 +70,8 @@ export function isPhoneValid(value?: string | null): boolean {
   return PHONE_STRIPPED_REGEX.test(stripped);
 }
 
+export const UPLOAD_MAX_BYTES = 10 * 1024 * 1024
+
 /**
  * Validates an ISO 3166-1 alpha-2 2-letter country code.
  * Blank/empty is treated as valid (optional fields).
