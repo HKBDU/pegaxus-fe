@@ -59,7 +59,13 @@ export type TransportMode = "ROAD" | "SEA" | "AIR";
 export type SegmentStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED";
 export type ProviderStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
 export type VehicleStatus =
-  "AVAILABLE" | "ASSIGNED" | "MAINTENANCE" | "INACTIVE";
+  | "AVAILABLE"
+  | "ASSIGNED"
+  | "IN_USE"
+  | "MAINTENANCE"
+  | "INACTIVE"
+  | "SUSPENDED"
+  | "OUT_OF_SERVICE";
 export type RoutePlanAction = "SAVE_DRAFT" | "SUBMIT_FOR_LEGAL_REVIEW";
 export type LocationType =
   | "CITY"
@@ -248,6 +254,30 @@ export interface OutsourceSegmentResult {
   routePlanId: string;
   segment: RouteSegment;
   isPersonnelComplete: boolean;
+  updatedAt: string;
+}
+
+export type ChangeVehiclesMode = "before-departure" | "mid-trip";
+
+export interface ChangeVehiclesSegment {
+  sequenceNo?: number;
+  routePlanRouteId?: string;
+  vehicleIds: string[];
+}
+
+export interface ChangeRoutePlanVehiclesRequest {
+  lastUpdatedAt: string;
+  reason: string;
+  incidentReportId?: string;
+  segments: ChangeVehiclesSegment[];
+}
+
+export interface ChangeRoutePlanVehiclesResult {
+  routePlanId: string;
+  status: RoutePlanStatus;
+  releasedVehicleIds: string[];
+  maintenanceVehicleIds: string[];
+  appliedSegmentIds: string[];
   updatedAt: string;
 }
 
