@@ -3,7 +3,7 @@ import { ArrowLeft, CheckCircle2, Clock, Truck, XCircle } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
-import { INCIDENT_ACTION } from "@/shared/constants/incident"
+import { EMERGENCY_COST_CATEGORY, EMERGENCY_COST_STATUS, INCIDENT_ACTION } from "@/shared/constants/incident"
 import { CategoryBadge, SeverityBadge, StatusBadge } from "@/shared/components/incident"
 import { ErrorState, NotFoundPage } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
@@ -19,6 +19,7 @@ import { actionButtonClass, dangerButtonClass, primaryButtonClass } from "../com
 import { incidentRoutes, severityEdge } from "../constants"
 import { isNotFound } from "../errors"
 import { useIncident } from "../hooks/useIncidents"
+import { useIncidentViewer } from "../hooks/useViewer"
 import type { Incident, IncidentAudience } from "../types"
 import { formatDateTime, timeAgo } from "../utils"
 
@@ -84,6 +85,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   const incident = query.data
   const [resolveOpen, setResolveOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
+  const { isCoordinator } = useIncidentViewer()
 
   if (query.isError && isNotFound(query.error)) return <NotFoundPage />
 
@@ -95,6 +97,12 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   const showHorse = incident && (incident.category === "HORSE_HEALTH" || incident.category === "BOTH")
   const canResolve = can(INCIDENT_ACTION.RESOLVE) || can(INCIDENT_ACTION.SELF_RESOLVE)
   const canCancel = can(INCIDENT_ACTION.CANCEL_INCIDENT)
+  // The BE tells nobody but the requester when the LM approves a replacement vehicle, so the RC reads it on the page (U-03).
+  const waitingForVehicleChange =
+    isCoordinator &&
+    Boolean(incident) &&
+    (incident?.status === "REPORTED" || incident?.status === "PENDING") &&
+    Boolean(incident?.costRequests.some((request) => request.category === EMERGENCY_COST_CATEGORY.REPLACEMENT_VEHICLE && request.status === EMERGENCY_COST_STATUS.APPROVED))
 
   const buttons = incident ? (
     <>
@@ -135,6 +143,12 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
                   <CategoryBadge category={incident.category} />
                   <SeverityBadge severity={incident.severity} />
                   <StatusBadge status={incident.status} />
+                  {waitingForVehicleChange ? (
+                    <span className="inline-flex h-5 items-center gap-1.5 rounded-[2px] border border-amber-300 bg-amber-50 px-1.5 text-[0.65rem] font-semibold text-amber-800">
+                      <span className="size-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+                      Approved - waiting for vehicle change
+                    </span>
+                  ) : null}
                 </div>
               ) : null}
             </div>
