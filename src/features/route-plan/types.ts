@@ -239,6 +239,7 @@ export interface LegalReviewRequest {
 }
 
 export interface OutsourceSegmentRequest {
+  lastUpdatedAt: string;
   outsourced: boolean;
   transportProviderId?: string;
   note?: string;

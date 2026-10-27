@@ -27,6 +27,8 @@ export interface RoutePreviewResult {
   geometry: RouteGeometry;
   distanceKm: number;
   durationMinutes: number;
+  /** True when routing failed and geometry is only a straight-line estimate. */
+  estimated?: boolean;
   snappedStart?: RoutingPoint;
   snappedEnd?: RoutingPoint;
 }
@@ -97,6 +99,7 @@ export function calculateGeodesicFallback(
     },
     distanceKm,
     durationMinutes,
+    estimated: true,
   };
 }
 

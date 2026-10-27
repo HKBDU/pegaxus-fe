@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { FileText, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 import { dossierDetail, ROLE_ROUTES, routePlanEdit } from "@/app/route-config";
 import {
   LegalFeasibilityPanel,
@@ -11,7 +12,15 @@ import { CancelRoutePlanDialog } from "@/features/route-plan/components/CancelRo
 import { OutsourceSegmentDialog } from "@/features/route-plan/components/OutsourceSegmentDialog";
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import { isFlow3MockMode } from "@/features/transport-plan/source";
+import { getRoutePlanError, updateSegmentOutsourcing } from "@/features/route-plan/services";
 import { Button } from "@/shared/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import {
   refreshEmergencyQueries,
   type EmergencyContext,
@@ -238,20 +247,55 @@ export function RouteSegmentOutsourceAction({
   context: EmergencyContext;
 }) {
   const client = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [savingInternal, setSavingInternal] = useState(false);
   if (
     getWorkspaceRole(context.workspace.principal) !== "manager" ||
     plan.status !== "DRAFT"
   )
     return null;
-  // This provider has no lastUpdatedAt prop and cannot safely submit the current UC42 contract.
-  // Keep the consumer/IDs/success callback mounted, but prevent an invalid business mutation.
+  async function switchToInternal() {
+    setSavingInternal(true);
+    try {
+      await updateSegmentOutsourcing(plan.routePlanId, segment.routePlanRouteId, {
+        lastUpdatedAt: plan.updatedAt,
+        outsourced: false,
+      });
+      await refreshEmergencyQueries(client, plan, "management", context.dossierId);
+      toast.success("Segment switched to internal fleet.");
+    } catch (requestError) {
+      toast.error(getRoutePlanError(requestError).message);
+    } finally {
+      setSavingInternal(false);
+    }
+  }
+
   return (
     <div className="max-w-72 space-y-1 text-right">
+      <Select
+        value={segment.isOutsourced ? "OUTSOURCED" : "INTERNAL"}
+        disabled={savingInternal}
+        onValueChange={(value) => {
+          if (value === "OUTSOURCED") setDialogOpen(true);
+          else void switchToInternal();
+        }}
+      >
+        <SelectTrigger className="h-9 w-full rounded border bg-background text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="INTERNAL">Internal</SelectItem>
+          <SelectItem value="OUTSOURCED">Outsource</SelectItem>
+        </SelectContent>
+      </Select>
       <OutsourceSegmentDialog
         routePlanId={plan.routePlanId}
         routePlanRouteId={segment.routePlanRouteId}
+        lastUpdatedAt={plan.updatedAt}
         transportMode={segment.route.transportMode}
         isOutsourced={segment.isOutsourced}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
         currentNote={segment.note}
         onChanged={() =>
           void refreshEmergencyQueries(
@@ -262,21 +306,15 @@ export function RouteSegmentOutsourceAction({
           )
         }
       >
-        <Button
-          size="sm"
-          variant="outline"
-          disabled
-          aria-describedby={`outsource-blocked-${segment.routePlanRouteId}`}
-        >
-          {segment.isOutsourced ? "Manage Outsource" : "Outsource Segment"}
-        </Button>
+        <span className="sr-only">Configure outsourced segment</span>
       </OutsourceSegmentDialog>
-      <p
-        id={`outsource-blocked-${segment.routePlanRouteId}`}
-        className="text-[11px] text-slate-500"
-      >
-        Provider update awaits lastUpdatedAt support in the shared dialog.
-      </p>
+      {!segment.isOutsourced ? (
+        <Button asChild size="sm" variant="link" className="h-auto px-0 text-xs">
+          <Link to={routePlanEdit(plan.routePlanId)}>
+            Assign vehicle in route builder
+          </Link>
+        </Button>
+      ) : null}
     </div>
   );
 }

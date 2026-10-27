@@ -82,14 +82,16 @@ export async function loadUploadDocument(input: UploadDocumentInput) {
 export async function loadComplianceDocument(
   documentId: string,
   signal?: AbortSignal,
-  _dossierId?: string,
-  _requirementId?: string,
+  dossierId?: string,
+  requirementId?: string,
 ) {
   signal?.throwIfAborted();
   const { dossierService } = await import("./services");
   return dossierService.getComplianceDocument(
     documentId,
     signal,
+    dossierId,
+    requirementId,
   );
 }
 

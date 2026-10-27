@@ -3,10 +3,23 @@ import { z } from "zod"
 import { DEPARTURE_TOO_SOON_MESSAGE, SAME_COUNTRY_MESSAGE, getDepartureRule } from "@/features/booking/lib/departure-rule"
 import { COUNTRY_MESSAGE, isBookingCountry } from "@/features/booking/lib/place"
 import { BOOKING_STATUSES } from "@/features/booking/types"
+import { countDecimalPlaces } from "@/shared/constants/validation-limits"
 
 // The BE stores coordinates as decimal(10,4); a missing or out-of-range value is rejected with INVALID_COORDINATES.
-const latitudeSchema = (message: string) => z.number({ error: message }).min(-90, message).max(90, message)
-const longitudeSchema = (message: string) => z.number({ error: message }).min(-180, message).max(180, message)
+const latitudeSchema = (message: string) =>
+  z
+    .number({ error: message })
+    .finite(message)
+    .min(-90, message)
+    .max(90, message)
+    .refine((value) => countDecimalPlaces(value) <= 4, "Latitude must be between -90 and 90 (up to 4 decimal places).")
+const longitudeSchema = (message: string) =>
+  z
+    .number({ error: message })
+    .finite(message)
+    .min(-180, message)
+    .max(180, message)
+    .refine((value) => countDecimalPlaces(value) <= 4, "Longitude must be between -180 and 180 (up to 4 decimal places).")
 
 const optionalText = (max: number) => z.string().trim().max(max)
 

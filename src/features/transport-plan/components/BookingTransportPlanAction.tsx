@@ -194,6 +194,7 @@ export function CreateTransportPlanContent({
       </Section>
       <TransportPlanMetadataForm
         bookingId={booking.bookingId}
+        requestedArrivalDate={booking.requestedArrivalDate}
         cancelHref={managerBookingDetailPath(booking.bookingId)}
         onCancel={onCancel}
         onCreated={onCreated}

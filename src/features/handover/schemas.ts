@@ -1,5 +1,6 @@
 import { z } from "zod"
 import {
+  countDecimalPlaces,
   PHONE_MESSAGE,
   VALIDATION_LIMITS,
   isPhoneValid,
@@ -7,6 +8,22 @@ import {
 
 const id = z.string()
 const timestamp = z.iso.datetime({ offset: true })
+
+const latitudeSchema = z
+  .number()
+  .finite()
+  .min(VALIDATION_LIMITS.latitude.min, "Latitude must be between -90 and 90 (up to 4 decimal places).")
+  .max(VALIDATION_LIMITS.latitude.max, "Latitude must be between -90 and 90 (up to 4 decimal places).")
+  .refine((value) => countDecimalPlaces(value) <= VALIDATION_LIMITS.coordinateScale, "Latitude must be between -90 and 90 (up to 4 decimal places).")
+
+const longitudeSchema = z
+  .number()
+  .finite()
+  .min(VALIDATION_LIMITS.longitude.min, "Longitude must be between -180 and 180 (up to 4 decimal places).")
+  .max(VALIDATION_LIMITS.longitude.max, "Longitude must be between -180 and 180 (up to 4 decimal places).")
+  .refine((value) => countDecimalPlaces(value) <= VALIDATION_LIMITS.coordinateScale, "Longitude must be between -180 and 180 (up to 4 decimal places).")
+
+export const handoverCoordinatesSchema = z.object({ latitude: latitudeSchema, longitude: longitudeSchema })
 
 /** Enums stay plain text: a value the BE adds later must not break a whole screen. */
 const partySchema = z.object({
@@ -57,7 +74,7 @@ export const handoverRecordSchema = z.object({
   equipmentHandoverNote: z.string().nullish(),
   discrepancyNote: z.string().nullish(),
   /** Point and radius the device must be in to complete (HO5); null for `OTHER`. */
-  geofence: z.object({ latitude: z.number(), longitude: z.number(), radiusMeters: z.number() }).nullish(),
+  geofence: handoverCoordinatesSchema.extend({ radiusMeters: z.number() }).nullish(),
   /** Signed URLs that expire after 5 minutes: never cached for long. */
   senderSignatureUrl: z.string().nullish(),
   receiverSignatureUrl: z.string().nullish(),
@@ -98,8 +115,8 @@ const locationBriefSchema = z.object({
   locationType: z.string().nullish(),
   city: z.string().nullish(),
   country: z.string().nullish(),
-  latitude: z.number().nullish(),
-  longitude: z.number().nullish(),
+  latitude: latitudeSchema.nullish().transform((value) => value ?? null),
+  longitude: longitudeSchema.nullish().transform((value) => value ?? null),
 })
 
 /** OT4, read only for the boundaries of the "create" picker and for the coordinates of the handover point. */

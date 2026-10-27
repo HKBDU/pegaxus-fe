@@ -2,7 +2,7 @@ import { driverLocationRequestSchema } from "./schemas";
 import type { DriverLocationRequest } from "./types";
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 
-export const SEND_INTERVAL_MS = 15_000;
+export const SEND_INTERVAL_MS = 2_500;
 export const SAMPLE_MAX_AGE_MS = 15_000;
 
 export function isFreshObservation(timestamp: number, now: number) {

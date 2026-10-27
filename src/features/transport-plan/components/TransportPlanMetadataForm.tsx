@@ -44,6 +44,7 @@ import {
 } from "../schemas";
 import { emptyPlanForm } from "../constants";
 import type { TransportPlanDetail, TransportPlanFormValues } from "../types";
+import { validateTransportPlanSchedule } from "../schedule-validation";
 import { Section } from "./ApprovedBookingDetails";
 import { Flow3MockIndicator } from "./Flow3MockIndicator";
 import { TransportPlanLocationSelect } from "./TransportPlanLocationSelect";
@@ -67,6 +68,7 @@ const fields = [
 
 export function TransportPlanMetadataForm({
   bookingId,
+  requestedArrivalDate,
   plan,
   cancelHref,
   reloadLatest,
@@ -75,6 +77,7 @@ export function TransportPlanMetadataForm({
   onCreated,
 }: {
   bookingId: string;
+  requestedArrivalDate?: string | null;
   plan?: TransportPlanDetail;
   cancelHref: string;
   reloadLatest?: () => Promise<TransportPlanDetail | undefined>;
@@ -118,6 +121,24 @@ export function TransportPlanMetadataForm({
   const submit = form.handleSubmit(async (values) => {
     if (blocked) return;
     setProblem(null);
+    if (!baseline) {
+      const scheduleError = validateTransportPlanSchedule({
+        plannedStartAt: values.plannedStartAt,
+        plannedEndAt: values.plannedEndAt,
+        estimatedDurationMinutes: values.estimatedDurationMinutes.trim()
+          ? Number(values.estimatedDurationMinutes)
+          : null,
+        requestedArrivalDate,
+      });
+      if (scheduleError) {
+        form.setError(scheduleError.field, {
+          type: "validate",
+          message: scheduleError.message,
+        });
+        setProblem({ message: "Check the highlighted schedule fields and try again." });
+        return;
+      }
+    }
     try {
       let result;
       if (baseline) {

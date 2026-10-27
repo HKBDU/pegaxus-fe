@@ -1,8 +1,20 @@
 import apiClient from "@/lib/axios"
+import { useAuthStore } from "@/features/auth/store"
 import type { ApiResponse, Profile, UpdateProfileRequest } from "@/features/profile/types"
 
 export const profileApi = {
   async getMe() {
+    const token = useAuthStore.getState().accessToken
+    if (token?.startsWith("demo-")) {
+      return {
+        accountId: "demo-user-01",
+        email: "demo@pegaxus.com",
+        fullName: "Alex Turner (Demo Lead)",
+        role: "LOGISTICS_MANAGER",
+        status: "ACTIVE",
+        avatarUrl: null,
+      } as Profile
+    }
     const response = await apiClient.get("/accounts/me") as unknown as ApiResponse<Profile>
     return normalizeProfile(response.value)
   },

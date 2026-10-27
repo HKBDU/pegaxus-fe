@@ -37,9 +37,21 @@ function toFieldErrors(raw: unknown): FieldError[] {
 
 function fromBody(body: unknown, status?: number): HandoverApiError | null {
   const parsed = apiEnvelopeSchema.safeParse(body)
-  if (!parsed.success || parsed.data.isSuccess) return null
-  const value = parsed.data.value && typeof parsed.data.value === "object" ? (parsed.data.value as Record<string, unknown>) : undefined
-  return new HandoverApiError({ status: status ?? parsed.data.code, errorCode: parsed.data.errorCode, message: parsed.data.message, errors: toFieldErrors(parsed.data.errors), value })
+  if (parsed.success) {
+    if (parsed.data.isSuccess) return null
+    const value = parsed.data.value && typeof parsed.data.value === "object" ? (parsed.data.value as Record<string, unknown>) : undefined
+    return new HandoverApiError({ status: status ?? parsed.data.code, errorCode: parsed.data.errorCode, message: parsed.data.message, errors: toFieldErrors(parsed.data.errors), value })
+  }
+
+  // Also handle ASP.NET ProblemDetails responses, so the actual 400 reason is visible in the form.
+  if (body && typeof body === "object") {
+    const problem = body as { title?: unknown; detail?: unknown; message?: unknown; errors?: unknown }
+    const message = [problem.detail, problem.message, problem.title].find((value): value is string => typeof value === "string" && value.trim() !== "")
+    if (message || problem.errors) {
+      return new HandoverApiError({ status, message: message ?? `Request failed (${status ?? "unknown"})`, errors: toFieldErrors(problem.errors) })
+    }
+  }
+  return null
 }
 
 /** Normalises axios failures (error body) and `isSuccess: false` envelopes into `HandoverApiError`. */
@@ -50,7 +62,11 @@ export function toHandoverError(error: unknown): HandoverApiError {
     if (fromResponse) return fromResponse
     if (error.code === "ERR_CANCELED") return new HandoverApiError({ errorCode: "CANCELED", message: "Request canceled" })
     if (!error.response) return new HandoverApiError({ errorCode: "NETWORK_ERROR", message: "Cannot reach the server. Check your connection and try again." })
-    return new HandoverApiError({ status: error.response.status, message: `Request failed (${error.response.status})` })
+    return new HandoverApiError({
+      status: error.response.status,
+      errorCode: error.response.status === 401 ? "UNAUTHORIZED" : undefined,
+      message: error.response.status === 401 ? "Your session has expired. Sign in again and retry." : `Request failed (${error.response.status})`,
+    })
   }
   return new HandoverApiError({ message: error instanceof Error ? error.message : "Unexpected error" })
 }
@@ -59,7 +75,16 @@ function unwrap(response: unknown): unknown {
   const failed = fromBody(response)
   if (failed) throw failed
   const parsed = apiEnvelopeSchema.safeParse(response)
-  return parsed.success ? parsed.data.value : response
+  if (!parsed.success) return response
+  if (!parsed.data.isSuccess) return response
+
+  // The contract calls the payload `value`; some deployed BE builds expose the
+  // same payload as `data`. Keep both shapes working for OT4/HO3.
+  if (parsed.data.value !== undefined) return parsed.data.value
+  if (response && typeof response === "object" && "data" in response) {
+    return (response as { data?: unknown }).data
+  }
+  return response
 }
 
 async function call<T>(request: () => Promise<unknown>, parse: (value: unknown) => T): Promise<T> {

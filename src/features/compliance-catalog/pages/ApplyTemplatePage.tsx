@@ -167,6 +167,20 @@ export default function ApplyTemplatePage() {
           selectedTemplateItemIds: (template?.items ?? [])
             .filter((item) => selectedItemIds.has(templateItemKey(item)))
             .map(templateItemKey),
+          initializationItems: (template?.items ?? [])
+            .filter((item) => selectedItemIds.has(templateItemKey(item)))
+            .map((item) => ({
+              complianceRequirementId: item.complianceRequirementId,
+              isMandatory:
+                !isMandatoryRoute &&
+                  ["QUARANTINE", "CUSTOMS"].includes(
+                    categoryOf(item.complianceRequirementId) ?? "",
+                  )
+                  ? false
+                  : item.isMandatory,
+              appliesPerHorse: item.appliesPerHorse,
+              instruction: item.instruction,
+            })),
           customRequirements: customs,
         }),
       );

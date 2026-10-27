@@ -57,6 +57,7 @@ import {
 import { RoutePlanEndpointsStep } from "./RoutePlanEndpointsStep";
 import { RoutePlanStatusBadge } from "./RoutePlanStatusBadge";
 import { BcpRouteSplitDialog } from "./BcpRouteSplitDialog";
+import { validateArrivalDate } from "@/features/transport-plan/schedule-validation";
 import {
   findBestBcpAlongRoute,
   isCrossBorder as checkIsCrossBorder,
@@ -82,6 +83,7 @@ type TransportPlanSummary = {
   scope: "International" | "Domestic";
   departureAt: string;
   arrivalAt: string;
+  requestedArrivalAt?: string | null;
   from: MapLocation;
   to: MapLocation;
 };
@@ -1006,6 +1008,20 @@ export function RoutePlanBuilder({
       setSaveError(continuity.message ?? "Route segments are not continuous.");
       return;
     }
+    const lateSegment = segments.find((segment) =>
+      validateArrivalDate(segment.plannedArrivalAt, plan.requestedArrivalAt),
+    );
+    if (lateSegment) {
+      setSaveError(
+        validateArrivalDate(lateSegment.plannedArrivalAt, plan.requestedArrivalAt) ??
+          "A segment arrives after the booking requested arrival date.",
+      );
+      return;
+    }
+    if (validateArrivalDate(plan.arrivalAt, plan.requestedArrivalAt)) {
+      setSaveError("The transport plan arrives after the booking requested arrival date.");
+      return;
+    }
     if (action === "SUBMIT_FOR_LEGAL_REVIEW") {
       const internalSegmentsWithoutVehicles = segments.filter(
         (segment) =>
@@ -1538,6 +1554,7 @@ export function RoutePlanBuilder({
                       onVehicleChange={(vIds) => handleVehicleChange(index, vIds)}
                       availableVehicles={availableVehicles}
                       routePlanId={edit?.routePlanId}
+                      lastUpdatedAt={edit?.lastUpdatedAt}
                       onOutsource={(selection) =>
                         setSegments((items) =>
                           items.map((item) =>

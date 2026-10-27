@@ -10,6 +10,7 @@ import { useBooking } from "@/features/booking/hooks"
 import type { BookingAudience } from "@/features/booking/types"
 import { formatBookingDate, formatSex } from "@/features/booking/utils"
 import { BookingClaimsSection, SubmitClaimAction } from "@/features/claim"
+import { estimateTransport, formatEstimateDuration } from "@/features/booking/lib/transport-estimate"
 import { BookingDossierLink } from "@/features/dossier"
 import { CustomerInvoicesTab } from "@/features/invoice"
 import { CustomerTransportAuditSummary } from "@/features/transport-audit/components/CustomerTransportAuditSummary"
@@ -117,6 +118,20 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
   const hasOutcome = Boolean(
     booking && (booking.assignedEmployee || booking.transport || booking.rejectionReason || booking.cancellationReason),
   )
+  const transportEstimate = booking
+    ? estimateTransport(
+        {
+          latitude: booking.originLatitude,
+          longitude: booking.originLongitude,
+          country: booking.originCountry,
+        },
+        {
+          latitude: booking.destinationLatitude,
+          longitude: booking.destinationLongitude,
+          country: booking.destinationCountry,
+        },
+      )
+    : null
 
   return (
     <div className="min-h-[70dvh] bg-[#f4f2ed] px-5 pt-5 pb-8 sm:px-6 lg:px-10">
@@ -132,6 +147,12 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
               ) : null}
               {audience === "manager" && isPending ? (
                 <>
+                  {transportEstimate ? (
+                    <div className="mr-1 whitespace-nowrap text-[11px] leading-4 text-gray-500">
+                      <div>Estimated distance: {transportEstimate.distanceKm.toFixed(1)} km</div>
+                      <div>Estimated time: {formatEstimateDuration(transportEstimate.durationMinutes)}</div>
+                    </div>
+                  ) : null}
                   <button type="button" className={cn(actionButtonClass, dangerButtonClass)} onClick={() => setRejectOpen(true)}>
                     Reject
                   </button>
