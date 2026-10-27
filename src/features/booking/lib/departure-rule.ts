@@ -6,13 +6,14 @@ const DATE_FORMAT = "yyyy-MM-dd"
 const UNITED_KINGDOM = "United Kingdom"
 
 export const DOMESTIC_MIN_DAYS = 21
-export const INTERNATIONAL_MIN_MONTHS = 3
+export const INTERNATIONAL_MIN_MONTHS = 2
 
 /**
  * How early a booking must be made. The BE enforces the same rule; the form repeats it so the Customer sees why the
  * nearest dates are greyed out.
  * - domestic: United Kingdom to United Kingdom, at least 21 days ahead
- * - international: between the EU countries, or the United Kingdom and an EU country, at least 3 months ahead
+ * - international: between the EU countries, or the United Kingdom and an EU country, at least 2 months ahead
+ * There is no latest date: the BE only sets the earliest one.
  * - unsupported: the same country other than the United Kingdom (for example Germany to Germany)
  * - pending: the route is not picked yet, so only the shortest lead time applies
  */
@@ -55,6 +56,6 @@ export const SAME_COUNTRY_MESSAGE = "Same-country bookings are only accepted in 
 export const DEPARTURE_TOO_SOON_MESSAGE: Record<DepartureRuleKind, string> = {
   pending: "Departure date must be at least 21 days from today",
   unsupported: "Departure date must be at least 21 days from today",
-  domestic: "Domestic bookings (United Kingdom) need a departure date at least 21 days from today",
-  international: "International bookings need a departure date at least 3 months from today",
+  domestic: "Domestic bookings (United Kingdom) need a departure date at least 21 days from today (UTC date)",
+  international: "International bookings need a departure date at least 2 months from today (UTC date)",
 }

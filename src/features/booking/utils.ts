@@ -27,7 +27,6 @@ const bookingErrorMessages: Record<string, string> = {
   BOOKING_HAS_NO_HORSE: "This booking has no horse, so it cannot be approved.",
   REASON_REQUIRED: "Please enter a reason.",
   INVALID_COORDINATES: "The pickup or destination point is outside the valid map range. Pick the point again on the map.",
-  DEPARTURE_DATE_OUT_OF_RANGE: "The departure date must be between 3 weeks and 2 months from today.",
   ARRIVAL_DATE_INVALID: "The arrival date cannot be before the departure date.",
   DUPLICATE_HORSE_IN_BOOKING: "A horse can only be selected once per booking.",
   HORSE_ALREADY_IN_BOOKING: "This horse is already in the booking.",
