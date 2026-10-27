@@ -7,8 +7,9 @@ import { Input } from "@/shared/components/ui/input"
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits"
 import { TYPE_LABEL, type HandoverAudience, type HandoverType } from "../constants"
 import type { CreateHandoverInput, HandoverBoundary, OverviewSegment } from "../types"
-import { describeError, typeLabel } from "../utils"
+import { describeError, isVehicleOnAnotherTrip, typeLabel } from "../utils"
 import { StatusBadge } from "./StatusBadge"
+import { routePlanLinkFor, VehicleOnAnotherTripNotice } from "./VehicleOnAnotherTripNotice"
 
 interface Props {
   audience: HandoverAudience
@@ -38,6 +39,7 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
   const [schedule, setSchedule] = useState(false)
   const [plannedAt, setPlannedAt] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
+  const [vehicleBlocked, setVehicleBlocked] = useState(false)
 
   // The link from the transport page carries the boundary in the query: use it until the person picks another.
   const creatable = boundaries.filter((boundary) => boundary.canCreate)
@@ -55,6 +57,7 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
 
   const submit = async () => {
     setFormError(null)
+    setVehicleBlocked(false)
     if (!selected || !type) return
     if (!canStartNow && !canSchedule) return
     if (scheduled) {
@@ -83,7 +86,8 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
         ...(scheduled ? { plannedHandoverAt: toIso(plannedAt) } : {}),
       })
     } catch (error) {
-      setFormError(describeError(error))
+      if (isVehicleOnAnotherTrip(error)) setVehicleBlocked(true)
+      else setFormError(describeError(error))
     }
   }
 
@@ -192,6 +196,7 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
       </section>
 
       {formError ? <p role="alert" className="rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p> : null}
+      {vehicleBlocked ? <VehicleOnAnotherTripNotice routePlanHref={routePlanLinkFor(audience, legs.get(selected?.toRoutePlanRouteId ?? selected?.fromRoutePlanRouteId ?? ""))} /> : null}
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button asChild variant="outline" className="min-h-12 rounded-[2px] sm:min-h-10">

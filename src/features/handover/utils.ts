@@ -130,6 +130,13 @@ export function formatDistance(meters: number) {
     : `${(meters / 1000).toFixed(1)} km`;
 }
 
+/** HO3, HO4, HO5 on a PICKUP: a vehicle of this transport is still on another unfinished trip. */
+export const VEHICLE_ON_ANOTHER_TRIP = "VEHICLE_STILL_ON_ANOTHER_TRIP";
+
+export const isVehicleOnAnotherTrip = (error: unknown) =>
+  (error as { errorCode?: unknown } | null)?.errorCode ===
+  VEHICLE_ON_ANOTHER_TRIP;
+
 /** Text to show for a failed call: the BE message (it already says what to fix), else a plain fallback. */
 export function describeError(
   error: unknown,
