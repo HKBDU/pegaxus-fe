@@ -201,23 +201,25 @@ export function parseGeoJsonToCoordinates(geoJsonInput: unknown): [number, numbe
 
     if (!data || typeof data !== "object") return [];
 
-    // FeatureCollection
+    // FeatureCollection. Preserve feature order so a multipart route remains
+    // one continuous path instead of falling back to a straight line.
     if ("type" in data && data.type === "FeatureCollection" && Array.isArray(data.features)) {
-      for (const feat of data.features) {
-        if (feat?.geometry?.type === "LineString" && Array.isArray(feat.geometry.coordinates)) {
-          return feat.geometry.coordinates as [number, number][];
-        }
-      }
+      return data.features.flatMap((feat: unknown) => parseGeoJsonToCoordinates(feat));
     }
 
     // Feature
-    if ("type" in data && data.type === "Feature" && data.geometry?.type === "LineString") {
-      return data.geometry.coordinates as [number, number][];
+    if ("type" in data && data.type === "Feature") {
+      return parseGeoJsonToCoordinates(data.geometry);
     }
 
-    // Direct Geometry LineString
+    // Direct Geometry LineString / MultiLineString
     if ("type" in data && data.type === "LineString" && Array.isArray(data.coordinates)) {
       return data.coordinates as [number, number][];
+    }
+    if ("type" in data && data.type === "MultiLineString" && Array.isArray(data.coordinates)) {
+      return data.coordinates.flatMap((line: unknown) =>
+        Array.isArray(line) ? (line as [number, number][]) : [],
+      );
     }
 
     // Direct array of coordinates

@@ -108,20 +108,23 @@ export function loadDemoPath(): Promise<DemoPath> {
     const legEnds: number[] = []
     let total = 0
     for (const leg of DEMO_LEGS) {
-      let line: Array<{ latitude: number; longitude: number }> = [leg.from, leg.to]
       try {
         const route = await previewGeoapifyRoute(leg.from, leg.to)
+        // A straight-line estimate is not a valid GPS path. Stop loading the
+        // demo instead of letting the marker travel "as the crow flies".
+        if (route.estimated) throw new Error("Road geometry unavailable for demo route")
         const coordinates = route.geometry.type === "LineString" ? route.geometry.coordinates : route.geometry.coordinates.flat()
-        if (coordinates.length > 1) line = coordinates.map(([longitude, latitude]) => ({ latitude, longitude }))
+        if (coordinates.length < 2) throw new Error("Road geometry has too few points")
+        const line = coordinates.map(([longitude, latitude]) => ({ latitude, longitude }))
+        for (const point of line) {
+          const previous = points.at(-1)
+          if (previous) total += distanceMeters(previous, point)
+          points.push({ ...point, at: total })
+        }
+        legEnds.push(total)
       } catch {
-        // Straight line: fallback
+        throw new Error(`Road geometry unavailable for demo leg ${leg.id}`)
       }
-      for (const point of line) {
-        const previous = points.at(-1)
-        if (previous) total += distanceMeters(previous, point)
-        points.push({ ...point, at: total })
-      }
-      legEnds.push(total)
     }
     return { points, legEnds }
   })()

@@ -172,10 +172,21 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
         // `estimated` is the resolver's straight-line fallback. Never use it
         // for GPS simulation: the vehicle must follow a real Geoapify road
         // geometry or remain stopped until one can be loaded.
-        if (!resolved.estimated && resolved.line?.type === "LineString" && resolved.line.coordinates.length >= 2) {
-          applyCoordinates(resolved.line.coordinates, "segment");
+        if (!resolved.estimated && resolved.line) {
+          const coordinates = resolved.line.type === "LineString"
+            ? resolved.line.coordinates
+            : resolved.line.coordinates.flat();
+          if (coordinates.length >= 2) {
+            applyCoordinates(coordinates, "segment");
+            setIsLoadingRoute(false);
+            return;
+          }
+        }
+        // Never substitute the endpoint-to-endpoint line here. A missing road
+        // geometry must leave the simulator stopped, otherwise fake GPS can
+        // cut across terrain/water between two route endpoints.
+        if (resolved.estimated || !resolved.line) {
           setIsLoadingRoute(false);
-          return;
         }
         routeDataRef.current = { coordinates: [], cumDistances: [], totalDistance: 0 };
         setTotalDistance(0);
