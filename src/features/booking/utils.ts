@@ -12,7 +12,7 @@ const bookingStatusLabels: Record<BookingAudience, Record<BookingStatus, string>
   manager: {
     PENDING: "Needs review",
     APPROVED: "Approved",
-    CANCELLED: "Cancelled by customer",
+    CANCELLED: "Cancelled",
     REJECTED: "Rejected",
     DRAFT: "Draft",
   },
@@ -22,6 +22,7 @@ const bookingStatusLabels: Record<BookingAudience, Record<BookingStatus, string>
 const bookingErrorMessages: Record<string, string> = {
   BOOKING_NOT_FOUND: "This booking no longer exists.",
   INVALID_BOOKING_STATUS: "This booking can no longer be changed in its current status. Reload and try again.",
+  TRANSPORT_ALREADY_DEPARTED: "The transport has already departed, so the booking cannot be cancelled. Create a RETURN route instead.",
   BOOKING_MODIFIED: "This booking changed elsewhere. Reload it before saving again.",
   BOOKING_BEING_EDITED: "The customer is editing this booking. Wait until the customer saves it, then review it again.",
   BOOKING_HAS_NO_HORSE: "This booking has no horse, so it cannot be approved.",

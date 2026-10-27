@@ -6,6 +6,9 @@ import { ApproveBookingDialog, RejectBookingDialog } from "@/features/booking/co
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
 import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
 import { CancelBookingDialog } from "@/features/booking/components/CancelBookingDialog"
+import { ManagerCancelBookingDialog } from "@/features/booking/components/ManagerCancelBookingDialog"
+import { canAccess } from "@/features/auth/access-control"
+import { useAuthStore } from "@/features/auth/store"
 import { useBooking } from "@/features/booking/hooks"
 import type { BookingAudience } from "@/features/booking/types"
 import { formatBookingDate, formatSex } from "@/features/booking/utils"
@@ -107,6 +110,14 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
   const [cancelOpen, setCancelOpen] = useState(false)
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
+  const [managerCancelOpen, setManagerCancelOpen] = useState(false)
+  const principal = useAuthStore((state) => state.principal)
+  // Only the Logistics Manager cancels an approved booking, and not once the transport has left (the BE answers TRANSPORT_ALREADY_DEPARTED).
+  const canManagerCancel =
+    audience === "manager" &&
+    booking?.status === "APPROVED" &&
+    canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) &&
+    !["IN_TRANSIT", "COMPLETED"].includes(booking.transport?.status ?? "")
   const isPending = booking?.status === "PENDING"
   const canEdit = booking?.status === "PENDING" || booking?.status === "DRAFT"
   const bookingLoaded = Boolean(booking)
@@ -171,6 +182,11 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                   bookingId={booking.bookingId}
                   status={booking.status}
                 />
+              ) : null}
+              {canManagerCancel ? (
+                <button type="button" className={cn(actionButtonClass, dangerButtonClass)} onClick={() => setManagerCancelOpen(true)}>
+                  Cancel booking
+                </button>
               ) : null}
               {audience === "customer" && booking.transport?.status === "IN_TRANSIT" ? (
                 <Link
@@ -364,6 +380,7 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
       </div>
 
       {booking ? <CancelBookingDialog bookingId={booking.bookingId} open={cancelOpen} onOpenChange={setCancelOpen} /> : null}
+      {booking ? <ManagerCancelBookingDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} open={managerCancelOpen} onOpenChange={setManagerCancelOpen} /> : null}
       {booking ? <ApproveBookingDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} open={approveOpen} onOpenChange={setApproveOpen} /> : null}
       {booking ? <RejectBookingDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} open={rejectOpen} onOpenChange={setRejectOpen} /> : null}
     </div>
