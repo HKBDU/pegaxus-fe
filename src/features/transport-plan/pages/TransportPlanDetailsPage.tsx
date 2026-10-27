@@ -88,7 +88,7 @@ export function TransportPlanDetails({
               </Link>
             </Button>
           ) : null}
-          {manager ? (
+          {manager && plan.status !== "CANCELLED" ? (
             <Button
               className="rounded-[2px]"
               onClick={() => navigate(invoiceCreate(plan.booking.bookingId))}

@@ -268,14 +268,14 @@ export function emptyItem(): InvoiceItemFormValues {
  * Fills the form from a saved draft (edit mode). Generated types (QUOTATION, DEPOSIT, FINAL) have no editable rows: the
  * server rebuilds the lines on every save. The deposit deduction lines are never form rows either.
  */
-export function invoiceToFormValues(invoice: Invoice): InvoiceFormValues {
+export function invoiceToFormValues(invoice: Invoice, locked = isGeneratedInvoiceType(invoice.type)): InvoiceFormValues {
   return {
     type: invoice.type,
     dueDate: splitDueDateTime(invoice.dueDate).date,
     dueTime: splitDueDateTime(invoice.dueDate).time,
     note: invoice.note ?? "",
     transitDays: "",
-    items: isGeneratedInvoiceType(invoice.type) ? [] : invoice.items
+    items: locked ? [] : invoice.items
       .filter((item) => !item.isDepositDeduction)
       .map((item) => ({
         invoiceItemId: item.invoiceItemId ?? undefined,
@@ -306,9 +306,12 @@ export function toDueDateTime(day: string, time: string = DEFAULT_DUE_TIME) {
   return dueDateTimeToIso(day, time)
 }
 
-/** The server builds the lines of QUOTATION, DEPOSIT and FINAL: they send `transitDays` (QUOTATION) but never `items`. */
-function lineFields(values: InvoiceFormValues) {
-  if (isGeneratedInvoiceType(values.type)) {
+/**
+ * `locked` is IV1 `isLocked`: the server builds the lines (QUOTATION from 1 to 9 horses, DEPOSIT, FINAL), so only `transitDays`
+ * (QUOTATION) is sent, never `items`. Unlocked types (SUPPLEMENTARY, CREDIT_NOTE, QUOTATION from 10 horses) send the typed lines.
+ */
+function lineFields(values: InvoiceFormValues, locked: boolean) {
+  if (locked) {
     const days = parseWholeNumber(values.transitDays)
     return values.type === INVOICE_TYPE.QUOTATION && !Number.isNaN(days) ? { transitDays: days } : {}
   }
@@ -316,21 +319,21 @@ function lineFields(values: InvoiceFormValues) {
 }
 
 /** `payment` and `itemDate` are left out on purpose: pending P-01 to P-03, the BE ignores them. */
-export function toCreatePayload(values: InvoiceFormValues): CreateInvoicePayload {
+export function toCreatePayload(values: InvoiceFormValues, locked = isGeneratedInvoiceType(values.type)): CreateInvoicePayload {
   return {
     type: values.type,
     dueDate: toDueDateTime(values.dueDate, values.dueTime),
     ...(values.note.trim() ? { note: values.note.trim() } : {}),
-    ...lineFields(values),
+    ...lineFields(values, locked),
   }
 }
 
-export function toUpdatePayload(values: InvoiceFormValues, lastUpdatedAt: string): UpdateInvoicePayload {
+export function toUpdatePayload(values: InvoiceFormValues, lastUpdatedAt: string, locked = isGeneratedInvoiceType(values.type)): UpdateInvoicePayload {
   return {
     lastUpdatedAt,
     dueDate: toDueDateTime(values.dueDate, values.dueTime),
     ...(values.note.trim() ? { note: values.note.trim() } : {}),
-    ...lineFields(values),
+    ...lineFields(values, locked),
   }
 }
 

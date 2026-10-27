@@ -132,13 +132,15 @@ export function TransportPlansTable({
                     View Invoices
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() =>
-                    navigate(invoiceCreate(row.original.bookingId))
-                  }
-                >
-                  Create Invoice
-                </DropdownMenuItem>
+                {row.original.status !== "CANCELLED" ? (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      navigate(invoiceCreate(row.original.bookingId))
+                    }
+                  >
+                    Create Invoice
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
