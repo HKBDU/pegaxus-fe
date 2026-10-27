@@ -5,8 +5,9 @@ import type { ExpiryStatus, VehicleWarning } from "@/features/fleet/types"
 
 const EXPIRING_SOON_DAYS = 7
 
-export function todayIso() {
-  return format(new Date(), "yyyy-MM-dd")
+/** Today as a UTC date (`yyyy-MM-dd`): the BE compares expiry dates with the UTC day, not the browser's day. */
+export function todayUtc(now = new Date()) {
+  return now.toISOString().slice(0, 10)
 }
 
 /** Mirrors the BE rule (api-contract "BE calculated field"): <= today expired, < 7 days left expiring soon. Used by the mock only. */
@@ -14,8 +15,7 @@ export function computeExpiryStatus(date: string | null, now = new Date()): Expi
   if (!date) return "VALID"
   const expiry = parseISO(date)
   if (!isValid(expiry)) return "VALID"
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const days = Math.round((expiry.getTime() - today.getTime()) / 86_400_000)
+  const days = Math.round((Date.parse(date) - Date.parse(todayUtc(now))) / 86_400_000)
   if (days <= 0) return "EXPIRED"
   if (days < EXPIRING_SOON_DAYS) return "EXPIRING_SOON"
   return "VALID"

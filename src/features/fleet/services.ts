@@ -19,6 +19,7 @@ import type {
   VehicleStatusResult,
   VehicleUpdatePayload,
 } from "@/features/fleet/types"
+import { SYSTEM_MANAGED_STATUSES } from "@/features/fleet/types"
 import { computeExpiryStatus, computeWarnings } from "@/features/fleet/utils"
 
 const VEHICLES = "vehicles"
@@ -259,7 +260,7 @@ export const vehicleService = {
       await wait()
       const row = findMockVehicle(id)
       if (payload.lastUpdatedAt !== row.updatedAt) throw new FleetApiError("VEHICLE_MODIFIED")
-      if (row.status === "ASSIGNED" || row.status === "IN_USE") throw new FleetApiError("VEHICLE_STATUS_LOCKED")
+      if (SYSTEM_MANAGED_STATUSES.has(row.status)) throw new FleetApiError("VEHICLE_STATUS_LOCKED")
       const previousStatus = row.status
       row.status = payload.status
       row.updatedAt = new Date().toISOString()

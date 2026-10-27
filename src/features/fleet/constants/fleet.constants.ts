@@ -39,6 +39,8 @@ export const VEHICLE_STATUS_LABEL: Record<VehicleStatus, string> = {
   IN_USE: "IN_USE",
   MAINTENANCE: "MAINTENANCE",
   INACTIVE: "INACTIVE",
+  SUSPENDED: "SUSPENDED",
+  OUT_OF_SERVICE: "OUT_OF_SERVICE",
 }
 
 export const MANUAL_STATUS_OPTION_LABEL: Record<ManualVehicleStatus, string> = {
