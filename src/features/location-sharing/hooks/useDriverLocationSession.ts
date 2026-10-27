@@ -3,11 +3,14 @@ import type { useLocationSharing } from "./useLocationSharing";
 import type { useLocationGate } from "./useLocationGate";
 import type { DriverTransportReadState } from "../types";
 
+import type { TrackingSegment } from "@/features/ongoing-transport/types";
+
 export type DriverLocationSession = ReturnType<typeof useLocationSharing> & {
   gate: ReturnType<typeof useLocationGate>;
   context: DriverTransportReadState;
   source: "real" | "mock";
   reload: () => void;
+  currentSegment?: TrackingSegment | null;
 };
 export const DriverLocationSessionContext =
   createContext<DriverLocationSession | null>(null);

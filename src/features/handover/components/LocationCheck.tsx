@@ -35,7 +35,13 @@ export function readPosition(): Promise<DevicePosition> {
   return new Promise((resolve, reject) => {
     if (!("geolocation" in navigator)) return reject(new Error("This device cannot share its location."))
     navigator.geolocation.getCurrentPosition(
-      ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy }),
+      ({ coords }) =>
+        resolve({
+          // The API accepts coordinates with a maximum scale of 4 decimal places.
+          latitude: Number(coords.latitude.toFixed(4)),
+          longitude: Number(coords.longitude.toFixed(4)),
+          accuracy: coords.accuracy,
+        }),
       (error) => reject(new Error(ERROR_TEXT[error.code] ?? "Could not read your position.")),
       { enableHighAccuracy: true, timeout: 12_000, maximumAge: 0 },
     )

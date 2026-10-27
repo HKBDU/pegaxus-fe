@@ -33,11 +33,11 @@ export function useUpdateAuthorityReview(submissionId: string) {
   })
 }
 
-export function useAuthoritySubmissionDetail(submissionId: string) {
+export function useAuthoritySubmissionDetail(dossierId: string, submissionId: string) {
   return useQuery({
-    queryKey: ['authoritySubmission', submissionId],
-    queryFn: () => getAuthoritySubmissionDetail(submissionId),
-    enabled: Boolean(submissionId),
+    queryKey: ['authoritySubmission', dossierId, submissionId],
+    queryFn: () => getAuthoritySubmissionDetail(dossierId, submissionId),
+    enabled: Boolean(dossierId && submissionId),
   })
 }
 

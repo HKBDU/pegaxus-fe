@@ -7,6 +7,7 @@ import { ErrorState, LoadingState } from "@/shared/components/common"
 import { Button } from "@/shared/components/ui/button"
 import { CancelHandoverDialog } from "../components/CancelHandoverDialog"
 import { CompleteForm } from "../components/CompleteForm"
+import { GpsSimulatorDrawer } from "@/features/location-sharing/simulator/GpsSimulatorDrawer"
 import { PageFrame } from "../components/PageFrame"
 import { PartiesSection } from "../components/PartyBlock"
 import { ReadOnlyRecord } from "../components/ReadOnlyRecord"
@@ -91,6 +92,13 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
 
   const status = record ? <StatusBadge status={record.status} /> : null
   const shown = record && completed && completed.handoverRecordId === record.handoverRecordId ? { ...record, effects: completed.effects ?? record.effects } : record
+  const simulatorSegment = shown && segments.data
+    ? (shown.toSegment
+        ? segments.data.segments.find((segment) => segment.routePlanRouteId === shown.toSegment?.routePlanRouteId)
+        : shown.fromSegment
+          ? segments.data.segments.find((segment) => segment.routePlanRouteId === shown.fromSegment?.routePlanRouteId)
+          : undefined)
+    : undefined
 
   const barClass = cn("flex gap-2", mobile ? "fixed inset-x-0 bottom-0 z-20 border-t border-slate-300 bg-white px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] [&>button]:min-h-15 [&>button]:flex-1 [&>button]:text-base" : "flex-col-reverse sm:flex-row sm:justify-end [&>button]:min-h-11 sm:[&>button]:min-h-10")
 
@@ -162,6 +170,15 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
             serverError={cancel.error && !modified ? describeError(cancel.error) : undefined}
             onSubmit={(reason) => void submitCancel(reason)}
           />
+          {audience === "crew" && simulatorSegment ? (
+            <GpsSimulatorDrawer
+              currentSegment={{
+                fromLocation: simulatorSegment.fromLocation,
+                toLocation: simulatorSegment.toLocation,
+                routePlanRouteId: simulatorSegment.routePlanRouteId,
+              }}
+            />
+          ) : null}
         </>
       )}
       <ReloadDialog open={modified} onReload={onReload} />

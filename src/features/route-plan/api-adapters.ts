@@ -66,7 +66,7 @@ export type TransportPlanApiValue = {
   isCrossBorder?: boolean;
   plannedStartAt?: string;
   plannedEndAt?: string;
-  booking?: { bookingCode?: string; originAddress?: string; originCountry?: string; originLocationId?: string | number; destinationAddress?: string; destinationCountry?: string; destinationLocationId?: string | number; isInternational?: boolean };
+  booking?: { bookingCode?: string; originAddress?: string; originCountry?: string; originLocationId?: string | number; destinationAddress?: string; destinationCountry?: string; destinationLocationId?: string | number; isInternational?: boolean; requestedArrivalDate?: string | null };
   originLocationId?: string | number;
   destinationLocationId?: string | number;
   complianceDossier?: { status?: string } | null;
@@ -133,6 +133,7 @@ export function adaptTransportPlan(plan: TransportPlanApiValue, locations: MapLo
     scope: (plan.isCrossBorder ?? booking.isInternational) ? "International" as const : "Domestic" as const,
     departureAt: plan.plannedStartAt ?? "",
     arrivalAt: plan.plannedEndAt ?? "",
+    requestedArrivalAt: booking.requestedArrivalDate ?? null,
     from: from ?? fallbackFrom,
     to: to ?? fallbackTo,
     isFromResolved: Boolean(from),

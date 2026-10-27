@@ -133,6 +133,13 @@ export const locationSharingService = {
     return driverLocationAcceptedSchema.parse(readValue(response));
   },
   async permissionDenied(transportId: string, signal: AbortSignal) {
+    if (transportId === "demo") {
+      signal.throwIfAborted();
+      return {
+        serverTime: new Date().toISOString(),
+        notified: true,
+      };
+    }
     signal.throwIfAborted();
     const response = await apiClient.post<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/locations/permission-denied`,

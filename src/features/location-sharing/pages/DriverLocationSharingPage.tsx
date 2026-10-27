@@ -4,6 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { LocationSharingControl } from "../components/LocationSharingControl";
 import { LocationSharingSummary } from "../components/LocationSharingDetails";
+import { GpsSimulatorDrawer } from "../simulator/GpsSimulatorDrawer";
 import { useDriverLocationSession } from "../hooks/useDriverLocationSession";
 import { driverTransportOverviewPath } from "../navigation";
 import { FEATURES } from "../features";
@@ -21,10 +22,14 @@ export default function DriverLocationSharingPage() {
     source,
     reload,
     gate,
+    currentSegment,
   } = useDriverLocationSession();
+  const isDemo = transportId === "demo";
   const unavailableReason =
-    context.kind === "loading"
-      ? "Loading journey"
+    isDemo
+      ? undefined
+      : context.kind === "loading"
+        ? "Loading journey"
       : source === "mock"
         ? "Mock journey"
         : context.kind !== "available"
@@ -131,6 +136,11 @@ export default function DriverLocationSharingPage() {
             </div>
           ) : null}
         </Card>
+        <GpsSimulatorDrawer
+          currentSegment={currentSegment}
+          sharingActive={state.active}
+          onStartSharing={canStart ? start : undefined}
+        />
       </div>
     </main>
   );

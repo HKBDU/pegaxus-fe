@@ -26,7 +26,7 @@ apiClient.interceptors.request.use((request) => {
   }
   config._authSessionVersion = sessionVersion
 
-  if (accessToken) {
+  if (accessToken && !accessToken.startsWith('demo-')) {
     config.headers.set('Authorization', `Bearer ${accessToken}`)
   }
 
@@ -61,6 +61,9 @@ apiClient.interceptors.response.use(
     }
 
     const { accessToken, refreshToken, sessionVersion } = useAuthStore.getState()
+    if (accessToken?.startsWith('demo-')) {
+      return Promise.reject(error)
+    }
     if (originalRequest._authSessionVersion !== sessionVersion) return Promise.reject(error)
 
     if (originalRequest._retry || !accessToken || !refreshToken) {

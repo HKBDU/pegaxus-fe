@@ -92,7 +92,8 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
   }, [onNavigate])
 
   useEffect(() => {
-    if (!signedIn) {
+    const token = useAuthStore.getState().accessToken
+    if (!signedIn || !token || token.startsWith("demo-")) {
       void notificationHub.stop()
       useNotificationStore.getState().reset()
       return
