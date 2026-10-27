@@ -218,8 +218,10 @@ export const dossierService = {
       };
     }
 
-    const items = (input.initializationItems?.length
-      ? input.initializationItems
+    // D2 takes the lines as items[] (the BE has no manualRequirements). With a template the items are the ticked template lines
+    // (custom lines are added afterwards with D3); without one they are the custom lines. horseId and dueDate cannot be sent here.
+    const items = (fromTemplate
+      ? (input.initializationItems ?? [])
       : customRequirements.map((item) => ({
         complianceRequirementId: item.complianceRequirementId,
         isMandatory: item.isMandatory,
@@ -233,10 +235,10 @@ export const dossierService = {
       instruction: item.instruction || undefined,
     }));
 
+    // items wins over selectedTemplateItemIds when both are sent, and an empty items[] is rejected, so send only one of them.
     const body = {
       ...(fromTemplate ? { dossierTemplateId: String(dossierTemplateId) } : {}),
-      items,
-      ...(fromTemplate && selectedTemplateItemIds?.length ? { selectedTemplateItemIds } : {}),
+      ...(items.length ? { items } : fromTemplate && selectedTemplateItemIds?.length ? { selectedTemplateItemIds } : {}),
     };
 
     let payload: unknown;
