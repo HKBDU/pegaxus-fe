@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 
 import {
   INCIDENT_ACTION,
+  INCIDENT_ERROR_MESSAGES,
   INCIDENT_SEVERITY,
   INCIDENT_SEVERITY_OPTIONS,
 } from "@/shared/constants/incident";
@@ -59,17 +60,25 @@ export function RaiseSeverityButton({
   const [reason, setReason] = useState("");
   const mutation = useIncidentMutations().raiseSeverity;
   const canRaise = availableActions.includes(INCIDENT_ACTION.RAISE_SEVERITY);
-  const higherSeverities = useMemo(
+  const canLower = availableActions.includes(INCIDENT_ACTION.LOWER_SEVERITY);
+  const selectableSeverities = useMemo(
     () => severityOrder.slice(severityOrder.indexOf(severity) + 1),
     [severity],
   );
+  const allowedSeverities = canLower
+    ? severityOrder.filter((option) => option !== severity)
+    : selectableSeverities;
   const reasonTooShort = reason.trim().length > 0 && reason.trim().length < 10;
 
-  if (!canRaise || higherSeverities.length === 0) return null;
+  if ((!canRaise && !canLower) || allowedSeverities.length === 0) return null;
 
   const submit = () => {
-    if (reason.trim().length < 10 || !higherSeverities.includes(nextSeverity))
-      return;
+    const isLowering = severityOrder.indexOf(nextSeverity) < severityOrder.indexOf(severity);
+    if (
+      reason.trim().length < 10 ||
+      !allowedSeverities.includes(nextSeverity) ||
+      (isLowering && !canLower)
+    ) return;
     mutation.mutate(
       {
         incidentReportId,
@@ -90,19 +99,22 @@ export function RaiseSeverityButton({
       <Button
         type="button"
         onClick={() => {
-          setNextSeverity(higherSeverities[0]);
+          setNextSeverity(allowedSeverities[0]);
           setOpen(true);
         }}
         className="min-h-12 rounded-[2px] bg-[#f39200] text-[#181818] hover:bg-[#d97f00]"
       >
-        Raise severity
+        Change severity
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="rounded-[2px] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Raise incident severity</DialogTitle>
+            <DialogTitle>Change incident severity</DialogTitle>
             <DialogDescription>
-              Severity can only move upward. The current value is{" "}
+              {canLower
+                ? "Logistics Manager can move severity up or down."
+                : "Severity can only move upward."}{" "}
+              The current value is{" "}
               {INCIDENT_SEVERITY_OPTIONS[severity].label}.
             </DialogDescription>
           </DialogHeader>
@@ -119,7 +131,7 @@ export function RaiseSeverityButton({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {higherSeverities.map((option) => (
+                  {allowedSeverities.map((option) => (
                     <SelectItem key={option} value={option}>
                       {INCIDENT_SEVERITY_OPTIONS[option].label}
                     </SelectItem>
@@ -146,7 +158,9 @@ export function RaiseSeverityButton({
           )}
           {mutation.error instanceof Error && (
             <p role="alert" className="text-sm text-red-600">
-              {mutation.error.message}
+              {INCIDENT_ERROR_MESSAGES[
+                (mutation.error as { errorCode?: string }).errorCode ?? ""
+              ] ?? mutation.error.message}
             </p>
           )}
           {mutation.data?.effects?.customerNotified && (
@@ -155,6 +169,14 @@ export function RaiseSeverityButton({
               className="bg-emerald-50 p-3 text-sm text-emerald-800"
             >
               Customer was notified.
+            </p>
+          )}
+          {mutation.data?.effects?.vehicleStatusChanged && (
+            <p
+              role="status"
+              className="border border-slate-300 bg-slate-50 p-3 text-sm text-slate-800"
+            >
+              Vehicle status was updated by this incident change.
             </p>
           )}
           <DialogFooter>
@@ -171,7 +193,7 @@ export function RaiseSeverityButton({
               onClick={submit}
               className="bg-[#f39200] text-[#181818] hover:bg-[#d97f00]"
             >
-              {mutation.isPending ? "Saving…" : "Raise severity"}
+              {mutation.isPending ? "Saving…" : "Change severity"}
             </Button>
           </DialogFooter>
         </DialogContent>

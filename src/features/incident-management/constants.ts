@@ -38,6 +38,8 @@ export const STATUS_FILTER_OPTIONS = [
 export const INCIDENT_ERROR_MESSAGES: Record<string, string> = {
   INCIDENT_MODIFIED: "This incident was changed by someone else. Reload to see the latest version.",
   INVALID_INCIDENT_STATUS: "This incident can no longer be changed in its current status.",
+  SEVERITY_LOWER_MANAGER_ONLY: "Only the Logistics Manager can lower incident severity.",
+  SEVERITY_UNCHANGED: "Choose a different severity before saving.",
   INVALID_TRANSPORT_STATUS: "The transport is not in a status that allows this action.",
   UNRESOLVED_EMERGENCY_COSTS: "Some emergency cost requests are still pending. Decide them before closing the incident.",
   HAS_OPEN_EMERGENCY_COSTS: "You still have open emergency cost requests. Ask the Logistics Manager to close the incident instead.",
