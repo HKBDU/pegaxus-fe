@@ -1,4 +1,5 @@
 import { format, isValid, parseISO } from "date-fns"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 
 import { EQUIPMENT_PRESETS } from "@/features/fleet/constants/fleet.constants"
 import type { ExpiryStatus, VehicleWarning } from "@/features/fleet/types"
@@ -8,6 +9,11 @@ const EXPIRING_SOON_DAYS = 7
 /** Today as a UTC date (`yyyy-MM-dd`): the BE compares expiry dates with the UTC day, not the browser's day. */
 export function todayUtc(now = new Date()) {
   return now.toISOString().slice(0, 10)
+}
+
+/** The day after today's UTC date (`yyyy-MM-dd`): the earliest expiry date the BE accepts ("must be in the future"). */
+export function nextUtcDay(now = new Date()) {
+  return new Date(Date.parse(todayUtc(now)) + 86_400_000).toISOString().slice(0, 10)
 }
 
 /** Mirrors the BE rule (api-contract "BE calculated field"): <= today expired, < 7 days left expiring soon. Used by the mock only. */
@@ -38,7 +44,8 @@ function safeFormat(value: string | null | undefined, pattern: string) {
 
 export const formatMonthYear = (value: string | null | undefined) => safeFormat(value, "MM/yyyy")
 export const formatFleetDate = (value: string | null | undefined) => safeFormat(value, "dd/MM/yyyy")
-export const formatFleetDateTime = (value: string | null | undefined) => safeFormat(value, "dd/MM/yyyy HH:mm")
+/** An instant (created, updated, planned departure) as labelled UTC; the expiry dates above are plain days and stay as they are. */
+export const formatFleetDateTime = (value: string | null | undefined) => formatUtcDateTime(value)
 
 /**
  * specialEquipment is one text column in the DB. The form keeps preset tags + free notes in it as

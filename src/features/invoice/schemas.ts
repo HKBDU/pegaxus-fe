@@ -225,7 +225,7 @@ export const invoiceItemFormSchema = z.object({
 
 function maxFutureDateIso(years = VALIDATION_LIMITS.dateWindowYears): string {
   const d = new Date()
-  d.setFullYear(d.getFullYear() + years)
+  d.setUTCFullYear(d.getUTCFullYear() + years)
   return d.toISOString().slice(0, 10)
 }
 
