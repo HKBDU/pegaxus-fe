@@ -1,6 +1,7 @@
 import { AlertTriangle, CircleDot, RefreshCw } from "lucide-react";
 import { ErrorState, LoadingState } from "@/shared/components/common";
 import { PageHeader } from "@/shared/components/PageHeader";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 
 import { CrewHomeActions } from "../components/CrewHomeActions";
 import { CrewShell } from "../components/CrewShell";
@@ -8,14 +9,7 @@ import { useAssignedTransports } from "../hooks/useAssignedTransports";
 import type { AssignedTransport } from "../types";
 
 function formatDate(value: string | null) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return formatUtcDateTime(value);
 }
 
 function TransportCard({ transport }: { transport: AssignedTransport }) {

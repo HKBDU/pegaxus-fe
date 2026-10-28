@@ -21,6 +21,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { DatePicker } from "@/shared/components/ui/date-picker";
+import { formatUtcDateTime, todayUtc } from "@/shared/utils/datetime";
 import {
   Dialog,
   DialogContent,
@@ -174,8 +175,7 @@ export function UpdateAuthorityReviewDialog({
 
       if (permitIssuedDate) {
         const issued = new Date(permitIssuedDate);
-        const now = new Date();
-        const diffYears = Math.abs(issued.getFullYear() - now.getFullYear());
+        const diffYears = Math.abs(issued.getUTCFullYear() - Number(todayUtc().slice(0, 4)));
         if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
           next.permitIssuedDate = `Issue date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
         }
@@ -183,8 +183,7 @@ export function UpdateAuthorityReviewDialog({
 
       if (permitExpiryDate) {
         const expiry = new Date(permitExpiryDate);
-        const now = new Date();
-        const diffYears = Math.abs(expiry.getFullYear() - now.getFullYear());
+        const diffYears = Math.abs(expiry.getUTCFullYear() - Number(todayUtc().slice(0, 4)));
         if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
           next.permitExpiryDate = `Expiry date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
         } else if (permitIssuedDate && permitExpiryDate < permitIssuedDate) {
@@ -207,8 +206,7 @@ export function UpdateAuthorityReviewDialog({
         next.revisionDueDate = "Revision Due Date is required.";
       } else {
         const revision = new Date(revisionDueDate);
-        const now = new Date();
-        const diffYears = Math.abs(revision.getFullYear() - now.getFullYear());
+        const diffYears = Math.abs(revision.getUTCFullYear() - Number(todayUtc().slice(0, 4)));
         if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
           next.revisionDueDate = `Revision due date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
         }
@@ -711,7 +709,7 @@ export function UpdateAuthorityReviewDialog({
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium text-slate-500">Transport Date</span>
                   <span className="col-span-2 text-slate-800">
-                    {submissionDetail?.dossierSummary?.departureDate || "05 Oct 2026"}
+                    {submissionDetail?.dossierSummary?.departureDate || "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -766,7 +764,7 @@ export function UpdateAuthorityReviewDialog({
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium text-slate-500">Submitted At</span>
                   <span className="col-span-2 text-slate-800">
-                    {submissionDetail?.submittedAt || "05 Oct 2026 14:30 (UTC+7)"}
+                    {submissionDetail?.submittedAt ? formatUtcDateTime(submissionDetail.submittedAt) : "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 items-start gap-2">
@@ -815,7 +813,7 @@ export function UpdateAuthorityReviewDialog({
                         Dossier Submitted to Authority
                       </p>
                       <p className="mt-0.5 text-[10px] text-slate-500">
-                        {submissionDetail?.submittedAt || "05 Oct 2026 14:30 (UTC+7)"} by{" "}
+                        {submissionDetail?.submittedAt ? formatUtcDateTime(submissionDetail.submittedAt) : "—"} by{" "}
                         {submissionDetail?.submittedBy || "Nguyen Van A (TS)"}
                       </p>
                       <p className="mt-1 text-[11px] text-slate-600">

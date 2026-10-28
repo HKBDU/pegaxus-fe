@@ -262,6 +262,9 @@ function actionsFor(item: Incident, roles: string[]): string[] {
   if (roles.includes("FLEET_ROUTE_COORDINATOR")) actions.push(INCIDENT_ACTION.PROPOSE_REROUTE, INCIDENT_ACTION.ESCALATE_REROUTE, INCIDENT_ACTION.HOLD_ROUTE)
   if (roles.includes("DRIVER") || roles.includes("ESCORT")) {
     actions.push(INCIDENT_ACTION.SELF_RESOLVE, INCIDENT_ACTION.REQUEST_COST)
+    // The assigned crew can cancel their own report while it is still REPORTED and no cost request is PENDING or APPROVED.
+    const costOpen = item.costRequests.some((request) => request.status === "PENDING" || request.status === "APPROVED")
+    if (item.status === "REPORTED" && !costOpen) actions.push(INCIDENT_ACTION.CANCEL_INCIDENT)
     if (roles.includes("DRIVER") && item.category !== "HORSE_HEALTH") actions.push(INCIDENT_ACTION.SUPPLEMENT_VEHICLE)
     if (roles.includes("ESCORT") && item.category !== "VEHICLE") actions.push(INCIDENT_ACTION.ADD_HORSE_DETAIL, INCIDENT_ACTION.FOLLOW_UP_HORSE)
   }
@@ -394,7 +397,22 @@ export async function mockSelfResolveIncident(incidentReportId: string, input: S
 export async function mockCancelIncident(incidentReportId: string, input: CancelInput): Promise<Incident> {
   await wait()
   const item = find(incidentReportId)
+  const roles = viewerRoles()
+  const manager = roles.includes("LOGISTICS_MANAGER")
+  if (!manager && !roles.includes("DRIVER") && !roles.includes("ESCORT")) {
+    throw new IncidentApiError({ status: 403, errorCode: "FORBIDDEN", message: "Forbidden" })
+  }
   assertWritable(item, input.lastUpdatedAt)
+  if (!manager) {
+    // Crew: only a REPORTED incident, and no PENDING or APPROVED cost request.
+    if (item.status !== "REPORTED") {
+      throw new IncidentApiError({ status: 422, errorCode: "INVALID_INCIDENT_STATUS", message: "Only a reported incident can be cancelled by the crew" })
+    }
+    const open = item.costRequests.filter((request) => request.status === "PENDING" || request.status === "APPROVED")
+    if (open.length) {
+      throw new IncidentApiError({ status: 422, errorCode: "HAS_OPEN_EMERGENCY_COSTS", message: "Open emergency costs", value: { requests: open.map(requestBrief) } })
+    }
+  }
   const approved = item.costRequests.filter((request) => request.status === "APPROVED")
   if (approved.length) {
     throw new IncidentApiError({ status: 422, errorCode: "HAS_APPROVED_EMERGENCY_COST", message: "Approved emergency cost exists", value: { approvedRequests: approved.map(requestBrief) } })

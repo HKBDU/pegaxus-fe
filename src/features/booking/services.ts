@@ -403,6 +403,24 @@ export const bookingService = {
     await api.post(`${BOOKING_ENDPOINT}/${bookingId}/cancel`, { reason })
   },
 
+  /** B-negotiated-status with CANCELLED: the Logistics Manager cancels an APPROVED booking; the BE closes the transport, plans, dossier, handovers and unpaid invoices. */
+  async managerCancelBooking(bookingId: EntityId, reason: string): Promise<void> {
+    if (useBookingMocks) {
+      await wait()
+      const booking = findMockBooking(bookingId)
+      if (booking.status !== "APPROVED") throw new Error("INVALID_BOOKING_STATUS")
+      if (booking.transport && ["IN_TRANSIT", "COMPLETED"].includes(booking.transport.status)) throw new Error("TRANSPORT_ALREADY_DEPARTED")
+      booking.status = "CANCELLED"
+      booking.statusName = "Cancelled"
+      booking.cancellationReason = reason
+      booking.cancelledAt = new Date().toISOString()
+      booking.updatedAt = booking.cancelledAt
+      if (booking.transport) booking.transport = { ...booking.transport, status: "CANCELLED" }
+      return
+    }
+    await api.patch(`${BOOKING_ENDPOINT}/${bookingId}/negotiated-status`, { status: "CANCELLED", reason })
+  },
+
   async approveBooking(bookingId: EntityId): Promise<ApproveBookingResult> {
     if (useBookingMocks) {
       await wait()

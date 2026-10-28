@@ -12,6 +12,7 @@ import { Field } from '@/shared/components/Field'
 import { cn } from '@/lib/utils'
 import { useFinalizeQuarantineProof, useQuarantineProofDetail } from '../hooks'
 import type { FinalizeQuarantineProofRequest } from '../types'
+import { formatUtcDateTime } from '@/shared/utils/datetime'
 
 const INPUT = 'w-full border border-[#d8d5ce] bg-[#f4f4f4] px-3 py-2.5 text-sm text-[#181818] focus:border-[#f39200] focus:outline-none focus:ring-1 focus:ring-[#f39200]'
 const RESULTS = ['PASSED', 'PASSED_WITH_CONDITIONS', 'FAILED'] as const
@@ -24,7 +25,7 @@ const schema = z.object({
 })
 
 function formatDate(value: string | null) {
-  return value ? new Date(value).toLocaleString('en-GB') : '—'
+  return formatUtcDateTime(value)
 }
 
 export default function QuarantineReviewPage() {

@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { Label } from "@/shared/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Textarea } from "@/shared/components/ui/textarea";
 
@@ -26,17 +26,26 @@ import {
 import type {
   ChangeRoutePlanVehiclesResult,
   ChangeVehiclesMode,
-  RoutePlan,
-  RouteSegment,
   Vehicle,
 } from "../types";
+
+type ChangeableSegment = {
+  routePlanRouteId: string;
+  sequenceNo: number;
+  route: { transportMode: "ROAD" | "SEA" | "AIR" };
+  plannedDepartureAt: string | null;
+  plannedArrivalAt: string | null;
+  fromLocation: { locationName: string };
+  toLocation: { locationName: string };
+  vehicles: Array<{ vehicleId: string }>;
+};
 
 export interface ChangeVehiclesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: ChangeVehiclesMode;
-  routePlan: Pick<RoutePlan, "routePlanId" | "transportPlanId" | "updatedAt">;
-  segments: RouteSegment[];
+  routePlan: { routePlanId: string; transportPlanId: string; updatedAt: string };
+  segments: ChangeableSegment[];
   incidentReportId?: string;
   onChanged?: (result: ChangeRoutePlanVehiclesResult) => void;
   onReload?: () => void;
@@ -47,17 +56,17 @@ type VehicleOptions = Record<string, Vehicle[]>;
 
 const modeCopy: Record<ChangeVehiclesMode, { title: string; description: string }> = {
   "before-departure": {
-    title: "Change route vehicles",
-    description: "Select one replacement vehicle for each segment you want to change.",
+    title: "Change vehicles",
+    description: "Choose vehicles for each segment.",
   },
   "mid-trip": {
-    title: "Replace vehicles mid-trip",
-    description: "Select replacement vehicles for the affected segments. The backend applies linked changes.",
+    title: "Change vehicles",
+    description: "Choose vehicles for the affected segments.",
   },
 };
 
-function dateOnly(value: string) {
-  return value.slice(0, 10);
+function dateOnly(value: string | null) {
+  return value?.slice(0, 10) ?? "";
 }
 
 function vehicleName(vehicle: Vehicle) {
@@ -144,9 +153,15 @@ export function ChangeVehiclesDialog({
     };
   }, [open, routePlan.transportPlanId, segmentKey, segments, vehiclesBySegment]);
 
-  function selectVehicle(segmentId: string, vehicleId: string) {
+  function toggleVehicle(segmentId: string, vehicleId: string, checked: boolean) {
     setSelectedVehicles((current) => {
-      return { ...current, [segmentId]: [vehicleId] };
+      const selected = current[segmentId] ?? [];
+      return {
+        ...current,
+        [segmentId]: checked
+          ? [...new Set([...selected, vehicleId])]
+          : selected.filter((id) => id !== vehicleId),
+      };
     });
   }
 
@@ -288,14 +303,13 @@ export function ChangeVehiclesDialog({
                         </div>
                       ) : vehicleLoadError ? null : options.length === 0 ? (
                         <p className="border border-dashed border-slate-400 bg-slate-50 p-3 text-sm font-medium text-slate-700">
-                          No vehicles match this segment window.
+                          No vehicles found.
                         </p>
                       ) : (
-                        <RadioGroup
-                          value={selected[0] ?? ""}
-                          onValueChange={(value) => selectVehicle(segment.routePlanRouteId, value)}
+                        <div
                           className="grid gap-2 sm:grid-cols-2"
-                          aria-label={`Select one vehicle for segment ${segment.sequenceNo}`}
+                          role="group"
+                          aria-label={`Choose vehicles for segment ${segment.sequenceNo}`}
                         >
                           {options.map((vehicle) => {
                             const id = `vehicle-${segment.routePlanRouteId}-${vehicle.vehicleId}`;
@@ -310,11 +324,23 @@ export function ChangeVehiclesDialog({
                                     : "border-slate-300 bg-white hover:border-slate-500 hover:bg-slate-50"
                                 }`}
                               >
-                                <RadioGroupItem id={id} value={vehicle.vehicleId} className="mt-0.5 rounded-[2px] border-slate-500 text-slate-900" />
+                                <Checkbox
+                                  id={id}
+                                  checked={checked}
+                                  onCheckedChange={(value) =>
+                                    toggleVehicle(
+                                      segment.routePlanRouteId,
+                                      vehicle.vehicleId,
+                                      value === true,
+                                    )
+                                  }
+                                  className="mt-0.5 rounded-[2px] border-slate-500 text-slate-900"
+                                />
                                 <span className="min-w-0 flex-1">
                                   <span className="block truncate text-sm font-bold text-slate-950">{vehicleName(vehicle)}</span>
                                   <span className="mt-1 flex flex-wrap gap-1.5 text-xs font-medium text-slate-600">
                                     <span>{vehicle.licensePlate ?? "No plate"}</span>
+                                    <span>{vehicle.capacityHorses} horses</span>
                                     <Badge variant="outline" className="rounded-[2px] border-slate-400 px-1.5 py-0 text-[10px] text-slate-800">
                                       {VEHICLE_STATUS_LABELS[vehicle.status]}
                                     </Badge>
@@ -323,7 +349,7 @@ export function ChangeVehiclesDialog({
                               </Label>
                             );
                           })}
-                        </RadioGroup>
+                        </div>
                       )}
                       {selected.length > 0 && (
                         <Button
@@ -357,14 +383,14 @@ export function ChangeVehiclesDialog({
             />
             {missingIncident && (
               <p className="text-xs font-semibold text-red-700" role="alert">
-                An incident report is required for a mid-trip vehicle change.
+                Select the incident before continuing.
               </p>
             )}
           </div>
         </div>
 
         <DialogFooter className="border-t border-slate-300 bg-white px-6 py-4 sm:justify-between">
-          <p className="text-xs font-medium text-slate-600">{selectedSegmentCount} segment{selectedSegmentCount === 1 ? "" : "s"} selected for change.</p>
+          <p className="text-xs font-medium text-slate-600">{selectedSegmentCount} segment{selectedSegmentCount === 1 ? "" : "s"} selected.</p>
           <div className="flex gap-2">
             <Button type="button" variant="outline" className="rounded-[2px] border-slate-400 bg-white text-slate-900 hover:bg-slate-100" onClick={() => onOpenChange(false)}>
               CANCEL

@@ -18,13 +18,14 @@ import { HORSE_BREED_OPTIONS, HORSE_SEX_OPTIONS } from "../constants/horse.const
 import { horseApi } from "../services"
 import { getHorseApiErrorMessage } from "../utils/horse-api-error"
 import { toHorseDateInput } from "../utils/format-horse-date"
+import { todayUtc } from "@/shared/utils/datetime"
 import type { CreateHorseRequest, Horse, HorseFormValues, HorseSex } from "../types"
 
 import {
   VALIDATION_LIMITS,
   countDecimalPlaces,
-  UPLOAD_MAX_BYTES,
 } from "@/shared/constants/validation-limits"
+import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
 
 const inputClass = "profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1"
 const selectOptions = HORSE_SEX_OPTIONS.filter((option) => option.value !== "ALL")
@@ -44,13 +45,11 @@ const dateOfBirthRules = {
     if (!value || !value.trim()) return "Date of birth is required."
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return "Invalid date of birth."
-    const today = new Date()
-    today.setHours(23, 59, 59, 999)
-    if (date > today) return "Date of birth cannot be in the future."
-    const minDate = new Date()
-    minDate.setFullYear(minDate.getFullYear() - VALIDATION_LIMITS.horseMaxAgeYears)
-    minDate.setHours(0, 0, 0, 0)
-    if (date < minDate) return `Date of birth cannot be more than ${VALIDATION_LIMITS.horseMaxAgeYears} years ago.`
+    const today = todayUtc()
+    const birthDate = value.slice(0, 10)
+    if (birthDate > today) return "Date of birth cannot be in the future."
+    const minYear = Number(today.slice(0, 4)) - VALIDATION_LIMITS.horseMaxAgeYears
+    if (Number(birthDate.slice(0, 4)) < minYear) return `Date of birth cannot be more than ${VALIDATION_LIMITS.horseMaxAgeYears} years ago.`
     return true
   },
 }

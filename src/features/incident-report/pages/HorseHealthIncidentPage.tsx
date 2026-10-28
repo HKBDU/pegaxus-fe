@@ -9,6 +9,7 @@ import {
   incidentPaths,
 } from "@/shared/constants/incident";
 import type { HorseHealthIncidentRequest } from "@/shared/types/incident";
+import { toUtcIso } from "@/shared/utils/datetime";
 
 import { IncidentReportHeader } from "../components/IncidentReportHeader";
 import type { IncidentPhotoFieldValue } from "../components/IncidentPhotoField";
@@ -159,7 +160,7 @@ export default function HorseHealthIncidentPage() {
       title: value.title,
       immediateAction: value.immediateAction || undefined,
       emergencySettlementRequired: value.emergencySettlementRequired,
-      occurredAt: new Date(value.occurredAt).toISOString(),
+      occurredAt: toUtcIso(value.occurredAt) ?? value.occurredAt,
       locationId: value.locationId,
       locationDescription: value.locationDescription || undefined,
       latitude: value.latitude,
@@ -184,7 +185,7 @@ export default function HorseHealthIncidentPage() {
           veterinarianRequired: details.veterinarianRequired,
           isolationRequired: details.isolationRequired,
           veterinarianContactedAt: details.veterinarianContactedAt
-            ? new Date(details.veterinarianContactedAt).toISOString()
+            ? toUtcIso(details.veterinarianContactedAt)
             : undefined,
           veterinarianInstruction: details.veterinarianInstruction || undefined,
           medicationGiven: details.medicationGiven || undefined,

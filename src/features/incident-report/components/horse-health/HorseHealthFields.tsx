@@ -6,6 +6,7 @@ import type { HorseIncidentType } from "@/shared/types/incident";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { DatePicker } from "@/shared/components/ui/date-picker";
 import { TimePicker } from "@/shared/components/ui/time-picker";
+import { formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime";
 import {
   Select,
   SelectContent,
@@ -56,6 +57,9 @@ export function HorseHealthFields({
   const contactedSeconds = value.veterinarianContactedAt
     .split("T")[1]
     ?.split(":")[2];
+  const contactedUtc = value.veterinarianContactedAt
+    ? toUtcIso(value.veterinarianContactedAt)
+    : undefined;
   const updateContactedDate = (date: string) =>
     update(
       "veterinarianContactedAt",
@@ -179,6 +183,9 @@ export function HorseHealthFields({
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-bold">
           Veterinarian contacted at
+          <span className="text-xs font-normal text-slate-500">
+            Your local time. Sent as {contactedUtc ? formatUtcDateTime(contactedUtc) : "UTC"}.
+          </span>
           <div className="@container grid min-w-0 gap-2 @min-[20rem]:grid-cols-[minmax(0,1fr)_9rem]">
             <DatePicker
               value={contactedDate}

@@ -26,6 +26,7 @@ export const ROUTE_PLAN_ERROR_MESSAGES: Record<string, string> = {
   REPLACEMENT_COST_NOT_APPROVED: 'Replacement vehicle cost must be approved first.',
   TRANSPORT_NOT_IN_TRANSIT: 'The transport is not in transit.',
   INVALID_ROUTE_PLAN_TYPE: 'Only a PRIMARY route plan can be changed before departure.',
+  INVALID_ROUTE_PLAN_STATUS: 'Vehicles can only be changed while the route plan is confirmed and has not departed.',
   SEGMENT_ALREADY_COMPLETED: 'A selected segment has already been completed.',
   SEGMENT_NOT_IN_ITINERARY: 'A selected segment is not in the active itinerary.',
   SEGMENT_TIMES_MISSING: 'A selected segment is missing departure or arrival times.',

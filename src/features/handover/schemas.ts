@@ -127,6 +127,8 @@ export const segmentsOverviewSchema = z.object({
   segments: z.array(
     z.object({
       routePlanRouteId: id,
+      /** Used to link to the route plan page when HO3-HO5 answer VEHICLE_STILL_ON_ANOTHER_TRIP. */
+      routePlanId: id.optional(),
       displayOrder: z.number().int(),
       fromLocation: locationBriefSchema,
       toLocation: locationBriefSchema,

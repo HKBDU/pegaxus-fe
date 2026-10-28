@@ -170,6 +170,34 @@ export function useCancelBooking() {
   })
 }
 
+/** Everything the BE closes together with the booking (transport, plans, dossier, handovers, invoices): refetch it all. */
+const CLOSED_WITH_BOOKING_KEYS = [
+  approvedBookingKeys.all,
+  ["transport-plans"],
+  ["route-view"],
+  ["ongoing-transports"],
+  ["dossier"],
+  ["handover"],
+  ["invoice"],
+] as const
+
+/** Logistics Manager cancels an APPROVED booking (PATCH negotiated-status). */
+export function useManagerCancelBooking() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ bookingId, reason }: { bookingId: EntityId; reason: string }) =>
+      bookingService.managerCancelBooking(bookingId, reason),
+    onSuccess: async (_, variables) => {
+      void Promise.all(CLOSED_WITH_BOOKING_KEYS.map((queryKey) => queryClient.invalidateQueries({ queryKey })))
+      await refreshBooking(queryClient, variables.bookingId)
+    },
+    // The booking moved on behind our back (departed or already cancelled): show its real state next to the error.
+    onError: (error, variables) => {
+      if (["TRANSPORT_ALREADY_DEPARTED", "INVALID_BOOKING_STATUS"].includes(error.message)) void refreshBooking(queryClient, variables.bookingId)
+    },
+  })
+}
+
 export function useApproveBooking() {
   const queryClient = useQueryClient()
   return useMutation({

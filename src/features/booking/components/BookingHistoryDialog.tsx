@@ -1,7 +1,7 @@
 import { useBookingHistories } from "@/features/booking/hooks"
 import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
 import type { BookingAudience } from "@/features/booking/types"
-import { formatBookingDate } from "@/features/booking/utils"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 import { ErrorState } from "@/shared/components/common"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
 import { Skeleton } from "@/shared/components/ui/skeleton"
@@ -46,7 +46,7 @@ export function BookingHistoryDialog({ bookingId, bookingCode, audience, open, o
                 {entry.previousStatus !== entry.newStatus ? <BookingStatusBadge status={entry.newStatus} audience={audience} /> : null}
               </div>
               <p className="text-xs text-gray-600">
-                {formatBookingDate(entry.changedAt, true)} · {entry.changedBy.fullName} ({entry.changedBy.role.replaceAll("_", " ").toLowerCase()})
+                {formatUtcDateTime(entry.changedAt)} · {entry.changedBy.fullName} ({entry.changedBy.role.replaceAll("_", " ").toLowerCase()})
               </p>
               {entry.reason ? <p className="mt-0.5 text-xs text-gray-700">{entry.reason}</p> : null}
             </li>

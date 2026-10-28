@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { addDays, format } from "date-fns"
 import { Lock, Minus, Plus } from "lucide-react"
 import { useEffect, type ReactNode } from "react"
 import { useForm, type Control, type Path } from "react-hook-form"
@@ -10,6 +9,7 @@ import { VehicleStatusBadge } from "@/features/fleet/components/VehicleBadges"
 import { actionButtonClass, FormCard, formControlClass, formLabelClass, outlineButtonClass, primaryButtonClass } from "@/features/fleet/components/DetailParts"
 import { EQUIPMENT_PRESETS, ROAD_VEHICLE_TYPE_OPTIONS, VEHICLE_CAPACITY_MAX, VEHICLE_CAPACITY_MIN } from "@/features/fleet/constants/fleet.constants"
 import { toVehicleDefaults } from "@/features/fleet/vehicle-form"
+import { nextUtcDay } from "@/features/fleet/utils"
 import { vehicleFormSchema, type VehicleFormValues } from "@/features/fleet/schemas"
 import { type Vehicle } from "@/features/fleet/types"
 import { DatePicker } from "@/shared/components/ui/date-picker"
@@ -95,7 +95,7 @@ function VehicleTypeField({ control }: { control: Control<VehicleFormValues> }) 
 }
 
 function DateField({ control, name, label }: { control: Control<VehicleFormValues>; name: "registrationExpiryDate" | "insuranceExpiryDate"; label: string }) {
-  const tomorrow = format(addDays(new Date(), 1), "yyyy-MM-dd")
+  const tomorrow = nextUtcDay()
   return (
     <FormField
       control={control}

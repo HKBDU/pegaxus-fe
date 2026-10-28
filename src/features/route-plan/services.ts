@@ -206,7 +206,12 @@ export function getRoutePlanError(error: unknown): {
   message: string;
 } {
   if (error instanceof RoutePlanApiError)
-    return { code: error.errorCode, message: error.message };
+    return {
+      code: error.errorCode,
+      message:
+        ROUTE_PLAN_ERROR_MESSAGES[error.errorCode] ??
+        error.message,
+    };
   return {
     code: "UNKNOWN_ERROR",
     message: "Unable to complete the route plan request.",

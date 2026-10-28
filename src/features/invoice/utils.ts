@@ -3,6 +3,7 @@ import { INVOICE_TAX_RATE_PERCENT, TRANSIT_DAYS_RANGE, PAYMENT_ERROR_CODES, CANC
 import type { InvoiceItem, InvoiceSummary, PaymentErrorCode, PaymentErrorState, Invoice, RecordPaymentPayload } from "@/features/invoice/types"
 import type { InvoiceCurrency } from "@/features/invoice/constants"
 import { z } from "zod"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 
 // ---- from shared/mock-mode.ts ----
 type MockEnvironment = { PROD?: boolean; VITE_INVOICE_API_MOCKS?: string }
@@ -45,13 +46,16 @@ export function formatMoney(amount: number, _currency?: InvoiceCurrency) {
 export function formatInvoiceDate(value: string | null | undefined) {
   if (!value) return EMPTY_VALUE
   const date = parseISO(value)
-  return isValid(date) ? format(date, "MMMM dd, yyyy") : EMPTY_VALUE
+  if (!isValid(date)) return EMPTY_VALUE
+  // A plain day is shown as it came; an instant is read as its UTC day.
+  if (value.length === 10) return format(date, "MMMM dd, yyyy")
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "2-digit", year: "numeric", timeZone: "UTC" }).format(date)
 }
 
+/** An instant as labelled UTC ("08:00 UTC, 27/10/2026"); the claim screens read it through this too. */
 export function formatInvoiceDateTime(value: string | null | undefined) {
-  if (!value) return EMPTY_VALUE
-  const date = parseISO(value)
-  return isValid(date) ? format(date, "dd/MM/yyyy HH:mm") : EMPTY_VALUE
+  const text = formatUtcDateTime(value)
+  return text === "—" ? EMPTY_VALUE : text
 }
 
 export function todayIsoDate() {
@@ -170,13 +174,7 @@ export function isPayableAmount(amount: number) {
 }
 
 export function formatPaymentDate(value: string | null | undefined) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+  return formatUtcDateTime(value)
 }
 
 export function toPaymentTimestamp(value: string) {

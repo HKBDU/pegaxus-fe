@@ -14,11 +14,12 @@ import { ReadOnlyRecord } from "../components/ReadOnlyRecord"
 import { RecordSummary } from "../components/RecordSummary"
 import { ReloadDialog } from "../components/ReloadDialog"
 import { StatusBadge } from "../components/StatusBadge"
+import { routePlanLinkFor, VehicleOnAnotherTripNotice } from "../components/VehicleOnAnotherTripNotice"
 import { handoverPaths, HANDOVER_GEOFENCE_ENFORCED, HANDOVER_GEOFENCE_METERS, type HandoverAudience } from "../constants"
 import { useCancelHandover, useCompleteHandover, useHandoverRecord, useReloadHandover, useStartHandover, useTransportSegments } from "../hooks/useHandovers"
 import { HandoverApiError } from "../services"
 import type { CompleteInput, HandoverRecord } from "../types"
-import { describeError, hasAction } from "../utils"
+import { describeError, hasAction, isVehicleOnAnotherTrip } from "../utils"
 
 const isModified = (error: unknown) => error instanceof HandoverApiError && error.errorCode === "HANDOVER_MODIFIED"
 
@@ -42,7 +43,10 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
   const record = recordQuery.data
   const canComplete = Boolean(record && hasAction(record, "COMPLETE"))
 
-  const segments = useTransportSegments(transportId, canComplete && audience !== "customer")
+  const canStart = Boolean(record && hasAction(record, "START"))
+
+  // Also needed when the start fails with VEHICLE_STILL_ON_ANOTHER_TRIP: the notice links to the route plan of the leg.
+  const segments = useTransportSegments(transportId, (canComplete || canStart) && audience !== "customer")
   const start = useStartHandover(transportId)
   const complete = useCompleteHandover(transportId, handoverId ?? "")
   const cancel = useCancelHandover(transportId, handoverId ?? "")
@@ -122,6 +126,7 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
               onSubmit={submitComplete}
               onBack={() => navigate(back)}
               submitError={complete.error}
+              routePlanHref={routePlanLinkFor(audience, simulatorSegment)}
               onClearSubmitError={() => complete.reset()}
             />
           ) : shown.status === "PLANNED" ? (
@@ -140,7 +145,9 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
             />
           )}
 
-          {start.error && !modified ? <p role="alert" className="rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{describeError(start.error)}</p> : null}
+          {isVehicleOnAnotherTrip(start.error) ? <VehicleOnAnotherTripNotice routePlanHref={routePlanLinkFor(audience, simulatorSegment)} /> : null}
+
+          {start.error && !modified && !isVehicleOnAnotherTrip(start.error) ? <p role="alert" className="rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{describeError(start.error)}</p> : null}
 
           {hasAction(shown, "START") ? (
             <div className={barClass}>

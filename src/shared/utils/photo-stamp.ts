@@ -1,3 +1,5 @@
+import { formatUtcDateTime } from "@/shared/utils/datetime"
+
 /**
  * Utility to permanently stamp GPS coordinates and time marking directly onto captured photo images.
  */
@@ -9,15 +11,7 @@ export interface StampOptions {
 }
 
 function formatStampDate(date: Date): string {
-  return date.toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  })
+  return formatUtcDateTime(date)
 }
 
 /**

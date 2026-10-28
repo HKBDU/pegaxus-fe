@@ -5,10 +5,12 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits"
+import { formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime"
 import { TYPE_LABEL, type HandoverAudience, type HandoverType } from "../constants"
 import type { CreateHandoverInput, HandoverBoundary, OverviewSegment } from "../types"
-import { describeError, typeLabel } from "../utils"
+import { describeError, isVehicleOnAnotherTrip, typeLabel } from "../utils"
 import { StatusBadge } from "./StatusBadge"
+import { routePlanLinkFor, VehicleOnAnotherTripNotice } from "./VehicleOnAnotherTripNotice"
 
 interface Props {
   audience: HandoverAudience
@@ -25,8 +27,11 @@ interface Props {
 
 const legName = (segment?: OverviewSegment) => (segment ? `#${segment.displayOrder} ${segment.fromLocation.locationName} → ${segment.toLocation.locationName}` : "—")
 
-/** Local date-time input value -> ISO with the browser offset. */
+/** Local date-time input value -> the UTC instant sent to the BE (ISO, ends with Z). */
 const toIso = (local: string) => new Date(local).toISOString()
+
+/** The same instant as the other side reads it: "08:00 UTC, 28/10/2026". Empty for an incomplete value. */
+const utcPreview = (local: string) => formatUtcDateTime(toUtcIso(local) ?? null).replace(/^—$/, "")
 
 /**
  * HO3 form: pick the handover point, the type and when. The boundaries come from OT4 and the buttons follow only `canCreate`
@@ -38,6 +43,7 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
   const [schedule, setSchedule] = useState(false)
   const [plannedAt, setPlannedAt] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
+  const [vehicleBlocked, setVehicleBlocked] = useState(false)
 
   // The link from the transport page carries the boundary in the query: use it until the person picks another.
   const creatable = boundaries.filter((boundary) => boundary.canCreate)
@@ -55,6 +61,7 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
 
   const submit = async () => {
     setFormError(null)
+    setVehicleBlocked(false)
     if (!selected || !type) return
     if (!canStartNow && !canSchedule) return
     if (scheduled) {
@@ -67,8 +74,9 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
         setFormError("Invalid date and time.")
         return
       }
+      // The window is counted on UTC dates, like every other date rule (R5), not on the browser clock.
       const now = new Date()
-      const diffYears = Math.abs(plannedDate.getFullYear() - now.getFullYear())
+      const diffYears = Math.abs(plannedDate.getUTCFullYear() - now.getUTCFullYear())
       if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
         setFormError(`Planned handover must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`)
         return
@@ -83,7 +91,8 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
         ...(scheduled ? { plannedHandoverAt: toIso(plannedAt) } : {}),
       })
     } catch (error) {
-      setFormError(describeError(error))
+      if (isVehicleOnAnotherTrip(error)) setVehicleBlocked(true)
+      else setFormError(describeError(error))
     }
   }
 
@@ -183,7 +192,10 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
               {scheduled ? (
                 <div className="max-w-xs space-y-1">
                   <label htmlFor="planned-at" className="font-heading text-[0.6875rem] font-semibold tracking-[0.06em] text-gray-500 uppercase">Planned at <span className="text-red-600">*</span></label>
-                  <Input id="planned-at" type="datetime-local" value={plannedAt} onChange={(event) => setPlannedAt(event.target.value)} className="h-11 rounded-[2px] border-slate-300 bg-white text-base shadow-none sm:h-9 sm:text-sm" />
+                  <Input id="planned-at" type="datetime-local" value={plannedAt} onChange={(event) => setPlannedAt(event.target.value)} aria-describedby="planned-at-utc" className="h-11 rounded-[2px] border-slate-300 bg-white text-base shadow-none sm:h-9 sm:text-sm" />
+                  <p id="planned-at-utc" className="m-0 text-xs text-gray-500">
+                    Your local time{utcPreview(plannedAt) ? <>. Sent as <span className="font-semibold text-gray-700">{utcPreview(plannedAt)}</span></> : null}
+                  </p>
                 </div>
               ) : null}
             </div>
@@ -192,6 +204,7 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
       </section>
 
       {formError ? <p role="alert" className="rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p> : null}
+      {vehicleBlocked ? <VehicleOnAnotherTripNotice routePlanHref={routePlanLinkFor(audience, legs.get(selected?.toRoutePlanRouteId ?? selected?.fromRoutePlanRouteId ?? ""))} /> : null}
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button asChild variant="outline" className="min-h-12 rounded-[2px] sm:min-h-10">

@@ -11,7 +11,8 @@ import { TablePagination } from "@/shared/components/common"
 import ImageViewer from "@/shared/components/file-viewer/ImageViewer"
 import { PhotoCaptureSection } from "@/shared/components/PhotoCaptureSection"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
-import { UPLOAD_MAX_BYTES } from "@/shared/constants/validation-limits"
+import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 
 import { HEALTH_STATUS_LABELS, HEALTH_STATUSES, HORSE_HEALTH_ROUTES, LOG_TYPES } from "../constants"
 import { useAddHealthLogPhotos, useHealthLogDetail, useHealthLogHistory, useHorseHealthOverview } from "../hooks/useHorseHealth"
@@ -48,8 +49,7 @@ function AddHealthLogPhotos({ transportId, logId, existingPhotoCount }: { transp
 }
 
 function formatDate(value: string | null | undefined) {
-  if (!value) return "—"
-  return new Date(value).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
+  return formatUtcDateTime(value)
 }
 
 function statusClass(status: HealthLogSummary["healthStatus"]) {

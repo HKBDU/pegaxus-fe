@@ -6,6 +6,9 @@ import { ApproveBookingDialog, RejectBookingDialog } from "@/features/booking/co
 import { BookingDetailsSkeleton } from "@/features/booking/components/BookingPageSkeletons"
 import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
 import { CancelBookingDialog } from "@/features/booking/components/CancelBookingDialog"
+import { ManagerCancelBookingDialog } from "@/features/booking/components/ManagerCancelBookingDialog"
+import { canAccess } from "@/features/auth/access-control"
+import { useAuthStore } from "@/features/auth/store"
 import { useBooking } from "@/features/booking/hooks"
 import type { BookingAudience } from "@/features/booking/types"
 import { formatBookingDate, formatSex } from "@/features/booking/utils"
@@ -16,6 +19,7 @@ import { CustomerInvoicesTab } from "@/features/invoice"
 import { CustomerTransportAuditSummary } from "@/features/transport-audit/components/CustomerTransportAuditSummary"
 import { BookingTransportPlanAction } from "@/features/transport-plan/components/BookingTransportPlanAction"
 import { cn } from "@/lib/utils"
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc"
 import { ErrorState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
@@ -107,6 +111,14 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
   const [cancelOpen, setCancelOpen] = useState(false)
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
+  const [managerCancelOpen, setManagerCancelOpen] = useState(false)
+  const principal = useAuthStore((state) => state.principal)
+  // Only the Logistics Manager cancels an approved booking, and not once the transport has left (the BE answers TRANSPORT_ALREADY_DEPARTED).
+  const canManagerCancel =
+    audience === "manager" &&
+    booking?.status === "APPROVED" &&
+    canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) &&
+    !["IN_TRANSIT", "COMPLETED"].includes(booking.transport?.status ?? "")
   const isPending = booking?.status === "PENDING"
   const canEdit = booking?.status === "PENDING" || booking?.status === "DRAFT"
   const bookingLoaded = Boolean(booking)
@@ -172,6 +184,11 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                   status={booking.status}
                 />
               ) : null}
+              {canManagerCancel ? (
+                <button type="button" className={cn(actionButtonClass, dangerButtonClass)} onClick={() => setManagerCancelOpen(true)}>
+                  Cancel booking
+                </button>
+              ) : null}
               {audience === "customer" && booking.transport?.status === "IN_TRANSIT" ? (
                 <Link
                   to={`/bookings/${encodeURIComponent(String(booking.bookingId))}/transports/${encodeURIComponent(String(booking.transport.transportId))}`}
@@ -208,8 +225,8 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
               <SummaryCell label="Status">
                 <BookingStatusBadge status={booking.status} audience={audience} />
               </SummaryCell>
-              <SummaryCell label="Created date">{formatBookingDate(booking.createdAt, true)}</SummaryCell>
-              <SummaryCell label="Last updated">{formatBookingDate(booking.updatedAt, true)}</SummaryCell>
+              <SummaryCell label="Created date"><DateTimeUtc value={booking.createdAt} compact /></SummaryCell>
+              <SummaryCell label="Last updated"><DateTimeUtc value={booking.updatedAt} compact /></SummaryCell>
             </dl>
 
             <div className="grid gap-2.5 lg:grid-cols-[minmax(0,560fr)_minmax(0,792fr)]">
@@ -321,9 +338,9 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
             {hasOutcome ? (
               <dl className={cn(panelClass, "grid gap-x-4 gap-y-3 p-4 sm:grid-cols-2 lg:grid-cols-4")}>
                 {booking.assignedEmployee ? <InfoBlock label="Handled by" value={booking.assignedEmployee.fullName} /> : null}
-                {booking.approvedAt ? <InfoBlock label="Approved at" value={formatBookingDate(booking.approvedAt, true)} /> : null}
-                {booking.rejectedAt ? <InfoBlock label="Rejected at" value={formatBookingDate(booking.rejectedAt, true)} /> : null}
-                {booking.cancelledAt ? <InfoBlock label="Cancelled at" value={formatBookingDate(booking.cancelledAt, true)} /> : null}
+                {booking.approvedAt ? <InfoBlock label="Approved at" value={<DateTimeUtc value={booking.approvedAt} />} /> : null}
+                {booking.rejectedAt ? <InfoBlock label="Rejected at" value={<DateTimeUtc value={booking.rejectedAt} />} /> : null}
+                {booking.cancelledAt ? <InfoBlock label="Cancelled at" value={<DateTimeUtc value={booking.cancelledAt} />} /> : null}
                 {booking.transport ? <InfoBlock label="Transport" value={booking.transport.transportCode} /> : null}
                 {booking.rejectionReason ? <InfoBlock label="Rejection reason" value={booking.rejectionReason} className="sm:col-span-2" /> : null}
                 {booking.cancellationReason ? <InfoBlock label="Cancellation reason" value={booking.cancellationReason} className="sm:col-span-2" /> : null}
@@ -364,6 +381,7 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
       </div>
 
       {booking ? <CancelBookingDialog bookingId={booking.bookingId} open={cancelOpen} onOpenChange={setCancelOpen} /> : null}
+      {booking ? <ManagerCancelBookingDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} open={managerCancelOpen} onOpenChange={setManagerCancelOpen} /> : null}
       {booking ? <ApproveBookingDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} open={approveOpen} onOpenChange={setApproveOpen} /> : null}
       {booking ? <RejectBookingDialog bookingId={booking.bookingId} bookingCode={booking.bookingCode} open={rejectOpen} onOpenChange={setRejectOpen} /> : null}
     </div>

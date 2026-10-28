@@ -10,6 +10,7 @@ import { getClaimErrorCode, getClaimErrorMessage } from "@/features/claim/errors
 import { useBookingHorses, useClaimEligibility, useSubmitClaim } from "@/features/claim/hooks"
 import { formatInvoiceDateTime } from "@/features/invoice/utils"
 import { cn } from "@/lib/utils"
+import { formatLocalDateTimeLabel } from "@/shared/utils/datetime"
 import { ErrorState, LoadingState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
@@ -56,6 +57,7 @@ export default function CustomerClaimNewPage() {
               <SummaryCell label="Claim deadline">
                 <span className="flex flex-col">
                   <span className="font-semibold text-gray-900">{formatInvoiceDateTime(data.claimDeadline)}</span>
+                  <span className="text-xs text-gray-500">{formatLocalDateTimeLabel(data.claimDeadline)}</span>
                   <ClaimCountdown seconds={remaining} />
                 </span>
               </SummaryCell>
