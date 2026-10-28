@@ -157,10 +157,7 @@ export function BookingTable({
         accessorKey: "requestedDepartureDate",
         header: "EXPECTED DEPARTURE",
         cell: ({ row }) => (
-          <div className="leading-tight">
-            <span className="block text-slate-900">{formatBookingDate(row.original.requestedDepartureDate)}</span>
-            <span className="mt-1 block text-[0.68rem] text-slate-400">{formatBookingTime(row.original.requestedDepartureDate)}</span>
-          </div>
+          <span className="block text-slate-900">{formatBookingDate(row.original.requestedDepartureDate)}</span>
         ),
       },
       {
