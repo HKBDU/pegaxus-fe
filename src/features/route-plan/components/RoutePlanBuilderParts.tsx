@@ -12,6 +12,7 @@ import {
 import { useState } from "react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
+import { formatUtcDateTime, formatUtcTime } from "@/shared/utils/datetime";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog";
 import {
@@ -88,26 +89,11 @@ export function arrangementForRoute(
 }
 
 function formatDate(value: string) {
-  const date = new Date(value);
-  if (!value || Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(date);
+  return formatUtcDateTime(value);
 }
 
 function formatShortTime(value?: string) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-    timeZone: "UTC",
-  }).format(date);
+  return formatUtcTime(value);
 }
 
 export function Metadata({ plan }: { plan: TransportPlanSummary }) {

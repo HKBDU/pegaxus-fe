@@ -6,6 +6,7 @@ import { Button } from "@/shared/components/ui/button"
 import { isPresignedUploadError, presignedUpload } from "@/shared/utils/presigned"
 import { getCurrentGpsCoordinates } from "@/shared/utils/gps"
 import { stampPhoto } from "@/shared/utils/photo-stamp"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 
 export interface PhotoCaptureSectionProps {
   files: File[]
@@ -32,7 +33,7 @@ const DEFAULT_TYPES = ["image/jpeg", "image/jpg", "image/png"]
 const DEFAULT_MAX_SIZE = 5 * 1024 * 1024
 
 function formatTimestamp(value: Date | null | undefined) {
-  return value?.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) ?? ""
+  return value ? formatUtcDateTime(value) : ""
 }
 
 export function PhotoCaptureSection({
