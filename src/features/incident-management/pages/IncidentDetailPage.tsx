@@ -4,8 +4,10 @@ import { Link, useParams } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
 import { EMERGENCY_COST_CATEGORY, EMERGENCY_COST_STATUS, INCIDENT_ACTION } from "@/shared/constants/incident"
+import type { IncidentAction } from "@/shared/types/incident"
 import { CategoryBadge, SeverityBadge, StatusBadge } from "@/shared/components/incident"
 import { ErrorState, NotFoundPage } from "@/shared/components/common"
+import { RaiseSeverityButton } from "@/features/incident-report"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 
@@ -68,7 +70,7 @@ function CrewHero({ incident }: { incident: Incident }) {
 /** The crew's actions stay in reach of a thumb: pinned to the bottom of the screen, full-size buttons. */
 function CrewActionBar({ children }: { children: ReactNode }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_20px_rgba(15,23,42,0.08)] backdrop-blur">
+    <div className="fixed inset-x-0 bottom-0 z-40 has-[>div:empty]:hidden border-t border-slate-200 bg-white/95 px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_20px_rgba(15,23,42,0.08)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-3xl flex-wrap gap-2 [&>*]:h-12 [&>*]:min-w-[8rem] [&>*]:flex-1 [&>*]:text-xs">{children}</div>
     </div>
   )
@@ -97,6 +99,13 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   const showHorse = incident && (incident.category === "HORSE_HEALTH" || incident.category === "BOTH")
   const canResolve = can(INCIDENT_ACTION.RESOLVE) || can(INCIDENT_ACTION.SELF_RESOLVE)
   const canCancel = can(INCIDENT_ACTION.CANCEL_INCIDENT)
+  const refetch = () => void query.refetch()
+  // The bar is shown when ANY button can appear: the ones above, the severity button, or one of Duong's response actions.
+  // Their own components decide whether they render, so the bar also hides itself when it ends up empty (`empty:hidden`).
+  const hasButtons =
+    canResolve ||
+    canCancel ||
+    [INCIDENT_ACTION.RAISE_SEVERITY, "LOWER_SEVERITY", INCIDENT_ACTION.REQUEST_COST, INCIDENT_ACTION.HOLD_ROUTE, INCIDENT_ACTION.PROPOSE_REROUTE, INCIDENT_ACTION.ESCALATE_REROUTE].some(can)
   // The BE tells nobody but the requester when the LM approves a replacement vehicle, so the RC reads it on the page (U-03).
   const waitingForVehicleChange =
     isCoordinator &&
@@ -107,6 +116,13 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   const buttons = incident ? (
     <>
       <IncidentResponseActions incident={incident} />
+      <RaiseSeverityButton
+        incidentReportId={incident.incidentReportId}
+        severity={incident.severity}
+        lastUpdatedAt={incident.updatedAt}
+        availableActions={incident.availableActions as IncidentAction[]}
+        onChanged={refetch}
+      />
       {canResolve ? (
         <button type="button" className={cn(actionButtonClass, primaryButtonClass)} onClick={() => setResolveOpen(true)}>
           <CheckCircle2 className="size-4" aria-hidden="true" />
@@ -121,7 +137,6 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
       ) : null}
     </>
   ) : null
-  const hasButtons = canResolve || canCancel
 
   return (
     <div className={cn("booking-page-shell min-h-[70dvh] bg-[#f4f2ed] font-sans", isCrew ? cn("px-3 pt-3", hasButtons ? "pb-28" : "pb-6") : "px-4 pt-5 pb-8 sm:px-6 lg:px-10")}>
@@ -152,7 +167,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
                 </div>
               ) : null}
             </div>
-            {incident && hasButtons ? <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:pb-0.5">{buttons}</div> : null}
+            {incident && hasButtons ? <div className="flex flex-wrap items-center gap-2 empty:hidden lg:shrink-0 lg:pb-0.5">{buttons}</div> : null}
           </div>
         )}
 
@@ -168,7 +183,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
               <IncidentLocation incident={incident} />
               {showVehicle ? <VehicleDetailSection incident={incident} /> : null}
               {showHorse ? <HorseDetailsSection incident={incident} /> : null}
-              <EmergencyCostSection incident={incident} />
+              <EmergencyCostSection incident={incident} onChanged={refetch} />
               <IncidentTimeline incident={incident} />
             </div>
           ) : null}
@@ -179,7 +194,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
 
       {incident ? (
         <>
-          <ResolveIncidentDialog incident={incident} mode={resolveMode} open={resolveOpen} onOpenChange={setResolveOpen} onReload={() => void query.refetch()} />
+          <ResolveIncidentDialog incident={incident} mode={resolveMode} open={resolveOpen} onOpenChange={setResolveOpen} onReload={refetch} />
           <CancelIncidentDialog incident={incident} audience={audience} open={cancelOpen} onOpenChange={setCancelOpen} onReload={() => void query.refetch()} />
         </>
       ) : null}

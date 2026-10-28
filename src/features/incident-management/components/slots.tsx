@@ -1,9 +1,8 @@
-import { HeartPulse, Receipt, Truck } from "lucide-react"
+import { HeartPulse, Truck } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { EMERGENCY_COST_CATEGORY_LABELS, HORSE_INCIDENT_TYPE_LABELS, VEHICLE_INCIDENT_TYPE_LABELS } from "@/shared/constants/incident"
-import { CostStatusBadge, VndText } from "@/shared/components/incident"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
+import { HORSE_INCIDENT_TYPE_LABELS, VEHICLE_INCIDENT_TYPE_LABELS } from "@/shared/constants/incident"
+import { EmergencyCostSection as RealEmergencyCostSection, IncidentResponseActions as RealIncidentResponseActions } from "@/features/incident-response"
 
 import type { Incident, IncidentLike } from "../types"
 import { EMPTY, formatDateTime, titleCase } from "../utils"
@@ -12,8 +11,8 @@ import { FieldGrid, Flag, InfoRow, Panel, StatTile, TextBlock } from "./ui"
 
 /**
  * Mounting points of SCR-F5-002 for the parts other people own. These are read-only stand-ins that render straight from IN8
- * so the page is complete today; when Khuyên's (`VehicleDetailSection`, `HorseDetailsSection`) and Duong's
- * (`EmergencyCostSection`, `IncidentResponseActions`) components reach `dev`, swap the export in this file only.
+ * so the page is complete today; when Khuyên's (`VehicleDetailSection`, `HorseDetailsSection`) components reach `dev`,
+ * swap the export in this file only. Duong's (`EmergencyCostSection`, `IncidentResponseActions`) are already mounted below.
  */
 
 const labelOf = (table: Record<string, string>, value: string) => table[value] ?? titleCase(value)
@@ -101,71 +100,30 @@ export function HorseDetailsSection({ incident }: { incident: IncidentLike }) {
   )
 }
 
-const headClass = "h-10 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
-const cellClass = "px-2.5 py-1.5 text-xs"
-
-export function EmergencyCostSection({ incident }: { incident: Incident }) {
-  const { costRequests, costSummary } = incident
-  return (
-    <Panel title="Emergency cost requests" icon={Receipt} id="emergency-costs">
-      {costRequests.length ? (
-        <>
-          <ul className="m-0 grid list-none gap-2 p-0 md:hidden">
-            {costRequests.map((request) => (
-              <li key={request.emergencyCostRequestId} className="border border-[#e5e2d9] bg-[#faf9f6] p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-heading text-sm font-bold text-slate-900">{request.requestCode}</span>
-                  <CostStatusBadge status={request.status} />
-                </div>
-                <p className="m-0 mt-0.5 text-xs text-slate-600">{labelOf(EMERGENCY_COST_CATEGORY_LABELS, request.category)} · {request.requestedBy.fullName}</p>
-                <dl className="m-0 mt-2 grid grid-cols-2 gap-2">
-                  <InfoRow label="Requested"><VndText amount={request.requestedAmount} /></InfoRow>
-                  <InfoRow label="Approved">{request.approvedAmount === null ? EMPTY : <VndText amount={request.approvedAmount} />}</InfoRow>
-                </dl>
-                {request.decision?.decisionReason ?? request.cancellationReason ? (
-                  <p className="m-0 mt-3 border-l-[3px] border-amber-400 bg-white px-2.5 py-1.5 text-xs leading-5 text-slate-700">{request.decision?.decisionReason ?? request.cancellationReason}</p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        <div className="hidden overflow-x-auto border border-slate-200 md:block">
-          <Table>
-            <TableHeader className="bg-[#e9e6de] [&_tr]:border-b-0">
-              <TableRow className="hover:bg-transparent">
-                {["Request", "Category", "Requested by", "Requested", "Status", "Approved", "Decision note"].map((title) => (
-                  <TableHead key={title} className={headClass}>{title}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {costRequests.map((request, index) => (
-                <TableRow key={request.emergencyCostRequestId} className={index % 2 ? "bg-[#f7f6f3]" : "bg-white"}>
-                  <TableCell className={`${cellClass} font-semibold text-slate-900`}>{request.requestCode}</TableCell>
-                  <TableCell className={cellClass}>{labelOf(EMERGENCY_COST_CATEGORY_LABELS, request.category)}</TableCell>
-                  <TableCell className={cellClass}>{request.requestedBy.fullName}</TableCell>
-                  <TableCell className={cellClass}><VndText amount={request.requestedAmount} /></TableCell>
-                  <TableCell className={cellClass}><CostStatusBadge status={request.status} /></TableCell>
-                  <TableCell className={cellClass}>{request.approvedAmount === null ? EMPTY : <VndText amount={request.approvedAmount} />}</TableCell>
-                  <TableCell className={`${cellClass} max-w-56 truncate`}>{request.decision?.decisionReason ?? request.cancellationReason ?? EMPTY}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        </>
-      ) : (
-        <p className="m-0 text-xs text-gray-500">No emergency cost requests for this incident.</p>
-      )}
-      <FieldGrid className="mt-3 border-t border-[#eceae3] pt-3">
-        <InfoRow label="Requested total"><VndText amount={costSummary.requestedTotal} /></InfoRow>
-        <InfoRow label="Approved total"><VndText amount={costSummary.approvedTotal} /></InfoRow>
-        <InfoRow label="Pending">{costSummary.pendingCount}</InfoRow>
-      </FieldGrid>
-    </Panel>
-  )
+/**
+ * The IN8 fields Duong's components read. Cost requests belong to a transport, so an incident without one has nothing to show;
+ * the cost summary currency is VND only (anything else is left out rather than mislabelled).
+ */
+function costContext(incident: Incident) {
+  if (!incident.transport) return null
+  const { incidentReportId, incidentCode, title, category, severity, status, availableActions, transport, costSummary } = incident
+  return {
+    incidentReportId, incidentCode, title, category, severity, status, availableActions, transport,
+    costSummary: costSummary.currency === "VND" ? { ...costSummary, currency: "VND" as const } : null,
+  }
 }
 
-/** Buttons of Duong's flows (cost request, route decision, cost decision) and Khuyen's "raise severity". Rendered by their features. */
-export function IncidentResponseActions(_props: { incident: Incident }) {
-  return null
+/**
+ * Duong's real components (incident-response). They read the incident through the same IN8 payload, decide for themselves
+ * whether to render (role, status, transport) and refetch through `onChanged` after a decision.
+ */
+export function EmergencyCostSection({ incident, onChanged }: { incident: Incident; onChanged?: () => void | Promise<void> }) {
+  const context = costContext(incident)
+  return context ? <RealEmergencyCostSection incident={context} audience="INTERNAL" onChanged={onChanged} /> : null
+}
+
+/** Cost request, route decision and cost decision buttons. Khuyen's severity button is mounted by the page next to it. */
+export function IncidentResponseActions({ incident }: { incident: Incident }) {
+  const context = costContext(incident)
+  return context ? <RealIncidentResponseActions incident={context} audience="INTERNAL" /> : null
 }
