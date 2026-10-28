@@ -11,7 +11,6 @@ import {
   transportSegmentsSchema,
   trackingSnapshotSchema,
 } from "./schemas";
-import { isOngoingTransportMockMode } from "./source";
 import type {
   MockScenario,
   OngoingTransportParams,
@@ -79,7 +78,7 @@ export const ongoingTransportService = {
     audience: TransportAudience,
     _scenario: OverviewScenario = "data",
     signal?: AbortSignal,
-  ) {
+  ): Promise<TransportOverview> {
     signal?.throwIfAborted();
     const response = await apiClient.get<unknown, unknown>(
       `/transports/${encodeURIComponent(transportId)}/overview`,
@@ -93,35 +92,29 @@ export const ongoingTransportService = {
         envelope.errorCode,
         envelope.message,
       );
+    const parsed = transportOverviewSchema.parse(envelope.value);
     const hideIncidents =
       audience === "customer" ||
       canAccess(useAuthStore.getState().principal, { anyRole: ["CUSTOMER"] });
-    return (
-      hideIncidents
-        ? transportOverviewSchema.extend({
-            activeIncidents: z
-              .unknown()
-              .transform((): TransportOverview["activeIncidents"] => []),
-          })
-        : transportOverviewSchema
-    ).parse(envelope.value);
+    if (hideIncidents) {
+      return {
+        ...parsed,
+        activeIncidents: [],
+      };
+    }
+    return parsed;
   },
   async list(
     params: OngoingTransportParams,
     signal?: AbortSignal,
-    scenario: MockScenario = "data",
+    _scenario: MockScenario = "data",
   ) {
     const query = buildOngoingTransportQuery(params);
     signal?.throwIfAborted();
-    const response =
-      !import.meta.env.PROD && isOngoingTransportMockMode()
-        ? await (
-            await import("./mock/service")
-          ).getMockOngoingTransports(query, scenario, signal)
-        : await apiClient.get<unknown, unknown>("/transports/ongoing", {
-            params: query,
-            signal,
-          });
+    const response = await apiClient.get<unknown, unknown>("/transports/ongoing", {
+      params: query,
+      signal,
+    });
     signal?.throwIfAborted();
     const envelope = ongoingTransportEnvelopeSchema.parse(response);
     if (!envelope.isSuccess)

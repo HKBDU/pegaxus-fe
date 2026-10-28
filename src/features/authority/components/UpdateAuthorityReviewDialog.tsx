@@ -65,12 +65,14 @@ type Errors = Partial<
 
 interface Props {
   submissionId: string;
+  dossierId: string;
   onUpdated?: () => void;
   defaultOpen?: boolean;
 }
 
 export function UpdateAuthorityReviewDialog({
   submissionId,
+  dossierId,
   onUpdated,
   defaultOpen = false,
 }: Props) {
@@ -80,7 +82,7 @@ export function UpdateAuthorityReviewDialog({
     (role) => normalizeRole(role) === "TRANSPORT_SPECIALIST",
   );
 
-  const { data: submissionDetail, isPending: isDetailPending, isError: isDetailError, refetch: refetchDetail } = useAuthoritySubmissionDetail(submissionId);
+  const { data: submissionDetail, isPending: isDetailPending, isError: isDetailError, refetch: refetchDetail } = useAuthoritySubmissionDetail(dossierId, submissionId);
   const mutation = useUpdateAuthorityReview(submissionId);
 
   const fileInputRef = useRef<HTMLInputElement>(null);

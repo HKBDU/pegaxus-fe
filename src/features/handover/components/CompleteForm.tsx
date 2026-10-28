@@ -3,7 +3,7 @@ import { useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/shared/components/ui/button"
 import { distanceMeters, formatDistance } from "../utils"
-import { completeFormSchema } from "../schemas"
+import { completeFormSchema, handoverCoordinatesSchema } from "../schemas"
 import { HandoverApiError } from "../services"
 import { hasSignature, INK, strokesToPng } from "../signature"
 import type { CompleteDraft, CompleteInput, HandoverRecord, SignatureStroke } from "../types"
@@ -99,6 +99,11 @@ export function CompleteForm({ record, mobile, pending, target, geofenced, onSub
         position = await readPosition()
       } catch (error) {
         setPositionError(error instanceof Error ? error.message : "Could not read your position.")
+        return
+      }
+      const coordinates = handoverCoordinatesSchema.safeParse(position)
+      if (!coordinates.success) {
+        setPositionError(coordinates.error.issues[0]?.message ?? "Invalid GPS coordinates.")
         return
       }
       if (target && geofenced) {

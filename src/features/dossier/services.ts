@@ -2,7 +2,7 @@ import type { AxiosRequestConfig } from "axios"
 
 import apiClient from "@/lib/axios"
 import { z } from "zod"
-import { mapBackendDossierOverview as mapActualOverview, mapBackendRequirement, mapBackendRequirementDetail, mapBackendDocumentVersions, overviewDtoSchema, protectedPreviewUrl, serializeDocumentMetadata, serializeDocumentSubmission, unwrapBackendValue, backendReminderEnvelopeSchema } from "./lib/backend-contract"
+import { mapBackendDossierOverview as mapActualOverview, mapBackendRequirement, mapBackendRequirementDetail, overviewDtoSchema, protectedPreviewUrl, serializeDocumentMetadata, serializeDocumentSubmission, unwrapBackendValue, backendReminderEnvelopeSchema } from "./lib/backend-contract"
 import {
   dossierIdSchema,
   dossierRequirementsParamsSchema,
@@ -289,10 +289,12 @@ const documentServiceMethods = {
 
   async reviewComplianceDocument(input: DocumentReviewInput) {
     const versionId = dossierIdSchema.parse(String(input.versionId));
-    const documentId = dossierIdSchema.parse(String(input.documentId));
+    const dossierId = dossierIdSchema.parse(String(input.dossierId));
+    const requirementId = dossierIdSchema.parse(String(input.requirementId));
     const review = documentReviewSchema.parse(input.review);
+    const action = review.result === "APPROVED" ? "approve" : "reject";
     const payload = await apiClient.post<unknown, unknown>(
-      `compliance-documents/${encodeURIComponent(documentId)}/versions/${encodeURIComponent(versionId)}/reviews`,
+      `${requirementEndpoint(dossierId, requirementId)}/versions/${encodeURIComponent(versionId)}/${action}`,
       review,
     );
     return documentReviewEnvelopeSchema.parse(payload);
@@ -300,7 +302,7 @@ const documentServiceMethods = {
 
   async markReadyForSubmission(dossierId: string) {
     const id = dossierIdSchema.parse(dossierId);
-    const payload = await apiClient.patch<unknown, unknown>(
+    const payload = await apiClient.post<unknown, unknown>(
       `${ENDPOINT}/${id}/ready-for-submission`,
     );
     return readyForSubmissionEnvelopeSchema.parse(payload);
@@ -384,7 +386,22 @@ const documentServiceMethods = {
   async getComplianceDocument(
     documentId: string,
     signal?: AbortSignal,
+    dossierId?: string,
+    requirementId?: string,
   ) {
+    if (dossierId && requirementId) {
+      const requirement = await dossierService.getRequirement(
+        dossierId,
+        requirementId,
+        signal,
+      );
+      if (
+        !requirement.document ||
+        String(requirement.document.complianceDocumentId) !== String(documentId)
+      )
+        throw new Error("DOCUMENT_NOT_FOUND");
+      return requirement.document;
+    }
     const id = dossierIdSchema.parse(String(documentId));
     const payload = await apiClient.get<unknown, unknown>(
       `compliance-documents/${encodeURIComponent(id)}`,
@@ -444,14 +461,12 @@ const documentServiceMethods = {
     requirementId: string,
     signal?: AbortSignal,
   ) {
-    return mapBackendDocumentVersions(
-      await apiClient.get<unknown, unknown>(
-        `${requirementEndpoint(dossierId, requirementId)}/document/versions`,
-        { signal },
-      ),
+    const requirement = await dossierService.getRequirement(
       dossierId,
       requirementId,
+      signal,
     );
+    return requirement.document?.versions ?? [];
   },
   async getMissingRequirements(dossierId: string, signal?: AbortSignal) {
     const payload = await apiClient.get<unknown, unknown>(

@@ -44,7 +44,9 @@ export function routeGeometryKey(route: MapRoute): string | null {
   const points = coordinates(route);
   if (!points) return null;
   const round = (value: number) => value.toFixed(4);
-  return `drive|${round(points.from.latitude)},${round(points.from.longitude)}|${round(points.to.latitude)},${round(points.to.longitude)}`;
+  // Bump the namespace so routes cached by the old straight-line fallback
+  // can never be reused as real road geometry.
+  return `v2|drive|${round(points.from.latitude)},${round(points.from.longitude)}|${round(points.to.latitude)},${round(points.to.longitude)}`;
 }
 
 function straightLine(route: MapRoute): RouteGeometry | null {
@@ -139,6 +141,14 @@ export async function resolveRouteGeometry(
         points.to,
         signal,
       );
+      if (preview.estimated) {
+        return {
+          line: null,
+          key,
+          estimated: true,
+          error: "Geoapify did not return a drivable route.",
+        };
+      }
       const record = { key, line: preview.geometry, savedAt: Date.now() };
       memoryCache.set(key, record);
       await writePersistent(record);

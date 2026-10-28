@@ -241,18 +241,21 @@ export const transportOverviewSchema = z.object({
       status: z.enum(DOSSIER_STATUSES),
     }),
   ),
-  activeIncidents: z.array(
-    z.object({
-      incidentReportId: z.string(),
-      incidentCode: z.string(),
-      category: z.enum(INCIDENT_CATEGORIES),
-      status: z.enum(["REPORTED", "PENDING"]),
-      title: z.string(),
-      occurredAt: timestampSchema,
-      severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
-      description: z.string().optional(),
-    }),
-  ),
+  activeIncidents: z
+    .array(
+      z.object({
+        incidentReportId: z.string(),
+        incidentCode: z.string(),
+        category: z.enum(INCIDENT_CATEGORIES),
+        status: z.enum(["REPORTED", "PENDING"]),
+        title: z.string(),
+        occurredAt: timestampSchema,
+        severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
+        description: z.string().optional(),
+      }),
+    )
+    .nullish()
+    .transform((v) => v ?? []),
   canViewGpsTab: z.boolean(),
 });
 

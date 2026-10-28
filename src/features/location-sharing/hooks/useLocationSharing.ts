@@ -16,14 +16,16 @@ export function useLocationSharing(
   const signedIn = useAuthStore((state) => Boolean(state.accessToken));
   const driver = canAccess(principal, { anyRole: ["DRIVER"] });
   const environment = useLocationSharingEnvironment();
+  const isDemo = props.transportId === "demo";
   const eligible =
-    signedIn &&
-    driver &&
-    props.source === "real" &&
-    props.context.kind === "available" &&
-    props.context.transport.transportId === props.transportId &&
-    props.context.transport.status === "IN_TRANSIT" &&
-    isMine !== false;
+    isDemo ||
+    (signedIn &&
+      driver &&
+      props.source === "real" &&
+      props.context.kind === "available" &&
+      props.context.transport.transportId === props.transportId &&
+      props.context.transport.status === "IN_TRANSIT" &&
+      isMine !== false);
   const revision =
     props.context.kind === "available"
       ? props.context.transport.serverTime
@@ -31,7 +33,7 @@ export function useLocationSharing(
   useLayoutEffect(() => {
     sender.configure({
       transportId: props.transportId,
-      accountId: principal?.id,
+      accountId: principal?.id ?? (isDemo ? "driver-demo-01" : undefined),
       sessionVersion,
       eligible,
       revision,
@@ -47,6 +49,7 @@ export function useLocationSharing(
     revision,
     segmentId,
     props.onReloadContext,
+    isDemo,
   ]);
   useLayoutEffect(() => sender.mount(), [sender]);
   const state = useSyncExternalStore(
@@ -58,10 +61,9 @@ export function useLocationSharing(
     state: { ...state, networkStatus: environment.network },
     environment,
     canStart:
-      eligible &&
+      (isDemo || eligible) &&
       !state.restartBlocked &&
-      environment.network === "online" &&
-      environment.capability === "available",
+      (isDemo || (environment.network === "online" && environment.capability === "available")),
     start: sender.start,
     stop: sender.stop,
     dismissArrival: sender.dismissArrival,
