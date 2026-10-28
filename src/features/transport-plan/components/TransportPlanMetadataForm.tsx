@@ -112,7 +112,8 @@ export function TransportPlanMetadataForm({
     form.formState.isSubmitting ||
     reloading;
   const canWrite = baseline
-    ? canEditTransportPlan(principal, baseline)
+    ? canEditTransportPlan(principal, baseline) &&
+      canEditTransportPlan(principal, plan ?? baseline)
     : canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] });
   const blocked =
     !canWrite ||

@@ -7,7 +7,7 @@ export function TransportPlanStatusBadge({
 }: {
   status: TransportPlanStatus;
 }) {
-  if (status === "IN_PROGRESS" || status === "COMPLETED")
+  if (status !== "DRAFT" && status !== "PENDING" && status !== "APPROVED")
     return <ApprovedBookingBadge value={status} />;
   return (
     <BookingStatusBadge

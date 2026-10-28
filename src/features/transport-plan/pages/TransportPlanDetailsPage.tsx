@@ -17,7 +17,10 @@ import type { TransportPlanDetail } from "../types";
 import { Button } from "@/shared/components/ui/button";
 import { useAuthStore } from "@/features/auth/store";
 import { UsersRound } from "lucide-react";
-import { canEditTransportPlan } from "../transport-plan.form";
+import {
+  canCreateTransportPlanInvoice,
+  canEditTransportPlan,
+} from "../transport-plan.form";
 import {
   editTransportPlanPath,
   getManagePersonnelAction,
@@ -88,7 +91,7 @@ export function TransportPlanDetails({
               </Link>
             </Button>
           ) : null}
-          {manager ? (
+          {canCreateTransportPlanInvoice(principal, plan) ? (
             <Button
               className="rounded-[2px]"
               onClick={() => navigate(invoiceCreate(plan.booking.bookingId))}
@@ -162,8 +165,12 @@ export function TransportPlanDetails({
                 />
               ) : (
                 <p className="text-sm text-slate-500">
-                  Personnel assignment opens after the transport plan is
-                  approved.
+                  {plan.status === "CANCELLED" ||
+                  plan.transport.status === "CANCELLED"
+                    ? "This transport plan is cancelled. Personnel assignments cannot be changed."
+                    : plan.status === "APPROVED"
+                      ? "Personnel assignments are locked once the transport departs."
+                      : "Personnel assignment opens after the transport plan is approved."}
                 </p>
               )}
             </Tabs.Content>

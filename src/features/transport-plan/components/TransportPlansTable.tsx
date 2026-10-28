@@ -27,6 +27,7 @@ import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-opt
 import { formatPlanDate } from "../format";
 import { hasTransportPlanFilters } from "../constants";
 import { transportPlanSortSchema } from "../schemas";
+import { canCreateTransportPlanInvoice } from "../transport-plan.form";
 import type {
   TransportPlanListItem,
   TransportPlansQueryParams,
@@ -132,13 +133,15 @@ export function TransportPlansTable({
                     View Invoices
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() =>
-                    navigate(invoiceCreate(row.original.bookingId))
-                  }
-                >
-                  Create Invoice
-                </DropdownMenuItem>
+                {canCreateTransportPlanInvoice(principal, row.original) ? (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      navigate(invoiceCreate(row.original.bookingId))
+                    }
+                  >
+                    Create Invoice
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
@@ -158,7 +161,7 @@ export function TransportPlansTable({
           ),
       },
     ],
-    [manager, navigate],
+    [manager, navigate, principal],
   );
   const [sortId, direction] = params.sortBy.split(":");
   const sorting: SortingState = [{ id: sortId, desc: direction === "desc" }];
