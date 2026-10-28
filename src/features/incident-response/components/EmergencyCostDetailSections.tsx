@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   CategoryBadge,
   CostStatusBadge,
@@ -15,6 +16,16 @@ import {
 import { emergencyCostIdSchema, type EmergencyCostDetail } from "../schemas";
 import type { CostEvidencePreview } from "../mocks/repository";
 import { CostEvidenceGallery } from "./EmergencyCostEvidence";
+
+const vehicleStatusLabels = new Map([
+  ["AVAILABLE", "Available"],
+  ["ASSIGNED", "Assigned"],
+  ["IN_USE", "In use"],
+  ["MAINTENANCE", "Maintenance"],
+  ["INACTIVE", "Inactive"],
+  ["SUSPENDED", "Suspended"],
+  ["OUT_OF_SERVICE", "Out of service"],
+]);
 
 const dateFormat = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -165,7 +176,23 @@ export function EmergencyCostDetailSections({
                       ? `${incident.vehicle.vehicleCode} · ${incident.vehicle.licensePlate}`
                       : null,
                   ],
-                  ["Vehicle status", incident.vehicle?.status],
+                  [
+                    "Vehicle status",
+                    incident.vehicle?.status ? (
+                      <Badge
+                        key="vehicle-status"
+                        variant={
+                          incident.vehicle.status === "OUT_OF_SERVICE"
+                            ? "destructive"
+                            : "outline"
+                        }
+                        className="rounded-xs whitespace-normal break-words"
+                      >
+                        {vehicleStatusLabels.get(incident.vehicle.status) ??
+                          incident.vehicle.status}
+                      </Badge>
+                    ) : null,
+                  ],
                 ]}
               />
             </>

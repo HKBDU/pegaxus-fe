@@ -311,7 +311,7 @@ export const emergencyCostService = {
     signal?: AbortSignal,
     expectedScope?: string,
   ) {
-    const auth = authorize(true, expectedScope);
+    const auth = authorize(false, expectedScope);
     const id = emergencyCostIdSchema.parse(input);
     signal?.throwIfAborted();
     let value: unknown;
