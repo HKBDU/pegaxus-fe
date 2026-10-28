@@ -32,6 +32,10 @@ export interface PhotoCaptureSectionProps {
 const DEFAULT_TYPES = ["image/jpeg", "image/jpg", "image/png"]
 const DEFAULT_MAX_SIZE = 5 * 1024 * 1024
 
+function sizeLimitMessage(maxFileSizeBytes: number) {
+  return `Only JPG, JPEG, PNG images up to ${Math.round(maxFileSizeBytes / 1024 / 1024)}MB are accepted. Please try again.`
+}
+
 function formatTimestamp(value: Date | null | undefined) {
   return value ? formatUtcDateTime(value) : ""
 }
@@ -152,7 +156,7 @@ export function PhotoCaptureSection({
         return
       }
       if (originalFile.size > maxFileSizeBytes) {
-        onError?.("Image must be 5 MB or smaller.")
+        onError?.(sizeLimitMessage(maxFileSizeBytes))
         return
       }
       const captureTime = new Date()
@@ -161,6 +165,10 @@ export function PhotoCaptureSection({
         coordinates: currentGps,
         documentLabel,
       })
+      if (stampedFile.size > maxFileSizeBytes) {
+        onError?.(sizeLimitMessage(maxFileSizeBytes))
+        return
+      }
 
       const nextFiles = [...files]
       nextFiles[retakeIdx] = stampedFile
@@ -201,7 +209,7 @@ export function PhotoCaptureSection({
         continue
       }
       if (originalFile.size > maxFileSizeBytes) {
-        onError?.("Image must be 5 MB or smaller.")
+        onError?.(sizeLimitMessage(maxFileSizeBytes))
         continue
       }
       const captureTime = new Date()
@@ -210,6 +218,10 @@ export function PhotoCaptureSection({
         coordinates: currentGps,
         documentLabel,
       })
+      if (stampedFile.size > maxFileSizeBytes) {
+        onError?.(sizeLimitMessage(maxFileSizeBytes))
+        continue
+      }
 
       nextFiles.push(stampedFile)
       nextDates.push(captureTime)

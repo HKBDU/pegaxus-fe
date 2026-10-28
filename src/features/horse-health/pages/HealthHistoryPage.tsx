@@ -11,6 +11,7 @@ import { TablePagination } from "@/shared/components/common"
 import ImageViewer from "@/shared/components/file-viewer/ImageViewer"
 import { PhotoCaptureSection } from "@/shared/components/PhotoCaptureSection"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
+import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
 import { formatUtcDateTime } from "@/shared/utils/datetime"
 
 import { HEALTH_STATUS_LABELS, HEALTH_STATUSES, HORSE_HEALTH_ROUTES, LOG_TYPES } from "../constants"
@@ -44,7 +45,7 @@ function AddHealthLogPhotos({ transportId, logId, existingPhotoCount }: { transp
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to upload additional photos.") }
   }
   if (maxFiles === 0) return null
-  return <div className="mt-5 space-y-3 border-t border-slate-300 pt-4"><p className="font-bold text-[#181818]">Add photo / field note</p><PhotoCaptureSection files={files} maxFiles={maxFiles} capturedAt={capturedAt} coordinates={coordinates} onCoordinatesChange={setCoordinates} captions={captions} onFilesChange={setFiles} onCapturedAtChange={setCapturedAt} onCaptionsChange={setCaptions} onUploadedPublicIdsChange={setUploadedPublicIds} error={error} onError={setError} presignedEntity="attachment" documentLabel="Additional field photo" /><button type="button" disabled={mutation.isPending || !files.length} onClick={() => void submit()} className="min-h-12 bg-[#f39200] px-4 text-sm font-bold text-[#181818] disabled:opacity-50">{mutation.isPending ? "Uploading…" : "Upload additional photos"}</button></div>
+  return <div className="mt-5 space-y-3 border-t border-slate-300 pt-4"><p className="font-bold text-[#181818]">Add photo / field note</p><PhotoCaptureSection files={files} maxFiles={maxFiles} maxFileSizeBytes={UPLOAD_MAX_BYTES} capturedAt={capturedAt} coordinates={coordinates} onCoordinatesChange={setCoordinates} captions={captions} onFilesChange={setFiles} onCapturedAtChange={setCapturedAt} onCaptionsChange={setCaptions} onUploadedPublicIdsChange={setUploadedPublicIds} error={error} onError={setError} presignedEntity="attachment" documentLabel="Additional field photo" /><button type="button" disabled={mutation.isPending || !files.length} onClick={() => void submit()} className="min-h-12 bg-[#f39200] px-4 text-sm font-bold text-[#181818] disabled:opacity-50">{mutation.isPending ? "Uploading…" : "Upload additional photos"}</button></div>
 }
 
 function formatDate(value: string | null | undefined) {

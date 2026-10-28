@@ -76,6 +76,7 @@ export const INCIDENT_ACTION = {
   RESOLVE: "RESOLVE",
   SELF_RESOLVE: "SELF_RESOLVE",
   RAISE_SEVERITY: "RAISE_SEVERITY",
+  LOWER_SEVERITY: "LOWER_SEVERITY",
   CANCEL_INCIDENT: "CANCEL_INCIDENT",
 } as const;
 
@@ -86,6 +87,17 @@ export const EMERGENCY_COST_ACTION = {
 
 export const INCIDENT_ACCENT_COLOR = "#F39200";
 export const INCIDENT_CHARCOAL_COLOR = "#181818";
+
+export const INCIDENT_ERROR_MESSAGES: Record<string, string> = {
+  INCIDENT_MODIFIED:
+    "This incident was changed by someone else. Reload to see the latest version.",
+  INVALID_INCIDENT_STATUS:
+    "This incident can no longer be changed in its current status.",
+  SEVERITY_LOWER_MANAGER_ONLY:
+    "Only the Logistics Manager can lower incident severity.",
+  SEVERITY_UNCHANGED: "Choose a different severity before saving.",
+  NETWORK_ERROR: "Cannot reach the server. Check your connection and try again.",
+};
 
 type IncidentValue = string;
 export type IncidentTone =
@@ -150,6 +162,7 @@ export const INCIDENT_ACTION_LABELS: Record<
   RESOLVE: "Resolve",
   SELF_RESOLVE: "Self Resolve",
   RAISE_SEVERITY: "Raise Severity",
+  LOWER_SEVERITY: "Lower Severity",
   CANCEL_INCIDENT: "Cancel Incident",
 };
 

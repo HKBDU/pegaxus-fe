@@ -372,6 +372,8 @@ export interface RaiseSeverityRequest {
 
 export interface IncidentEffects {
   customerNotified?: boolean;
+  emailQueued?: boolean;
+  vehicleStatusChanged?: boolean;
   canAddHorseDetails?: boolean;
   firstAidGuide?: string[];
   vitalWarnings?: string[];

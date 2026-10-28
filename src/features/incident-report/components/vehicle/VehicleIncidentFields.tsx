@@ -135,6 +135,9 @@ export function VehicleIncidentFields({
           </label>
         ))}
       </div>
+      <p className="border border-[#f39200] bg-[#fff7e8] px-3 py-2 text-sm font-semibold text-slate-800">
+        Vehicle held until replacement cost is approved.
+      </p>
       <div className="grid gap-4 sm:grid-cols-3">
         <label className="grid gap-2 text-sm font-bold text-slate-900">
           Estimated cost

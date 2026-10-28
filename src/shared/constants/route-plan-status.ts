@@ -33,9 +33,8 @@ export function canChangeVehiclesBeforeDeparture(plan: {
   routeType: string;
   status: RoutePlanStatus;
 }): boolean {
-  const validRouteTypes = ["PRIMARY", "BACKUP", "RETURN"];
-  const eligibleStatuses: RoutePlanStatus[] = ["DRAFT", "CONFIRMED", "ACTIVE"];
-  return validRouteTypes.includes(plan.routeType) && eligibleStatuses.includes(plan.status);
+  // The backend rejects any other type (INVALID_ROUTE_PLAN_TYPE) or status (INVALID_ROUTE_PLAN_STATUS).
+  return plan.routeType === "PRIMARY" && plan.status === "CONFIRMED";
 }
 
 export function canChangeVehiclesMidTrip(plan: {

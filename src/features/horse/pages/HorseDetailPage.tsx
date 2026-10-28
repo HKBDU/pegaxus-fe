@@ -107,7 +107,7 @@ export function HorseDetailPage() {
             <div className="h-1.5 bg-[#f39200]" />
             <div className="relative grid h-full min-h-0 lg:grid-cols-[250px_1fr]">
               <div className="hidden lg:flex items-center justify-center border-b border-slate-200/90 bg-white lg:border-b-0 lg:border-r ">
-                <img src={horseCard} alt="Horse" className="block max-h-full w-full object-contain " />
+                <img src={horse.avatarUrl ?? horseCard} alt={horse.avatarUrl ? `${horse.horseName} avatar` : "Horse"} className="block max-h-full w-full object-contain " />
               </div>
               <div className="relative min-h-0 overflow-hidden p-3.5 sm:p-4 lg:p-4">
                 <img src={logo} alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 m-auto h-[72%] w-[72%] object-contain opacity-[0.035]" />

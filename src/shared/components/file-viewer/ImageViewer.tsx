@@ -62,6 +62,7 @@ const ROOT_CLASS =
  */
 function ImageViewerContent({
   images,
+  maxFileSizeBytes = MAX_IMAGE_FILE_SIZE,
   index = 0,
   className,
   style,
@@ -79,7 +80,7 @@ function ImageViewerContent({
   )
   const fileStatus = useFileSizeLimit(
     sizeSources,
-    MAX_IMAGE_FILE_SIZE,
+    maxFileSizeBytes,
   )
 
   const multiple = slides.length > 1
@@ -138,7 +139,7 @@ function ImageViewerContent({
         style={{ width, height, ...style }}
       >
         <div className="flex size-full items-center justify-center p-4 text-center text-sm text-white/70">
-          {!slides.length ? 'No Image Found' : 'Image file is too large to preview. Maximum size is 5 MB.'}
+          {!slides.length ? 'No Image Found' : `Image file is too large to preview. Maximum size is ${Math.round(maxFileSizeBytes / 1024 / 1024)} MB.`}
         </div>
       </div>
     )
