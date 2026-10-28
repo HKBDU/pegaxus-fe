@@ -26,8 +26,16 @@ interface Props {
 
 const legName = (segment?: OverviewSegment) => (segment ? `#${segment.displayOrder} ${segment.fromLocation.locationName} → ${segment.toLocation.locationName}` : "—")
 
-/** Local date-time input value -> ISO with the browser offset. */
+/** Local date-time input value -> the UTC instant sent to the BE (ISO, ends with Z). */
 const toIso = (local: string) => new Date(local).toISOString()
+
+/** The same instant as the person should read it on the other side: "2026-10-28 08:00 UTC". Empty for an incomplete value. */
+function utcPreview(local: string) {
+  const date = new Date(local)
+  if (!local || Number.isNaN(date.getTime())) return ""
+  const iso = date.toISOString()
+  return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`
+}
 
 /**
  * HO3 form: pick the handover point, the type and when. The boundaries come from OT4 and the buttons follow only `canCreate`
@@ -70,8 +78,9 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
         setFormError("Invalid date and time.")
         return
       }
+      // The window is counted on UTC dates, like every other date rule (R5), not on the browser clock.
       const now = new Date()
-      const diffYears = Math.abs(plannedDate.getFullYear() - now.getFullYear())
+      const diffYears = Math.abs(plannedDate.getUTCFullYear() - now.getUTCFullYear())
       if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
         setFormError(`Planned handover must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`)
         return
@@ -187,7 +196,10 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
               {scheduled ? (
                 <div className="max-w-xs space-y-1">
                   <label htmlFor="planned-at" className="font-heading text-[0.6875rem] font-semibold tracking-[0.06em] text-gray-500 uppercase">Planned at <span className="text-red-600">*</span></label>
-                  <Input id="planned-at" type="datetime-local" value={plannedAt} onChange={(event) => setPlannedAt(event.target.value)} className="h-11 rounded-[2px] border-slate-300 bg-white text-base shadow-none sm:h-9 sm:text-sm" />
+                  <Input id="planned-at" type="datetime-local" value={plannedAt} onChange={(event) => setPlannedAt(event.target.value)} aria-describedby="planned-at-utc" className="h-11 rounded-[2px] border-slate-300 bg-white text-base shadow-none sm:h-9 sm:text-sm" />
+                  <p id="planned-at-utc" className="m-0 text-xs text-gray-500">
+                    Your local time{utcPreview(plannedAt) ? <> = <span className="font-semibold text-gray-700">{utcPreview(plannedAt)}</span></> : null}
+                  </p>
                 </div>
               ) : null}
             </div>
