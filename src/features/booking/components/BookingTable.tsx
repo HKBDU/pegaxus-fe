@@ -7,7 +7,8 @@ import { BookingStatusBadge } from "@/features/booking/components/BookingStatusB
 import { CancelBookingDialog } from "@/features/booking/components/CancelBookingDialog"
 import { BookingFilters } from "@/features/booking/components/BookingFilters"
 import type { BookingAudience, BookingListParams, BookingSort, BookingStatus, BookingSummary } from "@/features/booking/types"
-import { formatBookingDate, formatBookingTime } from "@/features/booking/utils"
+import { formatBookingDate } from "@/features/booking/utils"
+import { formatUtcDate, formatUtcTime } from "@/shared/utils/datetime"
 import type { EntityId, PaginationMeta } from "@/shared/types"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Button } from "@/shared/components/ui/button"
@@ -177,8 +178,8 @@ export function BookingTable({
         header: "CREATED AT",
         cell: ({ row }) => (
           <div className="leading-tight">
-            <span className="block text-slate-900">{formatBookingDate(row.original.createdAt)}</span>
-            <span className="mt-1 block text-[0.68rem] text-slate-400">{formatBookingTime(row.original.createdAt)}</span>
+            <span className="block text-slate-900">{formatUtcDate(row.original.createdAt)}</span>
+            <span className="mt-1 block text-[0.68rem] text-slate-400">{formatUtcTime(row.original.createdAt)}</span>
           </div>
         ),
       },
