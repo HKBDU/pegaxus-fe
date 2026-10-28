@@ -13,6 +13,7 @@ import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/feat
 import { useBookingInvoices } from "@/features/invoice/hooks/useInvoices"
 import { invoiceFormSchema, invoiceToFormValues, prefillToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoicePrefill, InvoiceType } from "@/features/invoice/types"
+import { formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime"
 import { DEFAULT_DUE_TIME, estimateSummary, formatMoney, parseTransitDays, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
 import { useDebounce } from "@/shared/hooks"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
@@ -82,6 +83,9 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
   })
   const { control, handleSubmit, setValue, setError, register, formState: { errors, isDirty } } = form
   const [type, items, transitDaysInput] = useWatch({ control, name: ["type", "items", "transitDays"] })
+  const [dueDateValue, dueTimeValue] = useWatch({ control, name: ["dueDate", "dueTime"] })
+  // The day and the clock time are the viewer's own; the BE gets (and shows everyone else) the UTC instant.
+  const dueUtcPreview = dueDateValue && dueTimeValue ? toUtcIso(`${dueDateValue}T${dueTimeValue}`) : undefined
   // The days re-price a QUOTATION through IV1; wait until typing stops and the number is valid.
   const debouncedDays = useDebounce(transitDaysInput ?? "", 400)
   const transitDays = selectedType === INVOICE_TYPE.QUOTATION ? parseTransitDays(debouncedDays) : undefined
@@ -304,6 +308,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                             )}
                           />
                         </div>
+                        {dueUtcPreview ? <p className="mt-1 text-[11px] text-gray-500">Your local time. Due at <span className="font-semibold text-gray-700">{formatUtcDateTime(dueUtcPreview)}</span></p> : null}
                         {errors.dueDate || errors.dueTime ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.dueDate?.message ?? errors.dueTime?.message}</p> : null}
                       </div>
 
