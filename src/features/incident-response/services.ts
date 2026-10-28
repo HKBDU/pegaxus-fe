@@ -1,6 +1,7 @@
 import { isAxiosError } from "axios";
 import { z } from "zod";
 import apiClient from "@/lib/axios";
+import { UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { canAccess, normalizeRole } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
 import type { AuthPrincipal } from "@/features/auth/types";
@@ -553,7 +554,7 @@ export function getEmergencyCostError(
   )
     return {
       message:
-        "The supporting images were rejected. Use up to five confirmed JPG/PNG uploads of at most 5 MB each.",
+        `The supporting images were rejected. Use up to five confirmed JPG/PNG uploads of at most ${UPLOAD_MAX_MB} MB each.`,
       retryable: false,
     };
   if (status === 400 || status === 422 || code === "VALIDATION_ERROR")

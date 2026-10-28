@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Button } from "@/shared/components/ui/button";
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import type {
   CostEvidencePreview,
   MockCostEvidence,
@@ -80,12 +81,12 @@ export function MockCostPhotoPicker({
             selected.some(
               (file) =>
                 !["image/jpeg", "image/png"].includes(file.type) ||
-                file.size > 5 * 1024 * 1024 ||
+                file.size > UPLOAD_MAX_BYTES ||
                 file.size === 0,
             )
           ) {
             setError(
-              "Use up to five non-empty JPG/PNG images, at most 5 MB each. No files from this selection were added.",
+              `Use up to five non-empty JPG/PNG images, at most ${UPLOAD_MAX_MB} MB each. No files from this selection were added.`,
             );
             return;
           }

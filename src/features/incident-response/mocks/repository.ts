@@ -1,6 +1,7 @@
 import { canAccess, normalizeRole } from "@/features/auth/access-control";
 import type { AuthPrincipal } from "@/features/auth/types";
 import { useAuthStore } from "@/features/auth/store";
+import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload";
 import {
   rerouteContextSchema,
   rerouteEscalationRequestSchema,
@@ -464,7 +465,7 @@ function create(
       (photo) =>
         !photo.publicId.startsWith("mock-evidence:") ||
         !["image/jpeg", "image/png"].includes(photo.file.type) ||
-        photo.file.size > 5 * 1024 * 1024 ||
+        photo.file.size > UPLOAD_MAX_BYTES ||
         photo.file.size === 0 ||
         !data.photoFiles?.some((ref) => ref.publicId === photo.publicId),
     )
