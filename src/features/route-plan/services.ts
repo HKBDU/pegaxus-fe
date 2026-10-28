@@ -3,6 +3,8 @@ import { ROUTE_PLAN_ENDPOINTS, ROUTE_PLAN_ERROR_MESSAGES } from "./constants";
 import type {
   ApiEnvelope,
   CancelRoutePlanRequest,
+  ChangeRoutePlanVehiclesRequest,
+  ChangeRoutePlanVehiclesResult,
   CreateRoutePlanRequest,
   LegalReviewRequest,
   LegalReviewResult,
@@ -142,12 +144,25 @@ export const createRoutePlan = (
       payload,
     ),
   );
+/** RP4 PUT: overwrite the full route plan while it is still DRAFT. */
 export const updateRoutePlan = (
   routePlanId: string,
   payload: UpdateRoutePlanRequest,
 ) =>
   request<RoutePlanMutationResult>(
     apiClient.put(`${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}`, payload),
+  );
+
+/** K-01: replace vehicles on existing segments of a CONFIRMED/ACTIVE plan. */
+export const changeRoutePlanVehicles = (
+  routePlanId: string,
+  payload: ChangeRoutePlanVehiclesRequest,
+) =>
+  request<ChangeRoutePlanVehiclesResult>(
+    apiClient.patch(
+      `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/vehicles`,
+      payload,
+    ),
   );
 export const cancelRoutePlan = (
   routePlanId: string,
@@ -191,7 +206,12 @@ export function getRoutePlanError(error: unknown): {
   message: string;
 } {
   if (error instanceof RoutePlanApiError)
-    return { code: error.errorCode, message: error.message };
+    return {
+      code: error.errorCode,
+      message:
+        ROUTE_PLAN_ERROR_MESSAGES[error.errorCode] ??
+        error.message,
+    };
   return {
     code: "UNKNOWN_ERROR",
     message: "Unable to complete the route plan request.",
