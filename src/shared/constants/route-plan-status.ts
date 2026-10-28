@@ -29,6 +29,21 @@ export function canEditRoutePlan(status: RoutePlanStatus): boolean {
   return status === "DRAFT";
 }
 
+export function canChangeVehiclesBeforeDeparture(plan: {
+  routeType: string;
+  status: RoutePlanStatus;
+}): boolean {
+  const validRouteTypes = ["PRIMARY", "BACKUP", "RETURN"];
+  const eligibleStatuses: RoutePlanStatus[] = ["DRAFT", "CONFIRMED", "ACTIVE"];
+  return validRouteTypes.includes(plan.routeType) && eligibleStatuses.includes(plan.status);
+}
+
+export function canChangeVehiclesMidTrip(plan: {
+  status: RoutePlanStatus;
+}): boolean {
+  return plan.status === "ACTIVE";
+}
+
 export function canCancelRoutePlan(status: RoutePlanStatus): boolean {
   return status === "DRAFT";
 }

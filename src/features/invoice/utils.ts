@@ -3,6 +3,7 @@ import { INVOICE_TAX_RATE_PERCENT, TRANSIT_DAYS_RANGE, PAYMENT_ERROR_CODES, CANC
 import type { InvoiceItem, InvoiceSummary, PaymentErrorCode, PaymentErrorState, Invoice, RecordPaymentPayload } from "@/features/invoice/types"
 import type { InvoiceCurrency } from "@/features/invoice/constants"
 import { z } from "zod"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 
 // ---- from shared/mock-mode.ts ----
 type MockEnvironment = { PROD?: boolean; VITE_INVOICE_API_MOCKS?: string }
@@ -170,13 +171,7 @@ export function isPayableAmount(amount: number) {
 }
 
 export function formatPaymentDate(value: string | null | undefined) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+  return formatUtcDateTime(value)
 }
 
 export function toPaymentTimestamp(value: string) {

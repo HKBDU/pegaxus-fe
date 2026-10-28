@@ -11,6 +11,7 @@ import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Form } from '@/shared/components/ui/form'
+import { formatUtcTime } from '@/shared/utils/datetime'
 import { PhotoCaptureSection } from '@/shared/components/PhotoCaptureSection'
 import {
   BcpLocationSection,
@@ -276,7 +277,7 @@ export default function BcpQuarantineProofPage() {
                     <div>
                       <dt className="text-slate-500 font-medium">Timestamp</dt>
                       <dd className="font-semibold text-slate-800 font-mono text-[11px]">
-                        {photoTakenAt ? photoTakenAt.toLocaleTimeString("en-GB") : "Live stamp"}
+                        {photoTakenAt ? formatUtcTime(photoTakenAt) : "Live stamp"}
                       </dd>
                     </div>
                   </dl>

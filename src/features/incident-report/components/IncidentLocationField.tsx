@@ -1,3 +1,5 @@
+import { formatUtcDateTime } from "@/shared/utils/datetime";
+
 export interface IncidentLocationValue {
   occurredAt: string;
   locationId?: string;
@@ -37,6 +39,7 @@ export function IncidentLocationField({
         <p className="min-h-12 border border-slate-200 bg-slate-50 px-3 py-3 font-normal">
           {value.occurredAt || "Captured on submit"}
         </p>
+        <p className="text-xs font-normal text-slate-500">Your local time. Sent as {value.occurredAt ? formatUtcDateTime(value.occurredAt) : "UTC"}.</p>
       </div>
       <div className="space-y-2 text-sm font-bold text-slate-900">
         <span>Location description</span>

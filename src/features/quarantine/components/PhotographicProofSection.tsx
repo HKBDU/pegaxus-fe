@@ -3,6 +3,7 @@ import { Camera, FolderOpen, RotateCcw, Trash2, Clock, ShieldCheck } from 'lucid
 import { Button } from '@/shared/components/ui/button'
 import ImageViewer from '@/shared/components/file-viewer/ImageViewer'
 import { QuarantineSectionHeader } from './QuarantineSectionHeader'
+import { formatUtcDateTime } from '@/shared/utils/datetime'
 
 interface PhotographicProofSectionProps {
   photoFile: File | null
@@ -15,14 +16,7 @@ interface PhotographicProofSectionProps {
 }
 
 function formatDateTimeStamp(date: Date): string {
-  return date.toLocaleString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  })
+  return formatUtcDateTime(date)
 }
 
 export function PhotographicProofSection({
