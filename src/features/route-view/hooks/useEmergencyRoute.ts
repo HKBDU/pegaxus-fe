@@ -147,17 +147,38 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
 export async function refreshEmergencyQueries(
   client: QueryClient,
   plan: Pick<RoutePlanDetail, "routePlanId" | "transportPlanId" | "bookingId">,
-  action: EmergencyAction | "management",
+  action: EmergencyAction | "management" | "change-vehicles",
   dossierId?: string,
   changedVehicleIds: readonly string[] = [],
   transportId?: string,
+  changeContext?: {
+    accountId: string;
+    sessionVersion: number;
+    incidentReportId?: string;
+  },
 ) {
+  const changesVehicles = action === "change-vehicles";
+  const auth = useAuthStore.getState();
+  if (
+    changesVehicles &&
+    (!transportId ||
+      !changeContext ||
+      !auth.accessToken ||
+      auth.principal?.id !== changeContext.accountId ||
+      auth.sessionVersion !== changeContext.sessionVersion)
+  )
+    throw new Error(
+      "Reload the transport in the original account/session before refreshing vehicle changes.",
+    );
   const keys: readonly (readonly unknown[])[] = [
     routeViewKeys.detail(plan.routePlanId),
     ["route-view", "list", plan.transportPlanId],
   ];
   const updatesWorkspace =
-    action === "decision" || action === "activation" || action === "management";
+    action === "decision" ||
+    action === "activation" ||
+    action === "management" ||
+    changesVehicles;
   const previousRoute = client.getQueryData<RoutePlanDetail>(
     routeViewKeys.detail(plan.routePlanId),
   );
@@ -182,6 +203,49 @@ export async function refreshEmergencyQueries(
       : []),
     ...(updatesWorkspace && transportId
       ? [refreshTransportProgress(client, transportId)]
+      : []),
+    ...(changesVehicles && transportId
+      ? ["snapshot", "segments", "overview"].map((part) =>
+          client.invalidateQueries({
+            queryKey: ["transport-tracking", part, transportId],
+          }),
+        )
+      : []),
+    ...(changesVehicles && changeContext?.incidentReportId
+      ? [
+          client.invalidateQueries({
+            queryKey: [
+              "incidents",
+              "detail",
+              changeContext.incidentReportId,
+              changeContext.sessionVersion,
+            ],
+            exact: true,
+          }),
+          client.invalidateQueries({
+            queryKey: ["incident-response"],
+            predicate: ({ queryKey }) => {
+              const matchesIncident =
+                (queryKey[1] === "reroute-context" &&
+                  queryKey[4] === changeContext.incidentReportId) ||
+                (queryKey[1] === "emergency-costs" &&
+                  queryKey[4] === "incident-context" &&
+                  queryKey[5] === changeContext.incidentReportId);
+              if (!matchesIncident || typeof queryKey[3] !== "string")
+                return false;
+              try {
+                const scope: unknown = JSON.parse(queryKey[3]);
+                return (
+                  Array.isArray(scope) &&
+                  scope[0] === changeContext.accountId &&
+                  scope[1] === changeContext.sessionVersion
+                );
+              } catch {
+                return false;
+              }
+            },
+          }),
+        ]
       : []),
     ...keys.map((queryKey) => client.invalidateQueries({ queryKey })),
     ...(updatesWorkspace
@@ -240,15 +304,25 @@ export async function refreshEmergencyQueries(
           }),
         ]
       : []),
-    ...(action === "activation"
+    ...(action === "activation" || changesVehicles
       ? [
-          client.invalidateQueries({
-            queryKey: ["route-view", "activation-resources", plan.routePlanId],
-          }),
+          ...(!changesVehicles
+            ? [
+                client.invalidateQueries({
+                  queryKey: [
+                    "route-view",
+                    "activation-resources",
+                    plan.routePlanId,
+                  ],
+                }),
+              ]
+            : []),
           client.invalidateQueries({ queryKey: vehicleKeys.lists() }),
           client.invalidateQueries({
             queryKey: vehicleKeys.details(),
             predicate: (query) =>
+              // K-03's callback is not available yet; refresh all cached details when new IDs are unknown.
+              changesVehicles ||
               vehiclesToRefresh.has(String(query.queryKey[3])),
           }),
         ]
