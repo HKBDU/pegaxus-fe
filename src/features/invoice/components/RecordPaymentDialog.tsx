@@ -9,7 +9,7 @@ import { TimePicker } from "@/shared/components/ui/time-picker"
 import { INVOICE_ACTION, INVOICE_TYPE, PAYMENT_METHOD } from "@/features/invoice/constants"
 import type { RecordPaymentDialogProps } from "@/features/invoice/types"
 import { useRecordPayment } from "@/features/invoice/hooks/useRecordPayment"
-import { mapPaymentError, formatPaymentAmount, toPaymentTimestamp, validateRecordPayment } from "@/features/invoice/utils"
+import { mapPaymentError, formatPaymentAmount, formatPaymentDate, toPaymentTimestamp, validateRecordPayment } from "@/features/invoice/utils"
 
 /** Local "yyyy-MM-dd" and "HH:mm" of now, the values of the date and time pickers. */
 function localDateAndTime() {
@@ -29,6 +29,7 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
   const [paidTime, setPaidTime] = useState(() => localDateAndTime().time)
   const [note, setNote] = useState('')
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
+  const paidAtPreview = paidDay ? toPaymentTimestamp(`${paidDay}T${paidTime || '00:00'}`) : undefined
 
   if (!canRecord || isQuotation) return null
 
@@ -112,6 +113,7 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
           </div>
           <div className="grid gap-2">
             <Label htmlFor="record-payment-paid-at">Paid at</Label>
+            <p className="text-xs text-slate-500">Your local time. Sent as {formatPaymentDate(paidAtPreview)}.</p>
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,9rem)] gap-2">
               <DatePicker
                 id="record-payment-paid-at"

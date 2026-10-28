@@ -2,6 +2,7 @@ import { FileArchive, FileText, ArrowRight } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import type { TransportAuditFull } from "../types";
+import { formatUtcDate } from "@/shared/utils/datetime";
 
 export function AuditOverviewHeader({
   audit,
@@ -14,11 +15,7 @@ export function AuditOverviewHeader({
 }) {
   const canExport = audit.status === "COMPLETED";
   const completedDate = audit.completedAt
-    ? new Date(audit.completedAt).toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    })
+    ? `${formatUtcDate(audit.completedAt)}${/^\d{4}-\d{2}-\d{2}$/.test(audit.completedAt) ? "" : " UTC"}`
     : undefined;
 
   const origin = audit.booking?.originCountry || audit.originCountry;

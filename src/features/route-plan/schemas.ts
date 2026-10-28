@@ -4,6 +4,53 @@ import type { RouteSegmentInput } from './types'
 const entityId = z.string()
 const dateTime = z.string().datetime({ offset: true, message: 'Must be a valid ISO date-time.' })
 
+const changeVehiclesSegmentSchema = z.object({
+  sequenceNo: z.number().int().positive().optional(),
+  routePlanRouteId: entityId.optional(),
+  vehicleIds: z.array(entityId).min(1, 'Select at least one vehicle.'),
+}).superRefine((segment, context) => {
+  if (Boolean(segment.sequenceNo) === Boolean(segment.routePlanRouteId)) {
+    context.addIssue({
+      code: 'custom',
+      path: ['sequenceNo'],
+      message: 'Provide exactly one of sequenceNo or routePlanRouteId.',
+    })
+  }
+})
+
+const changeVehiclesBaseSchema = z.object({
+  lastUpdatedAt: dateTime,
+  reason: z.string().trim().min(1, 'Reason is required.').max(2000),
+  segments: z.array(changeVehiclesSegmentSchema).min(1, 'Select at least one segment.'),
+})
+
+export const changeVehiclesBeforeDepartureSchema = changeVehiclesBaseSchema.extend({
+  incidentReportId: z.undefined().optional(),
+  segments: z.array(changeVehiclesSegmentSchema).min(1).superRefine((segments, context) => {
+    segments.forEach((segment, index) => {
+      if (segment.routePlanRouteId) {
+        context.addIssue({ code: 'custom', path: [index, 'routePlanRouteId'], message: 'Use sequenceNo before departure.' })
+      }
+    })
+  }),
+})
+
+export const changeVehiclesMidTripSchema = changeVehiclesBaseSchema.extend({
+  incidentReportId: entityId,
+  segments: z.array(changeVehiclesSegmentSchema).min(1).superRefine((segments, context) => {
+    segments.forEach((segment, index) => {
+      if (segment.sequenceNo !== undefined) {
+        context.addIssue({ code: 'custom', path: [index, 'sequenceNo'], message: 'Use routePlanRouteId mid-trip.' })
+      }
+    })
+  }),
+})
+
+export const changeVehiclesRequestSchema = z.union([
+  changeVehiclesBeforeDepartureSchema,
+  changeVehiclesMidTripSchema,
+])
+
 export const routeSegmentSchema = z.object({
   sequenceNo: z.number().int().positive(),
   routeId: entityId.optional(),
@@ -89,3 +136,6 @@ export type CreateRoutePlanFormValues = z.infer<typeof createRoutePlanSchema>
 export type UpdateRoutePlanFormValues = z.infer<typeof updateRoutePlanSchema>
 export type CancelRoutePlanFormValues = z.infer<typeof cancelRoutePlanSchema>
 export type LegalReviewFormValues = z.infer<typeof legalReviewSchema>
+export type ChangeVehiclesBeforeDepartureFormValues = z.infer<typeof changeVehiclesBeforeDepartureSchema>
+export type ChangeVehiclesMidTripFormValues = z.infer<typeof changeVehiclesMidTripSchema>
+export type ChangeVehiclesFormValues = z.infer<typeof changeVehiclesRequestSchema>

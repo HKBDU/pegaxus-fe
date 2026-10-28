@@ -10,3 +10,5 @@ export { OutsourceSegmentDialog } from "./components/OutsourceSegmentDialog";
 export * from "./route-continuity";
 export { CancelRoutePlanDialog } from "./components/CancelRoutePlanDialog";
 export { RoutePlanStatusBadge } from "./components/RoutePlanStatusBadge";
+export { ChangeVehiclesDialog } from "./components/ChangeVehiclesDialog";
+export * from "./hooks";

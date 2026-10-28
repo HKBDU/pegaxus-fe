@@ -21,6 +21,7 @@ import {
 } from "@/shared/components/ui/dropdown-menu";
 import { getRoutePlanError, submitLegalReview } from "../services";
 import type { LegalReview, LegalReviewResult, RouteSegment } from "../types";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 
 type FeasibilityStatus = "FEASIBLE" | "NOT FEASIBLE";
 
@@ -40,14 +41,7 @@ function initialStatus(legalReview?: LegalReview | null): FeasibilityStatus {
 }
 
 function formatReviewedAt(value: string | null | undefined) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(date);
+  return formatUtcDateTime(value);
 }
 
 export function LegalFeasibilityPanel({
