@@ -10,6 +10,7 @@ import { CountrySelect } from "@/shared/components/ui/country-select"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Input } from "@/shared/components/ui/input"
 import { PageHeader } from "@/shared/components/PageHeader"
+import { getAvatarFileError } from "../avatar"
 import {
   PHONE_MESSAGE,
   VALIDATION_LIMITS,
@@ -227,6 +228,11 @@ export function ProfileSettingsPage() {
 
     let avatar: UpdateProfileRequest["avatar"]
     if (currentDraft.avatar) {
+      const avatarError = getAvatarFileError(currentDraft.avatar)
+      if (avatarError) {
+        toast.error(avatarError)
+        return
+      }
       try {
         avatar = {
           publicId: await presignedUpload.upload({
@@ -313,7 +319,17 @@ export function ProfileSettingsPage() {
             type="file"
             accept="image/jpeg,image/png"
             aria-label="Change profile avatar"
-            onChange={(event) => setDraft((current) => current ? { ...current, avatar: event.target.files?.[0] ?? null } : current)}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0]
+              event.currentTarget.value = ""
+              if (!file) return
+              const avatarError = getAvatarFileError(file)
+              if (avatarError) {
+                toast.error(avatarError)
+                return
+              }
+              setDraft((current) => current ? { ...current, avatar: file } : current)
+            }}
           />
 
           <div className="flex min-w-0 flex-col gap-5">

@@ -28,6 +28,7 @@ import {
   RouteManagementActions,
   RouteSegmentOutsourceAction,
 } from "../components/RouteManagementActions";
+import { VehicleChangeContextPanel } from "../components/VehicleChangeContextPanel";
 
 export default function RoutePlanDetailPage({
   mapViewer,
@@ -151,6 +152,18 @@ export default function RoutePlanDetailPage({
                 {context.error && (
                   <ErrorState
                     message={getEmergencyError(context.error).message}
+                  />
+                )}
+                {params.has("changeVehicle") && context.data && (
+                  <VehicleChangeContextPanel
+                    plan={plan}
+                    context={context.data}
+                    incidentReportId={params.get("changeVehicle") ?? ""}
+                    onDismiss={() => setParams((current) => {
+                      const next = new URLSearchParams(current);
+                      next.delete("changeVehicle");
+                      return next;
+                    })}
                   />
                 )}
                 <RoutePlanDetails

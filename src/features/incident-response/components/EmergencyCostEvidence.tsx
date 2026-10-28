@@ -86,7 +86,7 @@ export function MockCostPhotoPicker({
             )
           ) {
             setError(
-              `Use up to five non-empty JPG/PNG images, at most ${UPLOAD_MAX_MB} MB each. No files from this selection were added.`,
+              `Use up to five non-empty JPG/PNG images, at most ${UPLOAD_MAX_MB} MiB each. No files from this selection were added.`,
             );
             return;
           }

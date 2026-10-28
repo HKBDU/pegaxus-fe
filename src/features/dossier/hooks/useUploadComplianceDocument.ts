@@ -6,6 +6,7 @@ import {
 import { dossierSourceKind, loadUploadDocument } from "../source";
 import type { UploadDocumentError, UploadDocumentInput } from "../types";
 import { dossierKeys } from "./useDossier";
+import { UPLOAD_MAX_MB } from "@/shared/constants/upload";
 
 export function mapUploadDocumentError(error: unknown): UploadDocumentError {
   const response =
@@ -52,7 +53,7 @@ export function mapUploadDocumentError(error: unknown): UploadDocumentError {
   )
     return { code, message: data.message, field: "expiryDate" };
   if (code === "FILE_TOO_LARGE" || status === 413)
-    return { code, message: "Each file must be 10 MB or smaller." };
+    return { code, message: `Each file must be ${UPLOAD_MAX_MB} MiB or smaller.` };
   if (code === "INVALID_FILE_TYPE")
     return {
       code,

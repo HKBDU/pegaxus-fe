@@ -554,7 +554,7 @@ export function getEmergencyCostError(
   )
     return {
       message:
-        `The supporting images were rejected. Use up to five confirmed JPG/PNG uploads of at most ${UPLOAD_MAX_MB} MB each.`,
+        `The supporting images were rejected. Use up to five confirmed JPG/PNG uploads of at most ${UPLOAD_MAX_MB} MiB each.`,
       retryable: false,
     };
   if (status === 400 || status === 422 || code === "VALIDATION_ERROR")

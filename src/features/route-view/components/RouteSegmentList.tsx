@@ -10,6 +10,7 @@ import { distanceLabel, durationLabel } from "../display";
 import type { RouteSegment } from "../types";
 import type { SegmentImpact } from "../route-comparison";
 import { Badge } from "@/shared/components/ui/badge";
+import { RouteVehicleStatus } from "./RouteVehicleStatus";
 
 export function RouteSegmentList({
   segments,
@@ -90,6 +91,7 @@ export function RouteSegmentList({
                               {vehicle.capacityHorses == null
                                 ? "Capacity unavailable"
                                 : `${vehicle.capacityHorses} horses`}
+                              <RouteVehicleStatus vehicleId={vehicle.vehicleId} />
                             </li>
                           ))}
                         </ul>

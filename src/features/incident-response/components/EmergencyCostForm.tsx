@@ -300,7 +300,7 @@ export function EmergencyCostForm({
           <h2 className="m-0 text-base font-semibold">
             Supporting evidence{" "}
             <span className="text-sm font-normal text-muted-foreground">
-              Optional · up to 5 JPG/PNG · {UPLOAD_MAX_MB} MB each
+              Optional · up to 5 JPG/PNG · {UPLOAD_MAX_MB} MiB each
             </span>
           </h2>
           {mock ? (

@@ -26,6 +26,7 @@ import {
   type EmergencyContext,
 } from "../hooks/useEmergencyRoute";
 import type { RoutePlanDetail, RouteSegment } from "../types";
+import { canChangeVehiclesBeforeDeparture, vehicleChangeDialogBlocker } from "../vehicle-change";
 
 const legalActionClass =
   "min-h-11 gap-1.5 rounded-[2px] border px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:ring-primary/30 motion-reduce:transition-none sm:min-h-8";
@@ -97,6 +98,12 @@ export function RouteManagementActions({
   const segments = legalSegments(review ?? plan);
   return (
     <>
+      {canChangeVehiclesBeforeDeparture(plan, context.workspace) && (
+        <span className="inline-flex max-w-full flex-wrap items-center gap-2">
+          <Button type="button" size="sm" variant="outline" className={legalActionClass} disabled title={vehicleChangeDialogBlocker} aria-describedby={`vehicle-change-blocker-${plan.routePlanId}`}>Change Vehicles</Button>
+          <span id={`vehicle-change-blocker-${plan.routePlanId}`} className="max-w-64 text-xs text-muted-foreground">{vehicleChangeDialogBlocker}</span>
+        </span>
+      )}
       {canViewDossier && legalDossier ? (
         <>
           <span className="text-xs text-slate-600">

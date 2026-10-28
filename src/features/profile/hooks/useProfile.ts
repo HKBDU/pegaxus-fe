@@ -5,6 +5,7 @@ import { MOCK_CUSTOMER_PROFILE, MOCK_EMPLOYEE_PROFILE } from "@/features/profile
 import { profileApi } from "@/features/profile/services"
 import type { Profile, UpdateProfileRequest } from "@/features/profile/types"
 import { presignedUpload } from "@/shared/utils/presigned"
+import { getAvatarFileError } from "../avatar"
 
 export function useProfile(customerId?: string) {
   const location = useLocation()
@@ -42,6 +43,10 @@ export function useProfile(customerId?: string) {
   }, [customerId, location.pathname, useMockProfile])
 
   async function updateProfile(input: UpdateProfileRequest): Promise<boolean> {
+    if (input.avatar instanceof File) {
+      const avatarError = getAvatarFileError(input.avatar)
+      if (avatarError) { toast.error(avatarError); return false }
+    }
     setIsSubmitting(true)
     try {
       if (useMockProfile) {

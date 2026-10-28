@@ -24,12 +24,12 @@ import {
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { useRecordAuthoritySubmission } from "../hooks";
 import type { AuthoritySubmissionStatus } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
 
 const ACCEPTED_PROOF_TYPES = "application/pdf,image/jpeg,image/png";
-const MAX_PROOF_SIZE = 10 * 1024 * 1024;
 type Errors = Partial<
   Record<
     | "authorityName"
@@ -68,6 +68,7 @@ export function RecordAuthoritySubmissionDialog({
   const mutation = useRecordAuthoritySubmission(dossierId);
   const filesRef = useRef(new Map<string, File>());
   const [uploadedIds, setUploadedIds] = useState<string[]>([]);
+  const [uploadIncomplete, setUploadIncomplete] = useState(false);
   const [open, setOpen] = useState(false);
   const [authorityName, setAuthorityName] = useState("");
   const [submissionReference, setSubmissionReference] = useState("");
@@ -95,6 +96,7 @@ export function RecordAuthoritySubmissionDialog({
     setSubmissionDate(today());
     setDecisionNote("");
     setUploadedIds([]);
+    setUploadIncomplete(false);
     filesRef.current.clear();
     setErrors({});
     setServerError("");
@@ -145,6 +147,9 @@ export function RecordAuthoritySubmissionDialog({
       next.decisionNote = `Decision note must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
     }
 
+    if (proofFiles.length !== uploadedIds.length || proofFiles.some((file) => file.size === 0 || file.size > UPLOAD_MAX_BYTES || !ACCEPTED_PROOF_TYPES.split(",").includes(file.type)))
+      next.proofFiles = `Use non-empty PDF, JPEG or PNG files of at most ${UPLOAD_MAX_MB} MiB.`;
+    if (uploadIncomplete) next.proofFiles = "Finish or remove pending and failed proof uploads before submitting.";
     if (Object.keys(next).length) return setErrors(next);
     try {
       await mutation.mutateAsync({
@@ -265,10 +270,11 @@ export function RecordAuthoritySubmissionDialog({
               <FileUploader
                 entity="attachment"
                 accept={ACCEPTED_PROOF_TYPES}
-                maxSize={MAX_PROOF_SIZE}
+                maxSize={UPLOAD_MAX_BYTES}
                 maxFiles={1}
                 title="Upload submission receipt"
-                hint="PDF, JPG, or PNG · up to 10 MB"
+                hint={`PDF, JPG, or PNG · up to ${UPLOAD_MAX_MB} MiB`}
+                onStateChange={(snapshot) => setUploadIncomplete(snapshot.items.some((item) => item.status !== "success"))}
                 onUploaded={({ publicId, file }) =>
                   filesRef.current.set(publicId, file)
                 }

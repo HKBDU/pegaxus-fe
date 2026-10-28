@@ -5,6 +5,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { useLayoutEffect, useRef } from "react";
+import { z } from "zod";
 import { useAuthStore } from "@/features/auth/store";
 import { approvedBookingKeys } from "@/features/transport-plan/hooks/useApprovedBookings";
 import { transportPlanKeys } from "@/features/transport-plan/hooks/useTransportPlans";
@@ -26,6 +27,7 @@ import type {
 } from "../types";
 import type { RouteWorkspaceContext } from "../workspace-actions";
 import { refreshTransportProgress } from "@/features/ongoing-transport/hooks/useTransportProgressRefresh";
+import { getVehiclePropagationMessage } from "../vehicle-change";
 
 export type EmergencyContext = {
   workspace: RouteWorkspaceContext;
@@ -155,6 +157,7 @@ export async function refreshEmergencyQueries(
     accountId: string;
     sessionVersion: number;
     incidentReportId?: string;
+    genericInvalidationHandled?: boolean;
   },
 ) {
   const changesVehicles = action === "change-vehicles";
@@ -170,7 +173,15 @@ export async function refreshEmergencyQueries(
     throw new Error(
       "Reload the transport in the original account/session before refreshing vehicle changes.",
     );
-  const keys: readonly (readonly unknown[])[] = [
+  const genericHandled = changesVehicles && changeContext?.genericInvalidationHandled === true;
+  const matchesChangeScope = (value: unknown) => {
+    if (!changeContext || typeof value !== "string") return false;
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return Array.isArray(parsed) && parsed[0] === changeContext.accountId && parsed[1] === changeContext.sessionVersion;
+    } catch { return false; }
+  };
+  const keys: readonly (readonly unknown[])[] = genericHandled ? [] : [
     routeViewKeys.detail(plan.routePlanId),
     ["route-view", "list", plan.transportPlanId],
   ];
@@ -211,6 +222,10 @@ export async function refreshEmergencyQueries(
           }),
         )
       : []),
+    ...(changesVehicles ? [
+      client.invalidateQueries({ queryKey: ["route-view", "vehicle-status"], predicate: ({ queryKey }) => matchesChangeScope(queryKey[2]) }),
+      client.invalidateQueries({ queryKey: ["route-view", "vehicle-change-context"], predicate: ({ queryKey }) => queryKey[6] === transportId && matchesChangeScope(queryKey[3]) }),
+    ] : []),
     ...(changesVehicles && changeContext?.incidentReportId
       ? [
           client.invalidateQueries({
@@ -231,18 +246,7 @@ export async function refreshEmergencyQueries(
                 (queryKey[1] === "emergency-costs" &&
                   queryKey[4] === "incident-context" &&
                   queryKey[5] === changeContext.incidentReportId);
-              if (!matchesIncident || typeof queryKey[3] !== "string")
-                return false;
-              try {
-                const scope: unknown = JSON.parse(queryKey[3]);
-                return (
-                  Array.isArray(scope) &&
-                  scope[0] === changeContext.accountId &&
-                  scope[1] === changeContext.sessionVersion
-                );
-              } catch {
-                return false;
-              }
+              return matchesIncident && matchesChangeScope(queryKey[3]);
             },
           }),
         ]
@@ -253,7 +257,7 @@ export async function refreshEmergencyQueries(
           client.invalidateQueries({
             queryKey: transportPlanKeys.detail(plan.transportPlanId),
           }),
-          client.invalidateQueries({ queryKey: ["transport-plans", "list"] }),
+          ...(!genericHandled ? [client.invalidateQueries({ queryKey: ["transport-plans", "list"] })] : []),
           client.invalidateQueries({
             queryKey: approvedBookingKeys.detail(plan.bookingId),
           }),
@@ -304,7 +308,7 @@ export async function refreshEmergencyQueries(
           }),
         ]
       : []),
-    ...(action === "activation" || changesVehicles
+    ...(action === "activation" || (changesVehicles && !genericHandled)
       ? [
           ...(!changesVehicles
             ? [
@@ -328,6 +332,57 @@ export async function refreshEmergencyQueries(
         ]
       : []),
   ]);
+}
+
+const vehicleChangeSuccessSchema = z.object({
+  routePlanId: z.string(),
+  status: z.enum(["CONFIRMED", "ACTIVE"]),
+  releasedVehicleIds: z.array(z.string()),
+  maintenanceVehicleIds: z.array(z.string()),
+  appliedSegmentIds: z.array(z.string()),
+  updatedAt: z.iso.datetime({ offset: true }),
+});
+
+export function captureVehicleChangeRefresh(
+  client: QueryClient,
+  plan: RoutePlanDetail,
+  context: EmergencyContext,
+  options: { incidentReportId?: string; genericInvalidationHandled: boolean },
+  notify: (message: string, kind: "success" | "error") => void,
+): (result: unknown) => void {
+  const auth = useAuthStore.getState();
+  const accountId = auth.principal?.id;
+  const sessionVersion = auth.sessionVersion;
+  if (!accountId || !auth.accessToken || !context.transportId)
+    throw new Error("Reload the authorized transport workspace before replacing vehicles.");
+  const snapshot = { routePlanId: plan.routePlanId, transportPlanId: plan.transportPlanId, bookingId: plan.bookingId };
+  const oldIds = plan.segments.flatMap((segment) => segment.vehicles.map((vehicle) => vehicle.vehicleId));
+  const transportId = context.transportId;
+  const dossierId = context.dossierId;
+  const incidentReportId = options.incidentReportId;
+  const genericInvalidationHandled = options.genericInvalidationHandled;
+  const currentSession = () => {
+    const current = useAuthStore.getState();
+    return Boolean(current.accessToken) && current.principal?.id === accountId && current.sessionVersion === sessionVersion;
+  };
+  let handled = false;
+  return (result) => {
+    if (handled || !currentSession()) return;
+    handled = true;
+    const parsed = vehicleChangeSuccessSchema.safeParse(result);
+    if (!parsed.success || parsed.data.routePlanId.toLowerCase() !== snapshot.routePlanId.toLowerCase()) {
+      notify("The replacement response could not be verified. Review the latest route before considering another attempt.", "error");
+      return;
+    }
+    const value = parsed.data;
+    const propagation = getVehiclePropagationMessage(value.appliedSegmentIds);
+    if (propagation) notify(propagation, "success");
+    void refreshEmergencyQueries(client, snapshot, "change-vehicles", dossierId,
+      [...oldIds, ...value.releasedVehicleIds, ...value.maintenanceVehicleIds], transportId,
+      { accountId, sessionVersion, incidentReportId, genericInvalidationHandled }).catch(() => {
+      if (currentSession()) notify("Vehicle replacement succeeded, but related views could not refresh. Review the latest route; do not repeat the replacement to refresh data.", "error");
+    });
+  };
 }
 
 export function useEmergencyMutation<A extends EmergencyAction>(

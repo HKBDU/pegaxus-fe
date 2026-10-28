@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { BOOKING_STATUSES } from "@/features/booking/types";
 import {
   DOSSIER_REQUIREMENT_STATUSES,
@@ -75,8 +76,8 @@ export const dossierUploadedAssetSchema = z.object({
   fileSizeBytes: z
     .number()
     .int()
-    .nonnegative()
-    .max(UPLOAD_MAX_FILE_BYTES, "Each file must be 10 MB or smaller."),
+    .positive("Uploaded files must not be empty.")
+    .max(UPLOAD_MAX_FILE_BYTES, `Each file must be ${UPLOAD_MAX_MB} MiB or smaller.`),
 });
 export const dossierUploadedAssetsSchema = z
   .array(dossierUploadedAssetSchema)
@@ -99,7 +100,7 @@ export function validateUploadedAssets(
     : issue.path.includes("mimeType")
       ? "INVALID_FILE_TYPE"
       : issue.path.includes("fileSizeBytes")
-        ? "FILE_TOO_LARGE"
+        ? issue.code === "too_small" ? "EMPTY_FILE" : "FILE_TOO_LARGE"
         : "INVALID_UPLOAD_REFERENCE";
   return { code, message: issue.message };
 }
