@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits"
+import { formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime"
 import { TYPE_LABEL, type HandoverAudience, type HandoverType } from "../constants"
 import type { CreateHandoverInput, HandoverBoundary, OverviewSegment } from "../types"
 import { describeError, isVehicleOnAnotherTrip, typeLabel } from "../utils"
@@ -29,13 +30,8 @@ const legName = (segment?: OverviewSegment) => (segment ? `#${segment.displayOrd
 /** Local date-time input value -> the UTC instant sent to the BE (ISO, ends with Z). */
 const toIso = (local: string) => new Date(local).toISOString()
 
-/** The same instant as the person should read it on the other side: "2026-10-28 08:00 UTC". Empty for an incomplete value. */
-function utcPreview(local: string) {
-  const date = new Date(local)
-  if (!local || Number.isNaN(date.getTime())) return ""
-  const iso = date.toISOString()
-  return `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`
-}
+/** The same instant as the other side reads it: "08:00 UTC, 28/10/2026". Empty for an incomplete value. */
+const utcPreview = (local: string) => formatUtcDateTime(toUtcIso(local) ?? null).replace(/^—$/, "")
 
 /**
  * HO3 form: pick the handover point, the type and when. The boundaries come from OT4 and the buttons follow only `canCreate`
@@ -198,7 +194,7 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
                   <label htmlFor="planned-at" className="font-heading text-[0.6875rem] font-semibold tracking-[0.06em] text-gray-500 uppercase">Planned at <span className="text-red-600">*</span></label>
                   <Input id="planned-at" type="datetime-local" value={plannedAt} onChange={(event) => setPlannedAt(event.target.value)} aria-describedby="planned-at-utc" className="h-11 rounded-[2px] border-slate-300 bg-white text-base shadow-none sm:h-9 sm:text-sm" />
                   <p id="planned-at-utc" className="m-0 text-xs text-gray-500">
-                    Your local time{utcPreview(plannedAt) ? <> = <span className="font-semibold text-gray-700">{utcPreview(plannedAt)}</span></> : null}
+                    Your local time{utcPreview(plannedAt) ? <>. Sent as <span className="font-semibold text-gray-700">{utcPreview(plannedAt)}</span></> : null}
                   </p>
                 </div>
               ) : null}

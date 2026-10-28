@@ -8,6 +8,7 @@ import type { HandoverRecord } from "./types";
 import { canAccess } from "@/features/auth/access-control";
 import type { AuthPrincipal } from "@/features/auth/types";
 import type { HandoverBoundary, OverviewSegment } from "./types";
+import { formatUtcDateTime, formatUtcTime } from "@/shared/utils/datetime";
 
 export const canOperateHandover = (principal: AuthPrincipal | null) =>
   !canAccess(principal, { anyRole: ["TRANSPORT_SPECIALIST"] }) &&
@@ -69,31 +70,10 @@ export const typeLabel = (value: string) =>
 export const statusLabel = (value: string) =>
   STATUS_LABEL[value as HandoverStatus] ?? value;
 
-export function formatDateTime(value?: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-}
+/** Every handover instant is read in UTC and labelled, so the driver and the manager see the same time. */
+export const formatDateTime = (value?: string | null) => formatUtcDateTime(value);
 
-export function formatTime(value?: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "—"
-    : new Intl.DateTimeFormat("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }).format(date);
-}
+export const formatTime = (value?: string | null) => formatUtcTime(value);
 
 /** The time that matters for a row: when it happened, else when it is planned. */
 export function handoverMoment(item: {
