@@ -17,9 +17,10 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form"
 import { Textarea } from "@/shared/components/ui/textarea"
 
+import { CREW_CANCEL_ERROR_MESSAGES } from "../constants"
 import { useCancelIncident } from "../hooks/useIncidents"
 import { CANCEL_REASON_MAX, CANCEL_REASON_MIN, cancelFormSchema } from "../schemas"
-import type { CancelFormValues, Incident } from "../types"
+import type { CancelFormValues, Incident, IncidentAudience } from "../types"
 import { IncidentErrorAlert } from "./IncidentErrorAlert"
 
 interface CancelIncidentDialogProps {
@@ -27,10 +28,15 @@ interface CancelIncidentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onReload: () => void
+  audience?: IncidentAudience
 }
 
-/** SCR-F5-006 (IN10, Logistics Manager): cancel an incident that was reported by mistake. Pending cost requests are cancelled with it. */
-export function CancelIncidentDialog({ incident, open, onOpenChange, onReload }: CancelIncidentDialogProps) {
+/**
+ * SCR-F5-006 (IN10): cancel an incident that was reported by mistake. For the Logistics Manager the pending cost requests are
+ * cancelled with it; the assigned driver or escort can cancel their own report while it is still REPORTED.
+ */
+export function CancelIncidentDialog({ incident, open, onOpenChange, onReload, audience = "admin" }: CancelIncidentDialogProps) {
+  const isCrew = audience === "crew"
   const cancel = useCancelIncident(incident.incidentReportId)
   const [error, setError] = useState<unknown>(null)
   const form = useForm<CancelFormValues>({
@@ -70,11 +76,12 @@ export function CancelIncidentDialog({ incident, open, onOpenChange, onReload }:
           </AlertDialogMedia>
           <div className="grid gap-0.5">
             <AlertDialogTitle className="col-auto! m-0! font-heading text-base! leading-5! font-semibold! tracking-normal! text-slate-900">
-              Cancel incident {incident.incidentCode}?
+              {isCrew ? "Cancel report" : "Cancel incident"} {incident.incidentCode}?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs leading-4 text-slate-600">
-              Use this only when the incident was reported by mistake. A cancelled incident cannot be reopened.
-              {pending > 0 ? ` ${pending} pending cost request${pending > 1 ? "s" : ""} will be cancelled automatically.` : ""}
+              {isCrew
+                ? "Use this only when you reported the incident by mistake. The report will be recorded as cancelled and will not count in the incident statistics. It cannot be reopened."
+                : `Use this only when the incident was reported by mistake. A cancelled incident cannot be reopened.${pending > 0 ? ` ${pending} pending cost request${pending > 1 ? "s" : ""} will be cancelled automatically.` : ""}`}
             </AlertDialogDescription>
           </div>
         </AlertDialogHeader>
@@ -109,11 +116,11 @@ export function CancelIncidentDialog({ incident, open, onOpenChange, onReload }:
           </form>
         </Form>
 
-        {error ? <IncidentErrorAlert error={error} onReload={() => { close(false); onReload() }} /> : null}
+        {error ? <IncidentErrorAlert error={error} messages={isCrew ? CREW_CANCEL_ERROR_MESSAGES : undefined} onReload={() => { close(false); onReload() }} /> : null}
 
         <AlertDialogFooter className="gap-1.5 [&>button]:h-10 sm:[&>button]:h-8">
           <AlertDialogCancel size="sm" className="h-8 rounded-[2px] border-slate-300 bg-white px-3 text-xs font-normal text-slate-700 shadow-none" disabled={cancel.isPending}>
-            Keep incident
+            {isCrew ? "Keep report" : "Keep incident"}
           </AlertDialogCancel>
           <button
             type="submit"
@@ -121,7 +128,7 @@ export function CancelIncidentDialog({ incident, open, onOpenChange, onReload }:
             disabled={cancel.isPending || !form.formState.isValid}
             className="inline-flex h-8 items-center justify-center rounded-[2px] bg-red-600 px-3 text-xs font-normal text-white shadow-none transition-colors hover:bg-red-700 disabled:pointer-events-none disabled:opacity-50"
           >
-            {cancel.isPending ? "Cancelling..." : "Cancel incident"}
+            {cancel.isPending ? "Cancelling..." : isCrew ? "Cancel report" : "Cancel incident"}
           </button>
         </AlertDialogFooter>
       </AlertDialogContent>

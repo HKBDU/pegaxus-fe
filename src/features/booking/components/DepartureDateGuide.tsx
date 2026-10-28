@@ -59,7 +59,7 @@ export function DepartureDateGuide({ originCountry, destinationCountry }: { orig
           <CalendarClock className="size-4 text-[#ef8f00]" aria-hidden="true" />
           Departure date rules
         </h3>
-        <span className="text-[11px] leading-4 text-gray-500">Counted from today. Earlier dates are greyed out in the calendar.</span>
+        <span className="text-[11px] leading-4 text-gray-500">Counted from today (UTC date). Earlier dates are greyed out in the calendar.</span>
       </div>
 
       <ul className="m-0 mt-2 grid list-none gap-2 p-0 sm:grid-cols-2">
@@ -98,7 +98,7 @@ export function DepartureDateGuide({ originCountry, destinationCountry }: { orig
               <span className="font-semibold">
                 {originCountry} → {destinationCountry}
               </span>
-              : pick a departure date from <span className="font-semibold text-[#c77700]">{showDate(rule.minDate)}</span>.{" "}
+              : pick a departure date from <span className="font-semibold text-[#c77700]">{showDate(rule.minDate)}</span> (UTC date).{" "}
             </>
           ) : (
             <>Pick the pickup and destination on the map to see which rule applies. </>

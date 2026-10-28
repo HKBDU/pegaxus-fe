@@ -8,7 +8,8 @@ import { HandoverApiError } from "../services"
 import { hasSignature, INK, strokesToPng } from "../signature"
 import type { CompleteDraft, CompleteInput, HandoverRecord, SignatureStroke } from "../types"
 import { useCompleteDraft } from "../hooks/useCompleteDraft"
-import { describeError } from "../utils"
+import { describeError, isVehicleOnAnotherTrip } from "../utils"
+import { VehicleOnAnotherTripNotice } from "./VehicleOnAnotherTripNotice"
 import { LocationCheck, metersOutside, readPosition, useHandoverPosition, type HandoverTarget } from "./LocationCheck"
 import { NoteSection } from "./NoteSection"
 import { PartiesSection } from "./PartyBlock"
@@ -27,6 +28,8 @@ interface Props {
   onBack: () => void
   /** The BE refused the last submit; shown above the buttons. */
   submitError: unknown
+  /** Staff only: where the Route Coordinator changes the vehicle after `VEHICLE_STILL_ON_ANOTHER_TRIP`. */
+  routePlanHref?: string
   onClearSubmitError: () => void
 }
 
@@ -43,7 +46,7 @@ const toFormKey = (field: string) => {
  * Completion step (HO5): notes, optional corrections to the parties and place, and the two signatures. The customer signs
  * on the driver's phone, so every control is sized for a finger and the pads keep a 2:1 shape at any screen width.
  */
-export function CompleteForm({ record, mobile, pending, target, geofenced, onSubmit, onBack, submitError, onClearSubmitError }: Props) {
+export function CompleteForm({ record, mobile, pending, target, geofenced, onSubmit, onBack, submitError, routePlanHref, onClearSubmitError }: Props) {
   const { draft, sender, receiver, setDraft, setSender, setReceiver, clear } = useCompleteDraft(record)
   const [editing, setEditing] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
@@ -203,7 +206,9 @@ export function CompleteForm({ record, mobile, pending, target, geofenced, onSub
         </p>
       ) : null}
 
-      {submitError && !(submitError instanceof HandoverApiError && ["SIGNATURE_REQUIRED", "INVALID_IMAGE", "HANDOVER_MODIFIED"].includes(submitError.errorCode ?? "")) ? (
+      {isVehicleOnAnotherTrip(submitError) ? <VehicleOnAnotherTripNotice routePlanHref={routePlanHref} /> : null}
+
+      {submitError && !isVehicleOnAnotherTrip(submitError) && !(submitError instanceof HandoverApiError && ["SIGNATURE_REQUIRED", "INVALID_IMAGE", "HANDOVER_MODIFIED"].includes(submitError.errorCode ?? "")) ? (
         <p role="alert" className="rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {describeError(submitError)}
         </p>

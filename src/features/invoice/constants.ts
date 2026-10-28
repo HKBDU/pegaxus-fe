@@ -63,6 +63,12 @@ export const INVOICE_TAX_RATE_PERCENT = 20
 export const GENERATED_INVOICE_TYPES: readonly string[] = ['QUOTATION', 'DEPOSIT', 'FINAL']
 export const isGeneratedInvoiceType = (type: string | null | undefined) => GENERATED_INVOICE_TYPES.includes(type ?? '')
 
+/**
+ * The quotation formula covers 1 to 9 horses. From 10 (or with none) the manager types the lines, which IV1 reports with
+ * `isLocked = false`. IV1 is only called while creating, so editing a saved draft falls back on this count.
+ */
+export const QUOTATION_FORMULA_MAX_HORSES = 9
+
 /** Allowed trip length of a QUOTATION (BE QuotationCatalog). */
 export const TRANSIT_DAYS_RANGE = { min: 1, max: 60 } as const
 

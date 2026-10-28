@@ -46,13 +46,16 @@ export function formatMoney(amount: number, _currency?: InvoiceCurrency) {
 export function formatInvoiceDate(value: string | null | undefined) {
   if (!value) return EMPTY_VALUE
   const date = parseISO(value)
-  return isValid(date) ? format(date, "MMMM dd, yyyy") : EMPTY_VALUE
+  if (!isValid(date)) return EMPTY_VALUE
+  // A plain day is shown as it came; an instant is read as its UTC day.
+  if (value.length === 10) return format(date, "MMMM dd, yyyy")
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "2-digit", year: "numeric", timeZone: "UTC" }).format(date)
 }
 
+/** An instant as labelled UTC ("08:00 UTC, 27/10/2026"); the claim screens read it through this too. */
 export function formatInvoiceDateTime(value: string | null | undefined) {
-  if (!value) return EMPTY_VALUE
-  const date = parseISO(value)
-  return isValid(date) ? format(date, "dd/MM/yyyy HH:mm") : EMPTY_VALUE
+  const text = formatUtcDateTime(value)
+  return text === "—" ? EMPTY_VALUE : text
 }
 
 export function todayIsoDate() {

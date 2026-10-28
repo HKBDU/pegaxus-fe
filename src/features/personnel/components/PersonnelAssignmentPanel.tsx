@@ -115,16 +115,32 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
   const planLocked = PLAN_LOCKED_STATUSES.includes(plan.status)
   const depositPending = plan.status !== "APPROVED" && !planLocked
   const routeStatus = routePlanQuery.data?.status ?? primaryRouteQuery.data?.status
+  // The LM cancelled the booking: the BE closes the plans but keeps the assigned people as history, so the lists stay and only editing stops.
+  const planCancelled = plan.status === "CANCELLED"
+  const routeCancelled = routeStatus === "CANCELLED"
+  const closed = planCancelled || routeCancelled
+  const phase2Locked = planLocked || routeCancelled
   const pendingInternal = rows.filter((row) => !row.isOutsourced && !row.driver && !row.escort).length
   const phase1Ready = phase1.isAssigned
 
   let phase1Hint: string | null = null
   if (!phase1Ready && depositPending) phase1Hint = "Phase 1 opens once the customer's deposit is paid (transport plan APPROVED)."
+  else if (planCancelled) phase1Hint = "This transport plan was cancelled: the assignments below are kept as history and cannot be changed."
   else if (planLocked) phase1Hint = "This transport plan is in progress, completed or cancelled: assignments are locked."
   else if (phase1Ready && phase1.isLocked) phase1Hint = "Phase 1 is locked because Phase 2 is open."
 
   return (
     <div className={cn("grid grid-cols-[minmax(0,1fr)] gap-5", className)}>
+      {closed ? (
+        <div role="status" className="flex items-start gap-3 border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          <Lock className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <div>
+            <p className="m-0 font-semibold">{planCancelled ? "Transport plan cancelled" : "Route plan cancelled"}</p>
+            <p className="m-0 mt-1 text-xs">The assigned personnel stay visible as history. Assigning or changing personnel is closed.</p>
+          </div>
+        </div>
+      ) : null}
+
       {/* ------------------------------------------------ Phase 1 */}
       <section className="booking-panel border bg-white p-5" aria-labelledby="phase1-title">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -195,7 +211,7 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
               phase2.isPersonnelComplete ? <Chip tone="green">Personnel complete</Chip> : <Chip tone="amber">Personnel incomplete</Chip>
             ) : null}
             {isManager && phase2.enabled ? (
-              <Button type="button" className={primaryButton} disabled={pendingInternal === 0 || planLocked} onClick={() => setPhase2Open(true)}>
+              <Button type="button" className={primaryButton} disabled={pendingInternal === 0 || phase2Locked} onClick={() => setPhase2Open(true)}>
                 <Users className="size-4" aria-hidden="true" />
                 Assign Phase 2
               </Button>
@@ -203,7 +219,7 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
           </div>
         </div>
 
-        {!phase2.enabled ? (
+        {!phase2.enabled && !closed ? (
           <div className="mt-4 flex items-start gap-3 border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
             <Lock className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <div>
@@ -218,7 +234,7 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
           <div className="mt-4">
             {routePlanQuery.isError ? <InfoNote tone="warning">Route details could not be loaded; locations and distances are hidden.</InfoNote> : null}
             {rows.length === 0 ? (
-              <p className="m-0 border border-dashed p-6 text-center text-sm text-slate-500">This route plan has no segments yet.</p>
+              <p className="m-0 border border-dashed p-6 text-center text-sm text-slate-500">{closed ? "No segments were staffed before this plan was cancelled." : "This route plan has no segments yet."}</p>
             ) : (
               <div className="mt-2 overflow-x-auto border">
                 <table className="w-full min-w-[820px] border-collapse text-left text-xs">
@@ -238,7 +254,7 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
                   <tbody className="divide-y">
                     {rows.map((row) => {
                       const locked = row.status === "IN_PROGRESS" || row.status === "COMPLETED"
-                      const canChange = isManager && !row.isOutsourced && Boolean(row.driver || row.escort) && !planLocked
+                      const canChange = isManager && !row.isOutsourced && Boolean(row.driver || row.escort) && !phase2Locked
                       return (
                         <tr key={row.routePlanRouteId} className="align-top">
                           <td className="px-3 py-3 font-semibold text-slate-500">{row.sequenceNo}</td>
@@ -288,7 +304,7 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
                 </table>
               </div>
             )}
-            {isManager && pendingInternal === 0 && rows.length > 0 && phase2.isPersonnelComplete ? (
+            {isManager && !phase2Locked && pendingInternal === 0 && rows.length > 0 && phase2.isPersonnelComplete ? (
               <p className="m-0 mt-3 text-xs text-slate-500">Every internal segment is staffed. Use “Change” to replace a driver or an escort before departure.</p>
             ) : null}
             {!isManager ? <p className="m-0 mt-3 text-xs text-slate-500">Only the Logistics Manager can assign or change personnel.</p> : null}

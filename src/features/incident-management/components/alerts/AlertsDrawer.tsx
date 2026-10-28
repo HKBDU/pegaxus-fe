@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react"
 import { useMarkAllNotificationsRead } from "@/features/notification/hooks"
 import { formatNotificationTime, isUnread } from "@/features/notification/utils"
 import { cn } from "@/lib/utils"
+import { formatLocalDateTimeLabel } from "@/shared/utils/datetime"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/shared/components/ui/sheet"
 import { useNotificationStore, type AppNotification } from "@/shared/realtime"
 
@@ -68,7 +69,7 @@ export function AlertsDrawer({ open, onOpenChange, onSelect, onViewAll }: Alerts
                   <span className="flex items-center justify-between gap-2">
                     <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide", style.tag)}>{style.label}</span>
                     <span className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                      {formatNotificationTime(notification.createdAt)}
+                      <span title={formatLocalDateTimeLabel(notification.createdAt)}>{formatNotificationTime(notification.createdAt)}</span>
                       {isUnread(notification) ? <span aria-label="Unread" className="size-2 rounded-full bg-amber-500" /> : null}
                     </span>
                   </span>

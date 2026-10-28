@@ -12,7 +12,7 @@ const bookingStatusLabels: Record<BookingAudience, Record<BookingStatus, string>
   manager: {
     PENDING: "Needs review",
     APPROVED: "Approved",
-    CANCELLED: "Cancelled by customer",
+    CANCELLED: "Cancelled",
     REJECTED: "Rejected",
     DRAFT: "Draft",
   },
@@ -22,12 +22,12 @@ const bookingStatusLabels: Record<BookingAudience, Record<BookingStatus, string>
 const bookingErrorMessages: Record<string, string> = {
   BOOKING_NOT_FOUND: "This booking no longer exists.",
   INVALID_BOOKING_STATUS: "This booking can no longer be changed in its current status. Reload and try again.",
+  TRANSPORT_ALREADY_DEPARTED: "The transport has already departed, so the booking cannot be cancelled. Create a RETURN route instead.",
   BOOKING_MODIFIED: "This booking changed elsewhere. Reload it before saving again.",
   BOOKING_BEING_EDITED: "The customer is editing this booking. Wait until the customer saves it, then review it again.",
   BOOKING_HAS_NO_HORSE: "This booking has no horse, so it cannot be approved.",
   REASON_REQUIRED: "Please enter a reason.",
   INVALID_COORDINATES: "The pickup or destination point is outside the valid map range. Pick the point again on the map.",
-  DEPARTURE_DATE_OUT_OF_RANGE: "The departure date must be between 3 weeks and 2 months from today.",
   ARRIVAL_DATE_INVALID: "The arrival date cannot be before the departure date.",
   DUPLICATE_HORSE_IN_BOOKING: "A horse can only be selected once per booking.",
   HORSE_ALREADY_IN_BOOKING: "This horse is already in the booking.",

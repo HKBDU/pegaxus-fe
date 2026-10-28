@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { format, isValid, parseISO } from "date-fns"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 import { BadgeCheck, Building2, Calendar, CircleDot, Coins, FileText, Mail, Send, TriangleAlert } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -28,10 +28,7 @@ interface IssueInvoiceDialogProps {
   onBackToEdit?: () => void
 }
 
-const day = (value: string) => {
-  const date = parseISO(value)
-  return isValid(date) ? format(date, "dd MMM yyyy") : "—"
-}
+const day = (value: string) => formatUtcDateTime(value)
 
 /** Second bullet of "What happens when you issue this invoice?", per UC-68 step 6. */
 const NOTIFICATION_TEXT: Record<InvoiceType, string> = {
