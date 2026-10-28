@@ -7,6 +7,7 @@ import { useAuthStore } from "@/features/auth/store"
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotificationList } from "@/features/notification/hooks"
 import { formatNotificationTime, getRelatedLabel, isUnread } from "@/features/notification/utils"
 import { cn } from "@/lib/utils"
+import { formatLocalDateTimeLabel } from "@/shared/utils/datetime"
 import { Button } from "@/shared/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/components/ui/popover"
 import { Skeleton } from "@/shared/components/ui/skeleton"
@@ -89,7 +90,7 @@ export function NotificationBell({ className }: { className?: string }) {
                     <span className="block truncate text-xs text-slate-500">{getRelatedLabel(notification) ?? notification.message}</span>
                   </span>
                   <span className="flex shrink-0 flex-col items-end gap-1.5">
-                    <span className="text-[11px] text-slate-500">{formatNotificationTime(notification.createdAt)}</span>
+                    <span className="text-[11px] text-slate-500" title={formatLocalDateTimeLabel(notification.createdAt)}>{formatNotificationTime(notification.createdAt)}</span>
                     {isUnread(notification) ? <span aria-label="Unread" className="size-2 rounded-full bg-amber-500" /> : <span className="size-2" />}
                   </span>
                 </button>

@@ -7,6 +7,7 @@ import { NotificationTypeIcon } from "@/features/notification/components/Notific
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotificationList } from "@/features/notification/hooks"
 import { formatNotificationTime, getRelatedLabel, getTypeMeta, isUnread, NOTIFICATION_TYPES, PRIORITY_CLASSES } from "@/features/notification/utils"
 import { cn } from "@/lib/utils"
+import { formatLocalDateTimeLabel } from "@/shared/utils/datetime"
 import { EmptyState, ErrorState } from "@/shared/components/common"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Input } from "@/shared/components/ui/input"
@@ -171,7 +172,7 @@ export default function NotificationsPage() {
                       <TableCell className="px-3">
                         {related ? <span className="block max-w-full truncate rounded-[2px] bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700" title={related}>{related}</span> : null}
                       </TableCell>
-                      <TableCell className="px-3 text-sm text-slate-600">{formatNotificationTime(notification.createdAt)}</TableCell>
+                      <TableCell className="px-3 text-sm text-slate-600" title={formatLocalDateTimeLabel(notification.createdAt)}>{formatNotificationTime(notification.createdAt)}</TableCell>
                       <TableCell className="px-3">
                         <span className={cn("inline-block rounded-[2px] border px-2 py-0.5 text-[11px] font-bold", PRIORITY_CLASSES[notification.priority])}>{notification.priority}</span>
                       </TableCell>
