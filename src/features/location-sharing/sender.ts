@@ -251,6 +251,11 @@ export class LocationSender {
     });
     this.acquire();
   };
+  /** Rebind the browser watcher after a geolocation provider (such as Mock GPS) changes. */
+  restart = () => {
+    if (!this.state.active || !this.authorized()) return;
+    this.acquire();
+  };
   stop = () =>
     this.stopWith(
       "stopped",
