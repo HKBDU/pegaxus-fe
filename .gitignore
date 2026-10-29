@@ -31,3 +31,7 @@ dist-ssr
 .docs
 **/.docs/
 **/.docs/*
+
+# Playwright e2e: stored session, reports, traces, screenshots and videos (generated)
+e2e/.auth/
+e2e/.output/
