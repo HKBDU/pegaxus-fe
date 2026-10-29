@@ -77,6 +77,7 @@ Các bước khi gõ `pnpm test:e2e`:
 
 ```
 playwright.config.ts            Cấu hình Playwright
+playwright.demo.config.ts       Cấu hình "demo": hiện trình duyệt, làm chậm thao tác
 docs/PLAYWRIGHT.md              Tài liệu này
 e2e/
 ├─ tsconfig.json                TypeScript riêng cho code test (strict)
@@ -217,13 +218,16 @@ pnpm exec playwright install chromium
 
 | Mục đích | Lệnh |
 |---|---|
-| Chạy toàn bộ (headless) | `pnpm test:e2e` |
+| Chạy toàn bộ (**headless**: trình duyệt chạy ngầm, không có cửa sổ, terminal chỉ in kết quả) | `pnpm test:e2e` |
+| **Demo** – mở cửa sổ trình duyệt và làm chậm từng thao tác (700 ms) để người xem theo dõi được; dùng khi thuyết trình | `pnpm test:e2e:demo` |
 | **UI mode** – giao diện tương tác, xem từng bước, chạy lại từng test | `pnpm test:e2e:ui` |
 | **Headed** – thấy cửa sổ trình duyệt chạy thật | `pnpm test:e2e:headed` |
 | **Debug** – Playwright Inspector, chạy từng bước | `pnpm test:e2e:debug` |
 | Mở báo cáo HTML của lần chạy trước | `pnpm test:e2e:report` |
 | **Codegen** – ghi thao tác thành code test (cần `pnpm dev` ở cổng 5173) | `pnpm test:e2e:codegen` |
 | Kiểm tra kiểu cho code test | `pnpm typecheck:e2e` |
+
+> **Vì sao `pnpm test:e2e` không thấy trình duyệt?** Mặc định Playwright chạy *headless* (không giao diện) để nhanh và chạy được trên CI/server. Muốn quan sát: dùng `test:e2e:demo` (xem thật chậm), `test:e2e:headed` (xem ở tốc độ thật, rất nhanh), `test:e2e:ui` (xem lại từng bước kèm ảnh chụp trang) hoặc `test:e2e:debug` (dừng ở từng lệnh). Nên xem một bài cụ thể: `pnpm test:e2e:demo -g "BOOKING-16"`. Cấu hình demo nằm ở `playwright.demo.config.ts` (đổi `SLOW_MO_MS` để nhanh/chậm hơn).
 
 Chạy một phần:
 
