@@ -129,6 +129,7 @@ export function useVehicleChangeContext(
         );
       if (
         route.status !== "ACTIVE" ||
+        !same(route.routePlanId, plan.routePlanId) ||
         !same(route.transportPlanId, plan.transportPlanId)
       )
         throw new VehicleChangeReadError(
@@ -179,24 +180,43 @@ export function useVehicleChangeContext(
             (item.status === "CONFIRMED" &&
               ["BACKUP", "RETURN"].includes(item.routeType))),
       );
-      const details = await Promise.all(
-        alternatives.map((item) =>
-          routeViewService.getRoute(item.routePlanId, signal),
-        ),
+      const alternativeIds = new Map(
+        [
+          ...alternatives,
+          ...reroute.backupPlans.filter((item) => item.status === "CONFIRMED"),
+          ...(reroute.returnPlan?.status === "CONFIRMED" ? [reroute.returnPlan] : []),
+          ...(reroute.currentSegment ? [reroute.currentSegment] : []),
+          ...reroute.remainingSegments,
+        ]
+          .filter((item) => !same(item.routePlanId, route.routePlanId))
+          .map((item) => [item.routePlanId.toLowerCase(), item.routePlanId]),
+      );
+      const reads = await Promise.allSettled(
+        [...alternativeIds.values()].map(async (id) => {
+          const detail = await routeViewService.getRoute(id, signal);
+          if (!same(detail.transportPlanId, route.transportPlanId))
+            throw new Error("This alternative does not belong to the current transport plan.");
+          return detail;
+        }),
       );
       ensureCurrent();
-      if (
-        details.some(
-          (item) => !same(item.transportPlanId, route.transportPlanId),
-        )
-      )
-        throw new VehicleChangeReadError(
-          "route_mismatch",
-          "An alternative route belongs to a different transport plan.",
-        );
+      const details: RoutePlanDetail[] = [];
+      const unavailableRoutes: { routePlanId: string; reason: string }[] = [];
+      reads.forEach((read, index) => {
+        if (read.status === "fulfilled") details.push(read.value);
+        else {
+          const error = getEmergencyError(read.reason);
+          if (error.denied || error.unauthorized) throw read.reason;
+          unavailableRoutes.push({
+            routePlanId: [...alternativeIds.values()][index],
+            reason: error.message,
+          });
+        }
+      });
       return {
         incident,
         route,
+        unavailableRoutes,
         selection: collectVehicleChangeCandidates(
           [route, ...details],
           route.transportPlanId,

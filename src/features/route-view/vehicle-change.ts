@@ -37,6 +37,12 @@ export function collectVehicleChangeCandidates(
     "currentSegment" | "remainingSegments" | "backupPlans" | "returnPlan"
   >,
 ) {
+  const options = new Map(
+    [
+      ...(authority?.backupPlans ?? []),
+      ...(authority?.returnPlan ? [authority.returnPlan] : []),
+    ].map((plan) => [plan.routePlanId.toLowerCase(), plan]),
+  );
   const candidates: VehicleChangeCandidate[] = [];
   const excluded: { segmentId: string; reason: string }[] = [];
   const seen = new Set<string>();
@@ -50,6 +56,8 @@ export function collectVehicleChangeCandidates(
       )
     )
       continue;
+    const branchSequenceNo = plan.branchSequenceNo ??
+      options.get(plan.routePlanId.toLowerCase())?.branchSequenceNo;
     for (const segment of plan.segments) {
       const id = segment.routePlanRouteId.toLowerCase();
       if (seen.has(id)) continue;
@@ -61,11 +69,11 @@ export function collectVehicleChangeCandidates(
             ? "Segment is outsourced."
             : !segment.plannedDepartureAt || !segment.plannedArrivalAt
               ? "Planned departure or arrival is missing."
-              : plan.routeType === "BACKUP" && plan.branchSequenceNo == null
+              : plan.routeType === "BACKUP" && branchSequenceNo == null
                 ? "BACKUP branch point is unavailable."
                 : plan.routeType === "BACKUP" &&
-                    plan.branchSequenceNo != null &&
-                    segment.sequenceNo < plan.branchSequenceNo
+                    branchSequenceNo != null &&
+                    segment.sequenceNo < branchSequenceNo
                   ? "Segment is before the BACKUP branch point."
                   : null;
       if (reason)
@@ -84,12 +92,6 @@ export function collectVehicleChangeCandidates(
       ...(authority?.remainingSegments ?? []),
     ].map((segment) => [segment.routePlanRouteId.toLowerCase(), segment]),
   );
-  const options = new Map(
-    [
-      ...(authority?.backupPlans ?? []),
-      ...(authority?.returnPlan ? [authority.returnPlan] : []),
-    ].map((plan) => [plan.routePlanId.toLowerCase(), plan]),
-  );
   const owners = new Map(
     plans.map((plan) => [plan.routePlanId.toLowerCase(), plan]),
   );
@@ -102,11 +104,11 @@ export function collectVehicleChangeCandidates(
       return Boolean(owner && ["ACTIVE", "CONFIRMED"].includes(owner.status));
     }
     const option = options.get(candidate.sourceRoutePlanId.toLowerCase());
-    // RT1 marks an option available only when its entire usable tail has no
-    // superseded/departed/arrived segment (IncidentService/Rerouting.cs).
+    // RT1 evaluates segment locks before rest rules. A rest-rule failure blocks
+    // activation, but still certifies the tail for vehicle replacement.
     return Boolean(
-      option?.isAvailable &&
-      option.status === "CONFIRMED" &&
+      option?.status === "CONFIRMED" &&
+      (option.isAvailable || option.unavailableReason === "REST_RULE_VIOLATION") &&
       ["BACKUP", "RETURN"].includes(candidate.segment.routeType) &&
       (candidate.segment.routeType !== "BACKUP" ||
         (option.branchSequenceNo != null &&
@@ -116,9 +118,14 @@ export function collectVehicleChangeCandidates(
   const verifiedIds = new Set(
     eligibleForSubmission.map(({ segment }) => segment.routePlanRouteId),
   );
-  const unverified = candidates.filter(
-    ({ segment }) => !verifiedIds.has(segment.routePlanRouteId),
-  );
+  const unverified = candidates
+    .filter(({ segment }) => !verifiedIds.has(segment.routePlanRouteId))
+    .map((candidate) => ({
+      ...candidate,
+      reason: options.get(candidate.sourceRoutePlanId.toLowerCase())?.unavailableReason === "SEGMENT_LOCKED"
+        ? "RT1 cannot confirm this tail: a segment is locked or no replaceable itinerary remains."
+        : "This segment has no matching effective itinerary or verified CONFIRMED option in RT1.",
+    }));
   return {
     candidates,
     excluded,

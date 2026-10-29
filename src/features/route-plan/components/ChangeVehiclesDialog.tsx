@@ -242,7 +242,7 @@ export function ChangeVehiclesDialog({
       return Boolean(current.accessToken) && current.principal?.id === accountId && current.sessionVersion === sessionVersion;
     };
     try {
-      onBeforeSubmit?.(structuredClone(snapshot));
+      onBeforeSubmit?.(structuredClone({ ...snapshot, segments: changedSegments }));
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "Unable to prepare this change. Reload the route plan before trying again.");
       return;
@@ -378,10 +378,16 @@ export function ChangeVehiclesDialog({
                 <div className="rounded-[2px] border border-emerald-200 bg-white p-2.5">
                   <span className="block text-xs font-semibold uppercase tracking-wide text-emerald-800">Released</span>
                   <span className="text-lg font-bold">{result.releasedVehicleIds.length}</span>
+                  <ul className="m-0 mt-1 list-none space-y-1 p-0 text-xs">
+                    {result.releasedVehicleIds.map((id) => <li key={id} className="break-all">{id}</li>)}
+                  </ul>
                 </div>
                 <div className="rounded-[2px] border border-emerald-200 bg-white p-2.5">
                   <span className="block text-xs font-semibold uppercase tracking-wide text-emerald-800">Maintenance</span>
                   <span className="text-lg font-bold">{result.maintenanceVehicleIds.length}</span>
+                  <ul className="m-0 mt-1 list-none space-y-1 p-0 text-xs">
+                    {result.maintenanceVehicleIds.map((id) => <li key={id} className="break-all">{id}</li>)}
+                  </ul>
                 </div>
                 <div className="rounded-[2px] border border-emerald-200 bg-white p-2.5">
                   <span className="block text-xs font-semibold uppercase tracking-wide text-emerald-800">Auto-applied segments</span>

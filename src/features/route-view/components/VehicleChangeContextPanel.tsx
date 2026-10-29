@@ -138,15 +138,20 @@ export function VehicleChangeContextPanel({
           </p>
           <ul className="m-0 list-none space-y-1 p-0 text-xs">
             {state.data.selection.unverified.map(
-              ({ sourceRoutePlanCode, segment }) => (
+              ({ sourceRoutePlanCode, segment, reason }) => (
                 <li key={segment.routePlanRouteId} className="break-words">
                   Viewed in {sourceRoutePlanCode} · {segment.routeType} segment{" "}
                   {segment.sequenceNo}: {segment.fromLocation.locationName} →{" "}
-                  {segment.toLocation.locationName} · Eligibility unavailable
+                  {segment.toLocation.locationName} · {reason}
                 </li>
               ),
             )}
           </ul>
+          {state.data.unavailableRoutes?.map(({ routePlanId, reason }) => (
+            <p key={routePlanId} className="m-0 break-words text-xs text-muted-foreground">
+              Route {routePlanId} unavailable: {reason}
+            </p>
+          ))}
         </>
       )}
       {dialog && (
