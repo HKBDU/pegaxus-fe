@@ -13,10 +13,11 @@ interface GapGeoJson {
  * it, with the length of the gap. It is a straight connector, not a route - the real path in between is unknown.
  */
 export function GapLayer({ gaps }: { gaps: TrailGap[] }) {
+  const drawableGaps = gaps.filter((gap) => gap.plausible)
   const data = useMemo<GapGeoJson>(
     () => ({
       type: "FeatureCollection",
-      features: gaps.map((gap) => ({
+      features: drawableGaps.map((gap) => ({
         type: "Feature",
         properties: {},
         geometry: {
@@ -28,9 +29,9 @@ export function GapLayer({ gaps }: { gaps: TrailGap[] }) {
         },
       })),
     }),
-    [gaps],
+    [drawableGaps],
   )
-  if (!gaps.length) return null
+  if (!drawableGaps.length) return null
   return (
     <>
       <Source id="live-gaps" type="geojson" data={data}>
@@ -41,7 +42,7 @@ export function GapLayer({ gaps }: { gaps: TrailGap[] }) {
           paint={{ "line-color": "#64748b", "line-width": 3, "line-opacity": 0.95, "line-dasharray": [0.5, 2] }}
         />
       </Source>
-      {gaps.map((gap) => (
+      {drawableGaps.map((gap) => (
         <Marker
           key={gap.from.time}
           latitude={(gap.from.latitude + gap.to.latitude) / 2}
