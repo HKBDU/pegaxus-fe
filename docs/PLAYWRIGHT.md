@@ -263,8 +263,8 @@ pnpm test:e2e --trace on                          # ghi trace cho mọi test
 |---|---|---|
 | `E2E_SKIP_BUILD=1` | (tắt) | Bỏ qua bước build, dùng lại `e2e/.output/dist` khi chỉ sửa test (nhanh hơn rất nhiều). Lần chạy đầu hoặc sau khi sửa `src/` thì **không** đặt biến này |
 | `E2E_PORT` | `5173` | Cổng của bộ mock. **Lưu ý:** nếu `pnpm dev` đang chạy ở cổng này thì bộ mock dùng lại chính dev server đó (chậm hơn bản build). Muốn tách riêng: `E2E_PORT=5199` |
-| `PLAYWRIGHT_BASE_URL` | `http://localhost:5173` | Front-end mà bộ real-api mở (đặt trong `.env.e2e`) |
-| `E2E_USER_EMAIL`, `E2E_USER_PASSWORD` | – | Tài khoản CUSTOMER thật của bộ real-api (đặt trong `.env.e2e`) |
+| `PLAYWRIGHT_BASE_URL` | `http://localhost:5173` | Front-end mà bộ real-api mở (đặt trong `.env` hoặc `.env.e2e`) |
+| `E2E_USER_EMAIL`, `E2E_USER_PASSWORD` | – | Tài khoản CUSTOMER thật của bộ real-api (đặt trong `.env` hoặc `.env.e2e`) |
 | `E2E_WORKERS` | `1` (local), `2` (CI) | Số trình duyệt chạy song song |
 | `CI` | – | Bật chế độ CI: `retries: 2`, `forbidOnly`, reporter `github`, luôn dựng server mới |
 
@@ -394,7 +394,7 @@ Bộ **mock** chứng minh *Front-end xử lý đúng mọi phản hồi*. Bộ 
 ### 11.2. Cài đặt
 
 1. Chuẩn bị **một tài khoản CUSTOMER dành riêng cho test** trên backend đích (không dùng tài khoản cá nhân/production).
-2. Copy `.env.e2e.example` thành `.env.e2e` (file này bị git bỏ qua) và điền:
+2. Thêm 3 biến sau vào file `.env` của dự án (file này bị git bỏ qua; ngay cạnh các biến `VITE_*`), **hoặc** tạo file riêng `.env.e2e` từ mẫu `.env.e2e.example`. Thứ tự ưu tiên: biến đã đặt trong shell > `.env.e2e` > `.env`. Vite chỉ đưa biến bắt đầu bằng `VITE_` vào bản build, nên email/mật khẩu **không** lọt vào code chạy trên trình duyệt.
 
 ```
 PLAYWRIGHT_BASE_URL=http://localhost:5173
@@ -404,7 +404,7 @@ E2E_USER_PASSWORD=<mật khẩu>
 
 3. Chạy: `pnpm test:e2e:real` (hoặc `pnpm test:e2e:real:ui` để debug). Nếu `pnpm dev` đang chạy ở cổng 5173 thì được dùng lại và **không bị tắt**; nếu chưa chạy, Playwright tự bật rồi tắt.
 
-Thiếu `.env.e2e` thì bước `setup` báo lỗi ngay, **không gọi mạng** và các test còn lại bị bỏ qua.
+Thiếu 2 biến `E2E_USER_*` thì bước `setup` báo lỗi ngay, **không gọi mạng** và các test còn lại bị bỏ qua.
 
 ### 11.3. Các ca kiểm thử
 
@@ -425,7 +425,7 @@ Test ghi dữ liệu thật nên **tự dọn** trong `afterAll`, bằng đúng 
 ### 11.5. Lưu ý an toàn
 
 - Bộ này **ghi vào database thật** của backend mà `VITE_API_URL` trỏ tới. Chỉ chạy trên môi trường dev/staging và với tài khoản test.
-- Không bao giờ commit `.env.e2e` hoặc `playwright/.auth/` (đã nằm trong `.gitignore`).
+- Không bao giờ commit `.env`, `.env.e2e` hoặc `playwright/.auth/` (đã nằm trong `.gitignore`). **Hai file mẫu `.env.example` và `.env.e2e.example` được git theo dõi: chỉ để tên biến, không điền email/mật khẩu thật vào đó.**
 - Không chạy trong CI trừ khi đã cấu hình secret riêng và backend test riêng. Các lệnh `test:e2e*` mặc định chỉ chạy bộ **mock**, nên `pnpm test:e2e` không bao giờ chạm backend thật. Lệnh `playwright test` trần (không `--project`) chạy cả hai.
 - Kết quả phụ thuộc mạng, backend (có thể "ngủ" lúc đầu) và dịch vụ bản đồ thật, nên bộ này có thể thất bại vì lý do ngoài Front-end. Bộ mock là nơi quyết định Front-end đúng hay sai.
 
@@ -433,7 +433,7 @@ Test ghi dữ liệu thật nên **tự dọn** trong `afterAll`, bằng đúng 
 
 | Hiện tượng | Cách xử lý |
 |---|---|
-| `Real-API tests need a CUSTOMER account...` | Chưa có `.env.e2e` hoặc thiếu `E2E_USER_EMAIL/PASSWORD` |
+| `Real-API tests need a CUSTOMER account...` | Thiếu `E2E_USER_EMAIL` / `E2E_USER_PASSWORD` trong `.env` (hoặc `.env.e2e`) |
 | `Real sign-in failed: "..."` | Sai mật khẩu, tài khoản chưa xác minh/bị khóa, hoặc backend đang khởi động: thử lại sau |
 | `E2E_USER_EMAIL must be a CUSTOMER account` | Tài khoản không phải khách hàng (chỉ khách hàng thêm ngựa và tạo booking được) |
 | Timeout ở ô tìm địa điểm | Khóa `VITE_GEOAPIFY_API_KEY` trong `.env` sai/hết hạn mức |

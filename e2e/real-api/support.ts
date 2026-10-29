@@ -20,8 +20,8 @@ export function credentials() {
   const password = process.env.E2E_USER_PASSWORD;
   if (!email || !password) {
     throw new Error(
-      "Real-API tests need a CUSTOMER account of the target backend. Copy .env.e2e.example to .env.e2e and fill " +
-        "E2E_USER_EMAIL and E2E_USER_PASSWORD (or export them in the shell). Never commit that file.",
+      "Real-API tests need a CUSTOMER account of the target backend. Set E2E_USER_EMAIL and E2E_USER_PASSWORD in .env " +
+        "(or in .env.e2e, or export them in the shell). Never commit the values.",
     );
   }
   return { email, password };

@@ -13,11 +13,16 @@ import { defineConfig, devices } from "@playwright/test";
  */
 
 // ---------------------------------------------------------------------------------------------- real-API settings
-// Credentials and URL live in `.env.e2e` (git-ignored, see `.env.e2e.example`); a variable already set in the shell wins.
-try {
-  process.loadEnvFile(".env.e2e");
-} catch {
-  /* no .env.e2e: the real-api setup project reports the missing variables; the mock suite needs none */
+// PLAYWRIGHT_BASE_URL, E2E_USER_EMAIL and E2E_USER_PASSWORD may live in the project's `.env` (next to the VITE_ variables)
+// or in a separate `.env.e2e` (see `.env.e2e.example`); both are git-ignored. Order of precedence: variables already
+// set in the shell, then `.env.e2e`, then `.env` (`loadEnvFile` never overrides a variable that is already set).
+// Vite only exposes `VITE_*` variables to the browser bundle, so these credentials never reach the built app.
+for (const file of [".env.e2e", ".env"]) {
+  try {
+    process.loadEnvFile(file);
+  } catch {
+    /* file absent: the real-api setup project reports missing variables; the mock suite needs none */
+  }
 }
 
 /** The front end the real-API suite drives. Default: the Vite dev server a developer already keeps on 5173. */
