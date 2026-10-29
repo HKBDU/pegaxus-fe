@@ -65,21 +65,11 @@ export function getBookingStatusLabel(status: BookingStatus, audience: BookingAu
   return bookingStatusLabels[audience][status]
 }
 
-export function formatBookingDate(value: string, includeTime = false) {
+export function formatBookingDate(value: string) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    ...(includeTime ? { hour: "2-digit", minute: "2-digit", hour12: false } : {}),
-    timeZone: "UTC",
-  }).format(new Date(value))
-}
-
-export function formatBookingTime(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
     timeZone: "UTC",
   }).format(new Date(value))
 }
