@@ -4,9 +4,7 @@ import {
   type RouteWorkspaceContext,
 } from "./workspace-actions";
 import type { RoutePlanDetail, RouteSegment } from "./types";
-
-export const vehicleChangeDialogBlocker =
-  "Vehicle replacement is temporarily unavailable. Please contact your logistics team.";
+import type { RerouteContext } from "@/features/incident-response/reroute-schemas";
 
 export function canChangeVehiclesBeforeDeparture(
   plan: RoutePlanDetail,
@@ -34,6 +32,10 @@ export type VehicleChangeCandidate = {
 export function collectVehicleChangeCandidates(
   plans: readonly RoutePlanDetail[],
   transportPlanId: string,
+  authority?: Pick<
+    RerouteContext,
+    "currentSegment" | "remainingSegments" | "backupPlans" | "returnPlan"
+  >,
 ) {
   const candidates: VehicleChangeCandidate[] = [];
   const excluded: { segmentId: string; reason: string }[] = [];
@@ -76,14 +78,58 @@ export function collectVehicleChangeCandidates(
         });
     }
   }
-  // RP3 omits SupersededAt. Candidates are read-only until that eligibility is authoritative.
-  const eligibleForSubmission: VehicleChangeCandidate[] = [];
+  const itinerary = new Map(
+    [
+      ...(authority?.currentSegment ? [authority.currentSegment] : []),
+      ...(authority?.remainingSegments ?? []),
+    ].map((segment) => [segment.routePlanRouteId.toLowerCase(), segment]),
+  );
+  const options = new Map(
+    [
+      ...(authority?.backupPlans ?? []),
+      ...(authority?.returnPlan ? [authority.returnPlan] : []),
+    ].map((plan) => [plan.routePlanId.toLowerCase(), plan]),
+  );
+  const owners = new Map(
+    plans.map((plan) => [plan.routePlanId.toLowerCase(), plan]),
+  );
+  const eligibleForSubmission = candidates.filter((candidate) => {
+    const actual = itinerary.get(
+      candidate.segment.routePlanRouteId.toLowerCase(),
+    );
+    if (actual && !actual.actualArrivalAt && actual.status !== "COMPLETED") {
+      const owner = owners.get(actual.routePlanId.toLowerCase());
+      return Boolean(owner && ["ACTIVE", "CONFIRMED"].includes(owner.status));
+    }
+    const option = options.get(candidate.sourceRoutePlanId.toLowerCase());
+    // RT1 marks an option available only when its entire usable tail has no
+    // superseded/departed/arrived segment (IncidentService/Rerouting.cs).
+    return Boolean(
+      option?.isAvailable &&
+      option.status === "CONFIRMED" &&
+      ["BACKUP", "RETURN"].includes(candidate.segment.routeType) &&
+      (candidate.segment.routeType !== "BACKUP" ||
+        (option.branchSequenceNo != null &&
+          candidate.segment.sequenceNo >= option.branchSequenceNo)),
+    );
+  });
+  const verifiedIds = new Set(
+    eligibleForSubmission.map(({ segment }) => segment.routePlanRouteId),
+  );
+  const unverified = candidates.filter(
+    ({ segment }) => !verifiedIds.has(segment.routePlanRouteId),
+  );
   return {
     candidates,
     excluded,
     eligibleForSubmission,
+    unverified,
     blocker:
-      "Segment eligibility could not be verified. Replacement remains blocked until the current itinerary can be confirmed.",
+      unverified.length > 0
+        ? "Some segments have no authoritative eligibility confirmation and cannot be selected. Backend propagation still applies to eligible unlisted segments."
+        : eligibleForSubmission.length === 0
+          ? "No eligible internal segments could be verified for replacement."
+          : null,
   };
 }
 

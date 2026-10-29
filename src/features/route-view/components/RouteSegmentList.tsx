@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { formatBookingDate } from "@/features/booking/utils";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge";
 import {
   Field,
@@ -47,12 +47,12 @@ export function RouteSegmentList({
               >
                 <Field label="Planned departure">
                   {segment.plannedDepartureAt
-                    ? formatBookingDate(segment.plannedDepartureAt, true)
+                    ? <DateTimeUtc value={segment.plannedDepartureAt} compact />
                     : "Not scheduled"}
                 </Field>
                 <Field label="Planned arrival">
                   {segment.plannedArrivalAt
-                    ? formatBookingDate(segment.plannedArrivalAt, true)
+                    ? <DateTimeUtc value={segment.plannedArrivalAt} compact />
                     : "Not scheduled"}
                 </Field>
                 <Field label="Distance">
@@ -63,12 +63,12 @@ export function RouteSegmentList({
                 </Field>
                 {segment.actualDepartureAt && (
                   <Field label="Actual departure">
-                    {formatBookingDate(segment.actualDepartureAt, true)}
+                    <DateTimeUtc value={segment.actualDepartureAt} compact />
                   </Field>
                 )}
                 {segment.actualArrivalAt && (
                   <Field label="Actual arrival">
-                    {formatBookingDate(segment.actualArrivalAt, true)}
+                    <DateTimeUtc value={segment.actualArrivalAt} compact />
                   </Field>
                 )}
                 {segment.dwellAfterMinutes != null && (
@@ -172,7 +172,7 @@ export function RouteSegmentList({
                     <p className="text-xs text-slate-600">
                       Planned arrival ·{" "}
                       {segment.plannedArrivalAt
-                        ? formatBookingDate(segment.plannedArrivalAt, true)
+                        ? <DateTimeUtc value={segment.plannedArrivalAt} compact />
                         : "Not scheduled"}
                     </p>
                     <details className="border-t border-slate-100 pt-3">

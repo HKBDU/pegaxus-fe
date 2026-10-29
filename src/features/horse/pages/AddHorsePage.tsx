@@ -25,7 +25,7 @@ import {
   VALIDATION_LIMITS,
   countDecimalPlaces,
 } from "@/shared/constants/validation-limits"
-import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload"
 
 const inputClass = "profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1"
 const selectOptions = HORSE_SEX_OPTIONS.filter((option) => option.value !== "ALL")
@@ -448,7 +448,7 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
                 maxFiles={1}
                 multiple={false}
                 title="Upload avatar"
-                hint="One Image Only · JPG or PNG, up to 10 MB"
+                hint={`One Image Only · JPG or PNG, up to ${UPLOAD_MAX_MB} MiB`}
                 className="[&>[role=button]]:min-h-[72px] [&>[role=button]]:gap-1 [&>[role=button]]:py-3"
                 onUploaded={({ publicId, file }) => {
                   setAvatarPublicId(publicId)

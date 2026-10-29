@@ -1,6 +1,7 @@
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc"
 import { cn } from "@/lib/utils"
 import type { AuditEvent } from "@/features/dossier/types"
-import { formatLocalDateTime, formatUtcDateTime, getAuditTone, getInitials, getRoleLabel, type AuditTone } from "@/features/dossier/utils"
+import { getAuditTone, getInitials, getRoleLabel, type AuditTone } from "@/features/dossier/utils"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 
 const toneDot: Record<AuditTone, string> = {
@@ -62,8 +63,7 @@ export function AuditTimeline({ events, isLoading, onViewVersionHistory }: Audit
 
                 <div className={cn("grid min-w-0 grid-cols-[minmax(0,1fr)] gap-x-4 gap-y-2 py-4 pl-12 pr-4", GRID)}>
                   <div className="min-w-0 text-xs [overflow-wrap:anywhere]">
-                    <p className="m-0 font-semibold text-slate-900">{formatUtcDateTime(event.occurredAt)}</p>
-                    <p className="m-0 mt-0.5 text-[0.7rem] text-slate-400">{formatLocalDateTime(event.occurredAt)} (local)</p>
+                    <DateTimeUtc value={event.occurredAt} />
                   </div>
 
                   <div className="min-w-0">

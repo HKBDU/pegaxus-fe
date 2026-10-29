@@ -15,7 +15,7 @@ import { requirementKeys } from "@/features/compliance-catalog/hooks/useDossierR
 import type { ApprovedBookingDetail } from "@/features/transport-plan/types";
 import { vehicleKeys } from "@/features/fleet/hooks/useVehicles";
 import { personnelKeys } from "@/features/personnel/hooks";
-import { executeEmergencyAction, routeViewService } from "../services";
+import { executeEmergencyAction, getEmergencyError, routeViewService } from "../services";
 import { getEmergencyActions } from "../emergency-policy";
 import { routeViewKeys, useRoutePlanAlternatives } from "./useRoutePlanDetail";
 import { returnActivationResultSchema } from "../schemas";
@@ -79,13 +79,14 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
     {},
     ready,
   );
-  const error = transport.isError
-    ? transport.error
-    : booking.isError
-      ? booking.error
-      : routes.isError
-        ? routes.error
-        : null;
+  const failures = [transport, booking, routes]
+    .filter((query) => query.isError)
+    .map((query) => query.error);
+  const permissionFailure = failures.find((failure) => {
+    const mapped = getEmergencyError(failure);
+    return mapped.denied || mapped.unauthorized;
+  });
+  const error = permissionFailure ?? failures[0] ?? null;
   const loading =
     ready && (transport.isPending || booking.isPending || routes.isPending);
   let data: EmergencyContext | undefined;
@@ -95,7 +96,7 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
     booking.data?.transportPlan?.transportPlanId === plan.transportPlanId &&
     booking.data.transport?.transportId ===
       transport.data.transport.transportId;
-  if (ready && !error && !loading && matches && routes.data) {
+  if (ready && !permissionFailure && !loading && matches && routes.data) {
     const legalDossier =
       plan.routeType === "RETURN"
         ? booking.data!.complianceDossiers.find(
@@ -143,7 +144,16 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
           "This route does not belong to the current authorized transport workspace.",
         )
       : null;
-  return { data, error: error ?? mismatch, loading };
+  return {
+    data,
+    error: error ?? mismatch,
+    loading,
+    reload: () => Promise.all([
+      transport.refetch({ throwOnError: true }),
+      booking.refetch({ throwOnError: true }),
+      routes.refetch({ throwOnError: true }),
+    ]),
+  };
 }
 
 export async function refreshEmergencyQueries(
@@ -345,7 +355,9 @@ const vehicleChangeSuccessSchema = z.object({
 
 export function captureVehicleChangeRefresh(
   client: QueryClient,
-  plan: RoutePlanDetail,
+  plan: Pick<RoutePlanDetail, "routePlanId" | "transportPlanId" | "bookingId"> & {
+    segments: readonly { vehicles: readonly { vehicleId: string }[] }[];
+  },
   context: EmergencyContext,
   options: { incidentReportId?: string; genericInvalidationHandled: boolean },
   notify: (message: string, kind: "success" | "error") => void,

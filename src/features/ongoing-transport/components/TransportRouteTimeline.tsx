@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import {
   ArrowRight,
   Check,
@@ -8,7 +9,7 @@ import {
   Route,
 } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
-import { formatTransportDate, formatTransportLabel } from "../format";
+import { formatTransportLabel } from "../format";
 import { routeLabels, segmentLabels } from "../constants";
 import { buildTransportTimeline } from "../timeline";
 import type {
@@ -40,7 +41,7 @@ function SegmentSchedule({ segment }: { segment: TrackingSegment }) {
           <div key={label} className="min-w-0">
             <dt className="text-[11px] text-slate-500">{label}</dt>
             <dd className="mt-1 ml-0 text-xs font-medium tabular-nums text-slate-800">
-              {formatTransportDate(value)}
+              <DateTimeUtc value={value} compact />
             </dd>
           </div>
         ))}

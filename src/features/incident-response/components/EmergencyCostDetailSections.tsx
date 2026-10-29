@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { Link } from "react-router-dom";
 import { Badge } from "@/shared/components/ui/badge";
 import {
@@ -27,12 +28,10 @@ const vehicleStatusLabels = new Map([
   ["OUT_OF_SERVICE", "Out of service"],
 ]);
 
-const dateFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 const date = (value: string) => (
-  <time dateTime={value}>{dateFormat.format(new Date(value))}</time>
+  <time dateTime={value}>
+    <DateTimeUtc value={value} compact />
+  </time>
 );
 
 function Section({ title, children }: { title: string; children: ReactNode }) {

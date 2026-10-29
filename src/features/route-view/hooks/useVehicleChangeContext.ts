@@ -103,6 +103,7 @@ export function useVehicleChangeContext(
       const same = (left: string, right: string) =>
         left.toLowerCase() === right.toLowerCase();
       if (
+        !same(incident.incidentReportId, incidentReportId) ||
         !same(incident.transport.transportId, context.transportId) ||
         !["REPORTED", "PENDING"].includes(incident.status) ||
         !["VEHICLE", "BOTH"].includes(incident.category) ||
@@ -137,6 +138,7 @@ export function useVehicleChangeContext(
       const reroute = await getRerouteContext(incidentReportId, scope, signal);
       ensureCurrent();
       if (
+        !same(reroute.incident.incidentReportId, incidentReportId) ||
         !reroute.transport.transportPlanId ||
         !same(reroute.transport.transportPlanId, route.transportPlanId) ||
         !same(reroute.transport.transportId, context.transportId) ||
@@ -198,6 +200,7 @@ export function useVehicleChangeContext(
         selection: collectVehicleChangeCandidates(
           [route, ...details],
           route.transportPlanId,
+          reroute,
         ),
       };
     },
@@ -240,10 +243,15 @@ export function useVehicleChangeContext(
           : getEmergencyError(query.error).message,
     };
   }
-  if (!query.data || query.isFetching)
+  if (!query.data)
     return {
       kind: "loading" as const,
       message: "Checking incident, cost approval and route eligibility…",
     };
-  return { kind: "ready" as const, data: query.data };
+  return {
+    kind: "ready" as const,
+    data: query.data,
+    refreshing: query.isFetching,
+    reload: () => query.refetch({ throwOnError: true }),
+  };
 }

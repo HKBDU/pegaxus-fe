@@ -109,6 +109,7 @@ function costContext(incident: Incident) {
   const { incidentReportId, incidentCode, title, category, severity, status, availableActions, transport, costSummary } = incident
   return {
     incidentReportId, incidentCode, title, category, severity, status, availableActions, transport,
+    vehicleDetail: incident.vehicleDetail,
     costSummary: costSummary.currency === "VND" ? { ...costSummary, currency: "VND" as const } : null,
   }
 }

@@ -1,4 +1,6 @@
 import { useId, useState } from "react";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
+import { toUtcIso } from "@/shared/utils/datetime";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -367,6 +369,11 @@ export function TransportPlanMetadataForm({
                                   className={controlClass}
                                 />
                               </FormControl>
+                            )}
+                            {type === "date-time" && toUtcIso(field.value) && (
+                              <p className="text-xs text-slate-500" aria-live="polite">
+                                UTC preview: <DateTimeUtc value={toUtcIso(field.value)} compact />
+                              </p>
                             )}
                             <div className="min-h-5">
                               <FormMessage

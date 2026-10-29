@@ -1,4 +1,4 @@
-import { formatBookingDate } from "@/features/booking/utils";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 
 export function toLocalDateTime(value?: string | null) {
   if (!value) return "";
@@ -9,7 +9,7 @@ export function toLocalDateTime(value?: string | null) {
 }
 
 export function formatPlanDate(value?: string | null) {
-  return value ? `${formatBookingDate(value, true)} UTC` : "—";
+  return formatUtcDateTime(value);
 }
 /** VND only, whole amounts. */
 export function formatPlanMoney(amount?: number | null) {
