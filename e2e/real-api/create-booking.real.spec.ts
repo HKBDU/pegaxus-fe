@@ -22,12 +22,14 @@ test.describe("Create booking (real API)", () => {
     const booking = new BookingFormPage(page);
     await booking.goto();
 
-    // Step 1 - route: search real addresses and take the first United Kingdom result (domestic trips need no extra rules).
+    // Step 1 - route: search real addresses and take the first result of each. The result buttons only show the place
+    // name ("Greater London"), not its country, so the country is checked on the Pickup / Destination card afterwards:
+    // two United Kingdom points make a domestic trip (no extra rules).
     await booking.search("London, United Kingdom");
-    await booking.searchResult(/United Kingdom/).first().click();
+    await booking.searchResult(/London/).first().click();
     await expect(booking.pointCard("Pickup")).toContainText("United Kingdom");
     await booking.search("Manchester, United Kingdom");
-    await booking.searchResult(/United Kingdom/).first().click();
+    await booking.searchResult(/Manchester/).first().click();
     await expect(booking.pointCard("Destination")).toContainText("United Kingdom");
 
     // Step 1 - schedule and notes.

@@ -15,6 +15,7 @@
     "test:e2e:mock": "playwright test --project=mock",
     "test:e2e:real": "playwright test --project=real-api",
     "test:e2e:real:ui": "playwright test --project=real-api --ui",
+    "test:e2e:real:demo": "playwright test --project=real-api --config=playwright.demo.config.ts",
     "test:e2e:ui": "playwright test --project=mock --ui",
     "test:e2e:headed": "playwright test --project=mock --headed",
     "test:e2e:demo": "playwright test --project=mock --config=playwright.demo.config.ts",

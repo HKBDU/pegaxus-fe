@@ -121,7 +121,13 @@ export default defineConfig({
       testDir: "./e2e/real-api",
       testMatch: /auth\.setup\.ts/,
       timeout: 180_000,
-      use: { ...devices["Desktop Chrome"], baseURL: REAL_BASE_URL, viewport: { width: 1440, height: 900 } },
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: REAL_BASE_URL,
+        viewport: { width: 1440, height: 900 },
+        /** The first page load through a Vite dev server that has been idle is cold: it compiles ~1000 modules (30 s+). */
+        navigationTimeout: 120_000,
+      },
     },
     {
       name: "real-api",
@@ -139,7 +145,7 @@ export default defineConfig({
         viewport: { width: 1440, height: 900 },
         storageState: REAL_AUTH_FILE,
         actionTimeout: 30_000,
-        navigationTimeout: 60_000,
+        navigationTimeout: 120_000,
       },
     },
   ],

@@ -235,6 +235,7 @@ pnpm exec playwright install chromium
 | Chạy bộ **mock** (**headless**: trình duyệt chạy ngầm, không có cửa sổ, terminal chỉ in kết quả) | `pnpm test:e2e` hoặc `pnpm test:e2e:mock` |
 | Chạy bộ **API thật** (cần `.env.e2e`, xem mục 11) | `pnpm test:e2e:real` |
 | Bộ API thật trong **UI mode** để dễ gỡ lỗi | `pnpm test:e2e:real:ui` |
+| Bộ API thật **hiện cửa sổ Chrome, chạy chậm** để xem từng thao tác | `pnpm test:e2e:real:demo` |
 | **Demo** – mở cửa sổ trình duyệt và làm chậm từng thao tác (700 ms) để người xem theo dõi được; dùng khi thuyết trình | `pnpm test:e2e:demo` |
 | **UI mode** – giao diện tương tác, xem từng bước, chạy lại từng test | `pnpm test:e2e:ui` |
 | **Headed** – thấy cửa sổ trình duyệt chạy thật | `pnpm test:e2e:headed` |
@@ -436,6 +437,7 @@ Test ghi dữ liệu thật nên **tự dọn** trong `afterAll`, bằng đúng 
 | `Real-API tests need a CUSTOMER account...` | Thiếu `E2E_USER_EMAIL` / `E2E_USER_PASSWORD` trong `.env` (hoặc `.env.e2e`) |
 | `Real sign-in failed: "..."` | Sai mật khẩu, tài khoản chưa xác minh/bị khóa, hoặc backend đang khởi động: thử lại sau |
 | `E2E_USER_EMAIL must be a CUSTOMER account` | Tài khoản không phải khách hàng (chỉ khách hàng thêm ngựa và tạo booking được) |
+| Lần chạy đầu bị timeout ở `page.goto`, hoặc form bị "reset" giữa chừng, lỗi `ERR_ABORTED` | Dev server (`pnpm dev`) còn "nguội": lần mở trang đầu tiên nó biên dịch ~1000 module (30 s+) và có thể tải lại trang. Chạy lại là hết (server đã ấm); timeout điều hướng của bộ real-api đã nâng lên 120 s |
 | Timeout ở ô tìm địa điểm | Khóa `VITE_GEOAPIFY_API_KEY` trong `.env` sai/hết hạn mức |
 | Còn dữ liệu "E2E Smoke ..." | Bước dọn dẹp thất bại: hủy booking và xóa ngựa đó bằng tay |
 
