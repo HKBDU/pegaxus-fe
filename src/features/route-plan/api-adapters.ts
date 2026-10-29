@@ -1,5 +1,5 @@
 import { getLocations, getRoutes, getVehicles } from "./services";
-import type { Location, LocationListParams, RouteListParams, RouteMaster, Vehicle, VehicleListParams } from "./types";
+import type { Location, LocationListParams, RouteListParams, RouteMaster, VehicleListParams } from "./types";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 
 const PAGE_SIZE = 100;
@@ -37,12 +37,7 @@ export async function loadAllRoutes(params: Omit<RouteListParams, "pageIndex" | 
 }
 
 export async function loadAllVehicles(params: Omit<VehicleListParams, "pageIndex" | "pageSize"> = {}) {
-  try {
-    const items = await loadPages((pageIndex) => getVehicles({ ...params, pageIndex, pageSize: PAGE_SIZE }));
-    return items;
-  } catch {
-    return [] as Vehicle[];
-  }
+  return loadPages((pageIndex) => getVehicles({ ...params, pageIndex, pageSize: PAGE_SIZE }));
 }
 
 type LocationLike = Pick<Location, "locationId" | "locationName"> & { locationType?: string | null; city?: string | null; country?: string | null; address?: string | null; latitude?: number | string | null; longitude?: number | string | null };

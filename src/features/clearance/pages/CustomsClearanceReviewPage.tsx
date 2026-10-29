@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { useCustomsClearanceProofDetail, useFinalizeCustomsClearanceProof } from '../hooks'
 import type { CustomsLane, FinalizeCustomsClearanceProofRequest } from '../types'
 import { VALIDATION_LIMITS } from '@/shared/constants/validation-limits'
+import { formatUtcDateTime, todayUtc } from '@/shared/utils/datetime'
 
 const INPUT = 'w-full border border-[#d8d5ce] bg-[#f4f4f4] px-3 py-2.5 text-sm text-[#181818] focus:border-[#f39200] focus:outline-none focus:ring-1 focus:ring-[#f39200]'
 const LANE_OPTIONS: CustomsLane[] = ['GREEN_LANE', 'ORANGE_LANE', 'RED_LANE']
@@ -27,15 +28,15 @@ const finalizeSchema = z.object({
     .refine((val) => {
       if (!val) return true
       const d = new Date(val)
-      const now = new Date()
-      return Math.abs(d.getFullYear() - now.getFullYear()) <= VALIDATION_LIMITS.dateWindowYears
+      const nowYear = Number(todayUtc().slice(0, 4))
+      return Math.abs(d.getUTCFullYear() - nowYear) <= VALIDATION_LIMITS.dateWindowYears
     }, `ATA Carnet expiry date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`),
   status: z.enum(FINAL_STATUSES),
   verificationNote: z.string().max(VALIDATION_LIMITS.noteMaxLength, `Verification note must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`).optional(),
 })
 
 function formatDate(value: string | null) {
-  return value ? new Date(value).toLocaleString('en-GB') : '—'
+  return formatUtcDateTime(value)
 }
 
 function laneLabel(lane: CustomsLane | null | undefined) {

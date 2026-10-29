@@ -25,6 +25,7 @@ import {
 } from "@/shared/components/ui/tooltip";
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload";
+import { todayUtc } from "@/shared/utils/datetime";
 import { useRecordAuthoritySubmission } from "../hooks";
 import type { AuthoritySubmissionStatus } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
@@ -128,16 +129,13 @@ export function RecordAuthoritySubmissionDialog({
     if (!submissionDate) {
       next.submissionDate = "Submission Date is required.";
     } else {
-      const date = new Date(submissionDate);
-      const now = new Date();
-      now.setHours(23, 59, 59, 999);
-      if (date > now) {
+      const today = todayUtc();
+      if (submissionDate > today) {
         next.submissionDate = "Submission date must not be in the future.";
       } else {
-        const minDate = new Date();
-        minDate.setFullYear(minDate.getFullYear() - VALIDATION_LIMITS.dateWindowYears);
-        minDate.setHours(0, 0, 0, 0);
-        if (date < minDate) {
+        const minYear = Number(today.slice(0, 4)) - VALIDATION_LIMITS.dateWindowYears;
+        const minDate = `${minYear}${today.slice(4)}`;
+        if (submissionDate < minDate) {
           next.submissionDate = `Submission date must be within the last ${VALIDATION_LIMITS.dateWindowYears} years.`;
         }
       }

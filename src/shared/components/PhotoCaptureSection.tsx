@@ -8,6 +8,7 @@ import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
 import { isPresignedUploadError, presignedUpload } from "@/shared/utils/presigned"
 import { getCurrentGpsCoordinates } from "@/shared/utils/gps"
 import { stampPhoto } from "@/shared/utils/photo-stamp"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 
 export interface PhotoCaptureSectionProps {
   files: File[]
@@ -33,7 +34,7 @@ export interface PhotoCaptureSectionProps {
 const DEFAULT_TYPES = ["image/jpeg", "image/jpg", "image/png"]
 
 function formatTimestamp(value: Date | null | undefined) {
-  return value?.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }) ?? ""
+  return value ? formatUtcDateTime(value) : ""
 }
 
 export function PhotoCaptureSection({

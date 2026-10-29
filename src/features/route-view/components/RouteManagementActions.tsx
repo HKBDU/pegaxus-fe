@@ -9,6 +9,7 @@ import {
   type LegalFeasibilityPanelProps,
 } from "@/features/route-plan/components/LegalFeasibilityPanel";
 import { CancelRoutePlanDialog } from "@/features/route-plan/components/CancelRoutePlanDialog";
+import { ChangeVehiclesDialog } from "@/features/route-plan/components/ChangeVehiclesDialog";
 import { OutsourceSegmentDialog } from "@/features/route-plan/components/OutsourceSegmentDialog";
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import { isFlow3MockMode } from "@/features/transport-plan/source";
@@ -69,6 +70,7 @@ export function RouteManagementActions({
   const [cancelVersion, setCancelVersion] = useState(plan.updatedAt);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
+  const [changeVehiclesOpen, setChangeVehiclesOpen] = useState(false);
   async function refresh() {
     setRefreshing(true);
     setRefreshFailed(false);
@@ -95,6 +97,10 @@ export function RouteManagementActions({
   const canReview =
     role === "specialist" && plan.status === "DRAFT" && dossierReady;
   const canCancel = role === "coordinator" && plan.status === "DRAFT";
+  const canChangeVehicles =
+    role === "coordinator" &&
+    plan.routeType === "PRIMARY" &&
+    plan.status === "CONFIRMED";
   const segments = legalSegments(review ?? plan);
   return (
     <>
@@ -172,6 +178,16 @@ export function RouteManagementActions({
           <Link to={routePlanEdit(plan.routePlanId)}>Edit</Link>
         </Button>
       ) : null}
+      {canChangeVehicles ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setChangeVehiclesOpen(true)}
+        >
+          Change vehicles
+        </Button>
+      ) : null}
       {canCancel && plan.routeType !== "RETURN" ? (
         <CancelRoutePlanDialog
           routePlanId={plan.routePlanId}
@@ -207,6 +223,20 @@ export function RouteManagementActions({
           Legal/Cancel providers use real APIs. Their mutations are disabled in
           Flow 3 mock mode.
         </p>
+      ) : null}
+      {canChangeVehicles ? (
+        <ChangeVehiclesDialog
+          open={changeVehiclesOpen}
+          onOpenChange={setChangeVehiclesOpen}
+          mode="before-departure"
+          routePlan={plan}
+          segments={plan.segments}
+          onChanged={() => {
+            setChangeVehiclesOpen(false);
+            void refresh();
+          }}
+          onReload={() => void refresh()}
+        />
       ) : null}
       {review && segments && canReview && !mockMode ? (
         <LegalFeasibilityPanel

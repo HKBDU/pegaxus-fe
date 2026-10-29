@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowRight, RefreshCw } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { ErrorState, LoadingState } from "@/shared/components/common"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 
 import { CrewShell } from "../components/CrewShell"
 import { HORSE_HEALTH_ROUTES } from "../constants"
@@ -9,8 +10,7 @@ import { useAssignedTransports } from "../hooks/useAssignedTransports"
 import type { AssignedTransport } from "../types"
 
 function formatDate(value: string | null) {
-  if (!value) return "—"
-  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value))
+  return formatUtcDateTime(value)
 }
 
 function TransportListItem({ transport }: { transport: AssignedTransport }) {

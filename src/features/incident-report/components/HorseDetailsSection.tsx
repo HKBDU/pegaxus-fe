@@ -23,6 +23,7 @@ import {
 } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { TimePicker } from "@/shared/components/ui/time-picker";
+import { toUtcIso } from "@/shared/utils/datetime";
 import {
   Dialog,
   DialogContent,
@@ -129,7 +130,7 @@ export function HorseDetailsSection({
           outcomeNote: outcomeNote || undefined,
           medicationGiven: medicationGiven || undefined,
           veterinarianInstruction: veterinarianInstruction || undefined,
-          veterinarianContactedAt: veterinarianContactedAt || undefined,
+          veterinarianContactedAt: toUtcIso(veterinarianContactedAt),
           horseTransportable,
         },
       },

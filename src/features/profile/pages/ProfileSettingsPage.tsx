@@ -19,6 +19,7 @@ import {
 
 import { ACCOUNT_TYPE_LABELS } from "../constants/profile.constants"
 import { presignedUpload } from "@/shared/utils/presigned"
+import { formatUtcDateTime, todayUtc } from "@/shared/utils/datetime"
 import { useProfile } from "../hooks/useProfile"
 import { ProfileIdentityPanel, ProfileInfoCard, ProfileInlineField, ProfileSaveBar } from "../components"
 import type { EmailVerificationStatus, Profile, ProfilePageStateProps, UpdateProfileRequest } from "../types"
@@ -62,15 +63,7 @@ function formatProfileDate(value: string | null | undefined) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  }).format(date)
+  return formatUtcDateTime(date)
 }
 
 function formatProfileDateOnly(value: string | null | undefined) {
@@ -201,25 +194,22 @@ export function ProfileSettingsPage() {
         setEditingField("dob")
         return
       }
-      const today = new Date()
-      const minAgeDate = new Date()
-      minAgeDate.setFullYear(minAgeDate.getFullYear() - VALIDATION_LIMITS.accountMinAgeYears)
-      minAgeDate.setHours(23, 59, 59, 999)
-      const maxAgeDate = new Date()
-      maxAgeDate.setFullYear(maxAgeDate.getFullYear() - VALIDATION_LIMITS.accountMaxAgeYears)
-      maxAgeDate.setHours(0, 0, 0, 0)
+      const today = todayUtc()
+      const dob = currentDraft.dob.slice(0, 10)
+      const minAgeDate = `${Number(today.slice(0, 4)) - VALIDATION_LIMITS.accountMinAgeYears}${today.slice(4)}`
+      const maxAgeDate = `${Number(today.slice(0, 4)) - VALIDATION_LIMITS.accountMaxAgeYears}${today.slice(4)}`
 
-      if (dobDate > today) {
+      if (dob > today) {
         toast.error("Date of birth cannot be in the future.")
         setEditingField("dob")
         return
       }
-      if (dobDate > minAgeDate) {
+      if (dob > minAgeDate) {
         toast.error(`You must be at least ${VALIDATION_LIMITS.accountMinAgeYears} years old.`)
         setEditingField("dob")
         return
       }
-      if (dobDate < maxAgeDate) {
+      if (dob < maxAgeDate) {
         toast.error(`Date of birth cannot be more than ${VALIDATION_LIMITS.accountMaxAgeYears} years ago.`)
         setEditingField("dob")
         return
@@ -355,9 +345,9 @@ export function ProfileSettingsPage() {
 
             <ProfileInfoGroup title="ACCOUNT ACTIVITY" description="Status and account history">
               {canManageOtherProfile ? inlineField("status", "ACCOUNT STATUS", formatProfileLabel(draft.status), ShieldCheck) : <ProfileInfoCard icon={ShieldCheck} label="ACCOUNT STATUS" value={formatProfileLabel(profile.status)} variant="status" />}
-              <ProfileInfoCard icon={Clock} label="MEMBER SINCE" value={formatProfileDate(profile.memberSince)} variant="date" />
-              <ProfileInfoCard icon={Clock} label="LAST LOGIN" value={formatProfileDate(profile.lastLoginAt)} variant="date" />
-              <ProfileInfoCard icon={Clock} label="UPDATED AT" value={formatProfileDate(profile.updatedAt)} variant="date" />
+              <ProfileInfoCard icon={Clock} label="MEMBER SINCE (UTC)" value={formatProfileDate(profile.memberSince)} variant="date" />
+              <ProfileInfoCard icon={Clock} label="LAST LOGIN (UTC)" value={formatProfileDate(profile.lastLoginAt)} variant="date" />
+              <ProfileInfoCard icon={Clock} label="UPDATED AT (UTC)" value={formatProfileDate(profile.updatedAt)} variant="date" />
             </ProfileInfoGroup>
           </div>
         </div>

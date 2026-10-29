@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/shared/components/ui/table";
 import { cn } from "@/lib/utils";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import type { AuditHorsesData, AuditHorseItem } from "../../types";
 import { BlockCard, CopyValue, StatusPill } from "./block-utils";
 
@@ -215,9 +216,7 @@ export function AuditHorsesBlock({ data }: { data?: AuditHorsesData }) {
                               {log.locationName || "Transit Checkpoint"}
                             </span>
                             <span className="text-slate-300">•</span>
-                            <span className="text-slate-500">
-                              {log.recordedAt ? new Date(log.recordedAt).toLocaleString() : "—"}
-                            </span>
+                            <DateTimeUtc value={log.recordedAt} className="text-slate-500" />
                           </div>
 
                           <div className="flex items-center gap-2">

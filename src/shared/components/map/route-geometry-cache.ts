@@ -61,6 +61,11 @@ function straightLine(route: MapRoute): RouteGeometry | null {
   };
 }
 
+/** Immediate render fallback while a road geometry is being resolved. */
+export function estimateRouteGeometry(route: MapRoute): RouteGeometry | null {
+  return straightLine(route);
+}
+
 function openDatabase(): Promise<IDBDatabase | null> {
   if (typeof indexedDB === "undefined") return Promise.resolve(null);
   return new Promise((resolve) => {
@@ -129,8 +134,12 @@ export async function resolveRouteGeometry(
   const promise = (async () => {
     const persistent = await readPersistent(key);
     if (persistent) {
-      memoryCache.set(key, persistent);
-      return { line: persistent.line, key, estimated: false, error: null };
+      const cachedLine = normalizeRouteGeoJson(persistent.line);
+      if (cachedLine) {
+        const normalized = { ...persistent, line: cachedLine };
+        memoryCache.set(key, normalized);
+        return { line: cachedLine, key, estimated: false, error: null };
+      }
     }
     const points = coordinates(route);
     if (!points)
@@ -143,7 +152,9 @@ export async function resolveRouteGeometry(
       );
       if (preview.estimated) {
         return {
-          line: null,
+          // Geoapify already provides a usable straight-line fallback.
+          // Keep it visible instead of turning a recoverable error into a blank map.
+          line: preview.geometry,
           key,
           estimated: true,
           error: "Geoapify did not return a drivable route.",
