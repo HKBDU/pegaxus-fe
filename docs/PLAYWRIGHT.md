@@ -3,6 +3,7 @@
 Tài liệu này mô tả cách Playwright được tích hợp vào dự án **Pegaxus Front-end** (React + Vite + TypeScript), nguyên lý hoạt động của Playwright, cách chạy bộ test và cách viết thêm test mới.
 
 - **Phạm vi:** chỉ Front-end. Backend đã có unit test riêng nên không kiểm thử ở đây.
+- **Hai bộ test:** **mock** (58 ca, backend giả, chạy nhanh, lặp lại được) và **real-api** (4 ca smoke test gọi backend và database thật + 1 bước đăng nhập). Xem mục 4 và mục 11.
 - **Ba chức năng được kiểm thử:** (1) Đăng nhập, (2) Thêm ngựa, (3) Tạo booking (phía khách hàng; việc Logistics Manager duyệt booking nằm ngoài phạm vi).
 - **Phiên bản:** `@playwright/test` 1.64.x, trình duyệt Chromium.
 
@@ -50,8 +51,8 @@ So với các mức kiểm thử khác trong kim tự tháp kiểm thử:
 Các bước khi gõ `pnpm test:e2e`:
 
 1. **Đọc cấu hình** `playwright.config.ts`: thư mục test, projects, reporter, webServer, timeout…
-2. **Khởi động web server** (`webServer`): build bản production của ứng dụng rồi phục vụ bằng `vite preview` ở cổng `5199`. Nếu cổng đã có server (và không ở CI) thì dùng lại.
-3. **Lập kế hoạch:** gom các file `*.spec.ts`, sắp thứ tự theo **dependency giữa các project** (`setup` chạy trước `chromium`).
+2. **Khởi động web server** (`webServer`): build bản production của ứng dụng rồi phục vụ bằng `vite preview` ở cổng `5173` (đổi bằng `E2E_PORT`). Nếu cổng đã có server (và không ở CI) thì **dùng lại server đó** - xem lưu ý ở mục 6.3.
+3. **Lập kế hoạch:** gom các file `*.spec.ts`, sắp thứ tự theo **dependency giữa các project** (`mock-setup` chạy trước `mock`, `setup` chạy trước `real-api`).
 4. **Chia cho worker:** mỗi worker là một tiến trình Node riêng; mỗi worker mở một trình duyệt và, cho từng test, tạo một `BrowserContext` + `Page` mới (cô lập hoàn toàn).
 5. **Chạy test:** mỗi lệnh `page.click(...)`, `locator.fill(...)` được gửi tới trình duyệt qua giao thức điều khiển (Chromium dùng **Chrome DevTools Protocol – CDP**). Playwright kiểm tra điều kiện *actionability* rồi mới thực hiện.
 6. **Kiểm tra (assertion):** `expect(...)` truy vấn lại trạng thái trang, lặp cho đến khi thỏa hoặc quá `expect.timeout`.
@@ -64,8 +65,8 @@ Các bước khi gõ `pnpm test:e2e`:
 |---|---|---|
 | **Locator** | Cách "tìm" phần tử, đánh giá lười (lúc dùng mới tìm) | `page.getByRole("button", { name: "Sign in" })` |
 | **Fixture** | Tài nguyên được tiêm vào test, tự dựng và tự dọn | `page`, và fixture riêng `api` |
-| **Project** | Một cấu hình chạy (trình duyệt, thiết bị, storageState) | `setup`, `chromium` |
-| **Dependencies** | Project phải chạy trước | `chromium` phụ thuộc `setup` |
+| **Project** | Một cấu hình chạy (trình duyệt, thiết bị, storageState) | `mock-setup`, `mock`, `setup`, `real-api` |
+| **Dependencies** | Project phải chạy trước | `mock` phụ thuộc `mock-setup`; `real-api` phụ thuộc `setup` |
 | **storageState** | Lưu cookie + localStorage để tái dùng phiên đăng nhập | `e2e/.auth/customer.json` |
 | **Page Object Model** | Gói thao tác của một trang vào một class | `LoginPage`, `HorseFormPage`, `BookingFormPage` |
 | **Network routing** | Chặn request và trả dữ liệu giả | `ApiMock` trong `e2e/support/api-mock.ts` |
@@ -84,9 +85,15 @@ e2e/
 ├─ tests/
 │  ├─ auth.setup.ts             Đăng nhập một lần, lưu phiên vào e2e/.auth/
 │  ├─ login.spec.ts             Chức năng 1 – Đăng nhập        (LOGIN-01 … 16)
-│  ├─ add-horse.spec.ts         Chức năng 2 – Thêm ngựa         (HORSE-01 … 16)
-│  └─ create-booking.spec.ts    Chức năng 3 – Tạo booking       (BOOKING-01 … 20)
-├─ pages/                       Page Object Model
+│  ├─ add-horse.spec.ts         Chức năng 2 – Thêm ngựa         (HORSE-01 … 19)
+│  └─ create-booking.spec.ts    Chức năng 3 – Tạo booking       (BOOKING-01 … 22)
+├─ real-api/                    Bộ smoke test gọi API THẬT (không mock)
+│  ├─ auth.setup.ts             Đăng nhập thật một lần, lưu phiên vào playwright/.auth/user.json
+│  ├─ login.real.spec.ts        REAL-LOGIN-01 … 03
+│  ├─ add-horse.real.spec.ts    REAL-HORSE-01 … 02
+│  ├─ create-booking.real.spec.ts  REAL-BOOKING-01
+│  └─ support.ts                Tài khoản từ .env.e2e, dữ liệu duy nhất, hàm dọn dữ liệu
+├─ pages/                       Page Object Model (dùng chung cho cả hai bộ)
 │  ├─ login.page.ts
 │  ├─ horse-form.page.ts
 │  └─ booking-form.page.ts
@@ -96,8 +103,10 @@ e2e/
 │  ├─ fakes.ts                  Backend giả có trạng thái (danh sách ngựa có tìm kiếm/phân trang)
 │  ├─ test-data.ts              Dữ liệu giả (phiên, ngựa, booking, địa điểm)
 │  └─ ui.ts                     Hàm tiện ích (tìm toast)
-├─ .auth/                       (git bỏ qua) phiên đăng nhập đã lưu
+├─ .auth/                       (git bỏ qua) phiên đăng nhập của bộ mock
 └─ .output/                     (git bỏ qua) bản build, báo cáo, trace, video
+playwright/.auth/user.json      (git bỏ qua) phiên đăng nhập THẬT của bộ real-api
+.env.e2e.example                Mẫu biến môi trường của bộ real-api (copy thành .env.e2e, git bỏ qua)
 ```
 
 ---
@@ -166,7 +175,7 @@ Chỉ dùng dữ liệu **tổng hợp** (`customer@e2e.test`, mật khẩu gi�
 | LOGIN-15 | Chưa đăng nhập vào trang riêng tư → chuyển về `/login` |
 | LOGIN-16 | Đăng nhập xong quay lại đúng trang đã yêu cầu |
 
-### Chức năng 2 – Thêm ngựa (`add-horse.spec.ts`, 16 ca)
+### Chức năng 2 – Thêm ngựa (`add-horse.spec.ts`, 19 ca)
 
 | Mã | Nội dung |
 |---|---|
@@ -180,9 +189,12 @@ Chỉ dùng dữ liệu **tổng hợp** (`customer@e2e.test`, mật khẩu gi�
 | HORSE-10 | Tạo thành công: payload chính xác (đã trim, số là number, ngày ISO), toast, chuyển sang "My horses" và thấy ngựa mới |
 | HORSE-11 | Trạng thái "Saving…", không bấm hai lần |
 | HORSE-12 | Cancel không gửi gì |
+| HORSE-17 | Tải ảnh đại diện: chạy đủ 3 bước tải lên có chữ ký (xin chữ ký → gửi ảnh lên kho ảnh → xác nhận), rồi `POST /horses` chỉ mang `avatar.publicId` |
+| HORSE-18 | File không phải JPG/PNG bị từ chối, không gọi API nào |
+| HORSE-19 | Xem ảnh đại diện toàn màn hình và phóng to |
 | HORSE-13…16 | Lỗi 409 (trùng), 400 (validation server), 500, mất mạng; dữ liệu đã nhập được giữ lại |
 
-### Chức năng 3 – Tạo booking (`create-booking.spec.ts`, 20 ca)
+### Chức năng 3 – Tạo booking (`create-booking.spec.ts`, 22 ca)
 
 | Mã | Nội dung |
 |---|---|
@@ -196,6 +208,8 @@ Chỉ dùng dữ liệu **tổng hợp** (`customer@e2e.test`, mật khẩu gi�
 | BOOKING-11…15 | Bước 2: danh sách ngựa, chọn / bỏ / xóa hết, tìm kiếm gọi server, quay lại bước 1 giữ dữ liệu, ghi chú ≤ 500 ký tự |
 | BOOKING-16 | Tạo thành công: payload `POST /bookings` chính xác, toast "Booking BK-… created", chuyển tới trang chi tiết, trạng thái **Pending** |
 | BOOKING-17…19 | Đang lưu; lỗi 400 (giữ nguyên dữ liệu); mất mạng |
+| BOOKING-21 | Ô "chọn tất cả ngựa" ở đầu bảng chọn / bỏ chọn mọi ngựa của trang |
+| BOOKING-22 | Chuyến quốc tế Anh → Pháp: ngày sớm nhất là sau 2 tháng (28/12 bị khóa, 29/12 chọn được), payload mang đủ hai quốc gia |
 | BOOKING-20 | Thêm ngựa mới ngay trong hộp thoại và tự được chọn |
 
 > Booking vừa tạo ở trạng thái **PENDING**. Bước duyệt (Approve/Reject) là việc của Logistics Manager nên **không** nằm trong phạm vi.
@@ -218,7 +232,9 @@ pnpm exec playwright install chromium
 
 | Mục đích | Lệnh |
 |---|---|
-| Chạy toàn bộ (**headless**: trình duyệt chạy ngầm, không có cửa sổ, terminal chỉ in kết quả) | `pnpm test:e2e` |
+| Chạy bộ **mock** (**headless**: trình duyệt chạy ngầm, không có cửa sổ, terminal chỉ in kết quả) | `pnpm test:e2e` hoặc `pnpm test:e2e:mock` |
+| Chạy bộ **API thật** (cần `.env.e2e`, xem mục 11) | `pnpm test:e2e:real` |
+| Bộ API thật trong **UI mode** để dễ gỡ lỗi | `pnpm test:e2e:real:ui` |
 | **Demo** – mở cửa sổ trình duyệt và làm chậm từng thao tác (700 ms) để người xem theo dõi được; dùng khi thuyết trình | `pnpm test:e2e:demo` |
 | **UI mode** – giao diện tương tác, xem từng bước, chạy lại từng test | `pnpm test:e2e:ui` |
 | **Headed** – thấy cửa sổ trình duyệt chạy thật | `pnpm test:e2e:headed` |
@@ -235,7 +251,7 @@ Chạy một phần:
 pnpm test:e2e login.spec.ts                       # một file
 pnpm test:e2e -g "HORSE-10"                       # theo tên / mã test
 pnpm test:e2e create-booking.spec.ts:195          # một test theo số dòng
-pnpm test:e2e --project=chromium                  # một project
+pnpm test:e2e --project=mock                      # một project (mock, mock-setup, setup, real-api)
 pnpm test:e2e --repeat-each=5                     # lặp để phát hiện test không ổn định
 pnpm test:e2e --last-failed                       # chỉ chạy lại test hỏng lần trước
 pnpm test:e2e --trace on                          # ghi trace cho mọi test
@@ -246,7 +262,9 @@ pnpm test:e2e --trace on                          # ghi trace cho mọi test
 | Biến | Mặc định | Tác dụng |
 |---|---|---|
 | `E2E_SKIP_BUILD=1` | (tắt) | Bỏ qua bước build, dùng lại `e2e/.output/dist` khi chỉ sửa test (nhanh hơn rất nhiều). Lần chạy đầu hoặc sau khi sửa `src/` thì **không** đặt biến này |
-| `E2E_PORT` | `5199` | Cổng phục vụ bản build |
+| `E2E_PORT` | `5173` | Cổng của bộ mock. **Lưu ý:** nếu `pnpm dev` đang chạy ở cổng này thì bộ mock dùng lại chính dev server đó (chậm hơn bản build). Muốn tách riêng: `E2E_PORT=5199` |
+| `PLAYWRIGHT_BASE_URL` | `http://localhost:5173` | Front-end mà bộ real-api mở (đặt trong `.env.e2e`) |
+| `E2E_USER_EMAIL`, `E2E_USER_PASSWORD` | – | Tài khoản CUSTOMER thật của bộ real-api (đặt trong `.env.e2e`) |
 | `E2E_WORKERS` | `1` (local), `2` (CI) | Số trình duyệt chạy song song |
 | `CI` | – | Bật chế độ CI: `retries: 2`, `forbidOnly`, reporter `github`, luôn dựng server mới |
 
@@ -350,14 +368,80 @@ Khi `CI` được đặt, cấu hình tự bật `retries: 2`, `forbidOnly` (c�
 | Lần chạy đầu rất lâu | Đang build bản production (~1 phút). Lần sau dùng `E2E_SKIP_BUILD=1` nếu không đổi `src/` |
 | Test hiển thị nội dung cũ sau khi sửa `src/` | Bản build cũ còn được dùng; bỏ `E2E_SKIP_BUILD`, hoặc xóa `e2e/.output/dist` |
 | `Executable doesn't exist` | Chưa cài trình duyệt: `pnpm exec playwright install chromium` |
-| `Port 5199 is already in use` | Đổi `E2E_PORT`, hoặc tắt tiến trình đang giữ cổng |
+| `Port 5173 is already in use` | Đổi `E2E_PORT`, hoặc tắt tiến trình đang giữ cổng |
 | Nhiều worker bị treo ở `page.goto` | Máy quá tải; giữ `E2E_WORKERS=1` |
 | `API calls without a mock` | FE gọi một API chưa khai báo → thêm `api.ok(...)` cho đúng endpoint |
 | Lỗi thiếu `VITE_API_URL` | Cấu hình đã có giá trị dự phòng; nếu tự chạy `vite build`, hãy đặt biến này |
 
 ---
 
-## 11. Tham khảo
+## 11. Bộ smoke test gọi API thật (`real-api`)
+
+Bộ **mock** chứng minh *Front-end xử lý đúng mọi phản hồi*. Bộ **real-api** trả lời câu hỏi còn lại: *Front-end và Backend thật có ghép với nhau chạy được không?* (đường dẫn API, định dạng dữ liệu, xác thực, luật ở server, kho ảnh...). Theo nguyên tắc kim tự tháp kiểm thử, bộ này chỉ chiếm phần nhỏ (10–20%): vài đường đi **quan trọng nhất**, không kiểm từng luật.
+
+### 11.1. Khác bộ mock ở đâu
+
+| | `mock` | `real-api` |
+|---|---|---|
+| Backend | Giả (`page.route`) | **Thật** + database thật |
+| Front-end | Bản build production | Dev server (`pnpm dev`, dùng `VITE_API_URL` của `.env`) |
+| Dữ liệu | Cố định, đồng hồ cố định | Tên duy nhất "E2E Smoke …", **ngày tính từ hôm nay thật** |
+| Chạy song song | Có (`fullyParallel`) | **Không** (tuần tự, một database dùng chung) |
+| Timeout | 60 s | 180 s (mạng thật, backend có thể khởi động nguội) |
+| Phiên đăng nhập | `e2e/.auth/customer.json` (giả) | `playwright/.auth/user.json` (thật) |
+| Nhiệm vụ | Mọi luật, mọi lỗi | Đường đi chính hoạt động |
+
+### 11.2. Cài đặt
+
+1. Chuẩn bị **một tài khoản CUSTOMER dành riêng cho test** trên backend đích (không dùng tài khoản cá nhân/production).
+2. Copy `.env.e2e.example` thành `.env.e2e` (file này bị git bỏ qua) và điền:
+
+```
+PLAYWRIGHT_BASE_URL=http://localhost:5173
+E2E_USER_EMAIL=<email tài khoản test>
+E2E_USER_PASSWORD=<mật khẩu>
+```
+
+3. Chạy: `pnpm test:e2e:real` (hoặc `pnpm test:e2e:real:ui` để debug). Nếu `pnpm dev` đang chạy ở cổng 5173 thì được dùng lại và **không bị tắt**; nếu chưa chạy, Playwright tự bật rồi tắt.
+
+Thiếu `.env.e2e` thì bước `setup` báo lỗi ngay, **không gọi mạng** và các test còn lại bị bỏ qua.
+
+### 11.3. Các ca kiểm thử
+
+| Mã | Nội dung |
+|---|---|
+| (setup) | Đăng nhập thật bằng form, kiểm tra tài khoản là CUSTOMER, lưu phiên |
+| REAL-LOGIN-01 | Tài khoản không tồn tại bị từ chối: có thông báo lỗi, vẫn ở trang login, không lưu phiên (dùng email ngẫu nhiên, **không** thử sai mật khẩu của tài khoản thật để tránh bị khóa) |
+| REAL-LOGIN-02 | Đăng nhập đúng: rời trang login, có toast "Signed in successfully.", phiên có token và `accountType = CUSTOMER` |
+| REAL-LOGIN-03 | Chưa đăng nhập vào trang riêng tư thì bị chuyển về `/login` |
+| REAL-HORSE-01 | Thêm ngựa mới (tên/hộ chiếu/microchip duy nhất): toast thành công, chuyển sang "My horses" |
+| REAL-HORSE-02 | Tải lại trang: ngựa vẫn còn với dữ liệu đã nhập (đã thực sự lưu trong database) |
+| REAL-BOOKING-01 | Tìm địa chỉ thật (Geoapify) London → Manchester, ngày đi +30 ngày, thêm ngựa ngay trong hộp thoại, tạo booking: toast "Booking … created", trang chi tiết hiện ngựa và trạng thái **Pending** |
+
+### 11.4. Dọn dữ liệu
+
+Test ghi dữ liệu thật nên **tự dọn** trong `afterAll`, bằng đúng thao tác người dùng: hủy booking (lý do "Automated smoke test clean-up."), rồi xóa ngựa. Dọn dẹp là *nỗ lực tối đa*: nếu thất bại, test **không bị fail** mà in cảnh báo `[real-api] clean-up failed, delete by hand: …` kèm tên cần xóa tay. Mọi dữ liệu test đều bắt đầu bằng **"E2E Smoke"**, dễ tìm. Thứ tự dọn: booking trước, ngựa sau (ngựa đang thuộc booking thì chưa xóa được).
+
+### 11.5. Lưu ý an toàn
+
+- Bộ này **ghi vào database thật** của backend mà `VITE_API_URL` trỏ tới. Chỉ chạy trên môi trường dev/staging và với tài khoản test.
+- Không bao giờ commit `.env.e2e` hoặc `playwright/.auth/` (đã nằm trong `.gitignore`).
+- Không chạy trong CI trừ khi đã cấu hình secret riêng và backend test riêng. Các lệnh `test:e2e*` mặc định chỉ chạy bộ **mock**, nên `pnpm test:e2e` không bao giờ chạm backend thật. Lệnh `playwright test` trần (không `--project`) chạy cả hai.
+- Kết quả phụ thuộc mạng, backend (có thể "ngủ" lúc đầu) và dịch vụ bản đồ thật, nên bộ này có thể thất bại vì lý do ngoài Front-end. Bộ mock là nơi quyết định Front-end đúng hay sai.
+
+### 11.6. Sự cố thường gặp của bộ real-api
+
+| Hiện tượng | Cách xử lý |
+|---|---|
+| `Real-API tests need a CUSTOMER account...` | Chưa có `.env.e2e` hoặc thiếu `E2E_USER_EMAIL/PASSWORD` |
+| `Real sign-in failed: "..."` | Sai mật khẩu, tài khoản chưa xác minh/bị khóa, hoặc backend đang khởi động: thử lại sau |
+| `E2E_USER_EMAIL must be a CUSTOMER account` | Tài khoản không phải khách hàng (chỉ khách hàng thêm ngựa và tạo booking được) |
+| Timeout ở ô tìm địa điểm | Khóa `VITE_GEOAPIFY_API_KEY` trong `.env` sai/hết hạn mức |
+| Còn dữ liệu "E2E Smoke ..." | Bước dọn dẹp thất bại: hủy booking và xóa ngựa đó bằng tay |
+
+---
+
+## 12. Tham khảo
 
 - Tài liệu chính thức: <https://playwright.dev/docs/intro>
 - Best practices: <https://playwright.dev/docs/best-practices>

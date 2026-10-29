@@ -3,7 +3,7 @@ import { AUTH_FILE, expect, test as setup } from "../support/fixtures"
 import { buildSession, CUSTOMER_CREDENTIALS } from "../support/test-data"
 
 /**
- * Setup project (runs once, before the `chromium` project, see playwright.config.ts).
+ * Setup project (runs once, before the `mock` project, see playwright.config.ts).
  *
  * It signs in through the REAL login form of the application (only the backend answer is mocked) and stores the
  * resulting browser state - the persisted zustand session in localStorage - in `e2e/.auth/customer.json`.

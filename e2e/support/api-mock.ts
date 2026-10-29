@@ -64,6 +64,8 @@ export class ApiMock {
   readonly unhandled: string[] = []
   /** Third-party requests that were blocked (informational). */
   readonly blockedExternal: string[] = []
+  /** Files the page sent to the (fake) image host, as "<content-type> <size> bytes", for specs that upload a file. */
+  readonly uploadedFiles: string[] = []
 
   private places: TestPlace[] = Object.values(PLACES)
   private fallbackReply?: Reply
@@ -147,6 +149,12 @@ export class ApiMock {
       return route.abort("blockedbyclient")
     })
     await this.page.route(/api\.geoapify\.com|maps\.geoapify\.com/, (route) => this.handleGeoapify(route))
+    // The image host the presigned upload posts to (the application only accepts https://api.cloudinary.com).
+    await this.page.route("https://api.cloudinary.com/**", (route) => {
+      const request = route.request()
+      this.uploadedFiles.push(`${request.headers()["content-type"]?.split(";")[0] ?? "unknown"} ${request.postDataBuffer()?.length ?? 0} bytes`)
+      return route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify({ public_id: "e2e" }) })
+    })
     await this.page.route(/\/hubs\//, (route) => route.abort("blockedbyclient"))
     await this.page.route(/\/api\/v1\//, (route) => this.handleApi(route))
   }

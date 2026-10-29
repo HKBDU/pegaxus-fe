@@ -149,6 +149,18 @@ test.describe("Create booking", () => {
       await expect(booking.page.getByRole("heading", { name: "Selected racehorses (0)" })).toBeVisible()
     })
 
+    test("BOOKING-21 the header checkbox selects every horse of the page and a second click clears them", async ({ page }) => {
+      const selectAll = page.getByRole("checkbox", { name: "Select all horses on this page" })
+
+      await selectAll.check()
+      await expect(page.getByRole("heading", { name: "Selected racehorses (2)" })).toBeVisible()
+      await expect(booking.horseCheckbox("Golden Thunder")).toBeChecked()
+      await expect(booking.horseCheckbox("Silver Mist")).toBeChecked()
+
+      await selectAll.uncheck()
+      await expect(page.getByRole("heading", { name: "Selected racehorses (0)" })).toBeVisible()
+    })
+
     test("BOOKING-12 horses can be selected, removed and cleared", async ({ page }) => {
       await booking.horseCheckbox("Golden Thunder").check()
       await booking.horseCheckbox("Silver Mist").check()
@@ -280,6 +292,51 @@ test.describe("Create booking", () => {
       await booking.submit.click()
 
       await expect(toast(page, "Unable to create this booking")).toBeVisible()
+    })
+  })
+
+  test.describe("international trip (United Kingdom to France)", () => {
+    test("BOOKING-22 the earliest departure is two months ahead and the booking carries both countries", async ({ api, page }) => {
+      const created = buildBooking({
+        destinationAddress: PLACES.parisStable.formatted,
+        destinationCountry: "France",
+        destinationLatitude: PLACES.parisStable.lat,
+        destinationLongitude: PLACES.parisStable.lon,
+        requestedDepartureDate: "2026-12-29",
+        requestedArrivalDate: "2027-01-28",
+        horses: [{ ...pick(GOLDEN), specialHandlingNotes: null }, { ...pick(SILVER), specialHandlingNotes: null }],
+        totalHorses: 2,
+      })
+      api.ok("POST", BOOKINGS_ENDPOINT, { bookingId: created.bookingId, bookingCode: created.bookingCode }, 201)
+      api.ok("GET", `${BOOKINGS_ENDPOINT}/${created.bookingId}`, created)
+      api.tolerateUndeclared({ body: { isSuccess: true, code: 200, message: "Success", value: { items: [], pageIndex: 1, pageSize: 10, totalItems: 0, totalPages: 1 } } })
+
+      await booking.pickPlace("London", /London Riding Stables/)
+      await booking.pickPlace("Paris", /Haras de Paris/)
+      await expect(booking.pointCard("Destination")).toContainText("France")
+
+      // 29 Oct 2026 + 2 months = 29 Dec 2026: the day before is closed, the day itself is the first open one.
+      await expect(await booking.calendarDay(booking.departureDate, "2026-12-28")).toBeDisabled()
+      await page.keyboard.press("Escape") // close the calendar that was only inspected
+      await expect(page.locator("[data-slot='calendar']")).toBeHidden()
+      await booking.chooseDeparture("2026-12-29")
+      await booking.chooseArrival("2027-01-28")
+      await booking.goToHorses()
+      await page.getByRole("checkbox", { name: "Select all horses on this page" }).check()
+      await booking.submit.click()
+
+      await expect.poll(() => api.calls("POST", BOOKINGS_ENDPOINT).length).toBe(1)
+      expect(api.lastBody("POST", BOOKINGS_ENDPOINT)).toMatchObject({
+        originCountry: "United Kingdom",
+        destinationCountry: "France",
+        destinationLatitude: 48.8566,
+        destinationLongitude: 2.3522,
+        requestedDepartureDate: "2026-12-29",
+        requestedArrivalDate: "2027-01-28",
+        horses: [{ horseId: GOLDEN.horseId }, { horseId: SILVER.horseId }],
+      })
+      await expect(toast(page, "Booking BK-20261029-0001 created")).toBeVisible()
+      await expect(page).toHaveURL(new RegExp(`/bookings/${created.bookingId}$`))
     })
   })
 

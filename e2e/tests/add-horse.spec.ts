@@ -13,6 +13,12 @@ import { toast } from "../support/ui"
 
 const HORSES_ENDPOINT = "/horses"
 
+/** A valid 1x1 PNG: the smallest real image the avatar uploader accepts (JPG or PNG). */
+const PNG_1PX = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+  "base64",
+)
+
 /** What the customer types into the form (the id and the avatar are assigned by the backend). */
 const NEW_HORSE = {
   horseName: "Golden Thunder",
@@ -197,6 +203,60 @@ test.describe("Add horse", () => {
 
       await expect(page).toHaveURL(/\/my-horses$/)
       expect(api.calls("POST", HORSES_ENDPOINT)).toHaveLength(0)
+    })
+  })
+
+  test.describe("avatar", () => {
+    test.beforeEach(({ api }) => {
+      // Presigned upload, step 1 (backend): ask for a signed upload slot. Step 2 goes to the image host (faked by the
+      // ApiMock). Step 3 (backend): confirm the upload by its publicId.
+      api.ok("POST", "/uploads/signature", {
+        publicId: "horses/e2e-avatar",
+        upload: { url: "https://api.cloudinary.com/v1_1/e2e/image/upload", params: { signature: "e2e", timestamp: "1" } },
+      })
+      api.ok("POST", "/uploads/confirm", null)
+    })
+
+    async function uploadAvatar(page: import("@playwright/test").Page) {
+      await page.locator("input[type='file']").setInputFiles({ name: "horse.png", mimeType: "image/png", buffer: PNG_1PX })
+    }
+
+    test("HORSE-17 an uploaded avatar goes through the signed upload and is sent with the horse", async ({ api, page }) => {
+      api.ok("POST", HORSES_ENDPOINT, buildHorse(), 201)
+
+      await uploadAvatar(page)
+
+      // The three steps of the upload happened, in this order, with the right data.
+      await expect(page.getByText("Preview", { exact: true })).toBeVisible()
+      expect(api.lastBody("POST", "/uploads/signature")).toEqual({ entity: "avatar", contentType: "image/png", sizeBytes: PNG_1PX.length })
+      expect(api.uploadedFiles).toHaveLength(1)
+      await expect.poll(() => api.calls("POST", "/uploads/confirm").length).toBe(1)
+      expect(api.lastBody("POST", "/uploads/confirm")).toEqual({ publicId: "horses/e2e-avatar" })
+
+      // Saving the horse sends only the publicId of the image, not the image itself.
+      await form.fillAll(NEW_HORSE)
+      await form.submit.click()
+      await expect.poll(() => api.calls("POST", HORSES_ENDPOINT).length).toBe(1)
+      expect(api.lastBody("POST", HORSES_ENDPOINT)).toEqual({ ...NEW_HORSE, avatar: { publicId: "horses/e2e-avatar" } })
+    })
+
+    test("HORSE-18 a file that is not JPG or PNG is refused and nothing is uploaded", async ({ api, page }) => {
+      await page.locator("input[type='file']").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("not an image") })
+
+      await expect(page.getByText("Preview", { exact: true })).toBeHidden()
+      expect(api.calls("POST", "/uploads/signature")).toHaveLength(0)
+      expect(api.uploadedFiles).toHaveLength(0)
+    })
+
+    test("HORSE-19 the avatar preview can be opened full screen and zoomed", async ({ page }) => {
+      await uploadAvatar(page)
+
+      await page.getByRole("button", { name: "Enter Fullscreen" }).click()
+      await expect(page.getByRole("button", { name: "Exit Fullscreen" })).toBeVisible()
+      await page.getByRole("button", { name: "Zoom in" }).click()
+      await expect(page.getByRole("button", { name: "Zoom out" })).toBeEnabled()
+      await page.getByRole("button", { name: "Exit Fullscreen" }).click()
+      await expect(page.getByRole("button", { name: "Enter Fullscreen" })).toBeVisible()
     })
   })
 

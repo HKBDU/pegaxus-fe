@@ -35,3 +35,8 @@ dist-ssr
 # Playwright e2e: stored session, reports, traces, screenshots and videos (generated)
 e2e/.auth/
 e2e/.output/
+
+# Playwright real-API suite: stored session of the real test account and its credentials (never commit)
+playwright/.auth/
+.env.e2e
+!.env.e2e.example
