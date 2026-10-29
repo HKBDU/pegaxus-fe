@@ -157,11 +157,13 @@ export const updateRoutePlan = (
 export const changeRoutePlanVehicles = (
   routePlanId: string,
   payload: ChangeRoutePlanVehiclesRequest,
+  signal?: AbortSignal,
 ) =>
   request<ChangeRoutePlanVehiclesResult>(
     apiClient.patch(
       `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/vehicles`,
       payload,
+      { signal },
     ),
   );
 export const cancelRoutePlan = (

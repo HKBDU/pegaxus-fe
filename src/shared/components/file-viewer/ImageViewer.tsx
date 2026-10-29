@@ -53,6 +53,15 @@ const ROOT_CLASS =
   'image-viewer-root relative max-h-full max-w-full min-w-0 overflow-hidden bg-neutral-900 ' +
   '[--yarl__color_backdrop:#171717] [--yarl__color_button:#fff] [--yarl__color_button_active:#f39200]'
 
+function getImageFileHref(value: string): string | undefined {
+  try {
+    const url = new URL(value, window.location.href)
+    return ['http:', 'https:', 'blob:'].includes(url.protocol) ? url.href : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /**
  * Inline image viewer. It stays inside the caller-provided `width` and `height`.
  * - Toolbar stays in the top-right corner.
@@ -138,8 +147,30 @@ function ImageViewerContent({
         aria-label={ariaLabel}
         style={{ width, height, ...style }}
       >
-        <div className="flex size-full items-center justify-center p-4 text-center text-sm text-white/70">
-          {!slides.length ? 'No Image Found' : `Image file is too large to preview. Maximum size is ${Math.round(maxFileSizeBytes / 1024 / 1024)} MB.`}
+        <div className="flex size-full flex-col items-center justify-center gap-3 overflow-y-auto p-4 text-center text-sm text-white/70">
+          {!slides.length ? 'No Image Found' : (
+            <>
+              <p className="m-0">Inline preview is limited to {maxFileSizeBytes / (1024 * 1024)} MiB. Larger uploaded images can be opened separately.</p>
+              <ul className="m-0 grid w-full list-none gap-2 p-0">
+                {slides.map((slide, slideIndex) => {
+                  const href = getImageFileHref(slide.src)
+                  const download = slide.download
+                  const downloadHref = getImageFileHref(typeof download === 'string' ? download : typeof download === 'object' ? download.url : slide.src)
+                  return (
+                    <li key={`${slide.src}:${slideIndex}`} className="flex min-w-0 flex-wrap items-center justify-center gap-3">
+                      <span className="max-w-full truncate">{slide.title ?? slide.alt ?? `Image ${slideIndex + 1}`}</span>
+                      {href ? (
+                        <a href={href} target="_blank" rel="noopener noreferrer" className="text-white underline underline-offset-4">Open image</a>
+                      ) : <span>File link unavailable.</span>}
+                      {download !== false && downloadHref && (
+                        <a href={downloadHref} download={typeof download === 'object' ? download.filename ?? '' : ''} target="_blank" rel="noopener noreferrer" className="text-white underline underline-offset-4">Download</a>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </>
+          )}
         </div>
       </div>
     )

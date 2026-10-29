@@ -124,6 +124,17 @@ export function getEmergencyError(error: unknown) {
     OUTSOURCED_SEGMENT: "Vehicles cannot be assigned to an outsourced segment.",
     VEHICLE_MODE_MISMATCH: "The vehicle mode does not match the segment.",
     VEHICLE_UNAVAILABLE: "A vehicle is unavailable for this segment.",
+    VEHICLE_DOCUMENT_EXPIRED: "A vehicle registration or insurance expires before this segment ends.",
+    SEGMENT_TIMES_MISSING: "The segment needs planned departure and arrival times before vehicles can be changed.",
+    AMBIGUOUS_REPLACEMENT: "The same vehicle has different replacements. Explicitly select every eligible segment that still uses it.",
+    INCIDENT_REQUIRED: "Open vehicle replacement from a verified incident for this transport.",
+    INCIDENT_NOT_FOUND: "The incident is unavailable or does not belong to this transport.",
+    INVALID_INCIDENT_STATUS: "Only a reported or pending incident allows vehicle replacement.",
+    VEHICLE_NOT_IN_INCIDENT: "Only vehicles reported in this incident can be replaced.",
+    REPLACEMENT_COST_NOT_APPROVED: "Waiting for replacement vehicle cost approval.",
+    SEGMENT_ALREADY_COMPLETED: "Vehicles cannot be changed on an arrived segment.",
+    SEGMENT_NOT_IN_ITINERARY: "This segment is superseded or outside the eligible itinerary.",
+    INVALID_ROUTE_PLAN_TYPE: "Before departure, vehicles can only be changed on a PRIMARY route plan.",
     VEHICLE_CAPACITY_EXCEEDED:
       "Vehicle capacity is insufficient for this segment.",
     PROVIDER_MODE_MISMATCH:

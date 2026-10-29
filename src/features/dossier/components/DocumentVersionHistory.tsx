@@ -1,3 +1,4 @@
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { FileText, History } from "lucide-react";
 import { useState } from "react";
 import { formatBookingDate } from "@/features/booking/utils";
@@ -71,7 +72,7 @@ export function DocumentVersionHistory({
               Version v{version.versionNo}
             </strong>
             <span className="text-slate-500">
-              {formatBookingDate(version.uploadedAt)}
+              <DateTimeUtc value={version.uploadedAt} compact />
             </span>
           </div>
           <p className="mt-1 text-slate-500">
@@ -124,7 +125,7 @@ export function DocumentVersionHistory({
                   </p>
                   <p>
                     <strong>Reviewed At:</strong>{" "}
-                    {formatBookingDate(review.reviewedAt)}
+                    <DateTimeUtc value={review.reviewedAt} compact />
                   </p>
                   {review.reviewComment ? (
                     <p>

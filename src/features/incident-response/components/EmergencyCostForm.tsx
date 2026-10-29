@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { EMERGENCY_COST_CATEGORY_LABELS } from "@/shared/constants/incident";
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { useCreateEmergencyCost } from "../hooks/useCreateEmergencyCost";
 import { useEmergencyCostScope } from "../hooks/useEmergencyCostScope";
 import {
@@ -46,7 +47,7 @@ type ParsedValues = z.output<typeof emergencyCostFormSchema>;
 const validPhoto = (file: File) =>
   ["image/jpeg", "image/png"].includes(file.type) &&
   file.size > 0 &&
-  file.size <= 5 * 1024 * 1024;
+  file.size <= UPLOAD_MAX_BYTES;
 
 function completedPhotos(snapshot: FileUploaderSnapshot | null) {
   if (!snapshot) return [];
@@ -299,7 +300,7 @@ export function EmergencyCostForm({
           <h2 className="m-0 text-base font-semibold">
             Supporting evidence{" "}
             <span className="text-sm font-normal text-muted-foreground">
-              Optional · up to 5 JPG/PNG · 5 MB each
+              Optional · up to 5 JPG/PNG · {UPLOAD_MAX_MB} MiB each
             </span>
           </h2>
           {mock ? (
@@ -318,7 +319,7 @@ export function EmergencyCostForm({
                 ref={uploader}
                 entity="attachment"
                 accept="image/jpeg,image/png"
-                maxSize={5 * 1024 * 1024}
+                maxSize={UPLOAD_MAX_BYTES}
                 maxFiles={5}
                 disabled={busy || !allowed || uncertainResult}
                 onStateChange={setSnapshot}

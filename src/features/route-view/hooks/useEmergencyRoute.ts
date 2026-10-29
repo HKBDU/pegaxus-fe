@@ -5,6 +5,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { useLayoutEffect, useRef } from "react";
+import { z } from "zod";
 import { useAuthStore } from "@/features/auth/store";
 import { approvedBookingKeys } from "@/features/transport-plan/hooks/useApprovedBookings";
 import { transportPlanKeys } from "@/features/transport-plan/hooks/useTransportPlans";
@@ -14,7 +15,7 @@ import { requirementKeys } from "@/features/compliance-catalog/hooks/useDossierR
 import type { ApprovedBookingDetail } from "@/features/transport-plan/types";
 import { vehicleKeys } from "@/features/fleet/hooks/useVehicles";
 import { personnelKeys } from "@/features/personnel/hooks";
-import { executeEmergencyAction, routeViewService } from "../services";
+import { executeEmergencyAction, getEmergencyError, routeViewService } from "../services";
 import { getEmergencyActions } from "../emergency-policy";
 import { routeViewKeys, useRoutePlanAlternatives } from "./useRoutePlanDetail";
 import { returnActivationResultSchema } from "../schemas";
@@ -26,6 +27,7 @@ import type {
 } from "../types";
 import type { RouteWorkspaceContext } from "../workspace-actions";
 import { refreshTransportProgress } from "@/features/ongoing-transport/hooks/useTransportProgressRefresh";
+import { getVehiclePropagationMessage } from "../vehicle-change";
 
 export type EmergencyContext = {
   workspace: RouteWorkspaceContext;
@@ -77,13 +79,14 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
     {},
     ready,
   );
-  const error = transport.isError
-    ? transport.error
-    : booking.isError
-      ? booking.error
-      : routes.isError
-        ? routes.error
-        : null;
+  const failures = [transport, booking, routes]
+    .filter((query) => query.isError)
+    .map((query) => query.error);
+  const permissionFailure = failures.find((failure) => {
+    const mapped = getEmergencyError(failure);
+    return mapped.denied || mapped.unauthorized;
+  });
+  const error = permissionFailure ?? failures[0] ?? null;
   const loading =
     ready && (transport.isPending || booking.isPending || routes.isPending);
   let data: EmergencyContext | undefined;
@@ -93,7 +96,7 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
     booking.data?.transportPlan?.transportPlanId === plan.transportPlanId &&
     booking.data.transport?.transportId ===
       transport.data.transport.transportId;
-  if (ready && !error && !loading && matches && routes.data) {
+  if (ready && !permissionFailure && !loading && matches && routes.data) {
     const legalDossier =
       plan.routeType === "RETURN"
         ? booking.data!.complianceDossiers.find(
@@ -141,23 +144,62 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
           "This route does not belong to the current authorized transport workspace.",
         )
       : null;
-  return { data, error: error ?? mismatch, loading };
+  return {
+    data,
+    error: error ?? mismatch,
+    loading,
+    reload: () => Promise.all([
+      transport.refetch({ throwOnError: true }),
+      booking.refetch({ throwOnError: true }),
+      routes.refetch({ throwOnError: true }),
+    ]),
+  };
 }
 
 export async function refreshEmergencyQueries(
   client: QueryClient,
   plan: Pick<RoutePlanDetail, "routePlanId" | "transportPlanId" | "bookingId">,
-  action: EmergencyAction | "management",
+  action: EmergencyAction | "management" | "change-vehicles",
   dossierId?: string,
   changedVehicleIds: readonly string[] = [],
   transportId?: string,
+  changeContext?: {
+    accountId: string;
+    sessionVersion: number;
+    incidentReportId?: string;
+    genericInvalidationHandled?: boolean;
+  },
 ) {
-  const keys: readonly (readonly unknown[])[] = [
+  const changesVehicles = action === "change-vehicles";
+  const auth = useAuthStore.getState();
+  if (
+    changesVehicles &&
+    (!transportId ||
+      !changeContext ||
+      !auth.accessToken ||
+      auth.principal?.id !== changeContext.accountId ||
+      auth.sessionVersion !== changeContext.sessionVersion)
+  )
+    throw new Error(
+      "Reload the transport in the original account/session before refreshing vehicle changes.",
+    );
+  const genericHandled = changesVehicles && changeContext?.genericInvalidationHandled === true;
+  const matchesChangeScope = (value: unknown) => {
+    if (!changeContext || typeof value !== "string") return false;
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return Array.isArray(parsed) && parsed[0] === changeContext.accountId && parsed[1] === changeContext.sessionVersion;
+    } catch { return false; }
+  };
+  const keys: readonly (readonly unknown[])[] = genericHandled ? [] : [
     routeViewKeys.detail(plan.routePlanId),
     ["route-view", "list", plan.transportPlanId],
   ];
   const updatesWorkspace =
-    action === "decision" || action === "activation" || action === "management";
+    action === "decision" ||
+    action === "activation" ||
+    action === "management" ||
+    changesVehicles;
   const previousRoute = client.getQueryData<RoutePlanDetail>(
     routeViewKeys.detail(plan.routePlanId),
   );
@@ -183,13 +225,49 @@ export async function refreshEmergencyQueries(
     ...(updatesWorkspace && transportId
       ? [refreshTransportProgress(client, transportId)]
       : []),
+    ...(changesVehicles && transportId
+      ? ["snapshot", "segments", "overview"].map((part) =>
+          client.invalidateQueries({
+            queryKey: ["transport-tracking", part, transportId],
+          }),
+        )
+      : []),
+    ...(changesVehicles ? [
+      client.invalidateQueries({ queryKey: ["route-view", "vehicle-status"], predicate: ({ queryKey }) => matchesChangeScope(queryKey[2]) }),
+      client.invalidateQueries({ queryKey: ["route-view", "vehicle-change-context"], predicate: ({ queryKey }) => queryKey[6] === transportId && matchesChangeScope(queryKey[3]) }),
+    ] : []),
+    ...(changesVehicles && changeContext?.incidentReportId
+      ? [
+          client.invalidateQueries({
+            queryKey: [
+              "incidents",
+              "detail",
+              changeContext.incidentReportId,
+              changeContext.sessionVersion,
+            ],
+            exact: true,
+          }),
+          client.invalidateQueries({
+            queryKey: ["incident-response"],
+            predicate: ({ queryKey }) => {
+              const matchesIncident =
+                (queryKey[1] === "reroute-context" &&
+                  queryKey[4] === changeContext.incidentReportId) ||
+                (queryKey[1] === "emergency-costs" &&
+                  queryKey[4] === "incident-context" &&
+                  queryKey[5] === changeContext.incidentReportId);
+              return matchesIncident && matchesChangeScope(queryKey[3]);
+            },
+          }),
+        ]
+      : []),
     ...keys.map((queryKey) => client.invalidateQueries({ queryKey })),
     ...(updatesWorkspace
       ? [
           client.invalidateQueries({
             queryKey: transportPlanKeys.detail(plan.transportPlanId),
           }),
-          client.invalidateQueries({ queryKey: ["transport-plans", "list"] }),
+          ...(!genericHandled ? [client.invalidateQueries({ queryKey: ["transport-plans", "list"] })] : []),
           client.invalidateQueries({
             queryKey: approvedBookingKeys.detail(plan.bookingId),
           }),
@@ -240,20 +318,83 @@ export async function refreshEmergencyQueries(
           }),
         ]
       : []),
-    ...(action === "activation"
+    ...(action === "activation" || (changesVehicles && !genericHandled)
       ? [
-          client.invalidateQueries({
-            queryKey: ["route-view", "activation-resources", plan.routePlanId],
-          }),
+          ...(!changesVehicles
+            ? [
+                client.invalidateQueries({
+                  queryKey: [
+                    "route-view",
+                    "activation-resources",
+                    plan.routePlanId,
+                  ],
+                }),
+              ]
+            : []),
           client.invalidateQueries({ queryKey: vehicleKeys.lists() }),
           client.invalidateQueries({
             queryKey: vehicleKeys.details(),
             predicate: (query) =>
+              // K-03's callback is not available yet; refresh all cached details when new IDs are unknown.
+              changesVehicles ||
               vehiclesToRefresh.has(String(query.queryKey[3])),
           }),
         ]
       : []),
   ]);
+}
+
+const vehicleChangeSuccessSchema = z.object({
+  routePlanId: z.string(),
+  status: z.enum(["CONFIRMED", "ACTIVE"]),
+  releasedVehicleIds: z.array(z.string()),
+  maintenanceVehicleIds: z.array(z.string()),
+  appliedSegmentIds: z.array(z.string()),
+  updatedAt: z.iso.datetime({ offset: true }),
+});
+
+export function captureVehicleChangeRefresh(
+  client: QueryClient,
+  plan: Pick<RoutePlanDetail, "routePlanId" | "transportPlanId" | "bookingId"> & {
+    segments: readonly { vehicles: readonly { vehicleId: string }[] }[];
+  },
+  context: EmergencyContext,
+  options: { incidentReportId?: string; genericInvalidationHandled: boolean },
+  notify: (message: string, kind: "success" | "error") => void,
+): (result: unknown) => void {
+  const auth = useAuthStore.getState();
+  const accountId = auth.principal?.id;
+  const sessionVersion = auth.sessionVersion;
+  if (!accountId || !auth.accessToken || !context.transportId)
+    throw new Error("Reload the authorized transport workspace before replacing vehicles.");
+  const snapshot = { routePlanId: plan.routePlanId, transportPlanId: plan.transportPlanId, bookingId: plan.bookingId };
+  const oldIds = plan.segments.flatMap((segment) => segment.vehicles.map((vehicle) => vehicle.vehicleId));
+  const transportId = context.transportId;
+  const dossierId = context.dossierId;
+  const incidentReportId = options.incidentReportId;
+  const genericInvalidationHandled = options.genericInvalidationHandled;
+  const currentSession = () => {
+    const current = useAuthStore.getState();
+    return Boolean(current.accessToken) && current.principal?.id === accountId && current.sessionVersion === sessionVersion;
+  };
+  let handled = false;
+  return (result) => {
+    if (handled || !currentSession()) return;
+    handled = true;
+    const parsed = vehicleChangeSuccessSchema.safeParse(result);
+    if (!parsed.success || parsed.data.routePlanId.toLowerCase() !== snapshot.routePlanId.toLowerCase()) {
+      notify("The replacement response could not be verified. Review the latest route before considering another attempt.", "error");
+      return;
+    }
+    const value = parsed.data;
+    const propagation = getVehiclePropagationMessage(value.appliedSegmentIds);
+    if (propagation) notify(propagation, "success");
+    void refreshEmergencyQueries(client, snapshot, "change-vehicles", dossierId,
+      [...oldIds, ...value.releasedVehicleIds, ...value.maintenanceVehicleIds], transportId,
+      { accountId, sessionVersion, incidentReportId, genericInvalidationHandled }).catch(() => {
+      if (currentSession()) notify("Vehicle replacement succeeded, but related views could not refresh. Review the latest route; do not repeat the replacement to refresh data.", "error");
+    });
+  };
 }
 
 export function useEmergencyMutation<A extends EmergencyAction>(

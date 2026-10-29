@@ -42,13 +42,19 @@ import {
 import { formatFileSize, matchesAcceptedType } from "@/shared/components/file-uploader/utils";
 import { cn } from "@/lib/utils";
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { presignedUpload } from "@/shared/utils/presigned";
 import { useAuthoritySubmissionDetail, useUpdateAuthorityReview } from "../hooks";
 import type { AuthorityDecision } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
 
 const ACCEPTED_FILE_TYPES = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+function getDecisionFileError(file: File): string | null {
+  if (!matchesAcceptedType(file, ACCEPTED_FILE_TYPES) || !["application/pdf", "image/jpeg", "image/png"].includes(file.type)) return "Only PDF, JPG, JPEG and PNG files are accepted.";
+  if (file.size === 0) return "Decision document must not be empty.";
+  if (file.size > UPLOAD_MAX_BYTES) return `Decision document must be ${UPLOAD_MAX_MB} MiB or smaller.`;
+  return null;
+}
 
 type Errors = Partial<
   Record<
@@ -123,17 +129,11 @@ export function UpdateAuthorityReviewDialog({
 
   const handleFile = (file: File) => {
     clearError("decisionFile");
-    if (!matchesAcceptedType(file, ACCEPTED_FILE_TYPES)) {
+    const fileError = getDecisionFileError(file);
+    if (fileError) {
       setErrors((prev) => ({
         ...prev,
-        decisionFile: "Invalid format. Accepted: PDF, JPG, JPEG, PNG (Max 10MB).",
-      }));
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setErrors((prev) => ({
-        ...prev,
-        decisionFile: "File size exceeds the 10MB limit. Please upload a smaller file.",
+        decisionFile: fileError,
       }));
       return;
     }
@@ -162,8 +162,9 @@ export function UpdateAuthorityReviewDialog({
 
     if (!decisionFile) {
       next.decisionFile = "Official authority decision document is required.";
-    } else if (decisionFile.size > MAX_FILE_SIZE) {
-      next.decisionFile = "File size exceeds the 10MB limit.";
+    } else {
+      const fileError = getDecisionFileError(decisionFile);
+      if (fileError) next.decisionFile = fileError;
     }
 
     if (decision === "APPROVED") {
@@ -589,7 +590,7 @@ export function UpdateAuthorityReviewDialog({
                       Or drag and drop file here
                     </p>
                     <p className="mt-1 text-[11px] text-slate-400">
-                Accepted format: PDF, JPG, JPEG, PNG (Max 10MB)
+                Accepted format: PDF, JPG, JPEG, PNG (Max {UPLOAD_MAX_MB} MiB)
                     </p>
                     <input
                       ref={fileInputRef}

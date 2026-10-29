@@ -28,6 +28,7 @@ import {
   RouteManagementActions,
   RouteSegmentOutsourceAction,
 } from "../components/RouteManagementActions";
+import { VehicleChangeContextPanel } from "../components/VehicleChangeContextPanel";
 
 export default function RoutePlanDetailPage({
   mapViewer,
@@ -46,7 +47,9 @@ export default function RoutePlanDetailPage({
     (!emergencyView || getWorkspaceRole(principal) === "manager");
   const valid = actionEntityIdSchema.safeParse(routePlanId).success;
   const query = useRoutePlanDetail(routePlanId, allowed);
-  const error = query.isError ? getRouteViewError(query.error) : null;
+  const readFailure = query.isError ? getEmergencyError(query.error) : null;
+  const error = query.isError && (!query.data || readFailure?.denied || readFailure?.unauthorized)
+    ? getRouteViewError(query.error) : null;
   const context = useEmergencyContext(query.data, allowed && !error);
   // Current scoped reads gate the page; historical action failures stay in their own dialogs.
   const accessFailure =
@@ -57,7 +60,7 @@ export default function RoutePlanDetailPage({
       : null;
   const mode = params.get("emergency") ?? emergencyView;
   const actions =
-    query.data && context.data
+    query.data && context.data && !readFailure && !context.error
       ? getEmergencyActions(query.data, context.data.workspace)
       : [];
   const activeMode = actions.find((action) => action === mode);
@@ -131,7 +134,7 @@ export default function RoutePlanDetailPage({
                 aria-label="Loading authorized route workspace"
                 className="h-80 w-full"
               />
-            ) : context.error && (staff || (mode && mode !== "overview")) ? (
+            ) : context.error && !context.data && (staff || (mode && mode !== "overview")) ? (
               <div className="space-y-3">
                 <ErrorState
                   message={getEmergencyError(context.error).message}
@@ -148,9 +151,27 @@ export default function RoutePlanDetailPage({
               <div key={`${routePlanId}-${mode}`}>{workspace}</div>
             ) : !fullPageMode ? (
               <>
+                {readFailure && <ErrorState message={`Showing the last authorized route. ${readFailure.message}`} onRetry={() => void query.refetch()} />}
                 {context.error && (
                   <ErrorState
                     message={getEmergencyError(context.error).message}
+                  />
+                )}
+                {params.has("changeVehicle") && context.data && (
+                  <VehicleChangeContextPanel
+                    plan={plan}
+                    context={context.data}
+                    readOnly={Boolean(readFailure || context.error)}
+                    onReloadWorkspace={() => Promise.all([
+                      query.refetch({ throwOnError: true }),
+                      context.reload(),
+                    ])}
+                    incidentReportId={params.get("changeVehicle") ?? ""}
+                    onDismiss={() => setParams((current) => {
+                      const next = new URLSearchParams(current);
+                      next.delete("changeVehicle");
+                      return next;
+                    })}
                   />
                 )}
                 <RoutePlanDetails
@@ -163,11 +184,12 @@ export default function RoutePlanDetailPage({
                       <RouteManagementActions
                         plan={plan}
                         context={context.data}
+                        readOnly={Boolean(readFailure || context.error)}
                       />
                     ) : undefined
                   }
                   segmentActions={
-                    context.data
+                    context.data && !readFailure && !context.error
                       ? (segment) => (
                           <RouteSegmentOutsourceAction
                             plan={plan}
@@ -178,7 +200,7 @@ export default function RoutePlanDetailPage({
                       : undefined
                   }
                   emergencyArea={
-                    context.data ? (
+                    context.data && !readFailure && !context.error ? (
                       <EmergencyActionBar
                         plan={plan}
                         context={context.data}

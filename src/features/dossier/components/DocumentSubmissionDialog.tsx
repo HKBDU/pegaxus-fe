@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { FileText, History, Info, Upload } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -592,7 +593,7 @@ export function DocumentSubmissionDialog({
                         disabled={pending || noRetry || !eligible}
                         onStateChange={changeUploadState}
                         title="Upload document files"
-                        hint="PDF, JPG, JPEG, PNG · Max 10 MB per file"
+                        hint={`PDF, JPG, JPEG, PNG · Max ${UPLOAD_MAX_MB} MiB per file`}
                         onReject={() => {
                           if (
                             activeUploadScope.current !== uploadScope ||
@@ -600,7 +601,7 @@ export function DocumentSubmissionDialog({
                           )
                             return;
                           setFileError(
-                            "Some files were rejected. Use PDF, JPG, JPEG, or PNG files of 10 MB or smaller.",
+                            `Some files were rejected. Use PDF, JPG, JPEG, or PNG files of ${UPLOAD_MAX_MB} MiB or smaller.`,
                           );
                         }}
                       />

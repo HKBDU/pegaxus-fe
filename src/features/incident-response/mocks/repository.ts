@@ -1,6 +1,7 @@
 import { canAccess, normalizeRole } from "@/features/auth/access-control";
 import type { AuthPrincipal } from "@/features/auth/types";
 import { useAuthStore } from "@/features/auth/store";
+import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload";
 import {
   rerouteContextSchema,
   rerouteEscalationRequestSchema,
@@ -142,6 +143,19 @@ function seed(actor: Actor): Repository {
       status: index === 5 ? "COMPLETED" : "IN_TRANSIT",
     },
     availableActions: [],
+    vehicleDetail:
+      index === 1
+        ? null
+        : {
+            vehicle: {
+              vehicleId: uuid(41),
+              vehicleCode: "VH-MOCK-001",
+              licensePlate: "MOCK-001",
+              status: "IN_USE",
+            },
+            vehicleOperable: false,
+            replacementVehicleRequired: true,
+          },
     assignedRoles: index === 4 ? [] : [...creatorRoles],
   }));
   const statuses = [
@@ -365,6 +379,12 @@ function incidentContext(id: string, actor: Actor): EmergencyCostIncident {
   const { assignedRoles: _assignedRoles, ...context } = incident;
   return {
     ...context,
+    vehicleDetail: incident.vehicleDetail
+      ? {
+          ...incident.vehicleDetail,
+          vehicle: { ...incident.vehicleDetail.vehicle },
+        }
+      : null,
     availableActions:
       canAccess(actor.principal, { anyRole: creatorRoles }) &&
       ["REPORTED", "PENDING"].includes(incident.status) &&
@@ -464,7 +484,7 @@ function create(
       (photo) =>
         !photo.publicId.startsWith("mock-evidence:") ||
         !["image/jpeg", "image/png"].includes(photo.file.type) ||
-        photo.file.size > 5 * 1024 * 1024 ||
+        photo.file.size > UPLOAD_MAX_BYTES ||
         photo.file.size === 0 ||
         !data.photoFiles?.some((ref) => ref.publicId === photo.publicId),
     )
@@ -528,6 +548,7 @@ function getDetail(
     assignedRoles: _assignedRoles,
     transport: _transport,
     availableActions: _availableActions,
+    vehicleDetail: _vehicleDetail,
     ...summary
   } = incident;
   return {
@@ -552,12 +573,9 @@ function getDetail(
           country: "FR",
           city: "Demo City",
         },
-        vehicle: {
-          vehicleId: uuid(41),
-          vehicleCode: "VH-MOCK-001",
-          licensePlate: "MOCK-001",
-          status: "OUT_OF_SERVICE",
-        },
+        vehicle: incident.vehicleDetail
+          ? { ...incident.vehicleDetail.vehicle }
+          : null,
       },
       otherRequests: store.records
         .filter(
@@ -643,6 +661,18 @@ function decide(id: string, input: EmergencyCostDecisionInput, actor: Actor) {
   const approvedAmount = body.decision === "APPROVE" ? body.approvedAmount : 0;
   const now = nextVersion(record.request.updatedAt);
   if (incident.status === "REPORTED") incident.status = "PENDING";
+  if (
+    body.decision === "APPROVE" &&
+    record.request.category === "REPLACEMENT_VEHICLE" &&
+    incident.vehicleDetail?.vehicleOperable === false &&
+    incident.vehicleDetail.replacementVehicleRequired === true
+  ) {
+    const vehicleId = incident.vehicleDetail.vehicle.vehicleId;
+    for (const related of repository(actor).incidents) {
+      if (related.vehicleDetail?.vehicle.vehicleId === vehicleId)
+        related.vehicleDetail.vehicle.status = "OUT_OF_SERVICE";
+    }
+  }
   record.request = {
     ...record.request,
     status,

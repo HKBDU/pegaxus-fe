@@ -31,6 +31,9 @@ const LOCAL_TIME_LABEL_FORMAT = new Intl.DateTimeFormat("en-GB", {
 
 function parseDate(value: string | Date | null | undefined) {
   if (!value) return null
+  // Instants must carry their zone; interpreting an unzoned string as local
+  // would display a different alleged UTC instant on each viewer's machine.
+  if (typeof value === "string" && !/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value)) return null
   const date = value instanceof Date ? value : new Date(value)
   return Number.isNaN(date.getTime()) ? null : date
 }
@@ -54,11 +57,14 @@ export function formatUtcDateTime(value: string | Date | null | undefined) {
 }
 
 export function formatLocalDateTimeLabel(value: string | Date | null | undefined) {
+  // A calendar date has no local clock time.
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return "—"
   const date = parseDate(value)
   return date ? `${LOCAL_TIME_LABEL_FORMAT.format(date)} (your time)` : "—"
 }
 
 export function formatUtcTime(value: string | Date | null | undefined) {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return "—"
   const date = parseDate(value)
   return date ? withUtcSuffix(UTC_TIME_FORMAT.format(date)) : "—"
 }
@@ -80,4 +86,3 @@ export function toUtcIso(localValue: string | null | undefined) {
   const date = new Date(localValue)
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
 }
-

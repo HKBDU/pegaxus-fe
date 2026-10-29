@@ -6,15 +6,13 @@ import type {
   DossierRequirementsParams,
 } from "./types";
 
-// Flow 2 BR-039 allows up to 10 MB per compliance document file.
-export const UPLOAD_MAX_FILE_BYTES = 10 * 1024 * 1024;
+export { UPLOAD_MAX_BYTES as UPLOAD_MAX_FILE_BYTES } from "@/shared/constants/upload";
 export const UPLOAD_ACCEPTED_MIME_TYPES = [
   "application/pdf",
   "image/jpeg",
   "image/png",
 ] as const;
-export const DOSSIER_UPLOAD_ACCEPT =
-  ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+export const DOSSIER_UPLOAD_ACCEPT = UPLOAD_ACCEPTED_MIME_TYPES.join(",");
 export const DOCUMENT_REQUEST_TYPES = [
   "MISSING_DOCUMENT",
   "REVISION",

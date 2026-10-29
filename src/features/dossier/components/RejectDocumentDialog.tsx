@@ -1,3 +1,4 @@
+import { todayUtc } from "@/shared/utils/datetime";
 import { useId, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -226,7 +227,7 @@ export function RejectDocumentDialog({
                         <DatePicker
                           {...field}
                           disabled={pending || !canReject}
-                          minDate={new Date().toISOString().slice(0, 10)}
+                          minDate={todayUtc()}
                           placeholder="Select deadline"
                           className="rounded-[2px]"
                         />

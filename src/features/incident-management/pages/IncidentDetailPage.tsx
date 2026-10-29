@@ -105,6 +105,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   const hasButtons =
     canResolve ||
     canCancel ||
+    (isCoordinator && showVehicle && incident.transport?.status === "IN_TRANSIT" && ["REPORTED", "PENDING"].includes(incident.status)) ||
     [INCIDENT_ACTION.RAISE_SEVERITY, "LOWER_SEVERITY", INCIDENT_ACTION.REQUEST_COST, INCIDENT_ACTION.HOLD_ROUTE, INCIDENT_ACTION.PROPOSE_REROUTE, INCIDENT_ACTION.ESCALATE_REROUTE].some(can)
   // The BE tells nobody but the requester when the LM approves a replacement vehicle, so the RC reads it on the page (U-03).
   const waitingForVehicleChange =

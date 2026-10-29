@@ -7,6 +7,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { approvedBookingDetail } from "@/app/route-config";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { formatBookingDate } from "@/features/booking/utils";
 import type { PaginationMeta } from "@/shared/types";
 import { TablePagination } from "@/shared/components/common/TablePagination";
@@ -135,7 +136,7 @@ export function ApprovedBookingsTable({
         enableSorting: true,
         cell: ({ row }) =>
           row.original.approvedAt
-            ? formatBookingDate(row.original.approvedAt, true)
+            ? <DateTimeUtc value={row.original.approvedAt} compact />
             : "—",
       },
       {

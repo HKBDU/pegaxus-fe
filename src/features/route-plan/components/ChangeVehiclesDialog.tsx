@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuthStore } from "@/features/auth/store";
 import { AlertTriangle, Loader2, RefreshCw, Truck } from "lucide-react";
 
 import { Badge } from "@/shared/components/ui/badge";
@@ -29,7 +30,7 @@ import type {
   Vehicle,
 } from "../types";
 
-type ChangeableSegment = {
+export type ChangeableSegment = {
   routePlanRouteId: string;
   sequenceNo: number;
   route: { transportMode: "ROAD" | "SEA" | "AIR" };
@@ -40,6 +41,24 @@ type ChangeableSegment = {
   vehicles: Array<{ vehicleId: string }>;
 };
 
+export type ChangeVehiclesSnapshot = {
+  routePlan: { routePlanId: string; transportPlanId: string; updatedAt: string };
+  segments: ChangeableSegment[];
+};
+
+function changedVehicleSegments(
+  segments: ChangeableSegment[],
+  selectedVehicles: Record<string, string[]>,
+  selectedSegments: Record<string, boolean>,
+) {
+  return segments.filter((segment) => {
+    const selected = selectedVehicles[segment.routePlanRouteId] ?? [];
+    const original = segment.vehicles.map((vehicle) => vehicle.vehicleId.toLowerCase());
+    return selectedSegments[segment.routePlanRouteId] && selected.length > 0 &&
+      (selected.length !== original.length || selected.some((id) => !original.includes(id.toLowerCase())));
+  });
+}
+
 export interface ChangeVehiclesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -47,8 +66,9 @@ export interface ChangeVehiclesDialogProps {
   routePlan: { routePlanId: string; transportPlanId: string; updatedAt: string };
   segments: ChangeableSegment[];
   incidentReportId?: string;
-  onChanged?: (result: ChangeRoutePlanVehiclesResult) => void;
-  onReload?: () => void;
+  onChanged?: (result: ChangeRoutePlanVehiclesResult) => void | Promise<unknown>;
+  onBeforeSubmit?: (snapshot: ChangeVehiclesSnapshot) => void;
+  onReload?: () => void | Promise<unknown>;
   vehiclesBySegment?: Record<string, Vehicle[]>;
 }
 
@@ -81,10 +101,24 @@ export function ChangeVehiclesDialog({
   segments,
   incidentReportId,
   onChanged,
+  onBeforeSubmit,
   onReload,
   vehiclesBySegment,
 }: ChangeVehiclesDialogProps) {
   const mutation = useChangeRoutePlanVehicles();
+  const resetMutation = mutation.reset;
+  const accountId = useAuthStore((state) => state.principal?.id);
+  const sessionVersion = useAuthStore((state) => state.sessionVersion);
+  const [snapshotSession, setSnapshotSession] = useState<{ accountId: string | undefined; sessionVersion: number; mode: ChangeVehiclesMode; incidentReportId?: string } | null>(null);
+  const [snapshot, setSnapshot] = useState<ChangeVehiclesSnapshot | null>(null);
+  const opened = useRef(false);
+  const reloadRequested = useRef(false);
+  const latest = useRef({ routePlan, segments });
+  useEffect(() => { latest.current = { routePlan, segments }; }, [routePlan, segments]);
+  const snapshotSegments = snapshot?.segments ?? [];
+  const [selectedSegments, setSelectedSegments] = useState<Record<string, boolean>>({});
+  const [notice, setNotice] = useState<string | null>(null);
+  const [reloading, setReloading] = useState(false);
   const [vehicleOptions, setVehicleOptions] = useState<VehicleOptions>({});
   const [selectedVehicles, setSelectedVehicles] = useState<Record<string, string[]>>({});
   const [reason, setReason] = useState("");
@@ -95,65 +129,87 @@ export function ChangeVehiclesDialog({
   const copy = modeCopy[mode];
   const mappedError = mutation.error ? getChangeRoutePlanVehiclesError(mutation.error) : null;
   const missingIncident = mode === "mid-trip" && !incidentReportId;
-  const selectedSegmentCount = segments.filter(
-    (segment) => (selectedVehicles[segment.routePlanRouteId]?.length ?? 0) > 0,
-  ).length;
-  const canSubmit = !missingIncident && reason.trim().length > 0 && selectedSegmentCount > 0;
-
-  const segmentKey = useMemo(
-    () => segments.map((segment) => segment.routePlanRouteId).join(","),
-    [segments],
-  );
+  const changedSegments = changedVehicleSegments(snapshotSegments, selectedVehicles, selectedSegments);
+  const selectedSegmentCount = changedSegments.length;
+  const emptySelection = snapshotSegments.some((segment) => selectedSegments[segment.routePlanRouteId] && !selectedVehicles[segment.routePlanRouteId]?.length);
+  const contextChanged = Boolean(snapshot && (snapshot.routePlan.routePlanId !== routePlan.routePlanId || snapshot.routePlan.transportPlanId !== routePlan.transportPlanId || snapshotSession?.accountId !== accountId || snapshotSession?.sessionVersion !== sessionVersion || snapshotSession?.mode !== mode || snapshotSession?.incidentReportId !== incidentReportId));
+  const locked = mutation.isPending || reloading || Boolean(result) || contextChanged;
+  const canSubmit = !locked && !missingIncident && !emptySelection && reason.trim().length > 0 && selectedSegmentCount > 0;
 
   useEffect(() => {
-    if (!open) return;
-    let active = true;
-    setIsLoadingVehicles(true);
-    setVehicleOptions({});
-    setVehicleLoadError(false);
-    setResult(null);
-    setSelectedVehicles(
-      Object.fromEntries(
-        segments.map((segment) => [
-          segment.routePlanRouteId,
-          segment.vehicles.map((vehicle) => vehicle.vehicleId),
-        ]),
-      ),
-    );
-
-    if (vehiclesBySegment) {
-      setVehicleOptions(vehiclesBySegment);
-      setIsLoadingVehicles(false);
+    if (!open) {
+      opened.current = false;
+      reloadRequested.current = false;
       return;
     }
+    if (opened.current) return;
+    opened.current = true;
+    setSnapshot(structuredClone({ routePlan, segments }));
+    setSnapshotSession({ accountId, sessionVersion, mode, incidentReportId });
+    setSelectedVehicles(Object.fromEntries(segments.map((segment) => [segment.routePlanRouteId, segment.vehicles.map((vehicle) => vehicle.vehicleId)])));
+    setSelectedSegments({});
+    setReason("");
+    setResult(null);
+    setNotice(null);
+    resetMutation();
+  }, [open, routePlan, segments, resetMutation, accountId, sessionVersion, mode, incidentReportId]);
 
-    void Promise.all(
-      segments.map(async (segment) => {
-        const vehicles = await loadAllVehicles({
-          availableFrom: dateOnly(segment.plannedDepartureAt),
-          availableTo: dateOnly(segment.plannedArrivalAt),
-          transportMode: segment.route.transportMode,
-          transportPlanId: routePlan.transportPlanId,
+  useEffect(() => {
+    if (!open || !reloadRequested.current || !snapshot || routePlan.routePlanId !== snapshot.routePlan.routePlanId || routePlan.updatedAt === snapshot.routePlan.updatedAt) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      reloadRequested.current = false;
+      setSnapshot(structuredClone({ routePlan, segments }));
+      setNotice("Latest route version loaded. Your draft is preserved; review the assignments before applying.");
+    });
+    return () => { active = false; };
+  }, [open, routePlan, segments, snapshot]);
+
+  useEffect(() => {
+    if (!open || !snapshot) return;
+    let active = true;
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      setIsLoadingVehicles(true);
+      setVehicleOptions({});
+      setVehicleLoadError(false);
+
+      if (vehiclesBySegment) {
+        setVehicleOptions(vehiclesBySegment);
+        setIsLoadingVehicles(false);
+        return;
+      }
+
+      await Promise.all(
+        snapshot.segments.map(async (segment) => {
+          const vehicles = await loadAllVehicles({
+            availableFrom: dateOnly(segment.plannedDepartureAt),
+            availableTo: dateOnly(segment.plannedArrivalAt),
+            transportMode: segment.route.transportMode,
+            transportPlanId: snapshot.routePlan.transportPlanId,
+          });
+          return [segment.routePlanRouteId, vehicles] as const;
+        }),
+      )
+        .then((entries) => {
+          if (active) setVehicleOptions(Object.fromEntries(entries));
+        })
+        .catch(() => {
+          if (active) setVehicleLoadError(true);
+        })
+        .finally(() => {
+          if (active) setIsLoadingVehicles(false);
         });
-        return [segment.routePlanRouteId, vehicles] as const;
-      }),
-    )
-      .then((entries) => {
-        if (active) setVehicleOptions(Object.fromEntries(entries));
-      })
-      .catch(() => {
-        if (active) setVehicleLoadError(true);
-      })
-      .finally(() => {
-        if (active) setIsLoadingVehicles(false);
-      });
+    });
 
     return () => {
       active = false;
     };
-  }, [open, routePlan.transportPlanId, segmentKey, segments, vehiclesBySegment]);
+  }, [open, snapshot, vehiclesBySegment]);
 
   function toggleVehicle(segmentId: string, vehicleId: string, checked: boolean) {
+    if (locked) return;
     setSelectedVehicles((current) => {
       const selected = current[segmentId] ?? [];
       return {
@@ -166,20 +222,41 @@ export function ChangeVehiclesDialog({
   }
 
   function skipSegment(segmentId: string) {
-    setSelectedVehicles((current) => ({ ...current, [segmentId]: [] }));
+    if (locked) return;
+    setSelectedSegments((current) => ({ ...current, [segmentId]: false }));
+    const original = snapshotSegments.find((segment) => segment.routePlanRouteId === segmentId);
+    setSelectedVehicles((current) => ({ ...current, [segmentId]: original?.vehicles.map((vehicle) => vehicle.vehicleId) ?? [] }));
   }
 
   function submit() {
-    if (!canSubmit || mutation.isPending) return;
+    if (!canSubmit || !snapshot || isLoadingVehicles || vehicleLoadError) return;
+    const auth = useAuthStore.getState();
+    const accountId = auth.principal?.id;
+    const sessionVersion = auth.sessionVersion;
+    if (!auth.accessToken || !accountId || !snapshotSession || accountId !== snapshotSession.accountId || sessionVersion !== snapshotSession.sessionVersion) {
+      setNotice("The account/session changed. Close and reopen this dialog before continuing.");
+      return;
+    }
+    const isCurrent = () => {
+      const current = useAuthStore.getState();
+      return Boolean(current.accessToken) && current.principal?.id === accountId && current.sessionVersion === sessionVersion;
+    };
+    try {
+      onBeforeSubmit?.(structuredClone({ ...snapshot, segments: changedSegments }));
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Unable to prepare this change. Reload the route plan before trying again.");
+      return;
+    }
+    if (!isCurrent()) return;
     mutation.mutate(
       {
-        routePlanId: routePlan.routePlanId,
+        routePlanId: snapshot.routePlan.routePlanId,
         mode,
         payload: {
-          lastUpdatedAt: routePlan.updatedAt,
+          lastUpdatedAt: snapshot.routePlan.updatedAt,
           reason: reason.trim(),
           ...(mode === "mid-trip" ? { incidentReportId } : {}),
-          segments: segments.flatMap((segment) => {
+          segments: changedSegments.flatMap((segment) => {
             const vehicleIds = selectedVehicles[segment.routePlanRouteId] ?? [];
             if (vehicleIds.length === 0) return [];
             return [{
@@ -193,21 +270,54 @@ export function ChangeVehiclesDialog({
       },
       {
         onSuccess: (result) => {
+          if (!isCurrent()) return;
           setResult(result);
-          onChanged?.(result);
+          try {
+            void Promise.resolve(onChanged?.(result)).catch(() => {
+              if (isCurrent()) setNotice("Vehicle changes were applied, but the workspace could not refresh. Reload to review the result.");
+            });
+          } catch {
+            setNotice("Vehicle changes were applied, but the workspace could not refresh. Reload to review the result.");
+          }
         },
       },
     );
   }
 
-  function reloadRoutePlan() {
-    if (onReload) onReload();
-    else window.location.reload();
+  async function reloadRoutePlan() {
+    if (locked || !onReload || !snapshot) return;
+    reloadRequested.current = true;
+    setReloading(true);
+    try {
+      await onReload();
+      if (latest.current.routePlan.routePlanId === snapshot.routePlan.routePlanId && latest.current.routePlan.updatedAt !== snapshot.routePlan.updatedAt) {
+        reloadRequested.current = false;
+        setSnapshot(structuredClone(latest.current));
+      }
+      setNotice("Reload requested. Your draft is preserved; review the latest assignments before applying.");
+    } catch {
+      reloadRequested.current = false;
+      setNotice("Unable to reload the route plan. Your draft has been preserved.");
+    } finally {
+      setReloading(false);
+    }
   }
 
-  return (
+  if (contextChanged) return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto rounded-[2px] border-slate-300 bg-slate-50 p-0 text-slate-950">
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Reopen vehicle replacement</DialogTitle>
+          <DialogDescription>The route, incident or account/session changed. Close this dialog and reopen it from the authorized workspace.</DialogDescription>
+        </DialogHeader>
+        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+      </DialogContent>
+    </Dialog>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={(value) => { if (!mutation.isPending && !reloading) onOpenChange(value); }}>
+      <DialogContent showCloseButton={!mutation.isPending && !reloading} className="max-h-[90vh] max-w-4xl overflow-y-auto rounded-[2px] border-slate-300 bg-slate-50 p-0 text-slate-950">
         <DialogHeader className="border-b border-slate-300 bg-white px-6 py-5 text-left">
           <div className="flex items-start gap-3 pr-8">
             <span className="grid size-10 shrink-0 place-items-center rounded-[2px] bg-slate-900 text-white">
@@ -228,13 +338,14 @@ export function ChangeVehiclesDialog({
               <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-700" />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">{mappedError.message}</p>
-                {mappedError.shouldReload && (
+                {mappedError.shouldReload && onReload && (
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     className="mt-2 rounded-[2px] border-red-400 bg-white text-red-900 hover:bg-red-100"
-                    onClick={reloadRoutePlan}
+                    disabled={locked}
+                    onClick={() => void reloadRoutePlan()}
                   >
                     <RefreshCw className="mr-1.5 size-3.5" />
                     Reload route plan
@@ -243,6 +354,15 @@ export function ChangeVehiclesDialog({
               </div>
             </div>
           )}
+
+          {contextChanged && <p className="text-sm text-amber-800" role="alert">The route or account/session changed. Close and reopen this dialog before continuing.</p>}
+          {(notice || mutation.refreshWarning) && <p className="text-sm text-amber-800" role="status">{notice ?? mutation.refreshWarning}</p>}
+          {onReload && !result && !mappedError?.shouldReload && (
+            <Button type="button" variant="outline" size="sm" disabled={locked} onClick={() => void reloadRoutePlan()}>
+              <RefreshCw className="mr-1.5 size-3.5" />Reload route plan
+            </Button>
+          )}
+          {emptySelection && <p className="text-sm text-red-700" role="alert">Select at least one vehicle for every selected segment, or mark that segment unchanged.</p>}
 
           {vehicleLoadError && (
             <div className="flex items-start gap-3 rounded-[2px] border border-red-300 bg-red-50 p-3 text-sm text-red-900" role="alert">
@@ -258,10 +378,16 @@ export function ChangeVehiclesDialog({
                 <div className="rounded-[2px] border border-emerald-200 bg-white p-2.5">
                   <span className="block text-xs font-semibold uppercase tracking-wide text-emerald-800">Released</span>
                   <span className="text-lg font-bold">{result.releasedVehicleIds.length}</span>
+                  <ul className="m-0 mt-1 list-none space-y-1 p-0 text-xs">
+                    {result.releasedVehicleIds.map((id) => <li key={id} className="break-all">{id}</li>)}
+                  </ul>
                 </div>
                 <div className="rounded-[2px] border border-emerald-200 bg-white p-2.5">
                   <span className="block text-xs font-semibold uppercase tracking-wide text-emerald-800">Maintenance</span>
                   <span className="text-lg font-bold">{result.maintenanceVehicleIds.length}</span>
+                  <ul className="m-0 mt-1 list-none space-y-1 p-0 text-xs">
+                    {result.maintenanceVehicleIds.map((id) => <li key={id} className="break-all">{id}</li>)}
+                  </ul>
                 </div>
                 <div className="rounded-[2px] border border-emerald-200 bg-white p-2.5">
                   <span className="block text-xs font-semibold uppercase tracking-wide text-emerald-800">Auto-applied segments</span>
@@ -271,13 +397,13 @@ export function ChangeVehiclesDialog({
             </div>
           )}
 
-          {segments.length === 0 ? (
+          {snapshotSegments.length === 0 ? (
             <div className="rounded-[2px] border border-slate-300 bg-white p-8 text-center text-sm font-medium text-slate-700">
               No segments are available for vehicle replacement.
             </div>
           ) : (
             <div className="grid gap-3">
-              {segments.map((segment) => {
+              {snapshotSegments.map((segment) => {
                 const selected = selectedVehicles[segment.routePlanRouteId] ?? [];
                 const options = vehicleOptions[segment.routePlanRouteId] ?? [];
                 return (
@@ -288,7 +414,7 @@ export function ChangeVehiclesDialog({
                           Segment {segment.sequenceNo}: {segment.fromLocation.locationName} → {segment.toLocation.locationName}
                         </CardTitle>
                         <Badge variant="outline" className="shrink-0 rounded-[2px] border-slate-400 bg-slate-100 text-slate-800">
-                          {selected.length > 0 ? "Selected" : "Unchanged"}
+                          {selectedSegments[segment.routePlanRouteId] ? "Selected" : "Unchanged"}
                         </Badge>
                       </div>
                       <p className="text-xs font-medium text-slate-600">
@@ -296,6 +422,23 @@ export function ChangeVehiclesDialog({
                       </p>
                     </CardHeader>
                     <CardContent className="grid gap-2 px-4 py-4">
+                      <Label className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={Boolean(selectedSegments[segment.routePlanRouteId])}
+                          disabled={locked}
+                          onCheckedChange={(checked) => {
+                            if (checked === true) setSelectedSegments((current) => ({ ...current, [segment.routePlanRouteId]: true }));
+                            else skipSegment(segment.routePlanRouteId);
+                          }}
+                        />
+                        Change vehicles for this segment
+                      </Label>
+                      {segment.vehicles.filter(({ vehicleId }) => !options.some((vehicle) => vehicle.vehicleId === vehicleId)).map(({ vehicleId }) => (
+                        <Label key={vehicleId} className="flex items-center gap-2 text-xs text-slate-600">
+                          <Checkbox checked={selected.includes(vehicleId)} disabled={locked || !selectedSegments[segment.routePlanRouteId]} onCheckedChange={(checked) => toggleVehicle(segment.routePlanRouteId, vehicleId, checked === true)} />
+                          Retain assigned vehicle {vehicleId} (not in available results)
+                        </Label>
+                      ))}
                       {isLoadingVehicles ? (
                         <div className="grid gap-2 sm:grid-cols-2">
                           <Skeleton className="h-16 rounded-[2px] bg-slate-200" />
@@ -327,6 +470,7 @@ export function ChangeVehiclesDialog({
                                 <Checkbox
                                   id={id}
                                   checked={checked}
+                                  disabled={locked || !selectedSegments[segment.routePlanRouteId]}
                                   onCheckedChange={(value) =>
                                     toggleVehicle(
                                       segment.routePlanRouteId,
@@ -351,13 +495,14 @@ export function ChangeVehiclesDialog({
                           })}
                         </div>
                       )}
-                      {selected.length > 0 && (
+                      {selectedSegments[segment.routePlanRouteId] && (
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           className="w-fit rounded-[2px] px-2 text-xs font-bold text-slate-700 hover:bg-slate-100 hover:text-slate-950"
                           onClick={() => skipSegment(segment.routePlanRouteId)}
+                          disabled={locked}
                         >
                           Do not change this segment
                         </Button>
@@ -376,6 +521,7 @@ export function ChangeVehiclesDialog({
             <Textarea
               id="change-vehicles-reason"
               value={reason}
+              disabled={locked}
               onChange={(event) => setReason(event.target.value)}
               placeholder="Explain why the current vehicle assignment must change."
               maxLength={2000}
@@ -392,13 +538,13 @@ export function ChangeVehiclesDialog({
         <DialogFooter className="border-t border-slate-300 bg-white px-6 py-4 sm:justify-between">
           <p className="text-xs font-medium text-slate-600">{selectedSegmentCount} segment{selectedSegmentCount === 1 ? "" : "s"} selected.</p>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" className="rounded-[2px] border-slate-400 bg-white text-slate-900 hover:bg-slate-100" onClick={() => onOpenChange(false)}>
-              CANCEL
+            <Button type="button" variant="outline" className="rounded-[2px] border-slate-400 bg-white text-slate-900 hover:bg-slate-100" disabled={mutation.isPending || reloading} onClick={() => onOpenChange(false)}>
+              {result ? "CLOSE" : "CANCEL"}
             </Button>
             <Button
               type="button"
               className="rounded-[2px] bg-[#f39200] text-slate-950 hover:bg-[#d97f00]"
-              disabled={!canSubmit || mutation.isPending || isLoadingVehicles}
+              disabled={!canSubmit || mutation.isPending || isLoadingVehicles || vehicleLoadError}
               onClick={submit}
             >
               {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}

@@ -132,7 +132,7 @@ export default function InvoiceDetailPage() {
                 ))}
               </dl>
               <p className="text-xs text-slate-500">
-                Timestamps are shown in your local time zone.
+                Timestamps are shown in UTC.
               </p>
             </section>
             {invoice.type === "QUOTATION" ? <QuotationBanner /> : null}

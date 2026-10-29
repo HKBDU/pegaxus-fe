@@ -1,4 +1,5 @@
 import { isAxiosError } from "axios"
+import { UPLOAD_MAX_MB } from "@/shared/constants/upload"
 
 type ApiError = {
   code?: number
@@ -23,7 +24,7 @@ export function getHorseApiErrorMessage(error: unknown, fallback = "The horse re
   if (status === 403 || errorCode === "FORBIDDEN") return "You do not have permission to manage this horse."
   if (status === 404 || errorCode === "NOT_FOUND") return "This horse could not be found. It may have already been removed."
   if (status === 409 || errorCode === "CONFLICT") return "A horse with the same name or microchip number already exists."
-  if (["INVALID_PUBLIC_ID", "INVALID_FILE_TYPE", "INVALID_FILE", "UPLOAD_NOT_FOUND", "FILE_TOO_LARGE"].includes(errorCode)) return data?.message || "The horse avatar could not be uploaded. Please choose a valid JPG or PNG image up to 10 MB."
+  if (["INVALID_PUBLIC_ID", "INVALID_FILE_TYPE", "INVALID_FILE", "UPLOAD_NOT_FOUND", "FILE_TOO_LARGE"].includes(errorCode)) return data?.message || `The horse avatar could not be uploaded. Please choose a valid JPG or PNG image up to ${UPLOAD_MAX_MB} MiB.`
   if (status !== undefined && status >= 500) return "The server could not complete this horse request. Please try again later."
 
   return data?.message || fallback

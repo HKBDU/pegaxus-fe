@@ -1,8 +1,8 @@
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { formatBookingDate } from "@/features/booking/utils";
 import {
   useAddDocumentRequestComment,
   useDocumentRequestComments,
@@ -95,7 +95,7 @@ export function DocumentRequestComments({
                   {comment.message}
                 </p>
                 <time className="text-muted-foreground">
-                  {formatBookingDate(comment.createdAt, true)}
+                  <DateTimeUtc value={comment.createdAt} compact />
                 </time>
               </li>
             ))}
