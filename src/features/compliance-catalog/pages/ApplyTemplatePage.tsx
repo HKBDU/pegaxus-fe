@@ -77,8 +77,11 @@ export default function ApplyTemplatePage() {
   const [customs, setCustoms] = useState<CustomRequirementDraft[]>([])
   const [creationUncertain, setCreationUncertain] = useState(false)
 
-  const templateQuery = useDossierTemplate(mode === "template" ? (templateId ?? undefined) : undefined)
-  const template = mode === "template" ? (templateQuery.data ?? null) : null
+  // The picked template stays loaded in both modes so "Select template" works again after trying "Create custom without template".
+  const templateQuery = useDossierTemplate(templateId ?? undefined)
+  const pickedTemplate = templateQuery.data ?? null
+  // Only the template mode builds the dossier from it; the custom mode ignores the pick without discarding it.
+  const template = mode === "template" ? pickedTemplate : null
   const booking = bookingQuery.data
   const requirements = useMemo(() => requirementsQuery.data ?? [], [requirementsQuery.data])
 
@@ -143,9 +146,9 @@ export default function ApplyTemplatePage() {
 
   const goToCustomize = (nextMode: "template" | "custom") => {
     setMode(nextMode)
-    if (nextMode === "template" && template && initializedFor !== template.dossierTemplateId) {
-      setSelectedItemIds(new Set(template.items.map(templateItemKey)))
-      setInitializedFor(template.dossierTemplateId)
+    if (nextMode === "template" && pickedTemplate && initializedFor !== pickedTemplate.dossierTemplateId) {
+      setSelectedItemIds(new Set(pickedTemplate.items.map(templateItemKey)))
+      setInitializedFor(pickedTemplate.dossierTemplateId)
     }
     setStep(2)
   }
@@ -284,7 +287,7 @@ export default function ApplyTemplatePage() {
           step === 1 ? (
             <div className="flex shrink-0 items-center gap-2 self-center">
               <button type="button" className={outlineButtonClass} onClick={() => goToCustomize("custom")}>Create custom without template</button>
-              <button type="button" className={primaryButtonClass} disabled={templateId === null || templateQuery.isLoading || !template} onClick={() => goToCustomize("template")}>
+              <button type="button" className={primaryButtonClass} disabled={templateId === null || templateQuery.isLoading || !pickedTemplate} onClick={() => goToCustomize("template")}>
                 <Check className="size-3.5" />
                 Select template
               </button>
