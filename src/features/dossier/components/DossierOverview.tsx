@@ -1,3 +1,4 @@
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import type { ReactNode } from "react";
 import { Circle, FolderOpen, LockKeyhole } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -152,7 +153,7 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
               ) : null}
               {dossier.openedAt ? (
                 <Detail label="Opened at">
-                  {formatBookingDate(dossier.openedAt, true)} UTC
+                  <DateTimeUtc value={dossier.openedAt} />
                 </Detail>
               ) : null}
               <Detail label="Status">
@@ -302,7 +303,7 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
             <dl className="mt-3 grid gap-x-6 gap-y-2 md:grid-cols-2">
               {meaningfulMilestones.map(([label, value]) => (
                 <Detail key={label} label={label}>
-                  {formatBookingDate(value!, true)} UTC
+                  <DateTimeUtc value={value} />
                 </Detail>
               ))}
               {dossier.rejectionReason ? (
@@ -322,7 +323,7 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
                       .replace(/^./, (letter) => letter.toUpperCase())}
                     {proof.verifiedAt ? (
                       <span className="block text-gray-500">
-                        Verified {formatBookingDate(proof.verifiedAt, true)} UTC
+                        Verified <DateTimeUtc value={proof.verifiedAt} compact />
                       </span>
                     ) : null}
                   </Detail>

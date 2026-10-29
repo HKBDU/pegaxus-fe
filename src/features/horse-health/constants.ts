@@ -13,6 +13,7 @@ export const LOG_TYPES = ["PRE_TRIP_CHECK", "ROUTINE_CHECK", "BORDER_CHECK", "RE
 export const HEALTH_STATUSES = ["NORMAL", "OBSERVATION_REQUIRED", "AT_RISK", "CRITICAL"] as const
 export const HYDRATION_STATUSES = ["NORMAL", "MILD_DEHYDRATION", "MODERATE_DEHYDRATION", "SEVERE_DEHYDRATION"] as const
 export const MAX_PHOTOS = 1
+export { UPLOAD_MAX_BYTES as PHOTO_MAX_BYTES } from "@/shared/constants/upload"
 
 export const HEALTH_STATUS_LABELS: Record<(typeof HEALTH_STATUSES)[number], string> = {
   NORMAL: "Normal",

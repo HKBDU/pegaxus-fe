@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { Link, useParams } from "react-router-dom";
 import { ClipboardCheck, MapPin } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
@@ -154,7 +155,7 @@ export function TransportHandoverBoundary({
           ) : null}
           {boundary.arrivalAt ? (
             <p className="m-0 text-xs text-slate-500">
-              Arrival: {new Date(boundary.arrivalAt).toLocaleString()}
+              Arrival: <DateTimeUtc value={boundary.arrivalAt} compact />
             </p>
           ) : null}
           {boundary.createModes &&

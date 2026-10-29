@@ -3,6 +3,8 @@ import { Camera, FolderOpen, RotateCcw, Trash2, Clock, ShieldCheck } from 'lucid
 import { Button } from '@/shared/components/ui/button'
 import ImageViewer from '@/shared/components/file-viewer/ImageViewer'
 import { QuarantineSectionHeader } from './QuarantineSectionHeader'
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from '@/shared/constants/upload'
+import { toast } from 'sonner'
 import { formatUtcDateTime } from '@/shared/utils/datetime'
 
 interface PhotographicProofSectionProps {
@@ -30,6 +32,16 @@ export function PhotographicProofSection({
 }: PhotographicProofSectionProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
+  const pickFile = (input: HTMLInputElement) => {
+    const file = input.files?.[0]
+    input.value = ''
+    if (!file) return
+    if (file.size === 0 || file.size > UPLOAD_MAX_BYTES || !['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+      toast.error(`Use a non-empty JPEG or PNG image of at most ${UPLOAD_MAX_MB} MiB.`)
+      return
+    }
+    onFilePicked(file)
+  }
 
   const imageViewerSlides = useMemo(() => {
     if (!photoFile) return []
@@ -95,7 +107,7 @@ export function PhotographicProofSection({
         capture="environment"
         className="sr-only"
         aria-label="Take photo with camera"
-        onChange={(e) => onFilePicked(e.target.files?.[0])}
+        onChange={(e) => pickFile(e.currentTarget)}
       />
       <input
         ref={galleryInputRef}
@@ -103,7 +115,7 @@ export function PhotographicProofSection({
         accept="image/jpeg,image/jpg,image/png"
         className="sr-only"
         aria-label="Select from gallery"
-        onChange={(e) => onFilePicked(e.target.files?.[0])}
+        onChange={(e) => pickFile(e.currentTarget)}
       />
 
       {/* ── Photo preview (shown when photo is attached) ── */}

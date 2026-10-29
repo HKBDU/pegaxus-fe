@@ -14,6 +14,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Form } from '@/shared/components/ui/form'
 import { QuickNotesSection } from '@/features/quarantine/components'
 import { PhotoCaptureSection } from '@/shared/components/PhotoCaptureSection'
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from '@/shared/constants/upload'
 
 const schema = z.object({
   customsPortName: z.string().min(1, 'Customs office / border post is required'),
@@ -81,6 +82,8 @@ export default function CustomsClearanceProofPage() {
   }, [dossier?.bookingSummary?.destinationCountry, dossier?.bookingSummary?.originCountry])
 
   const onSubmit = async (values: FormValues) => {
+    if (photoFile && (photoFile.size === 0 || photoFile.size > UPLOAD_MAX_BYTES || !['image/jpeg', 'image/jpg', 'image/png'].includes(photoFile.type)))
+      return setPhotoError(`Use a non-empty JPEG or PNG image of at most ${UPLOAD_MAX_MB} MiB.`)
     if (isMandatoryRoute && !photoFile) return setPhotoError('Please attach a customs release note / SAD document image.')
     if (uploadState === 'uploading') {
       toast.info('Photo is still uploading. Please wait a moment...')
@@ -108,7 +111,7 @@ export default function CustomsClearanceProofPage() {
         QUARANTINE_NOT_PASSED: 'Quarantine must be passed before customs submission.',
         DOSSIER_NOT_APPROVED: 'The dossier must be APPROVED before submitting customs proof.',
         QUICK_NOTE_REQUIRED: 'Quick note is required when held.',
-        FILE_TOO_LARGE: 'One or more files exceed the 5 MB limit.',
+        FILE_TOO_LARGE: `One or more files exceed the ${UPLOAD_MAX_MB} MiB limit.`,
         INVALID_FILE_TYPE: 'Invalid file type. Only images are accepted.',
         EVIDENCE_UNCLEAR: 'Image unclear or missing customs stamp. Please retake photo.',
       }

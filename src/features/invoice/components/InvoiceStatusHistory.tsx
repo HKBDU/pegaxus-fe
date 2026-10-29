@@ -6,7 +6,7 @@ import {
   FilePlus2,
   Send,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { canAccess } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
 import { EmptyState, ErrorState } from "@/shared/components/common";
@@ -65,8 +65,7 @@ export function InvoiceStatusHistory({ invoiceId }: { invoiceId: string }) {
           Status History
         </h2>
         <p className="text-xs text-slate-500 sm:text-sm">
-          Track invoice status changes over time. Timestamps are shown in your
-          local time zone.
+          Track invoice status changes over time. Timestamps are shown in UTC.
         </p>
       </CardHeader>
       <CardContent className="min-w-0 px-5 sm:px-6">
@@ -145,10 +144,7 @@ export function InvoiceStatusHistory({ invoiceId }: { invoiceId: string }) {
                     </div>
                     <div className="flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
                       <time dateTime={event.changedAt} className="tabular-nums">
-                        {format(
-                          parseISO(event.changedAt),
-                          "dd MMM yyyy, HH:mm:ss",
-                        )}
+                        <DateTimeUtc value={event.changedAt} compact />
                       </time>
                       <span className="min-w-0 [overflow-wrap:anywhere]">
                         {event.changedBy.fullName}

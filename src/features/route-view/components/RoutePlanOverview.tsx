@@ -1,12 +1,10 @@
-import { formatBookingDate as formatDate } from "@/features/booking/utils";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { Card, CardContent } from "@/shared/components/ui/card";
 import type { RoutePlanDetail } from "../types";
 import { durationLabel, replacementLabel } from "../display";
 
-const formatBookingDate = (
-  value: string | null | undefined,
-  includeTime: boolean,
-) => (value ? formatDate(value, includeTime) : "Not scheduled");
+const formatPlanTime = (value: string | null | undefined) =>
+  value ? <DateTimeUtc value={value} compact /> : "Not scheduled";
 
 export function RoutePlanOverview({ plan }: { plan: RoutePlanDetail }) {
   const metrics = [
@@ -66,7 +64,7 @@ export function RoutePlanOverview({ plan }: { plan: RoutePlanDetail }) {
                 Planned departure
               </dt>
               <dd className="break-words text-sm font-medium text-slate-900">
-                {formatBookingDate(plan.plannedDepartureAt, true)}
+                {formatPlanTime(plan.plannedDepartureAt)}
               </dd>
             </div>
             <div>
@@ -74,7 +72,7 @@ export function RoutePlanOverview({ plan }: { plan: RoutePlanDetail }) {
                 Planned arrival
               </dt>
               <dd className="break-words text-sm font-medium text-slate-900">
-                {formatBookingDate(plan.plannedArrivalAt, true)}
+                {formatPlanTime(plan.plannedArrivalAt)}
               </dd>
             </div>
           </dl>

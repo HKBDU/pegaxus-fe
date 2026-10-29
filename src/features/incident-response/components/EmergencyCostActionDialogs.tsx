@@ -38,6 +38,7 @@ import {
   type EmergencyCostDecisionInput,
 } from "../action-schemas";
 import { emergencyCostFormSchema, type EmergencyCostDetail } from "../schemas";
+import { useEmergencyCostIncident } from "../hooks/useEmergencyCostIncident";
 
 interface DialogProps {
   open?: boolean;
@@ -235,6 +236,23 @@ export function DecisionCostDialog(
     },
   });
   const decision = useWatch({ control: form.control, name: "decision" });
+  const checkingReplacement =
+    props.open !== false &&
+    decision === "APPROVE" &&
+    props.snapshot.category === "REPLACEMENT_VEHICLE";
+  const incident = useEmergencyCostIncident(
+    checkingReplacement ? props.snapshot.incident.incidentReportId : null,
+    "decision",
+  );
+  const vehicleDetail =
+    !incident.isError &&
+    incident.data?.transport.transportId === props.snapshot.incident.transportId
+      ? incident.data.vehicleDetail
+      : undefined;
+  const locksVehicle =
+    checkingReplacement &&
+    vehicleDetail?.vehicleOperable === false &&
+    vehicleDetail.replacementVehicleRequired === true;
   const busy = props.busy || form.formState.isSubmitting;
   const submit = form.handleSubmit(async (values) => {
     const body = createEmergencyCostDecisionSchema(
@@ -354,6 +372,21 @@ export function DecisionCostDialog(
               )}
             />
           </fieldset>
+          {locksVehicle ? (
+            <p
+              role="alert"
+              className="m-0 rounded-[2px] border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
+            >
+              Phê duyệt sẽ khóa xe {vehicleDetail.vehicle.vehicleCode} (Out of
+              service).
+            </p>
+          ) : checkingReplacement && !vehicleDetail ? (
+            <p role="status" className="m-0 text-xs text-muted-foreground">
+              {incident.isFetching
+                ? "Checking vehicle locking conditions..."
+                : "Vehicle locking conditions are not available. The server determines any vehicle status change."}
+            </p>
+          ) : null}
           <p className="m-0 text-xs text-muted-foreground">
             The server checks the request version before saving. A decision does
             not perform payment or settlement.
@@ -370,7 +403,12 @@ export function DecisionCostDialog(
             </Button>
             <Button
               type="submit"
-              disabled={busy || props.blocked || !form.formState.isValid}
+              disabled={
+                busy ||
+                props.blocked ||
+                !form.formState.isValid ||
+                (checkingReplacement && incident.isFetching)
+              }
               className="min-h-11 rounded-[2px] sm:min-h-9"
             >
               {busy ? "Saving..." : "Submit decision"}

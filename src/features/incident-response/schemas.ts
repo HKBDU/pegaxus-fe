@@ -253,7 +253,7 @@ export const emergencyCostDetailSchema = emergencyCostRequestSchema
           .object({
             vehicleId: identifier,
             vehicleCode: z.string(),
-            licensePlate: z.string(),
+            licensePlate: z.string().nullable(),
             status: z.string(),
           })
           .nullable(),
@@ -317,6 +317,18 @@ export const emergencyCostIncidentSchema = z.object({
     status: z.string(),
   }),
   availableActions: z.array(z.string()),
+  vehicleDetail: z
+    .object({
+      vehicle: z.object({
+        vehicleId: identifier,
+        vehicleCode: z.string(),
+        licensePlate: z.string().nullable(),
+        status: z.string(),
+      }),
+      vehicleOperable: z.boolean(),
+      replacementVehicleRequired: z.boolean(),
+    })
+    .nullish(),
   costSummary: z
     .object({
       requestedTotal: wholeAmount,

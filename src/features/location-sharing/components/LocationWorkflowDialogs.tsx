@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 import { Button } from "@/shared/components/ui/button";
 import {
   Dialog,
@@ -189,7 +190,7 @@ export function LocationWorkflowDialogs({
           <p className="text-sm">
             {arrival?.handoverRequired
               ? "Cần biên bản bàn giao. GPS không xác nhận hoàn tất bàn giao hoặc ghi giờ chính thức."
-              : `Giờ đến tạm do máy chủ ghi: ${arrival?.arrivalAt ? new Date(arrival.arrivalAt).toLocaleString() : "Chưa có"}. Đóng cửa sổ sẽ giữ nguyên giờ máy chủ đã ghi.`}
+              : `Giờ đến tạm do máy chủ ghi: ${arrival?.arrivalAt ? formatUtcDateTime(arrival.arrivalAt) : "Chưa có"}. Đóng cửa sổ sẽ giữ nguyên giờ máy chủ đã ghi.`}
           </p>
           {state.arrivalWarning ? (
             <p role="status" className="text-sm text-amber-800">

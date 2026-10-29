@@ -13,6 +13,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Form } from '@/shared/components/ui/form'
 import { formatUtcTime } from '@/shared/utils/datetime'
 import { PhotoCaptureSection } from '@/shared/components/PhotoCaptureSection'
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from '@/shared/constants/upload'
 import {
   BcpLocationSection,
   QuickNotesSection,
@@ -98,6 +99,8 @@ export default function BcpQuarantineProofPage() {
 
   // ─── Submit Handler ────────────────────────────────────────────────────────
   const onSubmit = async (values: FormValues) => {
+    if (photoFile && (photoFile.size === 0 || photoFile.size > UPLOAD_MAX_BYTES || !['image/jpeg', 'image/jpg', 'image/png'].includes(photoFile.type)))
+      return setPhotoError(`Use a non-empty JPEG or PNG image of at most ${UPLOAD_MAX_MB} MiB.`)
     if (isMandatoryRoute && !photoFile) {
       setPhotoError('Please attach a photo of the quarantine clearance sheet.')
       return
@@ -133,7 +136,7 @@ export default function BcpQuarantineProofPage() {
       const messages: Record<string, string> = {
         NOT_ASSIGNED_TO_TRIP: 'You are not assigned to this transport.',
         DOSSIER_NOT_APPROVED: 'The dossier must be APPROVED before submitting quarantine proof.',
-        FILE_TOO_LARGE: 'One or more files exceed the 5 MB limit.',
+        FILE_TOO_LARGE: `One or more files exceed the ${UPLOAD_MAX_MB} MiB limit.`,
         INVALID_FILE_TYPE: 'Invalid file type. Only images are accepted.',
         EVIDENCE_UNCLEAR: 'Upload failed or image unclear. Please retake photo.',
       }

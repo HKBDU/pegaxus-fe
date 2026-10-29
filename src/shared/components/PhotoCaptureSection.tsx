@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react"
 
 import ImageViewer from "@/shared/components/file-viewer/ImageViewer"
 import { Button } from "@/shared/components/ui/button"
+import { formatFileSize } from "@/shared/components/file-uploader/utils"
+import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
 import { isPresignedUploadError, presignedUpload } from "@/shared/utils/presigned"
 import { getCurrentGpsCoordinates } from "@/shared/utils/gps"
 import { stampPhoto } from "@/shared/utils/photo-stamp"
@@ -30,10 +32,9 @@ export interface PhotoCaptureSectionProps {
 }
 
 const DEFAULT_TYPES = ["image/jpeg", "image/jpg", "image/png"]
-const DEFAULT_MAX_SIZE = 5 * 1024 * 1024
 
 function sizeLimitMessage(maxFileSizeBytes: number) {
-  return `Only JPG, JPEG, PNG images up to ${Math.round(maxFileSizeBytes / 1024 / 1024)}MB are accepted. Please try again.`
+  return `Only JPG, JPEG, PNG images up to ${formatFileSize(maxFileSizeBytes)} are accepted. Please try again.`
 }
 
 function formatTimestamp(value: Date | null | undefined) {
@@ -44,7 +45,7 @@ export function PhotoCaptureSection({
   files,
   maxFiles = 1,
   acceptedTypes = DEFAULT_TYPES,
-  maxFileSizeBytes = DEFAULT_MAX_SIZE,
+  maxFileSizeBytes = UPLOAD_MAX_BYTES,
   capturedAt,
   coordinates,
   captions = [],
@@ -137,6 +138,18 @@ export function PhotoCaptureSection({
     void uploadSingle(file, index, generation)
   }
 
+  const validateImageSize = (file: File) => {
+    if (file.size === 0) {
+      onError?.("Image must not be empty.")
+      return false
+    }
+    if (file.size > maxFileSizeBytes) {
+      onError?.(sizeLimitMessage(maxFileSizeBytes))
+      return false
+    }
+    return true
+  }
+
   const addFiles = async (picked: FileList | null) => {
     if (!picked?.length) {
       retakeIndexRef.current = null
@@ -155,20 +168,14 @@ export function PhotoCaptureSection({
         onError?.("Only JPG, JPEG or PNG images are accepted.")
         return
       }
-      if (originalFile.size > maxFileSizeBytes) {
-        onError?.(sizeLimitMessage(maxFileSizeBytes))
-        return
-      }
+      if (!validateImageSize(originalFile)) return
       const captureTime = new Date()
       const stampedFile = await stampPhoto(originalFile, {
         capturedAt: captureTime,
         coordinates: currentGps,
         documentLabel,
       })
-      if (stampedFile.size > maxFileSizeBytes) {
-        onError?.(sizeLimitMessage(maxFileSizeBytes))
-        return
-      }
+      if (!validateImageSize(stampedFile)) return
 
       const nextFiles = [...files]
       nextFiles[retakeIdx] = stampedFile
@@ -208,20 +215,14 @@ export function PhotoCaptureSection({
         onError?.("Only JPG, JPEG or PNG images are accepted.")
         continue
       }
-      if (originalFile.size > maxFileSizeBytes) {
-        onError?.(sizeLimitMessage(maxFileSizeBytes))
-        continue
-      }
+      if (!validateImageSize(originalFile)) continue
       const captureTime = new Date()
       const stampedFile = await stampPhoto(originalFile, {
         capturedAt: captureTime,
         coordinates: currentGps,
         documentLabel,
       })
-      if (stampedFile.size > maxFileSizeBytes) {
-        onError?.(sizeLimitMessage(maxFileSizeBytes))
-        continue
-      }
+      if (!validateImageSize(stampedFile)) continue
 
       nextFiles.push(stampedFile)
       nextDates.push(captureTime)

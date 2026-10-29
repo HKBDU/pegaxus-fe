@@ -1,4 +1,6 @@
+import { todayUtc } from "@/shared/utils/datetime";
 import { z } from "zod";
+import { UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { BOOKING_STATUSES } from "@/features/booking/types";
 import {
   DOSSIER_REQUIREMENT_STATUSES,
@@ -39,7 +41,6 @@ const timestamp = z
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/,
   );
 const date = z.iso.date();
-const utcToday = () => new Date().toISOString().slice(0, 10);
 
 export const dossierStatusSchema = z.enum([
   "DRAFT",
@@ -75,8 +76,8 @@ export const dossierUploadedAssetSchema = z.object({
   fileSizeBytes: z
     .number()
     .int()
-    .nonnegative()
-    .max(UPLOAD_MAX_FILE_BYTES, "Each file must be 10 MB or smaller."),
+    .positive("Uploaded files must not be empty.")
+    .max(UPLOAD_MAX_FILE_BYTES, `Each file must be ${UPLOAD_MAX_MB} MiB or smaller.`),
 });
 export const dossierUploadedAssetsSchema = z
   .array(dossierUploadedAssetSchema)
@@ -99,7 +100,7 @@ export function validateUploadedAssets(
     : issue.path.includes("mimeType")
       ? "INVALID_FILE_TYPE"
       : issue.path.includes("fileSizeBytes")
-        ? "FILE_TOO_LARGE"
+        ? issue.code === "too_small" ? "EMPTY_FILE" : "FILE_TOO_LARGE"
         : "INVALID_UPLOAD_REFERENCE";
   return { code, message: issue.message };
 }
@@ -274,7 +275,7 @@ export const missingDocumentReminderSchema = z
         "Selected requirements must be unique.",
       ),
     dueDate: date.refine(
-      (value) => value >= utcToday(),
+      (value) => value >= todayUtc(),
       "Due date cannot be in the past.",
     ),
     note: z.string().trim().max(2000).optional(),
@@ -379,7 +380,7 @@ const rejectionReview = z.object({
   ]),
   rejectionNote: z.string().trim().min(15).max(2000),
   revisionDeadline: date.refine(
-    (value) => value >= utcToday(),
+    (value) => value >= todayUtc(),
     "Revision deadline cannot be in the past.",
   ),
   requirementStatus: z.union([z.literal(2), z.literal(5)]),
@@ -494,14 +495,14 @@ function validateMetadataDates(
   validUntil: string | null,
   plannedDepartureDate?: string | null,
 ) {
-  if (value.issuedDate && value.issuedDate > utcToday())
+  if (value.issuedDate && value.issuedDate > todayUtc())
     context.addIssue({
       code: "custom",
       path: ["issuedDate"],
       message: "Issued date cannot be in the future.",
     });
   if (!value.expiryDate) return;
-  if (value.expiryDate < utcToday()) {
+  if (value.expiryDate < todayUtc()) {
     context.addIssue({
       code: "custom",
       path: ["expiryDate"],

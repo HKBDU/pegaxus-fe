@@ -1,3 +1,4 @@
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { formatBookingDate } from "@/features/booking/utils";
 import {
   Dialog,
@@ -83,7 +84,7 @@ export function DossierRequirementDetailsDialog({
             <dt className="text-xs text-muted-foreground">Satisfied At</dt>
             <dd className="mt-1">
               {requirement.satisfiedAt
-                ? formatBookingDate(requirement.satisfiedAt, true)
+                ? <DateTimeUtc value={requirement.satisfiedAt} />
                 : "—"}
             </dd>
           </div>

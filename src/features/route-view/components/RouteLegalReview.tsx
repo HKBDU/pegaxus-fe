@@ -1,4 +1,4 @@
-import { formatBookingDate } from "@/features/booking/utils";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { Badge } from "@/shared/components/ui/badge";
 import { ShieldCheck } from "lucide-react";
 import {
@@ -40,7 +40,7 @@ export function RouteLegalReview({
             )}
             {review.reviewedAt && (
               <Field label="Reviewed at">
-                {formatBookingDate(review.reviewedAt, true)}
+                <DateTimeUtc value={review.reviewedAt} compact />
               </Field>
             )}
             <Field label="Blocked segments">

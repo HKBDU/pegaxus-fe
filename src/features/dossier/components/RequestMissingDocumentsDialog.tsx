@@ -1,3 +1,4 @@
+import { todayUtc } from "@/shared/utils/datetime";
 import { useId, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -411,7 +412,7 @@ function ReminderForm({
                             {...field}
                             disabled={disabled}
                             className="rounded-[2px]"
-                            minDate={new Date().toISOString().slice(0, 10)}
+                            minDate={todayUtc()}
                             placeholder="Submission deadline"
                           />
                         </FormControl>

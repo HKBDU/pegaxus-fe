@@ -1,3 +1,4 @@
+import { todayUtc } from "@/shared/utils/datetime";
 import { useId, useState } from "react";
 import { ShieldCheck, ShieldX } from "lucide-react";
 import { toast } from "sonner";
@@ -69,7 +70,7 @@ function ReviewContent({
     requirement,
     document,
     expiryExceptionReason,
-    today: new Date().toISOString().slice(0, 10),
+    today: todayUtc(),
   };
   const block = getReviewBlockReason(context);
   const canReject = canReviewDocument({ ...context, result: "REJECTED" });

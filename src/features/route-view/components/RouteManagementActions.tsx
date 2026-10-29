@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { FileText, ShieldCheck } from "lucide-react";
@@ -9,11 +9,17 @@ import {
   type LegalFeasibilityPanelProps,
 } from "@/features/route-plan/components/LegalFeasibilityPanel";
 import { CancelRoutePlanDialog } from "@/features/route-plan/components/CancelRoutePlanDialog";
-import { ChangeVehiclesDialog } from "@/features/route-plan/components/ChangeVehiclesDialog";
+import {
+  ChangeVehiclesDialog,
+  type ChangeVehiclesSnapshot,
+} from "@/features/route-plan/components/ChangeVehiclesDialog";
 import { OutsourceSegmentDialog } from "@/features/route-plan/components/OutsourceSegmentDialog";
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import { isFlow3MockMode } from "@/features/transport-plan/source";
-import { getRoutePlanError, updateSegmentOutsourcing } from "@/features/route-plan/services";
+import {
+  getRoutePlanError,
+  updateSegmentOutsourcing,
+} from "@/features/route-plan/services";
 import { Button } from "@/shared/components/ui/button";
 import {
   Select,
@@ -24,9 +30,11 @@ import {
 } from "@/shared/components/ui/select";
 import {
   refreshEmergencyQueries,
+  captureVehicleChangeRefresh,
   type EmergencyContext,
 } from "../hooks/useEmergencyRoute";
 import type { RoutePlanDetail, RouteSegment } from "../types";
+import { canChangeVehiclesBeforeDeparture } from "../vehicle-change";
 
 const legalActionClass =
   "min-h-11 gap-1.5 rounded-[2px] border px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:ring-primary/30 motion-reduce:transition-none sm:min-h-8";
@@ -56,9 +64,11 @@ function legalSegments(
 export function RouteManagementActions({
   plan,
   context,
+  readOnly = false,
 }: {
   plan: RoutePlanDetail;
   context: EmergencyContext;
+  readOnly?: boolean;
 }) {
   const client = useQueryClient();
   const role = getWorkspaceRole(context.workspace.principal);
@@ -70,7 +80,8 @@ export function RouteManagementActions({
   const [refreshing, setRefreshing] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
   const [changeVehiclesOpen, setChangeVehiclesOpen] = useState(false);
-  async function refresh() {
+  const vehicleRefresh = useRef<((result: unknown) => void) | null>(null);
+  async function refresh(throwOnError = false) {
     setRefreshing(true);
     setRefreshFailed(false);
     try {
@@ -82,8 +93,9 @@ export function RouteManagementActions({
         [],
         context.transportId,
       );
-    } catch {
+    } catch (error) {
       setRefreshFailed(true);
+      if (throwOnError) throw error;
     } finally {
       setRefreshing(false);
     }
@@ -94,12 +106,40 @@ export function RouteManagementActions({
       (plan.routeType !== "RETURN" ||
         context.workspace.transportStatus === "IN_TRANSIT"));
   const canReview =
-    role === "specialist" && plan.status === "DRAFT" && dossierReady;
-  const canCancel = role === "coordinator" && plan.status === "DRAFT";
-  const canChangeVehicles =
-    role === "coordinator" &&
-    plan.routeType === "PRIMARY" &&
-    plan.status === "CONFIRMED";
+    role === "specialist" && plan.status === "DRAFT" && dossierReady && !readOnly;
+  const canCancel = role === "coordinator" && plan.status === "DRAFT" && !readOnly;
+  const canChangeVehicles = canChangeVehiclesBeforeDeparture(
+    plan,
+    context.workspace,
+  );
+  const changeableSegments = plan.segments.filter(
+    (segment) =>
+      !segment.isOutsourced &&
+      segment.plannedDepartureAt &&
+      segment.plannedArrivalAt &&
+      ["ROAD", "SEA", "AIR"].includes(segment.route.transportMode),
+  );
+  const prepareVehicleRefresh = (snapshot: ChangeVehiclesSnapshot) => {
+    if (
+      readOnly || !canChangeVehicles ||
+      mockMode ||
+      !context.transportId ||
+      snapshot.routePlan.routePlanId !== plan.routePlanId ||
+      snapshot.routePlan.transportPlanId !== plan.transportPlanId
+    )
+      throw new Error("Reload the authorized route before changing vehicles.");
+    vehicleRefresh.current = captureVehicleChangeRefresh(
+      client,
+      {
+        ...snapshot.routePlan,
+        bookingId: plan.bookingId,
+        segments: snapshot.segments,
+      },
+      context,
+      { genericInvalidationHandled: true },
+      (message, kind) => toast[kind](message),
+    );
+  };
   const segments = legalSegments(review ?? plan);
   return (
     <>
@@ -176,6 +216,16 @@ export function RouteManagementActions({
           type="button"
           size="sm"
           variant="outline"
+          disabled={
+            readOnly || mockMode || !context.transportId || changeableSegments.length === 0
+          }
+          title={
+            mockMode
+              ? "Vehicle changes require live route data."
+              : changeableSegments.length === 0
+                ? "No internal segments have verified planned times and transport mode."
+                : undefined
+          }
           onClick={() => setChangeVehiclesOpen(true)}
         >
           Change vehicles
@@ -223,12 +273,10 @@ export function RouteManagementActions({
           onOpenChange={setChangeVehiclesOpen}
           mode="before-departure"
           routePlan={plan}
-          segments={plan.segments}
-          onChanged={() => {
-            setChangeVehiclesOpen(false);
-            void refresh();
-          }}
-          onReload={() => void refresh()}
+          segments={changeableSegments}
+          onBeforeSubmit={prepareVehicleRefresh}
+          onChanged={(result) => vehicleRefresh.current?.(result)}
+          onReload={() => refresh(true)}
         />
       ) : null}
       {review && segments && canReview && !mockMode ? (
@@ -287,11 +335,20 @@ export function RouteSegmentOutsourceAction({
   async function switchToInternal() {
     setSavingInternal(true);
     try {
-      await updateSegmentOutsourcing(plan.routePlanId, segment.routePlanRouteId, {
-        lastUpdatedAt: plan.updatedAt,
-        outsourced: false,
-      });
-      await refreshEmergencyQueries(client, plan, "management", context.dossierId);
+      await updateSegmentOutsourcing(
+        plan.routePlanId,
+        segment.routePlanRouteId,
+        {
+          lastUpdatedAt: plan.updatedAt,
+          outsourced: false,
+        },
+      );
+      await refreshEmergencyQueries(
+        client,
+        plan,
+        "management",
+        context.dossierId,
+      );
       toast.success("Segment switched to internal fleet.");
     } catch (requestError) {
       toast.error(getRoutePlanError(requestError).message);
@@ -339,7 +396,12 @@ export function RouteSegmentOutsourceAction({
         <span className="sr-only">Configure outsourced segment</span>
       </OutsourceSegmentDialog>
       {!segment.isOutsourced ? (
-        <Button asChild size="sm" variant="link" className="h-auto px-0 text-xs">
+        <Button
+          asChild
+          size="sm"
+          variant="link"
+          className="h-auto px-0 text-xs"
+        >
           <Link to={routePlanEdit(plan.routePlanId)}>
             Assign vehicle in route builder
           </Link>

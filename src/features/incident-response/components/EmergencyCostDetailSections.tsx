@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { Link } from "react-router-dom";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   CategoryBadge,
   CostStatusBadge,
@@ -16,12 +18,20 @@ import { emergencyCostIdSchema, type EmergencyCostDetail } from "../schemas";
 import type { CostEvidencePreview } from "../mocks/repository";
 import { CostEvidenceGallery } from "./EmergencyCostEvidence";
 
-const dateFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+const vehicleStatusLabels = new Map([
+  ["AVAILABLE", "Available"],
+  ["ASSIGNED", "Assigned"],
+  ["IN_USE", "In use"],
+  ["MAINTENANCE", "Maintenance"],
+  ["INACTIVE", "Inactive"],
+  ["SUSPENDED", "Suspended"],
+  ["OUT_OF_SERVICE", "Out of service"],
+]);
+
 const date = (value: string) => (
-  <time dateTime={value}>{dateFormat.format(new Date(value))}</time>
+  <time dateTime={value}>
+    <DateTimeUtc value={value} compact />
+  </time>
 );
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
@@ -165,7 +175,23 @@ export function EmergencyCostDetailSections({
                       ? `${incident.vehicle.vehicleCode} · ${incident.vehicle.licensePlate}`
                       : null,
                   ],
-                  ["Vehicle status", incident.vehicle?.status],
+                  [
+                    "Vehicle status",
+                    incident.vehicle?.status ? (
+                      <Badge
+                        key="vehicle-status"
+                        variant={
+                          incident.vehicle.status === "OUT_OF_SERVICE"
+                            ? "destructive"
+                            : "outline"
+                        }
+                        className="rounded-xs whitespace-normal break-words"
+                      >
+                        {vehicleStatusLabels.get(incident.vehicle.status) ??
+                          incident.vehicle.status}
+                      </Badge>
+                    ) : null,
+                  ],
                 ]}
               />
             </>
