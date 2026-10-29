@@ -67,7 +67,10 @@ class MockGeolocationController {
 
     // Intercept clearWatch
     navigator.geolocation.clearWatch = (id: number): void => {
-      this.watchers.delete(id);
+      if (this.watchers.delete(id)) return;
+      // A watcher may have been registered before Mock GPS was enabled. Keep
+      // the original native watcher cancellable after the API is overridden.
+      this.originalClearWatch?.(id);
     };
 
     // Intercept getCurrentPosition

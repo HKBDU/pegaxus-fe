@@ -79,18 +79,42 @@ export function toRouteMapData(
   plan: RoutePlanDetail,
   suppliedGeometry?: unknown,
 ) {
-  // RP3 currently has no geometry field. Only an explicitly verified source may supply this argument.
+  // RP3 currently has no saved geometry field. Build segment routes from the
+  // verified endpoints so MapViewer can resolve and render their line geometry.
   const geometry = verifiedRouteGeometry(suppliedGeometry);
   const geometryStatus =
     suppliedGeometry == null ? "missing" : geometry ? "available" : "invalid";
   const locations = toRouteMapLocations(plan);
-  // Never pass endpoint pairs or transportMode: shared MapViewer can otherwise route/estimate lines.
+  const locationById = new Map(locations.map((location) => [location.id, location]));
+  const routes: MapRoute[] = plan.segments
+    .slice()
+    .sort((a, b) => a.sequenceNo - b.sequenceNo)
+    .flatMap((segment) => {
+      const fromLocation = locationById.get(segment.fromLocation.locationId);
+      const toLocation = locationById.get(segment.toLocation.locationId);
+      if (!fromLocation || !toLocation) return [];
+      return [
+        {
+          id: segment.routePlanRouteId,
+          routePlanRouteId: segment.routePlanRouteId,
+          name: segment.route.routeName ?? segment.route.routeCode,
+          fromLocation,
+          toLocation,
+          transportMode: segment.route.transportMode,
+          distanceKm: segment.route.distanceKm,
+          durationMinutes: segment.route.estimatedDurationMinutes,
+          routePlanType: segment.routeType,
+          isOutsourced: segment.isOutsourced,
+        },
+      ];
+    });
   const route: MapRoute | null = geometry
     ? { id: plan.routePlanId, name: plan.routePlanCode, geometry }
     : null;
   return {
     locations,
     route,
+    routes,
     geometryStatus,
     omittedStops: plan.segments
       .flatMap((segment) => [segment.fromLocation, segment.toLocation])

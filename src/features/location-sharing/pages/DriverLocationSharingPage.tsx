@@ -4,7 +4,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { LocationSharingControl } from "../components/LocationSharingControl";
 import { LocationSharingSummary } from "../components/LocationSharingDetails";
-import { GpsSimulatorDrawer } from "../simulator/GpsSimulatorDrawer";
+import { GpsSimulatorWidget } from "../simulator/GpsSimulatorWidget";
 import { useDriverLocationSession } from "../hooks/useDriverLocationSession";
 import { driverTransportOverviewPath } from "../navigation";
 import { FEATURES } from "../features";
@@ -17,6 +17,7 @@ export default function DriverLocationSharingPage() {
     state,
     canStart,
     start,
+    restart,
     stop,
     context,
     source,
@@ -49,12 +50,12 @@ export default function DriverLocationSharingPage() {
 
   return (
     <main className="location-sharing-ui px-4 py-4 sm:px-6 sm:py-6">
-      <div className="mx-auto w-full min-w-0 max-w-lg space-y-3">
+      <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] lg:items-start">
         {transportId !== undefined ? (
           <Button
             asChild
             variant="ghost"
-            className="-ml-2 min-h-12 rounded-xs px-2 text-base"
+            className="-ml-2 min-h-12 rounded-xs px-2 text-base lg:col-span-2 lg:row-start-1 lg:w-fit"
           >
             <Link to={driverTransportOverviewPath(transportId)}>
               <ArrowLeft aria-hidden="true" className="size-4" />
@@ -62,7 +63,7 @@ export default function DriverLocationSharingPage() {
             </Link>
           </Button>
         ) : null}
-        <Card className="location-sharing-panel gap-5 rounded-xs border-border bg-card p-4 shadow-none sm:p-5">
+        <Card className="location-sharing-panel gap-5 rounded-xs border-border bg-card p-4 shadow-none sm:p-5 lg:col-start-1 lg:row-start-2">
           <header className="flex min-w-0 items-start gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xs bg-primary/10 text-primary">
               <MapPin aria-hidden="true" className="size-5" />
@@ -136,11 +137,22 @@ export default function DriverLocationSharingPage() {
             </div>
           ) : null}
         </Card>
-        <GpsSimulatorDrawer
-          currentSegment={currentSegment}
-          sharingActive={state.active}
-          onStartSharing={canStart ? start : undefined}
-        />
+        <aside
+          aria-label="Driver GPS simulator"
+          className="min-w-0 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-2"
+        >
+          <GpsSimulatorWidget
+            currentSegment={currentSegment}
+            sharingActive={state.active}
+            onStartSharing={canStart ? start : undefined}
+            onMockGpsEnabled={() => {
+              if (state.active) restart();
+            }}
+            onMockGpsDisabled={() => {
+              if (state.active) restart();
+            }}
+          />
+        </aside>
       </div>
     </main>
   );

@@ -33,6 +33,8 @@ export interface GpsSimulatorWidgetProps {
   } | null;
   sharingActive?: boolean;
   onStartSharing?: () => void;
+  onMockGpsEnabled?: () => void;
+  onMockGpsDisabled?: () => void;
 }
 
 const SPEED_PRESETS = [
@@ -47,6 +49,8 @@ export function GpsSimulatorWidget({
   currentSegment,
   sharingActive,
   onStartSharing,
+  onMockGpsEnabled,
+  onMockGpsDisabled,
 }: GpsSimulatorWidgetProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showGeoJsonModal, setShowGeoJsonModal] = useState(false);
@@ -62,6 +66,16 @@ export function GpsSimulatorWidget({
         }
       : undefined,
   );
+
+  const handleMockGpsChange = (enabled: boolean) => {
+    if (enabled) {
+      simulator.enableMockGps();
+      onMockGpsEnabled?.();
+    } else {
+      simulator.disableMockGps();
+      onMockGpsDisabled?.();
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -162,7 +176,7 @@ export function GpsSimulatorWidget({
             </span>
             <Switch
               checked={simulator.isEnabled}
-              onCheckedChange={simulator.toggleEnable}
+              onCheckedChange={handleMockGpsChange}
               aria-label="Toggle Mock GPS Simulator"
             />
           </div>

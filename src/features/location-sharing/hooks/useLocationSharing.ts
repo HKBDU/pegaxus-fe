@@ -65,6 +65,7 @@ export function useLocationSharing(
       !state.restartBlocked &&
       (isDemo || (environment.network === "online" && environment.capability === "available")),
     start: sender.start,
+    restart: sender.restart,
     stop: sender.stop,
     dismissArrival: sender.dismissArrival,
     freshPosition: sender.freshPosition,

@@ -37,6 +37,8 @@ export interface GpsSimulatorDrawerProps {
   } | null;
   sharingActive?: boolean;
   onStartSharing?: () => void;
+  onMockGpsEnabled?: () => void;
+  onMockGpsDisabled?: () => void;
   /** Custom trigger element if the caller wants to provide their own */
   trigger?: React.ReactNode;
 }
@@ -52,6 +54,8 @@ export function GpsSimulatorDrawer({
   currentSegment,
   sharingActive,
   onStartSharing,
+  onMockGpsEnabled,
+  onMockGpsDisabled,
   trigger,
 }: GpsSimulatorDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -68,6 +72,16 @@ export function GpsSimulatorDrawer({
         }
       : undefined,
   );
+
+  const handleMockGpsChange = (enabled: boolean) => {
+    if (enabled) {
+      simulator.enableMockGps();
+      onMockGpsEnabled?.();
+    } else {
+      simulator.disableMockGps();
+      onMockGpsDisabled?.();
+    }
+  };
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -198,7 +212,7 @@ export function GpsSimulatorDrawer({
               </div>
               <Switch
                 checked={simulator.isEnabled}
-                onCheckedChange={simulator.toggleEnable}
+                onCheckedChange={handleMockGpsChange}
                 aria-label="Toggle Mock GPS"
               />
             </div>
