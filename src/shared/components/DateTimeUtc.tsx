@@ -21,4 +21,3 @@ export function DateTimeUtc({ value, compact = false, className }: DateTimeUtcPr
     </span>
   )
 }
-

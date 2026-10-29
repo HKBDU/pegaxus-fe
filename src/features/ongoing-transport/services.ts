@@ -92,17 +92,27 @@ export const ongoingTransportService = {
         envelope.errorCode,
         envelope.message,
       );
-    const parsed = transportOverviewSchema.parse(envelope.value);
     const hideIncidents =
       audience === "customer" ||
       canAccess(useAuthStore.getState().principal, { anyRole: ["CUSTOMER"] });
     if (hideIncidents) {
+      const parsed = transportOverviewSchema
+        .extend({
+          activeIncidents: z
+            .unknown()
+            .transform((): TransportOverview["activeIncidents"] => []),
+        })
+        .parse(envelope.value);
       return {
         ...parsed,
         activeIncidents: [],
       };
     }
-    return parsed;
+    const parsed = transportOverviewSchema.parse(envelope.value);
+    return {
+      ...parsed,
+      activeIncidents: parsed.activeIncidents ?? [],
+    };
   },
   async list(
     params: OngoingTransportParams,

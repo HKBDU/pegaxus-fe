@@ -17,7 +17,6 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -144,9 +143,6 @@ export function VehicleDetailSection({
         <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-[2px] sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Supplement vehicle detail</DialogTitle>
-            <DialogDescription>
-              Update the vehicle information returned by the incident API.
-            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
             <label className="grid gap-2 text-sm font-semibold">
@@ -217,10 +213,20 @@ export function VehicleDetailSection({
                       update(field, checked === true)
                     }
                   />
-                  <span>{field.replace(/([A-Z])/g, " $1")}</span>
+                  <span>
+                    {{
+                      vehicleOperable: "Vehicle operable",
+                      repairRequired: "Repair required",
+                      towingRequired: "Towing required",
+                      replacementVehicleRequired: "Replacement vehicle required",
+                    }[field]}
+                  </span>
                 </label>
               ))}
             </div>
+            <p className="border border-[#f39200] bg-[#fff7e8] px-3 py-2 text-sm font-semibold text-slate-800">
+              Vehicle status only changes (locks) once the replacement cost is approved.
+            </p>
           </div>
           {mutation.error instanceof Error && (
             <p role="alert" className="text-sm text-red-600">

@@ -7,12 +7,13 @@ import { BillingSummaryCard } from "@/features/invoice/components/BillingSummary
 import { GeneratedLinesTable } from "@/features/invoice/components/GeneratedLinesTable"
 import { InvoiceLineItemsTable } from "@/features/invoice/components/InvoiceLineItemsTable"
 import { IssueInvoiceDialog } from "@/features/invoice/components/IssueInvoiceDialog"
-import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_STATUS, INVOICE_TAX_RATE_PERCENT, INVOICE_TYPE_HINTS, TRANSIT_DAYS_RANGE, TRANSPORT_STATUS_LABELS, INVOICE_TYPE, INVOICE_TYPE_LABELS, initialInvoiceParams, isGeneratedInvoiceType } from "@/features/invoice/constants"
+import { DEFAULT_INVOICE_CURRENCY, INVOICE_CURRENCY_LABELS, INVOICE_STATUS, INVOICE_TAX_RATE_PERCENT, INVOICE_TYPE_HINTS, TRANSIT_DAYS_RANGE, TRANSPORT_STATUS_LABELS, INVOICE_TYPE, INVOICE_TYPE_LABELS, initialInvoiceParams, isGeneratedInvoiceType, QUOTATION_FORMULA_MAX_HORSES } from "@/features/invoice/constants"
 import { getInvoiceErrorCode, getInvoiceErrorMessage, InvoiceApiError } from "@/features/invoice/errors"
 import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/features/invoice/hooks/useInvoiceCompose"
 import { useBookingInvoices } from "@/features/invoice/hooks/useInvoices"
 import { invoiceFormSchema, invoiceToFormValues, prefillToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoicePrefill, InvoiceType } from "@/features/invoice/types"
+import { formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime"
 import { DEFAULT_DUE_TIME, estimateSummary, formatMoney, parseTransitDays, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
 import { useDebounce } from "@/shared/hooks"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
@@ -68,14 +69,23 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
   const updateMutation = useUpdateInvoice(invoice?.invoiceId ?? "")
   const isSaving = createMutation.isPending || updateMutation.isPending
 
+  // A saved QUOTATION of a booking beyond the formula (0 or 10+ horses) has lines the manager typed.
+  const savedLocked =
+    isEdit && invoice
+      ? isGeneratedInvoiceType(invoice.type) &&
+        !(invoice.type === INVOICE_TYPE.QUOTATION && (booking.horses.length === 0 || booking.horses.length > QUOTATION_FORMULA_MAX_HORSES))
+      : false
+
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceFormSchema),
-    defaultValues: isEdit && invoice ? invoiceToFormValues(invoice) : { ...DEFAULT_VALUES, ...(prefill ? prefillToFormValues(prefill) : {}) },
+    defaultValues: isEdit && invoice ? invoiceToFormValues(invoice, savedLocked) : { ...DEFAULT_VALUES, ...(prefill ? prefillToFormValues(prefill) : {}) },
     mode: "onTouched",
   })
   const { control, handleSubmit, setValue, setError, register, formState: { errors, isDirty } } = form
   const [type, items, transitDaysInput] = useWatch({ control, name: ["type", "items", "transitDays"] })
-  const generated = isGeneratedInvoiceType(selectedType)
+  const [dueDateValue, dueTimeValue] = useWatch({ control, name: ["dueDate", "dueTime"] })
+  // The day and the clock time are the viewer's own; the BE gets (and shows everyone else) the UTC instant.
+  const dueUtcPreview = dueDateValue && dueTimeValue ? toUtcIso(`${dueDateValue}T${dueTimeValue}`) : undefined
   // The days re-price a QUOTATION through IV1; wait until typing stops and the number is valid.
   const debouncedDays = useDebounce(transitDaysInput ?? "", 400)
   const transitDays = selectedType === INVOICE_TYPE.QUOTATION ? parseTransitDays(debouncedDays) : undefined
@@ -86,6 +96,11 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
 
   // IV1 only when creating: for an existing draft it would answer INVOICE_ALREADY_EXISTS about the draft itself.
   const suggestionQuery = useInvoiceSuggestion(booking.bookingId, isEdit ? undefined : (selectedType ?? undefined), transitDays)
+  // IV1 `isLocked` decides whether the server builds the lines; until it answers (or if it is for another type), the type decides.
+  const suggestion = suggestionQuery.data?.type === selectedType ? suggestionQuery.data : undefined
+  const locked = isEdit ? savedLocked : (suggestion?.isLocked ?? isGeneratedInvoiceType(selectedType))
+  // A QUOTATION typed by hand (10+ horses) must carry a note.
+  const noteRequired = !locked && selectedType === INVOICE_TYPE.QUOTATION
   const precheckError = suggestionQuery.isError ? suggestionQuery.error : null
   // QUOTATION, DEPOSIT and FINAL: the server builds the lines (IV1 while creating, the saved draft while editing), deposit deductions included.
   const generatedItems: InvoiceItem[] = useMemo(
@@ -96,7 +111,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
   const generatedLines = useMemo(() => generatedItems.filter((item) => !item.isDepositDeduction), [generatedItems])
   const transportStatus = isEdit ? invoice?.transport?.status : suggestionQuery.data?.transportStatus
 
-  const parsedLines = generated
+  const parsedLines = locked
     ? generatedLines.map((item) => ({ label: item.description, quantity: item.quantity, price: item.price, key: item.invoiceItemId ?? "" }))
     : (items ?? []).map((item) => ({
         label: item.description?.trim() || "Untitled line",
@@ -106,7 +121,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
       }))
   // IV1 answers no totals, so the form adds the lines itself; a credit note carries no tax.
   const taxRatePercent = selectedType === INVOICE_TYPE.CREDIT_NOTE ? 0 : (suggestionQuery.data?.pricing?.taxRatePercent ?? invoice?.summary.taxRatePercent ?? INVOICE_TAX_RATE_PERCENT)
-  const estimate = estimateSummary(parsedLines, generated ? depositDeductionItems : [], taxRatePercent)
+  const estimate = estimateSummary(parsedLines, locked ? depositDeductionItems : [], taxRatePercent)
   const summaryLines = [
     ...parsedLines.flatMap((line, index) =>
       Number.isNaN(line.quantity) || Number.isNaN(line.price)
@@ -120,6 +135,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
     setValue("type", next, { shouldDirty: true })
     // Rows typed for a manual type must not block (or be sent with) a type whose lines the server builds.
     if (isGeneratedInvoiceType(next)) setValue("items", [])
+    form.clearErrors()
     setFormError(undefined)
   }
 
@@ -132,9 +148,13 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
       return onClose(invoice)
     }
     if (error instanceof InvoiceApiError && error.errors?.length) {
-      error.errors.forEach(({ field, message }) => setError(toFormPath(field) as Path<InvoiceFormValues>, { type: "server", message }))
+      // The BE may name a field in PascalCase ("DueDate"); the form fields start with a lower-case letter.
+      const fieldOf = (field: string) => field.charAt(0).toLowerCase() + field.slice(1)
+      error.errors.forEach(({ field, message }) => setError(toFormPath(fieldOf(field)) as Path<InvoiceFormValues>, { type: "server", message }))
       const row = /^items\[(\d+)\]/.exec(error.errors[0].field)
       if (row) setFocusRow({ index: Number(row[1]), nonce: Date.now() })
+      // A message that already sits under its own field (due date, note, transit days) is not repeated in the banner.
+      if (error.errors.every(({ field }) => ["dueDate", "note", "transitDays"].includes(fieldOf(field)))) return
     }
     setFormError(getInvoiceErrorMessage(error))
   }
@@ -143,7 +163,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
     toast.success(message)
     // The server rebuilds generated lines on every save: say so when the amount differs from what the manager just saw.
     const shown = isEdit && invoice ? invoice.summary.grandTotal : estimate.grandTotal
-    if (generated && saved.summary.grandTotal !== shown)
+    if (locked && saved.summary.grandTotal !== shown)
       toast.warning(`The system recalculated this invoice: total ${formatMoney(shown)} → ${formatMoney(saved.summary.grandTotal)}.`)
     if (next === "issue") setIssueTarget(saved)
     else onClose(saved)
@@ -153,15 +173,19 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
     handleSubmit(
       (values) => {
         setFormError(undefined)
+        if (noteRequired && !values.note.trim()) {
+          setError("note", { type: "manual", message: "Add a note: this quotation is typed by hand because the booking has 10 or more horses." })
+          return
+        }
         setSavingIntent(next)
         if (isEdit && invoice) {
-          updateMutation.mutate(toUpdatePayload(values, invoice.updatedAt), {
+          updateMutation.mutate(toUpdatePayload(values, invoice.updatedAt, locked), {
             onSuccess: (saved) => afterSave(saved, "Draft saved", next),
             onError: applyApiError,
           })
           return
         }
-        createMutation.mutate(toCreatePayload(values), {
+        createMutation.mutate(toCreatePayload(values, locked), {
           onSuccess: (saved) => afterSave(saved, `Draft ${saved.invoiceNumber} created`, next),
           onError: applyApiError,
         })
@@ -183,7 +207,8 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
     onReload?.()
   }
 
-  const canSave = selectedType !== null && !precheckError && !depositBlocked && !(suggestionQuery.isFetching && !isEdit)
+  const transportCancelled = transportStatus === "CANCELLED"
+  const canSave = selectedType !== null && !precheckError && !depositBlocked && !transportCancelled && !(suggestionQuery.isFetching && !isEdit)
   const issueLabel = isEdit ? "Issue Invoice" : "Create Invoice"
   const dateLabel = type === "QUOTATION" ? "Valid Until" : "Due Date"
 
@@ -283,6 +308,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                             )}
                           />
                         </div>
+                        {dueUtcPreview ? <p className="mt-1 text-[11px] text-gray-500">Your local time. Due at <span className="font-semibold text-gray-700">{formatUtcDateTime(dueUtcPreview)}</span></p> : null}
                         {errors.dueDate || errors.dueTime ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.dueDate?.message ?? errors.dueTime?.message}</p> : null}
                       </div>
 
@@ -322,6 +348,12 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                           <p>This booking already has a deposit invoice ({activeDeposit.invoiceNumber}). Cancel it first to create another one.</p>
                         </div>
                       ) : null}
+                      {transportCancelled ? (
+                        <div className="flex gap-2 border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 sm:col-span-2" role="alert">
+                          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                          <p>This transport was cancelled, so no new invoice can be created for it.</p>
+                        </div>
+                      ) : null}
                       {precheckError ? (
                         <div className="flex gap-2 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 sm:col-span-2" role="alert">
                           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
@@ -330,8 +362,9 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                       ) : null}
 
                       <div className="sm:col-span-2">
-                        <label className={fieldLabelClass} htmlFor="invoice-note">Notes</label>
+                        <label className={fieldLabelClass} htmlFor="invoice-note">Notes{noteRequired ? <span className="text-red-500"> *</span> : null}</label>
                         <Textarea id="invoice-note" rows={2} placeholder="Add any additional notes for this invoice..." className="field-sizing-fixed h-[60px] min-h-[60px] resize-none overflow-y-auto rounded-none border-[#d8d5cb] text-sm shadow-none" {...register("note")} />
+                        {errors.note ? <p className="mt-1 text-[11px] text-red-600" role="alert">{errors.note.message}</p> : null}
                       </div>
                     </div>
                   </section>
@@ -339,7 +372,7 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                   <BillingSummaryCard lines={summaryLines} summary={estimate} currency={DEFAULT_INVOICE_CURRENCY} />
                 </div>
 
-                {generated ? (
+                {locked ? (
                   <GeneratedLinesTable
                     items={generatedItems}
                     isLoading={!isEdit && suggestionQuery.isFetching && !suggestionQuery.data}

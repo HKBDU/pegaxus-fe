@@ -15,6 +15,8 @@ const statusStyles: Record<VehicleStatus, string> = {
   ASSIGNED: "border-sky-300 bg-sky-50 text-sky-700",
   MAINTENANCE: "border-violet-300 bg-violet-50 text-violet-700",
   INACTIVE: "border-slate-300 bg-slate-100 text-slate-600",
+  SUSPENDED: "border-orange-300 bg-orange-50 text-orange-700",
+  OUT_OF_SERVICE: "border-red-300 bg-red-50 text-red-700",
 }
 
 export function VehicleStatusBadge({ status, className }: { status: VehicleStatus; className?: string }) {

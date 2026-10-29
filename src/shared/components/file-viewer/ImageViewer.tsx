@@ -71,6 +71,7 @@ function getImageFileHref(value: string): string | undefined {
  */
 function ImageViewerContent({
   images,
+  maxFileSizeBytes = MAX_IMAGE_FILE_SIZE,
   index = 0,
   className,
   style,
@@ -88,7 +89,7 @@ function ImageViewerContent({
   )
   const fileStatus = useFileSizeLimit(
     sizeSources,
-    MAX_IMAGE_FILE_SIZE,
+    maxFileSizeBytes,
   )
 
   const multiple = slides.length > 1
@@ -149,7 +150,7 @@ function ImageViewerContent({
         <div className="flex size-full flex-col items-center justify-center gap-3 overflow-y-auto p-4 text-center text-sm text-white/70">
           {!slides.length ? 'No Image Found' : (
             <>
-              <p className="m-0">Inline preview is limited to {MAX_IMAGE_FILE_SIZE / (1024 * 1024)} MiB. Larger uploaded images can be opened separately.</p>
+              <p className="m-0">Inline preview is limited to {maxFileSizeBytes / (1024 * 1024)} MiB. Larger uploaded images can be opened separately.</p>
               <ul className="m-0 grid w-full list-none gap-2 p-0">
                 {slides.map((slide, slideIndex) => {
                   const href = getImageFileHref(slide.src)

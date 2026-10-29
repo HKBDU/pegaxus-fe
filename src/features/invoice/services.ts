@@ -4,7 +4,7 @@ import apiClient from "@/lib/axios"
 import type { PaginationMeta } from "@/shared/types"
 import { invoiceEnvelopeSchema, invoiceIdSchema, invoicePageSchema, invoiceDetailSchema, invoiceQuerySchema, bookingInvoiceQuerySchema, invoiceStatusHistorySchema } from "@/features/invoice/schemas"
 import { isInvoiceMockMode } from "@/features/invoice/utils"
-import type { InvoicePage, InvoiceQueryParams, BookingInvoiceQueryParams, ApiEnvelope, ApiFieldError, CreateInvoicePayload, Invoice, InvoiceBookingContext, InvoiceSuggestion, InvoiceType, IssuedInvoice, UpdateInvoicePayload, CancelInvoicePayload, CancelInvoiceResponse, OnlinePaymentResponse, RecordPaymentPayload, RecordPaymentResponse } from "@/features/invoice/types"
+import type { InvoicePage, InvoiceQueryParams, BookingInvoiceQueryParams, ApiEnvelope, ApiFieldError, CreateInvoicePayload, Invoice, InvoiceDetail, InvoiceBookingContext, InvoiceSuggestion, InvoiceType, IssuedInvoice, UpdateInvoicePayload, CancelInvoicePayload, CancelInvoiceResponse, OnlinePaymentResponse, RecordPaymentPayload, RecordPaymentResponse } from "@/features/invoice/types"
 import { InvoiceApiError } from "@/features/invoice/errors"
 import { mockCreateInvoice, mockGetBookingContext, mockGetInvoice, mockGetSuggestion, mockIssueInvoice, mockUpdateInvoice } from "@/features/invoice/mocks/compose.mock"
 import type { AxiosError } from "axios"
@@ -68,7 +68,7 @@ export const invoiceViewService = {
           );
     return invoicePageSchema.parse(readEnvelope(response));
   },
-  async detail(invoiceId: string, signal?: AbortSignal) {
+  async detail(invoiceId: string, signal?: AbortSignal): Promise<InvoiceDetail> {
     const id = invoiceIdSchema.parse(invoiceId);
     signal?.throwIfAborted();
     const response =
@@ -78,7 +78,12 @@ export const invoiceViewService = {
             `/invoices/${encodeURIComponent(id)}`,
             { signal },
           );
-    return invoiceDetailSchema.parse(readEnvelope(response));
+    const invoice = invoiceDetailSchema.parse(readEnvelope(response));
+    return {
+      ...invoice,
+      note: invoice.note ?? null,
+      cancellationReason: invoice.cancellationReason ?? null,
+    };
   },
   async statusHistory(invoiceId: string, signal?: AbortSignal) {
     const id = invoiceIdSchema.parse(invoiceId);

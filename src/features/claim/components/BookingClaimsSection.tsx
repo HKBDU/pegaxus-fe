@@ -9,6 +9,7 @@ import { useClaimEligibility, useClaims } from "@/features/claim/hooks"
 import type { ClaimQueryParams } from "@/features/claim/types"
 import { formatInvoiceDateTime, formatMoney } from "@/features/invoice/utils"
 import { cn } from "@/lib/utils"
+import { formatLocalDateTimeLabel } from "@/shared/utils/datetime"
 import { Button } from "@/shared/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
 import { Skeleton } from "@/shared/components/ui/skeleton"
@@ -60,6 +61,7 @@ export function BookingClaimsSection({ bookingId, highlightClaimId }: { bookingI
             {data.claimDeadline ? (
               <p>
                 Claim deadline: <span className="font-semibold text-gray-900">{formatInvoiceDateTime(data.claimDeadline)}</span>{" "}
+                <span className="text-xs text-gray-500">({formatLocalDateTimeLabel(data.claimDeadline)})</span>{" "}
                 <ClaimCountdown seconds={remaining} className="ml-1" />
               </p>
             ) : null}

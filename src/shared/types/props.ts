@@ -72,6 +72,8 @@ export type ImageViewerImage = string | {
 
 export type ImageViewerProps = {
   images: ImageViewerImage[]
+  /** Maximum allowed source size. Defaults to the shared 5 MB viewer limit. */
+  maxFileSizeBytes?: number
   index?: number
   open?: boolean
   onClose?: () => void

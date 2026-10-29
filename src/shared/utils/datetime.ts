@@ -80,4 +80,3 @@ export function toUtcIso(localValue: string | null | undefined) {
   const date = new Date(localValue)
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString()
 }
-

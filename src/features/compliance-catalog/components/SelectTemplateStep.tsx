@@ -1,13 +1,16 @@
 import { getCoreRowModel, useReactTable, type ColumnDef, type RowSelectionState } from "@tanstack/react-table"
-import { FilterX, Search, Star, X } from "lucide-react"
+import { FilterX, Search, Star, TriangleAlert, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 
+import { ROLE_ROUTES } from "@/app/route-config"
 import { cn } from "@/lib/utils"
 import { RequirementCountTiles } from "@/features/compliance-catalog/components/RequirementCountTiles"
 import { TemplateStatusBadge } from "@/features/compliance-catalog/components/TemplateStatusBadge"
 import { useDossierTemplate, useRecommendedTemplates } from "@/features/compliance-catalog/hooks"
 import type { DossierTemplateListParams, DossierTemplateSummary } from "@/features/compliance-catalog/template-types"
-import { formatTemplateDate, getTemplateErrorMessage } from "@/features/compliance-catalog/template-utils"
+import { formatTemplateDate, getTemplateErrorMessage, isBookingGoneError, isOffRouteTemplate } from "@/features/compliance-catalog/template-utils"
 import { ErrorState } from "@/shared/components/common"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Badge } from "@/shared/components/ui/badge"
@@ -43,16 +46,26 @@ interface SelectTemplateStepProps {
 
 /** SCR-F2-007, step 1: pick one of the ACTIVE templates, ranked for the route of the booking (T1 with bookingId). */
 export function SelectTemplateStep({ bookingId, selectedId, onSelect }: SelectTemplateStepProps) {
+  const navigate = useNavigate()
   const [pageIndex, setPageIndex] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
+  // T1 in recommendation mode is ranked over all results; the contract asks for pageSize 20.
+  const [pageSize, setPageSize] = useState(20)
   const [search, setSearch] = useState("")
   const debouncedSearch = useDebounce(search, 300)
   const params = useMemo<DossierTemplateListParams>(
-    () => ({ pageIndex, pageSize, search: debouncedSearch, country: "ALL", status: "ACTIVE", sortBy: "recommendation:desc", bookingId }),
+    () => ({ pageIndex, pageSize, search: debouncedSearch, country: "ALL", status: "ALL", sortBy: "recommendation:desc", bookingId }),
     [bookingId, debouncedSearch, pageIndex, pageSize],
   )
   const templatesQuery = useRecommendedTemplates(params)
   const templates = useMemo(() => templatesQuery.data?.data ?? [], [templatesQuery.data])
+
+  // 404 BOOKING_NOT_FOUND / 409 BOOKING_NOT_APPROVED: there is nothing to apply a template to, so go back to the list.
+  const listError = templatesQuery.error
+  useEffect(() => {
+    if (!isBookingGoneError(listError)) return
+    toast.error(getTemplateErrorMessage(listError, "This booking can no longer receive a dossier."))
+    navigate(ROLE_ROUTES.approvedBookings, { replace: true })
+  }, [listError, navigate])
   const recommended = templates.find((template) => template.isRecommended)
   const selectedTemplate = useDossierTemplate(selectedId ?? undefined)
 
@@ -96,7 +109,20 @@ export function SelectTemplateStep({ bookingId, selectedId, onSelect }: SelectTe
       {
         accessorKey: "templateName",
         header: "TEMPLATE NAME",
-        cell: ({ row }) => <span className="block min-w-40 max-w-64 whitespace-normal font-medium leading-snug text-slate-800">{row.original.templateName}</span>,
+        cell: ({ row }) => {
+          const offRoute = isOffRouteTemplate(row.original)
+          return (
+            <div className={cn("min-w-40 max-w-72 whitespace-normal", offRoute && "border-l-2 border-amber-400 pl-2")}>
+              <span className="block font-medium leading-snug text-slate-800">{row.original.templateName}</span>
+              {row.original.recommendationReason ? (
+                <span className={cn("mt-0.5 flex items-start gap-1 text-[11px] leading-4", offRoute ? "text-amber-700" : "text-slate-500")}>
+                  {offRoute ? <TriangleAlert className="mt-px size-3 shrink-0" aria-hidden="true" /> : null}
+                  {row.original.recommendationReason}
+                </span>
+              ) : null}
+            </div>
+          )
+        },
       },
       {
         id: "matchedCountries",

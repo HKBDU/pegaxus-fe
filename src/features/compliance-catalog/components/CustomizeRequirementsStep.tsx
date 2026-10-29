@@ -221,7 +221,7 @@ export function CustomizeRequirementsStep({
           <p className="m-0 flex-1">
             {template
               ? "The original dossier template will not be modified. These customizations will only be applied to the new compliance dossier created for this booking."
-              : "No template is used: the dossier will only contain the custom requirements you add here."}
+              : "No template is used: the dossier will only contain the custom requirements you add here. The horse and the due date you choose are not saved without a template."}
           </p>
           <button type="button" aria-label="Dismiss" className="shrink-0 text-sky-700 hover:text-sky-950" onClick={() => setNoticeOpen(false)}>
             <X className="size-3.5" />

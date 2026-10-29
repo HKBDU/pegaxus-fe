@@ -10,6 +10,7 @@ import { PageHeader } from "@/shared/components/PageHeader"
 import { PhotoCaptureSection } from "@/shared/components/PhotoCaptureSection"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { cn } from "@/lib/utils"
+import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
 
 import { CrewShell } from "../components/CrewShell"
 import { HEALTH_STATUSES, HORSE_HEALTH_ROUTES, HYDRATION_STATUSES, LOG_TYPES } from "../constants"
@@ -437,6 +438,7 @@ export default function HealthLogPage() {
               onUploadStateChange={setPhotoUploadState}
               presignedEntity="attachment"
               documentLabel="Health check photo"
+              maxFileSizeBytes={UPLOAD_MAX_BYTES}
             />
 
             {/* GPS Status Indicator */}

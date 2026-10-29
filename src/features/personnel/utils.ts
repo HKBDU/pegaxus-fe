@@ -1,5 +1,3 @@
-import { format, isValid, parseISO } from "date-fns"
-
 import type {
   AssignableRole,
   EmployeeBrief,
@@ -9,15 +7,11 @@ import type {
   SegmentStatus,
   SegmentVehicle,
 } from "@/features/personnel/types"
+import { formatUtcDate, formatUtcDateTime } from "@/shared/utils/datetime"
 
-function safeFormat(value: string | null | undefined, pattern: string) {
-  if (!value) return "—"
-  const date = parseISO(value)
-  return isValid(date) ? format(date, pattern) : "—"
-}
-
-export const formatDateTime = (value: string | null | undefined) => safeFormat(value, "dd/MM/yyyy HH:mm")
-export const formatDate = (value: string | null | undefined) => safeFormat(value, "dd/MM/yyyy")
+/** Segment times are read in UTC and labelled: two people in two time zones must see the same clash window. */
+export const formatDateTime = (value: string | null | undefined) => formatUtcDateTime(value)
+export const formatDate = (value: string | null | undefined) => formatUtcDate(value)
 
 export function formatDuration(minutes: number | null | undefined) {
   if (minutes === null || minutes === undefined) return "—"

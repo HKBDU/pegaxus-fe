@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { ROLE_ROUTES, accountEdit } from "@/app/route-config";
 import { formatBookingDate } from "@/features/booking/utils";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { LoadingState, ErrorState } from "@/shared/components/common";
 import { Button } from "@/shared/components/ui/button";
@@ -26,7 +27,7 @@ export default function ViewUserAccountPage() {
   const [deleting, setDeleting] = useState(false);
   const employee = query.data;
   const date = (value: string | null, time = true) =>
-    value ? formatBookingDate(value, time) : "—";
+    value ? (time ? formatUtcDateTime(value) : formatBookingDate(value)) : "—";
   const sections = employee
     ? [
         {

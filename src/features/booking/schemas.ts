@@ -96,10 +96,16 @@ export const reasonSchema = z.object({
   reason: z.string().trim().min(10, "Please provide at least 10 characters").max(500),
 })
 
+/** The Logistics Manager reason is required and at most 2000 characters (the customer one keeps its own limits). */
+export const managerCancelBookingSchema = z.object({
+  reason: z.string().trim().min(1, "Please enter a reason.").max(2000, "The reason must be at most 2000 characters."),
+})
+
 export const cancelBookingSchema = reasonSchema
 export const rejectBookingSchema = reasonSchema
 
 export type BookingFiltersFormValues = z.infer<typeof bookingFiltersSchema>
 export type BookingFormSchemaValues = z.infer<typeof bookingFormSchema>
 export type CancelBookingFormValues = z.infer<typeof cancelBookingSchema>
+export type ManagerCancelBookingFormValues = z.infer<typeof managerCancelBookingSchema>
 export type RejectBookingFormValues = z.infer<typeof rejectBookingSchema>

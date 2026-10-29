@@ -130,6 +130,7 @@ export function useIncidentMutations() {
         raiseSeverityRequestSchema.parse(input),
       ),
     onSuccess: invalidate,
+    retry: false,
     networkMode: "always",
   });
 

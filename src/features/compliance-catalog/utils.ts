@@ -1,4 +1,5 @@
 import type { ComplianceCategory, ComplianceRequirementSummary, ComplianceStatus } from "@/features/compliance-catalog/types"
+import { formatUtcDate, formatUtcTime } from "@/shared/utils/datetime"
 
 const categoryLabels: Record<ComplianceCategory, string> = {
   QUARANTINE: "Quarantine",
@@ -56,10 +57,7 @@ export function formatValidity(requirement: Pick<ComplianceRequirementSummary, "
   return days ? `${days} ${days === 1 ? "Day" : "Days"}` : "—"
 }
 
-export function formatComplianceDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(value))
-}
+export const formatComplianceDate = (value: string) => formatUtcDate(value)
 
-export function formatComplianceTime(value: string) {
-  return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" }).format(new Date(value))
-}
+/** "08:00 UTC": the label stays because the tables show the date and the time on two lines. */
+export const formatComplianceTime = (value: string) => formatUtcTime(value)

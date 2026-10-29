@@ -33,6 +33,10 @@ export interface PhotoCaptureSectionProps {
 
 const DEFAULT_TYPES = ["image/jpeg", "image/jpg", "image/png"]
 
+function sizeLimitMessage(maxFileSizeBytes: number) {
+  return `Only JPG, JPEG, PNG images up to ${formatFileSize(maxFileSizeBytes)} are accepted. Please try again.`
+}
+
 function formatTimestamp(value: Date | null | undefined) {
   return value ? formatUtcDateTime(value) : ""
 }
@@ -140,7 +144,7 @@ export function PhotoCaptureSection({
       return false
     }
     if (file.size > maxFileSizeBytes) {
-      onError?.(`Image size must not exceed ${formatFileSize(maxFileSizeBytes)}.`)
+      onError?.(sizeLimitMessage(maxFileSizeBytes))
       return false
     }
     return true
