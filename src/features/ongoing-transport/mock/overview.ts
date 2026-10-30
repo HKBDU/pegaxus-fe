@@ -289,7 +289,7 @@ function buildOverview(
           : {}),
       }),
     ),
-    canViewGpsTab: audience !== "crew",
+    canViewGpsTab: true,
   };
 }
 
