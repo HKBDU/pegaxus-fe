@@ -66,6 +66,11 @@ const routeCoordinatorItems = [
   { label: "Map Assets", href: ROLE_ROUTES.mapAssets, icon: MapPin },
 ]
 
+const crewItems = [
+  { label: "Ongoing Transport", href: "/crew", icon: Gauge },
+  { label: "Assigned Transports", href: "/crew/transports", icon: Truck },
+]
+
 const approvedBookingsItem = { label: "Approved Bookings", href: ROLE_ROUTES.approvedBookings, icon: ClipboardCheck }
 
 const staffSecondaryItems = [
@@ -84,7 +89,7 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
   return (
     <SlidingSidebarMenu>
       {items.map((item) => {
-        const isActive = item.href === "/admin" ? pathname === item.href : pathname.startsWith(item.href)
+        const isActive = item.href === "/admin" || item.href === "/crew" ? pathname === item.href : pathname.startsWith(item.href)
         const Icon = item.icon
 
         return (
@@ -117,7 +122,9 @@ export function AdminSidebar() {
   // Logistics managers get the full admin menu; other employees (e.g. Transport Specialist) only their own pages.
   const isManager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
   const isRouteCoordinator = canAccess(principal, { anyRole: ["FLEET_ROUTE_COORDINATOR"] })
-  const items = isManager ? primaryItems : [
+  // Drivers and escorts only have their assigned transports.
+  const isCrew = canAccess(principal, { anyRole: ["DRIVER", "ESCORT"] })
+  const items = isCrew ? crewItems : isManager ? primaryItems : [
     ...(canAccess(principal, APPROVED_BOOKINGS_ACCESS) ? [approvedBookingsItem] : []),
     ...(canAccess(principal, ONGOING_TRANSPORT_ACCESS) ? [{ label: "Ongoing Transports", href: ROLE_ROUTES.ongoingTransports, icon: Truck }] : []),
     ...(canAccess(principal, INCIDENT_ADMIN_ACCESS) ? [incidentsItem] : []),

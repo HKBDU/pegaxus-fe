@@ -34,7 +34,7 @@ function ActionButton({
   tone?: "accent" | "neutral" | "danger";
 }) {
   const className = cn(
-    "flex aspect-square min-h-0 min-w-0 flex-col items-center justify-center gap-3 rounded-[2px] border p-3 text-center text-sm font-semibold shadow-sm transition-colors",
+    "flex aspect-square min-h-0 min-w-0 flex-col items-center justify-center gap-3 rounded-[2px] border p-3 text-center text-sm font-semibold shadow-sm transition-colors lg:aspect-auto lg:min-h-28",
     tone === "accent" &&
       "border-orange-600 bg-orange-600 text-white hover:bg-orange-700",
     tone === "danger" &&
@@ -81,7 +81,7 @@ export function CrewHomeActions({
     : "Waiting for current Driver confirmation";
   return (
     <>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
         {transport.myRole === "DRIVER" ? (
           <ActionButton
             icon={FileText}

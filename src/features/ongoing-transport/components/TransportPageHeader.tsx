@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
+import { useIsDesktop } from "@/shared/hooks";
 import {
   readOngoingListReturn,
   transportOverviewPath,
@@ -46,7 +47,9 @@ export function TransportPageHeader({
   view: TransportView;
 }) {
   const location = useLocation();
-  const isCrew = audience === "crew";
+  const isDesktop = useIsDesktop();
+  // On desktop the crew sees the same breadcrumb header as the staff; the compact crew header is for phones.
+  const isCrew = audience === "crew" && !isDesktop;
   const returnState = readOngoingListReturn(location.state);
   const backPath =
     audience === "admin"
@@ -61,7 +64,7 @@ export function TransportPageHeader({
       ? "Ongoing Transports"
       : audience === "customer"
         ? "Booking"
-        : "Home";
+        : "Assigned Transports";
   const missingContext =
     transportId === undefined ||
     (audience === "customer" && bookingId === undefined);

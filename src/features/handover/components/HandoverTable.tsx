@@ -16,8 +16,6 @@ interface Props {
   hasFilters: boolean
   hrefFor: (item: HandoverListItem) => string
   filters: ReactNode
-  /** Rendered in the empty state (e.g. a "create" button). */
-  emptyAction?: ReactNode
 }
 
 const dim = (item: HandoverListItem) => item.status === "CANCELLED"
@@ -27,7 +25,7 @@ const dash = <span className="text-gray-400">—</span>
  * Same table at every width: on narrow screens it scrolls sideways instead of turning into cards. Sorting, paging and search run on the loaded
  * records: one transport has a handful of handover points, so HO1 returns them all in one page.
  */
-export function HandoverTable({ items, isLoading, hasFilters, hrefFor, filters, emptyAction }: Props) {
+export function HandoverTable({ items, isLoading, hasFilters, hrefFor, filters }: Props) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "sequenceNo", desc: false }])
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
 
@@ -86,9 +84,8 @@ export function HandoverTable({ items, isLoading, hasFilters, hrefFor, filters, 
     hasNextPage: table.getCanNextPage(),
   }
   const empty = (
-    <div className="space-y-3 text-center">
+    <div className="text-center">
       <EmptyState message={hasFilters ? "No handover records match your filters." : "There are no handover records for this transport yet."} />
-      {!hasFilters && emptyAction ? <div className="flex justify-center">{emptyAction}</div> : null}
     </div>
   )
 

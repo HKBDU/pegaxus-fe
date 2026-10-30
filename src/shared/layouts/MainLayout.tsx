@@ -8,6 +8,7 @@ import type { AuthAccount } from "@/features/auth/types"
 import { IncidentAlertHost } from "@/features/incident-management/components/alerts/IncidentAlertHost"
 import { Footer } from "@/shared/components/Footer"
 import { Header } from "@/shared/components/Header"
+import { useIsDesktop } from "@/shared/hooks"
 import { AdminLayout } from "@/shared/layouts/AdminLayout"
 import type { ProfileDropdownUser } from "@/shared/components/ProfileDropdown"
 import type { HeaderNavItem } from "@/shared/types/type"
@@ -38,6 +39,12 @@ export function MainLayout() {
   const { data: account } = useUser()
   const accessToken = useAuthStore((state) => state.accessToken)
   const principal = useAuthStore((state) => state.principal)
+  const isDesktop = useIsDesktop()
+
+  // Drivers and escorts use the same desktop shell (sidebar + header) as the other employees; phones keep the crew header.
+  if (isDesktop && pathname !== "/" && accessToken && principal && canAccess(principal, { anyRole: ["DRIVER", "ESCORT"] })) {
+    return <AdminLayout />
+  }
 
   // Employee-facing routes use the desktop admin shell consistently, including
   // roles whose routes are shared with the customer-facing application.
