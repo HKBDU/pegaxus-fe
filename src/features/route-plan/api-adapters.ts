@@ -109,21 +109,21 @@ export function adaptTransportPlan(plan: TransportPlanApiValue, locations: MapLo
   const from = resolveLocation(locations, originId, booking.originAddress);
   const to = resolveLocation(locations, destinationId, booking.destinationAddress);
 
-  const fallbackFrom = locations[0] ?? {
+  const unresolvedFrom = {
     id: "unknown-origin",
     name: booking.originAddress || "Origin",
     city: booking.originCountry ?? "",
     country: booking.originCountry ?? "",
-    latitude: 48.8566,
-    longitude: 2.3522,
+    latitude: 0,
+    longitude: 0,
   };
-  const fallbackTo = locations.length > 1 ? locations[locations.length - 1] : {
+  const unresolvedTo = {
     id: "unknown-dest",
     name: booking.destinationAddress || "Destination",
     city: booking.destinationCountry ?? "",
     country: booking.destinationCountry ?? "",
-    latitude: 45.764,
-    longitude: 4.8357,
+    latitude: 0,
+    longitude: 0,
   };
 
   return {
@@ -134,8 +134,8 @@ export function adaptTransportPlan(plan: TransportPlanApiValue, locations: MapLo
     departureAt: plan.plannedStartAt ?? "",
     arrivalAt: plan.plannedEndAt ?? "",
     requestedArrivalAt: booking.requestedArrivalDate ?? null,
-    from: from ?? fallbackFrom,
-    to: to ?? fallbackTo,
+    from: from ?? unresolvedFrom,
+    to: to ?? unresolvedTo,
     isFromResolved: Boolean(from),
     isToResolved: Boolean(to),
     unresolvedOriginAddress: !from ? booking.originAddress : undefined,

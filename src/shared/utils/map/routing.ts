@@ -1,6 +1,86 @@
 import { normalizeRouteGeoJson, type RouteGeometry } from "./geojson";
+import type { MapPoint } from "./coordinates";
 
 export type RoutingPoint = { latitude: number; longitude: number };
+
+export type RouteCorridorMetrics = {
+  distanceKm: number;
+  progress: number;
+};
+
+function distanceBetweenPoints(left: MapPoint, right: MapPoint): number {
+  const R = 6371;
+  const dLat = ((right[1] - left[1]) * Math.PI) / 180;
+  const dLon = ((right[0] - left[0]) * Math.PI) / 180;
+  const lat1 = (left[1] * Math.PI) / 180;
+  const lat2 = (right[1] * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * Returns the shortest approximate distance from a point to a route geometry
+ * and its normalized position along the route. The projection uses a local
+ * equirectangular approximation, which is sufficient for corridor validation
+ * before the two road-routing requests are made.
+ */
+export function getRouteCorridorMetrics(
+  geometryInput: unknown,
+  point: RoutingPoint,
+): RouteCorridorMetrics | null {
+  const geometry = normalizeRouteGeoJson(geometryInput);
+  if (!geometry) return null;
+
+  const lines = geometry.type === "LineString"
+    ? [geometry.coordinates]
+    : geometry.coordinates;
+  const line = lines[0];
+  if (!line || line.length < 2) return null;
+
+  const pointLat = (point.latitude * Math.PI) / 180;
+  const kmPerDegreeLat = 111.32;
+  const kmPerDegreeLon = 111.32 * Math.cos(pointLat);
+  const px = point.longitude * kmPerDegreeLon;
+  const py = point.latitude * kmPerDegreeLat;
+
+  const cumulative = [0];
+  for (let index = 1; index < line.length; index += 1) {
+    cumulative.push(cumulative[index - 1] + distanceBetweenPoints(line[index - 1], line[index]));
+  }
+  const totalKm = cumulative.at(-1) ?? 0;
+  if (totalKm <= 0) return null;
+
+  let bestDistance = Infinity;
+  let bestProgressKm = 0;
+  for (let index = 1; index < line.length; index += 1) {
+    const start = line[index - 1];
+    const end = line[index];
+    const sx = start[0] * kmPerDegreeLon;
+    const sy = start[1] * kmPerDegreeLat;
+    const ex = end[0] * kmPerDegreeLon;
+    const ey = end[1] * kmPerDegreeLat;
+    const dx = ex - sx;
+    const dy = ey - sy;
+    const lengthSquared = dx * dx + dy * dy;
+    const projection = lengthSquared > 0
+      ? Math.max(0, Math.min(1, ((px - sx) * dx + (py - sy) * dy) / lengthSquared))
+      : 0;
+    const nearestX = sx + projection * dx;
+    const nearestY = sy + projection * dy;
+    const distance = Math.hypot(px - nearestX, py - nearestY);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestProgressKm = cumulative[index - 1] + distanceBetweenPoints(start, end) * projection;
+    }
+  }
+
+  return {
+    distanceKm: bestDistance,
+    progress: Math.max(0, Math.min(1, bestProgressKm / totalKm)),
+  };
+}
 
 export type RoutePreviewErrorCode =
   | "MISSING_KEY"
