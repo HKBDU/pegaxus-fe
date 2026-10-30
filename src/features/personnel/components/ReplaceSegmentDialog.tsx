@@ -146,7 +146,6 @@ export function ReplaceSegmentDialog({ row, onOpenChange, plan, routePlan }: Rep
         open={open}
         onOpenChange={(next) => !isSaving && onOpenChange(next)}
         title="Change / replace personnel"
-        code="SCR-F3-018"
         description="Replace the assigned driver and/or escort for this route segment."
         footer={
           <>
@@ -268,7 +267,7 @@ export function ReplaceSegmentDialog({ row, onOpenChange, plan, routePlan }: Rep
                           <span className="text-[10px] text-slate-400">{field.value.length}/{REASON_MAX}</span>
                         </div>
                         <FormControl>
-                          <Textarea {...field} rows={3} maxLength={REASON_MAX} placeholder="e.g. The assigned driver is sick" className="min-h-20 rounded-[2px] border-0 bg-[#f3f3f3] py-2 text-xs shadow-none" />
+                          <Textarea {...field} rows={3} maxLength={REASON_MAX} placeholder="e.g. The assigned driver is sick" className="max-h-32 min-h-20 resize-none overflow-y-auto rounded-[2px] border-[#f3aa3b] bg-transparent px-3 py-2 text-xs shadow-none placeholder:text-[#6c6963] focus-visible:border-primary focus-visible:ring-primary/20" />
                         </FormControl>
                         <FormMessage className="text-xs" />
                       </FormItem>

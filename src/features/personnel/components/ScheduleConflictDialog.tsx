@@ -52,7 +52,6 @@ export function ScheduleConflictDialog({ conflict, onClose, onChoose }: Schedule
       open={conflict !== null}
       onOpenChange={(open) => !open && onClose()}
       title={`${conflict ? ROLE_LABEL[conflict.role] : "Driver"} schedule conflict`}
-      code="SCR-F3-019"
       description={`The selected ${roleLabel} is already assigned to another transport during the requested time window.`}
       className="sm:max-w-[520px]"
       footer={

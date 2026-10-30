@@ -48,6 +48,8 @@ function StepMark({ state, index }: { state: Step["state"]; index: number }) {
  * Read-only progress on the reui Stepper (no trigger, so nothing is clickable). `value` is the open step; reached steps are
  * marked `completed` explicitly because a claim can skip one (a decision without a recorded review) or end early (rejected,
  * cancelled), where "everything before the open step is done" would be wrong. `data-tone` lets the indicator turn red.
+ * Steps share the width equally and sit centred in their column; the line runs from one dot to the next, so the margins on
+ * both sides match and the lines get longer when there are fewer steps.
  */
 export function ClaimProgress({ claim }: { claim: Claim }) {
   const steps = buildSteps(claim)
@@ -62,9 +64,9 @@ export function ClaimProgress({ claim }: { claim: Claim }) {
             completed={step.state === "done" || step.state === "failed"}
             data-tone={step.state}
             aria-current={step.state === "current" ? "step" : undefined}
-            className="relative min-w-0 flex-1 items-start justify-start"
+            className="relative min-w-0 flex-1 items-start justify-center"
           >
-            <div className="flex min-w-0 flex-col gap-2 pr-3">
+            <div className="flex min-w-0 flex-col items-center gap-2 px-1 text-center">
               <StepperIndicator
                 className={cn(
                   "size-6 text-[11px] font-semibold",
@@ -91,7 +93,7 @@ export function ClaimProgress({ claim }: { claim: Claim }) {
               </div>
             </div>
             {index < steps.length - 1 ? (
-              <StepperSeparator className="absolute top-3 right-3 left-9 m-0 -translate-y-1/2 bg-slate-200 data-[state=completed]:bg-emerald-500" />
+              <StepperSeparator className="absolute top-3 right-[calc(-50%+1.125rem)] left-[calc(50%+1.125rem)] m-0 -translate-y-1/2 bg-slate-200 data-[state=completed]:bg-emerald-500" />
             ) : null}
           </StepperItem>
         ))}
