@@ -282,24 +282,31 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
     return () => clearInterval(timer);
   }, [isSignalLoss]);
 
-  // Enable/Disable mock layer
-  const toggleEnable = useCallback(() => {
+  // Enable/Disable mock layer. Enabling is intentionally synchronous so callers
+  // can reacquire an existing geolocation watcher immediately afterwards.
+  const enableMockGps = useCallback(() => {
+    mockGeolocation.enable();
     setIsEnabled((prev) => {
-      const next = !prev;
-      if (next) {
-        mockGeolocation.enable();
-        if (routeDataRef.current.coordinates.length > 0) {
-          dispatchCurrentPosition(distanceRef.current, speedRef.current);
-        }
-      } else {
-        mockGeolocation.disable();
-        setStatus("idle");
-        setIsSignalLoss(false);
-        setSignalLossSec(0);
+      if (prev) return prev;
+      if (routeDataRef.current.coordinates.length > 0) {
+        dispatchCurrentPosition(distanceRef.current, speedRef.current);
       }
-      return next;
+      return true;
     });
   }, [dispatchCurrentPosition]);
+
+  const disableMockGps = useCallback(() => {
+    mockGeolocation.disable();
+    setIsEnabled(false);
+    setStatus("idle");
+    setIsSignalLoss(false);
+    setSignalLossSec(0);
+  }, []);
+
+  const toggleEnable = useCallback(() => {
+    if (isEnabled) disableMockGps();
+    else enableMockGps();
+  }, [disableMockGps, enableMockGps, isEnabled]);
 
   const start = useCallback(() => {
     if (!isEnabled) {
@@ -381,6 +388,8 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
     isLoadingRoute,
     routeSource,
     currentPoint,
+    enableMockGps,
+    disableMockGps,
     toggleEnable,
     start,
     pause,

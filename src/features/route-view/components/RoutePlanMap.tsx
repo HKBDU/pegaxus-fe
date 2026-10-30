@@ -61,7 +61,7 @@ export function RoutePlanMap({
     <div className="min-w-0 space-y-3" data-route-map-id={plan.routePlanId}>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <span className="rounded-full bg-slate-100 px-2.5 py-1 font-medium text-slate-700">
-          {data.locations.length} verified stops · Markers only
+          {data.locations.length} verified stops · Route line enabled
         </span>
         {mock && (
           <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-800">
@@ -83,6 +83,7 @@ export function RoutePlanMap({
             <Viewer
               locations={data.locations}
               route={data.route}
+              routes={data.routes}
               styleUrl={style}
               mode="view"
               canEditLocation={false}
@@ -93,8 +94,8 @@ export function RoutePlanMap({
         )}
       </div>
       <p className="text-xs leading-5 text-slate-500">
-        Only supplied stop coordinates are shown. Route geometry is unavailable;
-        no road lines, vehicle positions or estimated paths are generated.
+        Lines are generated from the supplied segment endpoints. Road routing is
+        used when available; otherwise a direct estimated line is shown.
         {data.omittedStops > 0
           ? " Stops without valid coordinates remain in the segment timeline."
           : ""}

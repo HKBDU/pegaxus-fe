@@ -1,4 +1,5 @@
 import { TRAIL_BREAK_MS, TRAIL_MAX_POINTS } from "../constants"
+import { distanceMeters } from "./geo"
 import type { Trail, TrailPoint, TruckSample } from "../types"
 
 export function toTrailPoint(sample: Pick<TruckSample, "latitude" | "longitude" | "recordedAt">): TrailPoint | null {
@@ -63,6 +64,24 @@ export interface TrailGap {
   from: TrailPoint
   to: TrailPoint
   ms: number
+  distanceMeters: number
+  plausible: boolean
+}
+
+// A signal gap may legitimately cover a long distance, but it must not turn a
+// bad GPS fallback into a straight line between unrelated continents.
+const MAX_GAP_CONNECTOR_METERS = 2_000_000
+const MAX_GAP_TRAVEL_SPEED_KMH = 600
+const MIN_GAP_DISTANCE_BUDGET_METERS = 100_000
+
+function gapDistanceBudget(ms: number) {
+  return Math.min(
+    MAX_GAP_CONNECTOR_METERS,
+    Math.max(
+      MIN_GAP_DISTANCE_BUDGET_METERS,
+      (ms / 3_600_000) * MAX_GAP_TRAVEL_SPEED_KMH * 1_000,
+    ),
+  )
 }
 
 export function trailGaps(trail: Trail): TrailGap[] {
@@ -70,7 +89,17 @@ export function trailGaps(trail: Trail): TrailGap[] {
   for (let index = 1; index < trail.length; index += 1) {
     const from = trail[index - 1].at(-1)
     const to = trail[index][0]
-    if (from && to) gaps.push({ from, to, ms: to.time - from.time })
+    if (from && to) {
+      const ms = to.time - from.time
+      const distance = distanceMeters(from, to)
+      gaps.push({
+        from,
+        to,
+        ms,
+        distanceMeters: distance,
+        plausible: distance <= gapDistanceBudget(ms),
+      })
+    }
   }
   return gaps
 }
