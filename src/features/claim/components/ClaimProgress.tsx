@@ -1,7 +1,8 @@
+import { Check, X } from "lucide-react"
 import { formatInvoiceDateTime } from "@/features/invoice/utils"
 import { cn } from "@/lib/utils"
 import type { Claim } from "@/features/claim/types"
-import { Checkbox } from "@/shared/components/ui/checkbox"
+import { Stepper, StepperDescription, StepperIndicator, StepperItem, StepperNav, StepperSeparator, StepperTitle } from "@/shared/components/ui/stepper"
 
 interface Step {
   key: string
@@ -33,32 +34,68 @@ function buildSteps(claim: Claim): Step[] {
   return steps
 }
 
-const boxClass: Record<Step["state"], string> = {
-  done: "border-emerald-600 bg-emerald-600 data-[state=checked]:border-emerald-600 data-[state=checked]:bg-emerald-600",
-  failed: "border-red-600 bg-red-600 data-[state=checked]:border-red-600 data-[state=checked]:bg-red-600",
-  current: "border-[#ef8f00] bg-amber-50",
-  todo: "border-slate-300 bg-white",
+const stateLabel: Record<Step["state"], string> = { done: "completed", failed: "failed", current: "in progress", todo: "not reached yet" }
+
+/** What the dot of a step shows: a tick when reached, a cross when it ended badly, a pulse for the open step, else its number. */
+function StepMark({ state, index }: { state: Step["state"]; index: number }) {
+  if (state === "done") return <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
+  if (state === "failed") return <X className="size-3.5" strokeWidth={3} aria-hidden="true" />
+  if (state === "current") return <span className="block size-2 rounded-full bg-current motion-safe:animate-pulse" aria-hidden="true" />
+  return <span aria-hidden="true">{index + 1}</span>
 }
 
-/** Read-only steps: shadcn checkboxes (checked = reached) so the page keeps the look of the rest of the web. */
+/**
+ * Read-only progress on the reui Stepper (no trigger, so nothing is clickable). `value` is the open step; reached steps are
+ * marked `completed` explicitly because a claim can skip one (a decision without a recorded review) or end early (rejected,
+ * cancelled), where "everything before the open step is done" would be wrong. `data-tone` lets the indicator turn red.
+ */
 export function ClaimProgress({ claim }: { claim: Claim }) {
   const steps = buildSteps(claim)
+  const openStep = steps.findIndex((step) => step.state === "current") + 1
   return (
-    <ol aria-label="Claim progress" className="grid gap-3 sm:grid-flow-col sm:auto-cols-fr">
-      {steps.map((step) => (
-        <li key={step.key} className="flex items-start gap-2.5" aria-current={step.state === "current" ? "step" : undefined}>
-          <Checkbox
-            checked={step.state === "done" || step.state === "failed"}
-            tabIndex={-1}
-            aria-label={step.label}
-            className={cn("pointer-events-none mt-0.5 size-4 rounded-[3px] shadow-none data-[state=checked]:text-white", boxClass[step.state])}
-          />
-          <div className="min-w-0">
-            <p className={cn("font-heading text-[11px] font-semibold uppercase tracking-[0.05em]", step.state === "todo" ? "text-gray-400" : step.state === "failed" ? "text-red-700" : "text-gray-900")}>{step.label}</p>
-            <p className="text-[11px] text-gray-500">{step.at ? formatInvoiceDateTime(step.at) : step.state === "current" ? "In progress" : "—"}</p>
-          </div>
-        </li>
-      ))}
-    </ol>
+    <Stepper value={openStep} role="group" aria-label="Claim progress">
+      <StepperNav>
+        {steps.map((step, index) => (
+          <StepperItem
+            key={step.key}
+            step={index + 1}
+            completed={step.state === "done" || step.state === "failed"}
+            data-tone={step.state}
+            aria-current={step.state === "current" ? "step" : undefined}
+            className="relative min-w-0 flex-1 items-start justify-start"
+          >
+            <div className="flex min-w-0 flex-col gap-2 pr-3">
+              <StepperIndicator
+                className={cn(
+                  "size-6 text-[11px] font-semibold",
+                  "data-[state=completed]:bg-emerald-600 data-[state=completed]:text-white group-data-[tone=failed]/step:data-[state=completed]:bg-red-600",
+                  "data-[state=active]:bg-amber-50 data-[state=active]:text-[#ef8f00] data-[state=active]:ring-2 data-[state=active]:ring-[#ef8f00]",
+                  "data-[state=inactive]:bg-slate-100 data-[state=inactive]:text-slate-400 data-[state=inactive]:ring-1 data-[state=inactive]:ring-slate-300 data-[state=inactive]:ring-inset",
+                )}
+              >
+                <StepMark state={step.state} index={index} />
+              </StepperIndicator>
+              <div className="min-w-0 space-y-0.5">
+                <StepperTitle
+                  className={cn(
+                    "font-heading text-[11px] leading-4 font-semibold tracking-[0.05em] uppercase",
+                    step.state === "todo" ? "text-gray-400" : step.state === "failed" ? "text-red-700" : "text-gray-900",
+                  )}
+                >
+                  {step.label}
+                  <span className="sr-only">, {stateLabel[step.state]}</span>
+                </StepperTitle>
+                <StepperDescription className="text-[11px] leading-4 text-gray-500">
+                  {step.at ? formatInvoiceDateTime(step.at) : step.state === "current" ? "In progress" : "—"}
+                </StepperDescription>
+              </div>
+            </div>
+            {index < steps.length - 1 ? (
+              <StepperSeparator className="absolute top-3 right-3 left-9 m-0 -translate-y-1/2 bg-slate-200 data-[state=completed]:bg-emerald-500" />
+            ) : null}
+          </StepperItem>
+        ))}
+      </StepperNav>
+    </Stepper>
   )
 }
