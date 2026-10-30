@@ -395,6 +395,18 @@ export function RoutePlanBuilder({
     [isBackup, readonlyPrimaryRoutes, segments],
   );
 
+  const builtRouteLocations = useMemo(() => {
+    const selectedLocationIds = new Set(
+      selectedRoutes.flatMap((route) =>
+        [route.fromLocation?.id, route.toLocation?.id]
+          .filter((id): id is string | number => id !== undefined && id !== null)
+          .map((id) => String(id)),
+      ),
+    );
+
+    return locations.filter((location) => selectedLocationIds.has(String(location.id)));
+  }, [locations, selectedRoutes]);
+
   const continuity = useMemo(() => {
     const fromId = plan.from?.id ?? "";
     const toId = plan.to?.id ?? "";
@@ -2133,7 +2145,7 @@ export function RoutePlanBuilder({
                   <Badge variant="outline" className="rounded-[2px]">View mode</Badge>
                 </div>
                 <MapViewer
-                  locations={locations}
+                  locations={builtRouteLocations}
                   routes={selectedRoutes}
                   mode="view"
                 />
