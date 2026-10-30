@@ -21,7 +21,7 @@ interface PersonnelDialogProps {
 export function PersonnelDialog({ open, onOpenChange, title, description, children, footer, className }: PersonnelDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showCloseButton={false} className={cn("max-h-[90dvh] gap-0 overflow-y-auto rounded-[2px] bg-white p-6 sm:max-w-[720px]", className)}>
+      <DialogContent showCloseButton={false} className={cn("max-h-[90dvh] gap-0 overflow-y-auto rounded-[2px] bg-white p-6 sm:max-w-[860px]", className)}>
         <DialogHeader className="gap-1.5 text-left">
           <DialogTitle className="m-0! font-heading text-lg! font-bold! uppercase tracking-[0.04em]! text-[#181818]!">{title}</DialogTitle>
           <DialogDescription className="m-0 text-xs leading-5 text-gray-600">{description}</DialogDescription>

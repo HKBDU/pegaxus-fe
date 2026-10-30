@@ -130,7 +130,7 @@ export function Phase2AssignDialog({ open, onOpenChange, plan, routePlan, dossie
         onOpenChange={(next) => !isSaving && onOpenChange(next)}
         title="Phase 2 assignment by route segment"
         description="Assign a driver and an escort to every internal segment. Outsourced segments are handled by their provider."
-        className="sm:max-w-[960px]"
+        className="sm:max-w-[1120px]"
         footer={
           <>
             <CancelButton onClick={() => onOpenChange(false)} />

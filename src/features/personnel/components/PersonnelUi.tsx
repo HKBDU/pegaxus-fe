@@ -36,7 +36,7 @@ const toneClass: Record<Tone, string> = {
 
 export function Chip({ tone, children, className }: { tone: Tone; children: ReactNode; className?: string }) {
   return (
-    <span className={cn("inline-flex h-5 items-center whitespace-nowrap rounded-[3px] px-2 text-[10px] font-bold uppercase leading-none tracking-[0.04em]", toneClass[tone], className)}>
+    <span className={cn("inline-flex h-5 items-center whitespace-nowrap rounded-full px-2 text-[0.65rem] font-medium leading-none", toneClass[tone], className)}>
       {children}
     </span>
   )
