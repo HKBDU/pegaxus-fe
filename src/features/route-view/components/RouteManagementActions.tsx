@@ -13,9 +13,21 @@ import {
   ChangeVehiclesDialog,
   type ChangeVehiclesSnapshot,
 } from "@/features/route-plan/components/ChangeVehiclesDialog";
+import { OutsourceSegmentDialog } from "@/features/route-plan/components/OutsourceSegmentDialog";
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import { isFlow3MockMode } from "@/features/transport-plan/source";
+import {
+  getRoutePlanError,
+  updateSegmentOutsourcing,
+} from "@/features/route-plan/services";
 import { Button } from "@/shared/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import {
   refreshEmergencyQueries,
   captureVehicleChangeRefresh,
@@ -303,29 +315,94 @@ export function RouteManagementActions({
   );
 }
 
-/**
- * Draft segments are staffed with a fleet vehicle or a provider by the Route Coordinator in the route builder
- * (the provider link is saved together with the plan), so the detail page only points there.
- */
 export function RouteSegmentOutsourceAction({
   plan,
+  segment,
   context,
 }: {
   plan: RoutePlanDetail;
   segment: RouteSegment;
   context: EmergencyContext;
 }) {
-  if (
-    getWorkspaceRole(context.workspace.principal) !== "coordinator" ||
-    plan.status !== "DRAFT"
-  )
+  const client = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [savingInternal, setSavingInternal] = useState(false);
+  const role = getWorkspaceRole(context.workspace.principal);
+  // The Logistics Manager only links or removes a provider (OS1); fleet vehicles are the Route Coordinator's job in the route builder.
+  if (plan.status !== "DRAFT" || (role !== "manager" && role !== "coordinator"))
     return null;
+  if (role === "coordinator") {
+    return (
+      <Button asChild size="sm" variant="link" className="h-auto px-0 text-xs">
+        <Link to={routePlanEdit(plan.routePlanId)}>
+          Assign vehicle or provider in route builder
+        </Link>
+      </Button>
+    );
+  }
+  async function switchToInternal() {
+    setSavingInternal(true);
+    try {
+      await updateSegmentOutsourcing(
+        plan.routePlanId,
+        segment.routePlanRouteId,
+        {
+          lastUpdatedAt: plan.updatedAt,
+          outsourced: false,
+        },
+      );
+      await refreshEmergencyQueries(
+        client,
+        plan,
+        "management",
+        context.dossierId,
+      );
+      toast.success("Segment switched to internal fleet.");
+    } catch (requestError) {
+      toast.error(getRoutePlanError(requestError).message);
+    } finally {
+      setSavingInternal(false);
+    }
+  }
 
   return (
-    <Button asChild size="sm" variant="link" className="h-auto px-0 text-xs">
-      <Link to={routePlanEdit(plan.routePlanId)}>
-        Assign vehicle or provider in route builder
-      </Link>
-    </Button>
+    <div className="max-w-72 space-y-1 text-right">
+      <Select
+        value={segment.isOutsourced ? "OUTSOURCED" : "INTERNAL"}
+        disabled={savingInternal}
+        onValueChange={(value) => {
+          if (value === "OUTSOURCED") setDialogOpen(true);
+          else void switchToInternal();
+        }}
+      >
+        <SelectTrigger className="h-9 w-full rounded border bg-background text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="INTERNAL">Internal</SelectItem>
+          <SelectItem value="OUTSOURCED">Outsource</SelectItem>
+        </SelectContent>
+      </Select>
+      <OutsourceSegmentDialog
+        routePlanId={plan.routePlanId}
+        routePlanRouteId={segment.routePlanRouteId}
+        lastUpdatedAt={plan.updatedAt}
+        transportMode={segment.route.transportMode}
+        isOutsourced={segment.isOutsourced}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        currentNote={segment.note}
+        onChanged={() =>
+          void refreshEmergencyQueries(
+            client,
+            plan,
+            "management",
+            context.dossierId,
+          )
+        }
+      >
+        <span className="sr-only">Configure outsourced segment</span>
+      </OutsourceSegmentDialog>
+    </div>
   );
 }

@@ -1553,6 +1553,8 @@ export function RoutePlanBuilder({
                       onDwellChange={(mins) => handleDwellChange(index, mins)}
                       onVehicleChange={(vIds) => handleVehicleChange(index, vIds)}
                       availableVehicles={availableVehicles}
+                      routePlanId={edit?.routePlanId}
+                      lastUpdatedAt={edit?.lastUpdatedAt}
                       onOutsource={(selection) =>
                         setSegments((items) =>
                           items.map((item) =>

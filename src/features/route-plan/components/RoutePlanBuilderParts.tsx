@@ -248,6 +248,8 @@ export function SegmentCard({
   onDwellChange,
   onVehicleChange,
   availableVehicles = [],
+  routePlanId,
+  lastUpdatedAt,
 }: {
   segment: DraftSegment;
   index: number;
@@ -263,6 +265,8 @@ export function SegmentCard({
   onDwellChange?: (minutes: number) => void;
   onVehicleChange?: (vehicleIds: string[]) => void;
   availableVehicles?: Vehicle[];
+  routePlanId?: string;
+  lastUpdatedAt?: string;
 }) {
   const [pendingVehicleId, setPendingVehicleId] = useState<string | null>(null);
   const [vehicleOpen, setVehicleOpen] = useState(false);
@@ -272,6 +276,10 @@ export function SegmentCard({
   // Fleet vehicles and providers are picked by the Route Coordinator while building the route plan.
   const canAssignResources = canAccess(principal, {
     anyRole: ["FLEET_ROUTE_COORDINATOR"],
+  });
+  // The Logistics Manager can only link or remove a provider (OS1), never a vehicle.
+  const canManageOutsource = canAccess(principal, {
+    anyRole: ["LOGISTICS_MANAGER"],
   });
   const mode = modeChoice ?? segment.arrangement;
   const assignedVehicleId = segment.vehicleIds?.[0] ?? null;
@@ -478,6 +486,28 @@ export function SegmentCard({
                         <SelectItem value="OUTSOURCED" className="text-xs">Outsource</SelectItem>
                       </SelectContent>
                     </Select>
+                  ) : canManageOutsource ? (
+                    <OutsourceSegmentDialog
+                      routePlanId={routePlanId}
+                      routePlanRouteId={segment.route.routePlanRouteId ?? String(segment.route.id)}
+                      transportMode={segment.route.transportMode ?? "ROAD"}
+                      isOutsourced={segment.arrangement === "OUTSOURCED"}
+                      currentProvider={segment.provider}
+                      currentNote={segment.note}
+                      lastUpdatedAt={lastUpdatedAt ?? ""}
+                      onChanged={(sel) => {
+                        onOutsource(sel);
+                        if (sel) onVehicleChange?.([]);
+                      }}
+                    >
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="h-auto p-0 font-semibold hover:bg-transparent"
+                      >
+                        {segment.arrangement === "OUTSOURCED" ? "Outsource" : "Internal"}
+                      </Button>
+                    </OutsourceSegmentDialog>
                   ) : (
                     <span className="font-semibold">
                       {segment.arrangement === "OUTSOURCED" ? "Outsource" : "Internal"}
