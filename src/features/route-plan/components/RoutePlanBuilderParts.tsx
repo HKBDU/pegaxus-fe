@@ -47,7 +47,7 @@ import type { Provider, RoutePlanStatus, RouteType, Vehicle } from "../types";
 
 export type WizardStep = 0 | 1 | 2;
 
-/** Dialog the Route Coordinator uses to pick the internal fleet vehicle of a segment. */
+/** Dialog the Route Coordinator uses to pick the internal fleet vehicle of a segment (same layout as the provider dialog). */
 function AssignVehicleDialog({
   open,
   onOpenChange,
@@ -61,63 +61,55 @@ function AssignVehicleDialog({
   selectedId: string | null;
   onConfirm: (vehicleId: string | null) => void;
 }) {
-  const [choice, setChoice] = useState<string | null>(selectedId);
+  const [choice, setChoice] = useState(selectedId ?? "");
+  const selected = vehicles.find((vehicle) => vehicle.vehicleId === choice);
 
   return (
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (nextOpen) setChoice(selectedId);
+        if (nextOpen) setChoice(selectedId ?? "");
         onOpenChange(nextOpen);
       }}
     >
-      <DialogContent className="sm:max-w-[520px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Assign vehicle</DialogTitle>
           <DialogDescription>Select an available fleet vehicle for this segment.</DialogDescription>
         </DialogHeader>
-        <div role="radiogroup" aria-label="Fleet vehicle" className="grid max-h-72 gap-1.5 overflow-y-auto">
-          {[null, ...vehicles].map((vehicle) => {
-            const id = vehicle?.vehicleId ?? null;
-            const checked = choice === id;
-            return (
-              <button
-                key={id ?? "NONE"}
-                type="button"
-                role="radio"
-                aria-checked={checked}
-                onClick={() => setChoice(id)}
-                className={`flex items-center justify-between gap-3 rounded-[2px] border px-3 py-2 text-left text-xs transition-colors ${
-                  checked ? "border-primary bg-primary/5" : "border-slate-200 bg-white hover:bg-slate-50"
-                }`}
-              >
-                {vehicle ? (
-                  <>
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold text-slate-900">{vehicle.vehicleName}</span>
-                      <span className="block truncate text-slate-500">
-                        {vehicle.vehicleCode}
-                        {vehicle.licensePlate ? ` • ${vehicle.licensePlate}` : ""}
-                        {vehicle.country ? ` • ${vehicle.country}` : ""}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-slate-600">{vehicle.capacityHorses} horses</span>
-                  </>
-                ) : (
-                  <span className="text-slate-600">No vehicle assigned</span>
-                )}
-              </button>
-            );
-          })}
+        <div className="grid gap-4">
+          <label className="grid gap-2 text-sm font-medium">
+            Fleet Vehicle <span className="text-destructive">*</span>
+            <Select value={choice} onValueChange={setChoice}>
+              <SelectTrigger className="h-9 w-full rounded border bg-background px-3 font-normal *:data-[slot=select-value]:truncate">
+                <SelectValue placeholder="Select vehicle" />
+              </SelectTrigger>
+              <SelectContent className="max-w-[420px] max-h-60 text-sm">
+                <SelectItem value="NONE">-- No vehicle assigned --</SelectItem>
+                {vehicles.map((vehicle) => (
+                  <SelectItem key={vehicle.vehicleId} value={vehicle.vehicleId}>
+                    {vehicle.vehicleName} ({vehicle.capacityHorses} horses)
+                    {vehicle.licensePlate ? ` • ${vehicle.licensePlate}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
+          {selected && (
+            <Badge variant="outline">
+              {selected.vehicleCode}
+              {selected.country ? ` · ${selected.country}` : ""}
+            </Badge>
+          )}
           {vehicles.length === 0 && (
-            <p className="m-0 text-xs text-slate-500">No fleet vehicle is available for this time slot.</p>
+            <p className="m-0 text-sm text-muted-foreground">No fleet vehicle is available for this time slot.</p>
           )}
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={() => onConfirm(choice)}>
+          <Button type="button" disabled={!choice} onClick={() => onConfirm(choice === "NONE" ? null : choice)}>
             Confirm vehicle
           </Button>
         </DialogFooter>
