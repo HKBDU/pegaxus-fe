@@ -85,11 +85,13 @@
 .route-tracking .route-boundary .route-timeline-marker {
   top: 0.6rem;
 }
-.transport-overview[data-audience="crew"] summary {
-  min-height: 60px;
-}
-.transport-overview[data-audience="crew"] h3 {
-  font-size: 1rem;
+@media (max-width: 1023.98px) {
+  .transport-overview[data-audience="crew"] summary {
+    min-height: 60px;
+  }
+  .transport-overview[data-audience="crew"] h3 {
+    font-size: 1rem;
+  }
 }
 .transport-overview .overview-heading {
   display: flex;
@@ -118,13 +120,15 @@
 .transport-overview table td {
   padding: 0.75rem 1rem;
 }
-.transport-overview[data-audience="crew"] :is(a, button) {
-  min-height: 48px;
-  min-width: 48px;
-}
-.transport-overview[data-audience="crew"]
-  :is(h2, p, dt, dd, span, a, button, th, td) {
-  font-size: max(1rem, 1em);
+@media (max-width: 1023.98px) {
+  .transport-overview[data-audience="crew"] :is(a, button) {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  .transport-overview[data-audience="crew"]
+    :is(h2, p, dt, dd, span, a, button, th, td) {
+    font-size: max(1rem, 1em);
+  }
 }
 .transport-overview[data-audience="crew"] *,
 .transport-overview[data-audience="crew"] *::before,

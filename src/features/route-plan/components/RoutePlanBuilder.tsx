@@ -297,15 +297,17 @@ export function RoutePlanBuilder({
       setAvailableVehicles(initialVehicles);
       return;
     }
+    // GET /vehicles filters by calendar day (yyyy-MM-dd) and rejects a full timestamp with 400.
+    const availableFrom = plan.departureAt?.slice(0, 10);
+    const availableTo = plan.arrivalAt?.slice(0, 10);
     void loadAllVehicles({
-      availableFrom: plan.departureAt,
-      availableTo: plan.arrivalAt,
+      ...(availableFrom && availableTo ? { availableFrom, availableTo } : {}),
       transportPlanId,
     })
       .then((items) => {
         setAvailableVehicles(items.filter((v) => v.status === "AVAILABLE"));
       })
-      .catch(() => {});
+      .catch((error) => toast.error(getRoutePlanError(error).message));
   }, [initialVehicles, plan.departureAt, plan.arrivalAt, transportPlanId]);
 
   const routeCatalog = useMemo(

@@ -327,11 +327,19 @@ export function RouteSegmentOutsourceAction({
   const client = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [savingInternal, setSavingInternal] = useState(false);
-  if (
-    getWorkspaceRole(context.workspace.principal) !== "manager" ||
-    plan.status !== "DRAFT"
-  )
+  const role = getWorkspaceRole(context.workspace.principal);
+  // The Logistics Manager only links or removes a provider (OS1); fleet vehicles are the Route Coordinator's job in the route builder.
+  if (plan.status !== "DRAFT" || (role !== "manager" && role !== "coordinator"))
     return null;
+  if (role === "coordinator") {
+    return (
+      <Button asChild size="sm" variant="link" className="h-auto px-0 text-xs">
+        <Link to={routePlanEdit(plan.routePlanId)}>
+          Assign vehicle or provider in route builder
+        </Link>
+      </Button>
+    );
+  }
   async function switchToInternal() {
     setSavingInternal(true);
     try {
@@ -395,18 +403,6 @@ export function RouteSegmentOutsourceAction({
       >
         <span className="sr-only">Configure outsourced segment</span>
       </OutsourceSegmentDialog>
-      {!segment.isOutsourced ? (
-        <Button
-          asChild
-          size="sm"
-          variant="link"
-          className="h-auto px-0 text-xs"
-        >
-          <Link to={routePlanEdit(plan.routePlanId)}>
-            Assign vehicle in route builder
-          </Link>
-        </Button>
-      ) : null}
     </div>
   );
 }

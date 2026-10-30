@@ -25,6 +25,7 @@
     "typecheck:e2e": "tsc -p e2e/tsconfig.json"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
     "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^5.9.1",
     "@microsoft/signalr": "^10.0.11",

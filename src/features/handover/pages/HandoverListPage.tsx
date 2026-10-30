@@ -63,7 +63,6 @@ export default function HandoverListPage({ audience }: { audience: HandoverAudie
             isLoading={query.isFetching}
             hasFilters={hasFilters}
             hrefFor={hrefFor}
-            emptyAction={create}
             filters={
               <HandoverFilters search={search} handoverType={handoverType} status={status} onSearchChange={setSearch} onTypeChange={setHandoverType} onStatusChange={setStatus} />
             }

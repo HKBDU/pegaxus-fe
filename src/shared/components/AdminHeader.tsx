@@ -6,14 +6,15 @@ import { useUser } from "@/features/auth/hooks/useAuth"
 import { NotificationBell } from "@/features/notification"
 import { ProfileDropdown } from "@/shared/components/ProfileDropdown"
 import { SidebarTrigger, useSidebar } from "@/shared/components/ui/sidebar"
+import { canAccess } from "@/features/auth/access-control"
 import { getAdminHeaderContext } from "@/app/route-config"
 
 export function AdminHeader() {
   const { pathname } = useLocation()
-  const context = getAdminHeaderContext(pathname)
   const { open } = useSidebar()
   const accessToken = useAuthStore((state) => state.accessToken)
   const principal = useAuthStore((state) => state.principal)
+  const context = getAdminHeaderContext(pathname, canAccess(principal, { anyRole: ["DRIVER", "ESCORT"] }))
   const { data: account } = useUser()
   const user = account
     ? { name: account.fullName || account.email, email: account.email, avatarUrl: account.avatarUrl ?? undefined }

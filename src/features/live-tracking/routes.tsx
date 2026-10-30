@@ -7,8 +7,7 @@ import type { TrackingAudience } from "./constants"
 const GpsTabPage = lazy(() => import("./pages/GpsTabPage"))
 
 /**
- * GPS Map tab, relative to the transport URL (`gps`); it renders inside the transport shell. Only `admin` and `customer` have
- * one: the router gives crew no such route, so the map library never loads on a phone and the BE also answers 403.
+ * GPS Map tab, relative to the transport URL (`gps`); it renders inside the transport shell for every audience, crew included.
  */
 export const liveTrackingTabRoutes = (audience: TrackingAudience): RouteObject[] => [
   { path: "gps", element: <Suspense fallback={<LoadingState />}><GpsTabPage audience={audience} /></Suspense> },

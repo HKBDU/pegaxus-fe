@@ -35,9 +35,9 @@ export const isDemoMode = (transportId?: string) =>
     transportId === "TR-DEMO-0001" ||
     Boolean(transportId && /demo/i.test(transportId)))
 
-export type TrackingAudience = "admin" | "customer"
+export type TrackingAudience = "admin" | "customer" | "crew"
 
-/** Who may open Tab 4: staff of the transport (GP1 needs no assignment) and the Customer of the booking. Not crew. */
+/** Who may open Tab 4: staff of the transport (GP1 needs no assignment), the Customer of the booking and the assigned crew. */
 export const TRACKING_ADMIN_ROLES = ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] as const
 export const TRACKING_CUSTOMER_ROLES = ["CUSTOMER"] as const
 
@@ -53,7 +53,12 @@ export const trackingPaths = {
   adminPattern: "/admin/ongoing-transports/:transportId/gps",
   customerPattern: "/bookings/:bookingId/transports/:transportId/gps",
   tabs: (audience: TrackingAudience, transportId: string, bookingId?: string) => {
-    const base = audience === "customer" && bookingId ? customerBase(bookingId, transportId) : adminBase(transportId)
+    const base =
+      audience === "customer" && bookingId
+        ? customerBase(bookingId, transportId)
+        : audience === "crew"
+          ? `/crew/transports/${encodeURIComponent(transportId)}`
+          : adminBase(transportId)
     return { overview: base, route: `${base}/route`, health: `${base}/health`, gps: `${base}/gps` }
   },
 } as const

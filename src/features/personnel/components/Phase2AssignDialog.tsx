@@ -129,9 +129,8 @@ export function Phase2AssignDialog({ open, onOpenChange, plan, routePlan, dossie
         open={open}
         onOpenChange={(next) => !isSaving && onOpenChange(next)}
         title="Phase 2 assignment by route segment"
-        code="SCR-F3-017"
         description="Assign a driver and an escort to every internal segment. Outsourced segments are handled by their provider."
-        className="sm:max-w-[760px]"
+        className="sm:max-w-[1120px]"
         footer={
           <>
             <CancelButton onClick={() => onOpenChange(false)} />
@@ -141,7 +140,7 @@ export function Phase2AssignDialog({ open, onOpenChange, plan, routePlan, dossie
           </>
         }
       >
-        <dl className="m-0 flex flex-wrap items-center gap-x-6 gap-y-2 border bg-slate-50 px-4 py-3 text-xs">
+        <dl className="m-0 flex flex-wrap items-center gap-x-6 gap-y-2 border border-[#e5e2d9] bg-white px-4 py-3 text-xs">
           <div>
             <dt className={labelClass}>Transport plan</dt>
             <dd className="m-0 mt-0.5 font-semibold text-slate-900">{plan.planCode}</dd>
@@ -173,7 +172,7 @@ export function Phase2AssignDialog({ open, onOpenChange, plan, routePlan, dossie
             const window = { from: row.plannedDepartureAt, to: row.plannedArrivalAt }
             const errors = index >= 0 ? form.formState.errors.segments?.[index] : undefined
             return (
-              <li key={row.routePlanRouteId} className="border bg-white p-4">
+              <li key={row.routePlanRouteId} className="border border-[#e5e2d9] bg-white p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="grid size-6 place-items-center rounded-full bg-[#ef8f00] text-xs font-bold text-white">{row.sequenceNo}</span>
                   <h3 className="m-0 text-sm font-bold text-slate-900">

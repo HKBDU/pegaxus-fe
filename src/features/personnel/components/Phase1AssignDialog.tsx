@@ -23,7 +23,7 @@ interface Phase1AssignDialogProps {
   phase1: Phase1Assignment
 }
 
-/** SCR-F3-016: Logistics Manager picks the Transport Specialist and the Route Coordinator. */
+/** Logistics Manager picks the Transport Specialist and the Route Coordinator. */
 export function Phase1AssignDialog({ open, onOpenChange, mode, plan, phase1 }: Phase1AssignDialogProps) {
   const transportPlanId = plan.transportPlanId
   const assign = useAssignPhase1(transportPlanId)
@@ -93,7 +93,6 @@ export function Phase1AssignDialog({ open, onOpenChange, mode, plan, phase1 }: P
       open={open}
       onOpenChange={(next) => !isSaving && onOpenChange(next)}
       title={isChange ? "Change Phase 1 personnel" : "Phase 1 assignment"}
-      code="SCR-F3-016"
       description="Assign the Transport Specialist and the Route Coordinator to start legal review and route planning for this transport plan."
       footer={
         <>
@@ -104,10 +103,10 @@ export function Phase1AssignDialog({ open, onOpenChange, mode, plan, phase1 }: P
         </>
       }
     >
-      <PlanSummaryStrip plan={plan} className="sm:grid-cols-2 lg:grid-cols-2" />
+      <PlanSummaryStrip plan={plan} wideRoute className="sm:grid-cols-3 lg:grid-cols-3" />
       <Form {...form}>
         <form onSubmit={submit} noValidate className="grid gap-4">
-          <fieldset disabled={isSaving} className="m-0 grid min-w-0 gap-4 border-0 p-0">
+          <fieldset disabled={isSaving} className="m-0 grid min-w-0 items-start gap-4 border-0 p-0 sm:grid-cols-2">
             <FormField
               control={form.control}
               name="transportSpecialistId"
@@ -163,13 +162,13 @@ export function Phase1AssignDialog({ open, onOpenChange, mode, plan, phase1 }: P
                 control={form.control}
                 name="reason"
                 render={({ field }) => (
-                  <FormItem className="gap-1.5">
+                  <FormItem className="gap-1.5 sm:col-span-2">
                     <div className="flex items-center justify-between">
                       <FormLabel className={labelClass}>Reason for change *</FormLabel>
                       <span className="text-[10px] text-slate-400">{field.value.length}/{REASON_MAX}</span>
                     </div>
                     <FormControl>
-                      <Textarea {...field} rows={3} maxLength={REASON_MAX} placeholder="e.g. Previous coordinator is on leave" className="min-h-20 rounded-[2px] border-0 bg-[#f3f3f3] py-2 text-xs shadow-none" />
+                      <Textarea {...field} rows={3} maxLength={REASON_MAX} placeholder="e.g. Previous coordinator is on leave" className="max-h-32 min-h-20 resize-none overflow-y-auto rounded-[2px] border-[#f3aa3b] bg-transparent px-3 py-2 text-xs shadow-none placeholder:text-[#6c6963] focus-visible:border-primary focus-visible:ring-primary/20" />
                     </FormControl>
                     <FormMessage className="text-xs" />
                   </FormItem>

@@ -19,9 +19,9 @@ import { useDebounce } from "@/shared/hooks/useDebounce"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 
-export const labelClass = "font-heading text-[10px] font-semibold uppercase leading-4 tracking-[0.08em] text-[#181818]"
+export const labelClass = "font-heading text-[11px] font-medium uppercase leading-4 tracking-[0.04em] text-[#181818]"
 export const controlClass =
-  "h-9 w-full rounded-[2px] border-0 bg-[#f3f3f3] px-2.5 text-xs font-normal text-[#181818] shadow-none focus-visible:ring-2 focus-visible:ring-primary/40"
+  "h-9 w-full rounded-[2px] border-[#f3aa3b] bg-transparent px-3 text-xs font-normal text-[#181818] shadow-none placeholder:text-[#6c6963] focus-visible:border-primary focus-visible:ring-primary/20"
 
 type Tone = "green" | "amber" | "red" | "blue" | "slate" | "orange"
 
@@ -36,7 +36,7 @@ const toneClass: Record<Tone, string> = {
 
 export function Chip({ tone, children, className }: { tone: Tone; children: ReactNode; className?: string }) {
   return (
-    <span className={cn("inline-flex h-5 items-center whitespace-nowrap rounded-[3px] px-2 text-[10px] font-bold uppercase leading-none tracking-[0.04em]", toneClass[tone], className)}>
+    <span className={cn("inline-flex h-5 items-center whitespace-nowrap rounded-full px-2 text-[0.65rem] font-medium leading-none", toneClass[tone], className)}>
       {children}
     </span>
   )
@@ -104,7 +104,7 @@ export function EmployeeAvatar({ employee, className }: { employee: Pick<Employe
 export function EmployeeCard({ employee, className }: { employee: EmployeeBrief; className?: string }) {
   const role = employee.role in ROLE_LABEL ? ROLE_LABEL[employee.role as AssignableRole] : employee.role
   return (
-    <div className={cn("flex items-center gap-3 border bg-slate-50 p-3", className)}>
+    <div className={cn("flex items-center gap-3 border border-[#e5e2d9] bg-white px-3 py-2.5", className)}>
       <EmployeeAvatar employee={employee} />
       <div className="grid min-w-0 leading-tight">
         <span className="font-mono text-[10px] text-slate-500">{employee.employeeCode}</span>
@@ -132,23 +132,23 @@ export function SegmentTypeChip({ outsourced }: { outsourced: boolean }) {
 }
 
 /** Plan facts the dashboard and the dialogs show in a strip. */
-export function PlanSummaryStrip({ plan, className }: { plan: TransportPlanSummary; className?: string }) {
+export function PlanSummaryStrip({ plan, className, wideRoute = false }: { plan: TransportPlanSummary; className?: string; /** Let the route use two columns (dialogs, where the strip is the first thing read). */ wideRoute?: boolean }) {
   const route = [plan.booking.originAddress, plan.booking.destinationAddress].filter(Boolean).join(" → ") || "—"
-  const items: { label: string; value: ReactNode }[] = [
+  const items: { label: string; value: ReactNode; wide?: boolean }[] = [
     { label: "Transport plan", value: plan.planCode },
     { label: "Booking", value: plan.booking.bookingCode },
     { label: "Customer", value: plan.booking.customerName },
-    { label: "Route", value: route },
+    { label: "Route", value: route, wide: wideRoute },
     { label: "Status", value: <TransportPlanStatusChip status={plan.status} /> },
     { label: "Horses", value: plan.booking.totalHorses },
     { label: "Planned start", value: formatDate(plan.plannedStartAt) },
   ]
   return (
-    <dl className={cn("m-0 grid gap-x-6 gap-y-3 border bg-white p-4 sm:grid-cols-2 lg:grid-cols-4", className)}>
+    <dl className={cn("m-0 grid gap-x-6 gap-y-3 border border-[#e5e2d9] bg-white px-4 py-3 sm:grid-cols-2 lg:grid-cols-4", className)}>
       {items.map((item) => (
-        <div key={item.label} className="min-w-0">
+        <div key={item.label} className={cn("min-w-0", item.wide && "sm:col-span-2")}>
           <dt className={labelClass}>{item.label}</dt>
-          <dd className="m-0 mt-1 truncate text-sm font-semibold text-slate-900" title={typeof item.value === "string" ? item.value : undefined}>
+          <dd className="m-0 mt-0.5 truncate text-[13px] font-semibold text-slate-900" title={typeof item.value === "string" ? item.value : undefined}>
             {item.value}
           </dd>
         </div>
@@ -245,11 +245,11 @@ export function EmployeeSelect({
               disabled={disabled || waitingForWindow}
               placeholder="Search name or code"
               aria-label={`Search ${ariaLabel}`}
-              className="h-8 rounded-[2px] border-0 bg-[#f3f3f3] pl-7 text-xs shadow-none"
+              className="h-8 rounded-[2px] border-[#f3aa3b] bg-transparent pl-7 text-xs shadow-none placeholder:text-[#6c6963] focus-visible:border-primary focus-visible:ring-primary/20"
             />
           </div>
           <Select value={country} onValueChange={setCountry} disabled={disabled || waitingForWindow}>
-            <SelectTrigger aria-label={`Country of ${ariaLabel}`} className="h-8 w-full rounded-[2px] border-0 bg-[#f3f3f3] px-2 text-xs shadow-none">
+            <SelectTrigger aria-label={`Country of ${ariaLabel}`} className="h-8 w-full rounded-[2px] border-[#f3aa3b] bg-transparent px-2 text-xs shadow-none focus-visible:border-primary focus-visible:ring-primary/20">
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-72 rounded-[2px]">

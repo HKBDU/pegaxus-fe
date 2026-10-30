@@ -225,7 +225,11 @@ export const router = createBrowserRouter([
           ...liveTrackingTabRoutes("admin"),
           ...handoverTabRoutes("admin"),
         ],
-        crew: [...horseHealthTabRoutes, ...handoverTabRoutes("crew")],
+        crew: [
+          ...horseHealthTabRoutes,
+          ...liveTrackingTabRoutes("crew"),
+          ...handoverTabRoutes("crew"),
+        ],
         customer: [
           ...horseHealthTabRoutes,
           ...liveTrackingTabRoutes("customer"),

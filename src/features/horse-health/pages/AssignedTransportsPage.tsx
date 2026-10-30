@@ -2,8 +2,11 @@ import { AlertTriangle, ArrowRight, RefreshCw } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { ErrorState, LoadingState } from "@/shared/components/common"
+import { PageHeader } from "@/shared/components/PageHeader"
+import { useIsDesktop } from "@/shared/hooks"
 import { formatUtcDateTime } from "@/shared/utils/datetime"
 
+import { AssignedTransportsTable } from "../components/AssignedTransportsTable"
 import { CrewShell } from "../components/CrewShell"
 import { HORSE_HEALTH_ROUTES } from "../constants"
 import { useAssignedTransports } from "../hooks/useAssignedTransports"
@@ -35,6 +38,19 @@ function TransportListItem({ transport }: { transport: AssignedTransport }) {
 
 export default function AssignedTransportsPage() {
   const query = useAssignedTransports()
+  const isDesktop = useIsDesktop()
+
+  // Desktop: the table of the booking list inside the employee shell. Phones keep the cards below.
+  if (isDesktop) {
+    return <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
+      <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
+        <div className="mb-6"><PageHeader title="ASSIGNED TRANSPORTS" backHref={HORSE_HEALTH_ROUTES.home} showBack={false} /></div>
+        {query.isPending ? <LoadingState /> : query.error && !query.data
+          ? <ErrorState message={query.error instanceof Error ? query.error.message : "Unable to load assigned transports."} onRetry={() => void query.refetch()} />
+          : <AssignedTransportsTable transports={query.data?.items ?? []} />}
+      </div>
+    </div>
+  }
 
   return <CrewShell><div className="mx-auto max-w-3xl space-y-4">
     <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Assigned transports</h1>

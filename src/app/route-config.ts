@@ -138,7 +138,25 @@ const adminHeaderRoutes = [
   ...["profile", "staff", "transport-plans", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
 ]
 
-export function getAdminHeaderContext(pathname: string) {
+const crewHeaderRoutes = [
+  { path: "/crew/transports/:transportId/*", title: "TRANSPORT DETAILS" },
+  { path: "/crew/transports", title: "" },
+  { path: "/crew/incidents/new/*", title: "REPORT INCIDENT" },
+  { path: "/crew/incidents/:incidentReportId", title: "INCIDENT DETAILS" },
+  { path: "/crew/emergency-costs/new", title: "EMERGENCY COST REQUEST" },
+  { path: "/crew/emergency-costs/:emergencyCostRequestId", title: "EMERGENCY COST DETAILS" },
+  { path: "/crew/emergency-costs", title: "EMERGENCY COSTS" },
+]
+
+export function getAdminHeaderContext(pathname: string, isCrew = false) {
+  if (isCrew) {
+    if (pathname === "/crew") return { label: "ONGOING TRANSPORT", href: "/crew", title: "" }
+    const crewRoute = crewHeaderRoutes.find(({ path }) => matchPath({ path, end: true }, pathname))
+    const shared = adminHeaderRoutes.find(({ path }) => matchPath({ path, end: true }, pathname))
+    // Notifications and the profile keep their own label; every other crew page sits under Assigned Transports.
+    if (!crewRoute && shared && pathname === ROLE_ROUTES.notifications) return shared
+    return { label: "ASSIGNED TRANSPORTS", href: "/crew/transports", title: crewRoute?.title ?? "" }
+  }
   return adminHeaderRoutes.find(({ path }) => matchPath({ path, end: true }, pathname)) ?? { label: "MANAGER", href: ROLE_ROUTES.managerHome, title: "" }
 }
 

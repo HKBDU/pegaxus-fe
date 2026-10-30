@@ -1,5 +1,7 @@
 import { AlertTriangle, CircleDot, RefreshCw } from "lucide-react";
+import type { ReactNode } from "react";
 import { ErrorState, LoadingState } from "@/shared/components/common";
+import { useIsDesktop } from "@/shared/hooks";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { formatUtcDateTime } from "@/shared/utils/datetime";
 
@@ -49,15 +51,23 @@ function TransportCard({ transport }: { transport: AssignedTransport }) {
   );
 }
 
+function DesktopFrame({ children }: { children: ReactNode }) {
+  return <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">{children}</div>;
+}
+
 export default function CrewHomePage() {
   const query = useAssignedTransports();
+  const isDesktop = useIsDesktop();
   const currentTransport =
     query.data?.items.find((transport) => transport.status === "IN_TRANSIT") ??
     query.data?.items.find((transport) => transport.status === "READY");
 
+  // Desktop: the same page frame as the booking list (inside the employee shell). Phones keep the compact crew frame.
+  const Frame = isDesktop ? DesktopFrame : CrewShell;
+
   return (
-    <CrewShell>
-      <div className="mx-auto max-w-3xl space-y-4">
+    <Frame>
+      <div className={isDesktop ? "booking-page-enter mx-auto w-full max-w-[1152px] space-y-4" : "mx-auto max-w-3xl space-y-4"}>
         <PageHeader
           title="ONGOING TRANSPORT"
           backHref="/crew/transports"
@@ -108,6 +118,6 @@ export default function CrewHomePage() {
           </div>
         )}
       </div>
-    </CrewShell>
+    </Frame>
   );
 }
