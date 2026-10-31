@@ -1,0 +1,2 @@
+export const codeLinkClassName =
+  "inline-flex min-h-8 max-w-full items-center rounded-[2px] py-1 font-semibold text-slate-900 underline decoration-primary/40 underline-offset-4 transition-colors hover:text-primary hover:decoration-primary focus-visible:text-primary focus-visible:decoration-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary motion-reduce:transition-none";

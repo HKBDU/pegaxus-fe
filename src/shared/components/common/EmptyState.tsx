@@ -1,12 +1,10 @@
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { HorseLoader } from './HorseLoader'
 
 export function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center gap-4 p-20" role="status">
-      <div className="size-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-      <p className="animate-pulse text-gray-500">Loading data...</p>
-    </div>
+    <div className="flex min-h-40 items-center justify-center p-6"><HorseLoader size="page" /></div>
   )
 }
 

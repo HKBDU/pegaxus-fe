@@ -66,7 +66,7 @@ export function UserAccountFilters({
     <div
       role="toolbar"
       aria-label="User account filters"
-      className="flex min-w-0 flex-wrap items-center gap-2 lg:flex-nowrap lg:overflow-x-auto"
+      className="flex min-w-0 flex-wrap items-center gap-2 xl:flex-nowrap"
     >
       <div className="relative w-full min-w-0 lg:min-w-48 lg:flex-1">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />

@@ -80,7 +80,7 @@ export function VehicleIncidentFields({
           onChange={(event) =>
             update("incidentType", event.target.value as VehicleIncidentType)
           }
-          className="min-h-12 rounded-[2px] border border-slate-300 bg-white px-3 text-base"
+          className="min-h-12 w-full min-w-0 rounded-[2px] border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
         >
           {Object.values(VEHICLE_INCIDENT_TYPE).map((type) => (
             <option key={type} value={type}>

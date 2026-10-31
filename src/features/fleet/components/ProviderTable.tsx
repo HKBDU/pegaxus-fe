@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
@@ -97,7 +98,7 @@ export function ProviderTable({ providers, filters, meta, isLoading, onSearchCha
             type="button"
             title="View provider details"
             onClick={() => navigate(providerDetailPath(row.original.transportProviderId))}
-            className="font-semibold text-slate-900 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+            className={codeLinkClassName}
           >
             {row.original.providerCode}
           </button>

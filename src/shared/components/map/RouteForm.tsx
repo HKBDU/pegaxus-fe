@@ -157,7 +157,7 @@ export function RouteForm({
       <label className="grid gap-1 text-sm">
         Transport mode
         <select
-          className="h-9 rounded border px-3 text-sm"
+          className="h-9 w-full min-w-0 rounded-[2px] border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
           {...form.register("transportMode")}
         >
           <option value="ROAD">ROAD</option>

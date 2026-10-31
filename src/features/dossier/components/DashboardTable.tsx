@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type RowSelectionState, type SortingState } from "@tanstack/react-table"
@@ -43,9 +44,9 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         header: "DOSSIER CODE",
         enableHiding: false,
         cell: ({ row }) => (
-          <span className="inline-block whitespace-nowrap rounded-[2px] border border-slate-300 bg-white px-1.5 py-0.5 font-mono text-[0.7rem] font-semibold text-slate-900">
+          <button type="button" className={codeLinkClassName} onClick={() => navigate(`/compliance-dossiers/${row.original.complianceDossierId}`)}>
             {row.original.dossierCode || "—"}
-          </span>
+          </button>
         ),
       },
       {

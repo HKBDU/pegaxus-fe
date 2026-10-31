@@ -54,15 +54,15 @@ export function EmergencyCostFilters({
       <div
         role="region"
         tabIndex={0}
-        aria-label="Emergency cost filter toolbar, scroll horizontally for more controls"
+        aria-label="Emergency cost filter toolbar"
         className="w-full min-w-0 max-w-full rounded-[2px] p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
       >
         <div
           role="group"
           aria-label="Emergency cost filters"
-          className="flex w-full min-w-max flex-nowrap items-center gap-1"
+          className="flex w-full min-w-0 flex-wrap items-center gap-2"
         >
-          <div className="relative min-w-56 flex-1">
+          <div className="relative min-w-0 basis-full sm:basis-56 sm:flex-1">
             <Search
               aria-hidden="true"
               className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"

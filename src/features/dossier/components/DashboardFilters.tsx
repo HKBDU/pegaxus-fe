@@ -1,10 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react"
-import { FilterX, Search, X } from "lucide-react"
+import { Search, X } from "lucide-react"
 
 import { DOSSIER_STATUSES, type DashboardParams, type DashboardSort, type DossierRisk, type DossierRouteType, type DossierStatus } from "@/features/dossier/types"
 import { getDossierStatusLabel } from "@/features/dossier/utils"
 import { useDebounce } from "@/shared/hooks"
-import { Button } from "@/shared/components/ui/button"
+import { FilterToolbar } from "@/shared/components/ui/filter-toolbar"
 import { DataTableRadioFilter, type DataTableRadioOption } from "@/shared/components/ui/data-table-radio-filter"
 import { Input } from "@/shared/components/ui/input"
 
@@ -49,14 +49,16 @@ interface DashboardFiltersProps {
 export function DashboardFilters({ filters, onSearchChange, onRouteChange, onStatusChange, onRiskChange, onSortChange, onReset, viewOptions }: DashboardFiltersProps) {
   const [localSearch, setLocalSearch] = useState(filters.search)
   const debouncedSearch = useDebounce(localSearch, 300)
-  const hasActiveFilters =
-    Boolean(localSearch) || filters.routeType !== "ALL" || filters.status !== "ALL" || filters.risk !== "ALL" || filters.sortBy !== DEFAULT_DASHBOARD_SORT
+  const activeCount = [Boolean(localSearch), filters.routeType !== "ALL", filters.status !== "ALL", filters.risk !== "ALL", filters.sortBy !== DEFAULT_DASHBOARD_SORT].filter(Boolean).length
 
   useEffect(() => onSearchChange(debouncedSearch), [debouncedSearch, onSearchChange])
 
   return (
-    <div role="toolbar" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-[minmax(15rem,1fr)_9rem_9.5rem_9.5rem_10.5rem_auto]">
-      <div className="relative col-span-2 md:col-span-3 xl:col-span-1">
+    <FilterToolbar
+      label="Dossier filters"
+      activeCount={activeCount}
+      onClear={() => { setLocalSearch(""); onReset() }}
+      search={<div className="relative min-w-0">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
         <Input
           value={localSearch}
@@ -71,30 +73,13 @@ export function DashboardFilters({ filters, onSearchChange, onRouteChange, onSta
             <X className="size-3.5" />
           </button>
         ) : null}
-      </div>
-
+      </div>}
+      sort={<DataTableRadioFilter title="Sort" value={filters.sortBy} defaultValue={DEFAULT_DASHBOARD_SORT} options={SORT_OPTIONS} onValueChange={(value) => onSortChange(value as DashboardSort)} />}
+      actions={viewOptions}
+    >
       <DataTableRadioFilter title="Route" value={filters.routeType} options={ROUTE_OPTIONS} onValueChange={(value) => onRouteChange(value as DossierRouteType | "ALL")} />
       <DataTableRadioFilter title="Status" value={filters.status} options={STATUS_OPTIONS} onValueChange={(value) => onStatusChange(value as DossierStatus | "ALL")} />
       <DataTableRadioFilter title="Risk level" value={filters.risk} options={RISK_OPTIONS} onValueChange={(value) => onRiskChange(value as DossierRisk | "ALL")} />
-      <DataTableRadioFilter title="Sort" value={filters.sortBy} defaultValue={DEFAULT_DASHBOARD_SORT} options={SORT_OPTIONS} onValueChange={(value) => onSortChange(value as DashboardSort)} />
-
-      <div className="flex items-center justify-end gap-1.5">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-label="Reset filters"
-          disabled={!hasActiveFilters}
-          className="size-8 rounded-[2px] border-slate-300 bg-white p-0 shadow-none"
-          onClick={() => {
-            setLocalSearch("")
-            onReset()
-          }}
-        >
-          <FilterX className="size-3.5 text-slate-600" />
-        </Button>
-        {viewOptions}
-      </div>
-    </div>
+    </FilterToolbar>
   )
 }

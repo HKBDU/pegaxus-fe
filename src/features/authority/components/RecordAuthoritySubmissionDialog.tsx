@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
   Tooltip,
@@ -187,7 +188,7 @@ export function RecordAuthoritySubmissionDialog({
           Record Authority Submission
         </Button>
       </DialogTrigger>
-      <DialogContent className="min-w-0 max-h-[92vh] max-w-5xl overflow-x-hidden overflow-y-auto">
+      <DialogContent className="min-w-0 sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="font-heading uppercase text-[#f39200]">
             Record Authority Submission
@@ -202,8 +203,8 @@ export function RecordAuthoritySubmissionDialog({
           onSubmit={submit}
           className="min-w-0 space-y-5"
         >
-          <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-            <Field label="Authority Portal *" error={errors.authorityName}>
+          <div className="grid min-w-0 items-start gap-4 sm:grid-cols-2">
+            <Field reserveErrorSpace label="Authority Portal *" error={errors.authorityName}>
               <Input
                 className={
                   errors.authorityName
@@ -219,6 +220,7 @@ export function RecordAuthoritySubmissionDialog({
               />
             </Field>
             <Field
+              reserveErrorSpace
               label="Submission Reference *"
               error={errors.submissionReference}
             >
@@ -238,18 +240,21 @@ export function RecordAuthoritySubmissionDialog({
             </Field>
           </div>
           <Field label="Submission Method *">
-            <select value={submissionMethod} onChange={(event) => setSubmissionMethod(event.target.value)} className="h-9 w-full rounded-[2px] border border-input bg-background px-3 text-sm">
-              <option value="ONLINE_PORTAL">Online portal</option>
-              <option value="EMAIL">Email</option>
-              <option value="IN_PERSON">In person</option>
-              <option value="OTHER">Other</option>
-            </select>
+            <Select value={submissionMethod} onValueChange={setSubmissionMethod}>
+              <SelectTrigger aria-label="Submission Method" className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ONLINE_PORTAL">Online portal</SelectItem>
+                <SelectItem value="EMAIL">Email</SelectItem>
+                <SelectItem value="IN_PERSON">In person</SelectItem>
+                <SelectItem value="OTHER">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <Checkbox checked={isRequired} onCheckedChange={(checked) => setIsRequired(Boolean(checked))} aria-label="Mandatory submission" />
             Mandatory authority submission
           </label>
-          <Field label="Submission Date *" error={errors.submissionDate}>
+          <Field reserveErrorSpace label="Submission Date *" error={errors.submissionDate}>
             <DatePicker
               className={errors.submissionDate ? "border-red-500" : ""}
               value={submissionDate}
