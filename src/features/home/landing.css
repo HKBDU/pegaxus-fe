@@ -116,17 +116,19 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   position: fixed;
   z-index: 30;
   inset: 3px 0 auto;
-  height: 94px;
+  height: 76px;
   padding: 0 4vw;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2rem;
+  gap: clamp(1rem, 2vw, 2rem);
+  background: rgb(23 25 28 / 92%);
+  border-bottom: 1px solid var(--landing-line);
   transition: background 200ms;
 }
 .landing-navbar.is-scrolled {
   height: 76px;
-  background: rgb(16 18 16 / 95%);
+  background: rgb(23 25 28 / 95%);
   border-bottom: 1px solid var(--landing-line);
 }
 .landing-brand {
@@ -1315,10 +1317,10 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
 @media (max-width: 1023px) {
   .landing-navbar {
     height: 76px;
-    padding-inline: 5vw;
+    padding-inline: 4vw;
   }
   .landing-navbar.is-scrolled {
-    height: 68px;
+    height: 76px;
   }
   .landing-experience {
     top: 75px;
@@ -1484,7 +1486,7 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   }
   .landing-navbar {
     padding-inline: 1.25rem;
-    height: 70px;
+    height: 76px;
   }
   .landing-brand img {
     width: 145px;

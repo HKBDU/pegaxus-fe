@@ -13,6 +13,7 @@ export type ActionDialogProps = {
 }
 
 export type HeaderProps = {
+  variant?: "default" | "customer"
   navItems?: HeaderNavItem[]
   logoSrc?: string
   logoAlt?: string

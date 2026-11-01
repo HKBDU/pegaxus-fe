@@ -1,10 +1,11 @@
 import { House, MapPin, Menu, Truck } from "lucide-react"
-import { NavLink, useLocation } from "react-router-dom"
+import { Link, NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
 import { NotificationBell } from "@/features/notification"
 import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu"
 import { ProfileDropdown } from "@/shared/components/ProfileDropdown"
+import { BrandLogo, BrandMobileMenu } from "@/shared/components/BrandNavigation"
 import {
   Sidebar,
   SidebarContent,
@@ -40,7 +41,7 @@ function HeaderSidebarNav({ navItems }: HeaderSidebarNavProps) {
   return (
     <Sidebar side="left" collapsible="offcanvas" className="h-svh min-h-svh w-[15rem] lg:hidden">
       <div className="flex h-24 shrink-0 items-center justify-center bg-[#17191c] px-5">
-        <img src={logo} alt="Pegaxus" className="w-full max-w-[170px]" />
+        <BrandLogo onClick={() => setOpenMobile(false)} />
       </div>
       <SidebarContent className="min-h-0 overflow-hidden bg-[#17191c] text-white">
         <SidebarGroup className="px-0">
@@ -84,6 +85,7 @@ export function Header({
   user = null,
   rightContent,
   className,
+  variant = "default",
 }: HeaderProps) {
   const location = useLocation()
   // -1 = the page belongs to no menu item (no item is highlighted, the bar is hidden).
@@ -95,14 +97,58 @@ export function Header({
   // Live unread count + latest notifications; only for a signed-in user.
   const notificationButton = isLoggedIn ? <NotificationBell /> : null
 
+  if (variant === "customer") {
+    const account = rightContent ?? <ProfileDropdown isLoggedIn={isLoggedIn} user={user} />
+    return (
+      <header className={cn("brand-navbar customer-navbar", className)}>
+        <BrandLogo src={logoSrc} alt={logoAlt} />
+        <nav className="brand-nav-links" aria-label="Main navigation">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              to={item.href}
+              className="brand-nav-link"
+              aria-current={isNavItemActive(item, location.pathname) ? "page" : undefined}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+        <div className="brand-nav-actions">
+          <div className="brand-account-tools">{notificationButton}{account}</div>
+        </div>
+        <div className="brand-mobile-account">{notificationButton}{account}</div>
+        <BrandMobileMenu title="Customer navigation">
+          {(close) => (
+            <>
+              <nav className="brand-mobile-links" aria-label="Mobile customer navigation">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className="brand-nav-link"
+                    aria-current={isNavItemActive(item, location.pathname) ? "page" : undefined}
+                    onClick={close}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            </>
+          )}
+        </BrandMobileMenu>
+      </header>
+    )
+  }
+
   return (
     <SidebarProvider defaultOpen={false} className="sticky top-0 z-50 !min-h-0 w-full">
       <HeaderSidebarNav navItems={navItems} />
       <header className={cn("site-header-enter sticky top-0 z-50 w-full border-b border-white/5 bg-[#17191c] text-white transition-[background-color,box-shadow] duration-300", className)}>
       <div className="mx-auto hidden h-12 w-full items-center px-8 lg:flex">
-        <NavLink to="/" aria-label={logoAlt} className="shrink-0">
+        <BrandLogo src={logoSrc} alt={logoAlt} className="shrink-0">
           <img src={logoSrc} alt={logoAlt} className="h-auto w-[138px] transition-transform duration-300 hover:scale-[1.02]" />
-        </NavLink>
+        </BrandLogo>
         { /* active state got from url */}
         {navItems.length > 0 ? <nav aria-label="Main navigation" className="relative ml-auto flex h-full w-[22rem] items-center">
           {navItems.map((item) => (
@@ -146,9 +192,9 @@ export function Header({
           <SidebarTrigger aria-label="Open navigation menu" className="text-[#d7d9dc] hover:bg-white/10 hover:text-white">
             <Menu className="size-5" />
           </SidebarTrigger>
-          <NavLink to="/" aria-label={logoAlt} className="absolute left-1/2 shrink-0 -translate-x-1/2">
+          <BrandLogo src={logoSrc} alt={logoAlt} className="absolute left-1/2 shrink-0 -translate-x-1/2">
             <img src={logoSrc} alt={logoAlt} className="h-auto w-[100px] transition-transform duration-300 hover:scale-[1.02]" />
-          </NavLink>
+          </BrandLogo>
           <div className="flex items-center gap-1">
             {rightContent ?? notificationButton}
             <ProfileDropdown isLoggedIn={isLoggedIn} user={user} />

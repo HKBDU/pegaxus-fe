@@ -18,7 +18,7 @@ import {
 import type { CSSProperties } from "react"
 import { NavLink, useLocation } from "react-router-dom"
 
-import logo from "@/assets/logo-dark.png"
+import { BrandLogo } from "@/shared/components/BrandNavigation"
 import { canAccess } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
 import { APPROVED_BOOKINGS_ACCESS, INCIDENT_ADMIN_ACCESS, ONGOING_TRANSPORT_ACCESS, ROLE_ROUTES } from "@/app/route-config"
@@ -34,6 +34,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  useSidebar,
 } from "@/shared/components/ui/sidebar"
 
 const incidentsItem = { label: "Incidents", href: ROLE_ROUTES.incidents, icon: TriangleAlert }
@@ -118,6 +119,7 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
 }
 
 export function AdminSidebar() {
+  const { setOpenMobile } = useSidebar()
   const principal = useAuthStore((state) => state.principal)
   // Logistics managers get the full admin menu; other employees (e.g. Transport Specialist) only their own pages.
   const isManager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
@@ -134,7 +136,7 @@ export function AdminSidebar() {
   return (
     <Sidebar fixed={false} collapsible="icon" className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
       <div className="relative flex h-20 shrink-0 items-center justify-center bg-[#17191c] px-4 group-data-[collapsible=icon]:px-2">
-        <img alt="Pegaxus" src={logo} className="w-full max-w-[170px] group-data-[collapsible=icon]:hidden" />
+        <BrandLogo onClick={() => setOpenMobile(false)} className="w-full max-w-[170px] group-data-[collapsible=icon]:hidden" />
       </div>
       <SidebarContent className="overflow-y-auto overflow-x-hidden bg-[#17191c]">
         <SidebarGroup className="px-0">

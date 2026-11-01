@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { useAuthStore } from "@/features/auth/store";
+import { canAccess } from "@/features/auth/access-control";
 import { getTransportCta } from "../lib/landing-navigation";
 
 function subscribeHydration(listener: () => void) {
@@ -23,6 +24,10 @@ export function useLandingAuth() {
   const pending = !hydrated || Boolean(token && !principal);
   return {
     pending,
+    customer:
+      !pending &&
+      Boolean(token) &&
+      canAccess(principal, { anyRole: ["CUSTOMER"] }),
     guest: !pending && !token,
     cta: pending
       ? null

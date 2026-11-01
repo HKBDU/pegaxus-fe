@@ -3,6 +3,7 @@ import logo from "@/assets/logo-dark.png";
 import { IncidentAlertHost } from "@/features/incident-management/components/alerts/IncidentAlertHost";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { useIsDesktop } from "@/shared/hooks";
+import { BrandLogo } from "@/shared/components/BrandNavigation";
 
 export function CrewShell() {
   const isDesktop = useIsDesktop();
@@ -13,11 +14,13 @@ export function CrewShell() {
       <IncidentAlertHost />
       <header className="border-b border-slate-200 bg-[#17191c] px-4 py-3">
         <div className="mx-auto flex w-full max-w-4xl items-center lg:max-w-[1440px] justify-between gap-4">
-          <img
-            src={logo}
-            alt="PEGAXUS"
-            className="h-8 w-auto max-w-36 object-contain"
-          />
+          <BrandLogo>
+            <img
+              src={logo}
+              alt="PEGAXUS"
+              className="h-8 w-auto max-w-36 object-contain"
+            />
+          </BrandLogo>
           <span className="text-base font-medium text-white/80">
             Crew workspace
           </span>

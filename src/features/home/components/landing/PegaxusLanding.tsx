@@ -24,6 +24,7 @@ import { HorseLoader } from "./HorseLoader";
 import "../../landing.css";
 
 import { MarqueeBand } from "./MarqueeBand";
+import { scrollToLandingSection } from "../../lib/landing-navigation";
 
 const HorseExperience = lazy(() => import("./HorseExperience"));
 
@@ -100,17 +101,8 @@ export function PegaxusLanding() {
       : null;
     if (!section) return;
     event.preventDefault();
-    // Also handles Sheet portal links after the menu closes and restores focus.
     requestAnimationFrame(() => {
-      section.tabIndex = -1;
-      section.focus({ preventScroll: true });
-      section.scrollIntoView({
-        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "instant"
-          : "smooth",
-        block: "start",
-      });
-      history.replaceState(history.state, "", `#${id}`);
+      scrollToLandingSection(section);
     });
   };
   return (

@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import heroPanel from "@/assets/hero-panel1.png";
 import logoBlack from "@/assets/Logo-black.png";
+import { BrandLogo } from "@/shared/components/BrandNavigation";
 import "../auth.css";
 
 export function AuthShell() {
@@ -49,9 +50,11 @@ export function AuthShell() {
         />
         <div className="auth-overlay absolute inset-0 bg-black/40" />
         <div className="relative z-10 flex h-full flex-col items-center justify-center">
-          <h1 className="auth-wordmark text-6xl font-bold !text-white">
-            PEGAXUS
-          </h1>
+          <BrandLogo>
+            <h1 className="auth-wordmark text-6xl font-bold !text-white">
+              PEGAXUS
+            </h1>
+          </BrandLogo>
           <div className="auth-accent mt-4 h-0.5 w-24 bg-[#F29100]" />
         </div>
         <p className="auth-copyright absolute bottom-6 left-0 right-0 z-10 text-center text-xs text-white/50">
@@ -61,11 +64,13 @@ export function AuthShell() {
       <section className="flex min-h-svh min-w-0 flex-col px-6 py-4 sm:px-10 sm:py-6 lg:h-svh lg:min-h-0 lg:px-[clamp(3rem,6vw,8rem)] lg:py-2">
         <div className="mx-auto flex w-full max-w-[600px] flex-1 flex-col justify-center py-2 lg:py-0">
           <div className="mb-5 flex justify-center sm:mb-6 lg:hidden">
-            <img
-              src={logoBlack}
-              alt="PEGAXUS"
-              className="auth-wordmark h-auto w-[clamp(7rem,24vw,9rem)] object-contain"
-            />
+            <BrandLogo>
+              <img
+                src={logoBlack}
+                alt="PEGAXUS"
+                className="auth-wordmark h-auto w-[clamp(7rem,24vw,9rem)] object-contain"
+              />
+            </BrandLogo>
           </div>
           <div
             key={displayed.key}
