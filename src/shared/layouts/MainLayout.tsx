@@ -14,7 +14,7 @@ import type { ProfileDropdownUser } from "@/shared/components/ProfileDropdown"
 import type { HeaderNavItem } from "@/shared/types/type"
 
 const customerNavItems: HeaderNavItem[] = [
-  { label: "Explore", href: "/" },
+  { label: "Home", href: "/" },
   { label: "My Horses", href: "/my-horses" },
   // A customer opens a compliance dossier from a booking (notification link), so it belongs to BOOKING.
   { label: "Bookings", href: "/bookings", alsoActiveFor: ["/compliance-dossiers"] },

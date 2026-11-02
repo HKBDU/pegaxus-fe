@@ -101,6 +101,7 @@ export default function HorseExperience({
         <div className="landing-canvas-layer">
           <Canvas
             camera={{ position: [0, 0.45, 6.9], fov: 32, near: 0.1, far: 40 }}
+            resize={{ scroll: false, debounce: 0 }}
             dpr={lowPower ? 1 : [1, 1.5]}
             frameloop={
               !quality.visible || !horsePresent

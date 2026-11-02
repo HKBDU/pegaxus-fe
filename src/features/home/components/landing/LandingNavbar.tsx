@@ -10,6 +10,7 @@ import {
 } from "./LandingActions";
 import { BrandLogo } from "@/shared/components/BrandNavigation";
 import { useLandingAuth } from "../../hooks/useLandingAuth";
+import { useSmartNavbar } from "@/shared/hooks/useSmartNavbar";
 export function LandingNavbar({
   active,
   scrolled,
@@ -17,9 +18,11 @@ export function LandingNavbar({
   active: LandingChapter;
   scrolled: boolean;
 }) {
+  const navbarRef = useSmartNavbar();
   const { customer } = useLandingAuth();
   return (
     <header
+      ref={navbarRef}
       className={`landing-navbar brand-navbar${scrolled ? " is-scrolled" : ""}`}
     >
       <BrandLogo />
