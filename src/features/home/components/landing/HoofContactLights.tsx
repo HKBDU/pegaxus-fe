@@ -19,12 +19,16 @@ export function HoofContactLights({
   );
   useFrame(() => {
     const state = story.current;
-    state.hoofPulses.forEach((pulse, index) => {
+    const pulses = state.inJourney ? state.journeyHoofPulses : state.hoofPulses;
+    const time = state.inJourney
+      ? state.journeyEffectTime
+      : state.heroEffectTime;
+    pulses.forEach((pulse, index) => {
       const mesh = meshes.current[index];
       if (!mesh) return;
-      const age = (state.heroEffectTime - pulse.born) / 1250;
+      const age = (time - pulse.born) / 1250;
       mesh.visible =
-        state.inHero &&
+        (state.inHero || state.inJourney) &&
         state.visible &&
         !state.reducedMotion &&
         age >= 0 &&

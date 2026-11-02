@@ -88,10 +88,14 @@ export function useLandingStory(
             heroPhase: state.heroPhase,
             heroRevealTime: state.heroRevealTime,
             heroCameraReady: state.heroCameraReady,
+            heroCalmReady: state.heroCalmReady,
             heroContacts: state.heroContacts,
             heroWalkLoops: state.heroWalkLoops,
             heroHoof: state.heroHoof,
             hoofPulses: state.hoofPulses,
+            journeyEffectTime: state.journeyEffectTime,
+            journeyContacts: state.journeyContacts,
+            journeyHoofPulses: state.journeyHoofPulses,
             introX: state.introX,
             introZ: state.introZ,
             journeyCompleted: state.journeyCompleted,
@@ -170,7 +174,6 @@ export function useLandingStory(
                   1.1,
                 );
           let journeyVisibleAt = 0;
-          let departureMotion = -1;
           let departurePortrait = -1;
           let presentationLayer: HTMLDivElement | null = null;
           const syncJourneyText = () => {
@@ -182,12 +185,6 @@ export function useLandingStory(
               journey.dataset.lifecycle = state.journeyLifecycle;
             if (journey.dataset.phase !== state.journeyPhase)
               journey.dataset.phase = state.journeyPhase;
-            const motion =
-              state.journeyPhase === "RUNNING"
-                ? 1
-                : state.journeyPhase === "STOPPING"
-                  ? 1 - state.journeyStopProgress
-                  : 0;
             const portrait =
               state.journeyPhase === "STOPPING"
                 ? state.journeyStopProgress
@@ -195,13 +192,6 @@ export function useLandingStory(
                     state.journeyPhase === "POSE_READY"
                   ? 1
                   : 0;
-            if (departureMotion !== motion) {
-              departureMotion = motion;
-              journey.style.setProperty(
-                "--departure-motion",
-                motion.toFixed(3),
-              );
-            }
             if (departurePortrait !== portrait) {
               departurePortrait = portrait;
               journey.style.setProperty(
@@ -271,15 +261,22 @@ export function useLandingStory(
             const journeyRect = journey.getBoundingClientRect();
             const mapRect = map.getBoundingClientRect();
             const heldJourney = state.journeyPinned && state.visible;
-            // A navbar-covered sliver of Hero must not steal Journey anchor reentry.
-            const inHero =
-              !heldJourney &&
-              heroRect.bottom > (profile === "desktop" ? 80 : 75);
+            const visibleHeight = (rect: DOMRect) =>
+              Math.max(
+                0,
+                Math.min(rect.bottom, innerHeight) - Math.max(0, rect.top),
+              );
+            const heroVisibleHeight = visibleHeight(heroRect);
+            const journeyVisibleHeight = visibleHeight(journeyRect);
+            // Presentation ownership follows the same visible bounds in both directions.
+            // Journey may show its paused snapshot before autoplay is ready at entry.
             const inJourney =
               heldJourney ||
-              (!inHero &&
-                journeyRect.bottom > 0 &&
-                journeyRect.top < innerHeight);
+              (journeyVisibleHeight > 0 &&
+                (journeyVisibleHeight > heroVisibleHeight ||
+                  (journeyVisibleHeight === heroVisibleHeight &&
+                    currentShot === "journey")));
+            const inHero = !inJourney && heroVisibleHeight > 0;
             const inMap =
               !inHero &&
               !inJourney &&
@@ -315,15 +312,22 @@ export function useLandingStory(
               );
             const stageTop =
               layer?.getBoundingClientRect().top ??
-              (inMap || profile === "desktop" ? 0 : 75);
+              (inJourney
+                ? profile === "desktop"
+                  ? 76
+                  : 0
+                : inMap || profile === "desktop"
+                  ? 0
+                  : 75);
             const stageHeight =
               layer?.clientHeight ??
               (inMap || profile === "desktop"
                 ? innerHeight
                 : innerHeight * 0.43);
             const rect = inHero ? heroRect : inMap ? mapRect : journeyRect;
+            // Keep Hero's composition anchored to its section, not the viewport.
             const offset = inHero
-              ? rect.top
+              ? heroRect.top
               : inMap
                 ? 0
                 : rect.top - (profile === "desktop" ? 0 : stageTop);
@@ -360,6 +364,12 @@ export function useLandingStory(
             });
             if (!state.heroReady && state.heroLifecycle === "PLAYING")
               Object.assign(state, { heroLifecycle: "SUSPENDED" });
+            if (!state.inHero || !state.heroReady)
+              Object.assign(state, {
+                pointerX: 0,
+                pointerY: 0,
+                pointerActive: false,
+              });
             if (!state.journeyReady && state.journeyLifecycle === "PLAYING")
               Object.assign(state, { journeyLifecycle: "SUSPENDED" });
             if (layer) {
@@ -435,23 +445,6 @@ export function useLandingStory(
               },
             });
             if (reduced) return;
-            if (section.id === "journey") {
-              gsap.fromTo(
-                section.querySelector(".landing-journey-perspective"),
-                { opacity: 0.15, y: 35 },
-                {
-                  opacity: 0.45,
-                  y: -15,
-                  ease: "none",
-                  scrollTrigger: {
-                    trigger: section,
-                    start: "top bottom",
-                    end: "bottom top",
-                    scrub: true,
-                  },
-                },
-              );
-            }
             if (
               ["compliance", "platform", "reliability"].includes(section.id)
             ) {
@@ -547,7 +540,11 @@ export function useLandingStory(
             });
           });
           const clearPointer = () =>
-            Object.assign(state, { pointerX: 0, pointerY: 0 });
+            Object.assign(state, {
+              pointerX: 0,
+              pointerY: 0,
+              pointerActive: false,
+            });
           const fine = matchMedia("(hover: hover) and (pointer: fine)");
           const pointer = (event: PointerEvent) => {
             if (
@@ -555,14 +552,26 @@ export function useLandingStory(
               profile !== "desktop" ||
               state.lowPower ||
               !fine.matches ||
+              !state.visible ||
               !state.inHero ||
+              !state.heroReady ||
+              !state.heroCalmReady ||
               state.heroPhase !== "FINAL_POSE" ||
               event.pointerType !== "mouse"
-            )
+            ) {
+              clearPointer();
               return;
+            }
             Object.assign(state, {
-              pointerX: (event.clientX / innerWidth) * 2 - 1,
-              pointerY: 1 - (event.clientY / innerHeight) * 2,
+              pointerX: Math.max(
+                -1,
+                Math.min(1, (event.clientX / innerWidth) * 2 - 1),
+              ),
+              pointerY: Math.max(
+                -1,
+                Math.min(1, 1 - (event.clientY / innerHeight) * 2),
+              ),
+              pointerActive: true,
             });
           };
           const visibility = () => {
@@ -582,6 +591,8 @@ export function useLandingStory(
           window.addEventListener("resize", refresh, { passive: true });
           window.addEventListener("pointermove", pointer, { passive: true });
           window.addEventListener("pointerleave", clearPointer);
+          window.addEventListener("blur", clearPointer);
+          fine.addEventListener("change", clearPointer);
           document.addEventListener("visibilitychange", visibility);
           element.addEventListener("load", refresh, true);
           const resize = new ResizeObserver(refresh);
@@ -595,7 +606,6 @@ export function useLandingStory(
               Object.assign(state, { journeyTextTime: journeyText.time() });
             journey.removeAttribute("data-lifecycle");
             journey.removeAttribute("data-phase");
-            journey.style.removeProperty("--departure-motion");
             journey.style.removeProperty("--departure-portrait");
             cancelAnimationFrame(frame);
             cancelAnimationFrame(refreshFrame);
@@ -607,6 +617,8 @@ export function useLandingStory(
             window.removeEventListener("resize", refresh);
             window.removeEventListener("pointermove", pointer);
             window.removeEventListener("pointerleave", clearPointer);
+            window.removeEventListener("blur", clearPointer);
+            fine.removeEventListener("change", clearPointer);
             document.removeEventListener("visibilitychange", visibility);
             element.removeEventListener("load", refresh, true);
           };

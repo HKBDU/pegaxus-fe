@@ -306,6 +306,7 @@ export function HorseModel({
         introX: 0,
         introZ: 0,
         heroCameraReady: true,
+        heroCalmReady: immediate || state.reducedMotion,
         heroRevealTime: HERO_REVEAL_DURATION,
       });
       play(HERO_CALM_CLIP, false, state.reducedMotion);
@@ -647,6 +648,10 @@ export function HorseModel({
       Object.assign(state, {
         heroEffectTime: state.heroEffectTime + delta * 1000,
       });
+    if (cinematicPlaying && state.inJourney)
+      Object.assign(state, {
+        journeyEffectTime: state.journeyEffectTime + delta * 1000,
+      });
     if (cinematicPlaying && blend.current) {
       const transition = blend.current;
       transition.elapsed = Math.min(
@@ -743,12 +748,20 @@ export function HorseModel({
           journeyLifecycle: "PLAYING",
         });
     }
-    if (
-      state.inHero &&
-      state.heroPhase === "APPROACH" &&
-      cinematicPlaying &&
-      !ownerChanged.current
-    ) {
+    const contactMotion =
+      state.inHero && state.heroPhase === "APPROACH"
+        ? frame.walk
+        : state.inJourney && state.journeyPhase === "RUNNING"
+          ? frame.run
+          : state.inJourney && state.journeyPhase === "STOPPING"
+            ? frame.stop
+            : null;
+    if (ownerChanged.current || !cinematicPlaying || delta <= 0) {
+      hoofTracking.forEach((track) => {
+        track.previous = NaN;
+        track.armed = false;
+      });
+    } else if (contactMotion && !state.reducedMotion) {
       scene.updateWorldMatrix(true, true);
       frame.feet.forEach((foot, index) => {
         const track = hoofTracking[index];
@@ -757,27 +770,38 @@ export function HorseModel({
           (track.point.y - state.horseY) / (state.horseScale * frame.scale) -
           frame.offset[1];
         const velocity = (height - track.previous) / Math.max(delta, 0.001);
-        if (height > frame.walk.floor[index] + 0.025) track.armed = true;
+        if (height > contactMotion.floor[index] + 0.025) track.armed = true;
         if (
           track.armed &&
-          height <= frame.walk.floor[index] + 0.012 &&
+          height <= contactMotion.floor[index] + 0.012 &&
           velocity <= 0.04 &&
           performance.now() - track.last > 180
         ) {
           track.armed = false;
           track.last = performance.now();
-          const pulse =
-            state.hoofPulses[state.heroContacts % state.hoofPulses.length];
+          const pulses = state.inJourney
+            ? state.journeyHoofPulses
+            : state.hoofPulses;
+          const contacts = state.inJourney
+            ? state.journeyContacts
+            : state.heroContacts;
+          const pulse = pulses[contacts % pulses.length];
           Object.assign(pulse, {
             x: track.point.x,
             y: state.horseY + 0.012,
             z: track.point.z,
-            born: state.heroEffectTime,
+            born: state.inJourney
+              ? state.journeyEffectTime
+              : state.heroEffectTime,
           });
-          Object.assign(state, { heroContacts: state.heroContacts + 1 });
+          if (state.inJourney)
+            Object.assign(state, {
+              journeyContacts: state.journeyContacts + 1,
+            });
+          else Object.assign(state, { heroContacts: state.heroContacts + 1 });
         }
         track.previous = height;
-        if (index === 2)
+        if (state.inHero && index === 2)
           Object.assign(state.heroHoof, {
             x: track.point.x,
             y: state.horseY + 0.06,
@@ -820,6 +844,14 @@ export function HorseModel({
         outgoing.current.stop();
       outgoing.current = null;
     }
+    if (
+      state.inHero &&
+      state.heroPhase === "FINAL_POSE" &&
+      !state.heroCalmReady &&
+      !blend.current &&
+      settle.current >= 0.24
+    )
+      Object.assign(state, { heroCalmReady: true });
     if (state.reducedMotion) mixer.update(0);
   });
   return (

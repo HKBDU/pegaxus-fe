@@ -23,15 +23,14 @@ export function JourneySection() {
               className="landing-departure-edge"
               d="M98 326V163L316 59L542 163V326"
             />
+            <path
+              className="landing-departure-base"
+              d="M61 657L98 674M542 674L579 657M147 616L175 630M478 630L506 616"
+            />
           </svg>
-          <span className="landing-departure-sweep" />
           <span className="landing-departure-spotlight" />
         </div>
-        <div className="landing-journey-perspective" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
+        <span className="landing-departure-floor" aria-hidden="true" />
         <div className="landing-copy" data-reveal>
           <p className="landing-eyebrow">02 / The departure</p>
           <h2 id="journey-title">
