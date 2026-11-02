@@ -122,14 +122,24 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   align-items: center;
   justify-content: space-between;
   gap: clamp(1rem, 2vw, 2rem);
-  background: rgb(23 25 28 / 92%);
-  border-bottom: 1px solid var(--landing-line);
-  transition: background 200ms;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+  transition: background 240ms, border-color 240ms, backdrop-filter 240ms;
 }
 .landing-navbar.is-scrolled {
   height: 76px;
-  background: rgb(23 25 28 / 95%);
+  background: rgb(23 25 28 / 68%);
+  -webkit-backdrop-filter: blur(14px) saturate(110%);
+  backdrop-filter: blur(14px) saturate(110%);
   border-bottom: 1px solid var(--landing-line);
+}
+.landing-navbar .brand-nav-link {
+  text-shadow: 0 1px 3px #000, 0 0 12px #000a;
+}
+.landing-navbar > .brand-logo {
+  filter: drop-shadow(0 1px 3px #0009);
 }
 .landing-brand {
   display: inline-flex;
@@ -397,6 +407,15 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   width: auto;
   height: 1.2rem;
   opacity: 0.6;
+}
+.landing-journey-viewport {
+  position: relative;
+  min-height: 100dvh;
+}
+.landing-journey-viewport > .landing-journey {
+  position: relative;
+  min-height: 100dvh;
+  scroll-margin-top: 0;
 }
 .landing-journey {
   min-height: clamp(660px, 88svh, 820px);

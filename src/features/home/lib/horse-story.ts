@@ -55,6 +55,8 @@ export type LandingSceneState = HorseShot & {
   journeyLifecycle: SectionLifecycle;
   journeyStopProgress: number;
   journeyTextTime: number;
+  journeyPinned: boolean;
+  journeyTextReady: boolean;
   journeyTravel: number;
   journeyDistance: number;
   journeyReady: boolean;
@@ -169,6 +171,8 @@ export function createLandingStory(
     journeyLifecycle: "NOT_STARTED",
     journeyStopProgress: 0,
     journeyTextTime: 0,
+    journeyPinned: false,
+    journeyTextReady: false,
     journeyTravel: 0,
     journeyDistance: 0,
     journeyReady: false,

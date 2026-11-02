@@ -227,6 +227,8 @@ export function HorseModel({
   >({});
   const readyFrame = useRef(false);
   const journeyPose = useRef({ x: 0, z: 0, yaw: 0 });
+  const journeyPlaying = useRef(false);
+  const journeyDelta = useRef(0);
   const hoofTracking = useMemo(
     () =>
       HOOF_NAMES.map(() => ({
@@ -533,6 +535,11 @@ export function HorseModel({
         state.visible &&
         state.heroIntroReady &&
         (next === "hero" ? state.heroReady : state.journeyReady);
+      const resumeJourneyFrame =
+        next === "journey" &&
+        (ownerChanged.current ||
+          state.journeyLifecycle === "SUSPENDED" ||
+          !journeyPlaying.current);
       if (cinematic) {
         const lifecycle =
           next === "hero" ? "heroLifecycle" : "journeyLifecycle";
@@ -559,15 +566,28 @@ export function HorseModel({
         } else if (state[lifecycle] === "PLAYING")
           Object.assign(state, { [lifecycle]: "SUSPENDED" });
       }
+      const journeyActive =
+        next === "journey" &&
+        ready &&
+        !state.reducedMotion &&
+        !state.journeyTextReady;
+      // Discard the resume frame so hidden/offscreen time cannot fast-forward a snapshot.
+      journeyDelta.current = journeyActive && !resumeJourneyFrame ? elapsed : 0;
+      journeyPlaying.current = journeyActive;
       // Runs before Drei's mixer callback: an inactive owner never gets a stray frame.
       // oxlint-disable-next-line react/immutability -- external Three.js mixer clock.
-      mixer.timeScale = cinematic
-        ? ready && !state.reducedMotion
-          ? Math.min(1, 0.05 / Math.max(elapsed, 0.001))
-          : 0
-        : next === "map" && state.visible
-          ? 1
-          : 0;
+      mixer.timeScale =
+        next === "journey"
+          ? journeyDelta.current > 0
+            ? 1
+            : 0
+          : cinematic
+            ? ready && !state.reducedMotion
+              ? Math.min(1, 0.05 / Math.max(elapsed, 0.001))
+              : 0
+            : next === "map" && state.visible
+              ? 1
+              : 0;
     };
     controller.current = { settleMap, synchronize };
     previousShot.current = "";
@@ -597,7 +617,9 @@ export function HorseModel({
 
   useFrame((_frame, elapsed) => {
     const state = story.current;
-    const delta = Math.min(elapsed, 0.05);
+    const delta = state.inJourney
+      ? journeyDelta.current
+      : Math.min(elapsed, 0.05);
     Object.assign(state, { horseFrameAt: performance.now() });
     if (!readyFrame.current) {
       readyFrame.current = true;
@@ -718,7 +740,7 @@ export function HorseModel({
         Object.assign(state, {
           journeyPhase: "POSE_READY",
           journeyCompleted: true,
-          journeyLifecycle: "COMPLETED",
+          journeyLifecycle: "PLAYING",
         });
     }
     if (

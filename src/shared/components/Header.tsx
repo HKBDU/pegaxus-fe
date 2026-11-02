@@ -6,6 +6,7 @@ import { NotificationBell } from "@/features/notification"
 import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu"
 import { ProfileDropdown } from "@/shared/components/ProfileDropdown"
 import { BrandLogo, BrandMobileMenu } from "@/shared/components/BrandNavigation"
+import { useSmartNavbar } from "@/shared/hooks/useSmartNavbar"
 import {
   Sidebar,
   SidebarContent,
@@ -87,6 +88,7 @@ export function Header({
   className,
   variant = "default",
 }: HeaderProps) {
+  const navbarRef = useSmartNavbar(variant === "customer")
   const location = useLocation()
   // -1 = the page belongs to no menu item (no item is highlighted, the bar is hidden).
   const matchedNavIndex = navItems.findIndex((item) => isNavItemActive(item, location.pathname))
@@ -100,7 +102,7 @@ export function Header({
   if (variant === "customer") {
     const account = rightContent ?? <ProfileDropdown isLoggedIn={isLoggedIn} user={user} />
     return (
-      <header className={cn("brand-navbar customer-navbar", className)}>
+      <header ref={navbarRef} className={cn("brand-navbar customer-navbar", className)}>
         <BrandLogo src={logoSrc} alt={logoAlt} />
         <nav className="brand-nav-links" aria-label="Main navigation">
           {navItems.map((item) => (

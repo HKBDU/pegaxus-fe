@@ -4,6 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import { HORSE_CHAPTERS, type LandingChapter } from "../lib/landing-navigation";
 import { createMapTraversal } from "../lib/map-traversal";
+import { createJourneyScroll } from "../lib/journey-scroll";
 import {
   createLandingStory,
   getHorseShots,
@@ -97,6 +98,7 @@ export function useLandingStory(
             journeyLifecycle: state.journeyLifecycle,
             journeyStopProgress: state.journeyStopProgress,
             journeyTextTime: state.journeyTextTime,
+            journeyTextReady: state.journeyTextReady,
             journeyPhase: state.journeyPhase,
             journeyTravel: state.journeyTravel,
             journeyDistance: state.journeyDistance,
@@ -133,7 +135,6 @@ export function useLandingStory(
           const hero = sections[0];
           const journey = sections[1];
           const map = element.querySelector<HTMLElement>("#movement")!;
-          const traversal = createMapTraversal(map, state);
           const journeyText = reduced
             ? null
             : gsap
@@ -169,9 +170,6 @@ export function useLandingStory(
                   1.1,
                 );
           let journeyVisibleAt = 0;
-          let textFallback = false;
-          let textStarted = false;
-          let journeyWasActive = false;
           let departureMotion = -1;
           let departurePortrait = -1;
           let presentationLayer: HTMLDivElement | null = null;
@@ -211,7 +209,10 @@ export function useLandingStory(
                 portrait.toFixed(3),
               );
             }
-            if (!journeyText) return;
+            if (!journeyText) {
+              state.journeyTextReady = reduced && state.journeyCompleted;
+              return;
+            }
             if (
               !state.inJourney ||
               !state.journeyReady ||
@@ -219,34 +220,34 @@ export function useLandingStory(
               state.journeyLifecycle === "SUSPENDED"
             ) {
               journeyVisibleAt = 0;
-              journeyWasActive = false;
               journeyText.pause();
-              Object.assign(state, { journeyTextTime: journeyText.time() });
+              state.journeyTextTime = journeyText.time();
               return;
             }
-            const reentered = !journeyWasActive;
-            journeyWasActive = true;
-            if (!journeyVisibleAt && state.journeyReady)
-              journeyVisibleAt = performance.now();
+            if (!journeyVisibleAt) journeyVisibleAt = performance.now();
+            // Keep the existing text-only escape when WebGL cannot produce frames.
             if (
-              journeyVisibleAt &&
               performance.now() - journeyVisibleAt > 5000 &&
               performance.now() - state.horseFrameAt > 1500
-            )
-              textFallback = true;
-            if (
-              textFallback ||
-              previous.journeyCompleted ||
-              (reentered && textStarted && state.journeyCompleted)
-            )
+            ) {
               journeyText.progress(1).pause();
-            else if (state.journeyPhase === "POSE_READY") {
-              if (!textStarted) {
-                textStarted = true;
-                journeyText.play(state.journeyTextTime);
-              } else journeyText.play();
-            }
-            Object.assign(state, { journeyTextTime: journeyText.time() });
+              Object.assign(state, {
+                journeyCompleted: true,
+                journeyPhase: "POSE_READY",
+                journeyLifecycle: "COMPLETED",
+              });
+            } else if (state.journeyTextReady) journeyText.progress(1).pause();
+            else if (
+              state.journeyPhase === "POSE_READY" &&
+              journeyText.paused()
+            )
+              journeyText.play(state.journeyTextTime);
+            Object.assign(state, {
+              journeyTextTime: journeyText.time(),
+              journeyTextReady: journeyText.progress() >= 1,
+            });
+            if (state.journeyTextReady)
+              Object.assign(state, { journeyLifecycle: "COMPLETED" });
           };
           const progressFill = element.querySelector<HTMLElement>(
             ".landing-scroll-progress > span",
@@ -269,12 +270,16 @@ export function useLandingStory(
             const heroRect = hero.getBoundingClientRect();
             const journeyRect = journey.getBoundingClientRect();
             const mapRect = map.getBoundingClientRect();
+            const heldJourney = state.journeyPinned && state.visible;
             // A navbar-covered sliver of Hero must not steal Journey anchor reentry.
-            const inHero = heroRect.bottom > (profile === "desktop" ? 80 : 75);
+            const inHero =
+              !heldJourney &&
+              heroRect.bottom > (profile === "desktop" ? 80 : 75);
             const inJourney =
-              !inHero &&
-              journeyRect.bottom > 0 &&
-              journeyRect.top < innerHeight;
+              heldJourney ||
+              (!inHero &&
+                journeyRect.bottom > 0 &&
+                journeyRect.top < innerHeight);
             const inMap =
               !inHero &&
               !inJourney &&
@@ -321,10 +326,7 @@ export function useLandingStory(
               ? rect.top
               : inMap
                 ? 0
-                : inJourney && profile !== "desktop"
-                  ? rect.top - stageTop
-                  : Math.max(0, rect.top - stageTop) +
-                    Math.min(0, rect.bottom - stageTop - stageHeight);
+                : rect.top - (profile === "desktop" ? 0 : stageTop);
             const clipTop = Math.max(
               0,
               Math.min(stageHeight, rect.top - stageTop),
@@ -342,6 +344,10 @@ export function useLandingStory(
               clipBottom,
               journeyReady:
                 inJourney &&
+                (reduced ||
+                  heldJourney ||
+                  (Math.abs(journeyRect.top) <= 1 &&
+                    journeyRect.height >= innerHeight - 1)) &&
                 clipTop < stageHeight * 0.12 &&
                 clipBottom < stageHeight * 0.12 &&
                 offset < stageHeight * 0.12,
@@ -397,6 +403,11 @@ export function useLandingStory(
               updatePresentation();
             });
           };
+          const journeyScroll = createJourneyScroll(journey, state, () => {
+            requestUpdate();
+            syncJourneyText();
+          });
+          const traversal = createMapTraversal(map, state);
           const refresh = () => {
             if (refreshFrame || disposed) return;
             refreshFrame = requestAnimationFrame(() => {
@@ -436,7 +447,7 @@ export function useLandingStory(
                     trigger: section,
                     start: "top bottom",
                     end: "bottom top",
-                    scrub: 0.8,
+                    scrub: true,
                   },
                 },
               );
@@ -577,6 +588,7 @@ export function useLandingStory(
           resize.observe(element);
           void document.fonts.ready.then(refresh);
           updatePresentation();
+          syncJourneyText();
           return () => {
             disposed = true;
             if (journeyText)
@@ -588,6 +600,7 @@ export function useLandingStory(
             cancelAnimationFrame(frame);
             cancelAnimationFrame(refreshFrame);
             resize.disconnect();
+            journeyScroll.destroy();
             traversal.destroy();
             gsap.ticker.remove(syncJourneyText);
             window.removeEventListener("scroll", requestUpdate);
