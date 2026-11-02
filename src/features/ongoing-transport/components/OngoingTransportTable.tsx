@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import type { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, CircleDot, Route, TriangleAlert } from "lucide-react";
@@ -40,7 +41,7 @@ const createColumns = (
         data-progress-link
         to={ongoingTransportDetailPath(row.original.transportId)}
         state={{ ongoingTransportList: listState }}
-        className="rounded-xs font-semibold tracking-wide text-slate-900 underline decoration-primary/40 underline-offset-2 hover:decoration-primary focus-visible:outline-2 focus-visible:outline-primary"
+        className={codeLinkClassName}
       >
         {row.original.transportCode}
       </Link>

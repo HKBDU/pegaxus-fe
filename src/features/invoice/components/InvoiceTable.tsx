@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, MoreHorizontal } from "lucide-react";
 import {
@@ -129,7 +130,7 @@ export function InvoiceTable({
                     <Link
                       to={href(item)}
                       state={state}
-                      className="whitespace-nowrap font-semibold text-primary underline-offset-2 hover:underline"
+                      className={codeLinkClassName}
                     >
                       {item.invoiceNumber}
                     </Link>

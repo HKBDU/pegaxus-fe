@@ -2,6 +2,7 @@ import { Mail, MapPin, Phone } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
+import { BrandLogo } from "@/shared/components/BrandNavigation"
 import orangeLine from "@/assets/orange-line.svg"
 import { cn } from "@/lib/utils"
 import type { FooterColumnProps } from "@/shared/types/props"
@@ -63,7 +64,9 @@ export function Footer() {
         <img src={orangeLine} alt="" aria-hidden="true" className="mt-10 hidden h-auto w-full max-w-none lg:block" />
         <div className="site-footer-grid mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-x-10 gap-y-12 px-8 !pb-10 pt-12 sm:grid-cols-2 lg:grid-cols-[1.7fr_1fr_1fr_1fr_1.3fr] lg:px-16">
           <section className="site-footer-brand">
-            <img src={logo} alt="Pegaxus" className="site-footer-logo mx-auto w-[270px] max-w-full transition-transform duration-300 hover:scale-[1.02] lg:mx-0" />
+            <BrandLogo className="mx-auto flex w-fit max-w-full lg:mx-0">
+              <img src={logo} alt="Pegaxus" className="site-footer-logo mx-auto w-[270px] max-w-full transition-transform duration-300 hover:scale-[1.02] lg:mx-0" />
+            </BrandLogo>
             <h2 className="site-footer-brand-title mt-5 max-w-[250px] pt-5 text-base font-bold leading-[1.3] tracking-[0.16em] !text-white">
               GLOBAL RACEHORSE TRANSPORT WITHOUT BORDERS.
             </h2>

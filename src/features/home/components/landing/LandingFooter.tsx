@@ -1,13 +1,14 @@
 import { GuestLinks, TransportLink } from "./LandingActions";
+import { BrandLogo } from "@/shared/components/BrandNavigation";
 
 export function LandingFooter() {
   return (
     <footer className="landing-footer">
       <div className="landing-footer-top">
         <div>
-          <a className="landing-brand" href="#home">
+          <BrandLogo className="landing-brand">
             PEGAXUS
-          </a>
+          </BrandLogo>
           <p>
             Cross-border racehorse transport.
             <br />A clearer journey, from the beginning.

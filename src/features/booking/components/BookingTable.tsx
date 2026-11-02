@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useCallback, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type RowSelectionState, type SortingState } from "@tanstack/react-table"
@@ -136,7 +137,7 @@ export function BookingTable({
         accessorKey: "bookingCode",
         enableHiding: false,
         header: "REQUEST CODE",
-        cell: ({ row }) => <span className="font-semibold text-slate-900">{row.original.bookingCode}</span>,
+        cell: ({ row }) => <button type="button" className={codeLinkClassName} onClick={() => navigate(detailsPath(row.original.bookingId))}>{row.original.bookingCode}</button>,
       },
       ...(audience === "manager"
         ? [{ accessorKey: "customerName", header: "CUSTOMER" } satisfies ColumnDef<BookingSummary>]

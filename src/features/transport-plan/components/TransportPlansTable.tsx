@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, MoreHorizontal } from "lucide-react";
@@ -68,7 +69,7 @@ export function TransportPlansTable({
         cell: ({ row }) => (
           <Link
             to={transportPlanDetail(row.original.transportPlanId)}
-            className="font-semibold text-slate-900 underline decoration-primary/50 underline-offset-2 hover:decoration-primary"
+            className={codeLinkClassName}
           >
             {row.original.planCode}
           </Link>

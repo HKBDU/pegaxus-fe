@@ -14,10 +14,10 @@ import type { ProfileDropdownUser } from "@/shared/components/ProfileDropdown"
 import type { HeaderNavItem } from "@/shared/types/type"
 
 const customerNavItems: HeaderNavItem[] = [
-  { label: "HOME", href: "/" },
-  { label: "HORSE", href: "/my-horses" },
+  { label: "Explore", href: "/" },
+  { label: "My Horses", href: "/my-horses" },
   // A customer opens a compliance dossier from a booking (notification link), so it belongs to BOOKING.
-  { label: "BOOKING", href: "/bookings", alsoActiveFor: ["/compliance-dossiers"] },
+  { label: "Bookings", href: "/bookings", alsoActiveFor: ["/compliance-dossiers"] },
 ]
 
 const crewNavItems: HeaderNavItem[] = [
@@ -54,6 +54,7 @@ export function MainLayout() {
   }
 
   const navItems = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] }) ? customerNavItems : isCrewRoute ? crewNavItems : []
+  const customerChrome = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] })
   const user: ProfileDropdownUser | null = accessToken && account
     ? toHeaderUser(account)
     : accessToken && principal
@@ -63,9 +64,9 @@ export function MainLayout() {
         : null
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className={`flex min-h-screen flex-col${customerChrome && !isLanding ? " customer-workspace" : ""}`}>
       <IncidentAlertHost />
-      {!isLanding && <Header navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />}
+      {!isLanding && <Header variant={customerChrome ? "customer" : "default"} navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />}
       <main className="min-h-[calc(100svh-3rem)] flex-none">
         <Outlet /> {/* Outlet - React Router render route childs*/}
       </main>
