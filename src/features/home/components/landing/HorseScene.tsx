@@ -52,6 +52,7 @@ export function HorseScene({
   const fill = useRef<DirectionalLight>(null);
   const hoofLight = useRef<PointLight>(null);
   const revision = useRef(-1);
+  const canvasLayout = useRef({ shotVersion: -1, width: 0, height: 0 });
   const heroAnchorReady = useRef(false);
   const previousPresentation = useRef<"hero" | "journey" | null>(null);
   const presentations = useRef<
@@ -111,6 +112,28 @@ export function HorseScene({
     }),
     [],
   );
+  // Resolve CSS stage resizing before the mixer (-1), snapshots and camera (0).
+  useFrame((root) => {
+    const state = story.current;
+    if (!state.inHero && !state.inJourney) return;
+    const previous = canvasLayout.current;
+    if (
+      previous.shotVersion === state.shotVersion &&
+      previous.width === root.size.width &&
+      previous.height === root.size.height
+    )
+      return;
+    const bounds = root.gl.domElement.parentElement?.getBoundingClientRect();
+    if (!bounds || bounds.width <= 0 || bounds.height <= 0) return;
+    if (root.size.width !== bounds.width || root.size.height !== bounds.height)
+      root.setSize(bounds.width, bounds.height, bounds.top, bounds.left);
+    canvasLayout.current = {
+      shotVersion: state.shotVersion,
+      width: bounds.width,
+      height: bounds.height,
+    };
+  }, -2);
+
   useFrame(({ camera, size }, elapsed) => {
     if (!world.current) return;
     const state = story.current;
