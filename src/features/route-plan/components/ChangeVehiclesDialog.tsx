@@ -317,7 +317,7 @@ export function ChangeVehiclesDialog({
 
   return (
     <Dialog open={open} onOpenChange={(value) => { if (!mutation.isPending && !reloading) onOpenChange(value); }}>
-      <DialogContent showCloseButton={!mutation.isPending && !reloading} className="max-h-[calc(100dvh-2rem)] min-w-0 max-w-4xl overflow-y-auto rounded-[2px] border-slate-300 bg-slate-50 p-0 text-slate-950">
+      <DialogContent showCloseButton={!mutation.isPending && !reloading} className="max-h-[calc(100dvh-2rem)] min-w-0 w-[calc(100%-2rem)] sm:w-[min(92vw,64rem)] sm:max-w-none overflow-y-auto rounded-[2px] border-slate-300 bg-slate-50 p-0 text-slate-950">
         <DialogHeader className="border-b border-slate-300 bg-white px-6 py-5 text-left">
           <div className="flex items-start gap-3 pr-8">
             <span className="grid size-10 shrink-0 place-items-center rounded-[2px] bg-slate-900 text-white">
