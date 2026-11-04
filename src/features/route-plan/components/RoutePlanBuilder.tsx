@@ -1380,6 +1380,7 @@ export function RoutePlanBuilder({
                 plannedArrivalAt:
                   backupSegment.plannedArrivalAt || plan.arrivalAt,
                 vehicleIds: backupSegment.vehicleIds,
+                note: backupSegment.note,
                 outsourcing:
                   backupSegment.arrangement === "OUTSOURCED" &&
                   backupSegment.provider
@@ -1404,6 +1405,7 @@ export function RoutePlanBuilder({
                     (primaryData?.vehicleIds?.length ?? 0) >= 2
                       ? undefined
                       : primaryData?.vehicleIds,
+                  note: primaryData?.note,
                   outsourcing: primaryData?.provider
                     ? {
                         transportProviderId:
@@ -1420,6 +1422,7 @@ export function RoutePlanBuilder({
           plannedDepartureAt: segment.plannedDepartureAt || plan.departureAt,
           plannedArrivalAt: segment.plannedArrivalAt || plan.arrivalAt,
           vehicleIds: segment.vehicleIds,
+          note: segment.note,
           outsourcing:
             segment.arrangement === "OUTSOURCED" && segment.provider
               ? {
@@ -1434,7 +1437,7 @@ export function RoutePlanBuilder({
       action,
       ...(isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
       segments: payloadRoutes.map(
-        ({ route, routeType: segmentRouteType, plannedDepartureAt, plannedArrivalAt, vehicleIds, outsourcing }, index): RouteSegmentInput => {
+        ({ route, routeType: segmentRouteType, plannedDepartureAt, plannedArrivalAt, vehicleIds, note, outsourcing }, index): RouteSegmentInput => {
           const isCatalogRoute = Boolean(route.id && !String(route.id).startsWith("dynamic-"));
           return {
             sequenceNo: index + 1,
@@ -1453,6 +1456,8 @@ export function RoutePlanBuilder({
               : vehicleIds?.length
                 ? { vehicleIds }
                 : {}),
+            // The BE keeps the segment note from this field; `outsourcing.note` is ignored when a plan is saved.
+            ...(note?.trim() ? { note: note.trim() } : {}),
           };
         },
       ),

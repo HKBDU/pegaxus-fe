@@ -26,7 +26,7 @@ type SavedRoutePlan = {
     plannedArrivalAt: string | null;
     vehicles: { vehicleId: string }[];
     outsourcing: { provider: { transportProviderId: string } } | null;
-    note: string | null;
+    note?: string | null;
   }[];
 };
 
