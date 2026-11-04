@@ -15,6 +15,7 @@ import { mapPaymentError, formatPaymentAmount, formatPaymentDate, toPaymentTimes
 const RECORDABLE_PAYMENT_METHODS = [
   { value: PAYMENT_METHOD.CASH, label: "Cash" },
   { value: PAYMENT_METHOD.BANK_TRANSFER, label: "Bank transfer" },
+  { value: PAYMENT_METHOD.OTHER, label: "Other" },
 ] as const
 
 type RecordablePaymentMethod = (typeof RECORDABLE_PAYMENT_METHODS)[number]["value"]
@@ -92,7 +93,11 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
       <DialogTrigger asChild>
         <Button type="button">Record payment</Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-[2px] sm:max-w-lg">
+      <DialogContent
+        className="max-h-[90dvh] overflow-y-auto rounded-[2px] sm:max-w-lg"
+        // Radix would focus and select the read-only amount on open, painting it with the primary selection color.
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>
             {invoice.type === INVOICE_TYPE.CREDIT_NOTE ? 'Confirm compensation payment' : 'Record payment'}
