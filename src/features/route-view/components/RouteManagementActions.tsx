@@ -9,6 +9,7 @@ import {
   type LegalFeasibilityPanelProps,
 } from "@/features/route-plan/components/LegalFeasibilityPanel";
 import { CancelRoutePlanDialog } from "@/features/route-plan/components/CancelRoutePlanDialog";
+import { SubmitForLegalReviewButton } from "@/features/route-plan/components/SubmitForLegalReviewButton";
 import {
   ChangeVehiclesDialog,
   type ChangeVehiclesSnapshot,
@@ -225,14 +226,11 @@ export function RouteManagementActions({
             {formatUtcDateTime(plan.submittedForReviewAt)}
           </span>
         ) : (
-          <Button asChild size="sm" variant="outline">
-            <Link
-              to={routePlanEdit(plan.routePlanId)}
-              title="Open the route to submit it for legal review"
-            >
-              Submit for legal review
-            </Link>
-          </Button>
+          <SubmitForLegalReviewButton
+            plan={plan}
+            disabled={mockMode || refreshing}
+            onSubmitted={() => void refresh()}
+          />
         )
       ) : null}
       {canChangeVehicles ? (
