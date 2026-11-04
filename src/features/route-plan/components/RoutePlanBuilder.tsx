@@ -1398,7 +1398,11 @@ export function RoutePlanBuilder({
                   routeType: "PRIMARY" as const,
                   plannedDepartureAt: plan.departureAt,
                   plannedArrivalAt: plan.arrivalAt,
-                  vehicleIds: primaryData?.vehicleIds,
+                  // 2+ vehicles on the PRIMARY segment: saved unassigned, so the coordinator picks again (Assign vehicle in Edit).
+                  vehicleIds:
+                    (primaryData?.vehicleIds?.length ?? 0) >= 2
+                      ? undefined
+                      : primaryData?.vehicleIds,
                   outsourcing: primaryData?.provider
                     ? {
                         transportProviderId:
