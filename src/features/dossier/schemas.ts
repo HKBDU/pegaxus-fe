@@ -429,7 +429,17 @@ const backendReviewValue = z.object({
 export const approveDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const rejectDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const documentReviewEnvelopeSchema = envelope(backendReviewValue);
-export const readyForSubmissionEnvelopeSchema = envelope(z.null());
+// The BE returns DossierReadinessResponse. The screen only refetches afterwards, so the fields stay lenient: a success must
+// never be reported as an unknown outcome because of the body shape.
+export const readyForSubmissionEnvelopeSchema = envelope(
+  z
+    .object({
+      complianceDossierId: z.string().optional(),
+      status: z.string().optional(),
+      readyForSubmissionAt: timestamp.nullish(),
+    })
+    .nullish(),
+);
 export const submitDocumentVersionEnvelopeSchema = z.union([
   envelope(
     z.object({

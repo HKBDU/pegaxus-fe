@@ -211,8 +211,10 @@ export function getRoutePlanError(error: unknown): {
     return {
       code: error.errorCode,
       message:
-        ROUTE_PLAN_ERROR_MESSAGES[error.errorCode] ??
-        error.message,
+        // The same code comes from different actions, so show the BE message (it names the status) rather than one fixed sentence.
+        error.errorCode === "INVALID_ROUTE_PLAN_STATUS"
+          ? error.message
+          : (ROUTE_PLAN_ERROR_MESSAGES[error.errorCode] ?? error.message),
     };
   return {
     code: "UNKNOWN_ERROR",
