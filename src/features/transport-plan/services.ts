@@ -206,6 +206,11 @@ export function isTransportPlanConcurrencyCode(code?: string | null) {
   );
 }
 
+/** BE codes for a planned start that is in the past or earlier than the booking's lead time (3 weeks domestic, 2 months international). */
+export function isPlannedStartCode(code?: string | null) {
+  return code === "PLANNED_START_IN_PAST" || code === "PLANNED_START_TOO_EARLY";
+}
+
 export function isTransportPlanLockedCode(code?: string | null) {
   return code === "PLAN_LOCKED" || code === "INVALID_TRANSPORT_PLAN_STATUS";
 }
@@ -301,6 +306,16 @@ export function getTransportPlanError(
   context: "list" | "detail" | "quotation" | "personnel" = "detail",
 ) {
   const { code, status, message } = getApiErrorInfo(error);
+  if (isPlannedStartCode(code))
+    return {
+      // The BE message names the earliest allowed date, which the FE cannot compute (the booking creation date is not returned).
+      message:
+        message ||
+        (code === "PLANNED_START_IN_PAST"
+          ? "Planned start cannot be in the past."
+          : "Planned start is earlier than the booking lead time allows."),
+      retryable: false,
+    };
   if (code === "LOCATION_NOT_FOUND")
     return {
       message:

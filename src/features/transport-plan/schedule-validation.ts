@@ -27,6 +27,15 @@ export function validateTransportPlanSchedule({
   return null
 }
 
+/** The BE rejects a planned start earlier than now (`PLANNED_START_IN_PAST`); `startIso` is the UTC value that would be sent. */
+export function validatePlannedStartNotPast(startIso: string | undefined, now = Date.now()): ScheduleValidation {
+  if (!startIso) return null
+  const start = Date.parse(startIso)
+  return Number.isFinite(start) && start < now
+    ? { field: "plannedStartAt", message: "Planned start cannot be in the past." }
+    : null
+}
+
 export function validateArrivalDate(arrivalAt: string | undefined, requestedArrivalDate?: string | null) {
   if (!arrivalAt || !requestedArrivalDate) return null
   return datePart(arrivalAt) > requestedArrivalDate
