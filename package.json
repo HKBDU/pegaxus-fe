@@ -21,6 +21,7 @@
     "test:e2e:demo": "playwright test --project=mock --config=playwright.demo.config.ts",
     "test:e2e:debug": "playwright test --project=mock --debug",
     "test:e2e:report": "playwright show-report e2e/.output/report",
+    "test:e2e:playground": "playwright test --project=playground",
     "test:e2e:codegen": "playwright codegen http://localhost:5173",
     "typecheck:e2e": "tsc -p e2e/tsconfig.json"
   },
