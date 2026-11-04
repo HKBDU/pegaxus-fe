@@ -112,6 +112,7 @@ export function HorsesPage() {
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 variant="destructive"
+                className="bg-[#f39200] text-slate-950 hover:bg-[#d98200]"
                 onClick={() => {
                   if (pendingRemoval) void removeHorse(pendingRemoval)
                   setPendingRemoval(undefined)

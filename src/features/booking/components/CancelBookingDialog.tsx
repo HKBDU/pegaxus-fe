@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { TriangleAlert } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -16,7 +15,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form"
@@ -59,19 +57,12 @@ export function CancelBookingDialog({ bookingId, open, onOpenChange }: CancelBoo
 
   return (
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
-      <AlertDialogContent className="gap-3 rounded-[2px] border-slate-200 bg-white p-4 text-slate-900 shadow-[0_14px_35px_rgba(15,23,42,0.16)] data-[size=default]:sm:max-w-[390px]">
-        <AlertDialogHeader className="grid grid-rows-none grid-cols-[28px_minmax(0,1fr)] place-items-start gap-2.5 text-left">
-          <AlertDialogMedia className="m-0 grid size-7 shrink-0 place-items-center rounded-[2px] bg-red-50 text-red-600">
-            <TriangleAlert className="size-3.5" />
-          </AlertDialogMedia>
-          <div className="grid gap-0.5">
-            <AlertDialogTitle className="m-0! font-heading text-base! leading-5! font-semibold! tracking-normal! text-slate-900">
-              Cancel booking?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-xs leading-4 text-slate-600">
-              This updates the booking status immediately. Add a reason for the operations team.
-            </AlertDialogDescription>
-          </div>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancel booking?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This updates the booking status immediately. Add a reason for the operations team.
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <Form {...form}>
           <form id="cancel-booking-form" onSubmit={onSubmit}>
@@ -103,15 +94,12 @@ export function CancelBookingDialog({ bookingId, open, onOpenChange }: CancelBoo
             />
           </form>
         </Form>
-        <AlertDialogFooter className="gap-1.5">
-          <AlertDialogCancel size="sm" className="h-8 rounded-[2px] border-slate-300 bg-white px-3 text-xs font-normal text-slate-700 shadow-none" disabled={cancelBooking.isPending}>
-            Keep booking
-          </AlertDialogCancel>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={cancelBooking.isPending}>Keep booking</AlertDialogCancel>
           <AlertDialogAction
             type="button"
             variant="destructive"
-            size="sm"
-            className="h-8 rounded-[2px] bg-red-600 px-3 text-xs font-normal text-white shadow-none hover:bg-red-700"
+            className="bg-[#f39200] text-slate-950 hover:bg-[#d98200]"
             disabled={cancelBooking.isPending || requestGuard.isBlocked}
             onClick={(event) => {
               event.preventDefault()
