@@ -2264,11 +2264,14 @@ export function RoutePlanBuilder({
                 {(isBackup || isReturn) && (
                   <label className="grid gap-2 text-sm font-medium text-slate-900">
                     {isReturn ? "Return reason" : "Backup reason"}
-                    <span className="font-normal text-muted-foreground text-xs">
-                      Minimum 10 characters
+                    <span
+                      className={`font-normal text-xs ${routeNote.length > 0 && routeNote.trim().length < 10 ? "text-red-600" : "text-muted-foreground"}`}
+                    >
+                      Minimum 10 characters ({routeNote.trim().length}/10)
                     </span>
                     <textarea
-                      className="min-h-20 rounded-[2px] border border-slate-200 p-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
+                      aria-invalid={routeNote.length > 0 && routeNote.trim().length < 10}
+                      className={`min-h-20 rounded-[2px] border p-2 text-xs font-normal text-slate-900 focus:outline-none ${routeNote.length > 0 && routeNote.trim().length < 10 ? "border-red-500 focus:border-red-500" : "border-slate-200 focus:border-amber-500"}`}
                       value={routeNote}
                       onChange={(event) => setRouteNote(event.target.value)}
                       placeholder="Why is this route needed?"
