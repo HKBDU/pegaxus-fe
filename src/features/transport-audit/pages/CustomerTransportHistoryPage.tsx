@@ -38,7 +38,7 @@ export default function CustomerTransportHistoryPage() {
         />
         <section className="rounded-[2px] border bg-white p-5">
           <h2 className="mb-4 text-base font-semibold uppercase">
-            Journey timeline
+            Transport Timeline
           </h2>
           <AuditTimeline items={audit.timeline} publicOnly />
         </section>

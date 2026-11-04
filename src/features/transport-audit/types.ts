@@ -159,9 +159,9 @@ export interface AuditComplianceData {
 export interface AuditHandoverRecord {
   handoverRecordId: string;
   handoverCode: string;
-  handoverType: "PICKUP" | "TRANSIT" | "DELIVERY";
+  handoverType: string;
   status: string;
-  completedAt: string;
+  completedAt?: string | null;
   handedOverBy?: string;
   receivedBy?: string;
   digitalSignatureVerified: boolean;

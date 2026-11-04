@@ -28,6 +28,14 @@ export function CustomerTransportAuditSummary({
     "booking,operations",
   );
   const current = query.data ?? audit;
+  // The audit response has no `epod` field: the BE serves the PDF per handover record (GET /handover-records/{id}/epod, only
+  // once COMPLETED), so the delivery record from the operations block is the one a customer downloads.
+  const epodHandoverId =
+    current?.epod?.handoverRecordId ??
+    query.data?.operations?.handovers.find(
+      (handover) =>
+        handover.handoverType === "DELIVERY" && handover.status === "COMPLETED",
+    )?.handoverRecordId;
   const fallback = (current ?? {
     transportId: transportId ?? "",
     transportCode: "Completed transport",
@@ -61,9 +69,7 @@ export function CustomerTransportAuditSummary({
           ) : null}
           <DownloadEpodButton
             handoverRecordId={
-              fallback.epod?.handoverRecordId
-                ? String(fallback.epod.handoverRecordId)
-                : undefined
+              epodHandoverId ? String(epodHandoverId) : undefined
             }
           />
         </div>

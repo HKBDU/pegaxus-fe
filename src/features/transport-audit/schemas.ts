@@ -157,9 +157,11 @@ export const auditOperationsSchema = z.object({
       z.object({
         handoverRecordId: id,
         handoverCode: z.string(),
-        handoverType: z.enum(["PICKUP", "TRANSIT", "DELIVERY"]),
+        // The BE also sends TRANSFER, BORDER_HANDOVER, CARRIER_HANDOVER and OTHER, and completedAt is null until signed. A
+        // stricter shape made one such record empty the whole list.
+        handoverType: z.string(),
         status: z.string(),
-        completedAt: z.string(),
+        completedAt: z.string().nullish(),
         handedOverBy: z.string().optional(),
         receivedBy: z.string().optional(),
         digitalSignatureVerified: z.boolean().catch(false),
