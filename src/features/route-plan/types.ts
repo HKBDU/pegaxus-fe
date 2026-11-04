@@ -212,6 +212,7 @@ export interface RouteSegmentInput {
   transportMode?: TransportMode;
   plannedDepartureAt: string;
   plannedArrivalAt: string;
+  dwellAfterMinutes?: number;
   vehicleIds?: string[];
   outsourcing?: { transportProviderId: string; note?: string };
   note?: string;

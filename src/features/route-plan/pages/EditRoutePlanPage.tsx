@@ -46,6 +46,10 @@ function routeFromSegment(
     toLocation,
     distanceKm: segment.route.distanceKm,
     durationMinutes: segment.route.estimatedDurationMinutes,
+    vehicleIds: segment.vehicles.map((vehicle) => vehicle.vehicleId),
+    dwellAfterMinutes: segment.dwellAfterMinutes,
+    plannedDepartureAt: segment.plannedDepartureAt,
+    plannedArrivalAt: segment.plannedArrivalAt,
     readonly,
   };
 }
@@ -118,8 +122,11 @@ export default function EditRoutePlanPage() {
         const primary = routePlans.items.find(
           (item) => item.routeType === "PRIMARY" && item.status !== "CANCELLED",
         );
+        const primaryDetail = primary
+          ? await getRoutePlan(primary.routePlanId)
+          : null;
         setPrimaryRoutes(
-          primary?.segments.flatMap((segment) => {
+          primaryDetail?.segments.flatMap((segment) => {
             const route = routeFromSegment(segment, true);
             return route ? [route] : [];
           }) ?? [],

@@ -268,8 +268,29 @@ export function RoutePlanBuilder({
   }
 
   const [segments, setSegments] = useState<DraftSegment[]>(() =>
-    formatDraftSegments(
-      initialRoutes.map((route, index) => ({
+    initialRoutes.every((route) => route.plannedDepartureAt && route.plannedArrivalAt)
+      ? initialRoutes.map((route, index, routes) => ({
+          id: `${route.id}-${index}`,
+          route,
+          arrangement: arrangementForRoute(route),
+          stopType:
+            route.toLocation?.id === metadata?.to?.id
+              ? "DESTINATION"
+              : isBcpLocation(route.toLocation)
+                ? "BCP"
+                : "REST_STOP",
+          dwellAfterMinutes: route.dwellAfterMinutes ?? 0,
+          plannedDepartureAt: route.plannedDepartureAt,
+          plannedArrivalAt: route.plannedArrivalAt,
+          vehicleIds: route.vehicleIds,
+          sequenceNo: index + 1,
+          isDisconnected:
+            index > 0 &&
+            String(route.fromLocation?.id) !==
+              String(routes[index - 1]?.toLocation?.id),
+        }))
+      : formatDraftSegments(
+          initialRoutes.map((route, index) => ({
         id: `${route.id}-${index}`,
         route,
         arrangement: arrangementForRoute(route),
@@ -279,10 +300,13 @@ export function RoutePlanBuilder({
             : isBcpLocation(route.toLocation)
               ? "BCP"
               : "REST_STOP",
-        dwellAfterMinutes: 0,
-      })),
-      metadata?.departureAt,
-    ),
+            dwellAfterMinutes: route.dwellAfterMinutes ?? 0,
+            plannedDepartureAt: route.plannedDepartureAt,
+            plannedArrivalAt: route.plannedArrivalAt,
+            vehicleIds: route.vehicleIds,
+          })),
+          metadata?.departureAt,
+        ),
   );
 
   const [buildMessage, setBuildMessage] = useState<string | null>(null);
@@ -1343,6 +1367,7 @@ export function RoutePlanBuilder({
                   backupSegment.plannedDepartureAt || plan.departureAt,
                 plannedArrivalAt:
                   backupSegment.plannedArrivalAt || plan.arrivalAt,
+                dwellAfterMinutes: backupSegment.dwellAfterMinutes ?? 0,
                 vehicleIds: backupSegment.vehicleIds,
                 outsourcing:
                   backupSegment.arrangement === "OUTSOURCED" &&
@@ -1359,7 +1384,8 @@ export function RoutePlanBuilder({
                 routeType: "PRIMARY" as const,
                 plannedDepartureAt: plan.departureAt,
                 plannedArrivalAt: plan.arrivalAt,
-                vehicleIds: undefined,
+                dwellAfterMinutes: 0,
+                vehicleIds: [],
                 outsourcing: undefined,
               };
         })
@@ -1368,6 +1394,7 @@ export function RoutePlanBuilder({
           routeType,
           plannedDepartureAt: segment.plannedDepartureAt || plan.departureAt,
           plannedArrivalAt: segment.plannedArrivalAt || plan.arrivalAt,
+          dwellAfterMinutes: segment.dwellAfterMinutes ?? 0,
           vehicleIds: segment.vehicleIds,
           outsourcing:
             segment.arrangement === "OUTSOURCED" && segment.provider
@@ -1383,7 +1410,7 @@ export function RoutePlanBuilder({
       action,
       ...(isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
       segments: payloadRoutes.map(
-        ({ route, routeType: segmentRouteType, plannedDepartureAt, plannedArrivalAt, vehicleIds, outsourcing }, index): RouteSegmentInput => {
+        ({ route, routeType: segmentRouteType, plannedDepartureAt, plannedArrivalAt, dwellAfterMinutes, vehicleIds, outsourcing }, index): RouteSegmentInput => {
           const isCatalogRoute = Boolean(route.id && !String(route.id).startsWith("dynamic-"));
           return {
             sequenceNo: index + 1,
@@ -1397,6 +1424,7 @@ export function RoutePlanBuilder({
                 }),
             plannedDepartureAt,
             plannedArrivalAt,
+            dwellAfterMinutes,
             ...(outsourcing
               ? { outsourcing }
               : vehicleIds?.length

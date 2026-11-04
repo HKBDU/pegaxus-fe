@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RoutePlanBuilder, type RoutePlanBuilderMetadata } from "../components/RoutePlanBuilder";
+import { Button } from "@/shared/components/ui/button";
 import { createLocation, getRoutePlan, getRoutePlans, getTransportPlan } from "../services";
 import { adaptTransportPlan, loadAllLocations, loadAllRoutes, toMapLocation, toMapRoute, type TransportPlanApiValue } from "../api-adapters";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
@@ -9,6 +10,7 @@ import { ongoingTransportService } from "@/features/ongoing-transport/services";
 
 export default function CreateReturnRoutePage() {
   const { transportPlanId } = useParams<{ transportPlanId: string }>();
+  const [retryKey, setRetryKey] = useState(0);
   const [data, setData] = useState<{ metadata: RoutePlanBuilderMetadata; locations: MapLocation[]; routes: MapRoute[]; routePlanRoutes: MapRoute[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,8 +94,12 @@ export default function CreateReturnRoutePage() {
             if (rp.segments && rp.segments.length > 0) return rp as RoutePlan;
             try {
               return (await getRoutePlan(rp.routePlanId)) as RoutePlan;
-            } catch {
-              return rp as RoutePlan;
+            } catch (error) {
+              throw new Error(
+                error instanceof Error
+                  ? `Unable to load route plan detail: ${error.message}`
+                  : "Unable to load route plan detail.",
+              );
             }
           }),
         );
@@ -137,9 +143,17 @@ export default function CreateReturnRoutePage() {
         });
       })
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load Transport Plan."));
-  }, [transportPlanId]);
+  }, [retryKey, transportPlanId]);
 
-  if (error) return <main className="grid min-h-screen place-items-center p-6 text-destructive">{error}</main>;
+  if (error)
+    return (
+      <main className="grid min-h-screen place-items-center gap-4 p-6 text-center text-destructive">
+        <p>{error}</p>
+        <Button type="button" onClick={() => { setError(null); setRetryKey((key) => key + 1); }}>
+          Retry
+        </Button>
+      </main>
+    );
   if (!data || !transportPlanId) return <main className="grid min-h-screen place-items-center">Loading Transport Plan…</main>;
 
   return (
