@@ -216,7 +216,20 @@ export function getRoutePlanError(error: unknown): {
     };
   return {
     code: "UNKNOWN_ERROR",
-    message: "Unable to complete the route plan request.",
+    message:
+      (
+        error as {
+          response?: {
+            data?: { message?: string; error?: { message?: string } };
+          };
+        }
+      ).response?.data?.message ??
+      (
+        error as {
+          response?: { data?: { error?: { message?: string } } };
+        }
+      ).response?.data?.error?.message ??
+      "Unable to complete the route plan request.",
   };
 }
 

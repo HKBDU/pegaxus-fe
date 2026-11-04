@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Route } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { AuthPrincipal } from "@/features/auth/types";
 import { transportPlanDetail } from "@/app/route-config";
 import { Button } from "@/shared/components/ui/button";
@@ -13,6 +16,8 @@ import { getRouteDetailPath } from "../navigation";
 import type { RouteDetailPath } from "../types";
 import { beforeDeparture, getPendingRouteCreation } from "../workspace-actions";
 import { RoutePlansTable } from "./RoutePlansTable";
+import { getRoutePlan, getRoutePlanError, updateRoutePlan } from "@/features/route-plan/services";
+import type { RoutePlanSummary } from "../types";
 
 function UnavailableAction({
   label,
@@ -64,6 +69,8 @@ export function RoutePlansWorkspace({
   routeDetailPath?: RouteDetailPath;
   dossierStatus?: string | null;
 }) {
+  const queryClient = useQueryClient();
+  const [submittingRoutePlanId, setSubmittingRoutePlanId] = useState<string | null>(null);
   const allowed = canViewRoute(principal);
   const validId = routePlanIdSchema.safeParse(transportPlanId).success;
   const query = useRoutePlanAlternatives(
@@ -95,6 +102,51 @@ export function RoutePlansWorkspace({
       ? "Route Monitoring"
       : "Route Plans";
   const creation = getPendingRouteCreation(items, context, transportPlanId);
+  async function submitForLegalReview(route: RoutePlanSummary) {
+    if (submittingRoutePlanId) return;
+    setSubmittingRoutePlanId(route.routePlanId);
+    try {
+      const detail = await getRoutePlan(route.routePlanId);
+      await updateRoutePlan(route.routePlanId, {
+        lastUpdatedAt: detail.updatedAt,
+        updateReason: "Submitted for legal review.",
+        action: "SUBMIT_FOR_LEGAL_REVIEW",
+        routeNote: detail.routeNote ?? undefined,
+        segments: detail.segments.map((segment) => ({
+          sequenceNo: segment.sequenceNo,
+          ...(detail.routeType === "PRIMARY" ? {} : { routeType: segment.routeType }),
+          routeId: segment.route.routeId,
+          plannedDepartureAt: segment.plannedDepartureAt || detail.plannedDepartureAt,
+          plannedArrivalAt: segment.plannedArrivalAt || detail.plannedArrivalAt,
+          dwellAfterMinutes: segment.dwellAfterMinutes ?? 0,
+          ...(!segment.isOutsourced
+            ? { vehicleIds: segment.vehicles.map((vehicle) => vehicle.vehicleId) }
+            : {}),
+          ...(segment.isOutsourced && segment.outsourcing
+            ? {
+                outsourcing: {
+                  transportProviderId: segment.outsourcing.provider.transportProviderId,
+                  note: segment.note ?? undefined,
+                },
+              }
+            : {}),
+          note: segment.note ?? undefined,
+        })),
+      });
+      toast.success("Submitted for legal review.");
+    } catch (error) {
+      toast.error(getRoutePlanError(error).message);
+    } finally {
+      setSubmittingRoutePlanId(null);
+    }
+    // The submit request is complete once the backend has sent the notification.
+    // A failed cache refresh must not turn that successful submission into an error.
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["route-view", "list", transportPlanId] });
+    } catch {
+      // The next normal query refresh will reconcile the route status.
+    }
+  }
   const error = query.isError ? getRouteViewError(query.error) : null;
   return (
     <Section
@@ -135,6 +187,8 @@ export function RoutePlansWorkspace({
             routes={items}
             context={context}
             routeDetailPath={routeDetailPath}
+            onSubmitForLegalReview={submitForLegalReview}
+            submittingRoutePlanId={submittingRoutePlanId}
             isLoading={query.isPending}
           />
           {!routeDetailPath && (

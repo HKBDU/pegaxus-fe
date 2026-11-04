@@ -51,7 +51,7 @@ export function getPendingRouteActions(
       },
       {
         label: "Submit for Legal Review",
-        reason: "Route submission is not available yet.",
+        reason: "Submit this draft route for legal review.",
       },
     ];
   if (role === "specialist" && context.dossierStatus === "DRAFT")
