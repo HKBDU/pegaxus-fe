@@ -33,6 +33,7 @@ import {
   captureVehicleChangeRefresh,
   type EmergencyContext,
 } from "../hooks/useEmergencyRoute";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 import type { RoutePlanDetail, RouteSegment } from "../types";
 import { canChangeVehiclesBeforeDeparture } from "../vehicle-change";
 
@@ -105,8 +106,14 @@ export function RouteManagementActions({
     (legalDossier?.status === "DRAFT" &&
       (plan.routeType !== "RETURN" ||
         context.workspace.transportStatus === "IN_TRANSIT"));
+  // A PRIMARY / BACKUP plan can only be reviewed once the coordinator sent it (RP7 answers ROUTE_PLAN_NOT_SUBMITTED otherwise); RETURN is exempt.
+  const submittedForReview = plan.submittedForReviewAt != null;
   const canReview =
-    role === "specialist" && plan.status === "DRAFT" && dossierReady && !readOnly;
+    role === "specialist" &&
+    plan.status === "DRAFT" &&
+    dossierReady &&
+    !readOnly &&
+    (plan.routeType === "RETURN" || submittedForReview);
   const canCancel = role === "coordinator" && plan.status === "DRAFT" && !readOnly;
   const canChangeVehicles = canChangeVehiclesBeforeDeparture(
     plan,
@@ -211,6 +218,23 @@ export function RouteManagementActions({
           <Link to={routePlanEdit(plan.routePlanId)}>Edit</Link>
         </Button>
       ) : null}
+      {canCancel && plan.routeType !== "RETURN" ? (
+        submittedForReview ? (
+          <span className="text-xs text-slate-500">
+            Submitted for legal review at{" "}
+            {formatUtcDateTime(plan.submittedForReviewAt)}
+          </span>
+        ) : (
+          <Button asChild size="sm" variant="outline">
+            <Link
+              to={routePlanEdit(plan.routePlanId)}
+              title="Open the route to submit it for legal review"
+            >
+              Submit for legal review
+            </Link>
+          </Button>
+        )
+      ) : null}
       {canChangeVehicles ? (
         <Button
           type="button"
@@ -306,6 +330,10 @@ export function RouteManagementActions({
             if (!open) setReview(null);
           }}
           onConfirmed={() => {
+            setReview(null);
+            void refresh();
+          }}
+          onNotSubmitted={() => {
             setReview(null);
             void refresh();
           }}

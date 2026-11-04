@@ -19,6 +19,7 @@ export const ROUTE_PLAN_ERROR_MESSAGES: Record<string, string> = {
   PROVIDER_MODE_MISMATCH: 'Provider does not support this transport mode.',
   ROUTE_LOCKED: 'This route cannot be changed while transport is in progress.',
   ROUTE_PLAN_MODIFIED: 'Route plan changed. Reload and try again.',
+  ROUTE_PLAN_NOT_SUBMITTED: 'This route plan has not been submitted for legal review yet. The coordinator must submit it first.',
   INCIDENT_REQUIRED: 'An incident is required when changing vehicles mid-trip.',
   INCIDENT_NOT_FOUND: 'The incident could not be found.',
   INVALID_INCIDENT_STATUS: 'The incident can no longer be used for a vehicle change.',

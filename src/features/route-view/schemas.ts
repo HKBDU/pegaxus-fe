@@ -123,6 +123,8 @@ export const routePlanDetailSchema = z.object({
   isPersonnelComplete: z.boolean(),
   branchSequenceNo: z.number().int().positive().nullish(),
   legalReview: routeLegalReviewSchema.nullable().optional().transform((v) => v ?? null),
+  // RP3: null/absent = the plan was never sent to legal review (or was sent back), so it cannot be reviewed yet.
+  submittedForReviewAt: timestamp.nullish().transform((v) => v ?? null),
   replacesSequenceNo: replacesSequenceNoSchema,
   routeNote: text,
   createdAt: responseTimestamp,

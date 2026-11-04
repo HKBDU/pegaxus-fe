@@ -33,6 +33,8 @@ export type LegalFeasibilityPanelProps = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onConfirmed?: (result: LegalReviewResult) => void;
+  /** RP7 answered ROUTE_PLAN_NOT_SUBMITTED: the plan was not sent for review, so the caller should reload it. */
+  onNotSubmitted?: () => void;
   trigger?: ReactNode;
 };
 
@@ -52,6 +54,7 @@ export function LegalFeasibilityPanel({
   open,
   onOpenChange,
   onConfirmed,
+  onNotSubmitted,
   trigger,
 }: LegalFeasibilityPanelProps) {
   const principal = useAuthStore((state) => state.principal);
@@ -130,6 +133,10 @@ export function LegalFeasibilityPanel({
       const mapped = getRoutePlanError(requestError);
       setError(mapped.message);
       toast.error(mapped.message);
+      if (mapped.code === "ROUTE_PLAN_NOT_SUBMITTED") {
+        setPanelOpen(false);
+        onNotSubmitted?.();
+      }
     } finally {
       setIsPending(false);
     }
