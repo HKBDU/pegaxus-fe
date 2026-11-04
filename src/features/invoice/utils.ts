@@ -99,9 +99,10 @@ export function dueDateOrderBounds(type: InvoiceType, invoices: InvoiceListItem[
 
   let after: string | undefined
   let before: string | undefined
-  if (type === INVOICE_TYPE.QUOTATION) before = deposit ?? final
+  const earliest = (...days: (string | undefined)[]) => days.filter((day): day is string => Boolean(day)).sort()[0]
+  if (type === INVOICE_TYPE.QUOTATION) before = earliest(deposit, final)
   else if (type === INVOICE_TYPE.DEPOSIT) [after, before] = [quotation, final]
-  else if (type === INVOICE_TYPE.FINAL) after = deposit ?? quotation
+  else if (type === INVOICE_TYPE.FINAL) after = latest(quotation, deposit)
   else if (type === INVOICE_TYPE.SUPPLEMENTARY) after = latest(quotation, deposit)
   else if (type === INVOICE_TYPE.CREDIT_NOTE) after = final
 

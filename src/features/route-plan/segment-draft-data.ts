@@ -6,6 +6,7 @@ export type SegmentDraftData = Partial<
   Pick<
     DraftSegment,
     | "provider"
+    | "routeType"
     | "note"
     | "dwellAfterMinutes"
     | "plannedDepartureAt"
@@ -18,6 +19,7 @@ export type SegmentDraftData = Partial<
 export function draftDataFromSegment(segment: RouteSegment): SegmentDraftData {
   const vehicleIds = (segment.vehicles ?? []).map((vehicle) => vehicle.vehicleId);
   return {
+    routeType: segment.routeType,
     ...(segment.outsourcing?.provider
       ? { provider: segment.outsourcing.provider }
       : {}),

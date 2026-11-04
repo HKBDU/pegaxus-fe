@@ -151,6 +151,8 @@ export type DraftSegment = {
   arrangement: "INTERNAL" | "OUTSOURCED";
   stopType: "REST_STOP" | "BCP" | "DESTINATION";
   provider?: Provider;
+  /** Type the segment was saved with (a BACKUP plan also holds PRIMARY segments). Absent for a segment added in this session. */
+  routeType?: RouteType;
   note?: string;
   dwellAfterMinutes?: number;
   plannedDepartureAt?: string;

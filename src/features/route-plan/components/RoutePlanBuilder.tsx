@@ -1373,7 +1373,8 @@ export function RoutePlanBuilder({
           return backupSegment
             ? {
                 route,
-                routeType: "BACKUP" as const,
+                // Keep the saved type: the BE takes the first BACKUP segment as the branch point, so PRIMARY segments of a BACKUP plan must stay PRIMARY.
+                routeType: backupSegment.routeType ?? ("BACKUP" as const),
                 plannedDepartureAt:
                   backupSegment.plannedDepartureAt || plan.departureAt,
                 plannedArrivalAt:
