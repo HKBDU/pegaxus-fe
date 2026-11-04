@@ -35,6 +35,8 @@ export interface HorseHealthIncidentFormProps {
     | "unavailable"
     | "error";
   locationError?: string | null;
+  onPhotoUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
+  onPhotoError?: (message: string | null) => void;
 }
 
 export function HorseHealthIncidentForm({
@@ -50,6 +52,8 @@ export function HorseHealthIncidentForm({
   error,
   locationStatus,
   locationError,
+  onPhotoUploadStateChange,
+  onPhotoError,
 }: HorseHealthIncidentFormProps) {
   return (
     <form
@@ -109,6 +113,8 @@ export function HorseHealthIncidentForm({
         disabled={disabled}
         maxFiles={5}
         error={error}
+        onUploadStateChange={onPhotoUploadStateChange}
+        onError={onPhotoError}
       />
       <IncidentSubmitBar
         isSubmitting={submitting}

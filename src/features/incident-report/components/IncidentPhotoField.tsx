@@ -14,6 +14,8 @@ export interface IncidentPhotoFieldProps {
   disabled?: boolean;
   maxFiles?: number;
   error?: string | null;
+  onUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
+  onError?: (message: string | null) => void;
 }
 
 export function IncidentPhotoField({
@@ -22,6 +24,8 @@ export function IncidentPhotoField({
   disabled = false,
   maxFiles = 5,
   error,
+  onUploadStateChange,
+  onError,
 }: IncidentPhotoFieldProps) {
   return (
     <fieldset disabled={disabled}>
@@ -44,6 +48,8 @@ export function IncidentPhotoField({
         onUploadedPublicIdsChange={(uploadedPublicIds) =>
           onChange({ ...value, uploadedPublicIds })
         }
+        onUploadStateChange={onUploadStateChange}
+        onError={onError}
       />
     </fieldset>
   );

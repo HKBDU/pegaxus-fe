@@ -119,9 +119,12 @@ export function PhotoCaptureSection({
       ...current.slice(0, startIndex),
       ...newFiles.map(() => "uploading" as const),
     ])
-    await Promise.all(
-      newFiles.map((file, offset) => uploadSingle(file, startIndex + offset, generation)),
-    )
+    // Keep public IDs in file order. The API accepts parallel uploads, but
+    // resolving out of order shifts IDs when the callback filters gaps.
+    for (const [offset, file] of newFiles.entries()) {
+      await uploadSingle(file, startIndex + offset, generation)
+      if (generation !== uploadGeneration.current) return
+    }
   }
 
   const handleRetake = (index: number) => {

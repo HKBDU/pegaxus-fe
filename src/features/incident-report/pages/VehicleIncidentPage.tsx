@@ -60,6 +60,8 @@ export default function VehicleIncidentPage() {
     transportOverview.data?.currentSegment?.vehicles[0]?.vehicleId;
   const vehicleId = routeState.vehicleId ?? overviewVehicleId ?? "";
   const [photos, setPhotos] = useState(initialPhotos);
+  const [photoUploadState, setPhotoUploadState] = useState<"idle" | "uploading" | "ready" | "error">("idle");
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [locationId, setLocationId] = useState(routeState.locationId);
   const location = useIncidentLocation({
     locationId,
@@ -132,6 +134,10 @@ export default function VehicleIncidentPage() {
   ]);
 
   const submit = () => {
+    if (photos.files.length > 0 && (photoUploadState === "uploading" || photos.uploadedPublicIds.length !== photos.files.length)) {
+      setPhotoError("Please wait until every image finishes uploading.");
+      return;
+    }
     const value = form.values;
     const input: VehicleIncidentRequest = {
       transportId: value.transportId,
@@ -194,9 +200,11 @@ export default function VehicleIncidentPage() {
         onSubmit={submit}
         submitting={mutations.vehicle.isPending}
         disabled={mutations.vehicle.isPending}
-        error={error}
+        error={error ?? photoError}
         locationStatus={location.status}
         locationError={location.error}
+        onPhotoUploadStateChange={setPhotoUploadState}
+        onPhotoError={setPhotoError}
       />
     </main>
   );
