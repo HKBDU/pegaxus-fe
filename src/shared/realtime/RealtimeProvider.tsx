@@ -33,6 +33,21 @@ const REFRESH_ON_NOTIFICATION = new Set([
   "horse-health",
 ])
 
+/**
+ * The push can reach the browser before the server has finished writing the change it announces (a payment is recorded,
+ * the notification goes out, the invoice row is still UNPAID), so the first re-read may return the old status. Payment
+ * pushes are re-read once more after this delay.
+ */
+const PAYMENT_REREAD_DELAY_MS = 2_000
+
+function isPaymentNotification(notification: AppNotification) {
+  return notification.type === "PAYMENT" || notification.referenceType?.toUpperCase() === "INVOICE"
+}
+
+function refreshScreensOfServerState() {
+  return queryClient.invalidateQueries({ predicate: (query) => REFRESH_ON_NOTIFICATION.has(String(query.queryKey[0])) })
+}
+
 /** Re-read what SignalR could not deliver (offline, reconnect): unread count + latest unread rows. */
 async function syncFromRest() {
   const store = useNotificationStore.getState()
@@ -74,6 +89,7 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
     const store = useNotificationStore.getState()
     const offState = notificationHub.onStateChange(store.setConnection)
     const offConnected = notificationHub.onConnected(() => void syncFromRest())
+    const rereadTimers = new Set<ReturnType<typeof setTimeout>>()
     const offPush = notificationHub.on("ReceiveNotification", (notification) => {
       const isNew = useNotificationStore.getState().upsert([notification])
       if (isNew && notification.status !== "READ") {
@@ -81,13 +97,22 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
         showToast(notification, onNavigate)
       }
       void queryClient.invalidateQueries({ queryKey: ["notifications"] })
-      void queryClient.invalidateQueries({ predicate: (query) => REFRESH_ON_NOTIFICATION.has(String(query.queryKey[0])) })
+      void refreshScreensOfServerState()
+      if (isPaymentNotification(notification)) {
+        const timer = setTimeout(() => {
+          rereadTimers.delete(timer)
+          void refreshScreensOfServerState()
+        }, PAYMENT_REREAD_DELAY_MS)
+        rereadTimers.add(timer)
+      }
       void notificationHub.acknowledgeDelivered(notification.id)
     })
     return () => {
       offState()
       offConnected()
       offPush()
+      rereadTimers.forEach(clearTimeout)
+      rereadTimers.clear()
     }
   }, [onNavigate])
 
