@@ -70,8 +70,8 @@ export function validateTransportPlanSchedule({
   }
   if (estimatedDurationMinutes != null) {
     const elapsedMinutes = (Date.parse(plannedEndAt) - Date.parse(plannedStartAt)) / 60_000
-    if (Number.isFinite(elapsedMinutes) && elapsedMinutes > estimatedDurationMinutes) {
-      return { field: "plannedEndAt", message: "The planned schedule cannot exceed the estimated transport time." }
+    if (Number.isFinite(elapsedMinutes) && elapsedMinutes < estimatedDurationMinutes) {
+      return { field: "plannedEndAt", message: "The planned schedule must cover at least the estimated transport time." }
     }
   }
   return null
