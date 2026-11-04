@@ -16,7 +16,7 @@ export const incidentRoutes = {
 /** Statuses that count as "still open" (IN7 `status=REPORTED,PENDING`). */
 export const OPEN_STATUSES = "REPORTED,PENDING"
 
-export const DEFAULT_SORT: IncidentSort = "severity:desc,occurredAt:desc"
+export const DEFAULT_SORT: IncidentSort = "occurredAt:desc"
 
 export const SORT_OPTIONS: Array<{ value: IncidentSort; label: string }> = [
   { value: "severity:desc,occurredAt:desc", label: "Severity, newest" },

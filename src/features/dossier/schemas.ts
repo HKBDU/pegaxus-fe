@@ -678,12 +678,13 @@ export const dossierRequirementsParamsSchema = z.object({
   sortBy: z
     .enum([
       "createdAt:asc",
+      "createdAt:desc",
       "dueDate:asc",
       "dueDate:desc",
       "status:asc",
       "status:desc",
     ])
-    .default("createdAt:asc"),
+    .default("createdAt:desc"),
 });
 
 /** One row of D1 (`GET /bookings/{id}/compliance-dossier`): enough to link to the dossier. */
