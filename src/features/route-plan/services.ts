@@ -219,3 +219,13 @@ export function getRoutePlanError(error: unknown): {
     message: "Unable to complete the route plan request.",
   };
 }
+
+export function getLegalReviewError(error: unknown): {
+  code: string;
+  message: string;
+} {
+  const mapped = getRoutePlanError(error);
+  return mapped.code === "INVALID_ROUTE_PLAN_STATUS"
+    ? { ...mapped, message: "A cancelled route plan cannot be reviewed." }
+    : mapped;
+}

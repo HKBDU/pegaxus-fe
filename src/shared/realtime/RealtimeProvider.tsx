@@ -96,10 +96,19 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
       void queryClient.invalidateQueries({ predicate: (query) => REFRESH_ON_NOTIFICATION.has(String(query.queryKey[0])) })
       void notificationHub.acknowledgeDelivered(notification.id)
     })
+    const offRoutePlanCancelled = notificationHub.on("RoutePlanCancelled", (event) => {
+      void queryClient.invalidateQueries({
+        queryKey: ["route-view", "list", event.transportPlanId],
+      })
+      void queryClient.invalidateQueries({
+        queryKey: ["route-view", "detail", event.routePlanId],
+      })
+    })
     return () => {
       offState()
       offConnected()
       offPush()
+      offRoutePlanCancelled()
     }
   }, [onNavigate])
 
