@@ -60,6 +60,7 @@ import { RoutePlanEndpointsStep } from "./RoutePlanEndpointsStep";
 import { RoutePlanStatusBadge } from "./RoutePlanStatusBadge";
 import { BcpRouteSplitDialog } from "./BcpRouteSplitDialog";
 import { validateArrivalDate } from "@/features/transport-plan/schedule-validation";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 import {
   findBestBcpAlongRoute,
   haversineDistanceKm,
@@ -112,7 +113,11 @@ export type RoutePlanBuilderProps = {
   locations: MapLocation[];
   routes: MapRoute[];
   vehicles?: Vehicle[];
-  edit?: { routePlanId: string; lastUpdatedAt: string };
+  edit?: {
+    routePlanId: string;
+    lastUpdatedAt: string;
+    submittedForReviewAt?: string | null;
+  };
 };
 
 export function RoutePlanBuilder({
@@ -2249,6 +2254,12 @@ export function RoutePlanBuilder({
                 )}
 
                 {edit && (
+                  <>
+                    <p className="text-xs text-slate-600">
+                      {edit.submittedForReviewAt
+                        ? `Submitted for legal review at ${formatUtcDateTime(edit.submittedForReviewAt)}`
+                        : "This route plan has not been submitted for legal review."}
+                    </p>
                   <label className="grid gap-2 text-sm font-medium text-slate-900">
                     Update reason
                     <textarea
@@ -2259,6 +2270,7 @@ export function RoutePlanBuilder({
                       placeholder="Why is this route plan being updated?"
                     />
                   </label>
+                  </>
                 )}
 
                 {saveError && (

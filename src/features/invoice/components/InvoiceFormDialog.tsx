@@ -13,7 +13,7 @@ import { useCreateInvoice, useInvoiceSuggestion, useUpdateInvoice } from "@/feat
 import { useBookingInvoices } from "@/features/invoice/hooks/useInvoices"
 import { invoiceFormSchema, invoiceToFormValues, prefillToFormValues, toCreatePayload, toUpdatePayload, type InvoiceFormValues } from "@/features/invoice/schemas"
 import type { Invoice, InvoiceBookingContext, InvoiceItem, InvoicePrefill, InvoiceType } from "@/features/invoice/types"
-import { formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime"
+import { addUtcDays, formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime"
 import { DEFAULT_DUE_TIME, estimateSummary, formatMoney, parseTransitDays, parseWholeNumber, roundMoney, todayIsoDate } from "@/features/invoice/utils"
 import { useDebounce } from "@/shared/hooks"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
@@ -32,9 +32,6 @@ const panelClass = "border border-[#e5e2d9] bg-white"
 const panelHeaderClass = "m-0! flex items-center gap-2 border-b border-[#e5e2d9] bg-[#f7f6f3] px-4 py-2.5 font-heading text-[13px]! font-bold! uppercase tracking-[0.04em]! text-gray-900!"
 
 type Intent = "draft" | "issue"
-
-/** A booking has at most one deposit invoice that is not cancelled: only its cancellation allows another one. */
-const DEPOSIT_LOOKUP = { ...initialInvoiceParams, pageSize: 50, type: INVOICE_TYPE.DEPOSIT }
 
 /** `items[0].quantity` from the BE -> react-hook-form path `items.0.quantity`. */
 const toFormPath = (field: string) => field.replace(/\[(\d+)\]/g, ".$1")
@@ -90,9 +87,41 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
   const debouncedDays = useDebounce(transitDaysInput ?? "", 400)
   const transitDays = selectedType === INVOICE_TYPE.QUOTATION ? parseTransitDays(debouncedDays) : undefined
 
-  const depositsQuery = useBookingInvoices(booking.bookingId, DEPOSIT_LOOKUP, "manager")
-  const activeDeposit = isEdit ? undefined : depositsQuery.data?.items.find((item) => item.status !== INVOICE_STATUS.CANCELLED)
+  const invoicesQuery = useBookingInvoices(booking.bookingId, { ...initialInvoiceParams, pageSize: 100 }, "manager")
+  const bookingInvoices = invoicesQuery.data?.items ?? []
+  const activeDeposit = isEdit
+    ? undefined
+    : bookingInvoices.find((item) => item.type === INVOICE_TYPE.DEPOSIT && item.status !== INVOICE_STATUS.CANCELLED)
   const depositBlocked = Boolean(activeDeposit) && selectedType === INVOICE_TYPE.DEPOSIT
+
+  const dueDateBounds = useMemo(() => {
+    const active = bookingInvoices.filter(
+      (item) => item.status !== INVOICE_STATUS.CANCELLED && item.invoiceId !== invoice?.invoiceId && item.dueDate,
+    )
+    const due = (kind: InvoiceType) => active.find((item) => item.type === kind)?.dueDate?.slice(0, 10)
+    let minimum = todayIsoDate()
+    let maximum: string | undefined
+    const quotation = due(INVOICE_TYPE.QUOTATION)
+    const deposit = due(INVOICE_TYPE.DEPOSIT)
+    const final = due(INVOICE_TYPE.FINAL)
+    const preceding = selectedType === INVOICE_TYPE.DEPOSIT
+      ? quotation
+      : selectedType === INVOICE_TYPE.FINAL
+        ? deposit ?? quotation
+        : selectedType === INVOICE_TYPE.SUPPLEMENTARY
+          ? [quotation, deposit].filter(Boolean).sort().at(-1)
+          : selectedType === INVOICE_TYPE.CREDIT_NOTE
+            ? final
+            : undefined
+    if (preceding) minimum = addUtcDays(preceding, 1)
+    const following = selectedType === INVOICE_TYPE.QUOTATION
+      ? deposit ?? final
+      : selectedType === INVOICE_TYPE.DEPOSIT
+        ? final
+        : undefined
+    if (following) maximum = addUtcDays(following, -1)
+    return { minimum, maximum }
+  }, [bookingInvoices, invoice?.invoiceId, selectedType])
 
   // IV1 only when creating: for an existing draft it would answer INVOICE_ALREADY_EXISTS about the draft itself.
   const suggestionQuery = useInvoiceSuggestion(booking.bookingId, isEdit ? undefined : (selectedType ?? undefined), transitDays)
@@ -173,6 +202,15 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
     handleSubmit(
       (values) => {
         setFormError(undefined)
+        if (values.dueDate < dueDateBounds.minimum || (dueDateBounds.maximum && values.dueDate > dueDateBounds.maximum)) {
+          setError("dueDate", {
+            type: "validate",
+            message: dueDateBounds.maximum
+              ? `Due date must be between ${dueDateBounds.minimum} and ${dueDateBounds.maximum}.`
+              : `Due date must be on or after ${dueDateBounds.minimum}.`,
+          })
+          return
+        }
         if (noteRequired && !values.note.trim()) {
           setError("note", { type: "manual", message: "Add a note: this quotation is typed by hand because the booking has 10 or more horses." })
           return
@@ -286,7 +324,8 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                                 value={field.value}
                                 onChange={field.onChange}
                                 onBlur={field.onBlur}
-                                minDate={todayIsoDate()}
+                                minDate={dueDateBounds.minimum}
+                                maxDate={dueDateBounds.maximum}
                                 displayFormat="MMM dd, yyyy"
                                 placeholder="Pick a date"
                                 className={controlClass}

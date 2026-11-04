@@ -225,7 +225,12 @@ export function getLegalReviewError(error: unknown): {
   message: string;
 } {
   const mapped = getRoutePlanError(error);
-  return mapped.code === "INVALID_ROUTE_PLAN_STATUS"
-    ? { ...mapped, message: "A cancelled route plan cannot be reviewed." }
-    : mapped;
+  if (mapped.code === "INVALID_ROUTE_PLAN_STATUS")
+    return { ...mapped, message: "A cancelled route plan cannot be reviewed." };
+  if (mapped.code === "ROUTE_PLAN_NOT_SUBMITTED")
+    return {
+      ...mapped,
+      message: "This route plan has not been submitted for legal review.",
+    };
+  return mapped;
 }

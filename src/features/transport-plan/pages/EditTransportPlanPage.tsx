@@ -63,6 +63,7 @@ export default function EditTransportPlanPage() {
               <TransportPlanMetadataForm
                 key={transportPlanId}
                 bookingId={plan.booking.bookingId}
+                bookingCreatedAt={plan.booking.createdAt}
                 originCountry={plan.booking.originCountry}
                 destinationCountry={plan.booking.destinationCountry}
                 originLatitude={plan.booking.originLatitude}

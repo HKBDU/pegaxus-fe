@@ -48,6 +48,7 @@ import {
 import { emptyPlanForm } from "../constants";
 import type { TransportPlanDetail, TransportPlanFormValues } from "../types";
 import {
+  minimumPlannedStartDateUtc,
   validatePlannedStartDate,
   validateTransportPlanSchedule,
 } from "../schedule-validation";
@@ -81,6 +82,7 @@ export function TransportPlanMetadataForm({
   originLongitude,
   destinationLatitude,
   destinationLongitude,
+  bookingCreatedAt,
   plan,
   cancelHref,
   reloadLatest,
@@ -96,6 +98,7 @@ export function TransportPlanMetadataForm({
   originLongitude?: number | null;
   destinationLatitude?: number | null;
   destinationLongitude?: number | null;
+  bookingCreatedAt?: string | null;
   plan?: TransportPlanDetail;
   cancelHref: string;
   reloadLatest?: () => Promise<TransportPlanDetail | undefined>;
@@ -170,6 +173,7 @@ export function TransportPlanMetadataForm({
       requestedArrivalDate,
       originCountry,
       destinationCountry,
+      bookingCreatedAt,
     });
     if (scheduleError) {
       form.setError(scheduleError.field, {
@@ -345,6 +349,7 @@ export function TransportPlanMetadataForm({
                                 plannedStartAt: nextValue,
                                 originCountry,
                                 destinationCountry,
+                                bookingCreatedAt,
                               })
                             : null;
                           if (startError) {
@@ -384,6 +389,7 @@ export function TransportPlanMetadataForm({
                                     onChange={changeDate}
                                     onBlur={field.onBlur}
                                     disabled={isPending || !canWrite}
+                                    minDate={name === "plannedStartAt" ? minimumPlannedStartDateUtc(originCountry, destinationCountry, bookingCreatedAt) : undefined}
                                     placeholder="DD / MM / YYYY"
                                     className={controlClass}
                                   />

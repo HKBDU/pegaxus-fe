@@ -197,6 +197,7 @@ export interface RoutePlan {
   segments: RouteSegment[];
   isPersonnelComplete: boolean;
   legalReview: LegalReview | null;
+  submittedForReviewAt?: string | null;
   routeNote: string | null;
   createdAt: string;
   updatedAt: string;
