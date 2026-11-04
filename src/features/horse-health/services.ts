@@ -32,6 +32,12 @@ interface ApiEnvelope<T> {
   value: T;
 }
 
+function unwrap<T>(payload: ApiEnvelope<T> | T): T {
+  return payload && typeof payload === "object" && "value" in payload
+    ? (payload as ApiEnvelope<T>).value
+    : payload;
+}
+
 export async function getAssignedTransports(
   signal?: AbortSignal,
 ): Promise<AssignedTransportsResponse> {
@@ -64,11 +70,11 @@ export async function getHorseHealthOverview(
 ): Promise<HorseHealthOverview> {
   if (isHorseHealthMockMode())
     return horseHealthOverviewSchema.parse(getMockHealthOverview(transportId));
-  const response = await apiClient.get<
-    unknown,
-    ApiEnvelope<HorseHealthOverview>
-  >(`/transports/${encodeURIComponent(transportId)}/horse-health`, { signal });
-  return horseHealthOverviewSchema.parse(response.value);
+  const response = await apiClient.get<unknown, ApiEnvelope<HorseHealthOverview> | HorseHealthOverview>(
+    `/transports/${encodeURIComponent(transportId)}/horse-health`,
+    { signal },
+  );
+  return horseHealthOverviewSchema.parse(unwrap(response));
 }
 
 export async function getHealthLogHistory(
@@ -95,11 +101,11 @@ export async function getHealthLogHistory(
     LogType: filters.logType,
     HealthStatus: filters.healthStatus,
   };
-  const response = await apiClient.get<unknown, ApiEnvelope<HealthLogHistory>>(
+  const response = await apiClient.get<unknown, ApiEnvelope<HealthLogHistory> | HealthLogHistory>(
     `/transports/${encodeURIComponent(transportId)}/horses/${encodeURIComponent(horseId)}/health-logs`,
     { params: query, signal },
   );
-  return healthLogHistorySchema.parse(response.value);
+  return healthLogHistorySchema.parse(unwrap(response));
 }
 
 export async function getHealthLogDetail(
@@ -108,11 +114,11 @@ export async function getHealthLogDetail(
 ): Promise<HealthLog> {
   if (isHorseHealthMockMode())
     return healthLogSchema.parse(getMockHealthLog(logId));
-  const response = await apiClient.get<unknown, ApiEnvelope<HealthLog>>(
+  const response = await apiClient.get<unknown, ApiEnvelope<HealthLog> | HealthLog>(
     `/horse-health-logs/${encodeURIComponent(logId)}`,
     { signal },
   );
-  return healthLogSchema.parse(response.value);
+  return healthLogSchema.parse(unwrap(response));
 }
 
 function toUploadedFiles(photoPublicIds?: string[]) {
@@ -144,15 +150,18 @@ export async function createHealthLog(transportId: string, input: HealthLogInput
     generalNote: input.generalNote,
     files: toUploadedFiles(input.photoPublicIds),
   }
-  const response = await apiClient.post<unknown, ApiEnvelope<HealthLog>>(
+  const response = await apiClient.post<unknown, ApiEnvelope<HealthLog> | HealthLog>(
     `/transports/${encodeURIComponent(transportId)}/horse-health-logs`,
     payload,
   )
-  return healthLogSchema.parse(response.value)
+  return healthLogSchema.parse(unwrap(response))
 }
 
-export async function markAllNormal(transportId: string, input: MarkAllNormalInput): Promise<HealthLog> {
-  if (isHorseHealthMockMode()) return healthLogSchema.parse(mockMarkAllNormal(transportId, input))
+export async function markAllNormal(transportId: string, input: MarkAllNormalInput): Promise<void> {
+  if (isHorseHealthMockMode()) {
+    mockMarkAllNormal(transportId, input)
+    return
+  }
   const payload = {
     logType: input.logType,
     checkedAt: input.checkedAt,
@@ -160,11 +169,10 @@ export async function markAllNormal(transportId: string, input: MarkAllNormalInp
     generalNote: input.generalNote,
     files: toUploadedFiles(input.photoPublicIds),
   }
-  const response = await apiClient.post<unknown, ApiEnvelope<HealthLog>>(
+  await apiClient.post<unknown, unknown>(
     `/transports/${encodeURIComponent(transportId)}/horse-health-logs/mark-all-normal`,
     payload,
   )
-  return healthLogSchema.parse(response.value)
 }
 
 export async function addHealthLogPhotos(transportId: string, horseHealthLogId: string, input: HealthLogPhotoInput): Promise<HealthLog> {
@@ -172,10 +180,10 @@ export async function addHealthLogPhotos(transportId: string, horseHealthLogId: 
   const payload = {
     files: toUploadedFiles(input.photoPublicIds),
   }
-  const response = await apiClient.post<unknown, ApiEnvelope<HealthLog>>(
+  const response = await apiClient.post<unknown, ApiEnvelope<HealthLog> | HealthLog>(
     `/transports/${encodeURIComponent(transportId)}/horse-health-logs/${encodeURIComponent(horseHealthLogId)}/photos`,
     payload,
   )
-  return healthLogSchema.parse(response.value)
+  return healthLogSchema.parse(unwrap(response))
 }
 
