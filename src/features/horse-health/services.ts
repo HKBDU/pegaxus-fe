@@ -12,6 +12,7 @@ import {
 import {
   healthLogHistorySchema,
   healthLogSchema,
+  markAllNormalResponseSchema,
   horseHealthOverviewSchema,
 } from "./schemas";
 import type {
@@ -23,6 +24,7 @@ import type {
   HorseHealthOverview,
   LogType,
   MarkAllNormalInput,
+  MarkAllNormalResponse,
 } from "./types";
 
 export const isHorseHealthMockMode = () =>
@@ -149,6 +151,10 @@ export async function createHealthLog(transportId: string, input: HealthLogInput
     locationDescription: input.locationDescription,
     generalNote: input.generalNote,
     files: toUploadedFiles(input.photoPublicIds),
+    photoCaptions: input.photoCaptions,
+    photoLatitudes: input.photoLatitudes,
+    photoLongitudes: input.photoLongitudes,
+    photoCapturedAts: input.photoCapturedAts,
   }
   const response = await apiClient.post<unknown, ApiEnvelope<HealthLog> | HealthLog>(
     `/transports/${encodeURIComponent(transportId)}/horse-health-logs`,
@@ -157,10 +163,10 @@ export async function createHealthLog(transportId: string, input: HealthLogInput
   return healthLogSchema.parse(unwrap(response))
 }
 
-export async function markAllNormal(transportId: string, input: MarkAllNormalInput): Promise<void> {
+export async function markAllNormal(transportId: string, input: MarkAllNormalInput): Promise<MarkAllNormalResponse> {
   if (isHorseHealthMockMode()) {
     mockMarkAllNormal(transportId, input)
-    return
+    return { transportId, logType: input.logType, createdCount: 0, logs: [] }
   }
   const payload = {
     logType: input.logType,
@@ -169,10 +175,11 @@ export async function markAllNormal(transportId: string, input: MarkAllNormalInp
     generalNote: input.generalNote,
     files: toUploadedFiles(input.photoPublicIds),
   }
-  await apiClient.post<unknown, unknown>(
+  const response = await apiClient.post<unknown, unknown>(
     `/transports/${encodeURIComponent(transportId)}/horse-health-logs/mark-all-normal`,
     payload,
   )
+  return markAllNormalResponseSchema.parse(unwrap(response))
 }
 
 export async function addHealthLogPhotos(transportId: string, horseHealthLogId: string, input: HealthLogPhotoInput): Promise<HealthLog> {

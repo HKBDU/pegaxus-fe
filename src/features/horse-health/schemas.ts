@@ -47,6 +47,20 @@ export const healthLogSummarySchema = z.object({
   locationDescription: z.string().nullable().optional(),
 })
 
+// Overview's latestLog is a compact BE projection. It intentionally does not
+// include horse/hasPhoto; those fields belong to the history/detail payloads.
+export const horseHealthLatestLogSchema = z.object({
+  horseHealthLogId: id,
+  checkedAt: timestamp,
+  logType: logTypeSchema,
+  healthStatus: healthStatusSchema,
+  hydrationStatus: hydrationStatusSchema.nullable(),
+  checkedBy: crewMemberSchema,
+  veterinarianRequired: z.boolean(),
+  latestNote: z.string().nullable().optional(),
+  locationDescription: z.string().nullable().optional(),
+})
+
 export const healthLogSchema = healthLogSummarySchema.extend({
   transportId: id,
   temperatureCelsius: z.number().nullable(),
@@ -71,7 +85,7 @@ export const healthLogSchema = healthLogSummarySchema.extend({
 export const horseHealthOverviewItemSchema = z.object({
   horse: horseBriefSchema,
   latestHealthStatus: healthStatusSchema.nullable(),
-  latestLog: healthLogSummarySchema.nullable(),
+  latestLog: horseHealthLatestLogSchema.nullable(),
   logCount: z.number().int().nonnegative(),
 })
 
@@ -130,4 +144,11 @@ export const markAllNormalInputSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   files: z.array(z.instanceof(File)).max(1).optional(),
+})
+
+export const markAllNormalResponseSchema = z.object({
+  transportId: id,
+  logType: logTypeSchema,
+  createdCount: z.number().int().nonnegative(),
+  logs: z.array(z.unknown()),
 })
