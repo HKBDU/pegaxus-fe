@@ -601,22 +601,22 @@ export function InvoiceFormDialog({
                             )}
                           />
                         </div>
-                        {dueUtcPreview ? (
-                          <p className="mt-1 text-[11px] text-gray-500">
-                            Your local time. Due at{" "}
-                            <span className="font-semibold text-gray-700">
-                              {formatUtcDateTime(dueUtcPreview)}
-                            </span>
-                          </p>
-                        ) : null}
-                        {errors.dueDate || errors.dueTime ? (
-                          <p
-                            className="mt-1 text-[11px] text-red-600"
-                            role="alert"
-                          >
-                            {errors.dueDate?.message ?? errors.dueTime?.message}
-                          </p>
-                        ) : null}
+                        {/* One line is always reserved (error replaces the preview) so an error never pushes the fields below. */}
+                        <div className="mt-1 min-h-4 text-[11px] leading-4">
+                          {errors.dueDate || errors.dueTime ? (
+                            <p className="m-0 text-red-600" role="alert">
+                              {errors.dueDate?.message ??
+                                errors.dueTime?.message}
+                            </p>
+                          ) : dueUtcPreview ? (
+                            <p className="m-0 text-gray-500">
+                              Your local time. Due at{" "}
+                              <span className="font-semibold text-gray-700">
+                                {formatUtcDateTime(dueUtcPreview)}
+                              </span>
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
 
                       {selectedType === INVOICE_TYPE.QUOTATION ? (
