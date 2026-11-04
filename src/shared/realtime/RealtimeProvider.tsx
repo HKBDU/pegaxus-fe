@@ -107,10 +107,16 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
       }
       void notificationHub.acknowledgeDelivered(notification.id)
     })
+    // A cancelled route plan changes its detail (status CANCELLED, no review button) and drops it from the transport
+    // plan's list. The matching notification refreshes the same roots, but the event does not depend on it being delivered.
+    const offRoutePlanCancelled = notificationHub.on("RoutePlanCancelled", () => {
+      void refreshScreensOfServerState()
+    })
     return () => {
       offState()
       offConnected()
       offPush()
+      offRoutePlanCancelled()
       rereadTimers.forEach(clearTimeout)
       rereadTimers.clear()
     }

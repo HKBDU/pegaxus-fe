@@ -64,7 +64,7 @@ class NotificationHub {
         .configureLogging(import.meta.env.DEV ? LogLevel.Warning : LogLevel.Error)
         .build()
 
-      for (const event of ["ReceiveNotification", "BookingEditingStarted", "BookingEditingStopped"] as const) {
+      for (const event of ["ReceiveNotification", "BookingEditingStarted", "BookingEditingStopped", "RoutePlanCancelled"] as const) {
         connection.on(event, (payload) => this.handlers.get(event)?.forEach((handler) => handler(payload)))
       }
       connection.onreconnecting(() => this.setState("reconnecting"))
