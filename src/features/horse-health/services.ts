@@ -13,6 +13,7 @@ import {
   healthLogHistorySchema,
   healthLogSchema,
   horseHealthOverviewSchema,
+  markAllNormalResultSchema,
 } from "./schemas";
 import type {
   AssignedTransportsResponse,
@@ -23,6 +24,7 @@ import type {
   HorseHealthOverview,
   LogType,
   MarkAllNormalInput,
+  MarkAllNormalResult,
 } from "./types";
 
 export const isHorseHealthMockMode = () =>
@@ -151,8 +153,11 @@ export async function createHealthLog(transportId: string, input: HealthLogInput
   return healthLogSchema.parse(response.value)
 }
 
-export async function markAllNormal(transportId: string, input: MarkAllNormalInput): Promise<HealthLog> {
-  if (isHorseHealthMockMode()) return healthLogSchema.parse(mockMarkAllNormal(transportId, input))
+export async function markAllNormal(transportId: string, input: MarkAllNormalInput): Promise<MarkAllNormalResult> {
+  if (isHorseHealthMockMode()) {
+    const log = healthLogSchema.parse(mockMarkAllNormal(transportId, input))
+    return markAllNormalResultSchema.parse({ transportId, logType: log.logType, createdCount: 1, logs: [log] })
+  }
   const payload = {
     logType: input.logType,
     checkedAt: input.checkedAt,
@@ -160,11 +165,11 @@ export async function markAllNormal(transportId: string, input: MarkAllNormalInp
     generalNote: input.generalNote,
     files: toUploadedFiles(input.photoPublicIds),
   }
-  const response = await apiClient.post<unknown, ApiEnvelope<HealthLog>>(
+  const response = await apiClient.post<unknown, ApiEnvelope<MarkAllNormalResult>>(
     `/transports/${encodeURIComponent(transportId)}/horse-health-logs/mark-all-normal`,
     payload,
   )
-  return healthLogSchema.parse(response.value)
+  return markAllNormalResultSchema.parse(response.value)
 }
 
 export async function addHealthLogPhotos(transportId: string, horseHealthLogId: string, input: HealthLogPhotoInput): Promise<HealthLog> {

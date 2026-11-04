@@ -1,3 +1,6 @@
+import type { z } from "zod"
+import type { markAllNormalResultSchema } from "./schemas"
+
 export type CrewRole = "DRIVER" | "ESCORT"
 
 export interface AssignedTransportSegment {
@@ -167,3 +170,5 @@ export interface ApiErrorShape {
   errorCode?: string
   message?: string
 }
+
+export type MarkAllNormalResult = z.infer<typeof markAllNormalResultSchema>

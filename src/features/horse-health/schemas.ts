@@ -131,3 +131,24 @@ export const markAllNormalInputSchema = z.object({
   longitude: z.number().optional(),
   files: z.array(z.instanceof(File)).max(1).optional(),
 })
+
+// "Mark all normal" returns one summary row per horse (BE `BatchResponse`), not a single log. A summary's `checkedBy`
+// has no `role`, so it does not reuse crewMemberSchema.
+export const markAllNormalResultSchema = z.object({
+  transportId: id,
+  logType: logTypeSchema,
+  createdCount: z.number().int().nonnegative(),
+  logs: z.array(
+    z.object({
+      horseHealthLogId: id,
+      horse: horseBriefSchema,
+      checkedAt: timestamp,
+      logType: logTypeSchema,
+      healthStatus: healthStatusSchema,
+      hydrationStatus: hydrationStatusSchema.nullable(),
+      checkedBy: crewMemberSchema.partial({ role: true }),
+      veterinarianRequired: z.boolean(),
+      hasPhoto: z.boolean(),
+    }),
+  ),
+})
