@@ -448,7 +448,7 @@ export function InvoiceFormDialog({
           showCloseButton={!isSaving}
           className="flex h-[min(880px,calc(100dvh-2rem))] max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden rounded-none border-0 bg-[#faf9f6] p-0 sm:max-w-[1120px]"
         >
-          <header className="flex shrink-0 items-center gap-3 border-b border-[#e5e2d9] px-6 py-4 pr-14">
+          <header className="flex shrink-0 items-center gap-3 px-6 pb-1 pt-3 pr-14">
             <span className="flex size-10 shrink-0 items-center justify-center bg-[#ef8f00] text-slate-950">
               <ReceiptText className="size-5" aria-hidden="true" />
             </span>
@@ -473,7 +473,7 @@ export function InvoiceFormDialog({
                 submitWith("draft");
               }}
             >
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-4">
                 <dl
                   className={`grid grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-[#e5e2d9] ${panelClass}`}
                 >
@@ -794,7 +794,7 @@ export function InvoiceFormDialog({
                 ) : null}
               </div>
 
-              <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[#e5e2d9] px-6 py-3">
+              <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 px-6 pb-3 pt-1">
                 <Button
                   type="button"
                   variant="outline"
