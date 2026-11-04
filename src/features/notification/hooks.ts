@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { useAuthStore } from "@/features/auth/store"
-import { notificationApi, useNotificationStore } from "@/shared/realtime"
+import { isNotificationVisibleToPrincipal, notificationApi, useNotificationStore } from "@/shared/realtime"
 
 /** The BE has no search / type / read filters: only `unreadOnly`. The page filters the fetched rows. */
 export function useNotificationList({ unreadOnly = false, pageSize = 20, enabled = true }: { unreadOnly?: boolean; pageSize?: number; enabled?: boolean } = {}) {
@@ -9,7 +9,11 @@ export function useNotificationList({ unreadOnly = false, pageSize = 20, enabled
   const sessionVersion = useAuthStore((state) => state.sessionVersion)
   return useQuery({
     queryKey: ["notifications", "list", sessionVersion, unreadOnly, pageSize],
-    queryFn: () => notificationApi.list({ pageIndex: 1, pageSize, unreadOnly }),
+    queryFn: async () => {
+      const page = await notificationApi.list({ pageIndex: 1, pageSize, unreadOnly })
+      const principal = useAuthStore.getState().principal
+      return { ...page, items: page.items.filter((item) => isNotificationVisibleToPrincipal(item, principal)) }
+    },
     enabled: signedIn && enabled,
     staleTime: 30_000,
   })
@@ -18,6 +22,14 @@ export function useNotificationList({ unreadOnly = false, pageSize = 20, enabled
 /** After a write the BE is the truth for the badge: re-read the count instead of trusting local arithmetic. */
 async function refreshUnreadCount() {
   try {
+    const principal = useAuthStore.getState().principal
+    if (principal?.roles.includes("CUSTOMER")) {
+      const page = await notificationApi.list({ pageSize: 100, unreadOnly: true })
+      useNotificationStore.getState().setUnreadCount(
+        page.items.filter((item) => isNotificationVisibleToPrincipal(item, principal)).length,
+      )
+      return
+    }
     useNotificationStore.getState().setUnreadCount(await notificationApi.unreadCount())
   } catch {
     // keep the optimistic value

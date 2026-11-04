@@ -5,6 +5,7 @@ import { queryClient } from "@/lib/queryClient"
 import { notificationHub } from "./hub"
 import { notificationApi } from "./notification-api"
 import { resolveNotificationPath } from "./notification-routes"
+import { isNotificationVisibleToPrincipal } from "./notification-policy"
 import { useNotificationStore } from "./notification-store"
 import type { AppNotification } from "./types"
 
@@ -37,9 +38,15 @@ const REFRESH_ON_NOTIFICATION = new Set([
 async function syncFromRest() {
   const store = useNotificationStore.getState()
   try {
-    const [count, page] = await Promise.all([notificationApi.unreadCount(), notificationApi.list({ pageSize: 20, unreadOnly: true })])
-    store.setUnreadCount(count)
-    store.upsert(page.items)
+    const principal = useAuthStore.getState().principal
+    const pageSize = principal?.roles.includes("CUSTOMER") ? 100 : 20
+    const [count, page] = await Promise.all([
+      principal?.roles.includes("CUSTOMER") ? Promise.resolve(null) : notificationApi.unreadCount(),
+      notificationApi.list({ pageSize, unreadOnly: true }),
+    ])
+    const visible = page.items.filter((item) => isNotificationVisibleToPrincipal(item, principal))
+    store.setUnreadCount(count ?? visible.length)
+    store.upsert(visible)
   } catch (error) {
     console.warn("[realtime] could not sync notifications", error)
   }
@@ -75,6 +82,11 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
     const offState = notificationHub.onStateChange(store.setConnection)
     const offConnected = notificationHub.onConnected(() => void syncFromRest())
     const offPush = notificationHub.on("ReceiveNotification", (notification) => {
+      const principal = useAuthStore.getState().principal
+      if (!isNotificationVisibleToPrincipal(notification, principal)) {
+        void notificationHub.acknowledgeDelivered(notification.id)
+        return
+      }
       const isNew = useNotificationStore.getState().upsert([notification])
       if (isNew && notification.status !== "READ") {
         useNotificationStore.setState((state) => ({ unreadCount: state.unreadCount + 1 }))
