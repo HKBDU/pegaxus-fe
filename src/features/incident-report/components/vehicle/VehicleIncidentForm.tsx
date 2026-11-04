@@ -8,6 +8,9 @@ import {
   type VehicleIncidentFieldsValue,
 } from "./VehicleIncidentFields";
 import type { IncidentPhotoFieldValue } from "../IncidentPhotoField";
+import { areIncidentPhotosReady } from "../../validation";
+import { IncidentFieldError } from "../IncidentFieldError";
+import type { IncidentFieldErrors } from "../../validation";
 
 export interface VehicleIncidentFormValue
   extends IncidentCommonFormValue, VehicleIncidentFieldsValue {
@@ -23,6 +26,7 @@ export interface VehicleIncidentFormProps {
   disabled?: boolean;
   submitting?: boolean;
   error?: string | null;
+  errors?: IncidentFieldErrors;
   locationStatus?:
     | "idle"
     | "locating"
@@ -43,6 +47,7 @@ export function VehicleIncidentForm({
   disabled = false,
   submitting = false,
   error,
+  errors = {},
   locationStatus,
   locationError,
 }: VehicleIncidentFormProps) {
@@ -52,15 +57,22 @@ export function VehicleIncidentForm({
         event.preventDefault();
         onSubmit();
       }}
-      className="space-y-5"
+      className="min-w-0 space-y-5"
     >
+      <IncidentFieldError
+        message={errors.transportId && `Transport: ${errors.transportId}`}
+      />
+      <IncidentFieldError
+        message={errors.vehicleId && `Vehicle: ${errors.vehicleId}`}
+      />
       <IncidentCommonForm
         value={value}
         photos={photos}
         onChange={(next) => onChange({ ...value, ...next })}
         onPhotosChange={onPhotosChange}
         disabled={disabled}
-        photoError={error}
+        photoError={errors.photoFiles}
+        errors={errors}
         locationStatus={locationStatus}
         locationError={locationError}
       />
@@ -68,11 +80,13 @@ export function VehicleIncidentForm({
         value={value}
         onChange={(next) => onChange({ ...value, ...next })}
         disabled={disabled}
+        errors={errors}
       />
       <IncidentSubmitBar
         isSubmitting={submitting}
-        disabled={disabled}
+        disabled={disabled || !areIncidentPhotosReady(photos)}
         error={error}
+        uploadState={photos.files.length > 0 ? photos.uploadState : undefined}
       />
     </form>
   );
