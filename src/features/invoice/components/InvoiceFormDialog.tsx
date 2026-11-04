@@ -35,6 +35,8 @@ type Intent = "draft" | "issue"
 
 /** A booking has at most one deposit invoice that is not cancelled: only its cancellation allows another one. */
 const DEPOSIT_LOOKUP = { ...initialInvoiceParams, pageSize: 50, type: INVOICE_TYPE.DEPOSIT }
+/** Same rule for the quotation: while one is not cancelled the type cannot be created again (IV1/IV2 answer INVOICE_ALREADY_EXISTS). */
+const QUOTATION_LOOKUP = { ...initialInvoiceParams, pageSize: 50, type: INVOICE_TYPE.QUOTATION }
 
 /** `items[0].quantity` from the BE -> react-hook-form path `items.0.quantity`. */
 const toFormPath = (field: string) => field.replace(/\[(\d+)\]/g, ".$1")
@@ -93,6 +95,8 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
   const depositsQuery = useBookingInvoices(booking.bookingId, DEPOSIT_LOOKUP, "manager")
   const activeDeposit = isEdit ? undefined : depositsQuery.data?.items.find((item) => item.status !== INVOICE_STATUS.CANCELLED)
   const depositBlocked = Boolean(activeDeposit) && selectedType === INVOICE_TYPE.DEPOSIT
+  const quotationsQuery = useBookingInvoices(booking.bookingId, QUOTATION_LOOKUP, "manager")
+  const activeQuotation = isEdit ? undefined : quotationsQuery.data?.items.find((item) => item.status !== INVOICE_STATUS.CANCELLED)
 
   // IV1 only when creating: for an existing draft it would answer INVOICE_ALREADY_EXISTS about the draft itself.
   const suggestionQuery = useInvoiceSuggestion(booking.bookingId, isEdit ? undefined : (selectedType ?? undefined), transitDays)
@@ -268,7 +272,9 @@ export function InvoiceFormDialog({ mode, booking, invoice, onClose, onReload, p
                           <SelectTrigger id="invoice-type" className={controlClass}><SelectValue placeholder="Select invoice type" /></SelectTrigger>
                           <SelectContent>
                             {Object.values(INVOICE_TYPE).map((option) => {
-                              const taken = option === INVOICE_TYPE.DEPOSIT && Boolean(activeDeposit)
+                              const taken =
+                                (option === INVOICE_TYPE.DEPOSIT && Boolean(activeDeposit)) ||
+                                (option === INVOICE_TYPE.QUOTATION && Boolean(activeQuotation))
                               return <SelectItem key={option} value={option} disabled={taken}>{INVOICE_TYPE_LABELS[option]}{taken ? " (already created)" : ""}</SelectItem>
                             })}
                           </SelectContent>
