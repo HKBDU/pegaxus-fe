@@ -37,8 +37,10 @@ import {
 import { loadAllVehicles } from "../api-adapters";
 import {
   buildEffectiveBackupRoute,
+  sameRoute,
   validateRoutePlanRoute,
 } from "../route-continuity";
+import type { SegmentDraftData } from "../segment-draft-data";
 import { calculateRouteTimeline } from "../timeline-calculator";
 import type {
   CreateRoutePlanRequest,
@@ -108,6 +110,16 @@ export type RoutePlanBuilderProps = {
   primaryError?: string;
   metadata?: RoutePlanBuilderMetadata;
   initialRoutes?: MapRoute[];
+  /**
+   * What the saved plan already holds for each of `initialRoutes` (same order): vehicles, provider, note, dwell and times.
+   * Without it an edited plan starts with empty segments and saving would erase the vehicles and the provider.
+   */
+  initialSegmentData?: SegmentDraftData[];
+  /**
+   * BACKUP only: the vehicles / provider of each of `primaryRoutes` (same order). A backup segment on the very same route as a
+   * PRIMARY segment starts with that segment's resources, and the PRIMARY segments copied into the backup keep them when saving.
+   */
+  primarySegmentData?: SegmentDraftData[];
   initialRouteNote?: string;
   locations: MapLocation[];
   routes: MapRoute[];
@@ -125,6 +137,8 @@ export function RoutePlanBuilder({
   primaryError,
   metadata,
   initialRoutes = [],
+  initialSegmentData,
+  primarySegmentData,
   initialRouteNote = "",
   locations: initialLocations,
   routes,
@@ -280,6 +294,7 @@ export function RoutePlanBuilder({
               ? "BCP"
               : "REST_STOP",
         dwellAfterMinutes: 0,
+        ...initialSegmentData?.[index],
       })),
       metadata?.departureAt,
     ),
@@ -1036,6 +1051,22 @@ export function RoutePlanBuilder({
     return null;
   }
 
+  /** Vehicles / provider / note of the PRIMARY segment that runs on exactly this route, if there is one. */
+  function primaryResourcesFor(route: MapRoute) {
+    const index = readonlyPrimaryRoutes.findIndex((primary) =>
+      sameRoute(primary, route),
+    );
+    const data = index >= 0 ? primarySegmentData?.[index] : undefined;
+    if (!data?.vehicleIds?.length && !data?.provider) return undefined;
+    // The builder assigns one vehicle per segment: with 2+ vehicles on the PRIMARY segment the coordinator chooses again.
+    if ((data.vehicleIds?.length ?? 0) >= 2) return undefined;
+    return {
+      ...(data.vehicleIds?.length ? { vehicleIds: data.vehicleIds } : {}),
+      ...(data.provider ? { provider: data.provider } : {}),
+      ...(data.note ? { note: data.note } : {}),
+    };
+  }
+
   function addSegment(route: MapRoute, insertIndex?: number) {
     if (route.readonly) {
       setBuildMessage("Primary segments are view-only. Select a backup route to add it.");
@@ -1054,10 +1085,14 @@ export function RoutePlanBuilder({
       return;
     }
     setBuildMessage(null);
+    // A backup segment on the same route as a PRIMARY segment starts with its vehicles / provider (the coordinator can still change
+    // them). A route that only partly overlaps PRIMARY has no single source, so it stays unassigned and the coordinator assigns it.
+    const inherited = isBackup ? primaryResourcesFor(route) : undefined;
     const newSegment: DraftSegment = {
       id: `${route.id}-${Date.now()}`,
       route,
-      arrangement: arrangementForRoute(route),
+      arrangement: inherited?.provider ? "OUTSOURCED" : arrangementForRoute(route),
+      ...inherited,
       stopType:
         route.toLocation?.id === plan.to?.id
           ? "DESTINATION"
@@ -1354,14 +1389,25 @@ export function RoutePlanBuilder({
                       }
                     : undefined,
               }
-            : {
-                route,
-                routeType: "PRIMARY" as const,
-                plannedDepartureAt: plan.departureAt,
-                plannedArrivalAt: plan.arrivalAt,
-                vehicleIds: undefined,
-                outsourcing: undefined,
-              };
+            : (() => {
+                // PRIMARY segments copied into the backup keep the PRIMARY's own vehicles / provider (RP4 replaces the whole plan).
+                const primaryData =
+                  primarySegmentData?.[readonlyPrimaryRoutes.indexOf(route)];
+                return {
+                  route,
+                  routeType: "PRIMARY" as const,
+                  plannedDepartureAt: plan.departureAt,
+                  plannedArrivalAt: plan.arrivalAt,
+                  vehicleIds: primaryData?.vehicleIds,
+                  outsourcing: primaryData?.provider
+                    ? {
+                        transportProviderId:
+                          primaryData.provider.transportProviderId,
+                        note: primaryData.note,
+                      }
+                    : undefined,
+                };
+              })();
         })
       : segments.map((segment) => ({
           route: segment.route,

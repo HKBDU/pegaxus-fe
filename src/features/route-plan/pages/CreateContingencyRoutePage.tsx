@@ -4,10 +4,13 @@ import { RoutePlanBuilder, type RoutePlanBuilderMetadata } from "../components/R
 import { getRoutePlan, getRoutePlans, getTransportPlan } from "../services";
 import { adaptTransportPlan, loadAllLocations, loadAllRoutes, toMapLocation, toMapRoute, type TransportPlanApiValue } from "../api-adapters";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
+import { draftDataFromSegment, type SegmentDraftData } from "../segment-draft-data";
 
 export default function CreateContingencyRoutePage() {
   const { transportPlanId } = useParams<{ transportPlanId: string }>();
   const [primaryRoutes, setPrimaryRoutes] = useState<MapRoute[]>([]);
+  // Vehicles / provider of each PRIMARY segment, same order as `primaryRoutes`.
+  const [primarySegmentData, setPrimarySegmentData] = useState<SegmentDraftData[]>([]);
   const [locations, setLocations] = useState<MapLocation[]>([]);
   const [routes, setRoutes] = useState<MapRoute[]>([]);
   const [metadata, setMetadata] = useState<RoutePlanBuilderMetadata>();
@@ -62,26 +65,31 @@ export default function CreateContingencyRoutePage() {
           }
         }
         if (!active) return;
-        const routes =
+        const primarySegments =
           (primary?.segments ?? []).flatMap((segment) => {
             const from = toMapLocation(segment?.fromLocation);
             const to = toMapLocation(segment?.toLocation);
             if (!from || !to) return [];
             return [
               {
-                id: segment.route?.routeId ?? segment.routePlanRouteId,
-                name: segment.route?.routeName ?? "Primary Segment",
-                transportMode: segment.route?.transportMode ?? "ROAD",
-                fromLocation: from,
-                toLocation: to,
-                distanceKm: segment.route?.distanceKm ?? 0,
-                durationMinutes: segment.route?.estimatedDurationMinutes ?? 0,
-                isOutsourced: segment.isOutsourced,
-                readonly: true,
+                route: {
+                  id: segment.route?.routeId ?? segment.routePlanRouteId,
+                  name: segment.route?.routeName ?? "Primary Segment",
+                  transportMode: segment.route?.transportMode ?? "ROAD",
+                  fromLocation: from,
+                  toLocation: to,
+                  distanceKm: segment.route?.distanceKm ?? 0,
+                  durationMinutes: segment.route?.estimatedDurationMinutes ?? 0,
+                  isOutsourced: segment.isOutsourced,
+                  readonly: true,
+                } satisfies MapRoute,
+                data: draftDataFromSegment(segment),
               },
             ];
           });
+        const routes = primarySegments.map((item) => item.route);
         setPrimaryRoutes(routes);
+        setPrimarySegmentData(primarySegments.map((item) => item.data));
         if (!routes.length)
           setError(
             "No valid PRIMARY route plan found. Please create a PRIMARY route plan first.",
@@ -121,6 +129,7 @@ export default function CreateContingencyRoutePage() {
       routeType="BACKUP"
       transportPlanId={transportPlanId ?? ""}
       primaryRoutes={primaryRoutes}
+      primarySegmentData={primarySegmentData}
       primaryAvailable={primaryRoutes.length > 0}
       primaryError={error}
       metadata={metadata}

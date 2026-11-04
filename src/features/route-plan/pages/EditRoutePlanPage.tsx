@@ -6,6 +6,10 @@ import {
 } from "../components/RoutePlanBuilder";
 import { getRoutePlan, getRoutePlans } from "../services";
 import {
+  draftDataFromSegment,
+  type SegmentDraftData,
+} from "../segment-draft-data";
+import {
   loadAllLocations,
   loadAllRoutes,
   toMapLocation,
@@ -72,6 +76,10 @@ export default function EditRoutePlanPage() {
   const { routePlanId } = useParams<{ routePlanId: string }>();
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [primaryRoutes, setPrimaryRoutes] = useState<MapRoute[]>([]);
+  // Vehicles / provider of each PRIMARY segment, same order as `primaryRoutes`.
+  const [primarySegmentData, setPrimarySegmentData] = useState<
+    SegmentDraftData[]
+  >([]);
   const [catalog, setCatalog] = useState<{
     locations: MapLocation[];
     routes: MapRoute[];
@@ -118,12 +126,20 @@ export default function EditRoutePlanPage() {
         const primary = routePlans.items.find(
           (item) => item.routeType === "PRIMARY" && item.status !== "CANCELLED",
         );
-        setPrimaryRoutes(
-          primary?.segments.flatMap((segment) => {
+        // RP2 lists plans without their segments; the PRIMARY route is read from its detail (RP3).
+        const primaryDetail = primary
+          ? await getRoutePlan(primary.routePlanId)
+          : null;
+        if (!active) return;
+        const primarySegments =
+          primaryDetail?.segments.flatMap((segment) => {
             const route = routeFromSegment(segment, true);
-            return route ? [route] : [];
-          }) ?? [],
-        );
+            return route
+              ? [{ route, data: draftDataFromSegment(segment) }]
+              : [];
+          }) ?? [];
+        setPrimaryRoutes(primarySegments.map((item) => item.route));
+        setPrimarySegmentData(primarySegments.map((item) => item.data));
       })
       .catch((requestError) => {
         if (active)
@@ -154,10 +170,13 @@ export default function EditRoutePlanPage() {
       </main>
     );
 
-  const initialRoutes = plan.segments.flatMap((segment) => {
+  // Routes and their saved data are built together so both lists stay in the same order.
+  const initialSegments = plan.segments.flatMap((segment) => {
     const route = routeFromSegment(segment);
-    return route ? [route] : [];
+    return route ? [{ route, data: draftDataFromSegment(segment) }] : [];
   });
+  const initialRoutes = initialSegments.map((item) => item.route);
+  const initialSegmentData = initialSegments.map((item) => item.data);
 
   const allLocationsMap = new Map<string, MapLocation>();
   for (const loc of catalog.locations) allLocationsMap.set(String(loc.id), loc);
@@ -177,8 +196,10 @@ export default function EditRoutePlanPage() {
       routeType={plan.routeType}
       metadata={metadataFromPlan(plan)}
       initialRoutes={initialRoutes}
+      initialSegmentData={initialSegmentData}
       initialRouteNote={plan.routeNote ?? ""}
       primaryRoutes={primaryRoutes}
+      primarySegmentData={primarySegmentData}
       primaryAvailable={plan.routeType !== "BACKUP" || primaryRoutes.length > 0}
       primaryError="No valid PRIMARY route plan found. Please create a PRIMARY route plan first."
       edit={{ routePlanId: plan.routePlanId, lastUpdatedAt: plan.updatedAt }}
