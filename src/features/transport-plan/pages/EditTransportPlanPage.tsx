@@ -63,6 +63,12 @@ export default function EditTransportPlanPage() {
               <TransportPlanMetadataForm
                 key={transportPlanId}
                 bookingId={plan.booking.bookingId}
+                originCountry={plan.booking.originCountry}
+                destinationCountry={plan.booking.destinationCountry}
+                originLatitude={plan.booking.originLatitude}
+                originLongitude={plan.booking.originLongitude}
+                destinationLatitude={plan.booking.destinationLatitude}
+                destinationLongitude={plan.booking.destinationLongitude}
                 plan={plan}
                 cancelHref={transportPlanDetail(transportPlanId)}
                 reloadLatest={async () => {
