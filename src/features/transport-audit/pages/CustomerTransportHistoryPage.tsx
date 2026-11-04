@@ -10,7 +10,8 @@ import { AuditTimeline } from "../components/AuditTimeline";
 import { CustomerTransportAuditSummary } from "../components/CustomerTransportAuditSummary";
 export default function CustomerTransportHistoryPage() {
   const { bookingId = "", transportId = "" } = useParams();
-  const query = useTransportAudit(transportId, "booking,timeline");
+  // `timeline` is not a block: the BE always returns it. Same blocks as the summary card, so both share one request.
+  const query = useTransportAudit(transportId, "booking,operations");
   if (query.isPending) return <LoadingState />;
   if (query.isError)
     return (
@@ -30,7 +31,11 @@ export default function CustomerTransportHistoryPage() {
           title="TRANSPORT HISTORY"
           backHref={`/bookings/${encodeURIComponent(bookingId)}`}
         />
-        <CustomerTransportAuditSummary bookingId={bookingId} audit={audit} />
+        <CustomerTransportAuditSummary
+          bookingId={bookingId}
+          audit={audit}
+          showHistoryLink={false}
+        />
         <section className="rounded-[2px] border bg-white p-5">
           <h2 className="mb-4 text-base font-semibold uppercase">
             Journey timeline

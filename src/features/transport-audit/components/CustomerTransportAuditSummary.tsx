@@ -15,14 +15,17 @@ export function CustomerTransportAuditSummary({
   bookingId,
   audit,
   transportId,
+  showHistoryLink = true,
 }: {
   bookingId: string;
   audit?: TransportAuditCustomer;
   transportId?: string;
+  /** Off on the history page itself, where the link would only reopen the same page. */
+  showHistoryLink?: boolean;
 }) {
   const query = useTransportAudit(
     String(transportId ?? audit?.transportId ?? ""),
-    "booking,operations,timeline",
+    "booking,operations",
   );
   const current = query.data ?? audit;
   const fallback = (current ?? {
@@ -47,13 +50,15 @@ export function CustomerTransportAuditSummary({
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline">
-            <Link
-              to={`/bookings/${encodeURIComponent(bookingId)}/transports/${encodeURIComponent(String(fallback.transportId))}/history`}
-            >
-              View transport history
-            </Link>
-          </Button>
+          {showHistoryLink ? (
+            <Button asChild variant="outline">
+              <Link
+                to={`/bookings/${encodeURIComponent(bookingId)}/transports/${encodeURIComponent(String(fallback.transportId))}/history`}
+              >
+                View transport history
+              </Link>
+            </Button>
+          ) : null}
           <DownloadEpodButton
             handoverRecordId={
               fallback.epod?.handoverRecordId

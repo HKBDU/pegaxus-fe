@@ -402,7 +402,6 @@ export const auditResponseSchema = z.preprocess(
           transport.destinationCountry ??
           transport.DestinationCountry,
         viewMode: target.viewMode ?? target.ViewMode,
-        timeline,
         booking: target.booking ?? target.Booking,
         horses: target.horses ?? target.Horses,
         routing: target.routing ?? target.Routing,
@@ -412,6 +411,9 @@ export const auditResponseSchema = z.preprocess(
         epod: target.epod ?? target.Epod,
         ...transport,
         ...target,
+        // After the spreads on purpose: `...target` carries the raw timeline (at/source/refId, no id), which would replace the
+        // normalized one, fail validation, and silently turn the whole timeline into [].
+        timeline,
       };
     }
     return raw;
