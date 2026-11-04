@@ -299,7 +299,7 @@ export function TransportPlanMetadataForm({
                       className="text-xs text-slate-500"
                     >
                       {baseline
-                        ? "An empty selection retains the saved location; it does not remove it."
+                        ? "An empty selection retains the saved location."
                         : "Leave empty for automatical resolving"}
                     </p>
                     <div className="min-h-5">
