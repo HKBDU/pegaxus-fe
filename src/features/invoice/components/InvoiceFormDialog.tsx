@@ -64,6 +64,7 @@ import type {
 import { formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime";
 import {
   DEFAULT_DUE_TIME,
+  dueDateOrderBounds,
   estimateSummary,
   formatMoney,
   parseTransitDays,
@@ -129,6 +130,13 @@ const QUOTATION_LOOKUP = {
   ...initialInvoiceParams,
   pageSize: 50,
   type: INVOICE_TYPE.QUOTATION,
+};
+
+/** R30 compares the due date with the FINAL invoice too (DEPOSIT must stay before it, FINAL/CREDIT_NOTE come after the others). */
+const FINAL_LOOKUP = {
+  ...initialInvoiceParams,
+  pageSize: 50,
+  type: INVOICE_TYPE.FINAL,
 };
 
 /** `items[0].quantity` from the BE -> react-hook-form path `items.0.quantity`. */
@@ -251,6 +259,32 @@ export function InvoiceFormDialog({
     : quotationsQuery.data?.items.find(
         (item) => item.status !== INVOICE_STATUS.CANCELLED,
       );
+  const finalsQuery = useBookingInvoices(
+    booking.bookingId,
+    FINAL_LOOKUP,
+    "manager",
+  );
+  // R30: the due date is bounded by the due dates of the other invoices of this booking.
+  const dueOrderBounds = useMemo(
+    () =>
+      selectedType
+        ? dueDateOrderBounds(selectedType, [
+            ...(quotationsQuery.data?.items ?? []),
+            ...(depositsQuery.data?.items ?? []),
+            ...(finalsQuery.data?.items ?? []),
+          ])
+        : { minDay: undefined, maxDay: undefined },
+    [
+      selectedType,
+      quotationsQuery.data,
+      depositsQuery.data,
+      finalsQuery.data,
+    ],
+  );
+  const dueMinDay =
+    dueOrderBounds.minDay && dueOrderBounds.minDay > todayIsoDate()
+      ? dueOrderBounds.minDay
+      : todayIsoDate();
 
   // IV1 only when creating: for an existing draft it would answer INVOICE_ALREADY_EXISTS about the draft itself.
   const suggestionQuery = useInvoiceSuggestion(
@@ -579,7 +613,8 @@ export function InvoiceFormDialog({
                                 value={field.value}
                                 onChange={field.onChange}
                                 onBlur={field.onBlur}
-                                minDate={todayIsoDate()}
+                                minDate={dueMinDay}
+                                maxDate={dueOrderBounds.maxDay}
                                 displayFormat="MMM dd, yyyy"
                                 placeholder="Pick a date"
                                 className={controlClass}
