@@ -48,6 +48,8 @@ import {
 import { emptyPlanForm } from "../constants";
 import type { TransportPlanDetail, TransportPlanFormValues } from "../types";
 import {
+  plannedStartEarliestDate,
+  validatePlannedStartLeadTime,
   validatePlannedStartNotPast,
   validateTransportPlanSchedule,
 } from "../schedule-validation";
@@ -75,6 +77,7 @@ const fields = [
 export function TransportPlanMetadataForm({
   bookingId,
   requestedArrivalDate,
+  booking,
   plan,
   cancelHref,
   reloadLatest,
@@ -84,6 +87,12 @@ export function TransportPlanMetadataForm({
 }: {
   bookingId: string;
   requestedArrivalDate?: string | null;
+  /** Used for the earliest planned start (booking creation date plus lead time); the limit applies once `createdAt` is returned. */
+  booking?: {
+    createdAt?: string | null;
+    originCountry: string;
+    destinationCountry: string;
+  };
   plan?: TransportPlanDetail;
   cancelHref: string;
   reloadLatest?: () => Promise<TransportPlanDetail | undefined>;
@@ -94,6 +103,10 @@ export function TransportPlanMetadataForm({
   const navigate = useNavigate();
   const scheduleId = useId();
   const todayLocal = new Date().toLocaleDateString("sv-SE");
+  const leadTimeEarliest = booking ? plannedStartEarliestDate(booking) : undefined;
+  // Earliest pickable day: not in the past, and not before the booking lead time (when the BE returns the creation date).
+  const startMinDate =
+    leadTimeEarliest && leadTimeEarliest > todayLocal ? leadTimeEarliest : todayLocal;
   const principal = useAuthStore((state) => state.principal);
   // Background TP3 refreshes must never silently replace the version the manager edited.
   const [baseline, setBaseline] = useState(plan);
@@ -133,7 +146,11 @@ export function TransportPlanMetadataForm({
     const startChanged =
       !baseline || values.plannedStartAt !== planToForm(baseline).plannedStartAt;
     const pastError = startChanged
-      ? validatePlannedStartNotPast(toUtcIso(values.plannedStartAt))
+      ? (validatePlannedStartNotPast(toUtcIso(values.plannedStartAt)) ??
+        validatePlannedStartLeadTime(
+          toUtcIso(values.plannedStartAt),
+          leadTimeEarliest,
+        ))
       : null;
     if (pastError) {
       form.setError(pastError.field, { type: "validate", message: pastError.message });
@@ -357,9 +374,9 @@ export function TransportPlanMetadataForm({
                                     // Planned start: grey out past days. A saved start already in the past stays selectable so it can be kept.
                                     minDate={
                                       name === "plannedStartAt"
-                                        ? date && date < todayLocal
+                                        ? date && date < startMinDate
                                           ? date
-                                          : todayLocal
+                                          : startMinDate
                                         : undefined
                                     }
                                     onBlur={field.onBlur}

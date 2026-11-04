@@ -64,6 +64,7 @@ export default function EditTransportPlanPage() {
                 key={transportPlanId}
                 bookingId={plan.booking.bookingId}
                 plan={plan}
+                booking={plan.booking}
                 cancelHref={transportPlanDetail(transportPlanId)}
                 reloadLatest={async () => {
                   const result = await query.refetch();

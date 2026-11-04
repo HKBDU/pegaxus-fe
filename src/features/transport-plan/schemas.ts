@@ -151,6 +151,8 @@ const bookingFields = {
   totalHorses: z.number().int().nonnegative(),
   requestedDepartureDate: z.iso.date(),
   requestedArrivalDate: z.iso.date().nullish(),
+  // Not returned by the BE yet; once it is, the planned start picker can lock days before the lead time.
+  createdAt: z.iso.datetime({ offset: true }).nullish(),
   specialRequirements: optionalText,
   transportPlan: planSummarySchema.nullable(),
   complianceDossier: dossierSummarySchema.nullable(),
@@ -329,6 +331,7 @@ export const transportPlanDetailSchema = z
       totalHorses: z.number().int().nonnegative(),
       requestedDepartureDate: z.iso.date(),
       requestedArrivalDate: z.iso.date().nullish(),
+      createdAt: z.iso.datetime({ offset: true }).nullish(),
       specialRequirements: optionalText,
     }),
     transport: z.object({
