@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -60,7 +61,7 @@ export function ApprovedBookingsTable({
         enableSorting: false,
         cell: ({ row }) => (
           <Link
-            className="font-semibold text-slate-900 underline decoration-primary/50 underline-offset-2 hover:decoration-primary"
+            className={codeLinkClassName}
             to={approvedBookingDetail(row.original.bookingId)}
           >
             {row.original.transportPlan

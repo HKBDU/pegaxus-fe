@@ -1,4 +1,4 @@
-import { Navigation, Square } from "lucide-react";
+import { Navigation } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import type { LocationSharingState } from "../types";
 import { LocationSharingStatus } from "./LocationSharingDetails";
@@ -64,11 +64,9 @@ export function LocationSharingControl({
         aria-describedby="location-sharing-status"
         className="location-sharing-toggle min-h-16 w-full rounded-xs px-4 py-3 text-base whitespace-normal disabled:opacity-70"
       >
-        {state.active ? (
-          <Square aria-hidden="true" className="size-5" />
-        ) : (
+        {!state.active ? (
           <Navigation aria-hidden="true" className="size-5" />
-        )}
+        ) : null}
         <span className="min-w-0">
           <span className="block">{label}</span>
           {feedback ? (

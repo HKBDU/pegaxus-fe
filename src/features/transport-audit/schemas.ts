@@ -346,6 +346,30 @@ export const auditResponseSchema = z.preprocess(
             ? target.Transport
             : {}
       ) as Record<string, unknown>;
+      const rawTimeline = target.timeline ?? target.Timeline ?? [];
+      const timeline = Array.isArray(rawTimeline)
+        ? rawTimeline.map((item) => {
+            if (!item || typeof item !== "object") return item;
+            const entry = item as Record<string, unknown>;
+            return {
+              ...entry,
+              // The API contract calls these fields refId/source/at; the UI uses
+              // the normalized id/type/occurredAt names.
+              id:
+                entry.id ??
+                entry.Id ??
+                entry.refId ??
+                entry.RefId ??
+                `${String(entry.source ?? entry.Source ?? "EVENT")}-${String(entry.at ?? entry.At ?? "")}`,
+              type: entry.type ?? entry.Type ?? entry.source ?? entry.Source,
+              occurredAt:
+                entry.occurredAt ??
+                entry.OccurredAt ??
+                entry.at ??
+                entry.At,
+            };
+          })
+        : [];
       return {
         transportId:
           target.transportId ??
@@ -378,7 +402,7 @@ export const auditResponseSchema = z.preprocess(
           transport.destinationCountry ??
           transport.DestinationCountry,
         viewMode: target.viewMode ?? target.ViewMode,
-        timeline: target.timeline ?? target.Timeline ?? [],
+        timeline,
         booking: target.booking ?? target.Booking,
         horses: target.horses ?? target.Horses,
         routing: target.routing ?? target.Routing,

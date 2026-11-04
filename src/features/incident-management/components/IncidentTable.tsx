@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
@@ -83,7 +84,7 @@ export function IncidentTable({ items, params, meta, isLoading, onFilterChange, 
         enableSorting: false,
         header: "INCIDENT CODE",
         cell: ({ row }) => (
-          <Link to={incidentRoutes.adminDetail(row.original.incidentReportId)} className="font-semibold text-slate-900 underline-offset-2 hover:text-amber-700 hover:underline">
+          <Link to={incidentRoutes.adminDetail(row.original.incidentReportId)} className={codeLinkClassName}>
             {row.original.incidentCode}
           </Link>
         ),

@@ -285,7 +285,7 @@ export function UpdateAuthorityReviewDialog({
           Update Authority Review Result
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[92vh] max-w-6xl w-full overflow-y-auto rounded-[2px] border-[#e5e2d9] p-6 sm:max-w-6xl">
+      <DialogContent className="min-w-0 overflow-y-auto rounded-[2px] border-[#e5e2d9] p-4 sm:max-w-6xl sm:p-6">
         <DialogHeader className="gap-1 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <FileCheck2 className="size-5 shrink-0 text-[#f39200]" />

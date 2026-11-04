@@ -1,4 +1,5 @@
 import type { MapLocation, MapRoute } from "@/shared/components/map";
+import { getRouteCorridorMetrics } from "@/shared/utils/map/routing";
 
 export const UK_IE_COUNTRIES = new Set([
   "united kingdom",
@@ -154,7 +155,7 @@ export type DetectedBcpMatch = {
 // A BCP must be on the route corridor, not merely the closest BCP anywhere in
 // Europe. This also prevents a UK preset (for example Dover) being injected
 // into an unrelated route when the route geometry is far away.
-const MAX_BCP_DISTANCE_TO_ROUTE_KM = 50;
+const MAX_BCP_DISTANCE_TO_ROUTE_KM = 10;
 
 /**
  * Finds the most suitable BCP location along a route's corridor.
@@ -210,26 +211,18 @@ export function findBestBcpAlongRoute(
 
   if (!allCandidates.length) return null;
 
-  // Sample points evenly along the route geometry
-  const sampledPoints: [number, number][] = [];
-  if (coords.length > 0) {
-    const step = Math.max(1, Math.floor(coords.length / 40));
-    for (let i = 0; i < coords.length; i += step) {
-      sampledPoints.push(coords[i]);
-    }
-    sampledPoints.push(coords[coords.length - 1]);
-  }
-
   let bestMatch: { loc: MapLocation; isPreset: boolean } | null = null;
   let minScore = Infinity;
+  let bestDistance = Infinity;
 
   for (const candidate of allCandidates) {
     const bcp = candidate.loc;
-    let bcpMinDist = Infinity;
-    for (const [lon, lat] of sampledPoints) {
-      const d = haversineDistanceKm(bcp.latitude, bcp.longitude, lat, lon);
-      if (d < bcpMinDist) bcpMinDist = d;
-    }
+    const corridor = getRouteCorridorMetrics(route.geometry ?? route.geoJson, {
+      latitude: bcp.latitude,
+      longitude: bcp.longitude,
+    });
+    if (!corridor || corridor.distanceKm > MAX_BCP_DISTANCE_TO_ROUTE_KM) continue;
+    const bcpMinDist = corridor.distanceKm;
 
     // Affinity weight: prefer master over presets, and prefer matching countries
     const bcpCountry = bcp.country?.trim().toLowerCase();
@@ -243,28 +236,15 @@ export function findBestBcpAlongRoute(
     if (score < minScore) {
       minScore = score;
       bestMatch = candidate;
+      bestDistance = bcpMinDist;
     }
   }
 
   if (!bestMatch) return null;
 
-  // Compute actual minimum physical distance
-  let actualMinDist = Infinity;
-  for (const [lon, lat] of sampledPoints) {
-    const d = haversineDistanceKm(
-      bestMatch.loc.latitude,
-      bestMatch.loc.longitude,
-      lat,
-      lon,
-    );
-    if (d < actualMinDist) actualMinDist = d;
-  }
-
-  if (actualMinDist > MAX_BCP_DISTANCE_TO_ROUTE_KM) return null;
-
   return {
     bcp: bestMatch.loc,
-    distanceKmToRoute: Math.round(actualMinDist * 10) / 10,
+    distanceKmToRoute: Math.round(bestDistance * 10) / 10,
     isMandatory,
     isFromPreset: bestMatch.isPreset,
   };
