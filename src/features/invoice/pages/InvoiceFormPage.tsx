@@ -46,8 +46,8 @@ export default function InvoiceFormPage({ mode }: InvoiceFormPageProps) {
   }
 
   async function reload() {
-    await invoiceQuery.refetch()
-    setReloadCount((count) => count + 1)
+    const result = await invoiceQuery.refetch()
+    if (result.isSuccess) setReloadCount((count) => count + 1)
   }
 
   const failure = (mode === "edit" && invoiceQuery.isError ? invoiceQuery : null) ?? (bookingQuery.isError ? bookingQuery : null)
@@ -60,7 +60,7 @@ export default function InvoiceFormPage({ mode }: InvoiceFormPageProps) {
         <div className="mx-auto max-w-[640px] space-y-3">
           <ErrorState
             message={getInvoiceErrorMessage(failure.error, "Unable to load the data of this invoice.")}
-            onRetry={() => void (mode === "edit" ? invoiceQuery.refetch() : bookingQuery.refetch())}
+            onRetry={() => void failure.refetch()}
           />
           <Link to={ROLE_ROUTES.invoices} className="block text-center text-xs font-bold uppercase tracking-wider text-primary">← Back to invoices</Link>
         </div>

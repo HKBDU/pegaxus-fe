@@ -14,7 +14,12 @@ export function useHorses() {
     setIsLoading(true)
     try {
       const result = await horseApi.getHorses({ pageIndex: 1, pageSize: 32 })
-      setHorses(result.items)
+      const allHorses = [...result.items]
+      for (let pageIndex = 2; pageIndex <= result.totalPages; pageIndex += 1) {
+        const page = await horseApi.getHorses({ pageIndex, pageSize: result.pageSize })
+        allHorses.push(...page.items)
+      }
+      setHorses([...new Map(allHorses.map((horse) => [horse.horseId, horse])).values()])
       setError(undefined)
     } catch (error) {
       if (import.meta.env.DEV) {

@@ -75,6 +75,7 @@ import { useDebounce } from "@/shared/hooks";
 import {
   AlertDialog,
   AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -175,6 +176,7 @@ export function InvoiceFormDialog({
   );
   const [formError, setFormError] = useState<string>();
   const [staleOpen, setStaleOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [focusRow, setFocusRow] = useState<{
     index: number;
     nonce: number;
@@ -461,6 +463,12 @@ export function InvoiceFormDialog({
     onReload?.();
   }
 
+  function requestClose() {
+    if (isSaving) return;
+    if (isDirty) setDiscardOpen(true);
+    else onClose();
+  }
+
   const transportCancelled = transportStatus === "CANCELLED";
   const canSave =
     selectedType !== null &&
@@ -475,7 +483,7 @@ export function InvoiceFormDialog({
     <>
       <Dialog
         open={!issueTarget}
-        onOpenChange={(open) => !open && !isSaving && onClose()}
+        onOpenChange={(open) => !open && requestClose()}
       >
         <DialogContent
           showCloseButton={!isSaving}
@@ -834,7 +842,7 @@ export function InvoiceFormDialog({
                   variant="outline"
                   className="h-9 rounded-none px-5 font-heading text-xs font-semibold uppercase tracking-[0.05em]"
                   disabled={isSaving}
-                  onClick={() => onClose()}
+                  onClick={requestClose}
                 >
                   Cancel
                 </Button>
@@ -877,6 +885,15 @@ export function InvoiceFormDialog({
         />
       ) : null}
 
+      <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
+        <AlertDialogContent><AlertDialogHeader>
+          <AlertDialogTitle>Discard invoice changes?</AlertDialogTitle>
+          <AlertDialogDescription>Your unsaved changes will be lost.</AlertDialogDescription>
+        </AlertDialogHeader><AlertDialogFooter>
+          <AlertDialogCancel>Keep editing</AlertDialogCancel>
+          <AlertDialogAction onClick={() => onClose()}>Discard changes</AlertDialogAction>
+        </AlertDialogFooter></AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={staleOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

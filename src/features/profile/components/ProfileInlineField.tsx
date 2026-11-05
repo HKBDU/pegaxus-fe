@@ -18,6 +18,7 @@ export type ProfileInlineFieldProps = {
   editor?: ReactNode
   compact?: boolean
   className?: string
+  disabled?: boolean
 }
 
 export function ProfileInlineField({
@@ -32,6 +33,7 @@ export function ProfileInlineField({
   editor,
   compact = false,
   className,
+  disabled = false,
 }: ProfileInlineFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -43,6 +45,7 @@ export function ProfileInlineField({
     return editing ? (
       <div className={cn("flex w-full max-w-[300px] items-center gap-1", className)}>
         <Input
+          disabled={disabled}
           ref={inputRef}
           aria-label={label}
           value={value ?? ""}
@@ -53,15 +56,16 @@ export function ProfileInlineField({
           }}
           className="profile-edit-field !h-9 !min-w-0 !flex-1 !px-2 !py-1 !text-[#181818] text-lg font-bold sm:text-xl"
         />
-        <Button type="button" size="icon" className="size-8 shrink-0 rounded-[5px] bg-[#f39200] hover:bg-[#d97f00]" aria-label={`Save ${label}`} onClick={onCommit}>
+        <Button type="button" disabled={disabled} size="icon" className="size-8 shrink-0 rounded-[5px] bg-[#f39200] hover:bg-[#d97f00]" aria-label={`Save ${label}`} onClick={onCommit}>
           <Check className="size-4" />
         </Button>
-        <Button type="button" variant="ghost" size="icon" className="size-8 shrink-0 rounded-[5px] text-white hover:bg-white/15 hover:text-white" aria-label={`Cancel ${label}`} onClick={onCancel}>
+        <Button type="button" disabled={disabled} variant="ghost" size="icon" className="size-8 shrink-0 rounded-[5px] text-white hover:bg-white/15 hover:text-white" aria-label={`Cancel ${label}`} onClick={onCancel}>
           <X className="size-4" />
         </Button>
       </div>
     ) : (
       <button
+        disabled={disabled}
         type="button"
         className={cn("group inline-flex max-w-full items-center gap-2 text-left", className)}
         onClick={onEdit}
@@ -83,6 +87,7 @@ export function ProfileInlineField({
         <div className="flex min-w-0 items-center gap-1.5 [&>*:first-child]:min-w-0 [&>*:first-child]:flex-1">
           {editor ?? (
             <Input
+              disabled={disabled}
               ref={inputRef}
               aria-label={label}
               value={value ?? ""}
@@ -94,15 +99,16 @@ export function ProfileInlineField({
               className="profile-edit-field !h-9 !min-w-0 !px-3 !py-1"
             />
           )}
-          <Button type="button" size="icon" className="size-8 shrink-0" aria-label={`Save ${label}`} onClick={onCommit}>
+          <Button type="button" disabled={disabled} size="icon" className="size-8 shrink-0" aria-label={`Save ${label}`} onClick={onCommit}>
             <Check className="size-4" />
           </Button>
-          <Button type="button" variant="ghost" size="icon" className="size-8 shrink-0" aria-label={`Cancel ${label}`} onClick={onCancel}>
+          <Button type="button" disabled={disabled} variant="ghost" size="icon" className="size-8 shrink-0" aria-label={`Cancel ${label}`} onClick={onCancel}>
             <X className="size-4" />
           </Button>
         </div>
       ) : (
         <button
+          disabled={disabled}
           type="button"
           className="group flex min-h-10 min-w-0 items-center justify-between gap-3 border-b border-[#e4e0d9] px-1 py-2 text-left transition-colors hover:border-[#f39200] hover:bg-[#fffaf1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f39200]"
           onClick={onEdit}

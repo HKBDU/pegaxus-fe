@@ -23,6 +23,7 @@ export function ProfileIdentityPanel({
   onChangeAvatar,
   onChangePassword,
   actions,
+  disabled = false,
 }: {
   profile: Profile
   avatarUrl?: string | null
@@ -34,6 +35,7 @@ export function ProfileIdentityPanel({
   accountStatus: string
   onChangePassword: () => void
   actions?: ReactNode
+  disabled?: boolean
 }) {
   return (
     <aside className="lg:sticky lg:top-20">
@@ -47,16 +49,16 @@ export function ProfileIdentityPanel({
         <div className="absolute left-5 top-5 text-[10px] font-bold tracking-[0.18em] text-[#f39200] uppercase">Pegaxus profile</div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" aria-label="Open profile actions" className="absolute right-4 top-4 inline-flex size-9 items-center justify-center rounded-full border border-white/40 bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-[#f39200] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+            <button type="button" disabled={disabled} aria-label="Open profile actions" className="absolute right-4 top-4 inline-flex size-9 items-center justify-center rounded-full border border-white/40 bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-[#f39200] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
               <MoreHorizontal className="size-5" aria-hidden="true" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={8} className="w-52 rounded-[6px] border-[#d1d5db] bg-white p-1.5 text-[#181818]">
-            <DropdownMenuItem className="cursor-pointer gap-2 rounded-[3px] px-3 py-2.5 text-sm font-medium data-[highlighted]:bg-[#fff4df] data-[highlighted]:text-[#9a5b00]" onSelect={onChangeAvatar}>
+            <DropdownMenuItem disabled={disabled} className="cursor-pointer gap-2 rounded-[3px] px-3 py-2.5 text-sm font-medium data-[highlighted]:bg-[#fff4df] data-[highlighted]:text-[#9a5b00]" onSelect={onChangeAvatar}>
               <Pencil className="size-4" aria-hidden="true" />
               <span>Change avatar</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer gap-2 rounded-[3px] px-3 py-2.5 text-sm font-medium data-[highlighted]:bg-[#fff4df] data-[highlighted]:text-[#9a5b00]" onSelect={onChangePassword}>
+            <DropdownMenuItem disabled={disabled} className="cursor-pointer gap-2 rounded-[3px] px-3 py-2.5 text-sm font-medium data-[highlighted]:bg-[#fff4df] data-[highlighted]:text-[#9a5b00]" onSelect={onChangePassword}>
               <KeyRound className="size-4" aria-hidden="true" />
               <span>Change password</span>
             </DropdownMenuItem>

@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import type { UseFormReturn } from "react-hook-form"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -9,12 +9,14 @@ import { PAGE_SHELL_CLASS, PAGE_WIDTH_CLASS } from "@/features/fleet/components/
 import { VEHICLE_LIST_PATH, vehicleDetailPath } from "@/features/fleet/constants/fleet.constants"
 import { useCreateVehicle, useUpdateVehicle, useVehicle } from "@/features/fleet/hooks"
 import type { VehicleFormValues } from "@/features/fleet/schemas"
+import type { Vehicle } from "@/features/fleet/types"
 import { FleetApiError } from "@/features/fleet/services"
 import { toVehiclePayload } from "@/features/fleet/vehicle-form"
 import { getFleetErrorCode, getFleetErrorMessage } from "@/features/fleet/utils"
 import { ErrorState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog"
 
 const FORM_FIELDS = new Set<string>([
   "vehicleName",
@@ -41,14 +43,17 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
   const attempt = useRequestAttemptGuard()
   const formRef = useRef<UseFormReturn<VehicleFormValues> | null>(null)
   const isSaving = createVehicle.isPending || updateVehicle.isPending
+  const [reloadCount, setReloadCount] = useState(0)
+  const [reloadOpen, setReloadOpen] = useState(false)
 
-  const save = async (values: VehicleFormValues) => {
+  const save = async (values: VehicleFormValues, baseline?: Vehicle) => {
     const form = formRef.current
     try {
       const guarded = await attempt.run(async () => {
         const payload = toVehiclePayload(values)
-        if (isEdit && vehicleQuery.data) {
-          await updateVehicle.mutateAsync({ id: vehicleQuery.data.vehicleId, payload: { ...payload, lastUpdatedAt: vehicleQuery.data.updatedAt } })
+        if (isEdit) {
+          if (!baseline) throw new Error("Load the vehicle before saving changes.")
+          await updateVehicle.mutateAsync({ id: baseline.vehicleId, payload: { ...payload, lastUpdatedAt: baseline.updatedAt } })
         } else {
           await createVehicle.mutateAsync(payload)
         }
@@ -64,7 +69,7 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
         form?.setError("licensePlate", { message }, { shouldFocus: true })
         return
       }
-      if (code === "VEHICLE_MODIFIED") void vehicleQuery.refetch()
+      if (code === "VEHICLE_MODIFIED") setReloadOpen(true)
       if (code === "VALIDATION_ERROR" && error instanceof FleetApiError && error.errors?.length) {
         const unmapped: string[] = []
         for (const item of error.errors) {
@@ -75,6 +80,15 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
         return
       }
       toast.error(message)
+    }
+  }
+
+  async function reload() {
+    if (isSaving || vehicleQuery.isFetching) return
+    const result = await vehicleQuery.refetch()
+    if (result.isSuccess) {
+      setReloadCount((count) => count + 1)
+      setReloadOpen(false)
     }
   }
 
@@ -91,8 +105,10 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
 
         {isEdit && vehicleQuery.isLoading ? <VehicleFormSkeleton /> : null}
         {isEdit && vehicleQuery.isError ? <ErrorState message="Unable to load this vehicle." onRetry={() => void vehicleQuery.refetch()} /> : null}
+        {isEdit && vehicleQuery.data ? <button type="button" disabled={isSaving || vehicleQuery.isFetching} className="mb-3 text-sm font-semibold underline disabled:opacity-50" onClick={() => setReloadOpen(true)}>Load latest vehicle</button> : null}
         {!isEdit || vehicleQuery.data ? (
           <VehicleForm
+            key={`${mode}-${vehicleId ?? "new"}-${reloadCount}`}
             mode={mode}
             vehicle={vehicleQuery.data}
             isSaving={isSaving}
@@ -103,6 +119,19 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
             }}
           />
         ) : null}
+        <AlertDialog open={reloadOpen} onOpenChange={(open) => { if (!vehicleQuery.isFetching) setReloadOpen(open) }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Load latest vehicle?</AlertDialogTitle>
+              <AlertDialogDescription>This replaces your unsaved changes with the latest vehicle information. Your draft is kept if loading fails.</AlertDialogDescription>
+              {vehicleQuery.isError ? <p className="text-sm text-red-700" role="alert">Unable to load the latest vehicle. Your draft is kept; try again.</p> : null}
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={vehicleQuery.isFetching}>Keep editing</AlertDialogCancel>
+              <AlertDialogAction disabled={vehicleQuery.isFetching || isSaving} onClick={(event) => { event.preventDefault(); void reload() }}>Reload and replace draft</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )

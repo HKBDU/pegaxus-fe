@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { PageHeaderProps } from "@/shared/types/props";
@@ -25,12 +26,10 @@ export function PageHeader({
           onClick={(event) => {
             if (onBack?.() === false) event.preventDefault();
           }}
-          className="relative z-10 inline-flex min-h-8 w-fit max-w-full items-center gap-1.5 rounded-[2px] px-1 text-xs leading-5 font-bold tracking-wide text-primary uppercase underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className="group relative z-10 inline-flex min-h-8 w-fit max-w-full items-center gap-1.5 rounded-[2px] px-1 text-xs leading-5 font-bold tracking-wide text-primary uppercase focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
-          <span aria-hidden="true" className="text-[14px]">
-            ←
-          </span>
-          {backLabel}
+          <ArrowLeft aria-hidden="true" className="size-3.5 shrink-0" />
+          <span className="underline-offset-4 group-hover:underline">{backLabel}</span>
         </NavLink>
       )}
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">

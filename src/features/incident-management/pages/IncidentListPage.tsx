@@ -49,7 +49,7 @@ export default function IncidentListPage() {
     <div className="booking-page-shell min-h-[70dvh] px-4 py-6 font-sans sm:px-6 lg:px-10 lg:py-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         <div className="mb-6">
-          <PageHeader title="INCIDENTS" backHref="/admin" backLabel="BACK TO DASHBOARD" />
+          <PageHeader title="INCIDENTS" backHref="/admin" showBack={false} />
           <p className="m-0 max-w-2xl text-xs leading-5 text-gray-600">
             Monitor road incidents, emergency costs and settlements across every active transport.
           </p>

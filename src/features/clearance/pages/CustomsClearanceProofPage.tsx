@@ -8,6 +8,7 @@ import { Navigation } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useClearanceDossierContext, useSubmitCustomsClearanceProof } from '../hooks'
 import { CustomsEntrySection } from '../components/CustomsEntrySection'
+import { ErrorState } from '@/shared/components/common'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -46,7 +47,7 @@ function routeLabel(dossier?: ReturnType<typeof useClearanceDossierContext>['dat
 export default function CustomsClearanceProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
   const dossierId = dossierIdParam ?? null
-  const { data: dossier, isLoading } = useClearanceDossierContext(dossierId)
+  const { data: dossier, isLoading, isError: dossierFailed, refetch: reloadDossier } = useClearanceDossierContext(dossierId)
   const { mutateAsync: submitProof, isPending } = useSubmitCustomsClearanceProof(dossierId ?? '')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null)
@@ -58,7 +59,7 @@ export default function CustomsClearanceProofPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      customsPortName: 'Dover Western Docks Customs Point (GB DOV)',
+      customsPortName: '',
       mrnNumber: '',
       customsLane: undefined,
       isHeld: false,
@@ -67,7 +68,7 @@ export default function CustomsClearanceProofPage() {
   })
 
   useEffect(() => {
-    if (dossier?.bookingSummary?.destinationPort) form.setValue('customsPortName', dossier.bookingSummary.destinationPort)
+    if (dossier?.bookingSummary?.destinationPort && !form.getFieldState('customsPortName').isDirty) form.setValue('customsPortName', dossier.bookingSummary.destinationPort)
   }, [dossier, form])
 
   const isHeld = form.watch('isHeld')
@@ -92,7 +93,7 @@ export default function CustomsClearanceProofPage() {
     if (isMandatoryRoute && uploadedPublicIds.length === 0) {
       return setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
     }
-    if (dossierId == null) return
+    if (dossierId == null || !dossier || dossierFailed) return
     try {
       await submitProof({
         ...values,
@@ -118,6 +119,8 @@ export default function CustomsClearanceProofPage() {
       toast.error(messages[code] ?? 'Failed to submit customs proof. Please try again.')
     }
   }
+
+  if (dossierFailed || (!isLoading && !dossier)) return <ErrorState message="Unable to load the transport dossier. Retry before submitting proof." onRetry={() => void reloadDossier()} />
 
   if (isLoading) {
     return (

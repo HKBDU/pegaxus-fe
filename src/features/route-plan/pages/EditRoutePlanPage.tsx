@@ -77,6 +77,9 @@ export default function EditRoutePlanPage() {
     ])
       .then(async ([routePlan, locationResult, routeResult]) => {
         if (!active) return;
+        if (routePlan.segments.some((segment) => segment.driver || segment.escort)) {
+          throw new Error("This route has assigned crew. Editing is unavailable until those assignments can be preserved. Contact your Logistics Manager.");
+        }
         setSavedSegments(hydrateBuilderSegments(routePlan.segments));
         setPlan(routePlan);
 

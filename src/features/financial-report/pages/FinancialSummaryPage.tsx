@@ -176,27 +176,38 @@ function LoadedReport({
               <span>Currency: {report.currency}</span>
             </div>
           </div>
-          <Button
-            type="button"
-            variant={report.isStale ? "default" : "outline"}
-            onClick={() => void refresh()}
-            disabled={
-              REPORT_MOCK_MODE ||
-              !editable ||
-              busy ||
-              api.query.isFetching ||
-              draft.needsReview
-            }
-            className="h-auto min-h-10 max-w-full whitespace-normal rounded-[2px] text-left"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-4 shrink-0 ${api.refresh.isPending ? "animate-spin" : ""}`}
-            />
-            {api.refresh.isPending
-              ? "Refreshing financial data…"
-              : "Refresh financial data"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void reload()}
+              disabled={busy || api.query.isFetching}
+              className="rounded-[2px]"
+            >
+              Load latest report
+            </Button>
+            <Button
+              type="button"
+              variant={report.isStale ? "default" : "outline"}
+              onClick={() => void refresh()}
+              disabled={
+                REPORT_MOCK_MODE ||
+                !editable ||
+                busy ||
+                api.query.isFetching ||
+                draft.needsReview
+              }
+              className="h-auto min-h-10 max-w-full whitespace-normal rounded-[2px] text-left"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={`size-4 shrink-0 ${api.refresh.isPending ? "animate-spin" : ""}`}
+              />
+              {api.refresh.isPending
+                ? "Refreshing financial data…"
+                : "Refresh financial data"}
+            </Button>
+          </div>
         </div>
         <dl className="mt-3 mb-0 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-500">
           {(

@@ -246,13 +246,14 @@ export function serializeBuilderSegment(
     throw new Error(`Select a provider for segment ${index + 1}.`);
   }
   const route = segment.route;
+  const catalogRouteId = route.catalogRouteId ?? route.id;
   const isCatalogRoute =
-    route.id != null && !String(route.id).startsWith("dynamic-");
+    catalogRouteId != null && !String(catalogRouteId).startsWith("dynamic-");
   return {
     sequenceNo: index + 1,
     routeType,
     ...(isCatalogRoute
-      ? { routeId: String(route.id) }
+      ? { routeId: String(catalogRouteId) }
       : {
           fromLocationId: String(route.fromLocation?.id ?? ""),
           toLocationId: String(route.toLocation?.id ?? ""),

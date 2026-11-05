@@ -32,9 +32,13 @@ const HORSE_ENDPOINT = "horses"
 const useBookingMocks = import.meta.env.DEV && import.meta.env.VITE_BOOKING_API_MOCKS === "true"
 let mockBookings = structuredClone(MOCK_BOOKINGS)
 
-function wait(delay = 180) {
-  return new Promise((resolve) => window.setTimeout(resolve, delay))
+async function wait(delay = 180, signal?: AbortSignal) {
+  signal?.throwIfAborted()
+  await new Promise((resolve) => window.setTimeout(resolve, delay))
+  signal?.throwIfAborted()
 }
+
+type BookingRequestOptions = { signal?: AbortSignal }
 
 function unwrapValue<T>(payload: unknown): T {
   if (payload && typeof payload === "object" && "value" in payload) {
@@ -56,9 +60,9 @@ async function callApi<T>(request: Promise<T>): Promise<T> {
 
 const api = {
   get: <T = unknown>(url: string, config?: AxiosRequestConfig) => callApi(apiClient.get<unknown, T>(url, config)),
-  post: <T = unknown>(url: string, data?: unknown) => callApi(apiClient.post<unknown, T>(url, data)),
-  patch: <T = unknown>(url: string, data?: unknown) => callApi(apiClient.patch<unknown, T>(url, data)),
-  delete: <T = unknown>(url: string) => callApi(apiClient.delete<unknown, T>(url)),
+  post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) => callApi(apiClient.post<unknown, T>(url, data, config)),
+  patch: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) => callApi(apiClient.patch<unknown, T>(url, data, config)),
+  delete: <T = unknown>(url: string, config?: AxiosRequestConfig) => callApi(apiClient.delete<unknown, T>(url, config)),
 }
 
 /** The BE reads "+00:00" as local time on a non-UTC server (=> false BOOKING_MODIFIED); "Z" is always read as UTC. */
@@ -145,6 +149,35 @@ async function getMockBookings(params: BookingListParams): Promise<BookingListRe
   }
 }
 
+async function loadBooking(bookingId: EntityId, config?: BookingRequestOptions): Promise<Booking> {
+  if (useBookingMocks) {
+    await wait(180, config?.signal)
+    return structuredClone(findMockBooking(bookingId))
+  }
+  const payload = await api.get<unknown>(`${BOOKING_ENDPOINT}/${bookingId}`, config)
+  return unwrapValue<Booking>(payload)
+}
+
+async function updateBookingRequest(bookingId: EntityId, data: UpdateBookingRequest, config?: BookingRequestOptions): Promise<UpdateBookingResult> {
+  if (useBookingMocks) {
+    await wait(180, config?.signal)
+    const booking = findMockBooking(bookingId)
+    assertPending(booking)
+    if (booking.updatedAt !== data.lastUpdatedAt) throw new Error("BOOKING_MODIFIED")
+    const updatedAt = new Date().toISOString()
+    const changes = Object.fromEntries(
+      Object.entries(data).filter(([key, value]) => key !== "lastUpdatedAt" && value !== undefined),
+    )
+    Object.assign(booking, changes, { updatedAt })
+    return { updatedAt }
+  }
+  const payload = await api.patch<unknown>(`${BOOKING_ENDPOINT}/${bookingId}`, {
+    ...data,
+    lastUpdatedAt: toUtcZ(data.lastUpdatedAt),
+  }, config)
+  return unwrapValue<UpdateBookingResult>(payload)
+}
+
 const bookingBaseService = createBaseService<
   Booking,
   CreateBookingRequest,
@@ -194,15 +227,7 @@ const bookingBaseService = createBaseService<
       },
     }
   },
-  getById: async (id) => {
-    const bookingId = id
-    if (useBookingMocks) {
-      await wait()
-      return structuredClone(findMockBooking(bookingId))
-    }
-    const payload = await api.get<unknown>(`${BOOKING_ENDPOINT}/${bookingId}`)
-    return unwrapValue<Booking>(payload)
-  },
+  getById: loadBooking,
   create: async (data) => {
     if (useBookingMocks) {
       await wait()
@@ -248,26 +273,7 @@ const bookingBaseService = createBaseService<
     const payload = await api.post<unknown>(BOOKING_ENDPOINT, data)
     return unwrapValue<CreateBookingResult>(payload)
   },
-  update: async (id, data) => {
-    const bookingId = id
-    if (useBookingMocks) {
-      await wait()
-      const booking = findMockBooking(bookingId)
-      assertPending(booking)
-      if (booking.updatedAt !== data.lastUpdatedAt) throw new Error("BOOKING_MODIFIED")
-      const updatedAt = new Date().toISOString()
-      const changes = Object.fromEntries(
-        Object.entries(data).filter(([key, value]) => key !== "lastUpdatedAt" && value !== undefined),
-      )
-      Object.assign(booking, changes, { updatedAt })
-      return { updatedAt }
-    }
-    const payload = await api.patch<unknown>(`${BOOKING_ENDPOINT}/${bookingId}`, {
-      ...data,
-      lastUpdatedAt: toUtcZ(data.lastUpdatedAt),
-    })
-    return unwrapValue<UpdateBookingResult>(payload)
-  },
+  update: updateBookingRequest,
 })
 
 const horseBaseService = createBaseService<AvailableHorse, never, never, HorseListParams>({
@@ -321,9 +327,9 @@ const horseBaseService = createBaseService<AvailableHorse, never, never, HorseLi
 
 export const bookingService = {
   getBookings: (params: BookingListParams) => bookingBaseService.getAll(params),
-  getBooking: (bookingId: EntityId) => bookingBaseService.getById(bookingId),
+  getBooking: loadBooking,
   createBooking: (data: CreateBookingRequest) => bookingBaseService.create(data),
-  updateBooking: (bookingId: EntityId, data: UpdateBookingRequest) => bookingBaseService.update(bookingId, data),
+  updateBooking: updateBookingRequest,
 
   getAvailableHorses: (params: HorseListParams): Promise<HorseListResponse> => horseBaseService.getAll(params),
 
@@ -345,9 +351,9 @@ export const bookingService = {
     return unwrapValue<BookingHistoryEntry[]>(payload)
   },
 
-  async addHorse(bookingId: EntityId, data: AddBookingHorseRequest): Promise<void> {
+  async addHorse(bookingId: EntityId, data: AddBookingHorseRequest, config?: BookingRequestOptions): Promise<void> {
     if (useBookingMocks) {
-      await wait()
+      await wait(180, config?.signal)
       const booking = findMockBooking(bookingId)
       assertPending(booking)
       if (booking.horses.some((horse) => horse.horseId === data.horseId)) throw new Error("HORSE_ALREADY_IN_BOOKING")
@@ -356,12 +362,12 @@ export const bookingService = {
       booking.updatedAt = new Date().toISOString()
       return
     }
-    await api.post(`${BOOKING_ENDPOINT}/${bookingId}/horses`, data)
+    await api.post(`${BOOKING_ENDPOINT}/${bookingId}/horses`, data, config)
   },
 
-  async updateHorse(bookingId: EntityId, horseId: EntityId, data: UpdateBookingHorseRequest): Promise<void> {
+  async updateHorse(bookingId: EntityId, horseId: EntityId, data: UpdateBookingHorseRequest, config?: BookingRequestOptions): Promise<void> {
     if (useBookingMocks) {
-      await wait()
+      await wait(180, config?.signal)
       const booking = findMockBooking(bookingId)
       assertPending(booking)
       const horse = booking.horses.find((item) => item.horseId === horseId)
@@ -370,12 +376,12 @@ export const bookingService = {
       booking.updatedAt = new Date().toISOString()
       return
     }
-    await api.patch(`${BOOKING_ENDPOINT}/${bookingId}/horses/${horseId}`, data)
+    await api.patch(`${BOOKING_ENDPOINT}/${bookingId}/horses/${horseId}`, data, config)
   },
 
-  async removeHorse(bookingId: EntityId, horseId: EntityId): Promise<void> {
+  async removeHorse(bookingId: EntityId, horseId: EntityId, config?: BookingRequestOptions): Promise<void> {
     if (useBookingMocks) {
-      await wait()
+      await wait(180, config?.signal)
       const booking = findMockBooking(bookingId)
       assertPending(booking)
       const index = booking.horses.findIndex((item) => item.horseId === horseId)
@@ -385,7 +391,7 @@ export const bookingService = {
       booking.updatedAt = new Date().toISOString()
       return
     }
-    await api.delete(`${BOOKING_ENDPOINT}/${bookingId}/horses/${horseId}`)
+    await api.delete(`${BOOKING_ENDPOINT}/${bookingId}/horses/${horseId}`, config)
   },
 
   async cancelBooking(bookingId: EntityId, reason: string): Promise<void> {
@@ -448,21 +454,23 @@ export const bookingService = {
    * The BE only lets a customer edit a booking that is DRAFT (PENDING -> DRAFT -> edit -> PENDING),
    * whereas the contract edits it while PENDING. Mock mode has no such rule, so this is a no-op there.
    */
-  async changeStatus(bookingId: EntityId, status: "DRAFT" | "PENDING"): Promise<void> {
+  async changeStatus(bookingId: EntityId, status: "DRAFT" | "PENDING", config?: BookingRequestOptions): Promise<void> {
     if (useBookingMocks) return
-    await api.patch(`${BOOKING_ENDPOINT}/${bookingId}/status`, { status })
+    await api.patch(`${BOOKING_ENDPOINT}/${bookingId}/status`, { status }, config)
   },
 
   /** Best effort while the tab is closing: a keepalive fetch can outlive the page (axios cannot). */
-  releaseOnPageHide(bookingId: EntityId): void {
+  async releaseOnPageHide(bookingId: EntityId, config?: BookingRequestOptions): Promise<void> {
     if (useBookingMocks) return
     const token = useAuthStore.getState().accessToken
-    void fetch(`${env.API_URL}${BOOKING_ENDPOINT}/${bookingId}/status`, {
+    const response = await fetch(`${env.API_URL}${BOOKING_ENDPOINT}/${bookingId}/status`, {
       method: "PATCH",
       keepalive: true,
+      signal: config?.signal,
       headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify({ status: "PENDING" }),
-    }).catch(() => undefined)
+    })
+    if (!response.ok) throw new Error("Unable to release the booking edit session.")
   },
 
   async rejectBooking(bookingId: EntityId, reason: string): Promise<void> {

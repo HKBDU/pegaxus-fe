@@ -8,6 +8,7 @@ import { resolveNotificationPath } from "./notification-routes"
 import { isNotificationVisibleToPrincipal } from "./notification-policy"
 import { useNotificationStore } from "./notification-store"
 import type { AppNotification } from "./types"
+import { captureNotificationSession, isNotificationSessionCurrent } from "./session"
 
 interface RealtimeProviderProps {
   children: ReactNode
@@ -51,14 +52,17 @@ function refreshScreensOfServerState() {
 
 /** Re-read what SignalR could not deliver (offline, reconnect): unread count + latest unread rows. */
 async function syncFromRest() {
+  const owner = captureNotificationSession()
+  if (!isNotificationSessionCurrent(owner)) return
   const store = useNotificationStore.getState()
   try {
-    const principal = useAuthStore.getState().principal
+    const principal = owner.principal
     const pageSize = principal?.roles.includes("CUSTOMER") ? 100 : 20
     const [count, page] = await Promise.all([
       principal?.roles.includes("CUSTOMER") ? Promise.resolve(null) : notificationApi.unreadCount(),
       notificationApi.list({ pageSize, unreadOnly: true }),
     ])
+    if (!isNotificationSessionCurrent(owner)) return
     const visible = page.items.filter((item) => isNotificationVisibleToPrincipal(item, principal))
     store.setUnreadCount(count ?? visible.length)
     store.upsert(visible)
@@ -68,6 +72,7 @@ async function syncFromRest() {
 }
 
 function showToast(notification: AppNotification, onNavigate?: (path: string) => void) {
+  if (window.location.pathname === "/") return
   // LOW / NORMAL: bell + inbox only. HIGH: toast. URGENT: toast that stays until dismissed.
   if (notification.priority !== "HIGH" && notification.priority !== "URGENT") return
   const principal = useAuthStore.getState().principal
@@ -93,16 +98,19 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
   const sessionVersion = useAuthStore((state) => state.sessionVersion)
 
   useEffect(() => {
+    const owner = captureNotificationSession()
     const store = useNotificationStore.getState()
     const offState = notificationHub.onStateChange(store.setConnection)
     // A push sent while the connection was down (sleep, network drop, reconnect) is never replayed, so besides the
     // notifications every open screen of server state (route plan status included) is re-read once it is back.
     const offConnected = notificationHub.onConnected(() => {
+      if (!isNotificationSessionCurrent(owner)) return
       void syncFromRest()
       void refreshScreensOfServerState()
     })
     const rereadTimers = new Set<ReturnType<typeof setTimeout>>()
     const offPush = notificationHub.on("ReceiveNotification", (notification) => {
+      if (!isNotificationSessionCurrent(owner)) return
       const principal = useAuthStore.getState().principal
       if (!isNotificationVisibleToPrincipal(notification, principal)) {
         void notificationHub.acknowledgeDelivered(notification.id)
@@ -118,13 +126,14 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
       if (isPaymentNotification(notification)) {
         const timer = setTimeout(() => {
           rereadTimers.delete(timer)
-          void refreshScreensOfServerState()
+          if (isNotificationSessionCurrent(owner)) void refreshScreensOfServerState()
         }, PAYMENT_REREAD_DELAY_MS)
         rereadTimers.add(timer)
       }
       void notificationHub.acknowledgeDelivered(notification.id)
     })
     const offRoutePlanCancelled = notificationHub.on("RoutePlanCancelled", (event) => {
+      if (!isNotificationSessionCurrent(owner)) return
       void queryClient.invalidateQueries({
         queryKey: ["route-view", "list", event.transportPlanId],
       })
@@ -140,7 +149,7 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
       rereadTimers.forEach(clearTimeout)
       rereadTimers.clear()
     }
-  }, [onNavigate])
+  }, [onNavigate, signedIn, sessionVersion])
 
   useEffect(() => {
     const token = useAuthStore.getState().accessToken
@@ -149,8 +158,27 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
       useNotificationStore.getState().reset()
       return
     }
-    void notificationHub.start(() => useAuthStore.getState().accessToken)
+    const owner = captureNotificationSession()
+    let disposed = false
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+    let attempts = 0
+    async function connect() {
+      if (disposed || !isNotificationSessionCurrent(owner)) return
+      try {
+        await notificationHub.start(() => isNotificationSessionCurrent(owner) ? useAuthStore.getState().accessToken : null)
+      } catch {
+        // Initial start failures are not covered by SignalR automatic reconnect.
+      }
+      if (disposed || !isNotificationSessionCurrent(owner)) return
+      if (!["connected", "reconnecting"].includes(notificationHub.getState())) {
+        const delay = [2000, 5000, 10000][attempts++] ?? 30000
+        retryTimer = setTimeout(() => void connect(), delay)
+      }
+    }
+    void connect()
     return () => {
+      disposed = true
+      clearTimeout(retryTimer)
       void notificationHub.stop()
       useNotificationStore.getState().reset()
     }

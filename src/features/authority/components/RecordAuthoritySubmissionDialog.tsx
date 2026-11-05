@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
 import { normalizeRole } from "@/features/auth/access-control";
 import FileUploader from "@/shared/components/FileUploader";
@@ -18,12 +18,6 @@ import {
 import { Input } from "@/shared/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/shared/components/ui/tooltip";
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
 import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { todayUtc } from "@/shared/utils/datetime";
@@ -299,21 +293,7 @@ export function RecordAuthoritySubmissionDialog({
           </Field>
         </form>
         <DialogFooter className="gap-2 sm:justify-end">
-          {serverError && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="cursor-help text-red-600">
-                    <AlertCircle
-                      className="size-5"
-                      aria-label="Submission error"
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{serverError}</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+          {serverError && <p role="alert" className="w-full break-words text-sm text-red-700">{serverError}</p>}
           <Button
             type="button"
             variant="outline"

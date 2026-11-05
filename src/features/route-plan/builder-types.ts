@@ -14,7 +14,7 @@ export type DraftSegment = {
   id: string;
   sequenceNo?: number;
   routeType?: RouteType;
-  route: MapRoute;
+  route: MapRoute & { catalogRouteId?: string };
   arrangement: "INTERNAL" | "OUTSOURCED";
   stopType: "REST_STOP" | "BCP" | "DESTINATION";
   provider?: BuilderProvider;

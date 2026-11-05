@@ -22,7 +22,7 @@ function samePoint(
 export function sameRoute(left: MapRoute, right: MapRoute) {
   const leftId = left.id == null ? "" : String(left.id);
   const rightId = right.id == null ? "" : String(right.id);
-  if (leftId && rightId && leftId === rightId) return true;
+  if (leftId && rightId) return leftId === rightId;
   return (
     String(left.fromLocation?.id) === String(right.fromLocation?.id) &&
     String(left.toLocation?.id) === String(right.toLocation?.id) &&

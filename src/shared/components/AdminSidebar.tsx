@@ -5,7 +5,7 @@ import {
   FileStack,
   FileText,
   Gauge,
-  House,
+  ChartNoAxesCombined,
   LogOut,
   MapPin,
   MessageSquareWarning,
@@ -40,7 +40,6 @@ import {
 const incidentsItem = { label: "Incidents", href: ROLE_ROUTES.incidents, icon: TriangleAlert }
 
 const primaryItems = [
-  { label: "Dashboard", href: "/admin", icon: House },
   { label: "Transport Requests", href: "/admin/transport-requests", icon: Truck },
   { label: "Transport Plans", href: ROLE_ROUTES.transportPlans, icon: MapPin },
   { label: "Ongoing Transports", href: ROLE_ROUTES.ongoingTransports, icon: Truck },
@@ -48,6 +47,9 @@ const primaryItems = [
   { label: "Invoices", href: ROLE_ROUTES.invoices, icon: FileText },
   { label: "Claims", href: ROLE_ROUTES.claims, icon: MessageSquareWarning },
   { label: "Transport Archive & Audit", href: ROLE_ROUTES.transportArchive, icon: Archive },
+  { label: "Transit Time & Delays", href: "/admin/reports/transit-time", icon: ChartNoAxesCombined },
+  { label: "Incident & Claim Frequency", href: "/admin/reports/incident-claim-frequency", icon: ChartNoAxesCombined },
+  { label: "On-Time Delivery", href: "/admin/reports/on-time-delivery", icon: ChartNoAxesCombined },
   { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
   { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
   { label: "Users", href: "/admin/users", icon: UsersRound },

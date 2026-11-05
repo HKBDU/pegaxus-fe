@@ -93,7 +93,7 @@ export function HorseDetailPage() {
       navigate("/my-horses")
     } catch (error) {
       setIsDeleteOpen(false)
-      setError(getHorseApiErrorMessage(error, "Unable to delete horse. Please try again."))
+      toast.error(getHorseApiErrorMessage(error, "Unable to delete horse. Please try again."))
     }
   }
 
