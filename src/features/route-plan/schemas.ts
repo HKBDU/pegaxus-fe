@@ -74,8 +74,8 @@ export const routeSegmentSchema = z.object({
   if (hasRoute && (segment.fromLocationId || segment.toLocationId || segment.transportMode)) {
     context.addIssue({ code: 'custom', path: ['routeId'], message: 'Use either routeId or the route location/mode fields, not both' })
   }
-  if (new Date(segment.plannedArrivalAt) <= new Date(segment.plannedDepartureAt)) {
-    context.addIssue({ code: 'custom', path: ['plannedArrivalAt'], message: 'Arrival must be after departure.' })
+  if (new Date(segment.plannedArrivalAt).getTime() - new Date(segment.plannedDepartureAt).getTime() < 24 * 60 * 60 * 1000) {
+    context.addIssue({ code: 'custom', path: ['plannedArrivalAt'], message: 'Arrival must be at least 24 hours after departure.' })
   }
   if (segment.outsourcing && segment.vehicleIds?.length) {
     context.addIssue({ code: 'custom', path: ['vehicleIds'], message: 'Outsourced segments cannot have vehicles.' })
