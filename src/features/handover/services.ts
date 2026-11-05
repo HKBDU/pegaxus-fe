@@ -125,7 +125,8 @@ export const handoverService = {
     return call(
       () =>
         apiClient.get<unknown, unknown>(`${path(transportId)}/handover-records`, {
-          params: { handoverType: filters.handoverType, status: filters.status, pageIndex: 1, pageSize: LIST_PAGE_SIZE, sortBy: "sequenceNo:asc" },
+          // The handover API is explicitly zero-based: pageIndex=1 would skip the first page entirely.
+          params: { handoverType: filters.handoverType, status: filters.status, pageIndex: 0, pageSize: LIST_PAGE_SIZE, sortBy: "sequenceNo:asc" },
           signal,
         }),
       (value) => handoverListSchema.parse(value),
