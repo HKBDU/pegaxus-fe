@@ -95,7 +95,12 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
   useEffect(() => {
     const store = useNotificationStore.getState()
     const offState = notificationHub.onStateChange(store.setConnection)
-    const offConnected = notificationHub.onConnected(() => void syncFromRest())
+    // A push sent while the connection was down (sleep, network drop, reconnect) is never replayed, so besides the
+    // notifications every open screen of server state (route plan status included) is re-read once it is back.
+    const offConnected = notificationHub.onConnected(() => {
+      void syncFromRest()
+      void refreshScreensOfServerState()
+    })
     const rereadTimers = new Set<ReturnType<typeof setTimeout>>()
     const offPush = notificationHub.on("ReceiveNotification", (notification) => {
       const principal = useAuthStore.getState().principal
