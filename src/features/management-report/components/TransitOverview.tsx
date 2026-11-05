@@ -78,7 +78,7 @@ export function TransitOverview({ report }: { report: TransitTimeReport }) {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <p className="mt-2 mb-2 break-words text-2xl font-semibold tabular-nums text-slate-900">
+            <p className="report-kpi-value mt-2 mb-2 break-words text-2xl font-semibold tabular-nums text-slate-900">
               {item.format(item.metric.value)}
             </p>
             <p className="m-0 text-xs tabular-nums text-slate-500">
@@ -90,11 +90,6 @@ export function TransitOverview({ report }: { report: TransitTimeReport }) {
           </div>
         ))}
       </div>
-      <p className="m-0 text-xs text-slate-500">
-        Previous period: {report.period.previousDateFrom} –{" "}
-        {report.period.previousDateTo}. Overview and charts cover all measured
-        transports, regardless of the detail-table filter.
-      </p>
     </section>
   );
 }

@@ -48,7 +48,7 @@ export function FinancialOverview({ report }: { report: FinancialReport }) {
               </p>
             </div>
             <p
-              className={`mt-2 mb-0 break-words text-xl font-semibold tabular-nums ${index === 3 ? "text-primary" : "text-slate-900"}`}
+              className={`report-kpi-value mt-2 mb-0 break-words text-xl font-semibold tabular-nums ${index === 3 ? "text-primary" : "text-slate-900"}`}
             >
               {financialMoney(value)}
             </p>

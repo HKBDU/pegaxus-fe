@@ -320,18 +320,18 @@ function FinancialWorkspace({ transportId }: { transportId: string }) {
   }
 
   return (
-    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-4 px-4 py-5 sm:px-5">
+    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-3 px-3 py-4 sm:px-4">
       <PageHeader
         className="report-heading"
         size="compact"
         title="Financial summary"
         backHref={
           REPORT_MOCK_MODE
-            ? "/admin/reports/on-time-delivery"
+            ? ROLE_ROUTES.dashboard
             : `${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(transportId)}`
         }
         backLabel={
-          REPORT_MOCK_MODE ? "Management reports" : "Transport details"
+          REPORT_MOCK_MODE ? "Back to Dashboard" : "Back to Transport details"
         }
       />
       <FinancialDemoNotice />

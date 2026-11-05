@@ -11,7 +11,7 @@ import {
   useReportAccess,
 } from "../hooks";
 import { reportError, terminalReportError } from "../services";
-import { reportTime } from "../presentation";
+import { ReportTabs } from "../components/ReportTabs";
 import { ReportFilters } from "../components/ReportFilters";
 import { ReportExportActions } from "../components/ReportExportActions";
 import { ReportModeNotice } from "../components/ReportModeNotice";
@@ -35,11 +35,10 @@ function TransitWorkspace() {
   const report = query.data;
   const busy = Boolean(exporting.pending);
   return (
-    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-4 px-4 py-5 sm:px-5">
+    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-3 px-3 py-4 sm:px-4">
       <PageHeader
-        className="report-heading"
-        size="compact"
-        title="Transit time performance"
+        title="Dashboard"
+        showBack={false}
         backHref="/admin"
         backLabel="Workspace"
         action={
@@ -52,16 +51,8 @@ function TransitWorkspace() {
           />
         }
       />
+      <ReportTabs />
       <ReportModeNotice />
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-500">
-        <p className="m-0">
-          Compare actual transport duration against estimated duration.
-        </p>
-        <p className="m-0">
-          Applied period: {String(state.raw.dateFrom)} –{" "}
-          {String(state.raw.dateTo)} (UTC)
-        </p>
-      </div>
       <ReportFilters
         variant="transit-time"
         draft={state.draft}
@@ -111,13 +102,9 @@ function TransitWorkspace() {
           ) : null}
           {report ? (
             <>
-              <div
-                role="status"
-                className="flex min-h-5 flex-wrap items-center justify-between gap-2 text-xs text-slate-500"
-              >
-                <span>Generated: {reportTime(report.generatedAt)}</span>
-                <span>{query.isFetching ? "Updating report…" : ""}</span>
-              </div>
+              <p role="status" className="sr-only">
+                {query.isFetching ? "Updating report…" : ""}
+              </p>
               <TransitOverview report={report} />
               <TransitCharts report={report} />
               <TransitBenchmarks report={report} />

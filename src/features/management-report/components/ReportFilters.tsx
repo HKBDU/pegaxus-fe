@@ -71,24 +71,25 @@ export function ReportFilters({
     String(draft[key] ?? "").trim(),
   ).length;
   const control =
-    "h-9 w-full min-w-0 rounded-[2px] border-input bg-white text-sm shadow-none";
+    "h-8 w-full min-w-0 rounded-[2px] border-input bg-white py-1 text-xs shadow-none";
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
         if (!disabled) onApply();
       }}
-      className="report-filterbar min-w-0 rounded-xl border border-slate-200 bg-white p-3"
+      className="report-filterbar min-w-0 rounded-[2px] border border-slate-200 bg-white p-2.5"
       aria-label="Report filters"
     >
       <FilterToolbar
         label="Additional report filters"
+        density="compact"
         activeCount={activeCount}
         search={
           <div className="grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2">
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="report-date-from" className="text-xs">
-                From date
+                From (UTC)
               </Label>
               <DatePicker
                 id="report-date-from"
@@ -100,7 +101,7 @@ export function ReportFilters({
             </div>
             <div className="min-w-0 space-y-1.5">
               <Label htmlFor="report-date-to" className="text-xs">
-                To date
+                To (UTC)
               </Label>
               <DatePicker
                 id="report-date-to"
@@ -122,7 +123,7 @@ export function ReportFilters({
                 value={String(draft.trendBy)}
                 onValueChange={(value) => onChange("trendBy", value)}
               >
-                <SelectTrigger id="report-trend" className={control}>
+                <SelectTrigger id="report-trend" size="sm" className={control}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent
@@ -143,14 +144,14 @@ export function ReportFilters({
               variant="outline"
               disabled={disabled}
               onClick={onReset}
-              className="h-9 rounded-[2px]"
+              className="h-8 rounded-[2px] px-3 text-xs"
             >
               Reset filters
             </Button>
             <Button
               type="submit"
               disabled={disabled}
-              className="h-9 rounded-[2px]"
+              className="h-8 rounded-[2px] px-3 text-xs"
             >
               Apply filters
             </Button>
@@ -239,12 +240,13 @@ export function ReportFilters({
           </>
         ) : null}
       </FilterToolbar>
-      <div className="mt-2 flex min-w-0 flex-wrap items-start justify-between gap-2 text-[11px] text-slate-500">
-        <span>Inclusive UTC days; edit filters, then Apply</span>
+      <div>
         <div
           id="report-filter-errors"
           role="status"
-          className="min-w-0 text-xs text-destructive"
+          className={
+            errors.length ? "mt-2 min-w-0 text-xs text-destructive" : ""
+          }
         >
           {errors.map((error) => (
             <p key={error} className="m-0">

@@ -47,7 +47,7 @@ export function CsvFilter({
           id={id}
           variant="outline"
           title={names.join(", ")}
-          className="h-9 w-full min-w-0 justify-between rounded-[2px] border-input bg-white px-3 text-left text-sm font-normal shadow-none"
+          className="h-8 w-full min-w-0 justify-between rounded-[2px] border-input bg-white px-3 text-left text-xs font-normal shadow-none"
         >
           <span className="truncate">
             {names.length === 0

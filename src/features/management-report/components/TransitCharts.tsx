@@ -37,7 +37,7 @@ export function TransitCharts({ report }: { report: TransitTimeReport }) {
     estimated: item.avgEstimatedDays,
   }));
   return (
-    <div className="report-chart-grid grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+    <div className="report-chart-grid grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-2">
       <ChartPanel
         title="Duration deviation"
         note="Actual duration minus estimated duration, in days. Negative values represent shorter journeys."
@@ -101,7 +101,7 @@ export function TransitCharts({ report }: { report: TransitTimeReport }) {
           <div className="max-h-96 overflow-y-auto pr-1">
             <ChartContainer
               config={benchmarkConfig}
-              style={{ height: Math.max(256, benchmark.length * 60 + 55) }}
+              style={{ height: Math.max(224, benchmark.length * 60 + 55) }}
             >
               <BarChart
                 accessibilityLayer

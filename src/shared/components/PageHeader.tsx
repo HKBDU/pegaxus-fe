@@ -8,6 +8,7 @@ export function PageHeader({
   title,
   size = "default",
   backHref,
+  backState,
   backLabel = "RETURN",
   onBack,
   showBack = true,
@@ -24,6 +25,7 @@ export function PageHeader({
       {showBack && (
         <NavLink
           to={backHref}
+          state={backState}
           onClick={(event) => {
             if (onBack?.() === false) event.preventDefault();
           }}
@@ -40,7 +42,7 @@ export function PageHeader({
           className={cn(
             "m-0! min-w-0 flex-1 basis-full tracking-tight! [overflow-wrap:anywhere] sm:basis-[min(100%,12rem)]",
             size === "compact"
-              ? "font-sans! text-[24px]! leading-tight! font-semibold! text-foreground! normal-case sm:text-[28px]!"
+              ? "font-heading text-[24px]! leading-tight! font-semibold! text-primary! uppercase sm:text-[28px]!"
               : "font-heading text-[28px]! leading-[1.15]! font-bold! text-primary! uppercase sm:text-[36px]! xl:text-[40px]!",
           )}
         >

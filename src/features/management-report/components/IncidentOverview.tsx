@@ -104,7 +104,7 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <p className="mt-2 mb-2 break-words text-2xl font-semibold tabular-nums text-slate-900">
+            <p className="report-kpi-value mt-2 mb-2 break-words text-2xl font-semibold tabular-nums text-slate-900">
               {metric.format(metric.kpi.value)}
             </p>
             <p className="m-0 text-xs tabular-nums text-slate-500">
@@ -116,12 +116,6 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
           </div>
         ))}
       </div>
-      <p className="m-0 text-xs text-slate-500">
-        Previous period: {report.period.previousDateFrom} –{" "}
-        {report.period.previousDateTo}. Rates use the completed-transport
-        cohort; event counts use occurrence/submission dates. A missing
-        denominator is shown as —.
-      </p>
     </section>
   );
 }

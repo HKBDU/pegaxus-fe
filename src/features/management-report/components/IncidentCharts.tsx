@@ -76,7 +76,7 @@ function BreakdownChart({
   };
   const rows = data.map((item) => ({ ...item, fill: item.color }));
   const format = money ? reportMoney : reportNumber;
-  const height = donut ? 256 : Math.max(256, rows.length * 38 + 35);
+  const height = donut ? 224 : Math.max(224, rows.length * 38 + 35);
   return (
     <ChartPanel title={title} note={note}>
       {data.some((item) => item.value !== 0) ? (
@@ -185,7 +185,7 @@ function BreakdownChart({
 
 export function IncidentCharts({ report }: { report: IncidentClaimReport }) {
   return (
-    <div className="report-chart-grid grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+    <div className="report-chart-grid grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-2">
       <BreakdownChart
         title="Incident categories"
         donut

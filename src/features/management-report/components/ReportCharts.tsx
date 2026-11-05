@@ -52,9 +52,9 @@ export function ReportCharts({ report }: { report: OnTimeReport }) {
   const trend = report.trend;
   const hasTrend = trend.some((point) => point.onTimeRate !== null);
   const providers = report.byProvider;
-  const providerHeight = Math.max(256, providers.length * 42 + 35);
+  const providerHeight = Math.max(224, providers.length * 42 + 35);
   return (
-    <div className="report-chart-grid grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+    <div className="report-chart-grid grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-2">
       <ChartPanel
         title="Delivery performance trend"
         note="On-time rate across measured completed transports."
@@ -179,7 +179,7 @@ export function ReportCharts({ report }: { report: OnTimeReport }) {
           <div className="max-h-96 overflow-y-auto pr-1">
             <ChartContainer
               config={series}
-              className="min-h-64"
+              className="min-h-56"
               style={{ height: providerHeight }}
             >
               <BarChart

@@ -75,7 +75,7 @@ export function PerformanceOverview({ report }: { report: OnTimeReport }) {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <p className="mt-2 mb-2 break-words text-2xl font-semibold tabular-nums text-slate-900">
+            <p className="report-kpi-value mt-2 mb-2 break-words text-2xl font-semibold tabular-nums text-slate-900">
               {metric.value}
             </p>
             <p className="m-0 text-xs text-slate-500">
@@ -96,7 +96,7 @@ export function PerformanceOverview({ report }: { report: OnTimeReport }) {
             </h2>
           </div>
           <p
-            className={`mt-2 mb-2 text-2xl font-semibold ${kpi.onTimeRate.value === null ? "text-slate-500" : kpi.meetsSla ? "text-emerald-700" : "text-amber-800"}`}
+            className={`report-kpi-value mt-2 mb-2 text-2xl font-semibold ${kpi.onTimeRate.value === null ? "text-slate-500" : kpi.meetsSla ? "text-emerald-700" : "text-amber-800"}`}
           >
             {kpi.onTimeRate.value === null
               ? "Not measurable"
@@ -112,10 +112,6 @@ export function PerformanceOverview({ report }: { report: OnTimeReport }) {
           </p>
         </div>
       </div>
-      <p className="mt-2 mb-0 text-xs text-slate-500">
-        Previous period: {report.period.previousDateFrom} –{" "}
-        {report.period.previousDateTo}. Rate changes are percentage points.
-      </p>
     </section>
   );
 }
