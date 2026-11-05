@@ -4,6 +4,8 @@ export type RouteContinuityResult = {
   valid: boolean;
   message?: string;
   effectiveRoutes: MapRoute[];
+  replacementStart?: number;
+  replacementEnd?: number;
 };
 
 function samePoint(
@@ -139,11 +141,19 @@ export function buildEffectiveBackupRoute(
       effectiveRoutes: [...prefix, ...backup],
     };
 
-  return validateChain(
+  const result = validateChain(
     [...prefix, ...backup, ...suffix],
     originId,
     destinationId,
   );
+  const replacementStart = prefix.length;
+  const replacementEnd = primary.length - suffix.length;
+  const startMatches = primary.filter((route) => String(route.fromLocation?.id) === String(backupStart));
+  const endMatches = primary.filter((route) => String(route.toLocation?.id) === String(backupEnd));
+  if (replacementStart >= replacementEnd || startMatches.length !== 1 || endMatches.length !== 1) {
+    return { valid: false, message: "The PRIMARY replacement region is ambiguous. Choose distinct branch and rejoin points.", effectiveRoutes: result.effectiveRoutes };
+  }
+  return { ...result, replacementStart, replacementEnd };
 }
 
 export function validateRoutePlanRoute(

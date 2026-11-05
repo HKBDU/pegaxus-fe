@@ -40,9 +40,9 @@ import {
   validateRoutePlanRoute,
 } from "../route-continuity";
 import { calculateRouteTimeline } from "../timeline-calculator";
+import { initializeBackupVehicles, resolveBackupItinerary, serializeBuilderSegment } from "../builder-segments";
 import type {
   CreateRoutePlanRequest,
-  RouteSegmentInput,
   RoutePlanStatus,
   RouteType,
   Vehicle,
@@ -108,6 +108,9 @@ export type RoutePlanBuilderProps = {
   primaryError?: string;
   metadata?: RoutePlanBuilderMetadata;
   initialRoutes?: MapRoute[];
+  initialSegments?: DraftSegment[];
+  savedSegments?: DraftSegment[];
+  primarySegments?: DraftSegment[];
   initialRouteNote?: string;
   locations: MapLocation[];
   routes: MapRoute[];
@@ -125,6 +128,9 @@ export function RoutePlanBuilder({
   primaryError,
   metadata,
   initialRoutes = [],
+  initialSegments,
+  savedSegments = [],
+  primarySegments = [],
   initialRouteNote = "",
   locations: initialLocations,
   routes,
@@ -245,16 +251,31 @@ export function RoutePlanBuilder({
   function formatDraftSegments(
     rawSegments: DraftSegment[],
     baseStart?: string,
+    recalculateSavedTimes = false,
+    initializeAssignments = true,
   ): DraftSegment[] {
-    const startTime = baseStart || plan.departureAt || new Date().toISOString();
+    const mapping = isBackup ? resolveBackupItinerary(primarySegments, rawSegments) : null;
+    const branch = mapping?.replaced[0];
+    const startTime = branch?.plannedDepartureAt || baseStart || plan.departureAt;
     let timedSegments: DraftSegment[];
     try {
-      timedSegments = calculateRouteTimeline(startTime, rawSegments);
+      let cursor = startTime;
+      timedSegments = rawSegments.map((segment) => {
+        const duration = segment.plannedDepartureAt && segment.plannedArrivalAt
+          ? (Date.parse(segment.plannedArrivalAt) - Date.parse(segment.plannedDepartureAt)) / 60000
+          : segment.route.durationMinutes;
+        const timed = segment.preserveTiming && !recalculateSavedTimes
+          ? segment
+          : calculateRouteTimeline(cursor, [{ ...segment, durationMinutes: duration }])[0];
+        if (timed.plannedArrivalAt) cursor = new Date(Date.parse(timed.plannedArrivalAt) + (timed.dwellAfterMinutes ?? 0) * 60000).toISOString();
+        return timed;
+      });
     } catch {
       timedSegments = rawSegments;
     }
-
-    return timedSegments.map((seg, index) => {
+    // Inheritance is tied to a user topology edit; it never runs in a state effect.
+    const initialized = isBackup && initializeAssignments ? initializeBackupVehicles(primarySegments, timedSegments, availableVehicles) : timedSegments;
+    return initialized.map((seg, index) => {
       const isDisconnected =
         index > 0 &&
         String(seg.route.fromLocation?.id) !==
@@ -268,7 +289,7 @@ export function RoutePlanBuilder({
   }
 
   const [segments, setSegments] = useState<DraftSegment[]>(() =>
-    formatDraftSegments(
+    initialSegments ?? formatDraftSegments(
       initialRoutes.map((route, index) => ({
         id: `${route.id}-${index}`,
         route,
@@ -338,7 +359,7 @@ export function RoutePlanBuilder({
       transportPlanId,
     })
       .then((items) => {
-        setAvailableVehicles(items.filter((v) => v.status === "AVAILABLE"));
+        setAvailableVehicles(items);
       })
       .catch((error) => toast.error(getRoutePlanError(error).message));
   }, [initialVehicles, plan.departureAt, plan.arrivalAt, transportPlanId]);
@@ -618,7 +639,7 @@ export function RoutePlanBuilder({
 
     const arrangement = currentSegment?.arrangement ?? arrangementForRoute(routeToSplit);
     const sharedSegmentData = currentSegment
-      ? { arrangement, provider: currentSegment.provider, note: currentSegment.note, vehicleIds: currentSegment.vehicleIds }
+      ? { arrangement, provider: currentSegment.provider, note: currentSegment.note, vehicleIds: currentSegment.vehicleIds, vehicleDetails: currentSegment.vehicleDetails, assignmentOrigin: currentSegment.assignmentOrigin === "saved" ? "manual" as const : currentSegment.assignmentOrigin }
       : { arrangement };
     const seg1: DraftSegment = {
       id: `seg-${now}-1`,
@@ -1110,13 +1131,16 @@ export function RoutePlanBuilder({
       const updated = current.map((seg, idx) =>
         idx === index ? { ...seg, dwellAfterMinutes: minutes } : seg,
       );
-      return formatDraftSegments(updated, plan.departureAt);
+      return formatDraftSegments(updated, plan.departureAt, true, false);
     });
   }
 
   function handleVehicleChange(index: number, vehicleIds: string[]) {
     setSegments((current) =>
-      current.map((seg, idx) => (idx === index ? { ...seg, vehicleIds } : seg)),
+      current.map((seg, idx) => (idx === index ? { ...seg, vehicleIds: [...vehicleIds], assignmentOrigin: "manual", inheritanceSource: undefined, assignmentReason: undefined, vehicleDetails: vehicleIds.flatMap((id) => {
+        const vehicle = availableVehicles.find((v) => v.vehicleId === id) ?? seg.vehicleDetails?.find((v) => v.vehicleId === id);
+        return vehicle ? [vehicle] : [];
+      }) } : seg)),
     );
   }
 
@@ -1332,79 +1356,17 @@ export function RoutePlanBuilder({
   function toPayload(
     action: CreateRoutePlanRequest["action"],
   ): CreateRoutePlanRequest {
-    const payloadRoutes = isBackup
-      ? continuity.effectiveRoutes.map((route) => {
-          const backupSegment = segments.find((segment) => segment.route === route);
-          return backupSegment
-            ? {
-                route,
-                routeType: "BACKUP" as const,
-                plannedDepartureAt:
-                  backupSegment.plannedDepartureAt || plan.departureAt,
-                plannedArrivalAt:
-                  backupSegment.plannedArrivalAt || plan.arrivalAt,
-                vehicleIds: backupSegment.vehicleIds,
-                outsourcing:
-                  backupSegment.arrangement === "OUTSOURCED" &&
-                  backupSegment.provider
-                    ? {
-                        transportProviderId:
-                          backupSegment.provider.transportProviderId,
-                        note: backupSegment.note,
-                      }
-                    : undefined,
-              }
-            : {
-                route,
-                routeType: "PRIMARY" as const,
-                plannedDepartureAt: plan.departureAt,
-                plannedArrivalAt: plan.arrivalAt,
-                vehicleIds: undefined,
-                outsourcing: undefined,
-              };
-        })
-      : segments.map((segment) => ({
-          route: segment.route,
-          routeType,
-          plannedDepartureAt: segment.plannedDepartureAt || plan.departureAt,
-          plannedArrivalAt: segment.plannedArrivalAt || plan.arrivalAt,
-          vehicleIds: segment.vehicleIds,
-          outsourcing:
-            segment.arrangement === "OUTSOURCED" && segment.provider
-              ? {
-                  transportProviderId: segment.provider.transportProviderId,
-                  note: segment.note,
-                }
-              : undefined,
-        }));
-
+    const itinerary = isBackup
+      ? resolveBackupItinerary(primarySegments, segments, savedSegments)?.segments
+      : segments;
+    if (!itinerary) throw new Error("The PRIMARY replacement region cannot be verified. Reload the PRIMARY route before saving.");
     return {
       routeType: plan.routeType,
       action,
-      ...(isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
-      segments: payloadRoutes.map(
-        ({ route, routeType: segmentRouteType, plannedDepartureAt, plannedArrivalAt, vehicleIds, outsourcing }, index): RouteSegmentInput => {
-          const isCatalogRoute = Boolean(route.id && !String(route.id).startsWith("dynamic-"));
-          return {
-            sequenceNo: index + 1,
-            ...(isBackup || isReturn ? { routeType: segmentRouteType } : {}),
-            ...(isCatalogRoute
-              ? { routeId: String(route.id) }
-              : {
-                  fromLocationId: String(route.fromLocation?.id ?? ""),
-                  toLocationId: String(route.toLocation?.id ?? ""),
-                  transportMode: route.transportMode ?? "ROAD",
-                }),
-            plannedDepartureAt,
-            plannedArrivalAt,
-            ...(outsourcing
-              ? { outsourcing }
-              : vehicleIds?.length
-                ? { vehicleIds }
-                : {}),
-          };
-        },
-      ),
+      ...(initialRouteNote || isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
+      segments: itinerary.map((segment, index) => serializeBuilderSegment(
+        segment, index, isBackup ? (segments.includes(segment) ? "BACKUP" : "PRIMARY") : routeType,
+      )),
     };
   }
 
@@ -1468,6 +1430,13 @@ export function RoutePlanBuilder({
       setSaveError("Update reason is required.");
       return;
     }
+    let payload: CreateRoutePlanRequest;
+    try {
+      payload = toPayload(action);
+    } catch (validationError) {
+      setSaveError(validationError instanceof Error ? validationError.message : "Check the route segment data before saving.");
+      return;
+    }
     setIsSaving(true);
     try {
       // Pre-save check: ensure all locations in segments have feasible road coordinates in the backend
@@ -1484,12 +1453,12 @@ export function RoutePlanBuilder({
         await updateRoutePlan(edit.routePlanId, {
           lastUpdatedAt: edit.lastUpdatedAt,
           updateReason: updateReason.trim(),
-          routeNote: routeNote.trim() || undefined,
+          routeNote: routeNote,
           action,
-          segments: toPayload(action).segments,
+          segments: payload.segments,
         });
       } else {
-        await createRoutePlan(transportPlanId, toPayload(action));
+        await createRoutePlan(transportPlanId, payload);
       }
       const successMessage =
         action === "SAVE_DRAFT"
@@ -2022,8 +1991,6 @@ export function RoutePlanBuilder({
                       onDwellChange={(mins) => handleDwellChange(index, mins)}
                       onVehicleChange={(vIds) => handleVehicleChange(index, vIds)}
                       availableVehicles={availableVehicles}
-                      routePlanId={edit?.routePlanId}
-                      lastUpdatedAt={edit?.lastUpdatedAt}
                       onOutsource={(selection) =>
                         setSegments((items) =>
                           items.map((item) =>
@@ -2032,7 +1999,10 @@ export function RoutePlanBuilder({
                                   ...item,
                                   arrangement: selection ? "OUTSOURCED" : "INTERNAL",
                                   provider: selection?.provider,
-                                  note: selection?.note,
+                                  note: selection ? selection.note : item.note,
+                                  assignmentOrigin: "manual",
+                                  assignmentReason: undefined,
+                                  inheritanceSource: undefined,
                                   vehicleIds: selection ? undefined : item.vehicleIds,
                                 }
                               : item,
