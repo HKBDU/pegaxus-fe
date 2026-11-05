@@ -23,7 +23,6 @@ import { InvoiceLineItemsTable } from "@/features/invoice/components/InvoiceLine
 import { IssueInvoiceDialog } from "@/features/invoice/components/IssueInvoiceDialog";
 import {
   DEFAULT_INVOICE_CURRENCY,
-  INVOICE_CURRENCY_LABELS,
   INVOICE_STATUS,
   INVOICE_TAX_RATE_PERCENT,
   INVOICE_TYPE_HINTS,
