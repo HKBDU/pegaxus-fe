@@ -18,6 +18,9 @@ export const crewMemberSchema = z.object({
   phone: z.string().nullable().optional(),
 })
 
+// BE `CheckedBy` (log summary / detail) carries no role or phone, unlike the escort of the overview.
+export const checkedBySchema = crewMemberSchema.partial({ role: true })
+
 export const horseBriefSchema = z.object({
   horseId: id,
   horseName: z.string(),
@@ -47,19 +50,8 @@ export const healthLogSummarySchema = z.object({
   locationDescription: z.string().nullable().optional(),
 })
 
-// Overview's latestLog is a compact BE projection. It intentionally does not
-// include horse/hasPhoto; those fields belong to the history/detail payloads.
-export const horseHealthLatestLogSchema = z.object({
-  horseHealthLogId: id,
-  checkedAt: timestamp,
-  logType: logTypeSchema,
-  healthStatus: healthStatusSchema,
-  hydrationStatus: hydrationStatusSchema.nullable(),
-  checkedBy: crewMemberSchema,
-  veterinarianRequired: z.boolean(),
-  latestNote: z.string().nullable().optional(),
-  locationDescription: z.string().nullable().optional(),
-})
+// The overview's `latestLog` (BE `LatestLog`) is a trimmed summary: the horse is the row it sits in, and it has no `hasPhoto`.
+export const latestHealthLogSchema = healthLogSummarySchema.omit({ horse: true, hasPhoto: true })
 
 export const healthLogSchema = healthLogSummarySchema.extend({
   transportId: id,
@@ -85,7 +77,7 @@ export const healthLogSchema = healthLogSummarySchema.extend({
 export const horseHealthOverviewItemSchema = z.object({
   horse: horseBriefSchema,
   latestHealthStatus: healthStatusSchema.nullable(),
-  latestLog: horseHealthLatestLogSchema.nullable(),
+  latestLog: latestHealthLogSchema.nullable(),
   logCount: z.number().int().nonnegative(),
 })
 
@@ -146,9 +138,23 @@ export const markAllNormalInputSchema = z.object({
   files: z.array(z.instanceof(File)).max(1).optional(),
 })
 
-export const markAllNormalResponseSchema = z.object({
+// "Mark all normal" returns one summary row per horse (BE `BatchResponse`), not a single log. A summary's `checkedBy`
+// has no `role`, so it does not reuse crewMemberSchema.
+export const markAllNormalResultSchema = z.object({
   transportId: id,
   logType: logTypeSchema,
   createdCount: z.number().int().nonnegative(),
-  logs: z.array(z.unknown()),
+  logs: z.array(
+    z.object({
+      horseHealthLogId: id,
+      horse: horseBriefSchema,
+      checkedAt: timestamp,
+      logType: logTypeSchema,
+      healthStatus: healthStatusSchema,
+      hydrationStatus: hydrationStatusSchema.nullable(),
+      checkedBy: checkedBySchema,
+      veterinarianRequired: z.boolean(),
+      hasPhoto: z.boolean(),
+    }),
+  ),
 })

@@ -19,7 +19,7 @@ function samePoint(
   );
 }
 
-function sameRoute(left: MapRoute, right: MapRoute) {
+export function sameRoute(left: MapRoute, right: MapRoute) {
   const leftId = left.id == null ? "" : String(left.id);
   const rightId = right.id == null ? "" : String(right.id);
   if (leftId && rightId && leftId === rightId) return true;

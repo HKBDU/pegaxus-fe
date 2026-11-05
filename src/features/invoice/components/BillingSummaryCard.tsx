@@ -29,7 +29,7 @@ export function BillingSummaryCard({ lines, summary, currency }: BillingSummaryC
       </h3>
 
       <div className="flex min-h-0 flex-1 flex-col p-4 text-xs text-gray-700">
-        <div className="h-28 shrink-0 overflow-y-auto">
+        <div className="-mr-4 h-28 shrink-0 overflow-y-auto pr-4">
           {lines.length ? (
             <ul className="space-y-1.5">
               {lines.map((line) => (

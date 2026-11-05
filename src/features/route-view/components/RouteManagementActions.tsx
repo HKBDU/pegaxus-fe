@@ -9,6 +9,7 @@ import {
   type LegalFeasibilityPanelProps,
 } from "@/features/route-plan/components/LegalFeasibilityPanel";
 import { CancelRoutePlanDialog } from "@/features/route-plan/components/CancelRoutePlanDialog";
+import { SubmitForLegalReviewButton } from "@/features/route-plan/components/SubmitForLegalReviewButton";
 import {
   ChangeVehiclesDialog,
   type ChangeVehiclesSnapshot,
@@ -33,6 +34,7 @@ import {
   captureVehicleChangeRefresh,
   type EmergencyContext,
 } from "../hooks/useEmergencyRoute";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 import type { RoutePlanDetail, RouteSegment } from "../types";
 import { canChangeVehiclesBeforeDeparture } from "../vehicle-change";
 
@@ -105,12 +107,14 @@ export function RouteManagementActions({
     (legalDossier?.status === "DRAFT" &&
       (plan.routeType !== "RETURN" ||
         context.workspace.transportStatus === "IN_TRANSIT"));
+  // A PRIMARY / BACKUP plan can only be reviewed once the coordinator sent it (RP7 answers ROUTE_PLAN_NOT_SUBMITTED otherwise); RETURN is exempt.
+  const submittedForReview = plan.submittedForReviewAt != null;
   const canReview =
     role === "specialist" &&
     plan.status === "DRAFT" &&
     dossierReady &&
-    (plan.routeType === "RETURN" || plan.submittedForReviewAt != null) &&
-    !readOnly;
+    !readOnly &&
+    (plan.routeType === "RETURN" || submittedForReview);
   const canCancel = role === "coordinator" && plan.status === "DRAFT" && !readOnly;
   const canChangeVehicles = canChangeVehiclesBeforeDeparture(
     plan,
@@ -214,6 +218,20 @@ export function RouteManagementActions({
         <Button asChild size="sm" variant="outline">
           <Link to={routePlanEdit(plan.routePlanId)}>Edit</Link>
         </Button>
+      ) : null}
+      {canCancel && plan.routeType !== "RETURN" ? (
+        submittedForReview ? (
+          <span className="text-xs text-slate-500">
+            Submitted for legal review at{" "}
+            {formatUtcDateTime(plan.submittedForReviewAt)}
+          </span>
+        ) : (
+          <SubmitForLegalReviewButton
+            plan={plan}
+            disabled={mockMode || refreshing}
+            onSubmitted={() => void refresh()}
+          />
+        )
       ) : null}
       {canChangeVehicles ? (
         <Button

@@ -197,6 +197,7 @@ export interface RoutePlan {
   segments: RouteSegment[];
   isPersonnelComplete: boolean;
   legalReview: LegalReview | null;
+  /** When the coordinator sent the plan to legal review (RP3). `null` = not sent yet, so the specialist cannot review it. */
   submittedForReviewAt?: string | null;
   routeNote: string | null;
   createdAt: string;

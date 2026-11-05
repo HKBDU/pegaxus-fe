@@ -1,5 +1,5 @@
 import type { MapRoute } from "@/shared/components/map";
-import type { Provider, VehicleBrief } from "./types";
+import type { Provider, RouteType, VehicleBrief } from "./types";
 
 export type BuilderProvider = Pick<
   Provider,
@@ -13,6 +13,7 @@ export type BuilderProvider = Pick<
 export type DraftSegment = {
   id: string;
   sequenceNo?: number;
+  routeType?: RouteType;
   route: MapRoute;
   arrangement: "INTERNAL" | "OUTSOURCED";
   stopType: "REST_STOP" | "BCP" | "DESTINATION";

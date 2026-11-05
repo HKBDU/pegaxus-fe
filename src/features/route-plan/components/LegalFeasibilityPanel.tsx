@@ -33,6 +33,7 @@ export type LegalFeasibilityPanelProps = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onConfirmed?: (result: LegalReviewResult) => void;
+  /** RP7 answered ROUTE_PLAN_NOT_SUBMITTED: the plan was not sent for review, so the caller should reload it. */
   onNotSubmitted?: () => void;
   trigger?: ReactNode;
 };
