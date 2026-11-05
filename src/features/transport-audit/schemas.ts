@@ -157,9 +157,11 @@ export const auditOperationsSchema = z.object({
       z.object({
         handoverRecordId: id,
         handoverCode: z.string(),
-        handoverType: z.enum(["PICKUP", "TRANSIT", "DELIVERY"]),
+        // The BE also sends TRANSFER, BORDER_HANDOVER, CARRIER_HANDOVER and OTHER, and completedAt is null until signed. A
+        // stricter shape made one such record empty the whole list.
+        handoverType: z.string(),
         status: z.string(),
-        completedAt: z.string(),
+        completedAt: z.string().nullish(),
         handedOverBy: z.string().optional(),
         receivedBy: z.string().optional(),
         digitalSignatureVerified: z.boolean().catch(false),
@@ -402,7 +404,6 @@ export const auditResponseSchema = z.preprocess(
           transport.destinationCountry ??
           transport.DestinationCountry,
         viewMode: target.viewMode ?? target.ViewMode,
-        timeline,
         booking: target.booking ?? target.Booking,
         horses: target.horses ?? target.Horses,
         routing: target.routing ?? target.Routing,
@@ -412,6 +413,9 @@ export const auditResponseSchema = z.preprocess(
         epod: target.epod ?? target.Epod,
         ...transport,
         ...target,
+        // After the spreads on purpose: `...target` carries the raw timeline (at/source/refId, no id), which would replace the
+        // normalized one, fail validation, and silently turn the whole timeline into [].
+        timeline,
       };
     }
     return raw;

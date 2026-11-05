@@ -1,9 +1,17 @@
 import * as React from "react"
-import { flexRender, type Row, type Table as TanstackTable } from "@tanstack/react-table"
+import { flexRender, type Row, type RowData, type Table as TanstackTable } from "@tanstack/react-table"
 
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
+
+declare module "@tanstack/react-table" {
+  // oxlint-disable-next-line no-unused-vars -- the generics must match TanStack's own declaration to merge with it
+  interface ColumnMeta<TData extends RowData, TValue> {
+    /** Right-align the header (including its sort button) and the cells of this column, e.g. amounts. */
+    align?: "right"
+  }
+}
 
 interface DataTableProps<TData> extends React.ComponentProps<"div"> {
   table: TanstackTable<TData>
@@ -52,7 +60,7 @@ export function DataTable<TData>({
                       key={header.id}
                       colSpan={header.colSpan}
                       data-column-id={header.column.id}
-                      className={cn("h-9 bg-slate-50 px-3 font-heading text-[11px] font-medium uppercase tracking-wide text-slate-600", headerCellClassName, isActionsColumn && "w-9 px-1!")}
+                      className={cn("h-9 bg-slate-50 px-3 font-heading text-[11px] font-medium uppercase tracking-wide text-slate-600", headerCellClassName, header.column.columnDef.meta?.align === "right" && "text-right", isActionsColumn && "w-9 px-1!")}
                     >
                       {header.isPlaceholder || isActionsColumn ? null : canSort ? (
                         <button type="button" className="-ml-1.5 inline-flex h-7 items-center gap-1 rounded-[2px] px-1.5 text-left hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30" onClick={header.column.getToggleSortingHandler()}>
@@ -88,6 +96,7 @@ export function DataTable<TData>({
                         className={cn(
                           "px-3 py-2 text-xs",
                           cellClassName,
+                          cell.column.columnDef.meta?.align === "right" && "text-right",
                           isActionsColumn && "w-11 min-w-11 max-w-11 overflow-visible px-1! text-right [&>div]:justify-end",
                         )}
                       >

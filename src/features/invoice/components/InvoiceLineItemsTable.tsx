@@ -1,5 +1,5 @@
 import { getCoreRowModel, getPaginationRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
-import { List, Lock, Plus, Trash2 } from "lucide-react"
+import { Lock, Plus, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Controller, useFieldArray, useFormContext } from "react-hook-form"
 
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Button } from "@/shared/components/ui/button"
 import { DataTable } from "@/shared/components/ui/data-table"
+import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { Input } from "@/shared/components/ui/input"
 import { MoneyInput } from "@/shared/components/ui/money-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
@@ -98,6 +99,7 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
     {
       id: "itemType",
       header: "FEE TYPE",
+      enableHiding: false,
       cell: ({ row }) =>
         row.original.kind === "deduction" ? (
           <span className="block min-w-32">{INVOICE_ITEM_TYPE_LABELS[row.original.item.itemType]}</span>
@@ -119,6 +121,7 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
     {
       id: "description",
       header: "DESCRIPTION",
+      enableHiding: false,
       cell: ({ row, table }) => {
         const line = row.original
         if (line.kind === "deduction") {
@@ -164,6 +167,7 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
     {
       id: "quantity",
       header: "QTY",
+      enableHiding: false,
       cell: ({ row, table }) => {
         const line = row.original
         if (line.kind === "deduction") return <span className="tabular-nums">{line.item.quantity}</span>
@@ -183,6 +187,7 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
     {
       id: "price",
       header: "UNIT PRICE",
+      enableHiding: false,
       cell: ({ row, table }) => {
         const line = row.original
         if (line.kind === "deduction") return <span className="whitespace-nowrap tabular-nums">{formatMoney(line.item.price, currency)}</span>
@@ -211,7 +216,8 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
     },
     {
       id: "amount",
-      header: () => <span className="block w-full text-right">AMOUNT</span>,
+      header: "AMOUNT",
+      meta: { align: "right" },
       cell: ({ row }) => {
         const line = row.original
         if (line.kind === "deduction") return <span className="block whitespace-nowrap text-right font-medium tabular-nums">{formatMoney(line.item.total, currency)}</span>
@@ -261,51 +267,46 @@ export function InvoiceLineItemsTable({ currency, horses, depositDeductionItems,
   })
 
   return (
-    <section className="border border-[#e5e2d9] bg-white" aria-label="Line items">
-      <div className="flex items-center justify-between gap-2 border-b border-[#e5e2d9] bg-[#f7f6f3] px-4 py-2.5">
-        <h3 className="m-0! flex items-center gap-2 font-heading text-[13px]! font-bold! uppercase tracking-[0.04em]! text-gray-900!">
-          <List className="size-4 text-[#ef8f00]" aria-hidden="true" />
-          Line items ({total})
-        </h3>
-        <Button type="button" variant="outline" size="sm" disabled={disabled} className="h-8 rounded-[2px] border-gray-900 bg-white text-xs" onClick={addLine}>
-          <Plus className="size-3.5" aria-hidden="true" />
-          Add line
-        </Button>
-      </div>
-
-      <div className="p-3">
-        <DataTable
-          table={table}
-          className="gap-2.5"
-          containerClassName="booking-panel overflow-x-auto"
-          tableClassName="min-w-[900px]"
-          headerClassName="bg-[#e9e6de]"
-          headerCellClassName="h-10 whitespace-nowrap px-2 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
-          rowClassName={cn("border-slate-200 hover:bg-amber-50/60")}
-          cellClassName="px-2 py-1.5 text-xs"
-          emptyMessage="No fee lines yet. A draft can be saved without lines, but it cannot be issued until it has at least one."
-          footer={
-            total > 0 ? (
-              <TablePagination
-                meta={{
-                  totalItems: total,
-                  totalPages: pageCount,
-                  itemsPerPage: pagination.pageSize,
-                  currentPage: pageIndex + 1,
-                  hasPreviousPage: pageIndex > 0,
-                  hasNextPage: pageIndex < pageCount - 1,
-                }}
-                onPageChange={(page) => setPagination((current) => ({ ...current, pageIndex: page - 1 }))}
-                onPageSizeChange={(pageSize) => setPagination({ pageIndex: 0, pageSize })}
-                pageSizeAriaLabel="Lines per page"
-              />
-            ) : null
-          }
-        />
-      </div>
+    <section className="grid gap-2.5" aria-label="Line items">
+      <DataTable
+        table={table}
+        className="gap-2.5"
+        containerClassName="booking-panel overflow-x-auto"
+        tableClassName="min-w-[900px]"
+        headerClassName="bg-[#e9e6de]"
+        headerCellClassName="h-10 whitespace-nowrap px-2 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
+        rowClassName={cn("border-slate-200 hover:bg-amber-50/60")}
+        cellClassName="px-2 py-1.5 text-xs"
+        emptyMessage="No fee lines yet. A draft can be saved without lines, but it cannot be issued until it has at least one."
+        footer={
+          total > 0 ? (
+            <TablePagination
+              meta={{
+                totalItems: total,
+                totalPages: pageCount,
+                itemsPerPage: pagination.pageSize,
+                currentPage: pageIndex + 1,
+                hasPreviousPage: pageIndex > 0,
+                hasNextPage: pageIndex < pageCount - 1,
+              }}
+              onPageChange={(page) => setPagination((current) => ({ ...current, pageIndex: page - 1 }))}
+              onPageSizeChange={(pageSize) => setPagination({ pageIndex: 0, pageSize })}
+              pageSizeAriaLabel="Lines per page"
+            />
+          ) : null
+        }
+      >
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <DataTableViewOptions table={table} />
+          <Button type="button" variant="outline" size="sm" disabled={disabled} className="h-8 rounded-[2px] border-gray-900 bg-white text-xs" onClick={addLine}>
+            <Plus className="size-3.5" aria-hidden="true" />
+            Add line
+          </Button>
+        </div>
+      </DataTable>
 
       {errorMessages.length ? (
-        <p className="border-t border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700" role="alert">
+        <p className="border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700" role="alert">
           {errorMessages.slice(0, 3).join(" · ")}{errorMessages.length > 3 ? ` · +${errorMessages.length - 3} more` : ""}
         </p>
       ) : null}

@@ -13,6 +13,11 @@ export function DownloadEpodButton({
       variant="default"
       className="h-9 rounded-[2px] bg-[#17191c] px-4 text-xs font-semibold text-white shadow-sm hover:bg-[#34383e]"
       disabled={!handoverRecordId || download.isPending}
+      title={
+        handoverRecordId
+          ? undefined
+          : "The e-POD is available once the delivery handover is completed."
+      }
       onClick={() => handoverRecordId && download.mutate(handoverRecordId)}
     >
       {download.isPending ? (

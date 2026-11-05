@@ -1,6 +1,6 @@
 import { format, parseISO, isValid } from "date-fns"
-import { INVOICE_TAX_RATE_PERCENT, TRANSIT_DAYS_RANGE, PAYMENT_ERROR_CODES, CANCELLATION_REASON_MIN_LENGTH, PAYMENT_METHOD_VALUES, PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH } from "@/features/invoice/constants"
-import type { InvoiceItem, InvoiceSummary, PaymentErrorCode, PaymentErrorState, Invoice, RecordPaymentPayload } from "@/features/invoice/types"
+import { INVOICE_STATUS, INVOICE_TYPE, INVOICE_TAX_RATE_PERCENT, TRANSIT_DAYS_RANGE, PAYMENT_ERROR_CODES, CANCELLATION_REASON_MIN_LENGTH, PAYMENT_METHOD_VALUES, PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH } from "@/features/invoice/constants"
+import type { InvoiceItem, InvoiceSummary, PaymentErrorCode, PaymentErrorState, Invoice, InvoiceListItem, InvoiceType, RecordPaymentPayload } from "@/features/invoice/types"
 import type { InvoiceCurrency } from "@/features/invoice/constants"
 import { z } from "zod"
 import { formatUtcDateTime } from "@/shared/utils/datetime"
@@ -72,6 +72,50 @@ export function splitDueDateTime(value: string | null | undefined) {
   if (!value || !parsed || !isValid(parsed)) return { date: "", time: DEFAULT_DUE_TIME }
   if (value.length === 10) return { date: value, time: DEFAULT_DUE_TIME }
   return { date: format(parsed, "yyyy-MM-dd"), time: format(parsed, "HH:mm") }
+}
+
+/** UTC calendar day ("yyyy-MM-dd") of a BE due date: the BE compares due dates by this day (R30). */
+function utcDueDay(value: string) {
+  return value.length === 10 ? value : new Date(value).toISOString().slice(0, 10)
+}
+
+/**
+ * R30: a due date must come after the due date of the invoice before it in the chain QUOTATION < DEPOSIT < FINAL
+ * (SUPPLEMENTARY after the later of QUOTATION and DEPOSIT, CREDIT_NOTE after FINAL), strictly and by UTC day; and the
+ * chain invoices must stay before the ones that follow. Cancelled invoices and invoices without a due date are ignored.
+ *
+ * Returns the first and last LOCAL day ("yyyy-MM-dd") the date picker may offer. The day itself can still be refused when the
+ * chosen time lands on the wrong UTC day; the BE message is shown under the field in that case.
+ */
+export function dueDateOrderBounds(type: InvoiceType, invoices: InvoiceListItem[]) {
+  const dueOf = (invoiceType: InvoiceType) => {
+    const found = invoices.find((invoice) => invoice.type === invoiceType && invoice.status !== INVOICE_STATUS.CANCELLED && invoice.dueDate)
+    return found?.dueDate ? utcDueDay(found.dueDate) : undefined
+  }
+  const quotation = dueOf(INVOICE_TYPE.QUOTATION)
+  const deposit = dueOf(INVOICE_TYPE.DEPOSIT)
+  const final = dueOf(INVOICE_TYPE.FINAL)
+  const latest = (...days: (string | undefined)[]) => days.filter((day): day is string => Boolean(day)).sort().at(-1)
+
+  let after: string | undefined
+  let before: string | undefined
+  const earliest = (...days: (string | undefined)[]) => days.filter((day): day is string => Boolean(day)).sort()[0]
+  if (type === INVOICE_TYPE.QUOTATION) before = earliest(deposit, final)
+  else if (type === INVOICE_TYPE.DEPOSIT) [after, before] = [quotation, final]
+  else if (type === INVOICE_TYPE.FINAL) after = latest(quotation, deposit)
+  else if (type === INVOICE_TYPE.SUPPLEMENTARY) after = latest(quotation, deposit)
+  else if (type === INVOICE_TYPE.CREDIT_NOTE) after = final
+
+  const toUtcDayStart = (day: string, offsetDays: number) => {
+    const [year, month, date] = day.split("-").map(Number)
+    return Date.UTC(year, month - 1, date + offsetDays)
+  }
+  return {
+    // First instant of the UTC day after `after`, as the local day it falls on.
+    minDay: after ? format(new Date(toUtcDayStart(after, 1)), "yyyy-MM-dd") : undefined,
+    // Last instant of the UTC day before `before`, as the local day it falls on.
+    maxDay: before ? format(new Date(toUtcDayStart(before, 0) - 1), "yyyy-MM-dd") : undefined,
+  }
 }
 
 /** A local day and time as the UTC instant the BE expects (R29: always sent with a zone). */

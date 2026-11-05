@@ -34,6 +34,7 @@ import {
   isTransportPlanConcurrencyCode,
   isTransportPlanLockedCode,
   isTransportPlanDuplicateCode,
+  isPlannedStartCode,
 } from "../services";
 import {
   buildCreatePlanInput,
@@ -48,8 +49,9 @@ import {
 import { emptyPlanForm } from "../constants";
 import type { TransportPlanDetail, TransportPlanFormValues } from "../types";
 import {
-  minimumPlannedStartDateUtc,
-  validatePlannedStartDate,
+  plannedStartEarliestDate,
+  validatePlannedStartLeadTime,
+  validatePlannedStartNotPast,
   validateTransportPlanSchedule,
 } from "../schedule-validation";
 import { Section } from "./ApprovedBookingDetails";
@@ -108,6 +110,15 @@ export function TransportPlanMetadataForm({
 }) {
   const navigate = useNavigate();
   const scheduleId = useId();
+  const todayLocal = new Date().toLocaleDateString("sv-SE");
+  const leadTimeEarliest = plannedStartEarliestDate({
+    createdAt: bookingCreatedAt,
+    originCountry,
+    destinationCountry,
+  });
+  // Earliest pickable day: not in the past, and not before the booking lead time (when the BE returns the creation date).
+  const startMinDate =
+    leadTimeEarliest && leadTimeEarliest > todayLocal ? leadTimeEarliest : todayLocal;
   const principal = useAuthStore((state) => state.principal);
   // Background TP3 refreshes must never silently replace the version the manager edited.
   const [baseline, setBaseline] = useState(plan);
@@ -164,22 +175,32 @@ export function TransportPlanMetadataForm({
   const submit = form.handleSubmit(async (values) => {
     if (blocked) return;
     setProblem(null);
-    const scheduleError = validateTransportPlanSchedule({
-      plannedStartAt: values.plannedStartAt,
-      plannedEndAt: values.plannedEndAt,
-      estimatedDurationMinutes: values.estimatedDurationMinutes.trim()
-        ? Number(values.estimatedDurationMinutes)
-        : null,
-      requestedArrivalDate,
-      originCountry,
-      destinationCountry,
-      bookingCreatedAt,
-    });
+    // On edit the BE only checks a start that was changed, so an unchanged (possibly now past) start must not block saving.
+    const startChanged =
+      !baseline || values.plannedStartAt !== planToForm(baseline).plannedStartAt;
+    const startError = startChanged
+      ? (validatePlannedStartNotPast(toUtcIso(values.plannedStartAt)) ??
+        validatePlannedStartLeadTime(
+          toUtcIso(values.plannedStartAt),
+          leadTimeEarliest,
+        ))
+      : null;
+    const scheduleError =
+      startError ??
+      validateTransportPlanSchedule({
+        plannedStartAt: values.plannedStartAt,
+        plannedEndAt: values.plannedEndAt,
+        estimatedDurationMinutes: values.estimatedDurationMinutes.trim()
+          ? Number(values.estimatedDurationMinutes)
+          : null,
+        requestedArrivalDate,
+      });
     if (scheduleError) {
       form.setError(scheduleError.field, {
         type: "validate",
         message: scheduleError.message,
       });
+      setProblem({ message: "Check the highlighted schedule fields and try again." });
       return;
     }
     try {
@@ -222,6 +243,12 @@ export function TransportPlanMetadataForm({
             message: item.message,
           });
       }
+      // The BE reports these without a field name, so put the message on the start field itself.
+      if (isPlannedStartCode(info.code))
+        form.setError("plannedStartAt", {
+          type: "server",
+          message: getTransportPlanError(error).message,
+        });
       setProblem({
         code: info.code,
         message:
@@ -345,12 +372,11 @@ export function TransportPlanMetadataForm({
                           const nextValue = value ? `${value}T${time || "00:00"}` : "";
                           field.onChange(nextValue);
                           const startError = name === "plannedStartAt"
-                            ? validatePlannedStartDate({
-                                plannedStartAt: nextValue,
-                                originCountry,
-                                destinationCountry,
-                                bookingCreatedAt,
-                              })
+                            ? (validatePlannedStartNotPast(toUtcIso(nextValue)) ??
+                              validatePlannedStartLeadTime(
+                                toUtcIso(nextValue),
+                                leadTimeEarliest,
+                              ))
                             : null;
                           if (startError) {
                             form.setError("plannedStartAt", {
@@ -387,9 +413,16 @@ export function TransportPlanMetadataForm({
                                     ref={field.ref}
                                     value={date}
                                     onChange={changeDate}
+                                    // Planned start: grey out past days. A saved start already in the past stays selectable so it can be kept.
+                                    minDate={
+                                      name === "plannedStartAt"
+                                        ? date && date < startMinDate
+                                          ? date
+                                          : startMinDate
+                                        : undefined
+                                    }
                                     onBlur={field.onBlur}
                                     disabled={isPending || !canWrite}
-                                    minDate={name === "plannedStartAt" ? minimumPlannedStartDateUtc(originCountry, destinationCountry, bookingCreatedAt) : undefined}
                                     placeholder="DD / MM / YYYY"
                                     className={controlClass}
                                   />

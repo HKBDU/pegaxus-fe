@@ -19,6 +19,7 @@ export const ROUTE_PLAN_ERROR_MESSAGES: Record<string, string> = {
   PROVIDER_MODE_MISMATCH: 'Provider does not support this transport mode.',
   ROUTE_LOCKED: 'This route cannot be changed while transport is in progress.',
   ROUTE_PLAN_MODIFIED: 'Route plan changed. Reload and try again.',
+  ROUTE_PLAN_NOT_SUBMITTED: 'This route plan has not been submitted for legal review yet. The coordinator must submit it first.',
   INCIDENT_REQUIRED: 'An incident is required when changing vehicles mid-trip.',
   INCIDENT_NOT_FOUND: 'The incident could not be found.',
   INVALID_INCIDENT_STATUS: 'The incident can no longer be used for a vehicle change.',
@@ -26,7 +27,8 @@ export const ROUTE_PLAN_ERROR_MESSAGES: Record<string, string> = {
   REPLACEMENT_COST_NOT_APPROVED: 'Replacement vehicle cost must be approved first.',
   TRANSPORT_NOT_IN_TRANSIT: 'The transport is not in transit.',
   INVALID_ROUTE_PLAN_TYPE: 'Only a PRIMARY route plan can be changed before departure.',
-  INVALID_ROUTE_PLAN_STATUS: 'Vehicles can only be changed while the route plan is confirmed and has not departed.',
+  // Shared by several endpoints (vehicles, cancel, legal review...): this is only the fallback, the BE message says which status blocks the action.
+  INVALID_ROUTE_PLAN_STATUS: 'This action is not available for the route plan in its current status.',
   SEGMENT_ALREADY_COMPLETED: 'A selected segment has already been completed.',
   SEGMENT_NOT_IN_ITINERARY: 'A selected segment is not in the active itinerary.',
   SEGMENT_TIMES_MISSING: 'A selected segment is missing departure or arrival times.',
