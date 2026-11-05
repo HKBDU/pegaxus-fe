@@ -22,8 +22,8 @@ export function validateTransportPlanSchedule({
   }
   if (estimatedDurationMinutes != null) {
     const elapsedMinutes = (Date.parse(plannedEndAt) - Date.parse(plannedStartAt)) / 60_000
-    if (Number.isFinite(elapsedMinutes) && elapsedMinutes > estimatedDurationMinutes) {
-      return { field: "plannedEndAt", message: "The planned schedule cannot exceed the estimated transport time." }
+    if (Number.isFinite(elapsedMinutes) && elapsedMinutes < estimatedDurationMinutes) {
+      return { field: "plannedEndAt", message: "The planned schedule must cover at least the estimated transport time." }
     }
   }
   return null
@@ -47,16 +47,17 @@ export function validateArrivalDate(arrivalAt: string | undefined, requestedArri
 
 /**
  * Earliest planned start date (`yyyy-MM-dd`, UTC day) the BE accepts: the day the booking was made plus 21 days (same
- * country in and out) or 2 months (across a border). Returns undefined while the booking creation date is unknown.
+ * country in and out, which the BE only accepts for the United Kingdom) or 2 months (across a border). Returns
+ * undefined while the booking creation date is unknown.
  */
 export function plannedStartEarliestDate(booking: {
   createdAt?: string | null
-  originCountry: string
-  destinationCountry: string
+  originCountry?: string | null
+  destinationCountry?: string | null
 }) {
   if (!booking.createdAt) return undefined
   const madeOn = parseISO(new Date(booking.createdAt).toISOString().slice(0, 10))
-  const domestic = booking.originCountry.trim().toLowerCase() === booking.destinationCountry.trim().toLowerCase()
+  const domestic = (booking.originCountry ?? "").trim().toLowerCase() === (booking.destinationCountry ?? "").trim().toLowerCase()
   return format(domestic ? addDays(madeOn, 21) : addMonths(madeOn, 2), "yyyy-MM-dd")
 }
 

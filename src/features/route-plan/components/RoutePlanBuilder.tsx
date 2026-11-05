@@ -68,6 +68,7 @@ import { RoutePlanEndpointsStep } from "./RoutePlanEndpointsStep";
 import { RoutePlanStatusBadge } from "./RoutePlanStatusBadge";
 import { BcpRouteSplitDialog } from "./BcpRouteSplitDialog";
 import { validateArrivalDate } from "@/features/transport-plan/schedule-validation";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 import {
   findBestBcpAlongRoute,
   haversineDistanceKm,
@@ -130,7 +131,11 @@ export type RoutePlanBuilderProps = {
   locations: MapLocation[];
   routes: MapRoute[];
   vehicles?: Vehicle[];
-  edit?: { routePlanId: string; lastUpdatedAt: string };
+  edit?: {
+    routePlanId: string;
+    lastUpdatedAt: string;
+    submittedForReviewAt?: string | null;
+  };
 };
 
 export function RoutePlanBuilder({
@@ -298,8 +303,32 @@ export function RoutePlanBuilder({
   }
 
   const [segments, setSegments] = useState<DraftSegment[]>(() =>
-    formatDraftSegments(
-      initialRoutes.map((route, index) => ({
+    initialRoutes.every((route) => route.plannedDepartureAt && route.plannedArrivalAt)
+      ? initialRoutes.map((route, index, routes) => ({
+          id: `${route.id}-${index}`,
+          route,
+          arrangement: arrangementForRoute(route),
+          stopType:
+            route.toLocation?.id === metadata?.to?.id
+              ? "DESTINATION"
+              : isBcpLocation(route.toLocation)
+                ? "BCP"
+                : "REST_STOP",
+          dwellAfterMinutes: route.dwellAfterMinutes ?? 0,
+          plannedDepartureAt: route.plannedDepartureAt,
+          plannedArrivalAt: route.plannedArrivalAt,
+          vehicleIds: route.vehicleIds,
+          // The saved provider, note and segment type are not on the route; without this spread an outsourced segment would
+          // come back as unassigned and a backup's PRIMARY segments would lose their type.
+          ...initialSegmentData?.[index],
+          sequenceNo: index + 1,
+          isDisconnected:
+            index > 0 &&
+            String(route.fromLocation?.id) !==
+              String(routes[index - 1]?.toLocation?.id),
+        }))
+      : formatDraftSegments(
+          initialRoutes.map((route, index) => ({
         id: `${route.id}-${index}`,
         route,
         arrangement: arrangementForRoute(route),
@@ -1518,6 +1547,7 @@ export function RoutePlanBuilder({
                   backupSegment.plannedDepartureAt || plan.departureAt,
                 plannedArrivalAt:
                   backupSegment.plannedArrivalAt || plan.arrivalAt,
+                dwellAfterMinutes: backupSegment.dwellAfterMinutes ?? 0,
                 vehicleIds: backupSegment.vehicleIds,
                 note: backupSegment.note,
                 outsourcing:
@@ -1560,6 +1590,7 @@ export function RoutePlanBuilder({
           routeType,
           plannedDepartureAt: segment.plannedDepartureAt || plan.departureAt,
           plannedArrivalAt: segment.plannedArrivalAt || plan.arrivalAt,
+          dwellAfterMinutes: segment.dwellAfterMinutes ?? 0,
           vehicleIds: segment.vehicleIds,
           note: segment.note,
           outsourcing:
@@ -2585,6 +2616,12 @@ export function RoutePlanBuilder({
                 )}
 
                 {edit && (
+                  <>
+                    <p className="text-xs text-slate-600">
+                      {edit.submittedForReviewAt
+                        ? `Submitted for legal review at ${formatUtcDateTime(edit.submittedForReviewAt)}`
+                        : "This route plan has not been submitted for legal review."}
+                    </p>
                   <label className="grid gap-2 text-sm font-medium text-slate-900">
                     Update reason
                     <textarea
@@ -2595,6 +2632,7 @@ export function RoutePlanBuilder({
                       placeholder="Why is this route plan being updated?"
                     />
                   </label>
+                  </>
                 )}
 
                 {saveError && (

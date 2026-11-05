@@ -50,6 +50,10 @@ function routeFromSegment(
     toLocation,
     distanceKm: segment.route.distanceKm,
     durationMinutes: segment.route.estimatedDurationMinutes,
+    vehicleIds: segment.vehicles.map((vehicle) => vehicle.vehicleId),
+    dwellAfterMinutes: segment.dwellAfterMinutes,
+    plannedDepartureAt: segment.plannedDepartureAt,
+    plannedArrivalAt: segment.plannedArrivalAt,
     readonly,
   };
 }
@@ -202,7 +206,11 @@ export default function EditRoutePlanPage() {
       primarySegmentData={primarySegmentData}
       primaryAvailable={plan.routeType !== "BACKUP" || primaryRoutes.length > 0}
       primaryError="No valid PRIMARY route plan found. Please create a PRIMARY route plan first."
-      edit={{ routePlanId: plan.routePlanId, lastUpdatedAt: plan.updatedAt }}
+      edit={{
+        routePlanId: plan.routePlanId,
+        lastUpdatedAt: plan.updatedAt,
+        submittedForReviewAt: plan.submittedForReviewAt,
+      }}
       locations={Array.from(allLocationsMap.values())}
       routes={Array.from(allRoutesMap.values())}
     />

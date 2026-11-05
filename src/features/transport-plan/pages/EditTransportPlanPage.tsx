@@ -63,8 +63,14 @@ export default function EditTransportPlanPage() {
               <TransportPlanMetadataForm
                 key={transportPlanId}
                 bookingId={plan.booking.bookingId}
+                bookingCreatedAt={plan.booking.createdAt}
+                originCountry={plan.booking.originCountry}
+                destinationCountry={plan.booking.destinationCountry}
+                originLatitude={plan.booking.originLatitude}
+                originLongitude={plan.booking.originLongitude}
+                destinationLatitude={plan.booking.destinationLatitude}
+                destinationLongitude={plan.booking.destinationLongitude}
                 plan={plan}
-                booking={plan.booking}
                 cancelHref={transportPlanDetail(transportPlanId)}
                 reloadLatest={async () => {
                   const result = await query.refetch();

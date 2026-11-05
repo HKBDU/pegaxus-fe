@@ -361,6 +361,16 @@ export function getTransportPlanError(
       message: message || "Check the transport plan fields and try again.",
       retryable: false,
     };
+  if (code === "PLANNED_START_IN_PAST")
+    return {
+      message: message || "Planned start cannot be in the past.",
+      retryable: false,
+    };
+  if (code === "PLANNED_START_TOO_EARLY")
+    return {
+      message: message || "Planned start is earlier than the allowed booking lead time.",
+      retryable: false,
+    };
   if (code === "UNAUTHORIZED" || status === 401)
     return {
       message: "Your session has expired. Please sign in again.",

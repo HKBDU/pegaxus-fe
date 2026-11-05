@@ -209,7 +209,7 @@ export function ApprovedBookingsTable({
       const parsed = approvedBookingSortSchema.safeParse(
         sort
           ? `${sort.id}:${sort.desc ? "desc" : "asc"}`
-          : "requestedDepartureDate:asc",
+          : "requestedDepartureDate:desc",
       );
       if (parsed.success) onChange({ sortBy: parsed.data });
     },

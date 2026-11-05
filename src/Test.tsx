@@ -25,6 +25,10 @@ import { VehicleDetailSection } from "./features/incident-report/components/Vehi
 import { HorseDetailsSection } from "./features/incident-report/components/HorseDetailsSection";
 import { RaiseSeverityButton } from "./features/incident-report/components/RaiseSeverityButton";
 import { EmergencyContactsCard } from "./features/incident-report/components/EmergencyContactsCard";
+import {
+  ComplianceHorseSelectionPage,
+  type ComplianceHorse,
+} from "./features/compliance/components/ComplianceHorseSelectionPage";
 
 const MOCK_HORSES: HorseHealthOverviewItem[] = [
   {
@@ -158,11 +162,21 @@ const MOCK_CONTACTS: EmergencyContact[] = [
   },
 ];
 
+const MOCK_COMPLIANCE_HORSES: ComplianceHorse[] = [
+  { horseId: "compliance-horse-1", horseName: "Silver Comet", passportNumber: "IRE-2024-SC18", microchipNumber: "985141092348110", status: "Ready" },
+  { horseId: "compliance-horse-2", horseName: "Northern Star", passportNumber: "GB-2023-NS07", microchipNumber: "985141092348114", status: "Review required" },
+  { horseId: "compliance-horse-3", horseName: "Velvet Runner", passportNumber: "FR-2025-VR22", microchipNumber: "985141092348201", status: "Ready" },
+  { horseId: "compliance-horse-4", horseName: "Atlas Crown", passportNumber: "DE-2022-AC11", microchipNumber: "985141092348233", status: "Pending" },
+  { horseId: "compliance-horse-5", horseName: "Golden Vale", passportNumber: "BE-2024-GV09", microchipNumber: "985141092348245", status: "Ready" },
+  { horseId: "compliance-horse-6", horseName: "Blue Horizon", passportNumber: "ES-2023-BH31", microchipNumber: "985141092348267", status: "Ready" },
+];
+
 export default function Test() {
   const [selectedHorseIds, setSelectedHorseIds] = useState<string[]>([]);
   const [step, setStep] = useState<"selection" | "form">("selection");
   const [photos, setPhotos] = useState(emptyPhotos);
   const [submitted, setSubmitted] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"incident" | "quarantine" | "clearance">("quarantine");
   const selectedHorses = useMemo(
     () =>
       MOCK_HORSES.filter((item) =>
@@ -207,10 +221,44 @@ export default function Test() {
     setStep("form");
   };
 
+  const previewSwitcher = (
+    <div className="mb-5 flex flex-wrap gap-2 border-b border-slate-300 pb-4">
+      {([
+        ["quarantine", "Quarantine horse selection"],
+        ["clearance", "Clearance horse selection"],
+        ["incident", "Incident report preview"],
+      ] as const).map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => setPreviewMode(value)}
+          className={`border px-3 py-2 text-xs font-bold uppercase tracking-wide transition ${previewMode === value ? "border-[#f39200] bg-[#fff8ed] text-[#181818]" : "border-slate-300 bg-white text-slate-600 hover:border-[#f39200]"}`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (previewMode !== "incident") {
+    return (
+      <div>
+        <div className="sticky top-0 z-30 border-b border-slate-300 bg-white/95 px-4 py-3 backdrop-blur sm:px-8">
+          <div className="mx-auto max-w-[1440px]">{previewSwitcher}</div>
+        </div>
+        <ComplianceHorseSelectionPage
+          flow={previewMode}
+          horses={MOCK_COMPLIANCE_HORSES}
+        />
+      </div>
+    );
+  }
+
   if (step === "selection") {
     return (
       <main className="min-h-screen bg-slate-100 p-4 sm:p-8">
         <div className="mx-auto max-w-3xl">
+          {previewSwitcher}
           <p className="mb-4 text-xs font-bold uppercase tracking-wider text-[#f39200]">
             Mock UI preview
           </p>
@@ -228,6 +276,7 @@ export default function Test() {
   return (
     <main className="min-h-screen bg-slate-100 p-4 pb-32 sm:p-8">
       <div className="mx-auto max-w-3xl space-y-5">
+        {previewSwitcher}
         <IncidentReportHeader
           transportId={value.transportId}
           latitude={value.latitude ?? "Unavailable"}

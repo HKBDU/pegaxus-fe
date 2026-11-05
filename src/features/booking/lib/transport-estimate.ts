@@ -16,7 +16,6 @@ const SAFE_SPEED_KMH = 68
 const SHORT_REST_AFTER_MINUTES = 270
 const SHORT_REST_MINUTES = 45
 const CROSSING_TIME_MINUTES = 240
-const HANDLING_TIME_MINUTES = 45
 const LONG_REST_THRESHOLD_MINUTES = 1440
 const LONG_REST_MINUTES = 1440
 
@@ -55,8 +54,11 @@ export function estimateTransport(pointA: EstimatePoint, pointB: EstimatePoint):
   const driveMinutes = Math.round((distanceKm / SAFE_SPEED_KMH) * 60)
   const restMinutes = Math.floor(driveMinutes / SHORT_REST_AFTER_MINUTES) * SHORT_REST_MINUTES
   const crossingMinutes = isCrossChannel ? CROSSING_TIME_MINUTES : 0
-  const subtotalMinutes = driveMinutes + restMinutes + crossingMinutes + HANDLING_TIME_MINUTES
-  const durationMinutes = subtotalMinutes + (subtotalMinutes > LONG_REST_THRESHOLD_MINUTES ? LONG_REST_MINUTES : 0)
+  // BR-034 applies to the driving/rest/crossing portion of the journey;
+  // handling at pickup and delivery is intentionally excluded from this estimate.
+  const journeyMinutesBeforeLongRest = driveMinutes + restMinutes + crossingMinutes
+  const longRestMinutes = journeyMinutesBeforeLongRest > LONG_REST_THRESHOLD_MINUTES ? LONG_REST_MINUTES : 0
+  const durationMinutes = journeyMinutesBeforeLongRest + longRestMinutes
 
   return { distanceKm, durationMinutes }
 }

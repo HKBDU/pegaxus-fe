@@ -19,7 +19,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { getRoutePlanError, submitLegalReview } from "../services";
+import { getLegalReviewError, submitLegalReview } from "../services";
 import type { LegalReview, LegalReviewResult, RouteSegment } from "../types";
 import { formatUtcDateTime } from "@/shared/utils/datetime";
 
@@ -130,12 +130,12 @@ export function LegalFeasibilityPanel({
       onConfirmed?.(result);
       setPanelOpen(false);
     } catch (requestError) {
-      const mapped = getRoutePlanError(requestError);
+      const mapped = getLegalReviewError(requestError);
       setError(mapped.message);
       toast.error(mapped.message);
       if (mapped.code === "ROUTE_PLAN_NOT_SUBMITTED") {
-        setPanelOpen(false);
         onNotSubmitted?.();
+        setPanelOpen(false);
       }
     } finally {
       setIsPending(false);

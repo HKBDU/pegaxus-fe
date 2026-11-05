@@ -80,6 +80,23 @@ export function todayUtc() {
   return [now.getUTCFullYear(), String(now.getUTCMonth() + 1).padStart(2, "0"), String(now.getUTCDate()).padStart(2, "0")].join("-")
 }
 
+/** Adds calendar days to a YYYY-MM-DD value without using the viewer's timezone. */
+export function addUtcDays(value: string, days: number) {
+  const [year, month, day] = value.split("-").map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  date.setUTCDate(date.getUTCDate() + days)
+  return [date.getUTCFullYear(), String(date.getUTCMonth() + 1).padStart(2, "0"), String(date.getUTCDate()).padStart(2, "0")].join("-")
+}
+
+/** Adds calendar months to a YYYY-MM-DD value without using the viewer's timezone. */
+export function addUtcMonths(value: string, months: number) {
+  const [year, month, day] = value.split("-").map(Number)
+  const date = new Date(Date.UTC(year, month - 1 + months, 1))
+  const lastDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate()
+  date.setUTCDate(Math.min(day, lastDay))
+  return [date.getUTCFullYear(), String(date.getUTCMonth() + 1).padStart(2, "0"), String(date.getUTCDate()).padStart(2, "0")].join("-")
+}
+
 /** Converts a datetime-local value, interpreted in the viewer's local time, to UTC. */
 export function toUtcIso(localValue: string | null | undefined) {
   if (!localValue) return undefined

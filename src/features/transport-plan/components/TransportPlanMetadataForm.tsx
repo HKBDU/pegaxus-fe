@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { estimateTransport } from "@/features/booking/lib/transport-estimate";
 import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { toUtcIso } from "@/shared/utils/datetime";
 import { useForm } from "react-hook-form";
@@ -77,7 +78,13 @@ const fields = [
 export function TransportPlanMetadataForm({
   bookingId,
   requestedArrivalDate,
-  booking,
+  originCountry,
+  destinationCountry,
+  originLatitude,
+  originLongitude,
+  destinationLatitude,
+  destinationLongitude,
+  bookingCreatedAt,
   plan,
   cancelHref,
   reloadLatest,
@@ -87,12 +94,13 @@ export function TransportPlanMetadataForm({
 }: {
   bookingId: string;
   requestedArrivalDate?: string | null;
-  /** Used for the earliest planned start (booking creation date plus lead time); the limit applies once `createdAt` is returned. */
-  booking?: {
-    createdAt?: string | null;
-    originCountry: string;
-    destinationCountry: string;
-  };
+  originCountry?: string | null;
+  destinationCountry?: string | null;
+  originLatitude?: number | null;
+  originLongitude?: number | null;
+  destinationLatitude?: number | null;
+  destinationLongitude?: number | null;
+  bookingCreatedAt?: string | null;
   plan?: TransportPlanDetail;
   cancelHref: string;
   reloadLatest?: () => Promise<TransportPlanDetail | undefined>;
@@ -103,7 +111,11 @@ export function TransportPlanMetadataForm({
   const navigate = useNavigate();
   const scheduleId = useId();
   const todayLocal = new Date().toLocaleDateString("sv-SE");
-  const leadTimeEarliest = booking ? plannedStartEarliestDate(booking) : undefined;
+  const leadTimeEarliest = plannedStartEarliestDate({
+    createdAt: bookingCreatedAt,
+    originCountry,
+    destinationCountry,
+  });
   // Earliest pickable day: not in the past, and not before the booking lead time (when the BE returns the creation date).
   const startMinDate =
     leadTimeEarliest && leadTimeEarliest > todayLocal ? leadTimeEarliest : todayLocal;
@@ -115,12 +127,33 @@ export function TransportPlanMetadataForm({
     message: string;
   } | null>(null);
   const [reloading, setReloading] = useState(false);
+  const transportEstimate = estimateTransport(
+    {
+      latitude: originLatitude,
+      longitude: originLongitude,
+      country: originCountry ?? "",
+    },
+    {
+      latitude: destinationLatitude,
+      longitude: destinationLongitude,
+      country: destinationCountry ?? "",
+    },
+  );
+  const initialValues = { ...(plan ? planToForm(plan) : emptyPlanForm) };
+  if (transportEstimate) {
+    if (!initialValues.estimatedDistanceKm)
+      initialValues.estimatedDistanceKm = String(transportEstimate.distanceKm);
+    if (!initialValues.estimatedDurationMinutes)
+      initialValues.estimatedDurationMinutes = String(
+        transportEstimate.durationMinutes,
+      );
+  }
   const form = useForm<TransportPlanFormValues>({
     resolver: zodResolver(
       plan ? editTransportPlanFormSchema : transportPlanFormSchema,
     ),
     mode: "onTouched",
-    defaultValues: plan ? planToForm(plan) : emptyPlanForm,
+    defaultValues: initialValues,
   });
   const attempt = useFormRequestAttemptGuard(form);
   const create = useCreateTransportPlan(bookingId);
@@ -145,20 +178,16 @@ export function TransportPlanMetadataForm({
     // On edit the BE only checks a start that was changed, so an unchanged (possibly now past) start must not block saving.
     const startChanged =
       !baseline || values.plannedStartAt !== planToForm(baseline).plannedStartAt;
-    const pastError = startChanged
+    const startError = startChanged
       ? (validatePlannedStartNotPast(toUtcIso(values.plannedStartAt)) ??
         validatePlannedStartLeadTime(
           toUtcIso(values.plannedStartAt),
           leadTimeEarliest,
         ))
       : null;
-    if (pastError) {
-      form.setError(pastError.field, { type: "validate", message: pastError.message });
-      setProblem({ message: "Check the highlighted schedule fields and try again." });
-      return;
-    }
-    if (!baseline) {
-      const scheduleError = validateTransportPlanSchedule({
+    const scheduleError =
+      startError ??
+      validateTransportPlanSchedule({
         plannedStartAt: values.plannedStartAt,
         plannedEndAt: values.plannedEndAt,
         estimatedDurationMinutes: values.estimatedDurationMinutes.trim()
@@ -166,14 +195,13 @@ export function TransportPlanMetadataForm({
           : null,
         requestedArrivalDate,
       });
-      if (scheduleError) {
-        form.setError(scheduleError.field, {
-          type: "validate",
-          message: scheduleError.message,
-        });
-        setProblem({ message: "Check the highlighted schedule fields and try again." });
-        return;
-      }
+    if (scheduleError) {
+      form.setError(scheduleError.field, {
+        type: "validate",
+        message: scheduleError.message,
+      });
+      setProblem({ message: "Check the highlighted schedule fields and try again." });
+      return;
     }
     try {
       let result;
@@ -302,8 +330,8 @@ export function TransportPlanMetadataForm({
                       className="text-xs text-slate-500"
                     >
                       {baseline
-                        ? "An empty selection retains the saved location; it does not remove it."
-                        : "Leave empty for the backend to resolve the booking coordinates. Older bookings may have no location."}
+                        ? "An empty selection retains the saved location."
+                        : "Leave empty for automatical resolving"}
                     </p>
                     <div className="min-h-5">
                       {fieldState.error && (
@@ -341,9 +369,23 @@ export function TransportPlanMetadataForm({
                         const seconds = time.split(":")[2];
                         const changeDate = (value: string) => {
                           if (isPending || !canWrite) return;
-                          field.onChange(
-                            value ? `${value}T${time || "00:00"}` : "",
-                          );
+                          const nextValue = value ? `${value}T${time || "00:00"}` : "";
+                          field.onChange(nextValue);
+                          const startError = name === "plannedStartAt"
+                            ? (validatePlannedStartNotPast(toUtcIso(nextValue)) ??
+                              validatePlannedStartLeadTime(
+                                toUtcIso(nextValue),
+                                leadTimeEarliest,
+                              ))
+                            : null;
+                          if (startError) {
+                            form.setError("plannedStartAt", {
+                              type: "validate",
+                              message: startError.message,
+                            });
+                          } else {
+                            form.clearErrors("plannedStartAt");
+                          }
                           field.onBlur();
                         };
                         const changeTime = (value: string) => {

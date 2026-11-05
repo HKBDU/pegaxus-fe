@@ -429,16 +429,10 @@ const backendReviewValue = z.object({
 export const approveDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const rejectDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const documentReviewEnvelopeSchema = envelope(backendReviewValue);
-// The BE returns DossierReadinessResponse. The screen only refetches afterwards, so the fields stay lenient: a success must
-// never be reported as an unknown outcome because of the body shape.
+// Swagger documents only the 200 status, so keep the undocumented result
+// object forward-compatible until the API publishes its response schema.
 export const readyForSubmissionEnvelopeSchema = envelope(
-  z
-    .object({
-      complianceDossierId: z.string().optional(),
-      status: z.string().optional(),
-      readyForSubmissionAt: timestamp.nullish(),
-    })
-    .nullish(),
+  z.record(z.string(), z.unknown()),
 );
 export const submitDocumentVersionEnvelopeSchema = z.union([
   envelope(
@@ -688,12 +682,13 @@ export const dossierRequirementsParamsSchema = z.object({
   sortBy: z
     .enum([
       "createdAt:asc",
+      "createdAt:desc",
       "dueDate:asc",
       "dueDate:desc",
       "status:asc",
       "status:desc",
     ])
-    .default("createdAt:asc"),
+    .default("createdAt:desc"),
 });
 
 /** One row of D1 (`GET /bookings/{id}/compliance-dossier`): enough to link to the dossier. */
