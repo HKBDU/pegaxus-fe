@@ -1,3 +1,4 @@
+import "@/shared/components/report-dashboard.css";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
@@ -161,7 +162,7 @@ function LoadedReport({
 
   return (
     <div className="min-w-0 space-y-4" aria-busy={busy || api.query.isFetching}>
-      <section className="min-w-0 border-b border-slate-200 pb-4">
+      <section className="report-financial-context min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-2">
             <p className="m-0 break-words text-sm font-medium text-slate-800">
@@ -176,13 +177,13 @@ function LoadedReport({
               <span>Currency: {report.currency}</span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex min-w-0 w-full flex-wrap gap-2 sm:w-auto">
             <Button
               type="button"
               variant="outline"
               onClick={() => void reload()}
               disabled={busy || api.query.isFetching}
-              className="rounded-[2px]"
+              className="h-9 max-w-full rounded-[2px] border-input text-sm shadow-none"
             >
               Load latest report
             </Button>
@@ -197,7 +198,7 @@ function LoadedReport({
                 api.query.isFetching ||
                 draft.needsReview
               }
-              className="h-auto min-h-10 max-w-full whitespace-normal rounded-[2px] text-left"
+              className="h-9 max-w-full rounded-[2px] border-input text-sm shadow-none"
             >
               <RefreshCw
                 aria-hidden="true"
@@ -319,8 +320,10 @@ function FinancialWorkspace({ transportId }: { transportId: string }) {
   }
 
   return (
-    <main className="mx-auto w-full min-w-0 max-w-7xl space-y-4 px-4 py-6 sm:px-6">
+    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-4 px-4 py-5 sm:px-5">
       <PageHeader
+        className="report-heading"
+        size="compact"
         title="Financial summary"
         backHref={
           REPORT_MOCK_MODE

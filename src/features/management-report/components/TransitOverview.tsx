@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Clock3, Gauge, Info, Timer, Truck } from "lucide-react";
 import {
   Tooltip,
   TooltipTrigger,
@@ -16,6 +16,7 @@ export function TransitOverview({ report }: { report: TransitTimeReport }) {
   const metrics = [
     {
       label: "Measured transports",
+      icon: Truck,
       metric: report.kpi.totalTransports,
       format: reportNumber,
       change: signedNumber,
@@ -23,6 +24,7 @@ export function TransitOverview({ report }: { report: TransitTimeReport }) {
     },
     {
       label: "Average actual duration",
+      icon: Clock3,
       metric: report.kpi.avgActualDays,
       format: days,
       change: signedDays,
@@ -30,6 +32,7 @@ export function TransitOverview({ report }: { report: TransitTimeReport }) {
     },
     {
       label: "Average deviation",
+      icon: Timer,
       metric: report.kpi.avgDelayDays,
       format: signedDays,
       change: signedDays,
@@ -37,6 +40,7 @@ export function TransitOverview({ report }: { report: TransitTimeReport }) {
     },
     {
       label: "Duration ratio",
+      icon: Gauge,
       metric: report.kpi.accuracyRatio,
       format: reportRate,
       change: (value: number | null) =>
@@ -49,13 +53,13 @@ export function TransitOverview({ report }: { report: TransitTimeReport }) {
       aria-label="Transit time performance overview"
       className="min-w-0 space-y-2"
     >
-      <div className="grid min-w-0 grid-cols-1 rounded-[2px] border border-slate-200 bg-white sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((item, index) => (
-          <div
-            key={item.label}
-            className={`min-w-0 border-slate-200 p-4 ${index > 0 ? "border-t" : ""} ${index % 2 === 0 ? "sm:border-r" : ""} ${index < 2 ? "sm:border-t-0" : ""} ${index < 3 ? "xl:border-r" : "xl:border-r-0"} xl:border-t-0`}
-          >
+      <div className="report-kpi-grid">
+        {metrics.map((item) => (
+          <div key={item.label} className="report-kpi">
             <div className="flex items-center gap-2">
+              <span className="report-kpi-icon">
+                <item.icon aria-hidden="true" className="size-4" />
+              </span>
               <h2 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 {item.label}
               </h2>

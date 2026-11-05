@@ -42,6 +42,7 @@ export type SidebarContextProps = {
 
 export type PageHeaderProps = {
   title: string
+  size?: "default" | "compact"
   backHref: string
   backLabel?: string
   onBack?: () => boolean | void

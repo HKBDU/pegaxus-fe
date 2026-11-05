@@ -9,7 +9,7 @@ interface FilterToolbarProps {
   sort?: ReactNode;
   actions?: ReactNode;
   activeCount: number;
-  onClear: () => void;
+  onClear?: () => void;
 }
 
 export function FilterToolbar({
@@ -49,7 +49,7 @@ export function FilterToolbar({
         {sort ? (
           <div className="min-w-0 max-w-full [&>button]:h-8">{sort}</div>
         ) : null}
-        {activeCount > 0 ? (
+        {activeCount > 0 && onClear ? (
           <Button
             type="button"
             variant="ghost"

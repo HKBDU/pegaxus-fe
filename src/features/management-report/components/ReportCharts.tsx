@@ -54,7 +54,7 @@ export function ReportCharts({ report }: { report: OnTimeReport }) {
   const providers = report.byProvider;
   const providerHeight = Math.max(256, providers.length * 42 + 35);
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
+    <div className="report-chart-grid grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
       <ChartPanel
         title="Delivery performance trend"
         note="On-time rate across measured completed transports."

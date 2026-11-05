@@ -1,3 +1,4 @@
+import "@/shared/components/report-dashboard.css";
 import { useLocation } from "react-router-dom";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
@@ -33,8 +34,10 @@ function IncidentWorkspace() {
   const report = query.data;
   const busy = Boolean(exporting.pending);
   return (
-    <main className="mx-auto w-full min-w-0 max-w-[1440px] space-y-4 px-4 py-6 sm:px-6">
+    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-4 px-4 py-5 sm:px-5">
       <PageHeader
+        className="report-heading"
+        size="compact"
         title="Incident & claim analytics"
         backHref="/admin"
         backLabel="Workspace"

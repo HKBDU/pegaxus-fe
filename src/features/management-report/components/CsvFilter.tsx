@@ -47,7 +47,7 @@ export function CsvFilter({
           id={id}
           variant="outline"
           title={names.join(", ")}
-          className="h-9 w-full min-w-0 justify-between rounded-[2px] px-3 text-left text-sm font-normal"
+          className="h-9 w-full min-w-0 justify-between rounded-[2px] border-input bg-white px-3 text-left text-sm font-normal shadow-none"
         >
           <span className="truncate">
             {names.length === 0
@@ -61,7 +61,8 @@ export function CsvFilter({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="max-h-80 w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-[2px]"
+        collisionPadding={12}
+        className="max-h-[min(20rem,var(--radix-dropdown-menu-content-available-height))] w-[max(16rem,var(--radix-dropdown-menu-trigger-width))] max-w-[calc(100vw-2rem)] overflow-y-auto overscroll-contain rounded-[2px] border-input"
       >
         <DropdownMenuLabel>{label}</DropdownMenuLabel>
         <DropdownMenuItem onSelect={() => onChange("")}>
@@ -74,7 +75,7 @@ export function CsvFilter({
             checked={selected.has(option)}
             onSelect={(event) => event.preventDefault()}
             onCheckedChange={(checked) => toggle(option, checked === true)}
-            className="text-xs"
+            className="py-2 text-sm"
           >
             {reportLabel(option)}
           </DropdownMenuCheckboxItem>

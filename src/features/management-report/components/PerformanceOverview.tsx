@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { CheckCircle2, Clock3, Gauge, Info, Truck } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -12,6 +12,7 @@ export function PerformanceOverview({ report }: { report: OnTimeReport }) {
   const metrics = [
     {
       label: "Measured transports",
+      icon: Truck,
       value: reportNumber(kpi.totalTransports.value),
       previous: reportNumber(kpi.totalTransports.previous),
       change: signedNumber(kpi.totalTransports.change),
@@ -20,6 +21,7 @@ export function PerformanceOverview({ report }: { report: OnTimeReport }) {
     },
     {
       label: "On-time delivery",
+      icon: Gauge,
       value: reportRate(kpi.onTimeRate.value),
       previous: reportRate(kpi.onTimeRate.previous),
       change: `${signedNumber(kpi.onTimeRate.change)}${kpi.onTimeRate.change === null ? "" : " pp"}`,
@@ -33,6 +35,7 @@ export function PerformanceOverview({ report }: { report: OnTimeReport }) {
     },
     {
       label: "Avg delivery deviation",
+      icon: Clock3,
       value: `${signedNumber(kpi.avgDelayMinutes.value)}${kpi.avgDelayMinutes.value === null ? "" : " min"}`,
       previous: `${signedNumber(kpi.avgDelayMinutes.previous)}${kpi.avgDelayMinutes.previous === null ? "" : " min"}`,
       change: `${signedNumber(kpi.avgDelayMinutes.change)}${kpi.avgDelayMinutes.change === null ? "" : " min"}`,
@@ -47,13 +50,13 @@ export function PerformanceOverview({ report }: { report: OnTimeReport }) {
   ];
   return (
     <section aria-label="Performance overview" className="min-w-0">
-      <div className="grid min-w-0 grid-cols-1 rounded-[2px] border border-slate-200 bg-white sm:grid-cols-2 min-[1200px]:grid-cols-4">
+      <div className="report-kpi-grid">
         {metrics.map((metric) => (
-          <div
-            key={metric.label}
-            className="min-w-0 border-slate-200 p-4 not-first:border-t sm:odd:border-r sm:nth-2:border-t-0 min-[1200px]:not-first:border-t-0 min-[1200px]:border-r"
-          >
+          <div key={metric.label} className="report-kpi">
             <div className="flex items-center gap-2">
+              <span className="report-kpi-icon">
+                <metric.icon aria-hidden="true" className="size-4" />
+              </span>
               <h2 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 {metric.label}
               </h2>
@@ -83,10 +86,15 @@ export function PerformanceOverview({ report }: { report: OnTimeReport }) {
             </p>
           </div>
         ))}
-        <div className="min-w-0 border-t border-slate-200 p-4 min-[1200px]:border-t-0">
-          <h2 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-            SLA performance
-          </h2>
+        <div className="report-kpi report-kpi-sla">
+          <div className="flex items-center gap-2">
+            <span className="report-kpi-icon">
+              <CheckCircle2 aria-hidden="true" className="size-4" />
+            </span>
+            <h2 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              SLA performance
+            </h2>
+          </div>
           <p
             className={`mt-2 mb-2 text-2xl font-semibold ${kpi.onTimeRate.value === null ? "text-slate-500" : kpi.meetsSla ? "text-emerald-700" : "text-amber-800"}`}
           >

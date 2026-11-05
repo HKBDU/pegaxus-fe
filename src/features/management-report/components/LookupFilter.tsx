@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronsUpDown, Search } from "lucide-react";
+import { Check, ChevronsUpDown, Search } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import {
@@ -62,7 +62,7 @@ export function LookupFilter({
           type="button"
           variant="outline"
           title={selected ?? value}
-          className="h-9 w-full min-w-0 justify-between rounded-[2px] px-3 text-left font-normal"
+          className="h-9 w-full min-w-0 justify-between rounded-[2px] border-input bg-white px-3 text-left text-sm font-normal shadow-none"
         >
           <span className="truncate">
             {value
@@ -74,45 +74,52 @@ export function LookupFilter({
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-80 max-w-[calc(100vw-2rem)] space-y-3 rounded-[2px] p-3"
+        collisionPadding={12}
+        className="flex max-h-[min(32rem,var(--radix-popover-content-available-height))] w-[max(18rem,var(--radix-popover-trigger-width))] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[2px] border-input bg-white p-0"
       >
-        <div className="flex gap-2">
-          <Input
-            aria-label={`Search ${caption}s`}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                applySearch();
-              }
-            }}
-            placeholder={`Search ${caption}s`}
-            className="min-w-0 rounded-[2px]"
-          />
+        <div className="flex shrink-0 gap-2 border-b border-input p-2">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              aria-hidden="true"
+              className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <Input
+              aria-label={`Search ${caption}s`}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  applySearch();
+                }
+              }}
+              placeholder={`Search ${caption}s`}
+              className="h-9 min-w-0 rounded-[2px] border-input pl-8 text-sm shadow-none"
+            />
+          </div>
           <Button
             type="button"
             variant="outline"
-            size="icon"
             aria-label={`Find ${caption}s`}
             onClick={applySearch}
+            className="h-9 rounded-[2px] border-input px-3 shadow-none"
           >
-            <Search className="size-4" />
+            Search
           </Button>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          className="h-8 w-full justify-start text-xs"
-          onClick={() => choose({ id: "", label: `Any ${caption}` })}
-        >
-          Any {caption}
-        </Button>
         <div
-          className="max-h-56 space-y-1 overflow-y-auto"
+          className="min-h-0 space-y-1 overflow-y-auto overscroll-contain p-1"
           aria-label={`${caption} results`}
           aria-busy={query.isFetching}
         >
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-9 w-full justify-start rounded-[2px] px-2 text-sm font-normal text-muted-foreground"
+            onClick={() => choose({ id: "", label: `Any ${caption}` })}
+          >
+            Any {caption}
+          </Button>
           {query.isFetching ? (
             <p role="status" className="m-0 p-2 text-xs text-slate-500">
               Loading {caption}s…
@@ -126,11 +133,18 @@ export function LookupFilter({
               <Button
                 type="button"
                 variant={value === item.id ? "secondary" : "ghost"}
+                aria-pressed={value === item.id}
                 key={item.id}
-                className="h-auto min-h-9 w-full justify-start whitespace-normal rounded-[2px] px-2 py-2 text-left text-xs"
+                className="h-auto min-h-9 w-full justify-between whitespace-normal rounded-[2px] px-2 py-2 text-left text-sm font-normal"
                 onClick={() => choose(item)}
               >
-                {item.label}
+                <span className="min-w-0 break-words">{item.label}</span>
+                {value === item.id ? (
+                  <Check
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0 text-primary"
+                  />
+                ) : null}
               </Button>
             ))
           ) : (
@@ -138,8 +152,26 @@ export function LookupFilter({
               No matches. Try another search or use a known historical ID below.
             </p>
           )}
+          <details className="border-t border-input p-2 text-xs text-muted-foreground">
+            <summary className="cursor-pointer rounded-[2px] focus-visible:outline-2 focus-visible:outline-primary">
+              Use a historical {caption} ID
+            </summary>
+            <p className="my-2">
+              Deleted or reclassified records may not appear in the catalog.
+              Enter a known reference ID to retain the historical filter.
+            </p>
+            <Input
+              aria-label={`Historical ${caption} reference ID`}
+              value={value}
+              onChange={(event) => onChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.preventDefault();
+              }}
+              className="h-9 rounded-[2px] border-input text-sm shadow-none"
+            />
+          </details>
         </div>
-        <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-input p-2 text-xs text-muted-foreground">
           <Button
             type="button"
             variant="outline"
@@ -162,21 +194,6 @@ export function LookupFilter({
             Next
           </Button>
         </div>
-        <details className="border-t border-slate-200 pt-2 text-xs text-slate-500">
-          <summary className="cursor-pointer focus-visible:outline-2 focus-visible:outline-primary">
-            Use a historical {caption} ID
-          </summary>
-          <p className="my-2">
-            Deleted or reclassified records may not appear in the catalog. Enter
-            a known reference ID to retain the historical filter.
-          </p>
-          <Input
-            aria-label={`Historical ${caption} reference ID`}
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            className="rounded-[2px] text-xs"
-          />
-        </details>
       </PopoverContent>
     </Popover>
   );

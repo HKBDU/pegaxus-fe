@@ -1,3 +1,4 @@
+import "@/shared/components/report-dashboard.css";
 import { useLocation } from "react-router-dom";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
@@ -41,8 +42,10 @@ function ReportWorkspace() {
   const busy = Boolean(exporting.pending);
   const returnUrl = location.pathname + location.search;
   return (
-    <main className="mx-auto w-full min-w-0 max-w-[1440px] space-y-4 px-4 py-6 sm:px-6">
+    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-4 px-4 py-5 sm:px-5">
       <PageHeader
+        className="report-heading"
+        size="compact"
         title="On-time delivery performance"
         backHref="/admin"
         backLabel="Workspace"
@@ -124,7 +127,7 @@ function ReportWorkspace() {
               <ReportCharts report={report} />
               <section
                 aria-labelledby="data-quality-heading"
-                className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 rounded-[2px] border border-slate-200 bg-white p-4 text-xs text-slate-500"
+                className="report-surface flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 p-4 text-xs text-slate-500"
               >
                 <h2
                   id="data-quality-heading"
