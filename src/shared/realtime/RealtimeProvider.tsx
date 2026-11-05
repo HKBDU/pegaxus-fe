@@ -40,6 +40,8 @@ const REFRESH_ON_NOTIFICATION = new Set([
  * pushes are re-read once more after this delay.
  */
 const PAYMENT_REREAD_DELAY_MS = 2_000
+/** Keeps the bell correct when a hub is temporarily unavailable. This is deliberately low-frequency. */
+const UNREAD_FALLBACK_SYNC_INTERVAL_MS = 30_000
 
 function isPaymentNotification(notification: AppNotification) {
   return notification.type === "PAYMENT" || notification.referenceType?.toUpperCase() === "INVOICE"
@@ -149,8 +151,14 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
       useNotificationStore.getState().reset()
       return
     }
+
+    // The REST sync makes the current badge correct even before SignalR is connected. It is also a safe fallback for
+    // transient SignalR outages; the hub still provides immediate updates whenever it is available.
+    void syncFromRest()
+    const fallbackSync = setInterval(() => void syncFromRest(), UNREAD_FALLBACK_SYNC_INTERVAL_MS)
     void notificationHub.start(() => useAuthStore.getState().accessToken)
     return () => {
+      clearInterval(fallbackSync)
       void notificationHub.stop()
       useNotificationStore.getState().reset()
     }
