@@ -133,7 +133,7 @@ export function collectVehicleChangeCandidates(
     unverified,
     blocker:
       unverified.length > 0
-        ? "Some segments have no authoritative eligibility confirmation and cannot be selected. Backend propagation still applies to eligible unlisted segments."
+        ? "Some segments have no confirmed eligibility and cannot be selected. Updates still apply to eligible unlisted segments."
         : eligibleForSubmission.length === 0
           ? "No eligible internal segments could be verified for replacement."
           : null,

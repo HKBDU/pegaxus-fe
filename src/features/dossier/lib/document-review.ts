@@ -123,7 +123,7 @@ export function getReviewBlockReason({
     if (!expiryExceptionReason?.trim())
       return blocked(
         "DOCUMENT_EXPIRY_INVALID",
-        "Check document expiry. Provide an expiry exception reason if approving this document; the backend validates whether approval is allowed.",
+        "Check document expiry. Provide an expiry exception reason if approving this document; approval will be checked automatically.",
       );
   }
   return null;

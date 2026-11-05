@@ -195,7 +195,7 @@ export function getOngoingTransportError(
   if (status === 404)
     return {
       message:
-        "The API resource was not found. Check the backend URL and deployed API version.",
+        "The requested resource was not found. Please try again or contact support.",
       retryable: false,
     };
   if (code === "VALIDATION_ERROR" || status === 400)

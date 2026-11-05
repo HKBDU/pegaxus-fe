@@ -93,10 +93,13 @@ export function LocationWorkflowDialogs({
           className="rounded-xs"
         >
           <DialogHeader>
-            <DialogTitle>Bật chia sẻ vị trí để bắt đầu chặng</DialogTitle>
+            <DialogTitle>
+              Enable location sharing to start the segment
+            </DialogTitle>
             <DialogDescription>
-              Chặng hiện tại cần vị trí của bạn. Chỉ mở khóa sau khi máy chủ trả
-              accepted=true; quyền GPS hoặc ACK legacy chưa đủ.
+              The current segment requires your location. Unlock only after the
+              server returns accepted=true; GPS permission or the legacy ACK is
+              not sufficient.
             </DialogDescription>
           </DialogHeader>
           <p
@@ -107,37 +110,38 @@ export function LocationWorkflowDialogs({
                 : "text-sm text-muted-foreground"
             }
           >
-            {state.message ?? "Bấm bật chia sẻ vị trí khi xe đã đỗ an toàn."}
+            {state.message ??
+              "Enable location sharing after the vehicle has safely stopped."}
           </p>
           {state.notification !== "none" ? (
             <p className="text-sm" role="status">
               {state.notification === "notified"
-                ? "Máy chủ đã thông báo điều phối viên."
+                ? "The server notified the dispatcher."
                 : state.notification === "sending"
-                  ? "Đang báo quyền vị trí bị từ chối…"
+                  ? "Reporting the denied location permission…"
                   : state.notification === "not_notified"
-                    ? "Máy chủ không gửi thông báo mới."
-                    : "Chưa xác nhận được thông báo cho điều phối viên."}
+                    ? "The server did not send a new notification."
+                    : "Unable to confirm notification to the dispatcher."}
             </p>
           ) : null}
           <DialogFooter>
             {!pathname.endsWith("/location") ? (
               <Button asChild variant="outline">
                 <Link to={driverLocationSharingPath(transportId)}>
-                  Mở màn chia sẻ vị trí
+                  Open location sharing
                 </Link>
               </Button>
             ) : null}
             <Button onClick={reload} variant="outline">
-              Tải lại thông tin chặng
+              Reload segment information
             </Button>
             {state.active ? (
               <Button onClick={stop} variant="outline">
-                Dừng chia sẻ
+                Stop sharing
               </Button>
             ) : (
               <Button disabled={!canStart} onClick={start}>
-                Bật chia sẻ vị trí
+                Enable location sharing
               </Button>
             )}
           </DialogFooter>
@@ -159,8 +163,9 @@ export function LocationWorkflowDialogs({
           className="mx-auto max-w-4xl px-4 py-3 text-sm text-muted-foreground"
           role="status"
         >
-          C9 đang chờ Backend xác nhận currentSegment.isMine. Chưa xác nhận đã
-          mở khóa; vẫn có thể xem hành trình và mở màn chia sẻ vị trí.
+          We’re verifying that this is your current segment before enabling
+          arrival confirmation. You can still view the trip and open location
+          sharing.
         </div>
       ) : null}
       <Dialog
@@ -181,23 +186,26 @@ export function LocationWorkflowDialogs({
         >
           <DialogHeader>
             <DialogTitle>
-              {arrival?.handoverRequired ? "Điểm bàn giao" : "Cập nhật giờ đến"}
+              {arrival?.handoverRequired
+                ? "Handover point"
+                : "Arrival time update"}
             </DialogTitle>
             <DialogDescription>
-              Ranh giới {arrival?.boundaryNo} · {arrival?.location.locationName}
+              Boundary {arrival?.boundaryNo} · {arrival?.location.locationName}
             </DialogDescription>
           </DialogHeader>
           <p className="text-sm">
             {arrival?.handoverRequired
-              ? "Cần biên bản bàn giao. GPS không xác nhận hoàn tất bàn giao hoặc ghi giờ chính thức."
-              : `Giờ đến tạm do máy chủ ghi: ${arrival?.arrivalAt ? formatUtcDateTime(arrival.arrivalAt) : "Chưa có"}. Đóng cửa sổ sẽ giữ nguyên giờ máy chủ đã ghi.`}
+              ? "A handover record is required. GPS cannot confirm handover completion or record the official time."
+              : `Provisional arrival time recorded by the server: ${arrival?.arrivalAt ? formatUtcDateTime(arrival.arrivalAt) : "Not available"}. Closing this window keeps the server-recorded time.`}
           </p>
           {state.arrivalWarning ? (
             <p role="status" className="text-sm text-amber-800">
-              Xe đang rời điểm đến ({state.arrivalWarning.distanceMeters} m).{" "}
+              The vehicle is leaving the arrival point (
+              {state.arrivalWarning.distanceMeters} m).{" "}
               {state.arrivalWarning.secondsRemaining !== null
-                ? `Ước tính còn ${state.arrivalWarning.secondsRemaining} giây trong bán kính.`
-                : "Sẽ đóng khi ra khỏi bán kính cho phép."}
+                ? `Estimated ${state.arrivalWarning.secondsRemaining} seconds remaining within the radius.`
+                : "It will close after leaving the allowed radius."}
             </p>
           ) : null}
           {failure ? (
@@ -207,23 +215,23 @@ export function LocationWorkflowDialogs({
           ) : null}
           <DialogFooter>
             <Button variant="outline" disabled={busy} onClick={dismiss}>
-              Đóng
+              Close
             </Button>
             {arrival?.handoverRequired ? (
               handoverLink ? (
                 <Button asChild onClick={dismiss}>
                   <Link to={handoverLink}>
                     {record?.status === "PLANNED"
-                      ? "Bắt đầu bàn giao"
+                      ? "Start handover"
                       : record?.status === "IN_PROGRESS"
-                        ? "Mở biên bản"
-                        : "Tạo biên bản"}
+                        ? "Open record"
+                        : "Create record"}
                   </Link>
                 </Button>
               ) : (
                 <Button asChild variant="outline" onClick={dismiss}>
                   <Link to={handoverPaths.list("crew", transportId)}>
-                    Xem tab Handovers
+                    View Handovers tab
                   </Link>
                 </Button>
               )
@@ -240,10 +248,10 @@ export function LocationWorkflowDialogs({
                 onClick={() => void confirmArrival()}
               >
                 {busy
-                  ? "Đang xác nhận…"
+                  ? "Confirming…"
                   : FEATURES.segmentArrival
-                    ? "Xác nhận giờ đến"
-                    : "HO7 chờ Backend triển khai"}
+                    ? "Confirm arrival time"
+                    : "Arrival confirmation is not available yet"}
               </Button>
             )}
           </DialogFooter>

@@ -122,7 +122,7 @@ export function EmergencyCostDetailSections({
               [
                 "VAT invoice",
                 request.invoiceRequired == null
-                  ? "Not supplied by the backend"
+                  ? "Not available"
                   : request.invoiceRequired
                     ? "Required"
                     : "Not required",
