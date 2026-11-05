@@ -15,21 +15,21 @@ export function hasActivePrimary(routes: readonly Pick<RoutePlanSummary, "routeT
 }
 
 export function hasOpenReturn(routes: readonly Pick<RoutePlanSummary, "routeType" | "status">[]) {
-  return routes.some((route) => route.routeType === "RETURN" && !["CANCELLED", "REJECTED_BY_MANAGER"].includes(route.status));
+  return routes.some((route) => route.routeType === "RETURN" && ["DRAFT", "CONFIRMED", "ACTIVE"].includes(route.status));
 }
 
 export function hasOpenBackup(routes: readonly Pick<RoutePlanSummary, "routeType" | "status">[]) {
-  return routes.some((route) => route.routeType === "BACKUP" && !["CANCELLED", "REJECTED_BY_MANAGER"].includes(route.status));
+  return routes.some((route) => route.routeType === "BACKUP" && ["DRAFT", "CONFIRMED", "ACTIVE"].includes(route.status));
 }
 
 export function canSpecialistReviewRoute(
-  route: Pick<RoutePlanSummary, "routeType" | "status" | "submittedForReviewAt">,
+  route: Pick<RoutePlanSummary, "routeType" | "status" | "legalReviewRequested">,
   context: RouteWorkspaceContext,
 ) {
   if (getWorkspaceRole(context.principal) !== "specialist" || route.status !== "DRAFT") return false;
   if (!isDossierReady(context.dossierStatus)) return false;
-  if (route.routeType === "RETURN") return context.transportStatus === "IN_TRANSIT";
-  return route.submittedForReviewAt != null;
+  if (route.routeType === "RETURN" && context.transportStatus !== "IN_TRANSIT") return false;
+  return route.legalReviewRequested === true;
 }
 
 export function getPendingRouteActions(route: RoutePlanSummary, context: RouteWorkspaceContext): PendingRouteAction[] {
@@ -37,11 +37,13 @@ export function getPendingRouteActions(route: RoutePlanSummary, context: RouteWo
   const role = getWorkspaceRole(context.principal);
   if (role === "coordinator") {
     if (!beforeDeparture(context.transportStatus)) return [];
-    return [
+    const actions: PendingRouteAction[] = [
       { label: "Edit Route", reason: "Edit this draft route.", href: routePlanEdit(route.routePlanId) },
       { label: "Cancel Draft Route", reason: "Cancel this draft route." },
-      { label: "Submit for Legal Review", reason: "Submit this draft route for specialist review." },
     ];
+    if (route.routeType !== "RETURN" && route.legalReviewRequested !== true)
+      actions.push({ label: "Submit for Legal Review", reason: "Submit this draft route for specialist review." });
+    return actions;
   }
   if (canSpecialistReviewRoute(route, context)) return [{
     label: "Review Legal Feasibility",

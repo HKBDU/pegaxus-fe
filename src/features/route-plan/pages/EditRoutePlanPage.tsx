@@ -209,7 +209,8 @@ export default function EditRoutePlanPage() {
       edit={{
         routePlanId: plan.routePlanId,
         lastUpdatedAt: plan.updatedAt,
-        submittedForReviewAt: plan.submittedForReviewAt,
+        legalReviewRequested: plan.legalReviewRequested,
+        legalReviewRequestedAt: plan.legalReviewRequestedAt,
       }}
       locations={Array.from(allLocationsMap.values())}
       routes={Array.from(allRoutesMap.values())}

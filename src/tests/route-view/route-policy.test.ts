@@ -15,16 +15,25 @@ const coordinator: AuthPrincipal = { id: "coordinator-1", roles: ["FLEET_ROUTE_C
 
 function route(
   routeType: RoutePlanSummary["routeType"],
-  overrides: Partial<Pick<RoutePlanSummary, "status" | "submittedForReviewAt" | "routePlanId">> = {},
-) {
+  overrides: Partial<Pick<RoutePlanSummary, "status" | "legalReviewRequested" | "routePlanId">> = {},
+): RoutePlanSummary {
   return {
+    routePlanCode: `${routeType}-1`,
     routeType,
     status: "DRAFT",
     routePlanId: `${routeType.toLowerCase()}-1`,
-    submittedForReviewAt: "2026-11-05T10:00:00Z",
+    totalDistanceKm: 0,
+    estimatedDurationMinutes: 0,
+    isPersonnelComplete: true,
+    segmentCount: 0,
+    branchSequenceNo: null,
+    replacesSequenceNo: null,
+    routeNote: "",
+    updatedAt: "2026-11-05T10:00:00Z",
+    legalReviewRequested: true,
+    legalReviewRequestedAt: "2026-11-05T10:00:00Z",
     ...overrides,
-  } as Pick<RoutePlanSummary, "routeType" | "status" | "submittedForReviewAt"> &
-    Partial<Pick<RoutePlanSummary, "routePlanId">>;
+  };
 }
 
 function specialistContext(overrides: Partial<RouteWorkspaceContext> = {}): RouteWorkspaceContext {
@@ -41,21 +50,25 @@ describe("canSpecialistReviewRoute", () => {
     ["PRIMARY", null, "2026-11-05T10:00:00Z"],
     ["PRIMARY", "DRAFT", "2026-11-05T10:00:00Z"],
     ["BACKUP", null, "2026-11-05T10:00:00Z"],
-    ["RETURN", null, null],
-    ["RETURN", "DRAFT", null],
+    ["RETURN", null, "2026-11-05T10:00:00Z"],
+    ["RETURN", "DRAFT", "2026-11-05T10:00:00Z"],
   ] as const)("allows specialist review for %s with dossier %s", (routeType, dossierStatus, submittedAt) => {
     const context = specialistContext({ dossierStatus, transportStatus: routeType === "RETURN" ? "IN_TRANSIT" : "READY" });
-    expect(canSpecialistReviewRoute(route(routeType, { submittedForReviewAt: submittedAt }), context)).toBe(true);
+    expect(canSpecialistReviewRoute(route(routeType, { legalReviewRequested: submittedAt != null }), context)).toBe(true);
   });
 
   it("blocks PRIMARY and BACKUP routes that were not submitted", () => {
     for (const routeType of ["PRIMARY", "BACKUP"] as const) {
-      expect(canSpecialistReviewRoute(route(routeType, { submittedForReviewAt: null }), specialistContext())).toBe(false);
+      expect(canSpecialistReviewRoute(route(routeType, { legalReviewRequested: false }), specialistContext())).toBe(false);
     }
   });
 
+  it("blocks RETURN routes that were not submitted", () => {
+    expect(canSpecialistReviewRoute(route("RETURN", { legalReviewRequested: false }), specialistContext({ transportStatus: "IN_TRANSIT" }))).toBe(false);
+  });
+
   it("blocks RETURN routes when transport is not in transit", () => {
-    expect(canSpecialistReviewRoute(route("RETURN", { submittedForReviewAt: null }), specialistContext())).toBe(false);
+    expect(canSpecialistReviewRoute(route("RETURN", { legalReviewRequested: false }), specialistContext())).toBe(false);
   });
 
   it("blocks non-draft routes, non-draft dossiers, and non-specialists", () => {
@@ -69,10 +82,10 @@ describe("primary and backup route presence", () => {
   it("does not count a cancelled primary as active", () => {
     expect(hasActivePrimary([route("PRIMARY", { status: "CANCELLED" })])).toBe(false);
   });
-  it.each(["ACTIVE", "DRAFT"])("counts an open backup with status %s", (status) => {
+  it.each(["ACTIVE", "DRAFT"] as const)("counts an open backup with status %s", (status) => {
     expect(hasOpenBackup([route("BACKUP", { status })])).toBe(true);
   });
-  it.each(["CANCELLED", "REJECTED_BY_MANAGER"])("does not count a closed backup with status %s", (status) => {
+  it.each(["CANCELLED", "REJECTED_BY_MANAGER"] as const)("does not count a closed backup with status %s", (status) => {
     expect(hasOpenBackup([route("BACKUP", { status })])).toBe(false);
   });
 });
@@ -89,7 +102,7 @@ describe("workspace and detail policy consistency", () => {
   it("returns the same review decision for table and detail", () => {
     const selectedRoute = route("PRIMARY");
     const context = specialistContext({ routeDetailPath: (id) => `/routes/${id}` });
-    expect(getPendingRouteActions(selectedRoute as RoutePlanSummary, context)).toEqual([
+    expect(getPendingRouteActions(selectedRoute, context)).toEqual([
       { label: "Review Legal Feasibility", reason: "Review the route's legal feasibility.", href: "/routes/primary-1" },
     ]);
     expect(canSpecialistReviewRoute(selectedRoute, context)).toBe(true);
@@ -98,6 +111,6 @@ describe("workspace and detail policy consistency", () => {
   it("does not create a dossier warning decision when dossier status is absent", () => {
     const context = specialistContext({ dossierStatus: null });
     expect(canSpecialistReviewRoute(route("PRIMARY"), context)).toBe(true);
-    expect(getPendingRouteActions(route("PRIMARY") as RoutePlanSummary, context)).toHaveLength(1);
+    expect(getPendingRouteActions(route("PRIMARY"), context)).toHaveLength(1);
   });
 });

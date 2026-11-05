@@ -71,7 +71,12 @@ export type TransportPlanApiValue = {
   destinationLocationId?: string | number;
   complianceDossier?: { status?: string } | null;
   complianceDossiers?: Array<{ status?: string; dossierType?: string | null }>;
-  routePlans?: Array<{ routeType?: string; status?: string | number }>;
+  routePlans?: Array<{
+    routeType?: string;
+    status?: string | number;
+    legalReviewRequested?: boolean;
+    legalReviewRequestedAt?: string | null;
+  }>;
 };
 
 function resolveLocation(locations: MapLocation[], id: string | number | undefined, address: string | undefined) {

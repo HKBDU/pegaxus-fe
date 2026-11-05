@@ -8,6 +8,7 @@ import { resolveNotificationPath } from "./notification-routes"
 import { isNotificationVisibleToPrincipal } from "./notification-policy"
 import { useNotificationStore } from "./notification-store"
 import type { AppNotification } from "./types"
+import { refreshRouteSubmissionQueries } from "@/features/route-view/hooks/useRoutePlanDetail"
 
 interface RealtimeProviderProps {
   children: ReactNode
@@ -45,6 +46,10 @@ const UNREAD_FALLBACK_SYNC_INTERVAL_MS = 30_000
 
 function isPaymentNotification(notification: AppNotification) {
   return notification.type === "PAYMENT" || notification.referenceType?.toUpperCase() === "INVOICE"
+}
+
+function isRoutePlanNotification(notification: AppNotification) {
+  return notification.referenceType?.toUpperCase() === "ROUTEPLAN" && Boolean(notification.referenceId)
 }
 
 function refreshScreensOfServerState() {
@@ -117,6 +122,10 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
       }
       void queryClient.invalidateQueries({ queryKey: ["notifications"] })
       void refreshScreensOfServerState()
+      if (isRoutePlanNotification(notification)) {
+        const routePlanId = notification.referenceId!
+        void refreshRouteSubmissionQueries(queryClient, routePlanId)
+      }
       if (isPaymentNotification(notification)) {
         const timer = setTimeout(() => {
           rereadTimers.delete(timer)

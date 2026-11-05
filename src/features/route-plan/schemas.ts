@@ -123,6 +123,29 @@ export const legalReviewSchema = z.object({
   }
 })
 
+export const routePlanMutationResultSchema = z.object({
+  routePlanId: entityId,
+  status: z.string().min(1),
+  legalReviewRequested: z.boolean(),
+  legalReviewRequestedAt: dateTime.nullable(),
+  updatedAt: dateTime,
+}).passthrough()
+
+export const legalReviewResultSchema = routePlanMutationResultSchema.extend({
+  legalReview: z.object({
+    isFeasible: z.boolean(),
+    note: z.string().nullable().optional(),
+    blockedSegments: z.array(z.number().int().positive()).default([]),
+  }).passthrough(),
+  customerUploadEnabled: z.boolean().optional(),
+  personnelAssignmentPhase2Enabled: z.boolean().optional(),
+}).passthrough()
+
+export const outsourceSegmentResultSchema = routePlanMutationResultSchema.extend({
+  segment: z.unknown(),
+  isPersonnelComplete: z.boolean(),
+}).passthrough()
+
 function validateSequence(segments: RouteSegmentInput[], context: z.RefinementCtx) {
   segments.forEach((segment, index) => {
     if (segment.sequenceNo !== index + 1) {

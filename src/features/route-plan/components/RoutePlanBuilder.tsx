@@ -134,7 +134,8 @@ export type RoutePlanBuilderProps = {
   edit?: {
     routePlanId: string;
     lastUpdatedAt: string;
-    submittedForReviewAt?: string | null;
+    legalReviewRequested: boolean;
+    legalReviewRequestedAt: string | null;
   };
 };
 
@@ -2618,8 +2619,8 @@ export function RoutePlanBuilder({
                 {edit && (
                   <>
                     <p className="text-xs text-slate-600">
-                      {edit.submittedForReviewAt
-                        ? `Submitted for legal review at ${formatUtcDateTime(edit.submittedForReviewAt)}`
+                      {edit.legalReviewRequested
+                        ? `Submitted for legal review at ${formatUtcDateTime(edit.legalReviewRequestedAt)}`
                         : "This route plan has not been submitted for legal review."}
                     </p>
                   <label className="grid gap-2 text-sm font-medium text-slate-900">

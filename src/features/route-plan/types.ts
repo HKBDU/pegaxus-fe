@@ -197,8 +197,8 @@ export interface RoutePlan {
   segments: RouteSegment[];
   isPersonnelComplete: boolean;
   legalReview: LegalReview | null;
-  /** When the coordinator sent the plan to legal review (RP3). `null` = not sent yet, so the specialist cannot review it. */
-  submittedForReviewAt?: string | null;
+  legalReviewRequested: boolean;
+  legalReviewRequestedAt: string | null;
   routeNote: string | null;
   createdAt: string;
   updatedAt: string;
@@ -256,6 +256,9 @@ export interface OutsourceSegmentRequest {
 
 export interface OutsourceSegmentResult {
   routePlanId: string;
+  status: RoutePlanStatus;
+  legalReviewRequested: boolean;
+  legalReviewRequestedAt: string | null;
   segment: RouteSegment;
   isPersonnelComplete: boolean;
   updatedAt: string;
@@ -288,6 +291,8 @@ export interface ChangeRoutePlanVehiclesResult {
 export interface RoutePlanMutationResult {
   routePlanId: string;
   status: RoutePlanStatus;
+  legalReviewRequested: boolean;
+  legalReviewRequestedAt: string | null;
   totalDistanceKm?: number;
   estimatedDurationMinutes?: number;
   segmentCount?: number;
@@ -299,8 +304,8 @@ export interface RoutePlanMutationResult {
 
 export interface LegalReviewResult extends RoutePlanMutationResult {
   legalReview: LegalReview;
-  customerUploadEnabled: boolean;
-  personnelAssignmentPhase2Enabled: boolean;
+  customerUploadEnabled?: boolean;
+  personnelAssignmentPhase2Enabled?: boolean;
 }
 
 export interface RoutePlanListParams {

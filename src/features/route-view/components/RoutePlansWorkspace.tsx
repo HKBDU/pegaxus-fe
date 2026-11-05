@@ -9,7 +9,7 @@ import { Button } from "@/shared/components/ui/button";
 import { ErrorState } from "@/shared/components/common";
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import { Section } from "@/features/transport-plan/components/ApprovedBookingDetails";
-import { useRoutePlanAlternatives } from "../hooks/useRoutePlanDetail";
+import { refreshRouteAfterSubmit, useRoutePlanAlternatives } from "../hooks/useRoutePlanDetail";
 import { canViewRoute, getRouteViewError } from "../services";
 import { routePlanIdSchema } from "../schemas";
 import { getRouteDetailPath } from "../navigation";
@@ -73,15 +73,15 @@ export function RoutePlansWorkspace({
   const [submittingRoutePlanId, setSubmittingRoutePlanId] = useState<string | null>(null);
   const allowed = canViewRoute(principal);
   const validId = routePlanIdSchema.safeParse(transportPlanId).success;
+  const role = getWorkspaceRole(principal);
+  const manager = role === "manager",
+    coordinator = role === "coordinator",
+    specialist = role === "specialist";
   const query = useRoutePlanAlternatives(
     transportPlanId,
     {},
     allowed && validId,
   );
-  const role = getWorkspaceRole(principal);
-  const manager = role === "manager",
-    coordinator = role === "coordinator",
-    specialist = role === "specialist";
   const unlocked = beforeDeparture(transportStatus);
   const items = query.data?.items ?? [];
   const context = {
@@ -102,7 +102,7 @@ export function RoutePlansWorkspace({
       : "Route Plans";
   const creation = getPendingRouteCreation(items, context, transportPlanId);
   async function submitForLegalReview(route: RoutePlanSummary) {
-    if (submittingRoutePlanId) return;
+    if (submittingRoutePlanId || route.routeType === "RETURN" || route.legalReviewRequested) return;
     setSubmittingRoutePlanId(route.routePlanId);
     try {
       const detail = await getRoutePlan(route.routePlanId);
@@ -133,17 +133,21 @@ export function RoutePlansWorkspace({
         })),
       });
       toast.success("Submitted for legal review.");
+      try {
+        const refreshResult = await refreshRouteAfterSubmit(
+          queryClient,
+          route.routePlanId,
+        );
+        if (!refreshResult.synced) {
+          toast.warning("Submission succeeded, but the route view is still synchronizing.");
+        }
+      } catch {
+        toast.warning("Submission succeeded, but the route view could not be refreshed yet.");
+      }
     } catch (error) {
       toast.error(getRoutePlanError(error).message);
     } finally {
       setSubmittingRoutePlanId(null);
-    }
-    // The submit request is complete once the backend has sent the notification.
-    // A failed cache refresh must not turn that successful submission into an error.
-    try {
-      await queryClient.invalidateQueries({ queryKey: ["route-view", "list", transportPlanId] });
-    } catch {
-      // The next normal query refresh will reconcile the route status.
     }
   }
   const error = query.isError ? getRouteViewError(query.error) : null;

@@ -1,5 +1,10 @@
 import apiClient from "@/lib/axios";
 import { ROUTE_PLAN_ENDPOINTS, ROUTE_PLAN_ERROR_MESSAGES } from "./constants";
+import {
+  legalReviewResultSchema,
+  outsourceSegmentResultSchema,
+  routePlanMutationResultSchema,
+} from "./schemas";
 import type {
   ApiEnvelope,
   CancelRoutePlanRequest,
@@ -149,9 +154,9 @@ export const updateRoutePlan = (
   routePlanId: string,
   payload: UpdateRoutePlanRequest,
 ) =>
-  request<RoutePlanMutationResult>(
+  request<unknown>(
     apiClient.put(`${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}`, payload),
-  );
+  ).then((value) => routePlanMutationResultSchema.parse(value) as RoutePlanMutationResult);
 
 /** K-01: replace vehicles on existing segments of a CONFIRMED/ACTIVE plan. */
 export const changeRoutePlanVehicles = (
@@ -170,33 +175,33 @@ export const cancelRoutePlan = (
   routePlanId: string,
   payload: CancelRoutePlanRequest,
 ) =>
-  request<RoutePlanMutationResult>(
+  request<unknown>(
     apiClient.post(
       `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/cancel`,
       payload,
     ),
-  );
+  ).then((value) => routePlanMutationResultSchema.parse(value) as RoutePlanMutationResult);
 export const submitLegalReview = (
   routePlanId: string,
   payload: LegalReviewRequest,
 ) =>
-  request<LegalReviewResult>(
+  request<unknown>(
     apiClient.post(
       `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/legal-review`,
       payload,
     ),
-  );
+  ).then((value) => legalReviewResultSchema.parse(value) as unknown as LegalReviewResult);
 export const updateSegmentOutsourcing = (
   routePlanId: string,
   routePlanRouteId: string,
   payload: OutsourceSegmentRequest,
 ) =>
-  request<OutsourceSegmentResult>(
+  request<unknown>(
     apiClient.put(
       `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/segments/${routePlanRouteId}/outsourcing`,
       payload,
     ),
-  );
+  ).then((value) => outsourceSegmentResultSchema.parse(value) as OutsourceSegmentResult);
 export const exportRoutePlanPdf = (routePlanId: string) =>
   apiClient.get(`${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/export`, {
     params: { format: "pdf" },
@@ -240,12 +245,12 @@ export function getLegalReviewError(error: unknown): {
   message: string;
 } {
   const mapped = getRoutePlanError(error);
-  if (mapped.code === "INVALID_ROUTE_PLAN_STATUS")
-    return { ...mapped, message: "A cancelled route plan cannot be reviewed." };
   if (mapped.code === "ROUTE_PLAN_NOT_SUBMITTED")
     return {
       ...mapped,
-      message: "This route plan has not been submitted for legal review.",
+      message: "This route plan has not been requested for legal review.",
     };
+  if (mapped.code === "INVALID_ROUTE_PLAN_STATUS")
+    return { ...mapped, message: mapped.message || "Legal review requires a DRAFT route requested for review." };
   return mapped;
 }
