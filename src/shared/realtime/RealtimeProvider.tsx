@@ -41,6 +41,8 @@ const REFRESH_ON_NOTIFICATION = new Set([
  * pushes are re-read once more after this delay.
  */
 const PAYMENT_REREAD_DELAY_MS = 2_000
+/** Keeps the bell correct when a hub is temporarily unavailable. This is deliberately low-frequency. */
+const UNREAD_FALLBACK_SYNC_INTERVAL_MS = 30_000
 
 function isPaymentNotification(notification: AppNotification) {
   return notification.type === "PAYMENT" || notification.referenceType?.toUpperCase() === "INVOICE"
@@ -159,26 +161,16 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
       return
     }
     const owner = captureNotificationSession()
-    let disposed = false
-    let retryTimer: ReturnType<typeof setTimeout> | undefined
-    let attempts = 0
-    async function connect() {
-      if (disposed || !isNotificationSessionCurrent(owner)) return
-      try {
-        await notificationHub.start(() => isNotificationSessionCurrent(owner) ? useAuthStore.getState().accessToken : null)
-      } catch {
-        // Initial start failures are not covered by SignalR automatic reconnect.
-      }
-      if (disposed || !isNotificationSessionCurrent(owner)) return
-      if (!["connected", "reconnecting"].includes(notificationHub.getState())) {
-        const delay = [2000, 5000, 10000][attempts++] ?? 30000
-        retryTimer = setTimeout(() => void connect(), delay)
-      }
-    }
-    void connect()
+    // The REST sync makes the current badge correct even before SignalR is connected. It is also a safe fallback for
+    // transient SignalR outages; the hub still provides immediate updates whenever it is available.
+    void syncFromRest()
+    const fallbackSync = setInterval(() => {
+      if (isNotificationSessionCurrent(owner)) void syncFromRest()
+    }, UNREAD_FALLBACK_SYNC_INTERVAL_MS)
+    // Initial connection retries are owned by the hub; keep a single retry scheduler.
+    void notificationHub.start(() => isNotificationSessionCurrent(owner) ? useAuthStore.getState().accessToken : null)
     return () => {
-      disposed = true
-      clearTimeout(retryTimer)
+      clearInterval(fallbackSync)
       void notificationHub.stop()
       useNotificationStore.getState().reset()
     }
