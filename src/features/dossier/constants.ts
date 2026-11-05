@@ -162,7 +162,7 @@ export function getDossierRequirementActionLabels(
 export const initialDossierRequirementsParams: DossierRequirementsParams = {
   pageIndex: 1,
   pageSize: 20,
-  sortBy: "createdAt:asc",
+  sortBy: "createdAt:desc",
 };
 
 export function getDossierHorseFilterOptions(
@@ -250,6 +250,7 @@ export const dossierRequirementStatusOptions = [
 
 export const dossierRequirementSortOptions = [
   { value: "createdAt:asc", label: "Default requirement order" },
+  { value: "createdAt:desc", label: "Newest created" },
   { value: "dueDate:asc", label: "Due date ascending" },
   { value: "dueDate:desc", label: "Due date descending" },
   { value: "status:asc", label: "Status ascending" },

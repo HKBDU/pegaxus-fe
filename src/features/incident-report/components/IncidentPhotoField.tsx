@@ -21,6 +21,8 @@ export interface IncidentPhotoFieldProps {
   disabled?: boolean;
   maxFiles?: number;
   error?: string | null;
+  onUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
+  onError?: (message: string | null) => void;
 }
 
 export function IncidentPhotoField({
@@ -29,6 +31,8 @@ export function IncidentPhotoField({
   disabled = false,
   maxFiles = 5,
   error,
+  onUploadStateChange,
+  onError,
 }: IncidentPhotoFieldProps) {
   const latest = useRef(value);
   useLayoutEffect(() => {
@@ -50,7 +54,10 @@ export function IncidentPhotoField({
         coordinates={value.coordinates}
         captions={value.captions}
         error={photoError ?? error}
-        onError={setPhotoError}
+        onError={(message) => {
+          setPhotoError(message);
+          onError?.(message);
+        }}
         documentLabel="Incident photos"
         statusLabel="Ready for incident report"
         presignedEntity="attachment"
@@ -64,7 +71,10 @@ export function IncidentPhotoField({
         onUploadedPublicIdsChange={(uploadedPublicIds) =>
           patch({ uploadedPublicIds })
         }
-        onUploadStateChange={(uploadState) => patch({ uploadState })}
+        onUploadStateChange={(uploadState) => {
+          patch({ uploadState });
+          onUploadStateChange?.(uploadState);
+        }}
       />
     </fieldset>
   );

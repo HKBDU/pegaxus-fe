@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { estimateTransport } from "@/features/booking/lib/transport-estimate";
 import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { toUtcIso } from "@/shared/utils/datetime";
 import { useForm } from "react-hook-form";
@@ -46,7 +47,11 @@ import {
 } from "../schemas";
 import { emptyPlanForm } from "../constants";
 import type { TransportPlanDetail, TransportPlanFormValues } from "../types";
-import { validateTransportPlanSchedule } from "../schedule-validation";
+import {
+  minimumPlannedStartDateUtc,
+  validatePlannedStartDate,
+  validateTransportPlanSchedule,
+} from "../schedule-validation";
 import { Section } from "./ApprovedBookingDetails";
 import { Flow3MockIndicator } from "./Flow3MockIndicator";
 import { TransportPlanLocationSelect } from "./TransportPlanLocationSelect";
@@ -71,6 +76,13 @@ const fields = [
 export function TransportPlanMetadataForm({
   bookingId,
   requestedArrivalDate,
+  originCountry,
+  destinationCountry,
+  originLatitude,
+  originLongitude,
+  destinationLatitude,
+  destinationLongitude,
+  bookingCreatedAt,
   plan,
   cancelHref,
   reloadLatest,
@@ -80,6 +92,13 @@ export function TransportPlanMetadataForm({
 }: {
   bookingId: string;
   requestedArrivalDate?: string | null;
+  originCountry?: string | null;
+  destinationCountry?: string | null;
+  originLatitude?: number | null;
+  originLongitude?: number | null;
+  destinationLatitude?: number | null;
+  destinationLongitude?: number | null;
+  bookingCreatedAt?: string | null;
   plan?: TransportPlanDetail;
   cancelHref: string;
   reloadLatest?: () => Promise<TransportPlanDetail | undefined>;
@@ -97,12 +116,33 @@ export function TransportPlanMetadataForm({
     message: string;
   } | null>(null);
   const [reloading, setReloading] = useState(false);
+  const transportEstimate = estimateTransport(
+    {
+      latitude: originLatitude,
+      longitude: originLongitude,
+      country: originCountry ?? "",
+    },
+    {
+      latitude: destinationLatitude,
+      longitude: destinationLongitude,
+      country: destinationCountry ?? "",
+    },
+  );
+  const initialValues = { ...(plan ? planToForm(plan) : emptyPlanForm) };
+  if (transportEstimate) {
+    if (!initialValues.estimatedDistanceKm)
+      initialValues.estimatedDistanceKm = String(transportEstimate.distanceKm);
+    if (!initialValues.estimatedDurationMinutes)
+      initialValues.estimatedDurationMinutes = String(
+        transportEstimate.durationMinutes,
+      );
+  }
   const form = useForm<TransportPlanFormValues>({
     resolver: zodResolver(
       plan ? editTransportPlanFormSchema : transportPlanFormSchema,
     ),
     mode: "onTouched",
-    defaultValues: plan ? planToForm(plan) : emptyPlanForm,
+    defaultValues: initialValues,
   });
   const attempt = useFormRequestAttemptGuard(form);
   const create = useCreateTransportPlan(bookingId);
@@ -124,23 +164,23 @@ export function TransportPlanMetadataForm({
   const submit = form.handleSubmit(async (values) => {
     if (blocked) return;
     setProblem(null);
-    if (!baseline) {
-      const scheduleError = validateTransportPlanSchedule({
-        plannedStartAt: values.plannedStartAt,
-        plannedEndAt: values.plannedEndAt,
-        estimatedDurationMinutes: values.estimatedDurationMinutes.trim()
-          ? Number(values.estimatedDurationMinutes)
-          : null,
-        requestedArrivalDate,
+    const scheduleError = validateTransportPlanSchedule({
+      plannedStartAt: values.plannedStartAt,
+      plannedEndAt: values.plannedEndAt,
+      estimatedDurationMinutes: values.estimatedDurationMinutes.trim()
+        ? Number(values.estimatedDurationMinutes)
+        : null,
+      requestedArrivalDate,
+      originCountry,
+      destinationCountry,
+      bookingCreatedAt,
+    });
+    if (scheduleError) {
+      form.setError(scheduleError.field, {
+        type: "validate",
+        message: scheduleError.message,
       });
-      if (scheduleError) {
-        form.setError(scheduleError.field, {
-          type: "validate",
-          message: scheduleError.message,
-        });
-        setProblem({ message: "Check the highlighted schedule fields and try again." });
-        return;
-      }
+      return;
     }
     try {
       let result;
@@ -263,8 +303,8 @@ export function TransportPlanMetadataForm({
                       className="text-xs text-slate-500"
                     >
                       {baseline
-                        ? "An empty selection retains the saved location; it does not remove it."
-                        : "Leave empty for the backend to resolve the booking coordinates. Older bookings may have no location."}
+                        ? "An empty selection retains the saved location."
+                        : "Leave empty for automatical resolving"}
                     </p>
                     <div className="min-h-5">
                       {fieldState.error && (
@@ -302,9 +342,24 @@ export function TransportPlanMetadataForm({
                         const seconds = time.split(":")[2];
                         const changeDate = (value: string) => {
                           if (isPending || !canWrite) return;
-                          field.onChange(
-                            value ? `${value}T${time || "00:00"}` : "",
-                          );
+                          const nextValue = value ? `${value}T${time || "00:00"}` : "";
+                          field.onChange(nextValue);
+                          const startError = name === "plannedStartAt"
+                            ? validatePlannedStartDate({
+                                plannedStartAt: nextValue,
+                                originCountry,
+                                destinationCountry,
+                                bookingCreatedAt,
+                              })
+                            : null;
+                          if (startError) {
+                            form.setError("plannedStartAt", {
+                              type: "validate",
+                              message: startError.message,
+                            });
+                          } else {
+                            form.clearErrors("plannedStartAt");
+                          }
                           field.onBlur();
                         };
                         const changeTime = (value: string) => {
@@ -334,6 +389,7 @@ export function TransportPlanMetadataForm({
                                     onChange={changeDate}
                                     onBlur={field.onBlur}
                                     disabled={isPending || !canWrite}
+                                    minDate={name === "plannedStartAt" ? minimumPlannedStartDateUtc(originCountry, destinationCountry, bookingCreatedAt) : undefined}
                                     placeholder="DD / MM / YYYY"
                                     className={controlClass}
                                   />

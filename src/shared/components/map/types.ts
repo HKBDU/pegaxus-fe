@@ -41,6 +41,10 @@ export type MapRoute = {
   source?: "saved" | "preview";
   routePlanType?: "PRIMARY" | "BACKUP" | "RETURN";
   isOutsourced?: boolean;
+  vehicleIds?: string[];
+  dwellAfterMinutes?: number | null;
+  plannedDepartureAt?: string;
+  plannedArrivalAt?: string;
   readonly?: boolean;
 };
 

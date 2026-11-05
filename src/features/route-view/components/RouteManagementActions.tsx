@@ -106,7 +106,11 @@ export function RouteManagementActions({
       (plan.routeType !== "RETURN" ||
         context.workspace.transportStatus === "IN_TRANSIT"));
   const canReview =
-    role === "specialist" && plan.status === "DRAFT" && dossierReady && !readOnly;
+    role === "specialist" &&
+    plan.status === "DRAFT" &&
+    dossierReady &&
+    (plan.routeType === "RETURN" || plan.submittedForReviewAt != null) &&
+    !readOnly;
   const canCancel = role === "coordinator" && plan.status === "DRAFT" && !readOnly;
   const canChangeVehicles = canChangeVehiclesBeforeDeparture(
     plan,
@@ -306,6 +310,10 @@ export function RouteManagementActions({
             if (!open) setReview(null);
           }}
           onConfirmed={() => {
+            setReview(null);
+            void refresh();
+          }}
+          onNotSubmitted={() => {
             setReview(null);
             void refresh();
           }}

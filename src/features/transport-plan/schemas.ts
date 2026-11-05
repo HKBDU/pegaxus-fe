@@ -151,6 +151,7 @@ const bookingFields = {
   totalHorses: z.number().int().nonnegative(),
   requestedDepartureDate: z.iso.date(),
   requestedArrivalDate: z.iso.date().nullish(),
+  createdAt: z.iso.datetime({ offset: true }).nullish(),
   specialRequirements: optionalText,
   transportPlan: planSummarySchema.nullable(),
   complianceDossier: dossierSummarySchema.nullable(),
@@ -329,6 +330,7 @@ export const transportPlanDetailSchema = z
       totalHorses: z.number().int().nonnegative(),
       requestedDepartureDate: z.iso.date(),
       requestedArrivalDate: z.iso.date().nullish(),
+      createdAt: optionalTimestamp,
       specialRequirements: optionalText,
     }),
     transport: z.object({

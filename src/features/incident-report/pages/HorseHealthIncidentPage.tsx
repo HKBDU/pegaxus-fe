@@ -95,6 +95,8 @@ export default function HorseHealthIncidentPage() {
   const [fieldErrors, setFieldErrors] = useState<IncidentFieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submitting = useRef(false);
+  const [photoUploadState, setPhotoUploadState] = useState<"idle" | "uploading" | "ready" | "error">("idle");
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [locationId, setLocationId] = useState(routeState.locationId);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [createdIncidentId, setCreatedIncidentId] = useState<string | null>(
@@ -173,7 +175,7 @@ export default function HorseHealthIncidentPage() {
     setSubmitError(null);
     setFieldErrors({});
     mutations.horseHealth.reset();
-    if (!areIncidentPhotosReady(photos)) {
+    if (!areIncidentPhotosReady({ ...photos, uploadState: photoUploadState })) {
       setSubmitError(
         "Wait for every selected photo to upload, or retry/remove failed photos before submitting.",
       );
@@ -326,10 +328,12 @@ export default function HorseHealthIncidentPage() {
         warnings={warnings}
         submitting={mutations.horseHealth.isPending}
         disabled={mutations.horseHealth.isPending || Boolean(createdIncidentId)}
-        error={error}
+        error={error ?? photoError}
         errors={errors}
         locationStatus={location.status}
         locationError={location.error}
+        onPhotoUploadStateChange={setPhotoUploadState}
+        onPhotoError={setPhotoError}
       />
       {createdIncidentId && (
         <button

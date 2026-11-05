@@ -71,6 +71,8 @@ export default function VehicleIncidentPage() {
   const [fieldErrors, setFieldErrors] = useState<IncidentFieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submitting = useRef(false);
+  const [photoUploadState, setPhotoUploadState] = useState<"idle" | "uploading" | "ready" | "error">("idle");
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [locationId, setLocationId] = useState(routeState.locationId);
   const location = useIncidentLocation({
     locationId,
@@ -147,7 +149,7 @@ export default function VehicleIncidentPage() {
     setSubmitError(null);
     setFieldErrors({});
     mutations.vehicle.reset();
-    if (!areIncidentPhotosReady(photos)) {
+    if (!areIncidentPhotosReady({ ...photos, uploadState: photoUploadState })) {
       setSubmitError(
         "Wait for every selected photo to upload, or retry/remove failed photos before submitting.",
       );
@@ -230,10 +232,12 @@ export default function VehicleIncidentPage() {
         onSubmit={submit}
         submitting={mutations.vehicle.isPending}
         disabled={mutations.vehicle.isPending}
-        error={error}
+        error={error ?? photoError}
         errors={errors}
         locationStatus={location.status}
         locationError={location.error}
+        onPhotoUploadStateChange={setPhotoUploadState}
+        onPhotoError={setPhotoError}
       />
     </main>
   );

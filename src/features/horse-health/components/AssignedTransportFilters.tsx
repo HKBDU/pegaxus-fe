@@ -9,8 +9,8 @@ import { Input } from "@/shared/components/ui/input"
 export type AssignedStatusFilter = "ALL" | "READY" | "IN_TRANSIT" | "COMPLETED"
 export type AssignedSort = "departureAt:asc" | "departureAt:desc" | "transportCode:asc"
 
-/** Soonest departure first is the default order: selectable, but not shown as an active filter badge. */
-export const DEFAULT_ASSIGNED_SORT: AssignedSort = "departureAt:asc"
+/** Latest departure first is the default order: selectable, but not shown as an active filter badge. */
+export const DEFAULT_ASSIGNED_SORT: AssignedSort = "departureAt:desc"
 
 const SORT_OPTIONS: DataTableRadioOption[] = [
   { value: "departureAt:asc", label: "Departure (soonest)" },

@@ -30,6 +30,8 @@ export interface IncidentCommonFormProps {
   photoError?: string | null;
   locationStatus?: IncidentLocationStatus;
   locationError?: string | null;
+  onPhotoUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
+  onPhotoError?: (message: string | null) => void;
 }
 
 export function IncidentCommonForm({
@@ -45,6 +47,8 @@ export function IncidentCommonForm({
   photoError,
   locationStatus = "idle",
   locationError,
+  onPhotoUploadStateChange,
+  onPhotoError,
 }: IncidentCommonFormProps) {
   return (
     <div className="space-y-5">
@@ -89,6 +93,8 @@ export function IncidentCommonForm({
           disabled={disabled}
           maxFiles={maxPhotos}
           error={photoError}
+          onUploadStateChange={onPhotoUploadStateChange}
+          onError={onPhotoError}
         />
       )}
     </div>

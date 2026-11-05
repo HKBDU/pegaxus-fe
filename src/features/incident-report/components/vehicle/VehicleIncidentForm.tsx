@@ -36,6 +36,8 @@ export interface VehicleIncidentFormProps {
     | "unavailable"
     | "error";
   locationError?: string | null;
+  onPhotoUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
+  onPhotoError?: (message: string | null) => void;
 }
 
 export function VehicleIncidentForm({
@@ -50,6 +52,8 @@ export function VehicleIncidentForm({
   errors = {},
   locationStatus,
   locationError,
+  onPhotoUploadStateChange,
+  onPhotoError,
 }: VehicleIncidentFormProps) {
   return (
     <form
@@ -75,6 +79,8 @@ export function VehicleIncidentForm({
         errors={errors}
         locationStatus={locationStatus}
         locationError={locationError}
+        onPhotoUploadStateChange={onPhotoUploadStateChange}
+        onPhotoError={onPhotoError}
       />
       <VehicleIncidentFields
         value={value}

@@ -104,6 +104,11 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: defines,
+    build: {
+      // MapLibre, PDF.js, and the WebGL landing experience are intentionally
+      // lazy-loaded but remain large when their route chunks are built.
+      chunkSizeWarningLimit: 1200,
+    },
   }
 })
 

@@ -302,7 +302,7 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                           <TableCell className="truncate px-2.5 py-1.5 font-mono text-xs text-gray-600">{horse.passportNumber}</TableCell>
                           <TableCell className="truncate px-2.5 py-1.5 text-xs text-gray-600">{horse.breed}</TableCell>
                           <TableCell className="px-2.5 py-1.5 text-xs text-gray-600">{formatSex(horse.sex)}</TableCell>
-                          <TableCell className="truncate px-2.5 py-1.5 text-xs text-gray-600">{horse.specialHandlingNotes || EMPTY_VALUE}</TableCell>
+                          <TableCell className="whitespace-normal break-words px-2.5 py-1.5 text-xs leading-4 text-gray-600">{horse.specialHandlingNotes || EMPTY_VALUE}</TableCell>
                         </TableRow>
                       ))
                     ) : (
@@ -324,7 +324,7 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
               <dl className="space-y-2 border-gray-200 lg:border-l lg:pl-4">
                 <div>
                   <FieldLabel>General notes</FieldLabel>
-                  <dd className="mt-1 text-xs leading-[18px] text-gray-700">{booking.specialRequirements || "No special trip requirements."}</dd>
+                  <dd className="mt-1 whitespace-normal break-words text-xs leading-[18px] text-gray-700">{booking.specialRequirements || "No special trip requirements."}</dd>
                 </div>
                 {booking.customerNote ? (
                   <div>

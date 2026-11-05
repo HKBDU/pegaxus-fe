@@ -89,10 +89,6 @@ export function DossierReadinessAction({
           {error ? (
             <div role="alert" className="text-sm text-red-700">
               <p>{error.message}</p>
-              <details className="mt-2 text-xs">
-                <summary>Technical details</summary>
-                {error.code}: {error.backendMessage}
-              </details>
             </div>
           ) : null}
           <AlertDialogFooter>

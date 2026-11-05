@@ -274,7 +274,7 @@ const documentServiceMethods = {
     const id = dossierIdSchema.parse(input.dossierId);
     const reminder = missingDocumentReminderSchema.parse(input.reminder);
     const payload = await apiClient.post<unknown, unknown>(
-      `${ENDPOINT}/${id}/requirements/reminders`,
+      `${ENDPOINT}/${id}/missing-document-reminders`,
       reminder,
     );
     const response = backendReminderEnvelopeSchema.parse(payload);
@@ -411,12 +411,13 @@ const documentServiceMethods = {
   },
 
   async submitDocumentVersion(input: SubmitDocumentVersionInput) {
-    const documentId = dossierIdSchema.parse(String(input.documentId));
+    const dossierId = dossierIdSchema.parse(String(input.dossierId));
+    const requirementId = dossierIdSchema.parse(String(input.requirementId));
     const metadata = createSubmitDocumentVersionSchema(null).parse(
       input.metadata,
     );
     const payload = await apiClient.post<unknown, unknown>(
-      `compliance-documents/${encodeURIComponent(documentId)}/versions`,
+      `${requirementEndpoint(dossierId, requirementId)}/document/versions`,
       serializeDocumentSubmission(input.files, metadata),
       { timeout: 120_000 },
     );

@@ -123,6 +123,7 @@ export const routePlanDetailSchema = z.object({
   isPersonnelComplete: z.boolean(),
   branchSequenceNo: z.number().int().positive().nullish(),
   legalReview: routeLegalReviewSchema.nullable().optional().transform((v) => v ?? null),
+  submittedForReviewAt: timestamp.nullish().transform((v) => v ?? null),
   replacesSequenceNo: replacesSequenceNoSchema,
   routeNote: text,
   createdAt: responseTimestamp,
