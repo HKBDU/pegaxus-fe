@@ -197,6 +197,7 @@ export interface RoutePlan {
   segments: RouteSegment[];
   isPersonnelComplete: boolean;
   legalReview: LegalReview | null;
+  submittedForReviewAt?: string | null;
   routeNote: string | null;
   createdAt: string;
   updatedAt: string;
@@ -212,6 +213,7 @@ export interface RouteSegmentInput {
   transportMode?: TransportMode;
   plannedDepartureAt: string;
   plannedArrivalAt: string;
+  dwellAfterMinutes?: number;
   vehicleIds?: string[];
   outsourcing?: { transportProviderId: string; note?: string };
   note?: string;

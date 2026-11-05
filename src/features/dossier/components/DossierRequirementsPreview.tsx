@@ -388,8 +388,8 @@ export function DossierRequirementFilters({
       <div className="w-full sm:w-44 [&>button]:w-full">
         <DataTableRadioFilter
           title="Sort"
-          value={params.sortBy ?? "createdAt:asc"}
-          defaultValue="createdAt:asc"
+          value={params.sortBy ?? "createdAt:desc"}
+          defaultValue="createdAt:desc"
           options={dossierRequirementSortOptions}
           hideTitleWhenFiltered
           onValueChange={(sortBy) =>

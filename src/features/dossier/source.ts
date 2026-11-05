@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { dossierIdSchema, dossierRequirementsParamsSchema } from "./schemas";
+import { dossierService } from "./services";
 import type {
   DocumentReviewInput,
   DossierLoadErrorKind,
@@ -16,7 +17,6 @@ export async function loadMissingDossierRequirements(
   signal?: AbortSignal,
 ) {
   const id = dossierIdSchema.parse(dossierId);
-  const { dossierService } = await import("./services");
   return dossierService.getMissingRequirements(id, signal);
 }
 
@@ -24,7 +24,6 @@ export async function loadMissingRequirementReminder(
   input: SendMissingDocumentReminderInput,
 ) {
   const id = dossierIdSchema.parse(input.dossierId);
-  const { dossierService } = await import("./services");
   return dossierService.sendMissingRequirementReminder({
     ...input,
     dossierId: id,
@@ -32,13 +31,11 @@ export async function loadMissingRequirementReminder(
 }
 
 export async function loadDocumentReview(input: DocumentReviewInput) {
-  const { dossierService } = await import("./services");
   return dossierService.reviewComplianceDocument(input);
 }
 
 export async function loadMarkReadyForSubmission(dossierId: string) {
   const id = dossierIdSchema.parse(dossierId);
-  const { dossierService } = await import("./services");
   return dossierService.markReadyForSubmission(id);
 }
 
@@ -59,7 +56,6 @@ export async function loadDossierOverview(
   signal?: AbortSignal,
 ) {
   signal?.throwIfAborted();
-  const { dossierService } = await import("./services");
   return dossierService.getOverview(dossierId, signal);
 }
 
@@ -70,12 +66,10 @@ export async function loadDossierRequirements(
 ) {
   const query = dossierRequirementsParamsSchema.parse(params);
   signal?.throwIfAborted();
-  const { dossierService } = await import("./services");
   return dossierService.getRequirements(dossierId, query, signal);
 }
 
 export async function loadUploadDocument(input: UploadDocumentInput) {
-  const { dossierService } = await import("./services");
   return dossierService.uploadComplianceDocument(input);
 }
 
@@ -86,7 +80,6 @@ export async function loadComplianceDocument(
   requirementId?: string,
 ) {
   signal?.throwIfAborted();
-  const { dossierService } = await import("./services");
   return dossierService.getComplianceDocument(
     documentId,
     signal,
@@ -98,14 +91,12 @@ export async function loadComplianceDocument(
 export async function loadSubmitDocumentVersion(
   input: SubmitDocumentVersionInput,
 ) {
-  const { dossierService } = await import("./services");
   return dossierService.submitDocumentVersion(input);
 }
 
 export async function loadUpdateDocumentMetadata(
   input: UpdateDocumentMetadataInput,
 ) {
-  const { dossierService } = await import("./services");
   return dossierService.updateComplianceDocumentMetadata(input);
 }
 

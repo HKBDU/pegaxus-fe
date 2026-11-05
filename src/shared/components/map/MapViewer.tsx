@@ -6,6 +6,7 @@ import {
   toMapPoint,
 } from "@/shared/utils/map";
 import { MapControls } from "./MapControls";
+import { EuUkBoundaryLayer } from "./EuUkBoundaryLayer";
 import { LocationMarkers } from "./LocationMarkers";
 import { LocationPopup } from "./LocationPopup";
 import { LocationSearch } from "./LocationSearch";
@@ -201,6 +202,7 @@ export function MapViewer({
           if (selected) onRouteSelect?.(selected);
         }}
       >
+        <EuUkBoundaryLayer />
         <LocationMarkers
           locations={validLocations}
           selectedLocation={state.selectedLocation}

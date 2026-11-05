@@ -8,8 +8,8 @@ import { FilterToolbar } from "@/shared/components/ui/filter-toolbar"
 import { DataTableRadioFilter, type DataTableRadioOption } from "@/shared/components/ui/data-table-radio-filter"
 import { Input } from "@/shared/components/ui/input"
 
-/** Soonest departure first is the default order, so it is not shown as an active filter. */
-export const DEFAULT_DASHBOARD_SORT: DashboardSort = "requestedDepartureDate:asc"
+/** Latest departure first is the default order, so it is not shown as an active filter. */
+export const DEFAULT_DASHBOARD_SORT: DashboardSort = "requestedDepartureDate:desc"
 
 const ROUTE_OPTIONS: DataTableRadioOption[] = [
   { value: "ALL", label: "All routes" },

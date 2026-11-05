@@ -216,6 +216,34 @@ export function getRoutePlanError(error: unknown): {
     };
   return {
     code: "UNKNOWN_ERROR",
-    message: "Unable to complete the route plan request.",
+    message:
+      (
+        error as {
+          response?: {
+            data?: { message?: string; error?: { message?: string } };
+          };
+        }
+      ).response?.data?.message ??
+      (
+        error as {
+          response?: { data?: { error?: { message?: string } } };
+        }
+      ).response?.data?.error?.message ??
+      "Unable to complete the route plan request.",
   };
+}
+
+export function getLegalReviewError(error: unknown): {
+  code: string;
+  message: string;
+} {
+  const mapped = getRoutePlanError(error);
+  if (mapped.code === "INVALID_ROUTE_PLAN_STATUS")
+    return { ...mapped, message: "A cancelled route plan cannot be reviewed." };
+  if (mapped.code === "ROUTE_PLAN_NOT_SUBMITTED")
+    return {
+      ...mapped,
+      message: "This route plan has not been submitted for legal review.",
+    };
+  return mapped;
 }

@@ -84,6 +84,8 @@ export default function HorseHealthIncidentPage() {
     routeState.horseIds ?? [],
   );
   const [photos, setPhotos] = useState(initialPhotos);
+  const [photoUploadState, setPhotoUploadState] = useState<"idle" | "uploading" | "ready" | "error">("idle");
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [locationId, setLocationId] = useState(routeState.locationId);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [createdIncidentId, setCreatedIncidentId] = useState<string | null>(
@@ -153,6 +155,10 @@ export default function HorseHealthIncidentPage() {
   };
 
   const submit = () => {
+    if (photos.files.length > 0 && (photoUploadState === "uploading" || photos.uploadedPublicIds.length !== photos.files.length)) {
+      setPhotoError("Please wait until every image finishes uploading.");
+      return;
+    }
     const value = form.values;
     const input: HorseHealthIncidentRequest = {
       transportId: value.transportId,
@@ -273,9 +279,11 @@ export default function HorseHealthIncidentPage() {
         warnings={warnings}
         submitting={mutations.horseHealth.isPending}
         disabled={mutations.horseHealth.isPending || Boolean(createdIncidentId)}
-        error={error}
+        error={error ?? photoError}
         locationStatus={location.status}
         locationError={location.error}
+        onPhotoUploadStateChange={setPhotoUploadState}
+        onPhotoError={setPhotoError}
       />
       {createdIncidentId && (
         <button

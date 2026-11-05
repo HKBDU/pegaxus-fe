@@ -41,7 +41,7 @@ const KPI_BASE: IncidentListParams = {
   search: "",
   pageIndex: 1,
   pageSize: 1,
-  sortBy: "severity:desc,occurredAt:desc",
+  sortBy: "occurredAt:desc",
 }
 
 /**

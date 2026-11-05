@@ -67,6 +67,8 @@ export interface HealthLogSummary {
   locationDescription?: string | null
 }
 
+export type HorseHealthLatestLog = Pick<HealthLogSummary, "horseHealthLogId" | "checkedAt" | "logType" | "healthStatus" | "hydrationStatus" | "checkedBy" | "veterinarianRequired" | "latestNote" | "locationDescription">
+
 export interface HealthLog extends HealthLogSummary {
   transportId: string
   temperatureCelsius: number | null
@@ -91,7 +93,7 @@ export interface HealthLog extends HealthLogSummary {
 export interface HorseHealthOverviewItem {
   horse: HorseBrief
   latestHealthStatus: HealthStatus | null
-  latestLog: HealthLogSummary | null
+  latestLog: HorseHealthLatestLog | null
   logCount: number
 }
 
@@ -152,6 +154,13 @@ export interface MarkAllNormalInput {
   latitude?: number
   longitude?: number
   files?: File[]
+}
+
+export interface MarkAllNormalResponse {
+  transportId: string
+  logType: LogType
+  createdCount: number
+  logs: unknown[]
 }
 
 export interface HealthLogPhotoInput {

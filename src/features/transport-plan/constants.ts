@@ -17,7 +17,7 @@ export const initialApprovedBookingParams: ApprovedBookingsQueryParams = {
   pageIndex: 1,
   pageSize: 20,
   search: "",
-  sortBy: "requestedDepartureDate:asc",
+  sortBy: "requestedDepartureDate:desc",
 };
 export const scopeOptions = [
   { value: "ALL", label: "All scopes" },

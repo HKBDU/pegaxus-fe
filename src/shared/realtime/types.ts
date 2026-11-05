@@ -40,6 +40,12 @@ export type RealtimeConnectionState = "idle" | "connecting" | "connected" | "rec
 /** Ephemeral (not stored) hub events: add the payload type here when the BE starts emitting one. */
 export interface RealtimeEventMap {
   ReceiveNotification: AppNotification
+  RoutePlanCancelled: {
+    routePlanId: string
+    transportPlanId: string
+    routeType: "PRIMARY" | "BACKUP" | "RETURN"
+    cancelledAt: string
+  }
   BookingEditingStarted: { bookingId: string; accountId: string; timestamp: string }
   BookingEditingStopped: { bookingId: string; accountId: string; timestamp: string }
 }

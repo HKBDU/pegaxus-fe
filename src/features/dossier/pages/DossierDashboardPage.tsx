@@ -20,7 +20,7 @@ const initialParams: DashboardParams = {
   status: "ALL",
   risk: "ALL",
   routeType: "ALL",
-  sortBy: "requestedDepartureDate:asc",
+  sortBy: "requestedDepartureDate:desc",
 }
 
 /** SCR-F2-023: tracking dashboard of all ComplianceDossiers (TS and LM, UC-30). */
