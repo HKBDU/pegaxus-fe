@@ -143,6 +143,7 @@ export const routePlanSummarySchema = z.object({
   replacesSequenceNo: replacesSequenceNoSchema,
   routeNote: text,
   updatedAt: responseTimestamp,
+  submittedForReviewAt: timestamp.nullish().transform((v) => v ?? null),
 });
 export const routePlansSchema = z.object({
   items: z.array(routePlanSummarySchema),

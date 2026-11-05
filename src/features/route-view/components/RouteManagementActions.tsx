@@ -37,6 +37,7 @@ import {
 import { formatUtcDateTime } from "@/shared/utils/datetime";
 import type { RoutePlanDetail, RouteSegment } from "../types";
 import { canChangeVehiclesBeforeDeparture } from "../vehicle-change";
+import { canSpecialistReviewRoute, isDossierReady } from "../route-policy";
 
 const legalActionClass =
   "min-h-11 gap-1.5 rounded-[2px] border px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:ring-primary/30 motion-reduce:transition-none sm:min-h-8";
@@ -102,19 +103,10 @@ export function RouteManagementActions({
       setRefreshing(false);
     }
   }
-  const dossierReady =
-    plan.routeType === "BACKUP" ||
-    (legalDossier?.status === "DRAFT" &&
-      (plan.routeType !== "RETURN" ||
-        context.workspace.transportStatus === "IN_TRANSIT"));
+  const dossierReady = isDossierReady(legalDossier?.status);
   // A PRIMARY / BACKUP plan can only be reviewed once the coordinator sent it (RP7 answers ROUTE_PLAN_NOT_SUBMITTED otherwise); RETURN is exempt.
   const submittedForReview = plan.submittedForReviewAt != null;
-  const canReview =
-    role === "specialist" &&
-    plan.status === "DRAFT" &&
-    dossierReady &&
-    !readOnly &&
-    (plan.routeType === "RETURN" || submittedForReview);
+  const canReview = canSpecialistReviewRoute(plan, context.workspace) && !readOnly;
   const canCancel = role === "coordinator" && plan.status === "DRAFT" && !readOnly;
   const canChangeVehicles = canChangeVehiclesBeforeDeparture(
     plan,

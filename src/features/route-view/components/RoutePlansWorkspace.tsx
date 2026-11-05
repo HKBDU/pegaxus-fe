@@ -14,7 +14,7 @@ import { canViewRoute, getRouteViewError } from "../services";
 import { routePlanIdSchema } from "../schemas";
 import { getRouteDetailPath } from "../navigation";
 import type { RouteDetailPath } from "../types";
-import { beforeDeparture, getPendingRouteCreation } from "../workspace-actions";
+import { beforeDeparture, getPendingRouteCreation, hasActivePrimary } from "../route-policy";
 import { RoutePlansTable } from "./RoutePlansTable";
 import { getRoutePlan, getRoutePlanError, updateRoutePlan } from "@/features/route-plan/services";
 import type { RoutePlanSummary } from "../types";
@@ -89,9 +89,8 @@ export function RoutePlansWorkspace({
     planStatus,
     transportStatus,
     dossierStatus,
-    hasActivePrimary: items.some(
-      (route) => route.routeType === "PRIMARY" && route.status === "ACTIVE",
-    ),
+    hasActivePrimary: hasActivePrimary(items),
+    routeDetailPath,
   };
   const primary = items.find(
     (item) => item.routeType === "PRIMARY" && item.status !== "CANCELLED",
@@ -196,10 +195,9 @@ export function RoutePlansWorkspace({
               Route detail navigation is not available in this environment yet.
             </p>
           )}
-          {specialist && dossierStatus !== "DRAFT" && (
+          {specialist && dossierStatus != null && dossierStatus !== "DRAFT" && (
             <p className="text-xs text-slate-500">
-              Legal review requires a draft dossier and a draft route. Existing
-              review results remain available in route details.
+              Legal review is unavailable until the dossier is in DRAFT.
             </p>
           )}
           {manager && (

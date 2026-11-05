@@ -1,8 +1,8 @@
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import {
   beforeDeparture,
-  type RouteWorkspaceContext,
-} from "./workspace-actions";
+} from "./route-policy";
+import type { RouteWorkspaceContext } from "./types";
 import type { RoutePlanDetail, RouteSegment } from "./types";
 import type { RerouteContext } from "@/features/incident-response/reroute-schemas";
 
