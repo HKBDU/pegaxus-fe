@@ -77,7 +77,7 @@ export function HorsesPage() {
     <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
       <div className="mx-auto flex w-full max-w-[1152px] flex-col gap-0">
         <div>
-          <PageHeader title="MY HORSES" backHref="/" />
+          <PageHeader title="MY HORSES" backHref="/" backLabel="Back to Home" />
         </div>
 
         <div className="flex flex-col gap-[0px] pt-4">

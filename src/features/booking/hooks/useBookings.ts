@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { acquireEditLock, forgetEditLock, scheduleEditRelease } from "@/features/booking/editLock"
+import { acquireEditLock, assertBookingEditSession, beginBookingSave, captureBookingEditSession, finishBookingSaveAttempt, forgetEditLock, markBookingSaveWrite, refreshBookingEditLock, scheduleEditRelease, type BookingEditSession } from "@/features/booking/editLock"
+import { useAuthStore } from "@/features/auth/store"
 import { bookingService } from "@/features/booking/services"
 import { bookingIdSchema } from "@/features/booking/schemas"
 import { approvedBookingKeys } from "@/features/transport-plan/hooks/useApprovedBookings"
@@ -84,81 +85,111 @@ export function useUpdateBooking() {
   const queryClient = useQueryClient()
   return useMutation({
     // `booking` is the snapshot taken when the edit page locked it (DRAFT), see useBookingEditLock.
-    mutationFn: async ({ booking, values }: { booking: Booking; values: BookingFormValues }) => {
+    mutationFn: async ({ booking, values, session }: { booking: Booking; values: BookingFormValues; session: BookingEditSession }) => {
       const { bookingId } = booking
-
-      // Keep the anti-overwrite check: refuse if the booking changed since the form was opened.
-      if ((await bookingService.getBooking(bookingId)).updatedAt !== booking.updatedAt) throw new Error("BOOKING_MODIFIED")
-
-      await bookingService.updateBooking(bookingId, {
-        lastUpdatedAt: booking.updatedAt,
-        originAddress: values.originAddress,
-        originCountry: values.originCountry,
-        ...pairOf("origin", values.originLatitude, values.originLongitude),
-        destinationAddress: values.destinationAddress,
-        destinationCountry: values.destinationCountry,
-        ...pairOf("destination", values.destinationLatitude, values.destinationLongitude),
-        requestedDepartureDate: values.requestedDepartureDate,
-        requestedArrivalDate: values.requestedArrivalDate || undefined,
-        specialRequirements: values.specialRequirements || undefined,
-        customerNote: values.customerNote || undefined,
-      })
-
-      const previousById = new Map(booking.horses.map((horse) => [horse.horseId, horse]))
-      const nextById = new Map(values.horses.map((horse) => [horse.horseId, horse]))
-
-      for (const horse of booking.horses.filter((item) => !nextById.has(item.horseId))) {
-        await bookingService.removeHorse(bookingId, horse.horseId)
+      beginBookingSave(bookingId, session)
+      const config = { signal: session.controller.signal }
+      const run = async <T,>(request: () => Promise<T>) => {
+        assertBookingEditSession(session)
+        const result = await request()
+        assertBookingEditSession(session)
+        return result
       }
-
-      for (const horse of values.horses.filter((item) => !previousById.has(item.horseId))) {
-        await bookingService.addHorse(bookingId, horse)
+      const write = <T,>(request: () => Promise<T>) => {
+        markBookingSaveWrite(bookingId, session)
+        return run(request)
       }
-
-      for (const horse of values.horses) {
-        const previous = previousById.get(horse.horseId)
-        if (previous && (previous.specialHandlingNotes ?? "") !== (horse.specialHandlingNotes ?? "")) {
-          await bookingService.updateHorse(bookingId, horse.horseId, {
-            specialHandlingNotes: horse.specialHandlingNotes ?? "",
-          })
+      try {
+        // A retry diffs against the actual server horses, including requests whose response was lost.
+        let current = await run(() => bookingService.getBooking(bookingId, config))
+        if (current.updatedAt !== booking.updatedAt) throw new Error("BOOKING_MODIFIED")
+        if (current.status === "PENDING") {
+          await write(() => bookingService.changeStatus(bookingId, "DRAFT", config))
+          current = await run(() => bookingService.getBooking(bookingId, config))
         }
-      }
+        if (current.status !== "DRAFT" && current.status !== "PENDING") throw new Error("INVALID_BOOKING_STATUS")
 
-      // Save = submit again: DRAFT -> PENDING, so the manager can review it. If a step above failed the booking
-      // stays DRAFT and the customer keeps editing (Cancel or leaving the page then returns it to PENDING).
-      await bookingService.changeStatus(bookingId, "PENDING")
-      forgetEditLock(bookingId)
+        await write(() => bookingService.updateBooking(bookingId, {
+          lastUpdatedAt: current.updatedAt,
+          originAddress: values.originAddress,
+          originCountry: values.originCountry,
+          ...pairOf("origin", values.originLatitude, values.originLongitude),
+          destinationAddress: values.destinationAddress,
+          destinationCountry: values.destinationCountry,
+          ...pairOf("destination", values.destinationLatitude, values.destinationLongitude),
+          requestedDepartureDate: values.requestedDepartureDate,
+          requestedArrivalDate: values.requestedArrivalDate || undefined,
+          specialRequirements: values.specialRequirements || undefined,
+          customerNote: values.customerNote || undefined,
+        }, config))
+
+        const previousById = new Map(current.horses.map((horse) => [horse.horseId, horse]))
+        const nextById = new Map(values.horses.map((horse) => [horse.horseId, horse]))
+
+        for (const horse of current.horses.filter((item) => !nextById.has(item.horseId))) {
+          await write(() => bookingService.removeHorse(bookingId, horse.horseId, config))
+        }
+
+        for (const horse of values.horses.filter((item) => !previousById.has(item.horseId))) {
+          await write(() => bookingService.addHorse(bookingId, horse, config))
+        }
+
+        for (const horse of values.horses) {
+          const previous = previousById.get(horse.horseId)
+          if (previous && (previous.specialHandlingNotes ?? "") !== (horse.specialHandlingNotes ?? "")) {
+            await write(() => bookingService.updateHorse(bookingId, horse.horseId, {
+              specialHandlingNotes: horse.specialHandlingNotes ?? "",
+            }, config))
+          }
+        }
+
+        await write(() => bookingService.changeStatus(bookingId, "PENDING", config))
+        const submitted = await run(() => bookingService.getBooking(bookingId, config))
+        if (submitted.status !== "PENDING") throw new Error("Unable to confirm the booking submission. Check its current status before retrying.")
+        forgetEditLock(bookingId, session)
+      } finally {
+        finishBookingSaveAttempt(bookingId, session)
+      }
     },
     onSuccess: (_, variables) => {
+      assertBookingEditSession(variables.session)
       void queryClient.invalidateQueries({ queryKey: bookingKeys.detail(variables.booking.bookingId) })
       void queryClient.invalidateQueries({ queryKey: bookingKeys.lists() })
     },
   })
 }
 
-/** Opens the edit session: PENDING -> DRAFT right away. Leaving the page without saving puts it back to PENDING. */
+/** Opens PENDING -> DRAFT; automatic release is allowed only before a save write. */
 export function useBookingEditLock(bookingId: EntityId | undefined) {
-  const [state, setState] = useState<{ booking?: Booking; error?: unknown }>({})
+  const sessionVersion = useAuthStore((state) => state.sessionVersion)
+  const accountId = useAuthStore((state) => state.principal?.id)
+  const session = useMemo(() => captureBookingEditSession(accountId, sessionVersion), [sessionVersion, accountId])
+  const [state, setState] = useState<{ bookingId?: EntityId; session?: BookingEditSession; booking?: Booking; error?: unknown }>({})
 
   useEffect(() => {
     if (!bookingId) return
     let active = true
-    acquireEditLock(bookingId).then(
-      (booking) => { if (active) setState({ booking }) },
-      (error: unknown) => { if (active) setState({ error }) },
+    void Promise.resolve().then(() => acquireEditLock(bookingId, session)).then(
+      (booking) => { if (active) setState({ bookingId, session, booking }) },
+      (error: unknown) => { if (active) setState({ bookingId, session, error }) },
     )
     return () => {
       active = false
-      scheduleEditRelease(bookingId)
+      scheduleEditRelease(bookingId, session)
     }
-  }, [bookingId])
+  }, [bookingId, session])
 
   /** Re-reads the server copy (the baseline for the next Save) without touching what the customer typed. */
   const refresh = useCallback(async () => {
-    if (bookingId) setState({ booking: await bookingService.getBooking(bookingId) })
-  }, [bookingId])
+    if (!bookingId) return
+    assertBookingEditSession(session)
+    const booking = await refreshBookingEditLock(bookingId, session)
+    assertBookingEditSession(session)
+    setState((current) => current.bookingId === bookingId && current.session === session ? { bookingId, session, booking } : current)
+  }, [bookingId, session])
 
-  return { booking: state.booking, error: state.error, isLocking: Boolean(bookingId) && !state.booking && !state.error, refresh }
+  const current = state.bookingId === bookingId && state.session === session ? state : {}
+  return { booking: current.booking, error: current.error, session, isLocking: Boolean(bookingId) && !current.booking && !current.error, refresh }
 }
 
 export function useCancelBooking() {

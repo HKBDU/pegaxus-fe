@@ -53,6 +53,7 @@ export const changeVehiclesRequestSchema = z.union([
 
 export const routeSegmentSchema = z.object({
   sequenceNo: z.number().int().positive(),
+  routeType: z.enum(['PRIMARY', 'BACKUP', 'RETURN']).optional(),
   routeId: entityId.optional(),
   fromLocationId: entityId.optional(),
   toLocationId: entityId.optional(),

@@ -64,7 +64,7 @@ export function TransitDetailsTable({
     <section
       aria-labelledby="transit-details-heading"
       aria-busy={pending}
-      className="min-w-0 space-y-3 rounded-[2px] border border-slate-200 bg-white p-4"
+      className="report-surface min-w-0 space-y-3 p-4"
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
@@ -97,11 +97,14 @@ export function TransitDetailsTable({
             >
               <SelectTrigger
                 id="transit-delay-filter"
-                className="h-9 w-full rounded-[2px]"
+                className="h-9 w-full rounded-[2px] border-input bg-white text-sm shadow-none"
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                className="overflow-hidden"
+                viewportClassName="max-h-[min(20rem,calc(var(--radix-select-content-available-height)-3rem))]"
+              >
                 <SelectItem value="ALL">All measured transports</SelectItem>
                 <SelectItem value="EARLY">Shorter than estimate</SelectItem>
                 <SelectItem value="LATE_OVER_1_DAY">
@@ -126,11 +129,14 @@ export function TransitDetailsTable({
             >
               <SelectTrigger
                 id="transit-sort"
-                className="h-9 w-full rounded-[2px]"
+                className="h-9 w-full rounded-[2px] border-input bg-white text-sm shadow-none"
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                className="overflow-hidden"
+                viewportClassName="max-h-[min(20rem,calc(var(--radix-select-content-available-height)-3rem))]"
+              >
                 {transitSortSchema.options.map((value) => (
                   <SelectItem key={value} value={value}>
                     {sorts[value]}
@@ -152,11 +158,14 @@ export function TransitDetailsTable({
             >
               <SelectTrigger
                 id="transit-size"
-                className="h-9 w-20 rounded-[2px]"
+                className="h-9 w-20 rounded-[2px] border-input bg-white text-sm shadow-none"
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                className="overflow-hidden"
+                viewportClassName="max-h-[min(20rem,calc(var(--radix-select-content-available-height)-3rem))]"
+              >
                 {Array.from(new Set([10, 20, 50, 100, filters.pageSize]))
                   .sort((a, b) => a - b)
                   .map((size) => (

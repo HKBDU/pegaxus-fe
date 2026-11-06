@@ -27,9 +27,10 @@ import {
   updateSegmentOutsourcing,
 } from "../services";
 import type { Provider, RouteSegment, TransportMode } from "../types";
+import type { BuilderProvider } from "../builder-types";
 
 export type OutsourceSegmentSelection = {
-  provider: Provider;
+  provider: BuilderProvider;
   note: string;
 };
 
@@ -39,7 +40,7 @@ type OutsourceSegmentDialogProps = {
   lastUpdatedAt: string;
   transportMode: TransportMode;
   isOutsourced: boolean;
-  currentProvider?: Provider | null;
+  currentProvider?: BuilderProvider | null;
   currentNote?: string | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;

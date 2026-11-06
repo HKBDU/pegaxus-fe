@@ -31,6 +31,7 @@ export function ExportAuditModal({
   const [mode, setMode] = useState<"STANDARD" | "INSURANCE">("STANDARD");
   const exportJob = useAuditExportJob(transportId);
   const job = exportJob.job.data;
+  const active = Boolean(exportJob.exportId && (!job || ["QUEUED", "PROCESSING"].includes(job.status)));
   const start = () =>
     exportJob.start(
       { format, mode },
@@ -102,6 +103,17 @@ export function ExportAuditModal({
               ) : null}
             </div>
           ) : null}
+          {exportJob.isError ? (
+            <p className="text-sm text-red-700" role="alert">Unable to create export package. {exportJob.exportId ? "Your previous export is kept. " : ""}Try starting again.</p>
+          ) : null}
+          {exportJob.job.isError ? (
+            <div className="space-y-2" role="alert">
+              <p className="text-sm text-red-700">Unable to check this export. Its last known progress is kept.</p>
+              <Button type="button" variant="outline" disabled={exportJob.job.isFetching} onClick={() => void exportJob.job.refetch()}>
+                Retry checking export
+              </Button>
+            </div>
+          ) : null}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -110,7 +122,7 @@ export function ExportAuditModal({
           <Button
             disabled={
               exportJob.isPending ||
-              Boolean(job && ["QUEUED", "PROCESSING"].includes(job.status))
+              active
             }
             onClick={start}
           >

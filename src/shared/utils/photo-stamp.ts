@@ -8,6 +8,7 @@ export interface StampOptions {
   capturedAt: Date
   coordinates?: { latitude: number; longitude: number } | null
   documentLabel?: string
+  throwOnError?: boolean
 }
 
 function formatStampDate(date: Date): string {
@@ -18,7 +19,10 @@ function formatStampDate(date: Date): string {
  * Applies a tamper-evident visual watermark (Date/Time, GPS coordinates, verification badge)
  * directly into the image canvas.
  */
-export async function stampPhoto(file: File, options: StampOptions): Promise<File> {
+export async function stampPhoto(
+  file: File,
+  options: StampOptions,
+): Promise<File> {
   if (typeof window === "undefined" || typeof document === "undefined") {
     return file
   }
@@ -28,35 +32,49 @@ export async function stampPhoto(file: File, options: StampOptions): Promise<Fil
     return file
   }
 
+  const objectUrl = URL.createObjectURL(file)
+  let canvas: HTMLCanvasElement | undefined
   try {
-    const objectUrl = URL.createObjectURL(file)
     const img = new Image()
+    img.decoding = "async"
 
     await new Promise<void>((resolve, reject) => {
-      img.onload = () => resolve()
-      img.onerror = () => reject(new Error("Image load failed"))
+      const timeout = window.setTimeout(
+        () => reject(new Error("Image load timed out")),
+        15_000,
+      )
+      img.onload = () => {
+        window.clearTimeout(timeout)
+        resolve()
+      }
+      img.onerror = () => {
+        window.clearTimeout(timeout)
+        reject(new Error("Image load failed"))
+      }
       img.src = objectUrl
     })
 
-    const width = img.naturalWidth || img.width
-    const height = img.naturalHeight || img.height
-    if (!width || !height) {
-      URL.revokeObjectURL(objectUrl)
-      return file
-    }
+    const sourceWidth = img.naturalWidth || img.width
+    const sourceHeight = img.naturalHeight || img.height
+    if (!sourceWidth || !sourceHeight)
+      throw new Error("Image has no dimensions")
+    // Bound the canvas allocation for high-resolution phone photos; preserve aspect ratio.
+    const scale = Math.min(
+      1,
+      4096 / Math.max(sourceWidth, sourceHeight),
+      Math.sqrt(12_000_000 / (sourceWidth * sourceHeight)),
+    )
+    const width = Math.max(1, Math.round(sourceWidth * scale))
+    const height = Math.max(1, Math.round(sourceHeight * scale))
 
-    const canvas = document.createElement("canvas")
+    canvas = document.createElement("canvas")
     canvas.width = width
     canvas.height = height
     const ctx = canvas.getContext("2d")
-    if (!ctx) {
-      URL.revokeObjectURL(objectUrl)
-      return file
-    }
+    if (!ctx) throw new Error("Image processing is unavailable")
 
     // 1. Draw base image
     ctx.drawImage(img, 0, 0, width, height)
-    URL.revokeObjectURL(objectUrl)
 
     // 2. Prepare stamp text
     const timeStr = `TIME: ${formatStampDate(options.capturedAt)}`
@@ -91,9 +109,19 @@ export async function stampPhoto(file: File, options: StampOptions): Promise<Fil
     ctx.lineTo(boxX + boxWidth - radius, boxY)
     ctx.quadraticCurveTo(boxX + boxWidth, boxY, boxX + boxWidth, boxY + radius)
     ctx.lineTo(boxX + boxWidth, boxY + boxHeight - radius)
-    ctx.quadraticCurveTo(boxX + boxWidth, boxY + boxHeight, boxX + boxWidth - radius, boxY + boxHeight)
+    ctx.quadraticCurveTo(
+      boxX + boxWidth,
+      boxY + boxHeight,
+      boxX + boxWidth - radius,
+      boxY + boxHeight,
+    )
     ctx.lineTo(boxX + radius, boxY + boxHeight)
-    ctx.quadraticCurveTo(boxX, boxY + boxHeight, boxX, boxY + boxHeight - radius)
+    ctx.quadraticCurveTo(
+      boxX,
+      boxY + boxHeight,
+      boxX,
+      boxY + boxHeight - radius,
+    )
     ctx.lineTo(boxX, boxY + radius)
     ctx.quadraticCurveTo(boxX, boxY, boxX + radius, boxY)
     ctx.closePath()
@@ -115,18 +143,34 @@ export async function stampPhoto(file: File, options: StampOptions): Promise<Fil
 
     // 6. Export stamped canvas to Blob and File
     const outputType = file.type === "image/png" ? "image/png" : "image/jpeg"
+    const outputCanvas = canvas
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, outputType, 0.92),
+      outputCanvas.toBlob(resolve, outputType, 0.92),
     )
 
-    if (!blob) return file
+    if (!blob) throw new Error("Image export failed")
 
-    return new File([blob], file.name, {
-      type: outputType,
-      lastModified: options.capturedAt.getTime(),
-    })
+    return new File(
+      [blob],
+      file.name.replace(/\.[^.]+$/, "") +
+        (outputType === "image/png" ? ".png" : ".jpg"),
+      {
+        type: outputType,
+        lastModified: options.capturedAt.getTime(),
+      },
+    )
   } catch {
-    // If stamping fails, fall back smoothly to the original file
+    if (options.throwOnError) {
+      throw new Error(
+        "Unable to read or stamp this photo. Try another JPG or PNG image; your selected photo has been kept.",
+      )
+    }
     return file
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+    if (canvas) {
+      canvas.width = 0
+      canvas.height = 0
+    }
   }
 }

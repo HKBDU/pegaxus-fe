@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface FilterToolbarProps {
   label: string;
@@ -9,7 +10,8 @@ interface FilterToolbarProps {
   sort?: ReactNode;
   actions?: ReactNode;
   activeCount: number;
-  onClear: () => void;
+  onClear?: () => void;
+  density?: "default" | "compact";
 }
 
 export function FilterToolbar({
@@ -20,14 +22,27 @@ export function FilterToolbar({
   actions,
   activeCount,
   onClear,
+  density = "default",
 }: FilterToolbarProps) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
 
   return (
     <section aria-label={label} className="min-w-0 space-y-2">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <div className="min-w-0 basis-full sm:basis-48 sm:flex-1">{search}</div>
+      <div
+        className={cn(
+          "flex min-w-0 flex-wrap gap-2",
+          density === "compact" ? "items-end" : "items-center",
+        )}
+      >
+        <div
+          className={cn(
+            "min-w-0 basis-full sm:flex-1",
+            density === "compact" ? "sm:basis-64" : "sm:basis-48",
+          )}
+        >
+          {search}
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -47,9 +62,17 @@ export function FilterToolbar({
           ) : null}
         </Button>
         {sort ? (
-          <div className="min-w-0 max-w-full [&>button]:h-8">{sort}</div>
+          <div
+            className={
+              density === "compact"
+                ? "w-28 min-w-0 max-w-full"
+                : "min-w-0 max-w-full [&>button]:h-8"
+            }
+          >
+            {sort}
+          </div>
         ) : null}
-        {activeCount > 0 ? (
+        {activeCount > 0 && onClear ? (
           <Button
             type="button"
             variant="ghost"

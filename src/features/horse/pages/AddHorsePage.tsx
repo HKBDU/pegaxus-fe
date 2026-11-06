@@ -500,7 +500,7 @@ export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
   return (
     <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
       <div className="mx-auto flex w-full max-w-[1152px] flex-col">
-        <PageHeader title={mode === "edit" ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" />
+        <PageHeader title={mode === "edit" ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" backLabel="Back to My Horses" />
         <HorseForm mode={mode} initialHorse={initialHorse} onSaved={() => navigate("/my-horses")} onCancel={() => navigate("/my-horses")} />
       </div>
     </section>

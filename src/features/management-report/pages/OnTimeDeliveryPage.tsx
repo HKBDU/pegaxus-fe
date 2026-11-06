@@ -1,8 +1,10 @@
+import "@/shared/components/report-dashboard.css";
 import { useLocation } from "react-router-dom";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { ReportTabs } from "../components/ReportTabs";
 import { ReportFilters } from "../components/ReportFilters";
 import { PerformanceOverview } from "../components/PerformanceOverview";
 import { ReportCharts } from "../components/ReportCharts";
@@ -17,12 +19,12 @@ import {
 } from "../hooks";
 import type { ReportFilters as Filters } from "../schemas";
 import { reportError, terminalReportError } from "../services";
-import { reportNumber, reportTime } from "../presentation";
+import { reportNumber } from "../presentation";
 
 function ReportWorkspace() {
   const location = useLocation();
   const state = useOnTimeFilterState();
-  const { raw, applied, draft } = state;
+  const { applied, draft } = state;
   const query = useOnTimeDeliveryReport(applied);
   const exporting = useReportExport();
 
@@ -41,9 +43,10 @@ function ReportWorkspace() {
   const busy = Boolean(exporting.pending);
   const returnUrl = location.pathname + location.search;
   return (
-    <main className="mx-auto w-full min-w-0 max-w-[1440px] space-y-4 px-4 py-6 sm:px-6">
+    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-3 px-3 py-4 sm:px-4">
       <PageHeader
-        title="On-time delivery performance"
+        title="Dashboard"
+        showBack={false}
         backHref="/admin"
         backLabel="Workspace"
         action={
@@ -56,15 +59,8 @@ function ReportWorkspace() {
           />
         }
       />
+      <ReportTabs />
       <ReportModeNotice />
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-500">
-        <p className="m-0">
-          Analyze delivery punctuality, trends and SLA performance.
-        </p>
-        <p className="m-0">
-          Applied period: {String(raw.dateFrom)} – {String(raw.dateTo)} (UTC)
-        </p>
-      </div>
       <ReportFilters
         draft={draft}
         onChange={state.edit}
@@ -113,18 +109,14 @@ function ReportWorkspace() {
           ) : null}
           {report ? (
             <>
-              <div
-                role="status"
-                className="flex min-h-5 flex-wrap items-center justify-between gap-2 text-xs text-slate-500"
-              >
-                <span>Generated: {reportTime(report.generatedAt)}</span>
-                <span>{query.isFetching ? "Updating report…" : ""}</span>
-              </div>
+              <p role="status" className="sr-only">
+                {query.isFetching ? "Updating report…" : ""}
+              </p>
               <PerformanceOverview report={report} />
               <ReportCharts report={report} />
               <section
                 aria-labelledby="data-quality-heading"
-                className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 rounded-[2px] border border-slate-200 bg-white p-4 text-xs text-slate-500"
+                className="report-surface flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 p-4 text-xs text-slate-500"
               >
                 <h2
                   id="data-quality-heading"

@@ -5,7 +5,7 @@ import {
   FileStack,
   FileText,
   Gauge,
-  House,
+  ChartNoAxesCombined,
   LogOut,
   MapPin,
   MessageSquareWarning,
@@ -40,7 +40,7 @@ import {
 const incidentsItem = { label: "Incidents", href: ROLE_ROUTES.incidents, icon: TriangleAlert }
 
 const primaryItems = [
-  { label: "Dashboard", href: "/admin", icon: House },
+  { label: "Dashboard", href: ROLE_ROUTES.dashboard, icon: ChartNoAxesCombined },
   { label: "Transport Requests", href: "/admin/transport-requests", icon: Truck },
   { label: "Transport Plans", href: ROLE_ROUTES.transportPlans, icon: MapPin },
   { label: "Ongoing Transports", href: ROLE_ROUTES.ongoingTransports, icon: Truck },
@@ -86,6 +86,7 @@ const logoutItem = { label: "Sign Out", href: "/logout", icon: LogOut }
 
 function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
   const { pathname } = useLocation()
+  const { setOpenMobile } = useSidebar()
 
   return (
     <SlidingSidebarMenu>
@@ -106,7 +107,7 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
                 isActive && "!bg-[#f39200]/10 font-semibold !text-[#f39200]",
               )}
             >
-              <NavLink to={item.href}>
+              <NavLink to={item.href} onClick={() => setOpenMobile(false)}>
                 <Icon className="size-4" />
                 <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
               </NavLink>

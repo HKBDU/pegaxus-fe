@@ -5,6 +5,10 @@ import { matchPath } from "react-router-dom"
 export const ROLE_ROUTES = {
   home: "/",
   managerHome: "/admin",
+  dashboard: "/admin/reports",
+  onTimeReport: "/admin/reports/on-time-delivery",
+  incidentClaimReport: "/admin/reports/incident-claim-frequency",
+  transitTimeReport: "/admin/reports/transit-time",
   approvedBookings: "/admin/approved-bookings",
   transportPlans: "/admin/transport-plans",
   ongoingTransports: "/admin/ongoing-transports",
@@ -79,9 +83,10 @@ export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home 
 }
 
 const adminHeaderRoutes = [
-  { path: "/admin/reports/transit-time", label: "REPORTS & ANALYTICS", href: "/admin/reports/transit-time", title: "TRANSIT TIME & DELAY BENCHMARK" },
-  { path: "/admin/reports/incident-claim-frequency", label: "REPORTS & ANALYTICS", href: "/admin/reports/incident-claim-frequency", title: "INCIDENT & CLAIM FREQUENCY" },
-  { path: "/admin/reports/on-time-delivery", label: "REPORTS & ANALYTICS", href: "/admin/reports/on-time-delivery", title: "ON-TIME DELIVERY" },
+  { path: ROLE_ROUTES.dashboard, label: "DASHBOARD", href: ROLE_ROUTES.dashboard, title: "" },
+  { path: ROLE_ROUTES.transitTimeReport, label: "DASHBOARD", href: ROLE_ROUTES.dashboard, title: "TRANSIT TIME" },
+  { path: ROLE_ROUTES.incidentClaimReport, label: "DASHBOARD", href: ROLE_ROUTES.dashboard, title: "INCIDENT & CLAIM FREQUENCY" },
+  { path: ROLE_ROUTES.onTimeReport, label: "DASHBOARD", href: ROLE_ROUTES.dashboard, title: "ON-TIME DELIVERY" },
   { path: "/admin/transports/:transportId/financial-summary", label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "FINANCIAL SUMMARY" },
   { path: "/admin/transports/:transportId/audit", label: "TRANSPORT ARCHIVE", href: ROLE_ROUTES.transportArchive, title: "AUDIT DOSSIER" },
   { path: ROLE_ROUTES.transportArchive, label: "TRANSPORT ARCHIVE", href: ROLE_ROUTES.transportArchive, title: "" },
@@ -89,6 +94,8 @@ const adminHeaderRoutes = [
   { path: "/admin/emergency-costs/:emergencyCostRequestId", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "COST REQUEST DETAILS" },
   { path: "/admin/emergency-costs", label: "EMERGENCY COSTS", href: "/admin/emergency-costs", title: "" },
   { path: `${ROLE_ROUTES.ongoingTransports}/:transportId/segments`, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "ROUTE TRACKING" },
+  { path: `${ROLE_ROUTES.ongoingTransports}/:transportId/health/:horseId`, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "HORSE HEALTH HISTORY" },
+  { path: `${ROLE_ROUTES.ongoingTransports}/:transportId/health`, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "HORSE HEALTH" },
   { path: `${ROLE_ROUTES.ongoingTransports}/:transportId`, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "TRANSPORT OVERVIEW" },
   { path: ROLE_ROUTES.ongoingTransports, label: "ONGOING TRANSPORTS", href: ROLE_ROUTES.ongoingTransports, title: "" },
   { path: `${ROLE_ROUTES.vehicles}/new`, label: "VEHICLES", href: ROLE_ROUTES.vehicles, title: "ADD NEW VEHICLE" },
@@ -112,6 +119,7 @@ const adminHeaderRoutes = [
   { path: "/admin/users/:employeeId", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "VIEW EMPLOYEE ACCOUNT" },
   { path: "/admin/users", label: "USERS", href: ROLE_ROUTES.managerUsers, title: "MANAGE EMPLOYEE ACCOUNTS" },
   { path: "/admin/transport-requests/:bookingId", label: "TRANSPORT REQUESTS", href: "/admin/transport-requests", title: "BOOKING DETAILS" },
+  { path: "/bookings/:bookingId/history", label: "TRANSPORT REQUESTS", href: "/admin/transport-requests", title: "BOOKING STATUS HISTORY" },
   { path: "/admin/transport-requests", label: "TRANSPORT REQUESTS", href: "/admin/transport-requests", title: "" },
   { path: `${ROLE_ROUTES.complianceRequirements}/new`, label: "COMPLIANCE REQUIREMENTS", href: ROLE_ROUTES.complianceRequirements, title: "CREATE REQUIREMENT" },
   { path: `${ROLE_ROUTES.complianceRequirements}/:complianceRequirementId/edit`, label: "COMPLIANCE REQUIREMENTS", href: ROLE_ROUTES.complianceRequirements, title: "EDIT REQUIREMENT" },
@@ -135,7 +143,7 @@ const adminHeaderRoutes = [
   { path: ROLE_ROUTES.claims, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "" },
   { path: "/admin/ongoing-transports/:transportId/gps", label: "ONGOING TRANSPORTS", href: "/admin/ongoing-transports", title: "LIVE GPS TRACKING" },
   { path: `${ROLE_ROUTES.personnelAssignment}/:transportPlanId`, label: "TRANSPORT PLANS", href: "/admin/transport-plans", title: "PERSONNEL ASSIGNMENT" },
-  ...["profile", "staff", "transport-plans", "reports", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
+  ...["profile", "staff", "transport-plans", "settings"].map((name) => ({ path: `/admin/${name}`, label: name.replaceAll("-", " ").toUpperCase(), href: `/admin/${name}`, title: "" })),
 ]
 
 const crewHeaderRoutes = [

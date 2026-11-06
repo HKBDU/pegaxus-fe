@@ -43,7 +43,7 @@ export default function TemplateListPage() {
         <div className="mb-6">
           <PageHeader
             title="MANAGE DOSSIER TEMPLATES"
-            backHref="/"
+            backHref="/compliance-dossiers"
             backLabel="RETURN TO COMPLIANCE DASHBOARD"
             action={canManage ? (
               <Button

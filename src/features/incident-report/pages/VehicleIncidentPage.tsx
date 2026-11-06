@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { IncidentReportHeader } from "../components/IncidentReportHeader";
 import {
@@ -6,6 +6,14 @@ import {
   type VehicleIncidentFormValue,
 } from "../components/vehicle/VehicleIncidentForm";
 import type { IncidentPhotoFieldValue } from "../components/IncidentPhotoField";
+import { areIncidentPhotosReady } from "../validation";
+import { vehicleIncidentRequestSchema } from "../schemas";
+import {
+  focusFirstIncidentError,
+  getIncidentFieldErrors,
+  incidentErrorMessage,
+  type IncidentFieldErrors,
+} from "../validation";
 import { useIncidentLocation } from "../hooks/useIncidentLocation";
 import { useIncidentMutations } from "../hooks/useIncidentMutations";
 import { useIncidentReport } from "../hooks/useIncidentReport";
@@ -60,6 +68,9 @@ export default function VehicleIncidentPage() {
     transportOverview.data?.currentSegment?.vehicles[0]?.vehicleId;
   const vehicleId = routeState.vehicleId ?? overviewVehicleId ?? "";
   const [photos, setPhotos] = useState(initialPhotos);
+  const [fieldErrors, setFieldErrors] = useState<IncidentFieldErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitting = useRef(false);
   const [photoUploadState, setPhotoUploadState] = useState<"idle" | "uploading" | "ready" | "error">("idle");
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [locationId, setLocationId] = useState(routeState.locationId);
@@ -134,8 +145,14 @@ export default function VehicleIncidentPage() {
   ]);
 
   const submit = () => {
-    if (photos.files.length > 0 && (photoUploadState === "uploading" || photos.uploadedPublicIds.length !== photos.files.length)) {
-      setPhotoError("Please wait until every image finishes uploading.");
+    if (submitting.current || mutations.vehicle.isPending) return;
+    setSubmitError(null);
+    setFieldErrors({});
+    mutations.vehicle.reset();
+    if (!areIncidentPhotosReady({ ...photos, uploadState: photoUploadState })) {
+      setSubmitError(
+        "Wait for every selected photo to upload, or retry/remove failed photos before submitting.",
+      );
       return;
     }
     const value = form.values;
@@ -172,16 +189,31 @@ export default function VehicleIncidentPage() {
       longitude: value.longitude,
       photoFiles: photos.uploadedPublicIds.map((publicId) => ({ publicId })),
     };
-    mutations.vehicle.mutate(input, {
+    const parsed = vehicleIncidentRequestSchema.safeParse(input);
+    if (!parsed.success) {
+      const errors = getIncidentFieldErrors(parsed.error);
+      setFieldErrors(errors);
+      setSubmitError(incidentErrorMessage(parsed.error, errors));
+      focusFirstIncidentError();
+      return;
+    }
+    submitting.current = true;
+    mutations.vehicle.mutate(parsed.data, {
       onSuccess: (result) =>
         navigate(incidentPaths.detail("CREW", result.incidentReportId)),
+      onError: focusFirstIncidentError,
+      onSettled: () => {
+        submitting.current = false;
+      },
     });
   };
 
+  const errors = {
+    ...fieldErrors,
+    ...getIncidentFieldErrors(mutations.vehicle.error),
+  };
   const error =
-    mutations.vehicle.error instanceof Error
-      ? mutations.vehicle.error.message
-      : null;
+    submitError ?? incidentErrorMessage(mutations.vehicle.error, errors);
   return (
     <main className="mx-auto max-w-3xl space-y-5 p-4 pb-28 sm:p-6">
       <IncidentReportHeader
@@ -201,6 +233,7 @@ export default function VehicleIncidentPage() {
         submitting={mutations.vehicle.isPending}
         disabled={mutations.vehicle.isPending}
         error={error ?? photoError}
+        errors={errors}
         locationStatus={location.status}
         locationError={location.error}
         onPhotoUploadStateChange={setPhotoUploadState}

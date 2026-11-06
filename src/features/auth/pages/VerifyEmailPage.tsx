@@ -4,7 +4,7 @@ import { getAuthApiError } from "../services";
 import { ChevronRight, LoaderCircle } from "lucide-react";
 import { OtpResend } from "../components/OtpResend";
 import { useForm } from "react-hook-form";
-import { Link, Navigate, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   emailRouteStateSchema,
   verifyEmailSchema,
@@ -13,6 +13,7 @@ import {
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
   AuthOtpFormField,
+  AuthFormField,
   authPrimaryButtonClass,
 } from "@/features/auth/components/AuthFormField";
 import {
@@ -36,16 +37,30 @@ export default function VerifyEmailPage() {
   const location = useLocation();
   const result = emailRouteStateSchema.safeParse(location.state);
 
-  if (!result.success) return <Navigate to="/register" replace />;
+  if (!result.success) return <VerificationEmailEntry />;
 
-  return <VerifyEmailForm key={result.data.email} email={result.data.email} />;
+  const needsResend = Boolean(location.state && typeof location.state === "object" && "needsResend" in location.state && location.state.needsResend === true);
+  return <VerifyEmailForm key={result.data.email} email={result.data.email} needsResend={needsResend} />;
 }
 
-function VerifyEmailForm({ email }: { email: string }) {
+function VerificationEmailEntry() {
+  const navigate = useNavigate();
+  const form = useForm<{ email: string }>({ resolver: zodResolver(emailRouteStateSchema), defaultValues: { email: "" } });
+  return <AuthFlowLayout title="Verify your email" backTo="/login">
+    <p className="mt-4 text-sm text-neutral-600">Enter the email used to create your account, then request a verification code.</p>
+    <Form {...form}><form className="mt-6 space-y-4" noValidate onSubmit={form.handleSubmit(({ email }) => navigate("/verify-email", { replace: true, state: { email, needsResend: true } }))}>
+      <AuthFormField control={form.control} name="email" type="email" label="Email address" autoComplete="email" />
+      <Button type="submit" className={authPrimaryButtonClass}>Continue verification</Button>
+    </form></Form>
+  </AuthFlowLayout>;
+}
+
+function VerifyEmailForm({ email, needsResend }: { email: string; needsResend: boolean }) {
   const verifyEmail = useVerifyEmailMutation();
   const resend = useResendOtpMutation();
-  const [cooldownUntil, setCooldownUntil] = useState(() => Date.now() + 60_000);
-  const [secondsLeft, setSecondsLeft] = useState(60);
+  const [cooldownUntil, setCooldownUntil] = useState(() => needsResend ? 0 : Date.now() + 60_000);
+  const [secondsLeft, setSecondsLeft] = useState(needsResend ? 0 : 60);
+  const [codeRequested, setCodeRequested] = useState(!needsResend);
   const form = useForm<VerifyEmailFormValues>({
     resolver: zodResolver(verifyEmailSchema),
     defaultValues: { otp: "" },
@@ -83,6 +98,7 @@ function VerifyEmailForm({ email }: { email: string }) {
         resend.mutateAsync({ email, purpose: "EMAIL_VERIFICATION" }),
       );
       if (result.started) {
+        setCodeRequested(true);
         restartCooldown();
         form.reset({ otp: "" });
       }
@@ -130,7 +146,7 @@ function VerifyEmailForm({ email }: { email: string }) {
   return (
     <AuthFlowLayout
       title="OTP verification"
-      backTo="/register"
+      backTo="/login"
       footer={
         <p>
           Already verified?{" "}
@@ -144,7 +160,7 @@ function VerifyEmailForm({ email }: { email: string }) {
       }
     >
       <p className="mt-5 break-words font-['Arial_Narrow',Impact,sans-serif] text-base font-bold text-[#202020]">
-        <span>We have sent a code to your email:</span>{" "}
+        <span>{codeRequested ? "Enter the verification code sent to:" : "Request a code for:"}</span>{" "}
         <span className="text-[#F39200]">{email}</span>
       </p>
       <Form {...form}>

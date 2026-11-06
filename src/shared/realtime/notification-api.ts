@@ -13,15 +13,15 @@ const unwrap = <T,>(payload: unknown) => (payload as { value: T }).value
 
 /** REST side of the notification feature. SignalR only pushes; the inbox, unread count and read state live here. */
 export const notificationApi = {
-  async list(params: { pageIndex?: number; pageSize?: number; unreadOnly?: boolean } = {}) {
+  async list(params: { pageIndex?: number; pageSize?: number; unreadOnly?: boolean } = {}, signal?: AbortSignal) {
     const payload = await apiClient.get<unknown, unknown>("notifications", {
-      params: { pageIndex: params.pageIndex ?? 1, pageSize: params.pageSize ?? 20, unreadOnly: params.unreadOnly },
+      params: { pageIndex: params.pageIndex ?? 1, pageSize: params.pageSize ?? 20, unreadOnly: params.unreadOnly }, signal,
     })
     return unwrap<Paged<AppNotification>>(payload)
   },
 
-  async unreadCount() {
-    const payload = await apiClient.get<unknown, unknown>("notifications/unread-count")
+  async unreadCount(signal?: AbortSignal) {
+    const payload = await apiClient.get<unknown, unknown>("notifications/unread-count", { signal })
     return unwrap<{ count: number }>(payload).count
   },
 
