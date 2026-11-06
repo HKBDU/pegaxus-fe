@@ -24,13 +24,6 @@ import {
 } from "@/shared/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -250,10 +243,11 @@ export function SegmentCard({
   const canAssignResources = canAccess(principal, {
     anyRole: ["FLEET_ROUTE_COORDINATOR"],
   });
-  // The Logistics Manager can only link or remove a provider (OS1), never a vehicle.
+  // The Logistics Manager and Route Coordinator can link or remove a provider (OS1), never a vehicle.
   const canManageOutsource = canAccess(principal, {
-    anyRole: ["LOGISTICS_MANAGER"],
+    anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR"],
   });
+  const canChangeArrangement = canAssignResources || canManageOutsource;
   const mode = modeChoice ?? segment.arrangement;
   const assignedVehicleIds = segment.vehicleIds ?? [];
   const assignedVehicles = assignedVehicleIds.map((id) => availableVehicles.find((v) => v.vehicleId === id) ?? segment.vehicleDetails?.find((v) => v.vehicleId === id));
@@ -441,23 +435,7 @@ export function SegmentCard({
               <div>
                 <span className="text-muted-foreground">Arrangement</span>
                 <div className="mt-1">
-                  {canAssignResources ? (
-                    <Select
-                      value={mode}
-                      onValueChange={(value) => setModeChoice(value === segment.arrangement ? null : (value as "INTERNAL" | "OUTSOURCED"))}
-                    >
-                      <SelectTrigger
-                        className="h-7 w-full min-w-0 rounded-[2px] border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-900"
-                        aria-label="Arrangement"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="text-xs">
-                        <SelectItem value="INTERNAL" className="text-xs">Internal</SelectItem>
-                        <SelectItem value="OUTSOURCED" className="text-xs">Outsource</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : canManageOutsource ? (
+                  {canChangeArrangement ? (
                     <OutsourceSegmentDialog
                       routePlanId={routePlanId}
                       routePlanRouteId={segment.route.routePlanRouteId ?? String(segment.route.id)}
@@ -543,7 +521,7 @@ export function SegmentCard({
                       }).join("; ")
                     : "Select vehicle"}
               </span>
-              {canAssignResources && (
+              {(segment.arrangement === "OUTSOURCED" ? canManageOutsource : canAssignResources) && (
                 <Button
                   type="button"
                   size="sm"
@@ -561,17 +539,18 @@ export function SegmentCard({
               <p className="mt-1 text-xs text-amber-800">Inherited from PRIMARY · Segment {segment.inheritanceSource}</p>
             )}
             {segment.assignmentReason && <p className="mt-1 text-xs text-muted-foreground">{segment.assignmentReason}</p>}
-            {canAssignResources && (
-              <>
-                {vehicleOpen && <AssignVehicleDialog
-                  open={vehicleOpen}
-                  onOpenChange={setVehicleOpen}
-                  vehicles={availableVehicles.filter((v) => assignmentStatusAllowed(v) && v.transportMode === segment.route.transportMode && v.isAvailable !== false)}
-                  selectedIds={segment.arrangement === "INTERNAL" ? assignedVehicleIds : []}
-                  selectedDetails={segment.vehicleDetails ?? []}
-                  onConfirm={applyVehicle}
-                />}
-                <OutsourceSegmentDialog
+            {canAssignResources && vehicleOpen && (
+              <AssignVehicleDialog
+                open={vehicleOpen}
+                onOpenChange={setVehicleOpen}
+                vehicles={availableVehicles.filter((v) => assignmentStatusAllowed(v) && v.transportMode === segment.route.transportMode && v.isAvailable !== false)}
+                selectedIds={segment.arrangement === "INTERNAL" ? assignedVehicleIds : []}
+                selectedDetails={segment.vehicleDetails ?? []}
+                onConfirm={applyVehicle}
+              />
+            )}
+            {canManageOutsource && (
+              <OutsourceSegmentDialog
                   routePlanRouteId={segment.route.routePlanRouteId ?? String(segment.route.id)}
                   transportMode={segment.route.transportMode ?? "ROAD"}
                   isOutsourced={false}
@@ -585,10 +564,9 @@ export function SegmentCard({
                     if (selection) onVehicleChange?.([]);
                     setModeChoice(null);
                   }}
-                >
-                  <span className="sr-only">Assign provider</span>
-                </OutsourceSegmentDialog>
-              </>
+              >
+                <span className="sr-only">Assign provider</span>
+              </OutsourceSegmentDialog>
             )}
             <AlertDialog open={Boolean(pendingVehicleIds)} onOpenChange={(open) => !open && setPendingVehicleIds(null)}>
               <AlertDialogContent className="rounded-[2px]">

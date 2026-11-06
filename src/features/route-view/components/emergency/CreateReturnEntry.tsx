@@ -68,7 +68,7 @@ export function CreateReturnEntry({
             <DialogTitle>Create Return Route</DialogTitle>
             <DialogDescription>
               Continue to the existing Return Builder for this transport plan.
-              The backend validates journey, Location and route rules when
+              Journey, location, and route rules are checked when
               saving.
             </DialogDescription>
           </DialogHeader>

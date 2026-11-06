@@ -70,7 +70,7 @@ export function MissingReminderPreview({
         aria-label="Reminder preview"
       >
         <p className="text-xs leading-relaxed text-muted-foreground">
-          This is a local summary, not the exact backend email template.
+          This is a summary and may differ from the email received by the customer.
         </p>
         <p>Missing documents for {dossier.bookingCode}</p>
         <ul className="list-inside list-disc space-y-1 text-xs leading-relaxed">

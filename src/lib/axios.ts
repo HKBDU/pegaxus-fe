@@ -2,6 +2,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/features/auth/store'
 import { env } from '@/lib/env'
 import { requestRefreshToken } from '@/features/auth/services/refresh-token'
+import { normalizeCoordinatePayload } from '@/shared/constants/validation-limits'
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean
@@ -33,6 +34,8 @@ apiClient.interceptors.request.use((request) => {
   // Let the browser/Axios add the multipart boundary for profile uploads.
   if (config.data instanceof FormData) {
     config.headers.delete('Content-Type')
+  } else if (config.data && typeof config.data === 'object') {
+    config.data = normalizeCoordinatePayload(config.data)
   }
 
   return config

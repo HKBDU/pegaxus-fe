@@ -19,8 +19,8 @@ import { formatPlanDate } from "@/features/transport-plan/format";
 import { distanceLabel, durationLabel, replacementLabel } from "../display";
 import {
   getPendingRouteActions,
-  type RouteWorkspaceContext,
-} from "../workspace-actions";
+} from "../route-policy";
+import type { RouteWorkspaceContext } from "../types";
 import type { RouteDetailPath, RoutePlanSummary } from "../types";
 import {
   emergencyActionLabels,

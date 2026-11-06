@@ -110,7 +110,7 @@ export function useSegmentArrival({
     if (!sample) {
       setProblem({
         key,
-        message: "Đang chờ vị trí GPS mới. Không thể dùng điểm cũ để xác nhận.",
+        message: "Waiting for a fresh GPS position. Cannot confirm using an old position.",
       });
       return;
     }
@@ -141,7 +141,7 @@ export function useSegmentArrival({
       )
         throw new Error("Arrival response does not match this boundary.");
       dismiss();
-      toast.success("Đã cập nhật giờ đến theo xác nhận của máy chủ.");
+      toast.success("Arrival time updated from the server confirmation.");
       reload();
     } catch (error) {
       if (controller.signal.aborted || !stillAuthorized()) return;
@@ -156,10 +156,10 @@ export function useSegmentArrival({
         dismiss();
         toast.info(
           failure.code === "ARRIVAL_LOCKED"
-            ? "Giờ đến đã khóa. Giữ nguyên thời gian GPS do máy chủ ghi."
+            ? "Arrival time is locked. Keeping the GPS-recorded time from the server."
             : failure.code === "NOT_IN_ARRIVAL_RADIUS"
-              ? "Xe không còn trong bán kính cho phép. Không cập nhật giờ đến."
-              : "Ranh giới này cần biên bản. Tiếp tục tại tab Handovers.",
+              ? "The vehicle is no longer within the allowed radius. Arrival time was not updated."
+              : "This boundary requires a handover record. Continue in the Handovers tab.",
         );
         reload();
         if (failure.code === "HANDOVER_REQUIRED")
@@ -168,7 +168,7 @@ export function useSegmentArrival({
         setProblem({
           key,
           message: failure.network
-            ? "Mất kết nối. Chưa xác nhận giờ đến; không tự gửi lại."
+            ? "Connection lost. Arrival time was not confirmed; do not retry automatically."
             : failure.message,
         });
     } finally {

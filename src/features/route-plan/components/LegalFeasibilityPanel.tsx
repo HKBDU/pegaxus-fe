@@ -98,6 +98,8 @@ export function LegalFeasibilityPanel({
   }
 
   function addBlockedSegment(sequenceNo: number) {
+    setStatus("NOT FEASIBLE");
+    setError(null);
     setBlockedSegments((current) =>
       current.includes(sequenceNo)
         ? current

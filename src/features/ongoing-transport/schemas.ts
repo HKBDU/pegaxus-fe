@@ -206,6 +206,8 @@ export const transportOverviewSchema = z.object({
     .object({
       routePlanId: z.string(),
       routePlanCode: z.string(),
+      legalReviewRequested: z.boolean(),
+      legalReviewRequestedAt: z.iso.datetime({ offset: true }).nullish().transform((v) => v ?? null),
       status: z.enum([
         "DRAFT",
         "CONFIRMED",

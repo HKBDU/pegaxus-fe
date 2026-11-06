@@ -50,10 +50,10 @@ interface Stop {
 }
 
 export const DEMO_STOPS: Stop[] = [
-  { id: "demo-stop-1", name: "Hanoi Equine Quarantine Facility", type: "STABLE", city: "Hanoi", country: "VN", latitude: 21.0285, longitude: 105.8544 },
-  { id: "demo-stop-2", name: "Vinh Transit Rest Stop", type: "REST_STOP", city: "Vinh", country: "VN", latitude: 18.6796, longitude: 105.6813 },
-  { id: "demo-stop-3", name: "Hue Equine Inspection Gate", type: "BORDER_GATE", city: "Hue", country: "VN", latitude: 16.4637, longitude: 107.5909 },
-  { id: "demo-stop-4", name: "Danang Transit Terminal", type: "STABLE", city: "Danang", country: "VN", latitude: 16.0544, longitude: 108.2022 },
+  { id: "demo-stop-1", name: "Chantilly Equine Quarantine Facility", type: "STABLE", city: "Chantilly", country: "FR", latitude: 49.1944, longitude: 2.4858 },
+  { id: "demo-stop-2", name: "Lille Transit Rest Stop", type: "REST_STOP", city: "Lille", country: "FR", latitude: 50.6292, longitude: 3.0573 },
+  { id: "demo-stop-3", name: "Calais Border Inspection Gate", type: "BORDER_GATE", city: "Calais", country: "FR", latitude: 50.9513, longitude: 1.8587 },
+  { id: "demo-stop-4", name: "Dover Equine Transit Terminal", type: "STABLE", city: "Dover", country: "GB", latitude: 51.1279, longitude: 1.3134 },
 ]
 
 export const DEMO_LEGS = DEMO_STOPS.slice(0, -1).map((from, index) => ({

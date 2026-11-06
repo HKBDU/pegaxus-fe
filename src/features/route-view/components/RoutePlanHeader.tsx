@@ -36,7 +36,7 @@ export function RoutePlanHeader({
           </h2>
           <ApprovedBookingBadge value={plan.routeType} />
           {plan.status === REJECTED_BY_MANAGER ? (
-            <Badge variant="outline">LM đã từ chối</Badge>
+            <Badge variant="outline">Rejected by Logistics Manager</Badge>
           ) : (
             <ApprovedBookingBadge value={plan.status} />
           )}

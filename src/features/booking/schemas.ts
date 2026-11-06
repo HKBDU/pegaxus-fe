@@ -82,15 +82,21 @@ export const bookingFormSchema = z
     if (
       values.requestedArrivalDate &&
       values.requestedDepartureDate &&
-      values.requestedArrivalDate < values.requestedDepartureDate
+      values.requestedArrivalDate < addDays(values.requestedDepartureDate, 1)
     ) {
       context.addIssue({
         code: "custom",
-        message: "Arrival date cannot be before departure",
+        message: "Arrival date must be at least 24 hours after departure",
         path: ["requestedArrivalDate"],
       })
     }
   })
+
+export function addDays(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
 
 export const reasonSchema = z.object({
   reason: z.string().trim().min(10, "Please provide at least 10 characters").max(500),

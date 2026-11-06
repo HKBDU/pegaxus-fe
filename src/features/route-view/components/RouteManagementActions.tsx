@@ -37,6 +37,7 @@ import {
 import { formatUtcDateTime } from "@/shared/utils/datetime";
 import type { RoutePlanDetail, RouteSegment } from "../types";
 import { canChangeVehiclesBeforeDeparture } from "../vehicle-change";
+import { canSpecialistReviewRoute, isDossierReady } from "../route-policy";
 
 const legalActionClass =
   "min-h-11 gap-1.5 rounded-[2px] border px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:ring-primary/30 motion-reduce:transition-none sm:min-h-8";
@@ -102,19 +103,10 @@ export function RouteManagementActions({
       setRefreshing(false);
     }
   }
-  const dossierReady =
-    plan.routeType === "BACKUP" ||
-    (legalDossier?.status === "DRAFT" &&
-      (plan.routeType !== "RETURN" ||
-        context.workspace.transportStatus === "IN_TRANSIT"));
-  // A PRIMARY / BACKUP plan can only be reviewed once the coordinator sent it (RP7 answers ROUTE_PLAN_NOT_SUBMITTED otherwise); RETURN is exempt.
-  const submittedForReview = plan.submittedForReviewAt != null;
-  const canReview =
-    role === "specialist" &&
-    plan.status === "DRAFT" &&
-    dossierReady &&
-    !readOnly &&
-    (plan.routeType === "RETURN" || submittedForReview);
+  const dossierReady = isDossierReady(legalDossier?.status);
+  // A PRIMARY or BACKUP plan must be submitted before RP7 review; RETURN reaches the specialist via LM approval when transport is in transit.
+  const submittedForReview = plan.legalReviewRequested === true;
+  const canReview = canSpecialistReviewRoute(plan, context.workspace) && !readOnly;
   const canCancel = role === "coordinator" && plan.status === "DRAFT" && !readOnly;
   const canChangeVehicles = canChangeVehiclesBeforeDeparture(
     plan,
@@ -195,6 +187,16 @@ export function RouteManagementActions({
               </Link>
             </Button>
           ) : null}
+          {!legalDossier ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => toast.info("Create a compliance dossier before reviewing legal feasibility.")}
+            >
+              Review Legal Feasibility
+            </Button>
+          ) : null}
         </div>
       ) : null}
       {canReview ? (
@@ -223,7 +225,7 @@ export function RouteManagementActions({
         submittedForReview ? (
           <span className="text-xs text-slate-500">
             Submitted for legal review at{" "}
-            {formatUtcDateTime(plan.submittedForReviewAt)}
+            {formatUtcDateTime(plan.legalReviewRequestedAt)}
           </span>
         ) : (
           <SubmitForLegalReviewButton
@@ -354,18 +356,9 @@ export function RouteSegmentOutsourceAction({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [savingInternal, setSavingInternal] = useState(false);
   const role = getWorkspaceRole(context.workspace.principal);
-  // The Logistics Manager only links or removes a provider (OS1); fleet vehicles are the Route Coordinator's job in the route builder.
+  // The Logistics Manager and Route Coordinator may link or remove a provider (OS1).
   if (plan.status !== "DRAFT" || (role !== "manager" && role !== "coordinator"))
     return null;
-  if (role === "coordinator") {
-    return (
-      <Button asChild size="sm" variant="link" className="h-auto px-0 text-xs">
-        <Link to={routePlanEdit(plan.routePlanId)}>
-          Assign vehicle or provider in route builder
-        </Link>
-      </Button>
-    );
-  }
   async function switchToInternal() {
     setSavingInternal(true);
     try {

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -12,10 +13,13 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { getRoutePlanError, updateRoutePlan } from "../services";
 import type { RouteSegmentInput, UpdateRoutePlanRequest } from "../types";
+import { refreshRouteAfterSubmit } from "@/features/route-view/hooks/useRoutePlanDetail";
 
 /** The parts of a saved route plan (RP3) the update call needs. */
 type SavedRoutePlan = {
   routePlanId: string;
+  transportPlanId: string;
+  routeType: "PRIMARY" | "BACKUP" | "RETURN";
   updatedAt: string;
   routeNote?: string | null;
   segments: {
@@ -75,7 +79,7 @@ export function buildSubmitForReviewRequest(
 
 /**
  * Sends a saved DRAFT route plan to legal review straight from its page (RP4 with `SUBMIT_FOR_LEGAL_REVIEW`), without
- * opening the builder. The Transport Specialist is notified and `submittedForReviewAt` is set.
+ * opening the builder. BE returns the authoritative legal-review request state.
  */
 export function SubmitForLegalReviewButton({
   plan,
@@ -84,8 +88,9 @@ export function SubmitForLegalReviewButton({
 }: {
   plan: SavedRoutePlan;
   disabled?: boolean;
-  onSubmitted: () => void;
+  onSubmitted: () => Promise<void> | void;
 }) {
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const request = buildSubmitForReviewRequest(plan);
@@ -96,8 +101,19 @@ export function SubmitForLegalReviewButton({
     try {
       await updateRoutePlan(plan.routePlanId, request);
       toast.success("Route plan submitted for legal review.");
+      try {
+        const refreshResult = await refreshRouteAfterSubmit(
+          queryClient,
+          plan.routePlanId,
+        );
+        if (!refreshResult.synced) {
+          toast.warning("Submission succeeded, but the route view is still synchronizing.");
+        }
+      } catch {
+        toast.warning("Submission succeeded, but the route view could not be refreshed yet.");
+      }
       setOpen(false);
-      onSubmitted();
+      await onSubmitted();
     } catch (error) {
       const mapped = getRoutePlanError(error);
       toast.error(mapped.message);

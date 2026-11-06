@@ -125,7 +125,8 @@ export type RoutePlanBuilderProps = {
   edit?: {
     routePlanId: string;
     lastUpdatedAt: string;
-    submittedForReviewAt?: string | null;
+    legalReviewRequested: boolean;
+    legalReviewRequestedAt: string | null;
   };
 };
 
@@ -1513,6 +1514,33 @@ export function RoutePlanBuilder({
       setSaveError("Add at least one segment before saving.");
       return;
     }
+    const invalidCoordinateSegment = segments.findIndex((segment) => {
+      const locations = [segment.route.fromLocation, segment.route.toLocation];
+      return locations.some(
+        (location) =>
+          !location ||
+          !Number.isFinite(location?.latitude) ||
+          !Number.isFinite(location?.longitude) ||
+          Math.abs(location.latitude) > 90 ||
+          Math.abs(location.longitude) > 180,
+      );
+    });
+    if (invalidCoordinateSegment >= 0) {
+      const segment = segments[invalidCoordinateSegment];
+      const location = [segment.route.fromLocation, segment.route.toLocation].find(
+        (item) =>
+          !item ||
+          !Number.isFinite(item?.latitude) ||
+          !Number.isFinite(item?.longitude) ||
+          Math.abs(item.latitude) > 90 ||
+          Math.abs(item.longitude) > 180,
+      );
+      setSaveError(
+        `Segment ${invalidCoordinateSegment + 1} has invalid coordinates for ${location?.name ?? "a location"}. Select or update the location before saving.`,
+      );
+      setStep(0);
+      return;
+    }
     if (!continuity.valid) {
       setSaveError(continuity.message ?? "Route segments are not continuous.");
       return;
@@ -2482,8 +2510,8 @@ export function RoutePlanBuilder({
                 {edit && (
                   <>
                     <p className="text-xs text-slate-600">
-                      {edit.submittedForReviewAt
-                        ? `Submitted for legal review at ${formatUtcDateTime(edit.submittedForReviewAt)}`
+                      {edit.legalReviewRequested
+                        ? `Submitted for legal review at ${formatUtcDateTime(edit.legalReviewRequestedAt)}`
                         : "This route plan has not been submitted for legal review."}
                     </p>
                   <label className="grid gap-2 text-sm font-medium text-slate-900">

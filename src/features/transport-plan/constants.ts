@@ -31,7 +31,9 @@ export const formatStatusLabel = (value: string) =>
     .replace(/^./, (letter) => letter.toUpperCase());
 export const routeStatusOptions = [
   { value: "ALL", label: "All route statuses" },
-  ...routePlanStatusSchema.options.map((value) => ({
+  ...routePlanStatusSchema.options.filter((value) =>
+    value !== "PENDING_LEGAL_REVIEW" && value !== "PENDING_MANAGER_APPROVAL",
+  ).map((value) => ({
     value,
     label:
       value === REJECTED_BY_MANAGER
