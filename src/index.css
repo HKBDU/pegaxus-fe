@@ -38,6 +38,7 @@
   --secondary-foreground: 222.2 47.4% 11.2%;
   /* Light orange used for every hover/focus highlight (menus, selects, ghost buttons). */
   --hover-accent: 36 100% 93%;
+  --selection-accent: #f39200;
 
   --sans: system-ui, "Segoe UI", Roboto, sans-serif;
   --heading: "Oswald", system-ui, sans-serif;
@@ -92,6 +93,7 @@
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-accent: hsl(var(--hover-accent));
+  --color-selection-accent: var(--selection-accent);
   --color-accent-foreground: hsl(var(--foreground));
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);

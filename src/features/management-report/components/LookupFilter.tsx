@@ -135,14 +135,14 @@ export function LookupFilter({
                 variant={value === item.id ? "secondary" : "ghost"}
                 aria-pressed={value === item.id}
                 key={item.id}
-                className="h-auto min-h-9 w-full justify-between whitespace-normal rounded-[2px] px-2 py-2 text-left text-sm font-normal"
+                className="h-auto min-h-9 w-full justify-between whitespace-normal rounded-[2px] px-2 py-1.5 text-left text-sm font-normal aria-pressed:bg-accent aria-pressed:text-foreground"
                 onClick={() => choose(item)}
               >
                 <span className="min-w-0 break-words">{item.label}</span>
                 {value === item.id ? (
                   <Check
                     aria-hidden="true"
-                    className="size-3.5 shrink-0 text-primary"
+                    className="size-3.5 shrink-0 text-selection-accent!"
                   />
                 ) : null}
               </Button>

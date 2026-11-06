@@ -66,7 +66,7 @@ export function ProfileDropdown({ isLoggedIn, user }: ProfileDropdownProps) {
         <DropdownMenuContent
           align="end"
           sideOffset={8}
-          className="w-64 rounded-md border-slate-200 p-1.5 font-sans text-slate-800 shadow-xl shadow-slate-950/10"
+          className="w-64 rounded-[2px] border-input p-1.5 font-sans text-foreground shadow-md"
         >
           {isLoggedIn && user ? (
             <>
