@@ -28,7 +28,7 @@ export function canSpecialistReviewRoute(
 ) {
   if (getWorkspaceRole(context.principal) !== "specialist" || route.status !== "DRAFT") return false;
   if (!isDossierReady(context.dossierStatus)) return false;
-  if (route.routeType === "RETURN" && context.transportStatus !== "IN_TRANSIT") return false;
+  if (route.routeType === "RETURN") return context.transportStatus === "IN_TRANSIT";
   return route.legalReviewRequested === true;
 }
 

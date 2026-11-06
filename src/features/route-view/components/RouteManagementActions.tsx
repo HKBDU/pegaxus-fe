@@ -104,7 +104,7 @@ export function RouteManagementActions({
     }
   }
   const dossierReady = isDossierReady(legalDossier?.status);
-  // Every route type must be submitted before RP7 review; RETURN additionally requires an in-transit transport.
+  // A PRIMARY or BACKUP plan must be submitted before RP7 review; RETURN reaches the specialist via LM approval when transport is in transit.
   const submittedForReview = plan.legalReviewRequested === true;
   const canReview = canSpecialistReviewRoute(plan, context.workspace) && !readOnly;
   const canCancel = role === "coordinator" && plan.status === "DRAFT" && !readOnly;

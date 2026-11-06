@@ -50,8 +50,8 @@ describe("canSpecialistReviewRoute", () => {
     ["PRIMARY", null, "2026-11-05T10:00:00Z"],
     ["PRIMARY", "DRAFT", "2026-11-05T10:00:00Z"],
     ["BACKUP", null, "2026-11-05T10:00:00Z"],
-    ["RETURN", null, "2026-11-05T10:00:00Z"],
-    ["RETURN", "DRAFT", "2026-11-05T10:00:00Z"],
+    ["RETURN", null, null],
+    ["RETURN", "DRAFT", null],
   ] as const)("allows specialist review for %s with dossier %s", (routeType, dossierStatus, submittedAt) => {
     const context = specialistContext({ dossierStatus, transportStatus: routeType === "RETURN" ? "IN_TRANSIT" : "READY" });
     expect(canSpecialistReviewRoute(route(routeType, { legalReviewRequested: submittedAt != null }), context)).toBe(true);
@@ -61,10 +61,6 @@ describe("canSpecialistReviewRoute", () => {
     for (const routeType of ["PRIMARY", "BACKUP"] as const) {
       expect(canSpecialistReviewRoute(route(routeType, { legalReviewRequested: false }), specialistContext())).toBe(false);
     }
-  });
-
-  it("blocks RETURN routes that were not submitted", () => {
-    expect(canSpecialistReviewRoute(route("RETURN", { legalReviewRequested: false }), specialistContext({ transportStatus: "IN_TRANSIT" }))).toBe(false);
   });
 
   it("blocks RETURN routes when transport is not in transit", () => {
