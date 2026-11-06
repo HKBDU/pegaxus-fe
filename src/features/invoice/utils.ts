@@ -137,7 +137,8 @@ export function parseTransitDays(value: string) {
 }
 
 /**
- * Estimate shown while the draft is being edited (contract R8): subtotal of the manual lines, 20% tax,
+ * Estimate shown while the draft is being edited: subtotal of the lines, VAT from the active price list
+ * (or the saved invoice snapshot; the default rate is only a fallback),
  * deposit deduction added after tax. The server recomputes everything, this number is never sent. IV1 returns no totals,
  * so the form adds the lines it shows; a credit note carries no tax (`taxRatePercent` 0).
  */
