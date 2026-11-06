@@ -2,6 +2,7 @@ import { FilterToolbar } from "@/shared/components/ui/filter-toolbar";
 import { Button } from "@/shared/components/ui/button";
 import { DatePicker } from "@/shared/components/ui/date-picker";
 import { Input } from "@/shared/components/ui/input";
+import { FormItem } from "@/shared/components/ui/form";
 import { Label } from "@/shared/components/ui/label";
 import { CountrySelect } from "@/shared/components/ui/country-select";
 import {
@@ -87,7 +88,7 @@ export function ReportFilters({
         activeCount={activeCount}
         search={
           <div className="grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2">
-            <div className="min-w-0 space-y-1.5">
+            <FormItem className="min-w-0 gap-1.5">
               <Label htmlFor="report-date-from" className="text-xs">
                 From (UTC)
               </Label>
@@ -98,8 +99,8 @@ export function ReportFilters({
                 className={control}
                 aria-describedby="report-filter-errors"
               />
-            </div>
-            <div className="min-w-0 space-y-1.5">
+            </FormItem>
+            <FormItem className="min-w-0 gap-1.5">
               <Label htmlFor="report-date-to" className="text-xs">
                 To (UTC)
               </Label>
@@ -110,12 +111,12 @@ export function ReportFilters({
                 className={control}
                 aria-describedby="report-filter-errors"
               />
-            </div>
+            </FormItem>
           </div>
         }
         sort={
           variant === "on-time-delivery" ? (
-            <div className="min-w-0 space-y-1.5">
+            <FormItem className="min-w-0 gap-1.5">
               <Label htmlFor="report-trend" className="text-xs">
                 Trend grouping
               </Label>
@@ -134,7 +135,7 @@ export function ReportFilters({
                   <SelectItem value="MONTH">Month</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </FormItem>
           ) : undefined
         }
         actions={

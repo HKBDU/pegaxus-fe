@@ -61,7 +61,7 @@ function DatePicker({
           type="button"
           data-empty={!selected}
           className={cn(
-            "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-transparent px-3 text-left text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[empty=true]:text-muted-foreground disabled:pointer-events-none disabled:opacity-50",
+            "flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-[2px] border border-input bg-transparent px-3 text-left text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 data-[empty=true]:text-muted-foreground disabled:pointer-events-none disabled:opacity-50",
             className,
           )}
           {...props}

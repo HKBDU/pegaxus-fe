@@ -50,13 +50,13 @@ export function LocationSearch({
         />
       </div>
       {!loading && inputValue.trim() && (
-        <div className="mt-1 max-h-48 overflow-y-auto rounded border border-slate-200 bg-white p-1 shadow-md">
+        <div className="mt-1 max-h-48 overflow-y-auto overscroll-contain rounded-[2px] border border-slate-200 bg-white p-1 shadow-md">
           {options.length ? (
             options.map((location) => (
               <button
                 key={location.id}
                 type="button"
-                className="block w-full rounded px-2 py-2 text-left text-sm hover:bg-amber-50 focus-visible:bg-amber-50"
+                className="block w-full rounded-[2px] px-2 py-2 text-left text-sm hover:bg-accent focus-visible:bg-accent"
                 onClick={() => onSelect(location)}
               >
                 <span className="font-medium">{location.name}</span>

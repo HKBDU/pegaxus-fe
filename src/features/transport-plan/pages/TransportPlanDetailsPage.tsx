@@ -1,5 +1,10 @@
 import type { ComponentType } from "react";
-import { Tabs } from "radix-ui";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/shared/components/ui/tabs";
 import {
   Link,
   useNavigate,
@@ -119,7 +124,8 @@ export function TransportPlanDetails({
             transportPlanId={plan.transportPlanId}
             canManage
           />
-          <Tabs.Root
+          <Tabs
+            variant="underline"
             value={activeTab}
             onValueChange={(value) =>
               setParams((current) => {
@@ -129,35 +135,22 @@ export function TransportPlanDetails({
               })
             }
           >
-            <Tabs.List
-              aria-label="Transport plan sections"
-              className="mb-3 flex flex-wrap gap-1 p-1 border-b border-slate-200"
-            >
+            <TabsList aria-label="Transport plan sections">
               {[
                 { value: "general", label: "General" },
                 { value: "personnel", label: "Personnel" },
                 { value: "invoices", label: "Invoices" },
               ].map((tab) => (
-                <Tabs.Trigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="shrink-0 whitespace-nowrap rounded-t-[2px] border-b-2 border-transparent px-4 py-2.5 font-heading text-sm uppercase text-slate-500 outline-none transition-colors duration-200 hover:bg-primary/5 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-primary/30 data-[state=active]:border-primary data-[state=active]:bg-primary/10 data-[state=active]:text-slate-900 motion-reduce:transition-none"
-                >
+                <TabsTrigger key={tab.value} value={tab.value}>
                   {tab.label}
-                </Tabs.Trigger>
+                </TabsTrigger>
               ))}
-            </Tabs.List>
-            <Tabs.Content
-              value="general"
-              className="space-y-4 outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"
-            >
+            </TabsList>
+            <TabsContent value="general" className="space-y-4">
               <TransportPlanGeneral plan={plan} />
               <TransportPlanWorkspace plan={plan} />
-            </Tabs.Content>
-            <Tabs.Content
-              value="personnel"
-              className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"
-            >
+            </TabsContent>
+            <TabsContent value="personnel">
               {personnelAction ? (
                 <TransportPlanPersonnel
                   transportPlanId={plan.transportPlanId}
@@ -173,16 +166,13 @@ export function TransportPlanDetails({
                       : "Personnel assignment opens after the transport plan is approved."}
                 </p>
               )}
-            </Tabs.Content>
-            <Tabs.Content
-              value="invoices"
-              className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"
-            >
+            </TabsContent>
+            <TabsContent value="invoices">
               {activeTab === "invoices" ? (
                 <InvoicesPanel bookingId={plan.booking.bookingId} />
               ) : null}
-            </Tabs.Content>
-          </Tabs.Root>
+            </TabsContent>
+          </Tabs>
         </>
       ) : (
         <TransportPlanWorkspace plan={plan} />

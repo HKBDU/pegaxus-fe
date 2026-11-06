@@ -10,6 +10,13 @@ import type {
   VehicleIncidentType,
 } from "@/shared/types/incident";
 import { Input } from "@/shared/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { IncidentFieldError } from "../IncidentFieldError";
 import type { IncidentFieldErrors } from "../../validation";
 
@@ -78,20 +85,28 @@ export function VehicleIncidentFields({
       </div>
       <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold text-slate-900">
         Incident type
-        <select
+        <Select
           value={value.incidentType}
           disabled={disabled}
-          onChange={(event) =>
-            update("incidentType", event.target.value as VehicleIncidentType)
+          onValueChange={(type) =>
+            update("incidentType", type as VehicleIncidentType)
           }
-          className="min-h-12 w-full min-w-0 rounded-[2px] border border-input bg-background px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
         >
-          {Object.values(VEHICLE_INCIDENT_TYPE).map((type) => (
-            <option key={type} value={type}>
-              {VEHICLE_INCIDENT_TYPE_LABELS[type]}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            aria-label="Incident type"
+            aria-invalid={Boolean(errors.incidentType)}
+            className="min-h-12 w-full text-base"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.values(VEHICLE_INCIDENT_TYPE).map((type) => (
+              <SelectItem key={type} value={type}>
+                {VEHICLE_INCIDENT_TYPE_LABELS[type]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <IncidentFieldError message={errors.incidentType} />
       </label>
       <div className="grid items-start gap-4 sm:grid-cols-2">

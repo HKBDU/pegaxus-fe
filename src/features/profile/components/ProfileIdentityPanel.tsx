@@ -53,17 +53,17 @@ export function ProfileIdentityPanel({
               <MoreHorizontal className="size-5" aria-hidden="true" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" sideOffset={8} className="w-52 rounded-[6px] border-[#d1d5db] bg-white p-1.5 text-[#181818]">
-            <DropdownMenuItem disabled={disabled} className="cursor-pointer gap-2 rounded-[3px] px-3 py-2.5 text-sm font-medium data-[highlighted]:bg-[#fff4df] data-[highlighted]:text-[#9a5b00]" onSelect={onChangeAvatar}>
+          <DropdownMenuContent align="end" sideOffset={8} className="w-52 rounded-[2px] border-input bg-white p-1.5 text-[#181818]">
+            <DropdownMenuItem disabled={disabled} className="cursor-pointer gap-2 rounded-[2px] px-3 py-2.5 text-sm font-medium data-[highlighted]:bg-accent data-[highlighted]:text-foreground" onSelect={onChangeAvatar}>
               <Pencil className="size-4" aria-hidden="true" />
               <span>Change avatar</span>
             </DropdownMenuItem>
-            <DropdownMenuItem disabled={disabled} className="cursor-pointer gap-2 rounded-[3px] px-3 py-2.5 text-sm font-medium data-[highlighted]:bg-[#fff4df] data-[highlighted]:text-[#9a5b00]" onSelect={onChangePassword}>
+            <DropdownMenuItem disabled={disabled} className="cursor-pointer gap-2 rounded-[2px] px-3 py-2.5 text-sm font-medium data-[highlighted]:bg-accent data-[highlighted]:text-foreground" onSelect={onChangePassword}>
               <KeyRound className="size-4" aria-hidden="true" />
               <span>Change password</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="my-1 bg-[#ece9e4]" />
-            <DropdownMenuItem asChild variant="destructive" className="cursor-pointer gap-2 rounded-[3px] px-3 py-2.5 text-sm font-medium">
+            <DropdownMenuItem asChild variant="destructive" className="cursor-pointer gap-2 rounded-[2px] px-3 py-2.5 text-sm font-medium">
               <Link to="/logout">
                 <LogOut className="size-4" aria-hidden="true" />
                 <span>Sign out</span>
