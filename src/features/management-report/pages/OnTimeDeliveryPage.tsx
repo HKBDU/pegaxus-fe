@@ -1,9 +1,11 @@
 import "@/shared/components/report-dashboard.css";
+import { useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
 import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { useViewportEntry } from "@/shared/hooks/useViewportEntry";
 import { ReportTabs } from "../components/ReportTabs";
 import { ReportFilters } from "../components/ReportFilters";
 import { PerformanceOverview } from "../components/PerformanceOverview";
@@ -25,7 +27,11 @@ function ReportWorkspace() {
   const location = useLocation();
   const state = useOnTimeFilterState();
   const { applied, draft } = state;
-  const query = useOnTimeDeliveryReport(applied);
+  const reportRef = useRef<HTMLDivElement>(null);
+  const hasEnteredViewport = useViewportEntry(reportRef, {
+    enabled: applied !== null,
+  });
+  const query = useOnTimeDeliveryReport(applied, hasEnteredViewport);
   const exporting = useReportExport();
 
   function change(update: Partial<Filters>) {
@@ -33,10 +39,12 @@ function ReportWorkspace() {
     state.change(update);
   }
   function apply() {
-    state.apply(() => void query.refetch());
+    state.apply(() => {
+      if (hasEnteredViewport) void query.refetch();
+    });
   }
   const failure = query.error ? reportError(query.error) : null;
-  const report = query.data;
+  const report = hasEnteredViewport ? query.data : undefined;
   const blocked = [failure, exporting.error].find(
     (error) => error && terminalReportError(error),
   );
@@ -82,101 +90,105 @@ function ReportWorkspace() {
             {exporting.completed}
           </p>
         ) : null}
-        {!applied ? (
-          <p role="alert" className="m-0 text-sm text-slate-600">
-            Correct the report filters above and apply them before loading or
-            exporting.
-          </p>
-        ) : blocked ? (
-          <ErrorState message={blocked.message} />
-        ) : (
-          <>
-            {failure ? (
-              <div
-                role="alert"
-                className="flex flex-wrap items-center justify-between gap-3 border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
-              >
-                <span>{failure.message}</span>
-                <Button
-                  variant="outline"
-                  type="button"
-                  disabled={query.isFetching || busy}
-                  onClick={() => void query.refetch()}
+        <div ref={reportRef} className="min-h-px space-y-3">
+          {!applied ? (
+            <p role="alert" className="m-0 text-sm text-slate-600">
+              Correct the report filters above and apply them before loading or
+              exporting.
+            </p>
+          ) : blocked ? (
+            <ErrorState message={blocked.message} />
+          ) : (
+            <>
+              {failure ? (
+                <div
+                  role="alert"
+                  className="flex flex-wrap items-center justify-between gap-3 border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
                 >
-                  Retry report
-                </Button>
-              </div>
-            ) : null}
-            {report ? (
-              <>
-                <p role="status" className="sr-only">
-                  {query.isFetching ? "Updating report…" : ""}
-                </p>
-                <PerformanceOverview report={report} />
-                <ReportCharts report={report} />
-                <section
-                  aria-labelledby="data-quality-heading"
-                  className="report-surface flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 p-4 text-xs text-slate-500"
-                >
-                  <h2
-                    id="data-quality-heading"
-                    className="m-0 font-heading text-base uppercase text-slate-900"
+                  <span>{failure.message}</span>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    disabled={query.isFetching || busy}
+                    onClick={() => {
+                      if (hasEnteredViewport) void query.refetch();
+                    }}
                   >
-                    Data quality
-                  </h2>
-                  <span>
-                    Excluded:{" "}
-                    <strong className="tabular-nums text-slate-800">
-                      {reportNumber(report.excluded.count)}
-                    </strong>
-                  </span>
-                  <span>
-                    Missing planned end:{" "}
-                    <strong className="tabular-nums text-slate-800">
-                      {reportNumber(
-                        report.excluded.reasons.MISSING_PLANNED_END,
-                      )}
-                    </strong>
-                  </span>
-                  <span>
-                    Missing actual arrival:{" "}
-                    <strong className="tabular-nums text-slate-800">
-                      {reportNumber(
-                        report.excluded.reasons.MISSING_ACTUAL_ARRIVAL,
-                      )}
-                    </strong>
-                  </span>
-                </section>
-                <TransportReportTable
-                  report={report}
-                  filters={applied}
-                  onChange={change}
-                  returnUrl={returnUrl}
-                  pending={query.previousRows}
-                  tableError={failure?.message}
-                  disabled={busy || query.isFetching}
-                />
-              </>
-            ) : query.isPending || query.isFetching ? (
-              <div
-                role="status"
-                aria-label="Loading on-time delivery report"
-                className="space-y-4"
-              >
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  {[1, 2, 3, 4].map((index) => (
-                    <Skeleton key={index} className="h-32" />
-                  ))}
+                    Retry report
+                  </Button>
                 </div>
-                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                  {[1, 2, 3, 4].map((index) => (
-                    <Skeleton key={index} className="h-80" />
-                  ))}
+              ) : null}
+              {report ? (
+                <>
+                  <p role="status" className="sr-only">
+                    {query.isFetching ? "Updating report…" : ""}
+                  </p>
+                  <PerformanceOverview report={report} />
+                  <ReportCharts report={report} />
+                  <section
+                    aria-labelledby="data-quality-heading"
+                    className="report-surface flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 p-4 text-xs text-slate-500"
+                  >
+                    <h2
+                      id="data-quality-heading"
+                      className="m-0 font-heading text-base uppercase text-slate-900"
+                    >
+                      Data quality
+                    </h2>
+                    <span>
+                      Excluded:{" "}
+                      <strong className="tabular-nums text-slate-800">
+                        {reportNumber(report.excluded.count)}
+                      </strong>
+                    </span>
+                    <span>
+                      Missing planned end:{" "}
+                      <strong className="tabular-nums text-slate-800">
+                        {reportNumber(
+                          report.excluded.reasons.MISSING_PLANNED_END,
+                        )}
+                      </strong>
+                    </span>
+                    <span>
+                      Missing actual arrival:{" "}
+                      <strong className="tabular-nums text-slate-800">
+                        {reportNumber(
+                          report.excluded.reasons.MISSING_ACTUAL_ARRIVAL,
+                        )}
+                      </strong>
+                    </span>
+                  </section>
+                  <TransportReportTable
+                    report={report}
+                    filters={applied}
+                    onChange={change}
+                    returnUrl={returnUrl}
+                    pending={query.previousRows}
+                    tableError={failure?.message}
+                    disabled={busy || query.isFetching}
+                  />
+                </>
+              ) : !hasEnteredViewport || query.isPending || query.isFetching ? (
+                <div
+                  role="status"
+                  aria-label="Loading on-time delivery report"
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {[1, 2, 3, 4].map((index) => (
+                      <Skeleton key={index} className="h-32" />
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    {[1, 2, 3, 4].map((index) => (
+                      <Skeleton key={index} className="h-80" />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </>
-        )}
+              ) : null}
+            </>
+          )}
+        </div>
       </ReportTabs>
     </main>
   );
