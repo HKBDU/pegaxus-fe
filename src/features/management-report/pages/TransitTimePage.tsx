@@ -51,96 +51,97 @@ function TransitWorkspace() {
           />
         }
       />
-      <ReportTabs />
-      <ReportModeNotice />
-      <ReportFilters
-        variant="transit-time"
-        draft={state.draft}
-        onChange={state.edit}
-        onApply={() => state.apply(() => void query.refetch())}
-        onReset={state.reset}
-        errors={state.errors}
-        disabled={busy}
-      />
-      {exporting.error && !blocked ? (
-        <p
-          role="alert"
-          className="m-0 border-l-2 border-destructive bg-red-50 px-3 py-2 text-sm text-destructive"
-        >
-          {exporting.error.message}
-        </p>
-      ) : null}
-      {exporting.completed ? (
-        <p role="status" className="m-0 break-words text-xs text-emerald-700">
-          {exporting.completed}
-        </p>
-      ) : null}
-      {!state.applied ? (
-        <p role="alert" className="m-0 text-sm text-slate-600">
-          Correct the report filters above and apply them before loading or
-          exporting.
-        </p>
-      ) : blocked ? (
-        <ErrorState message={blocked.message} />
-      ) : (
-        <>
-          {failure ? (
-            <div
-              role="alert"
-              className="flex flex-wrap items-center justify-between gap-3 border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
-            >
-              <span>{failure.message}</span>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={query.isFetching || busy}
-                onClick={() => void query.refetch()}
+      <ReportTabs>
+        <ReportModeNotice />
+        <ReportFilters
+          variant="transit-time"
+          draft={state.draft}
+          onChange={state.edit}
+          onApply={() => state.apply(() => void query.refetch())}
+          onReset={state.reset}
+          errors={state.errors}
+          disabled={busy}
+        />
+        {exporting.error && !blocked ? (
+          <p
+            role="alert"
+            className="m-0 border-l-2 border-destructive bg-red-50 px-3 py-2 text-sm text-destructive"
+          >
+            {exporting.error.message}
+          </p>
+        ) : null}
+        {exporting.completed ? (
+          <p role="status" className="m-0 break-words text-xs text-emerald-700">
+            {exporting.completed}
+          </p>
+        ) : null}
+        {!state.applied ? (
+          <p role="alert" className="m-0 text-sm text-slate-600">
+            Correct the report filters above and apply them before loading or
+            exporting.
+          </p>
+        ) : blocked ? (
+          <ErrorState message={blocked.message} />
+        ) : (
+          <>
+            {failure ? (
+              <div
+                role="alert"
+                className="flex flex-wrap items-center justify-between gap-3 border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
               >
-                Retry report
-              </Button>
-            </div>
-          ) : null}
-          {report ? (
-            <>
-              <p role="status" className="sr-only">
-                {query.isFetching ? "Updating report…" : ""}
-              </p>
-              <TransitOverview report={report} />
-              <TransitCharts report={report} />
-              <TransitBenchmarks report={report} />
-              <TransitExclusions report={report} />
-              <TransitDetailsTable
-                report={report}
-                filters={state.applied}
-                returnUrl={location.pathname + location.search}
-                onChange={(update) => {
-                  if (!busy) state.change(update);
-                }}
-                pending={query.previousRows}
-                error={failure?.message}
-                disabled={busy || query.isFetching}
-              />
-            </>
-          ) : query.isPending || query.isFetching ? (
-            <div
-              role="status"
-              aria-label="Loading transit time report"
-              className="space-y-4"
-            >
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {[1, 2, 3, 4].map((item) => (
-                  <Skeleton key={item} className="h-32" />
-                ))}
+                <span>{failure.message}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={query.isFetching || busy}
+                  onClick={() => void query.refetch()}
+                >
+                  Retry report
+                </Button>
               </div>
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                {[1, 2].map((item) => (
-                  <Skeleton key={item} className="h-80" />
-                ))}
+            ) : null}
+            {report ? (
+              <>
+                <p role="status" className="sr-only">
+                  {query.isFetching ? "Updating report…" : ""}
+                </p>
+                <TransitOverview report={report} />
+                <TransitCharts report={report} />
+                <TransitBenchmarks report={report} />
+                <TransitExclusions report={report} />
+                <TransitDetailsTable
+                  report={report}
+                  filters={state.applied}
+                  returnUrl={location.pathname + location.search}
+                  onChange={(update) => {
+                    if (!busy) state.change(update);
+                  }}
+                  pending={query.previousRows}
+                  error={failure?.message}
+                  disabled={busy || query.isFetching}
+                />
+              </>
+            ) : query.isPending || query.isFetching ? (
+              <div
+                role="status"
+                aria-label="Loading transit time report"
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  {[1, 2, 3, 4].map((item) => (
+                    <Skeleton key={item} className="h-32" />
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                  {[1, 2].map((item) => (
+                    <Skeleton key={item} className="h-80" />
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
-        </>
-      )}
+            ) : null}
+          </>
+        )}
+      </ReportTabs>
     </main>
   );
 }

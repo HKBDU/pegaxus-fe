@@ -59,122 +59,125 @@ function ReportWorkspace() {
           />
         }
       />
-      <ReportTabs />
-      <ReportModeNotice />
-      <ReportFilters
-        draft={draft}
-        onChange={state.edit}
-        onApply={apply}
-        onReset={state.reset}
-        errors={state.errors}
-        disabled={busy}
-      />
-      {exporting.error && !blocked ? (
-        <p
-          role="alert"
-          className="m-0 border-l-2 border-destructive bg-red-50 px-3 py-2 text-sm text-destructive"
-        >
-          {exporting.error.message}
-        </p>
-      ) : null}
-      {exporting.completed ? (
-        <p role="status" className="m-0 break-words text-xs text-emerald-700">
-          {exporting.completed}
-        </p>
-      ) : null}
-      {!applied ? (
-        <p role="alert" className="m-0 text-sm text-slate-600">
-          Correct the report filters above and apply them before loading or
-          exporting.
-        </p>
-      ) : blocked ? (
-        <ErrorState message={blocked.message} />
-      ) : (
-        <>
-          {failure ? (
-            <div
-              role="alert"
-              className="flex flex-wrap items-center justify-between gap-3 border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
-            >
-              <span>{failure.message}</span>
-              <Button
-                variant="outline"
-                type="button"
-                disabled={query.isFetching || busy}
-                onClick={() => void query.refetch()}
+      <ReportTabs>
+        <ReportModeNotice />
+        <ReportFilters
+          draft={draft}
+          onChange={state.edit}
+          onApply={apply}
+          onReset={state.reset}
+          errors={state.errors}
+          disabled={busy}
+        />
+        {exporting.error && !blocked ? (
+          <p
+            role="alert"
+            className="m-0 border-l-2 border-destructive bg-red-50 px-3 py-2 text-sm text-destructive"
+          >
+            {exporting.error.message}
+          </p>
+        ) : null}
+        {exporting.completed ? (
+          <p role="status" className="m-0 break-words text-xs text-emerald-700">
+            {exporting.completed}
+          </p>
+        ) : null}
+        {!applied ? (
+          <p role="alert" className="m-0 text-sm text-slate-600">
+            Correct the report filters above and apply them before loading or
+            exporting.
+          </p>
+        ) : blocked ? (
+          <ErrorState message={blocked.message} />
+        ) : (
+          <>
+            {failure ? (
+              <div
+                role="alert"
+                className="flex flex-wrap items-center justify-between gap-3 border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
               >
-                Retry report
-              </Button>
-            </div>
-          ) : null}
-          {report ? (
-            <>
-              <p role="status" className="sr-only">
-                {query.isFetching ? "Updating report…" : ""}
-              </p>
-              <PerformanceOverview report={report} />
-              <ReportCharts report={report} />
-              <section
-                aria-labelledby="data-quality-heading"
-                className="report-surface flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 p-4 text-xs text-slate-500"
-              >
-                <h2
-                  id="data-quality-heading"
-                  className="m-0 font-heading text-base uppercase text-slate-900"
+                <span>{failure.message}</span>
+                <Button
+                  variant="outline"
+                  type="button"
+                  disabled={query.isFetching || busy}
+                  onClick={() => void query.refetch()}
                 >
-                  Data quality
-                </h2>
-                <span>
-                  Excluded:{" "}
-                  <strong className="tabular-nums text-slate-800">
-                    {reportNumber(report.excluded.count)}
-                  </strong>
-                </span>
-                <span>
-                  Missing planned end:{" "}
-                  <strong className="tabular-nums text-slate-800">
-                    {reportNumber(report.excluded.reasons.MISSING_PLANNED_END)}
-                  </strong>
-                </span>
-                <span>
-                  Missing actual arrival:{" "}
-                  <strong className="tabular-nums text-slate-800">
-                    {reportNumber(
-                      report.excluded.reasons.MISSING_ACTUAL_ARRIVAL,
-                    )}
-                  </strong>
-                </span>
-              </section>
-              <TransportReportTable
-                report={report}
-                filters={applied}
-                onChange={change}
-                returnUrl={returnUrl}
-                pending={query.previousRows}
-                tableError={failure?.message}
-                disabled={busy || query.isFetching}
-              />
-            </>
-          ) : query.isPending || query.isFetching ? (
-            <div
-              role="status"
-              aria-label="Loading on-time delivery report"
-              className="space-y-4"
-            >
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {[1, 2, 3, 4].map((index) => (
-                  <Skeleton key={index} className="h-32" />
-                ))}
+                  Retry report
+                </Button>
               </div>
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                {[1, 2, 3, 4].map((index) => (
-                  <Skeleton key={index} className="h-80" />
-                ))}
+            ) : null}
+            {report ? (
+              <>
+                <p role="status" className="sr-only">
+                  {query.isFetching ? "Updating report…" : ""}
+                </p>
+                <PerformanceOverview report={report} />
+                <ReportCharts report={report} />
+                <section
+                  aria-labelledby="data-quality-heading"
+                  className="report-surface flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2 p-4 text-xs text-slate-500"
+                >
+                  <h2
+                    id="data-quality-heading"
+                    className="m-0 font-heading text-base uppercase text-slate-900"
+                  >
+                    Data quality
+                  </h2>
+                  <span>
+                    Excluded:{" "}
+                    <strong className="tabular-nums text-slate-800">
+                      {reportNumber(report.excluded.count)}
+                    </strong>
+                  </span>
+                  <span>
+                    Missing planned end:{" "}
+                    <strong className="tabular-nums text-slate-800">
+                      {reportNumber(
+                        report.excluded.reasons.MISSING_PLANNED_END,
+                      )}
+                    </strong>
+                  </span>
+                  <span>
+                    Missing actual arrival:{" "}
+                    <strong className="tabular-nums text-slate-800">
+                      {reportNumber(
+                        report.excluded.reasons.MISSING_ACTUAL_ARRIVAL,
+                      )}
+                    </strong>
+                  </span>
+                </section>
+                <TransportReportTable
+                  report={report}
+                  filters={applied}
+                  onChange={change}
+                  returnUrl={returnUrl}
+                  pending={query.previousRows}
+                  tableError={failure?.message}
+                  disabled={busy || query.isFetching}
+                />
+              </>
+            ) : query.isPending || query.isFetching ? (
+              <div
+                role="status"
+                aria-label="Loading on-time delivery report"
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  {[1, 2, 3, 4].map((index) => (
+                    <Skeleton key={index} className="h-32" />
+                  ))}
+                </div>
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                  {[1, 2, 3, 4].map((index) => (
+                    <Skeleton key={index} className="h-80" />
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
-        </>
-      )}
+            ) : null}
+          </>
+        )}
+      </ReportTabs>
     </main>
   );
 }

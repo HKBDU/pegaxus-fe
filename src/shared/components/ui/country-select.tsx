@@ -24,6 +24,7 @@ interface CountrySelectProps {
   emptyLabel?: string;
   allowCustomValue?: boolean;
   "aria-describedby"?: string;
+  "aria-label"?: string;
   "data-slot"?: string;
   "aria-invalid"?: boolean;
 }
@@ -37,6 +38,7 @@ export function CountrySelect({
   emptyLabel,
   allowCustomValue = false,
   "aria-describedby": ariaDescribedBy,
+  "aria-label": ariaLabel,
   "data-slot": dataSlot,
   "aria-invalid": ariaInvalid,
 }: CountrySelectProps) {
@@ -77,6 +79,7 @@ export function CountrySelect({
           variant="outline"
           aria-expanded={open}
           aria-describedby={ariaDescribedBy}
+          aria-label={ariaLabel}
           aria-invalid={ariaInvalid}
           className={cn(
             "h-8 w-full min-w-0 justify-between rounded-[2px] border-[#f3aa3b] bg-transparent px-3 py-1 text-left text-xs font-normal text-[#181818] shadow-none hover:bg-transparent",
