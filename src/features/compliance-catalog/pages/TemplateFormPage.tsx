@@ -10,7 +10,7 @@ import { useActiveRequirementOptions, useCreateDossierTemplate, useDossierTempla
 import { templateFormSchema, type TemplateFormValues } from "@/features/compliance-catalog/template-schemas"
 import { TEMPLATE_STATUSES, type DossierTemplate, type DossierTemplatePayload, type TemplateStatus } from "@/features/compliance-catalog/template-types"
 import { getTemplateErrorMessage, getTemplateStatusLabel } from "@/features/compliance-catalog/template-utils"
-import { newTemplateItem, TemplateItemsEditor, templateControlClass as controlClass, templateSectionTitleClass as sectionTitleClass, type RequirementOption } from "@/features/compliance-catalog/components/TemplateItemsEditor"
+import { TemplateItemsEditor, templateControlClass as controlClass, templateSectionTitleClass as sectionTitleClass, type RequirementOption } from "@/features/compliance-catalog/components/TemplateItemsEditor"
 import { ErrorState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { DatePicker } from "@/shared/components/ui/date-picker"
@@ -30,7 +30,7 @@ const outlineButtonClass =
 
 function toDefaultValues(template?: DossierTemplate): TemplateFormValues {
   if (!template) {
-    return { templateCode: "", templateName: "", description: "", status: "DRAFT", effectiveFrom: "", effectiveTo: "", items: [newTemplateItem(1)] }
+    return { templateCode: "", templateName: "", description: "", status: "DRAFT", effectiveFrom: "", effectiveTo: "", items: [] }
   }
   return {
     templateCode: template.templateCode,

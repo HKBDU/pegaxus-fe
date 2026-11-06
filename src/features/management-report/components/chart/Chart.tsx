@@ -35,7 +35,7 @@ export function ChartContainer({
       <div
         data-chart={id}
         className={cn(
-          "h-64 min-h-64 w-full min-w-0 text-xs [&_.recharts-cartesian-axis-tick_text]:fill-slate-500 [&_.recharts-cartesian-grid_line]:stroke-slate-200 [&_.recharts-pie-label-text]:fill-slate-700",
+          "h-56 min-h-56 w-full min-w-0 text-xs [&_.recharts-cartesian-axis-tick_text]:fill-slate-500 [&_.recharts-cartesian-grid_line]:stroke-slate-200 [&_.recharts-pie-label-text]:fill-slate-700",
           className,
         )}
         style={{ ...colors, ...style } as CSSProperties}
@@ -44,7 +44,7 @@ export function ChartContainer({
           width="100%"
           height="100%"
           minWidth={0}
-          initialDimension={{ width: 320, height: 256 }}
+          initialDimension={{ width: 320, height: 224 }}
         >
           {children}
         </ResponsiveContainer>
@@ -80,7 +80,7 @@ export function ChartTooltipContent({
   if (!active || !payload?.length) return null;
   const row = payload[0].payload;
   return (
-    <div className="max-w-72 rounded-[2px] border border-slate-200 bg-white p-3 text-xs shadow-md">
+    <div className="max-w-[min(18rem,calc(100vw-2rem))] rounded-[2px] border border-slate-200 bg-white p-3 text-xs shadow-md">
       {typeof label === "string" || typeof label === "number" ? (
         <p className="m-0 mb-2 break-words font-semibold text-slate-900">
           {label}
@@ -89,7 +89,7 @@ export function ChartTooltipContent({
       {payload.map((item, index) => {
         const entry = config[String(item.dataKey)] ?? config[String(item.name)];
         return (
-          <div key={index} className="flex items-center justify-between gap-4">
+          <div key={index} className="flex items-center justify-between gap-3">
             <span className="flex min-w-0 items-center gap-2">
               <span
                 aria-hidden="true"
@@ -124,7 +124,7 @@ export function ChartLegendContent({
 }) {
   const config = useContext(ChartContext);
   return (
-    <ul className="m-0 flex list-none flex-wrap justify-center gap-x-4 gap-y-2 p-0 pt-3 text-xs text-slate-600">
+    <ul className="m-0 flex list-none flex-wrap justify-center gap-x-3 gap-y-1.5 p-0 pt-2 text-[11px] text-slate-600">
       {payload?.map((entry, index) => {
         const item =
           config[String(entry.value)] ?? config[String(entry.dataKey)];

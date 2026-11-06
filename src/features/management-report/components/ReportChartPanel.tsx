@@ -16,14 +16,14 @@ export function ChartPanel({
   note?: string;
 }) {
   return (
-    <Card className="min-w-0 gap-3 rounded-[2px] py-4 shadow-none">
-      <CardHeader className="px-4">
+    <Card className="min-w-0 gap-2 rounded-[2px] py-3 shadow-none">
+      <CardHeader className="px-3">
         <CardTitle className="font-heading text-base uppercase">
           {title}
         </CardTitle>
         {note ? <p className="m-0 text-xs text-slate-500">{note}</p> : null}
       </CardHeader>
-      <CardContent className="min-w-0 px-4">{children}</CardContent>
+      <CardContent className="min-w-0 px-3">{children}</CardContent>
     </Card>
   );
 }
@@ -31,7 +31,7 @@ export function NoChart({ children }: { children: ReactNode }) {
   return (
     <p
       role="status"
-      className="m-0 flex min-h-64 items-center justify-center px-4 text-center text-sm text-slate-500"
+      className="m-0 flex min-h-56 items-center justify-center px-4 text-center text-sm text-slate-500"
     >
       {children}
     </p>

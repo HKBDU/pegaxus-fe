@@ -10,6 +10,8 @@ import type {
   VehicleIncidentType,
 } from "@/shared/types/incident";
 import { Input } from "@/shared/components/ui/input";
+import { IncidentFieldError } from "../IncidentFieldError";
+import type { IncidentFieldErrors } from "../../validation";
 
 export interface VehicleIncidentFieldsValue {
   category: Extract<IncidentCategory, "VEHICLE" | "BOTH">;
@@ -30,12 +32,14 @@ export interface VehicleIncidentFieldsProps {
   value: VehicleIncidentFieldsValue;
   onChange: (value: VehicleIncidentFieldsValue) => void;
   disabled?: boolean;
+  errors?: IncidentFieldErrors;
 }
 
 export function VehicleIncidentFields({
   value,
   onChange,
   disabled = false,
+  errors = {},
 }: VehicleIncidentFieldsProps) {
   const update = <K extends keyof VehicleIncidentFieldsValue>(
     field: K,
@@ -72,7 +76,7 @@ export function VehicleIncidentFields({
           ),
         )}
       </div>
-      <label className="grid gap-2 text-sm font-bold text-slate-900">
+      <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold text-slate-900">
         Incident type
         <select
           value={value.incidentType}
@@ -88,27 +92,34 @@ export function VehicleIncidentFields({
             </option>
           ))}
         </select>
+        <IncidentFieldError message={errors.incidentType} />
       </label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm font-bold text-slate-900">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold text-slate-900">
           Vehicle condition
           <textarea
             value={value.vehicleCondition}
+            aria-invalid={Boolean(errors.vehicleCondition)}
+            maxLength={2000}
             disabled={disabled}
             onChange={(event) => update("vehicleCondition", event.target.value)}
-            className="min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
+            className="w-full min-w-0 max-w-full resize-y outline-none focus:border-[#f39200] min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
           />
+          <IncidentFieldError message={errors.vehicleCondition} />
         </label>
-        <label className="grid gap-2 text-sm font-bold text-slate-900">
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold text-slate-900">
           Damage description
           <textarea
             value={value.damageDescription}
+            aria-invalid={Boolean(errors.damageDescription)}
+            maxLength={2000}
             disabled={disabled}
             onChange={(event) =>
               update("damageDescription", event.target.value)
             }
-            className="min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
+            className="w-full min-w-0 max-w-full resize-y outline-none focus:border-[#f39200] min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
           />
+          <IncidentFieldError message={errors.damageDescription} />
         </label>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -138,42 +149,49 @@ export function VehicleIncidentFields({
       <p className="border border-[#f39200] bg-[#fff7e8] px-3 py-2 text-sm font-semibold text-slate-800">
         Vehicle held until replacement cost is approved.
       </p>
-      <div className="grid gap-4 sm:grid-cols-3">
-        <label className="grid gap-2 text-sm font-bold text-slate-900">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold text-slate-900">
           Estimated cost
           <Input
             type="number"
             min="0"
             value={value.estimatedRepairCost}
+            aria-invalid={Boolean(errors.estimatedRepairCost)}
             disabled={disabled}
             onChange={(event) =>
               update("estimatedRepairCost", event.target.value)
             }
             className="min-h-12 rounded-[2px] text-base"
           />
+          <IncidentFieldError message={errors.estimatedRepairCost} />
         </label>
-        <label className="grid gap-2 text-sm font-bold text-slate-900">
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold text-slate-900">
           Repair hours
           <Input
             type="number"
             min="0"
             step="0.1"
             value={value.estimatedRepairHours}
+            aria-invalid={Boolean(errors.estimatedRepairHours)}
             disabled={disabled}
             onChange={(event) =>
               update("estimatedRepairHours", event.target.value)
             }
             className="min-h-12 rounded-[2px] text-base"
           />
+          <IncidentFieldError message={errors.estimatedRepairHours} />
         </label>
-        <label className="grid gap-2 text-sm font-bold text-slate-900 sm:col-span-1">
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold text-slate-900 sm:col-span-2">
           Repair note
           <textarea
             value={value.repairNote}
+            aria-invalid={Boolean(errors.repairNote)}
+            maxLength={2000}
             disabled={disabled}
             onChange={(event) => update("repairNote", event.target.value)}
-            className="min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
+            className="w-full min-w-0 max-w-full resize-y outline-none focus:border-[#f39200] min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
           />
+          <IncidentFieldError message={errors.repairNote} />
         </label>
       </div>
     </section>

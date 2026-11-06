@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Navigation } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDossierContext, useSubmitQuarantineProof } from '../hooks'
+import { ErrorState } from '@/shared/components/common'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -56,7 +57,7 @@ export default function BcpQuarantineProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
   const dossierId = dossierIdParam ?? null
 
-  const { data: dossier, isLoading: dossierLoading } = useDossierContext(dossierId)
+  const { data: dossier, isLoading: dossierLoading, isError: dossierFailed, refetch: reloadDossier } = useDossierContext(dossierId)
   const { mutateAsync: submitProof, isPending } = useSubmitQuarantineProof(dossierId ?? '')
 
   // ─── Photo state ──────────────────────────────────────────────────────────
@@ -71,9 +72,7 @@ export default function BcpQuarantineProofPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      bcpName: dossier?.bookingSummary?.originCountry
-        ? `${dossier.bookingSummary.originCountry} BCP`
-        : 'Dublin Port BCP (IE DUB)',
+      bcpName: '',
       officialVetName: '',
       bcpReceiptNumber: '',
       isHoldback: false,
@@ -81,11 +80,6 @@ export default function BcpQuarantineProofPage() {
     },
   })
 
-  useEffect(() => {
-    const originCountry = dossier?.bookingSummary?.originCountry
-    if (!originCountry) return
-    form.setValue('bcpName', `${originCountry} BCP`)
-  }, [dossier, form])
 
   const isHoldback = form.watch('isHoldback')
 
@@ -113,7 +107,7 @@ export default function BcpQuarantineProofPage() {
       setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
       return
     }
-    if (dossierId == null) return
+    if (dossierId == null || !dossier || dossierFailed) return
 
     try {
       await submitProof({
@@ -145,6 +139,8 @@ export default function BcpQuarantineProofPage() {
   }
 
   // ─── Loading Skeleton ─────────────────────────────────────────────────────
+  if (dossierFailed || (!dossierLoading && !dossier)) return <ErrorState message="Unable to load the transport dossier. Retry before submitting proof." onRetry={() => void reloadDossier()} />
+
   if (dossierLoading) {
     return (
       <div className="mx-auto max-w-6xl space-y-5 p-6">

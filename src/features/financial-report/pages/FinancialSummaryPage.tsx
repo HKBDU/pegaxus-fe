@@ -1,3 +1,4 @@
+import "@/shared/components/report-dashboard.css";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
@@ -161,7 +162,7 @@ function LoadedReport({
 
   return (
     <div className="min-w-0 space-y-4" aria-busy={busy || api.query.isFetching}>
-      <section className="min-w-0 border-b border-slate-200 pb-4">
+      <section className="report-financial-context min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-2">
             <p className="m-0 break-words text-sm font-medium text-slate-800">
@@ -176,27 +177,38 @@ function LoadedReport({
               <span>Currency: {report.currency}</span>
             </div>
           </div>
-          <Button
-            type="button"
-            variant={report.isStale ? "default" : "outline"}
-            onClick={() => void refresh()}
-            disabled={
-              REPORT_MOCK_MODE ||
-              !editable ||
-              busy ||
-              api.query.isFetching ||
-              draft.needsReview
-            }
-            className="h-auto min-h-10 max-w-full whitespace-normal rounded-[2px] text-left"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-4 shrink-0 ${api.refresh.isPending ? "animate-spin" : ""}`}
-            />
-            {api.refresh.isPending
-              ? "Refreshing financial data…"
-              : "Refresh financial data"}
-          </Button>
+          <div className="flex min-w-0 w-full flex-wrap gap-2 sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void reload()}
+              disabled={busy || api.query.isFetching}
+              className="h-9 max-w-full rounded-[2px] border-input text-sm shadow-none"
+            >
+              Load latest report
+            </Button>
+            <Button
+              type="button"
+              variant={report.isStale ? "default" : "outline"}
+              onClick={() => void refresh()}
+              disabled={
+                REPORT_MOCK_MODE ||
+                !editable ||
+                busy ||
+                api.query.isFetching ||
+                draft.needsReview
+              }
+              className="h-9 max-w-full rounded-[2px] border-input text-sm shadow-none"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                className={`size-4 shrink-0 ${api.refresh.isPending ? "animate-spin" : ""}`}
+              />
+              {api.refresh.isPending
+                ? "Refreshing financial data…"
+                : "Refresh financial data"}
+            </Button>
+          </div>
         </div>
         <dl className="mt-3 mb-0 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-500">
           {(
@@ -308,16 +320,18 @@ function FinancialWorkspace({ transportId }: { transportId: string }) {
   }
 
   return (
-    <main className="mx-auto w-full min-w-0 max-w-7xl space-y-4 px-4 py-6 sm:px-6">
+    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-3 px-3 py-4 sm:px-4">
       <PageHeader
+        className="report-heading"
+        size="compact"
         title="Financial summary"
         backHref={
           REPORT_MOCK_MODE
-            ? "/admin/reports/on-time-delivery"
+            ? ROLE_ROUTES.dashboard
             : `${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(transportId)}`
         }
         backLabel={
-          REPORT_MOCK_MODE ? "Management reports" : "Transport details"
+          REPORT_MOCK_MODE ? "Back to Dashboard" : "Back to Transport details"
         }
       />
       <FinancialDemoNotice />

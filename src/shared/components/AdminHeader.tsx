@@ -34,12 +34,12 @@ export function AdminHeader() {
       >
         {open ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
       </SidebarTrigger>
-      <nav aria-label="Admin page path" className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-[10px] font-semibold tracking-[0.08em]">
-        <Link to={context.href} className="text-[#f39200] transition-colors hover:text-[#ffad33]">{context.label}</Link>
+      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 overflow-x-auto whitespace-nowrap text-[10px] font-semibold tracking-[0.08em]">
+        {context.title ? <Link to={context.href} className="rounded-[2px] text-[#f39200] transition-colors hover:text-[#ffad33] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{context.label}</Link> : <span aria-current="page" className="text-[#f39200]">{context.label}</span>}
         {context.title ? (
           <>
             <ChevronRight className="size-3.5 shrink-0 text-[#5f6670]" aria-hidden="true" />
-            <span className="text-[#d7d9dc]">{context.title}</span>
+            <span aria-current="page" className="text-[#d7d9dc]">{context.title}</span>
           </>
         ) : null}
       </nav>

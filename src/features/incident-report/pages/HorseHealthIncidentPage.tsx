@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useHorseHealthOverview } from "@/features/horse-health/hooks/useHorseHealth";
@@ -13,6 +13,14 @@ import { toUtcIso } from "@/shared/utils/datetime";
 
 import { IncidentReportHeader } from "../components/IncidentReportHeader";
 import type { IncidentPhotoFieldValue } from "../components/IncidentPhotoField";
+import { areIncidentPhotosReady } from "../validation";
+import { horseHealthIncidentRequestSchema } from "../schemas";
+import {
+  focusFirstIncidentError,
+  getIncidentFieldErrors,
+  incidentErrorMessage,
+  type IncidentFieldErrors,
+} from "../validation";
 import {
   HorseHealthIncidentForm,
   type HorseHealthIncidentFormValue,
@@ -84,6 +92,9 @@ export default function HorseHealthIncidentPage() {
     routeState.horseIds ?? [],
   );
   const [photos, setPhotos] = useState(initialPhotos);
+  const [fieldErrors, setFieldErrors] = useState<IncidentFieldErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitting = useRef(false);
   const [photoUploadState, setPhotoUploadState] = useState<"idle" | "uploading" | "ready" | "error">("idle");
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [locationId, setLocationId] = useState(routeState.locationId);
@@ -155,8 +166,19 @@ export default function HorseHealthIncidentPage() {
   };
 
   const submit = () => {
-    if (photos.files.length > 0 && (photoUploadState === "uploading" || photos.uploadedPublicIds.length !== photos.files.length)) {
-      setPhotoError("Please wait until every image finishes uploading.");
+    if (
+      submitting.current ||
+      mutations.horseHealth.isPending ||
+      createdIncidentId
+    )
+      return;
+    setSubmitError(null);
+    setFieldErrors({});
+    mutations.horseHealth.reset();
+    if (!areIncidentPhotosReady({ ...photos, uploadState: photoUploadState })) {
+      setSubmitError(
+        "Wait for every selected photo to upload, or retry/remove failed photos before submitting.",
+      );
       return;
     }
     const value = form.values;
@@ -200,18 +222,33 @@ export default function HorseHealthIncidentPage() {
       }),
       photoFiles: photos.uploadedPublicIds.map((publicId) => ({ publicId })),
     };
-    mutations.horseHealth.mutate(input, {
+    const parsed = horseHealthIncidentRequestSchema.safeParse(input);
+    if (!parsed.success) {
+      const errors = getIncidentFieldErrors(parsed.error, selectedHorseIds);
+      setFieldErrors(errors);
+      setSubmitError(incidentErrorMessage(parsed.error, errors));
+      focusFirstIncidentError();
+      return;
+    }
+    submitting.current = true;
+    mutations.horseHealth.mutate(parsed.data, {
       onSuccess: (result) => {
         setWarnings(result.effects?.vitalWarnings ?? []);
         setCreatedIncidentId(result.incidentReportId);
       },
+      onError: focusFirstIncidentError,
+      onSettled: () => {
+        submitting.current = false;
+      },
     });
   };
 
+  const errors = {
+    ...fieldErrors,
+    ...getIncidentFieldErrors(mutations.horseHealth.error, selectedHorseIds),
+  };
   const error =
-    mutations.horseHealth.error instanceof Error
-      ? mutations.horseHealth.error.message
-      : null;
+    submitError ?? incidentErrorMessage(mutations.horseHealth.error, errors);
 
   if (step === "selection") {
     return (
@@ -242,7 +279,19 @@ export default function HorseHealthIncidentPage() {
             selectedHorseIds={selectedHorseIds}
             onToggle={toggleHorse}
             onNext={() => {
-              form.replace(initialValue);
+              form.replace({
+                ...form.values,
+                transportId: transportId ?? "",
+                horses: {
+                  ...form.values.horses,
+                  ...Object.fromEntries(
+                    selectedHorseIds.map((id) => [
+                      id,
+                      form.values.horses[id] ?? createHorseDetails(),
+                    ]),
+                  ),
+                },
+              });
               setStep("form");
             }}
           />
@@ -263,7 +312,7 @@ export default function HorseHealthIncidentPage() {
       />
       <button
         type="button"
-        disabled={Boolean(createdIncidentId)}
+        disabled={mutations.horseHealth.isPending || Boolean(createdIncidentId)}
         onClick={() => setStep("selection")}
         className="text-left text-sm font-bold text-[#181818] underline disabled:no-underline disabled:opacity-50"
       >
@@ -280,6 +329,7 @@ export default function HorseHealthIncidentPage() {
         submitting={mutations.horseHealth.isPending}
         disabled={mutations.horseHealth.isPending || Boolean(createdIncidentId)}
         error={error ?? photoError}
+        errors={errors}
         locationStatus={location.status}
         locationError={location.error}
         onPhotoUploadStateChange={setPhotoUploadState}

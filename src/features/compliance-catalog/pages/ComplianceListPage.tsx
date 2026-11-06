@@ -44,7 +44,7 @@ export default function ComplianceListPage() {
         <div className="mb-6">
           <PageHeader
             title="COMPLIANCE REQUIREMENTS"
-            backHref="/"
+            backHref="/compliance-dossiers"
             backLabel="RETURN TO COMPLIANCE DASHBOARD"
             action={canManage ? (
               <Button

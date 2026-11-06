@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ChevronRight, LoaderCircle, Truck } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { LoaderCircle, Truck } from "lucide-react";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
@@ -82,29 +82,14 @@ export default function OngoingTransportListPage() {
   return (
     <div className="ongoing-transport-ui booking-page-shell min-h-[calc(100svh-5rem)] min-w-0 px-4 py-4 font-sans sm:px-6 lg:py-6">
       <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1440px] space-y-4">
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center gap-1.5 text-[11px] text-slate-500"
-        >
-          <Link
-            to={ROLE_ROUTES.transportPlans}
-            className="rounded-[2px] hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-          >
-            Transport
-          </Link>
-          <ChevronRight aria-hidden="true" className="size-3" />
-          <span aria-current="page" className="font-medium text-slate-700">
-            Ongoing Transports
-          </span>
-        </nav>
         <header className="border-b border-slate-200 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <div className="min-w-0">
               <PageHeader
                 title="Ongoing Transports"
+                size="compact"
                 backHref={ROLE_ROUTES.transportPlans}
                 showBack={false}
-                className="[&_h1]:!my-0 [&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl"
               />
               <p className="mt-1 mb-0 text-xs text-slate-500 sm:text-sm">
                 Monitor transportation journeys and operational status.

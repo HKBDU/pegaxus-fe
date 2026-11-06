@@ -214,7 +214,7 @@ function TransportPlanReadPage() {
         <Flow3MockIndicator />
         <div>
           <PageHeader
-            className="[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl"
+            size="compact"
             title="Transport Plan Details"
             backHref={
               role === "manager"

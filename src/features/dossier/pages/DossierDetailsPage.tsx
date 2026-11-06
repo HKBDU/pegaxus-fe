@@ -60,7 +60,7 @@ export default function DossierDetailsPage() {
   const requestedTab = sections.find(
     ({ id }) => id === searchParams.get("tab"),
   )?.id;
-  const [activeSection, setActiveSection] = useState<SectionId>(
+  const [selectedSection, setActiveSection] = useState<SectionId>(
     requestedTab ?? "requirements",
   );
   const role = useDossierRole();
@@ -68,6 +68,7 @@ export default function DossierDetailsPage() {
     role === "CUSTOMER"
       ? sections.filter(({ id }) => id !== "audit")
       : sections;
+  const activeSection = visibleSections.some(({ id }) => id === selectedSection) ? selectedSection : "requirements";
   const query = useDossierOverview(dossierId);
   return (
     <div className="booking-page-shell min-w-0 px-5 py-6 font-sans sm:px-6 lg:px-10">
@@ -87,10 +88,10 @@ export default function DossierDetailsPage() {
                         : "/bookings",
                 )
               }
-              className="inline-flex items-center gap-[6px] pt-2 text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+              className="group inline-flex items-center gap-[6px] pt-2 text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase focus-visible:outline-2 focus-visible:outline-ring"
             >
-              <ArrowLeft aria-hidden="true" className="size-3.5" /> Back to
-              Booking
+              <ArrowLeft aria-hidden="true" className="size-3.5 shrink-0" />
+              <span className="underline-offset-4 group-hover:underline">{role === "TRANSPORT_SPECIALIST" ? "Back to Dossier Tracking" : query.data?.bookingId ? "Back to Booking" : "Back to Bookings"}</span>
             </button>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <PageHeader

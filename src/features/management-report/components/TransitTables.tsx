@@ -16,7 +16,7 @@ export function TransitBenchmarks({ report }: { report: TransitTimeReport }) {
   return (
     <section
       aria-labelledby="transit-benchmark-heading"
-      className="min-w-0 space-y-3 rounded-[2px] border border-slate-200 bg-white p-4"
+      className="report-surface min-w-0 space-y-3 p-4"
     >
       <h2
         id="transit-benchmark-heading"
@@ -97,7 +97,7 @@ export function TransitExclusions({ report }: { report: TransitTimeReport }) {
   return (
     <section
       aria-labelledby="transit-exclusions-heading"
-      className="min-w-0 space-y-3 rounded-[2px] border border-slate-200 bg-white p-4"
+      className="report-surface min-w-0 space-y-3 p-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2

@@ -13,8 +13,9 @@ function getErrorData(error: unknown): { code?: string; status?: number } {
   const value = data as Record<string, unknown>
   const nested = value.data && typeof value.data === "object" ? value.data as Record<string, unknown> : undefined
   const nestedError = value.error && typeof value.error === "object" ? value.error as Record<string, unknown> : undefined
-  const code = value.code ?? value.errorCode ?? nested?.code ?? nested?.errorCode ?? nestedError?.code ?? nestedError?.errorCode
-  return { code: typeof code === "string" ? code : undefined, status: response?.status }
+  const code = [value.errorCode, value.code, nested?.errorCode, nested?.code, nestedError?.errorCode, nestedError?.code]
+    .find((candidate): candidate is string => typeof candidate === "string" && candidate.length > 0)
+  return { code, status: response?.status }
 }
 
 function assertPresignedUploadResponse(value: PresignedUploadResponse): PresignedUploadResponse {
@@ -69,7 +70,7 @@ export async function confirmPresignedUpload(publicId: string, signal?: AbortSig
 }
 
 function isRetryableConfirmError(code: string | undefined, status: number | undefined) {
-  if (code === PRESIGNED_UPLOAD_ERROR_CODES.FILE_NOT_FOUND_ON_CLOUD) return true
+  if (code === PRESIGNED_UPLOAD_ERROR_CODES.FILE_NOT_FOUND_ON_CLOUD || code === "UPLOAD_NOT_FOUND") return true
   if (code === PRESIGNED_UPLOAD_ERROR_CODES.TOO_MANY_REQUESTS) return false
   return !status || status >= 500
 }

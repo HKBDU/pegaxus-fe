@@ -1,4 +1,4 @@
-import { CheckCircle2, TriangleAlert } from "lucide-react";
+import { CheckCircle2, Receipt, TriangleAlert, Wallet } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import {
   Card,
@@ -29,24 +29,26 @@ const issues: Record<string, string> = {
 export function FinancialOverview({ report }: { report: FinancialReport }) {
   return (
     <section aria-label="Financial overview" className="min-w-0 space-y-3">
-      <div className="grid min-w-0 grid-cols-1 rounded-[2px] border border-slate-200 bg-white sm:grid-cols-2 min-[1200px]:grid-cols-4">
+      <div className="report-kpi-grid">
         {(
           [
-            ["Total invoiced", report.totalInvoicedAmount],
-            ["Total paid", report.totalPaidAmount],
-            ["Emergency cost", report.totalEmergencyCost],
-            ["Outstanding", report.outstandingAmount],
+            ["Total invoiced", report.totalInvoicedAmount, Receipt],
+            ["Total paid", report.totalPaidAmount, CheckCircle2],
+            ["Emergency cost", report.totalEmergencyCost, TriangleAlert],
+            ["Outstanding", report.outstandingAmount, Wallet],
           ] as const
-        ).map(([label, value], index) => (
-          <div
-            key={label}
-            className="min-w-0 border-slate-200 p-4 not-first:border-t sm:odd:border-r sm:nth-2:border-t-0 min-[1200px]:not-first:border-t-0 min-[1200px]:not-last:border-r"
-          >
-            <p className="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              {label}
-            </p>
+        ).map(([label, value, Icon], index) => (
+          <div key={label} className="report-kpi">
+            <div className="flex items-center gap-2">
+              <span className="report-kpi-icon">
+                <Icon aria-hidden="true" className="size-4" />
+              </span>
+              <p className="m-0 text-xs font-semibold text-slate-500">
+                {label}
+              </p>
+            </div>
             <p
-              className={`mt-2 mb-0 break-words text-xl font-semibold tabular-nums ${index === 3 ? "text-primary" : "text-slate-900"}`}
+              className={`report-kpi-value mt-2 mb-0 break-words text-xl font-semibold tabular-nums ${index === 3 ? "text-primary" : "text-slate-900"}`}
             >
               {financialMoney(value)}
             </p>
