@@ -1,4 +1,4 @@
-import { Info, Lock } from "lucide-react"
+import { Lock } from "lucide-react"
 import { Controller } from "react-hook-form"
 import {
   ALL_TIERS_LABEL,
@@ -21,22 +21,22 @@ import { Input } from "@/shared/components/ui/input"
 import { MoneyInput } from "@/shared/components/ui/money-input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 
-function LockedMark() {
+function ReadOnlyMark() {
   return (
     <span className="ml-1.5 inline-flex items-center gap-0.5 normal-case tracking-normal text-gray-500">
       <Lock aria-hidden="true" className="size-3" />
-      locked
+      read-only
     </span>
   )
 }
 
 /**
- * Add a price line, or edit one (UC-79). On the active list an existing line only opens name, price and tier;
- * the other fields are shown and sent back unchanged. All the logic lives in `usePriceListItemForm`.
+ * Add a price line, or edit one (UC-79). Only offered for a list that is not active: an active list is locked as a whole.
+ * Every field can be edited except the item code, which is read-only once the line exists. All the logic lives in `usePriceListItemForm`.
  * Give it a new `key` for every opening: the form takes its starting values from `item` when it mounts.
  */
-export function PriceListItemFormDialog({ priceListId, isActive, item, currency = "VND", open, onOpenChange, onSaved }: PriceListItemFormDialogProps) {
-  const { form, mode, locked, isPending, failure, submit, changeOpen, reload } = usePriceListItemForm({ priceListId, isActive, item, onOpenChange, onSaved })
+export function PriceListItemFormDialog({ priceListId, item, currency = "VND", open, onOpenChange, onSaved }: PriceListItemFormDialogProps) {
+  const { form, mode, isPending, failure, submit, changeOpen, reload } = usePriceListItemForm({ priceListId, item, onOpenChange, onSaved })
   const { control, register, watch, formState: { errors } } = form
   const unit = watch("unit")
   const stale = failure?.kind === "stale"
@@ -57,15 +57,8 @@ export function PriceListItemFormDialog({ priceListId, isActive, item, currency 
         </DialogHeader>
 
         <form noValidate onSubmit={submit} className="space-y-3" aria-label={mode === "create" ? "Add price line" : "Edit price line"}>
-          {locked ? (
-            <p role="note" className="flex items-start gap-2 border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              <Info aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-              <span>Locked while this price list is active. You can change the name, unit price and vehicle tier.</span>
-            </p>
-          ) : null}
-
           <div>
-            <label htmlFor="price-item-code" className={fieldLabelClass}>Item code {mode === "create" ? <span className="text-red-500">*</span> : <LockedMark />}</label>
+            <label htmlFor="price-item-code" className={fieldLabelClass}>Item code {mode === "create" ? <span className="text-red-500">*</span> : <ReadOnlyMark />}</label>
             <Controller
               control={control}
               name="itemCode"
@@ -105,12 +98,12 @@ export function PriceListItemFormDialog({ priceListId, isActive, item, currency 
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor="price-item-type" className={fieldLabelClass}>Type <span className="text-red-500">*</span>{locked ? <LockedMark /> : null}</label>
+              <label htmlFor="price-item-type" className={fieldLabelClass}>Type <span className="text-red-500">*</span></label>
               <Controller
                 control={control}
                 name="itemType"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange} disabled={disabled || locked}>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
                     <SelectTrigger id="price-item-type" className={controlClass} aria-invalid={Boolean(errors.itemType)}>
                       <SelectValue placeholder="Select a type..." />
                     </SelectTrigger>
@@ -126,12 +119,12 @@ export function PriceListItemFormDialog({ priceListId, isActive, item, currency 
             </div>
 
             <div>
-              <label htmlFor="price-item-unit" className={fieldLabelClass}>Unit <span className="text-red-500">*</span>{locked ? <LockedMark /> : null}</label>
+              <label htmlFor="price-item-unit" className={fieldLabelClass}>Unit <span className="text-red-500">*</span></label>
               <Controller
                 control={control}
                 name="unit"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange} disabled={disabled || locked}>
+                  <Select value={field.value} onValueChange={field.onChange} disabled={disabled}>
                     <SelectTrigger id="price-item-unit" className={controlClass} aria-invalid={Boolean(errors.unit)}>
                       <SelectValue placeholder="Select a unit..." />
                     </SelectTrigger>
@@ -194,7 +187,7 @@ export function PriceListItemFormDialog({ priceListId, isActive, item, currency 
           </div>
 
           <div>
-            <label htmlFor="price-item-order" className={fieldLabelClass}>Sort order{locked ? <LockedMark /> : null}</label>
+            <label htmlFor="price-item-order" className={fieldLabelClass}>Sort order</label>
             <Controller
               control={control}
               name="sortOrder"
@@ -208,7 +201,7 @@ export function PriceListItemFormDialog({ priceListId, isActive, item, currency 
                   autoComplete="off"
                   placeholder={mode === "create" ? "Leave empty to put the line last" : "Leave empty to keep the current order"}
                   className={controlClass}
-                  disabled={disabled || locked}
+                  disabled={disabled}
                   aria-invalid={Boolean(errors.sortOrder)}
                 />
               )}

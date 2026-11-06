@@ -19,7 +19,7 @@ import { formatUtcDate, formatUtcTime } from "@/shared/utils/datetime"
 interface PriceListItemsTableProps {
   items: PriceListItem[]
   currency: string
-  /** The active list is locked: lines can be edited (within limits) but not deleted or added. */
+  /** The active list is locked 100%: no Edit, no Delete, no Add, so the actions column is not shown at all. */
   isActive: boolean
   onEdit: (item: PriceListItem) => void
   onDelete: (item: PriceListItem) => void
@@ -70,7 +70,8 @@ function RowActions({ item, canDelete, onEdit, onDelete }: RowActionsProps) {
  */
 export function PriceListItemsTable({ items, currency, isActive, onEdit, onDelete, onAdd }: PriceListItemsTableProps) {
   const columns = useMemo<ColumnDef<PriceListItem>[]>(
-    () => [
+    () => {
+      const all: ColumnDef<PriceListItem>[] = [
       {
         id: "select",
         header: ({ table }) => (
@@ -99,11 +100,15 @@ export function PriceListItemsTable({ items, currency, isActive, onEdit, onDelet
         accessorKey: "itemCode",
         enableHiding: false,
         header: "CODE",
-        cell: ({ row }) => (
-          <button type="button" className={`${codeLinkClassName} font-mono`} onClick={() => onEdit(row.original)}>
-            {row.original.itemCode}
-          </button>
-        ),
+        // An active list is read-only, so its code is plain text; otherwise the code opens the edit form.
+        cell: ({ row }) =>
+          isActive ? (
+            <span className="font-mono font-semibold text-slate-900">{row.original.itemCode}</span>
+          ) : (
+            <button type="button" className={`${codeLinkClassName} font-mono`} onClick={() => onEdit(row.original)}>
+              {row.original.itemCode}
+            </button>
+          ),
       },
       { accessorKey: "itemName", header: "NAME", cell: ({ row }) => <span className="block min-w-48 text-slate-900">{row.original.itemName}</span> },
       {
@@ -167,7 +172,10 @@ export function PriceListItemsTable({ items, currency, isActive, onEdit, onDelet
           </div>
         ),
       },
-    ],
+      ]
+      // The active list is read-only: no actions column.
+      return all.filter((column) => !(isActive && column.id === "actions"))
+    },
     [currency, isActive, onEdit, onDelete],
   )
 

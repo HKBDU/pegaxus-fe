@@ -101,7 +101,6 @@ export default function PriceListDetailPage() {
         <PriceListItemFormDialog
           key={page.itemForm.session}
           priceListId={priceList.priceListId}
-          isActive={priceList.isActive}
           currency={priceList.currency}
           item={page.itemForm.item}
           open={page.itemForm.open}

@@ -1,4 +1,4 @@
-import { ACTIVE_PRICELIST_LOCKED, DUPLICATE_ITEM_CODE, PRICE_LIST_ITEM_MODIFIED, PRICE_LIST_ITEM_NOT_FOUND, PRICE_LIST_NOT_FOUND, PRICE_LIST_TIER_MISSING, PRICE_LIST_TIERS } from "@/features/price-list/constants"
+import { ACTIVE_PRICELIST_LOCKED, DUPLICATE_ITEM_CODE, PRICE_LIST_ITEM_MODIFIED, PRICE_LIST_ITEM_NOT_FOUND, PRICE_LIST_NOT_FOUND } from "@/features/price-list/constants"
 import { PriceListApiError } from "@/features/price-list/errors"
 import type { CreatePriceListItemPayload, PriceListDetail, PriceListItem, UpdatePriceListItemPayload } from "@/features/price-list/types"
 
@@ -110,18 +110,10 @@ function findList(priceListId: string) {
   return list
 }
 
-function missingTiers(items: PriceListItem[]) {
-  return PRICE_LIST_TIERS.filter((tier) => !items.some((item) => item.vehicleTier === tier))
-}
-
 export async function mockGetPriceList(priceListId: string): Promise<PriceListDetail> {
   await wait()
   const list = findList(priceListId)
   return structuredClone({ ...list, items: sortItems(list.items) })
-}
-
-export async function mockListPriceListItems(priceListId: string): Promise<PriceListItem[]> {
-  return (await mockGetPriceList(priceListId)).items
 }
 
 export async function mockCreatePriceListItem(priceListId: string, payload: CreatePriceListItemPayload): Promise<PriceListItem> {
@@ -151,12 +143,8 @@ export async function mockUpdatePriceListItem(priceListId: string, priceListItem
   const current = list.items[index]
   if (payload.lastUpdatedAt !== current.updatedAt) throw new PriceListApiError(PRICE_LIST_ITEM_MODIFIED)
   const sortOrder = payload.sortOrder ?? current.sortOrder
-  if (list.isActive) {
-    if (payload.itemType !== current.itemType || payload.unit !== current.unit || sortOrder !== current.sortOrder) throw new PriceListApiError(ACTIVE_PRICELIST_LOCKED)
-    const after = list.items.map((item, position) => (position === index ? { ...item, vehicleTier: payload.vehicleTier } : item))
-    const missing = missingTiers(after)
-    if (missing.length > 0) throw new PriceListApiError(PRICE_LIST_TIER_MISSING, { backendMessage: `The active price list has no price line for tier ${missing.join(", ")}.` })
-  }
+  // An active list is locked as a whole: no line can be changed.
+  if (list.isActive) throw new PriceListApiError(ACTIVE_PRICELIST_LOCKED)
   const unchanged =
     payload.itemName === current.itemName && payload.itemType === current.itemType && payload.unit === current.unit &&
     payload.unitPrice === current.unitPrice && payload.vehicleTier === current.vehicleTier && sortOrder === current.sortOrder

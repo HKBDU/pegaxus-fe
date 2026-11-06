@@ -48,7 +48,6 @@ export const priceListDetailSchema: z.ZodType<PriceListDetail> = z.object({
   items: z.array(priceListItemSchema),
 })
 
-export const priceListItemListSchema = z.array(priceListItemSchema)
 
 /* ---------- Item form ---------- */
 

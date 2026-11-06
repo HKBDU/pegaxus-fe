@@ -24,7 +24,6 @@ import type { PriceListItem, PriceListItemFormMode } from "@/features/price-list
 
 interface UsePriceListItemFormOptions {
   priceListId: string
-  isActive: boolean
   item?: PriceListItem
   onOpenChange: (open: boolean) => void
   onSaved?: (item: PriceListItem) => void
@@ -40,14 +39,12 @@ function toFieldName(field: string) {
 
 /**
  * Logic of the add / edit line form (U-03), kept apart from the markup:
- * form state, locked-list rules, payloads and the mapping of every BE error to a place on screen.
+ * form state, payloads and the mapping of every BE error to a place on screen.
  * The form starts from `item` once, when it mounts: the dialog is mounted with a new `key` for every opening,
  * so there is nothing to reset and a refetch behind the dialog never overwrites what the manager is typing.
  */
-export function usePriceListItemForm({ priceListId, isActive, item, onOpenChange, onSaved }: UsePriceListItemFormOptions) {
+export function usePriceListItemForm({ priceListId, item, onOpenChange, onSaved }: UsePriceListItemFormOptions) {
   const mode: PriceListItemFormMode = item ? "edit" : "create"
-  // On the active list an existing line only lets name, price and tier change; the rest is shown and sent back as it was.
-  const locked = isActive && mode === "edit"
   const schema = useMemo(() => getPriceListItemFormSchema(mode), [mode])
   const form = useForm<PriceListItemFormValues>({
     resolver: zodResolver(schema),
@@ -99,10 +96,8 @@ export function usePriceListItemForm({ priceListId, isActive, item, onOpenChange
       createMutation.mutate(toCreateItemPayload(values), { onSuccess: finish, onError: handleFailure })
       return
     }
-    // Locked fields go back exactly as the BE sent them (it only refuses a changed value).
-    const sent = locked ? { ...values, itemType: item.itemType, unit: item.unit, sortOrder: String(item.sortOrder) } : values
     updateMutation.mutate(
-      { priceListItemId: item.priceListItemId, payload: toUpdateItemPayload(sent, item.updatedAt) },
+      { priceListItemId: item.priceListItemId, payload: toUpdateItemPayload(values, item.updatedAt) },
       { onSuccess: finish, onError: handleFailure },
     )
   })
@@ -118,5 +113,5 @@ export function usePriceListItemForm({ priceListId, isActive, item, onOpenChange
     onOpenChange(false)
   }
 
-  return { form, mode, locked, isPending, failure, submit, changeOpen, reload }
+  return { form, mode, isPending, failure, submit, changeOpen, reload }
 }

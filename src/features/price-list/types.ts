@@ -64,8 +64,6 @@ export type PriceListItemFormMode = "create" | "edit"
 
 export interface PriceListItemFormDialogProps {
   priceListId: string
-  /** An active list is locked: only name, price and tier of an existing line can change. */
-  isActive: boolean
   /** Absent = add a line; present = edit this line. */
   item?: PriceListItem
   /** Currency of the list, shown next to the price. */
