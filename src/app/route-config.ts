@@ -43,6 +43,9 @@ export const invoiceDetail = (invoiceId: string) => `${ROLE_ROUTES.invoices}/${e
 export const invoiceEdit = (invoiceId: string) => `${invoiceDetail(invoiceId)}/edit`
 export const invoiceCreate = (bookingId: string) => `${ROLE_ROUTES.invoices}/new/${encodeURIComponent(bookingId)}`
 
+// The list page (`ROLE_ROUTES.priceLists`) is added with the list task; this is the detail page of one price list.
+export const priceListDetail = (priceListId: string) => `/admin/price-lists/${encodeURIComponent(priceListId)}`
+
 export const claimDetail = (claimId: string) => `${ROLE_ROUTES.claims}/${encodeURIComponent(claimId)}`
 export const claimResolve = (claimId: string) => `${claimDetail(claimId)}/resolve`
 export const customerClaimNew = (bookingId: string) => `/bookings/${encodeURIComponent(bookingId)}/claims/new`
@@ -136,6 +139,7 @@ const adminHeaderRoutes = [
   { path: `${ROLE_ROUTES.invoices}/:invoiceId/edit`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "EDIT INVOICE" },
   { path: `${ROLE_ROUTES.invoices}/:invoiceId`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "INVOICE DETAILS" },
   { path: ROLE_ROUTES.invoices, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "" },
+  { path: "/admin/price-lists/:priceListId", label: "PRICE LISTS", href: "/admin/price-lists", title: "PRICE LIST DETAILS" },
   { path: `${ROLE_ROUTES.incidents}/:incidentReportId`, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "INCIDENT DETAILS" },
   { path: ROLE_ROUTES.incidents, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "" },
   { path: `${ROLE_ROUTES.claims}/:claimId/resolve`, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "RESOLVE CLAIM" },
