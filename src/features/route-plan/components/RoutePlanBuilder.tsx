@@ -1518,6 +1518,7 @@ export function RoutePlanBuilder({
       const locations = [segment.route.fromLocation, segment.route.toLocation];
       return locations.some(
         (location) =>
+          !location ||
           !Number.isFinite(location?.latitude) ||
           !Number.isFinite(location?.longitude) ||
           Math.abs(location.latitude) > 90 ||
@@ -1528,6 +1529,7 @@ export function RoutePlanBuilder({
       const segment = segments[invalidCoordinateSegment];
       const location = [segment.route.fromLocation, segment.route.toLocation].find(
         (item) =>
+          !item ||
           !Number.isFinite(item?.latitude) ||
           !Number.isFinite(item?.longitude) ||
           Math.abs(item.latitude) > 90 ||

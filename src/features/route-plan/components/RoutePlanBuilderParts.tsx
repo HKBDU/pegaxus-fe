@@ -243,9 +243,9 @@ export function SegmentCard({
   const canAssignResources = canAccess(principal, {
     anyRole: ["FLEET_ROUTE_COORDINATOR"],
   });
-  // The Logistics Manager can only link or remove a provider (OS1), never a vehicle.
+  // The Logistics Manager and Route Coordinator can link or remove a provider (OS1), never a vehicle.
   const canManageOutsource = canAccess(principal, {
-    anyRole: ["LOGISTICS_MANAGER"],
+    anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR"],
   });
   const canChangeArrangement = canAssignResources || canManageOutsource;
   const mode = modeChoice ?? segment.arrangement;

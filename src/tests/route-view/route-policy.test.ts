@@ -42,16 +42,19 @@ function specialistContext(overrides: Partial<RouteWorkspaceContext> = {}): Rout
 }
 
 describe("isDossierReady", () => {
-  it.each([undefined, null, "DRAFT"])("accepts %s as ready", (status) => expect(isDossierReady(status)).toBe(true));
+  it("rejects a missing dossier", () => {
+    expect(isDossierReady(undefined)).toBe(false);
+    expect(isDossierReady(null)).toBe(false);
+  });
+  it("accepts only a DRAFT dossier", () => expect(isDossierReady("DRAFT")).toBe(true));
   it.each(["IN_PREPARATION", "APPROVED", "REJECTED"])("rejects %s", (status) => expect(isDossierReady(status)).toBe(false));
 });
 
 describe("canSpecialistReviewRoute", () => {
   it.each([
-    ["PRIMARY", null, "2026-11-05T10:00:00Z"],
     ["PRIMARY", "DRAFT", "2026-11-05T10:00:00Z"],
-    ["BACKUP", null, "2026-11-05T10:00:00Z"],
-    ["RETURN", null, null],
+    ["BACKUP", "DRAFT", "2026-11-05T10:00:00Z"],
+    ["RETURN", "DRAFT", null],
     ["RETURN", "DRAFT", null],
   ] as const)("allows specialist review for %s with dossier %s", (routeType, dossierStatus, submittedAt) => {
     const context = specialistContext({ dossierStatus, transportStatus: routeType === "RETURN" ? "IN_TRANSIT" : "READY" });
@@ -103,16 +106,16 @@ describe("getPendingRouteCreation", () => {
 describe("workspace and detail policy consistency", () => {
   it("returns the same review decision for table and detail", () => {
     const selectedRoute = route("PRIMARY");
-    const context = specialistContext({ routeDetailPath: (id) => `/routes/${id}` });
+    const context = specialistContext({ dossierStatus: "DRAFT", routeDetailPath: (id) => `/routes/${id}` });
     expect(getPendingRouteActions(selectedRoute, context)).toEqual([
       { label: "Review Legal Feasibility", reason: "Review the route's legal feasibility.", href: "/routes/primary-1" },
     ]);
     expect(canSpecialistReviewRoute(selectedRoute, context)).toBe(true);
   });
 
-  it("does not create a dossier warning decision when dossier status is absent", () => {
+  it("does not allow review when dossier status is absent", () => {
     const context = specialistContext({ dossierStatus: null });
-    expect(canSpecialistReviewRoute(route("PRIMARY"), context)).toBe(true);
-    expect(getPendingRouteActions(route("PRIMARY"), context)).toHaveLength(1);
+    expect(canSpecialistReviewRoute(route("PRIMARY"), context)).toBe(false);
+    expect(getPendingRouteActions(route("PRIMARY"), context)).toHaveLength(0);
   });
 });

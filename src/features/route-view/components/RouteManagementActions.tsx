@@ -187,6 +187,16 @@ export function RouteManagementActions({
               </Link>
             </Button>
           ) : null}
+          {!legalDossier ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => toast.info("Create a compliance dossier before reviewing legal feasibility.")}
+            >
+              Review Legal Feasibility
+            </Button>
+          ) : null}
         </div>
       ) : null}
       {canReview ? (
@@ -346,8 +356,8 @@ export function RouteSegmentOutsourceAction({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [savingInternal, setSavingInternal] = useState(false);
   const role = getWorkspaceRole(context.workspace.principal);
-  // The Logistics Manager only links or removes a provider (OS1); fleet vehicles are the Route Coordinator's job in the route builder.
-  if (plan.status !== "DRAFT" || role !== "manager")
+  // The Logistics Manager and Route Coordinator may link or remove a provider (OS1).
+  if (plan.status !== "DRAFT" || (role !== "manager" && role !== "coordinator"))
     return null;
   async function switchToInternal() {
     setSavingInternal(true);

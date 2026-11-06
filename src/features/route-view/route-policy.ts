@@ -8,7 +8,7 @@ export const beforeDeparture = (status?: string | null) =>
   Boolean(status && ["CREATED", "PLANNING", "READY"].includes(status));
 
 export const isDossierReady = (status?: string | null) =>
-  status == null || status === "DRAFT";
+  status === "DRAFT";
 
 export function hasActivePrimary(routes: readonly Pick<RoutePlanSummary, "routeType" | "status">[]) {
   return routes.some((route) => route.routeType === "PRIMARY" && route.status === "ACTIVE");
@@ -59,7 +59,7 @@ export function getPendingRouteActions(route: RoutePlanSummary, context: RouteWo
 }
 
 export function getPendingRouteCreation(routes: RoutePlanSummary[], context: RouteWorkspaceContext, transportPlanId?: string): PendingRouteAction | null {
-  if (getWorkspaceRole(context.principal) !== "coordinator" || context.planStatus !== "APPROVED" || !beforeDeparture(context.transportStatus) || !isDossierReady(context.dossierStatus)) return null;
+  if (getWorkspaceRole(context.principal) !== "coordinator" || context.planStatus !== "APPROVED" || !beforeDeparture(context.transportStatus)) return null;
   if (!hasPrimaryRoute(routes)) return { label: "Create Primary Route", reason: "Create the primary route.", ...(transportPlanId ? { href: routePlanCreate(transportPlanId) } : {}) };
   if (hasOpenBackup(routes)) return null;
   return { label: "Add Backup Route", reason: "Add a backup route.", ...(transportPlanId ? { href: contingencyRouteCreate(transportPlanId) } : {}) };
