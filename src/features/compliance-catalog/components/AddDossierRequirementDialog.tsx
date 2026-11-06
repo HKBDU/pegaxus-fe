@@ -14,7 +14,7 @@ import { getRequirementErrorMessage } from "@/features/compliance-catalog/templa
 import type { ComplianceRequirementSummary } from "@/features/compliance-catalog/types"
 import { Button } from "@/shared/components/ui/button"
 import { DatePicker } from "@/shared/components/ui/date-picker"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
@@ -159,7 +159,6 @@ export function AddDossierRequirementDialog({ open, onOpenChange, dossierId, boo
       <DialogContent className="max-h-[92dvh] gap-0 overflow-y-auto rounded-[2px] border-slate-200 bg-white p-0 sm:max-w-5xl">
         <DialogHeader className="border-b border-slate-200 px-6 py-4 text-left">
           <DialogTitle className="m-0! font-heading text-2xl! font-bold! uppercase tracking-[0.02em]! text-[#ef8f00]!">Add custom dossier requirement</DialogTitle>
-          <DialogDescription className="text-xs text-slate-500">As a Transport Specialist, you can add a custom DossierRequirement to this ComplianceDossier.</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-6 px-6 py-5 lg:grid-cols-[minmax(0,1fr)_20rem]">

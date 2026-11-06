@@ -128,8 +128,8 @@ export default function DossierDetailsPage() {
                 </p>
                 <p className="m-0 mt-1">
                   This dossier is waiting for the Transport Specialist to
-                  complete route feasibility review (RP7). Uploading
-                  documents will open after the review is approved.
+                  complete route feasibility review. Uploading documents will
+                  open after the review is approved.
                 </p>
               </div>
             ) : null}
