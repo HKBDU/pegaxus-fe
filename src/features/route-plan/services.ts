@@ -1,6 +1,7 @@
 import apiClient from "@/lib/axios";
 import { ROUTE_PLAN_ENDPOINTS, ROUTE_PLAN_ERROR_MESSAGES } from "./constants";
 import {
+  legalReviewSchema,
   legalReviewResultSchema,
   outsourceSegmentResultSchema,
   routePlanMutationResultSchema,
@@ -188,7 +189,7 @@ export const submitLegalReview = (
   request<unknown>(
     apiClient.post(
       `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/legal-review`,
-      payload,
+      legalReviewSchema.parse(payload),
     ),
   ).then((value) => legalReviewResultSchema.parse(value) as unknown as LegalReviewResult);
 export const updateSegmentOutsourcing = (

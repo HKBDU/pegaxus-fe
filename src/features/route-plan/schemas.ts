@@ -122,6 +122,13 @@ export const legalReviewSchema = z.object({
   if (!value.isFeasible && !value.note?.trim()) {
     context.addIssue({ code: 'custom', path: ['note'], message: 'A note is required when the route is not feasible.' })
   }
+  if (value.isFeasible && value.blockedSegments?.length) {
+    context.addIssue({
+      code: 'custom',
+      path: ['blockedSegments'],
+      message: 'A feasible route cannot contain blocked segments.',
+    })
+  }
 })
 
 export const routePlanMutationResultSchema = z.object({

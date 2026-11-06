@@ -25,6 +25,14 @@ describe("legal review contract", () => {
     expect(legalReviewSchema.safeParse({ ...base, note: "Blocked by customs restriction" }).success).toBe(true);
   });
 
+  it("rejects blocked segments when the review is marked feasible", () => {
+    expect(legalReviewSchema.safeParse({
+      lastUpdatedAt: "2026-11-06T08:00:00Z",
+      isFeasible: true,
+      blockedSegments: [2],
+    }).success).toBe(false);
+  });
+
   it("normalizes omitted blockedSegments and preserves authoritative request fields", () => {
     const result = legalReviewResultSchema.parse({
       routePlanId: "route-1",
