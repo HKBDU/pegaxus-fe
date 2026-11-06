@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
+import { PageHeader } from "@/shared/components/PageHeader";
 import { Button } from "@/shared/components/ui/button";
 import { ErrorState } from "@/shared/components/common";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -120,18 +121,7 @@ function BookingHistoryContent({
   return (
     <div className="booking-page-shell min-h-[70dvh] min-w-0 px-4 py-8 font-sans text-slate-900 sm:px-6 lg:px-8 lg:py-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1152px] space-y-6">
-        <header className="space-y-3">
-          <Link
-            to={detailsPath}
-            className="inline-flex items-center gap-[6px] text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            <span aria-hidden="true" className="text-[14px]">←</span>
-            Return to booking details
-          </Link>
-          <h1 className="m-0! min-w-0 font-heading text-[28px]! leading-[1.1]! font-bold! tracking-normal! text-primary! uppercase min-[360px]:text-[32px]! sm:text-[40px]!">
-            Booking status history
-          </h1>
-        </header>
+        <PageHeader title="Booking status history" backHref={detailsPath} backLabel="Back to booking details" />
 
         {(query.isPending || query.isError) && renderFilters()}
 

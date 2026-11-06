@@ -1,9 +1,9 @@
 import { MoreVertical, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react"
 import { useEffect, useState } from "react"
-import { useFieldArray, useWatch, type Control, type UseFormReturn } from "react-hook-form"
+import { useFieldArray, useWatch, type UseFormReturn } from "react-hook-form"
 
 import { cn } from "@/lib/utils"
-import type { TemplateFormValues, TemplateItemFormValues } from "@/features/compliance-catalog/template-schemas"
+import { templateItemSchema, type TemplateFormValues, type TemplateItemFormValues } from "@/features/compliance-catalog/template-schemas"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import {
   AlertDialog,
@@ -18,10 +18,11 @@ import {
 } from "@/shared/components/ui/alert-dialog"
 import { Button } from "@/shared/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
-import { FormControl, FormField, FormItem, FormMessage } from "@/shared/components/ui/form"
-import { Input } from "@/shared/components/ui/input"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
+import { Label } from "@/shared/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Switch } from "@/shared/components/ui/switch"
+import { Textarea } from "@/shared/components/ui/textarea"
 import { TruncatedText } from "@/features/compliance-catalog/components/TruncatedText"
 import { TooltipProvider } from "@/shared/components/ui/tooltip"
 
@@ -38,8 +39,8 @@ export interface RequirementOption {
   name: string
 }
 
-export function newTemplateItem(sequenceNo: number): TemplateItemFormValues {
-  return { complianceRequirementId: "", sequenceNo: String(sequenceNo), isMandatory: true, appliesPerHorse: false, isEditing: true, instruction: "" }
+function newTemplateItem(sequenceNo: number): TemplateItemFormValues {
+  return { complianceRequirementId: "", sequenceNo: String(sequenceNo), isMandatory: true, appliesPerHorse: false, isEditing: false, instruction: "" }
 }
 
 
@@ -52,18 +53,20 @@ interface TemplateItemsEditorProps {
 }
 
 export function TemplateItemsEditor({ form, options, optionsLoading, fallbackNames, readOnly }: TemplateItemsEditorProps) {
-  const { fields, append, remove } = useFieldArray({ control: form.control, name: "items" })
+  const { fields, append, update, remove } = useFieldArray({ control: form.control, name: "items" })
   const items = useWatch({ control: form.control, name: "items" })
-  const control = form.control as Control<TemplateFormValues>
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [removeIndex, setRemoveIndex] = useState<number | null>(null)
+  const [draft, setDraft] = useState<TemplateItemFormValues | null>(null)
+  const [editIndex, setEditIndex] = useState<number | null>(null)
+  const [draftErrors, setDraftErrors] = useState<{ complianceRequirementId?: string; instruction?: string }>({})
 
   const totalPages = Math.max(1, Math.ceil(fields.length / pageSize))
   const currentPage = Math.min(page, totalPages)
   const start = (currentPage - 1) * pageSize
   const visible = fields.slice(start, start + pageSize)
-  const chosenIds = new Set(items.map((item) => item.complianceRequirementId).filter(Boolean))
+  const chosenIds = new Set(items.filter((_, index) => index !== editIndex).map((item) => item.complianceRequirementId).filter(Boolean))
   const itemsError = form.formState.errors.items?.root?.message ?? form.formState.errors.items?.message
   const { submitCount, errors } = form.formState
 
@@ -85,9 +88,33 @@ export function TemplateItemsEditor({ form, options, optionsLoading, fallbackNam
   const optionOf = (id: string) => options.find((option) => option.id === id)
   const nameOf = (id: string) => optionOf(id)?.name ?? fallbackNames.get(id) ?? "—"
 
-  const addItem = () => {
-    append(newTemplateItem(fields.length + 1))
-    setPage(Math.ceil((fields.length + 1) / pageSize))
+  const openItem = (index: number | null) => {
+    setEditIndex(index)
+    setDraft(index === null ? newTemplateItem(fields.length + 1) : { ...form.getValues(`items.${index}`) })
+    setDraftErrors({})
+  }
+
+  const saveItem = () => {
+    if (!draft || readOnly) return
+    const parsed = templateItemSchema.safeParse(draft)
+    if (!parsed.success) {
+      const fieldErrors = parsed.error.flatten().fieldErrors
+      setDraftErrors({ complianceRequirementId: fieldErrors.complianceRequirementId?.[0], instruction: fieldErrors.instruction?.[0] })
+      return
+    }
+    if (chosenIds.has(parsed.data.complianceRequirementId)) {
+      setDraftErrors({ complianceRequirementId: "This requirement is already added." })
+      return
+    }
+    const item = { ...parsed.data, isEditing: false }
+    if (editIndex === null) {
+      append(item)
+      setPage(Math.ceil((fields.length + 1) / pageSize))
+    } else {
+      update(editIndex, item)
+      form.clearErrors(`items.${editIndex}`)
+    }
+    setDraft(null)
   }
 
   const confirmRemove = () => {
@@ -111,7 +138,7 @@ export function TemplateItemsEditor({ form, options, optionsLoading, fallbackNam
             type="button"
             disabled={optionsLoading}
             className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-[2px] bg-[#ef8f00] px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] text-slate-950 transition-colors hover:bg-[#db8300] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-60"
-            onClick={addItem}
+            onClick={() => openItem(null)}
           >
             <Plus className="size-3.5" />
             Add item
@@ -121,7 +148,7 @@ export function TemplateItemsEditor({ form, options, optionsLoading, fallbackNam
 
       <TooltipProvider delayDuration={200}>
       <div className="relative overflow-x-auto border border-slate-200">
-        {/* table-fixed: the same column widths in view and edit mode, whatever a row currently holds. */}
+        {/* Keep long requirement labels and instructions within their columns. */}
         <table className="w-full min-w-[1120px] table-fixed border-collapse text-xs">
           <colgroup>
             <col className="w-[64px]" />
@@ -145,75 +172,24 @@ export function TemplateItemsEditor({ form, options, optionsLoading, fallbackNam
             {visible.map((field, offset) => {
               const index = start + offset
               const item = items[index]
-              const editing = Boolean(item?.isEditing) && !readOnly
               return (
                 <tr key={field.id} className={cn("border-t border-slate-200 align-top", offset % 2 === 1 && "bg-[#f7f6f3]")}>
                   <td className="px-2.5 py-3 font-semibold text-slate-900">{index + 1}</td>
 
                   <td className="overflow-hidden px-2.5 py-2">
-                    {editing ? (
-                      <FormField
-                        control={control}
-                        name={`items.${index}.complianceRequirementId`}
-                        render={({ field: select }) => (
-                          <FormItem className="gap-1">
-                            <Select value={select.value} onValueChange={select.onChange}>
-                              <FormControl>
-                                <SelectTrigger aria-label={`Compliance requirement of item ${index + 1}`} className={cn(templateControlClass, "h-8 min-w-0 max-w-full justify-between overflow-hidden data-[placeholder]:text-slate-400 *:data-[slot=select-value]:block *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:truncate")}>
-                                  <SelectValue placeholder="Select requirement" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="max-h-72 rounded-[2px]">
-                                {options.map((option) => (
-                                  <SelectItem key={option.id} value={option.id} disabled={chosenIds.has(option.id) && option.id !== select.value} className="text-xs">
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage className="text-[0.65rem]" />
-                          </FormItem>
-                        )}
-                      />
-                    ) : (
-                      <TruncatedText className="text-slate-700" text={optionOf(item?.complianceRequirementId ?? "")?.label ?? nameOf(item?.complianceRequirementId ?? "")} />
-                    )}
+                    <TruncatedText className="text-slate-700" text={optionOf(item?.complianceRequirementId ?? "")?.label ?? nameOf(item?.complianceRequirementId ?? "")} />
+                    {errors.items?.[index]?.complianceRequirementId?.message ? <p role="alert" className="mt-1 text-destructive">{errors.items[index]?.complianceRequirementId?.message}</p> : null}
                   </td>
 
                   <td className="overflow-hidden px-2.5 py-2"><TruncatedText className="text-slate-700" text={nameOf(item?.complianceRequirementId ?? "")} /></td>
 
                   <td className="px-2.5 py-2.5">
-                    <FormField
-                      control={control}
-                      name={`items.${index}.isMandatory`}
-                      render={({ field: toggle }) => (
-                        <FormItem className="flex items-center gap-2">
-                          <FormControl>
-                            <Switch size="sm" disabled={!editing} checked={toggle.value} onCheckedChange={toggle.onChange} aria-label={`Item ${index + 1} is mandatory`} />
-                          </FormControl>
-                          <span className="text-slate-700">{toggle.value ? "Yes" : "No"}</span>
-                        </FormItem>
-                      )}
-                    />
+                    <span className="text-slate-700">{item?.isMandatory ? "Yes" : "No"}</span>
                   </td>
 
                   <td className="overflow-hidden px-2.5 py-2">
-                    {editing ? (
-                      <FormField
-                        control={control}
-                        name={`items.${index}.instruction`}
-                        render={({ field: input }) => (
-                          <FormItem className="gap-1">
-                            <FormControl>
-                              <Input {...input} placeholder="Instruction for the customer" aria-label={`Instruction of item ${index + 1}`} className={cn(templateControlClass, "h-8")} />
-                            </FormControl>
-                            <FormMessage className="text-[0.65rem]" />
-                          </FormItem>
-                        )}
-                      />
-                    ) : (
-                      <TruncatedText className="text-slate-700" text={item?.instruction || "—"} />
-                    )}
+                    <TruncatedText className="text-slate-700" text={item?.instruction || "—"} />
+                    {errors.items?.[index]?.instruction?.message ? <p role="alert" className="mt-1 text-destructive">{errors.items[index]?.instruction?.message}</p> : null}
                   </td>
 
                   <td className="px-1 py-1.5 text-center">
@@ -225,9 +201,9 @@ export function TemplateItemsEditor({ form, options, optionsLoading, fallbackNam
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" sideOffset={2} className="w-36 min-w-0 rounded-[2px] border-slate-200 p-0.5 shadow-md">
-                          <DropdownMenuItem className={menuItemClass} onSelect={() => form.setValue(`items.${index}.isEditing`, !editing)}>
+                          <DropdownMenuItem className={menuItemClass} onSelect={() => openItem(index)}>
                             <Pencil className="size-3.5 text-amber-600" />
-                            {editing ? "Done editing" : "Edit"}
+                            Edit
                           </DropdownMenuItem>
                           <DropdownMenuSeparator className="my-0.5" />
                           <DropdownMenuItem
@@ -275,6 +251,45 @@ export function TemplateItemsEditor({ form, options, optionsLoading, fallbackNam
           }}
         />
       </div>
+
+      <Dialog open={draft !== null} onOpenChange={(open) => !open && setDraft(null)}>
+        <DialogContent className="rounded-[2px] sm:max-w-xl" onKeyDown={(event) => event.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>{editIndex === null ? "Add template item" : "Edit template item"}</DialogTitle>
+            <DialogDescription>Choose a compliance requirement and save this item to the template.</DialogDescription>
+          </DialogHeader>
+          {draft ? (
+            <form onSubmit={(event) => { event.preventDefault(); event.stopPropagation(); saveItem() }} className="grid gap-4" noValidate>
+              <div className="grid min-w-0 gap-1.5">
+                <Label htmlFor="template-item-requirement">Compliance requirement <span className="text-destructive">*</span></Label>
+                <Select value={draft.complianceRequirementId} onValueChange={(value) => setDraft({ ...draft, complianceRequirementId: value })} disabled={optionsLoading || readOnly}>
+                  <SelectTrigger id="template-item-requirement" aria-invalid={Boolean(draftErrors.complianceRequirementId)} aria-describedby={draftErrors.complianceRequirementId ? "template-item-requirement-error" : undefined} className={cn(templateControlClass, "min-w-0 justify-between *:data-[slot=select-value]:truncate")}>
+                    <SelectValue placeholder="Select requirement" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72 rounded-[2px]">
+                    {options.map((option) => <SelectItem key={option.id} value={option.id} disabled={chosenIds.has(option.id)} className="text-xs">{option.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {draftErrors.complianceRequirementId ? <p id="template-item-requirement-error" role="alert" className="text-xs text-destructive">{draftErrors.complianceRequirementId}</p> : null}
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="template-item-mandatory" checked={draft.isMandatory} onCheckedChange={(value) => setDraft({ ...draft, isMandatory: value })} disabled={readOnly} />
+                <Label htmlFor="template-item-mandatory">Mandatory</Label>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="template-item-instruction">Instruction</Label>
+                <Textarea id="template-item-instruction" value={draft.instruction} onChange={(event) => setDraft({ ...draft, instruction: event.target.value })} rows={4} maxLength={1000} disabled={readOnly} aria-invalid={Boolean(draftErrors.instruction)} aria-describedby={draftErrors.instruction ? "template-item-instruction-error" : undefined} placeholder="Instruction for the customer" className="resize-y rounded-[2px] text-sm" />
+                <span className="text-right text-xs text-slate-500">{draft.instruction.length}/1000</span>
+                {draftErrors.instruction ? <p id="template-item-instruction-error" role="alert" className="text-xs text-destructive">{draftErrors.instruction}</p> : null}
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDraft(null)}>Cancel</Button>
+                <Button type="submit" disabled={optionsLoading || readOnly}>Save item</Button>
+              </DialogFooter>
+            </form>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={removeIndex !== null} onOpenChange={(open) => !open && setRemoveIndex(null)}>
         <AlertDialogContent className="gap-3 rounded-[2px] border-slate-200 bg-white p-4 text-slate-900 shadow-[0_14px_35px_rgba(15,23,42,0.16)] data-[size=default]:sm:max-w-[400px]">

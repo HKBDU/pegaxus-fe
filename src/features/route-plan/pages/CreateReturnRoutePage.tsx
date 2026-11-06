@@ -111,6 +111,7 @@ export default function CreateReturnRoutePage() {
             if (!segmentFrom || !segmentTo) return [];
             return [{
               id: `${routePlan.routePlanId}-${segment.routePlanRouteId}`,
+              catalogRouteId: segment.route.routeId,
               routePlanRouteId: segment.routePlanRouteId,
               routePlanType: routePlan.routeType,
               name: `${segment.route?.routeName ?? "Route"} (${routePlan.routeType})`,

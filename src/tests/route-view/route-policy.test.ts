@@ -4,6 +4,7 @@ import {
   canSpecialistReviewRoute,
   getPendingRouteActions,
   getPendingRouteCreation,
+  hasPrimaryRoute,
   hasActivePrimary,
   hasOpenBackup,
   isDossierReady,
@@ -78,6 +79,10 @@ describe("primary and backup route presence", () => {
   it("does not count a cancelled primary as active", () => {
     expect(hasActivePrimary([route("PRIMARY", { status: "CANCELLED" })])).toBe(false);
   });
+  it("recognizes an existing non-cancelled primary route", () => {
+    expect(hasPrimaryRoute([route("PRIMARY", { status: "CONFIRMED" })])).toBe(true);
+    expect(hasPrimaryRoute([route("PRIMARY", { status: "CANCELLED" })])).toBe(false);
+  });
   it.each(["ACTIVE", "DRAFT"] as const)("counts an open backup with status %s", (status) => {
     expect(hasOpenBackup([route("BACKUP", { status })])).toBe(true);
   });
@@ -90,6 +95,7 @@ describe("getPendingRouteCreation", () => {
   const context = specialistContext({ principal: coordinator });
   it("offers Add Backup Route only when there is an active primary and no open backup", () => {
     expect(getPendingRouteCreation([route("PRIMARY", { status: "ACTIVE" })], context, "transport-1")?.label).toBe("Add Backup Route");
+    expect(getPendingRouteCreation([route("PRIMARY", { status: "CONFIRMED" })], context, "transport-1")?.label).toBe("Add Backup Route");
     expect(getPendingRouteCreation([route("PRIMARY", { status: "ACTIVE" }), route("BACKUP", { status: "DRAFT" })], context, "transport-1")).toBeNull();
   });
 });

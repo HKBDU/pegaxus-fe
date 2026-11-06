@@ -62,7 +62,7 @@ export function TransportReportTable({
   const pageMissing = report.pageIndex > Math.max(1, report.totalPages);
   return (
     <section
-      className="min-w-0 space-y-3 rounded-[2px] border border-slate-200 bg-white p-4"
+      className="report-surface min-w-0 space-y-3 p-4"
       aria-labelledby="transport-details-heading"
       aria-busy={pending}
     >
@@ -96,11 +96,14 @@ export function TransportReportTable({
             >
               <SelectTrigger
                 id="report-bucket"
-                className="h-9 w-full rounded-[2px]"
+                className="h-9 w-full rounded-[2px] border-input bg-white text-sm shadow-none"
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                className="overflow-hidden"
+                viewportClassName="max-h-[min(20rem,calc(var(--radix-select-content-available-height)-3rem))]"
+              >
                 <SelectItem value="DELAYED">Delayed (default)</SelectItem>
                 <SelectItem value="ON_TIME">On time</SelectItem>
                 <SelectItem value="MINOR_DELAY">Minor delay</SelectItem>
@@ -121,11 +124,14 @@ export function TransportReportTable({
             >
               <SelectTrigger
                 id="report-sort"
-                className="h-9 w-full rounded-[2px]"
+                className="h-9 w-full rounded-[2px] border-input bg-white text-sm shadow-none"
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                className="overflow-hidden"
+                viewportClassName="max-h-[min(20rem,calc(var(--radix-select-content-available-height)-3rem))]"
+              >
                 {(Object.keys(sorts) as (keyof typeof sorts)[]).map((key) => (
                   <SelectItem key={key} value={key}>
                     {sorts[key]}
@@ -147,11 +153,14 @@ export function TransportReportTable({
             >
               <SelectTrigger
                 id="report-page-size"
-                className="h-9 w-20 rounded-[2px]"
+                className="h-9 w-20 rounded-[2px] border-input bg-white text-sm shadow-none"
               >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent
+                className="overflow-hidden"
+                viewportClassName="max-h-[min(20rem,calc(var(--radix-select-content-available-height)-3rem))]"
+              >
                 {Array.from(new Set([10, 20, 50, 100, filters.pageSize]))
                   .sort((a, b) => a - b)
                   .map((size) => (

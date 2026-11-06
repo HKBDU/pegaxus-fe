@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth/store'
 import type { Permission, Role } from '@/features/auth/types'
@@ -19,45 +19,14 @@ export function ProtectedRoute({
   const accessToken = useAuthStore((state) => state.accessToken)
   const principal = useAuthStore((state) => state.principal)
 
-  // [DEMO-MOCK] Allow direct testing of GPS Simulator without requiring login
-  if (
-    location.pathname.includes('/transports/demo') ||
-    location.pathname.includes('/ongoing-transports/demo')
-  ) {
-    if (!accessToken) {
-      useAuthStore.setState({
-        sessionVersion: 1,
-        accessToken: "demo-jwt-token",
-        refreshToken: "demo-refresh-token",
-        expiresIn: 3600,
-        user: {
-          accountId: "demo-user-01",
-            accountType: "EMPLOYEE",
-            customerId: null,
-            employeeId: "demo-user-01",
-          fullName: "Alex Turner (Demo Lead)",
-          role: "LOGISTICS_MANAGER",
-            avatarUrl: null,
-        },
-        principal: {
-          id: "demo-user-01",
-            email: "demo@pegaxus.com",
-          displayName: "Alex Turner (Demo Lead)",
-          roles: [
-            "DRIVER",
-            "LOGISTICS_MANAGER",
-            "TRANSPORT_SPECIALIST",
-            "FLEET_ROUTE_COORDINATOR",
-            "ADMIN",
-          ],
-          permissions: [],
-        },
-      });
+  const legacyDemoSession = accessToken === "demo-jwt-token"
+  useEffect(() => {
+    if (legacyDemoSession && useAuthStore.getState().accessToken === accessToken) {
+      useAuthStore.getState().clearAuth()
     }
-    return children ?? <Outlet />
-  }
+  }, [accessToken, legacyDemoSession])
 
-  if (!accessToken) {
+  if (!accessToken || legacyDemoSession) {
     const state = /^\/logout\/?$/i.test(location.pathname) ? null : { from: location }
     return <Navigate to="/login" state={state} replace />
   }

@@ -46,7 +46,13 @@ export function toMapLocation(item: LocationLike | null | undefined): MapLocatio
   if (!item) return null;
   const latitude = Number(item.latitude);
   const longitude = Number(item.longitude);
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    Math.abs(latitude) > 90 ||
+    Math.abs(longitude) > 180
+  )
+    return null;
   return { id: String(item.locationId), name: item.locationName, type: item.locationType ?? undefined, city: item.city, country: item.country, address: item.address, latitude, longitude };
 }
 

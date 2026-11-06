@@ -1,8 +1,9 @@
-import { getCountryDataList } from "countries-list";
+import { FilterToolbar } from "@/shared/components/ui/filter-toolbar";
 import { Button } from "@/shared/components/ui/button";
 import { DatePicker } from "@/shared/components/ui/date-picker";
 import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
+import { CountrySelect } from "@/shared/components/ui/country-select";
 import {
   Select,
   SelectContent,
@@ -21,9 +22,6 @@ import {
 import { LookupFilter } from "./LookupFilter";
 import { CsvFilter } from "./CsvFilter";
 
-const countries = getCountryDataList().sort((a, b) =>
-  a.name.localeCompare(b.name),
-);
 export function ReportFilters({
   draft,
   onChange,
@@ -61,48 +59,105 @@ export function ReportFilters({
             ["transportProviderId", "Provider", "provider"],
             ["driverEmployeeId", "Driver", "driver"],
           ] as const);
+  const secondaryKeys = [
+    "originCountry",
+    "destinationCountry",
+    ...lookupFields.map(([key]) => key),
+    ...(variant === "incident-claim-frequency"
+      ? ["incidentCategory", "severity", "claimType", "horseId"]
+      : []),
+  ];
+  const activeCount = secondaryKeys.filter((key) =>
+    String(draft[key] ?? "").trim(),
+  ).length;
   const control =
-    "h-9 w-full rounded-[2px] border-slate-200 bg-white text-sm shadow-none";
+    "h-8 w-full min-w-0 rounded-[2px] border-input bg-white py-1 text-xs shadow-none";
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
         if (!disabled) onApply();
       }}
-      className="min-w-0 rounded-[2px] border border-slate-200 bg-white p-4"
+      className="report-filterbar min-w-0 rounded-[2px] border border-slate-200 bg-white p-2.5"
       aria-label="Report filters"
     >
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="m-0 font-heading text-base uppercase">Report filters</h2>
-        <span className="text-xs text-slate-500">
-          Reporting dates are inclusive UTC days
-        </span>
-      </div>
-      <div className="grid min-w-0 grid-cols-1 gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="min-w-0 space-y-1.5">
-          <Label htmlFor="report-date-from" className="text-xs">
-            From date
-          </Label>
-          <DatePicker
-            id="report-date-from"
-            value={String(draft.dateFrom)}
-            onChange={(value) => onChange("dateFrom", value)}
-            className={control}
-            aria-describedby="report-filter-errors"
-          />
-        </div>
-        <div className="min-w-0 space-y-1.5">
-          <Label htmlFor="report-date-to" className="text-xs">
-            To date
-          </Label>
-          <DatePicker
-            id="report-date-to"
-            value={String(draft.dateTo)}
-            onChange={(value) => onChange("dateTo", value)}
-            className={control}
-            aria-describedby="report-filter-errors"
-          />
-        </div>
+      <FilterToolbar
+        label="Additional report filters"
+        density="compact"
+        activeCount={activeCount}
+        search={
+          <div className="grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2">
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="report-date-from" className="text-xs">
+                From (UTC)
+              </Label>
+              <DatePicker
+                id="report-date-from"
+                value={String(draft.dateFrom)}
+                onChange={(value) => onChange("dateFrom", value)}
+                className={control}
+                aria-describedby="report-filter-errors"
+              />
+            </div>
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="report-date-to" className="text-xs">
+                To (UTC)
+              </Label>
+              <DatePicker
+                id="report-date-to"
+                value={String(draft.dateTo)}
+                onChange={(value) => onChange("dateTo", value)}
+                className={control}
+                aria-describedby="report-filter-errors"
+              />
+            </div>
+          </div>
+        }
+        sort={
+          variant === "on-time-delivery" ? (
+            <div className="min-w-0 space-y-1.5">
+              <Label htmlFor="report-trend" className="text-xs">
+                Trend grouping
+              </Label>
+              <Select
+                value={String(draft.trendBy)}
+                onValueChange={(value) => onChange("trendBy", value)}
+              >
+                <SelectTrigger id="report-trend" size="sm" className={control}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent
+                  className="overflow-hidden"
+                  viewportClassName="max-h-[min(20rem,calc(var(--radix-select-content-available-height)-3rem))]"
+                >
+                  <SelectItem value="WEEK">Week</SelectItem>
+                  <SelectItem value="MONTH">Month</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : undefined
+        }
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={disabled}
+              onClick={onReset}
+              className="h-8 rounded-[2px] px-3 text-xs"
+            >
+              Reset filters
+            </Button>
+            <Button
+              type="submit"
+              disabled={disabled}
+              className="h-8 rounded-[2px] px-3 text-xs"
+            >
+              Apply filters
+            </Button>
+          </div>
+        }
+      >
         {(
           [
             ["originCountry", "Origin country"],
@@ -113,13 +168,13 @@ export function ReportFilters({
             <Label htmlFor={`report-${key}`} className="text-xs">
               {label}
             </Label>
-            <Input
+            <CountrySelect
               id={`report-${key}`}
-              list="report-countries"
               value={String(draft[key])}
-              onChange={(event) => onChange(key, event.target.value)}
+              onValueChange={(value) => onChange(key, value)}
               placeholder="Any country"
-              maxLength={100}
+              emptyLabel="Any country"
+              allowCustomValue
               className={control}
             />
           </div>
@@ -137,25 +192,7 @@ export function ReportFilters({
             />
           </div>
         ))}
-        {variant === "on-time-delivery" ? (
-          <div className="min-w-0 space-y-1.5">
-            <Label htmlFor="report-trend" className="text-xs">
-              Trend grouping
-            </Label>
-            <Select
-              value={String(draft.trendBy)}
-              onValueChange={(value) => onChange("trendBy", value)}
-            >
-              <SelectTrigger id="report-trend" className={control}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="WEEK">Week</SelectItem>
-                <SelectItem value="MONTH">Month</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        ) : variant === "incident-claim-frequency" ? (
+        {variant === "incident-claim-frequency" ? (
           <>
             {(
               [
@@ -202,41 +239,20 @@ export function ReportFilters({
             </div>
           </>
         ) : null}
-      </div>
-      <datalist id="report-countries">
-        {countries.map((country) => (
-          <option key={country.iso2} value={country.name} />
-        ))}
-      </datalist>
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+      </FilterToolbar>
+      <div>
         <div
           id="report-filter-errors"
           role="status"
-          className="min-h-5 min-w-0 flex-1 text-xs text-destructive"
+          className={
+            errors.length ? "mt-2 min-w-0 text-xs text-destructive" : ""
+          }
         >
           {errors.map((error) => (
             <p key={error} className="m-0">
               {error}
             </p>
           ))}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={disabled}
-            onClick={onReset}
-            className="h-9 rounded-[2px]"
-          >
-            Reset filters
-          </Button>
-          <Button
-            type="submit"
-            disabled={disabled}
-            className="h-9 rounded-[2px]"
-          >
-            Apply filters
-          </Button>
         </div>
       </div>
     </form>

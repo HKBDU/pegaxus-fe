@@ -49,6 +49,18 @@ const STALE_CODES = ["CLAIM_MODIFIED", "INVALID_CLAIM_STATUS", "CLAIM_ALREADY_RE
 
 type Intent = "approve" | "reject" | "resolve"
 
+function resolutionDefaults(claim: Claim): ResolveClaimValues {
+  return claim.resolution
+    ? {
+        resolutionType: claim.resolution.resolutionType,
+        approvedCompensationAmount: claim.resolution.approvedCompensationAmount == null ? "" : String(claim.resolution.approvedCompensationAmount),
+        resolutionSummary: claim.resolution.resolutionSummary,
+        correctiveAction: claim.resolution.correctiveAction ?? "",
+        internalNote: claim.resolution.internalNote ?? "",
+      }
+    : emptyResolveClaimValues
+}
+
 /** screen §10B, resolve mode (Logistics Manager): the decision form next to the facts needed to take it. */
 export default function ClaimResolvePage() {
   const principal = useAuthStore((state) => state.principal)
@@ -70,13 +82,13 @@ export default function ClaimResolvePage() {
         </div>
         {query.isLoading ? <Skeleton className="h-64 w-full rounded-none bg-white" /> : null}
         {query.isError ? <ErrorState message={getClaimErrorMessage(query.error, "Unable to load this claim.")} onRetry={() => void query.refetch()} /> : null}
-        {claim ? <ResolveBody key={`${claim.claimId}-${claim.updatedAt}`} claim={claim} listSearch={listSearch} onReload={() => void query.refetch()} /> : null}
+        {claim ? <ResolveBody key={claim.claimId} claim={claim} listSearch={listSearch} onReload={async () => { const result = await query.refetch(); return result.isSuccess ? result.data : undefined }} /> : null}
       </div>
     </div>
   )
 }
 
-function ResolveBody({ claim, listSearch, onReload }: { claim: Claim; listSearch: string; onReload: () => void }) {
+function ResolveBody({ claim, listSearch, onReload }: { claim: Claim; listSearch: string; onReload: () => Promise<Claim | undefined> }) {
   const navigate = useNavigate()
   const resolve = useResolveClaim(claim.claimId)
   const complete = useCompleteClaim(claim.claimId)
@@ -84,6 +96,8 @@ function ResolveBody({ claim, listSearch, onReload }: { claim: Claim; listSearch
   const [staleOpen, setStaleOpen] = useState(false)
   const [confirm, setConfirm] = useState<"resolve" | "complete" | null>(null)
   const [busy, setBusy] = useState(false)
+  const [version, setVersion] = useState(claim.updatedAt)
+  const [reloadFailed, setReloadFailed] = useState(false)
 
   const canResolve = claim.availableActions.includes("RESOLVE")
   const canComplete = claim.availableActions.includes("COMPLETE")
@@ -91,15 +105,7 @@ function ResolveBody({ claim, listSearch, onReload }: { claim: Claim; listSearch
 
   const form = useForm<ResolveClaimValues>({
     resolver: zodResolver(resolveClaimSchema),
-    defaultValues: claim.resolution
-      ? {
-          resolutionType: claim.resolution.resolutionType,
-          approvedCompensationAmount: claim.resolution.approvedCompensationAmount == null ? "" : String(claim.resolution.approvedCompensationAmount),
-          resolutionSummary: claim.resolution.resolutionSummary,
-          correctiveAction: claim.resolution.correctiveAction ?? "",
-          internalNote: claim.resolution.internalNote ?? "",
-        }
-      : emptyResolveClaimValues,
+    defaultValues: resolutionDefaults(claim),
     mode: "onTouched",
   })
   const { control, register, handleSubmit, setValue, setError: setFieldError, watch, formState: { errors } } = form
@@ -123,6 +129,23 @@ function ResolveBody({ claim, listSearch, onReload }: { claim: Claim; listSearch
     setError(failure)
   }
 
+  async function reloadLatest() {
+    if (pending) return
+    setBusy(true)
+    setReloadFailed(false)
+    try {
+      const latest = await onReload()
+      if (latest) {
+        form.reset(resolutionDefaults(latest))
+        setVersion(latest.updatedAt)
+        setError(undefined)
+        setStaleOpen(false)
+      } else setReloadFailed(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const submit = (intent: Intent) => {
     if (intent === "reject") {
       setValue("resolutionType", "NO_COMPENSATION")
@@ -132,7 +155,8 @@ function ResolveBody({ claim, listSearch, onReload }: { claim: Claim; listSearch
       setError(undefined)
       setBusy(true)
       try {
-        const saved = await resolve.mutateAsync(toResolvePayload(values, claim.updatedAt))
+        const saved = await resolve.mutateAsync(toResolvePayload(values, version))
+        setVersion(saved.updatedAt)
         if (intent === "resolve") {
           // Approve and settle in one go: CL7 is only valid on an APPROVED claim, so it uses the version CL5 returned.
           try {
@@ -162,7 +186,7 @@ function ResolveBody({ claim, listSearch, onReload }: { claim: Claim; listSearch
     setError(undefined)
     setBusy(true)
     try {
-      const saved = await complete.mutateAsync(claim.updatedAt)
+      const saved = await complete.mutateAsync(version)
       toast.success(`Claim ${saved.claimCode} resolved`)
       toDetail()
     } catch (failure) {
@@ -197,6 +221,12 @@ function ResolveBody({ claim, listSearch, onReload }: { claim: Claim; listSearch
 
         <aside aria-label="Claim resolution" className={cn(panelClass, "space-y-3 p-4 lg:sticky lg:top-4")}>
           <CardTitle>Claim resolution</CardTitle>
+          {claim.updatedAt !== version ? (
+            <div className="space-y-2 text-xs text-amber-800" role="status">
+              <p>This claim changed. Your draft is kept; load the latest version before saving.</p>
+              <Button type="button" variant="outline" disabled={pending} onClick={() => setStaleOpen(true)}>Load latest claim</Button>
+            </div>
+          ) : null}
           {!canResolve ? (
             <p className="text-xs text-gray-600">This claim is already approved. Confirm below once the compensation has been carried out.</p>
           ) : null}
@@ -309,9 +339,11 @@ function ResolveBody({ claim, listSearch, onReload }: { claim: Claim; listSearch
           <AlertDialogHeader>
             <AlertDialogTitle>Please reload the page</AlertDialogTitle>
             <AlertDialogDescription>This claim was just modified. Reload to get the latest version; the values you typed will be replaced.</AlertDialogDescription>
+            {reloadFailed ? <p className="text-sm text-red-700" role="alert">Unable to load the latest claim. Your draft is kept; try again.</p> : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => { setStaleOpen(false); onReload() }}>Reload</AlertDialogAction>
+            <AlertDialogCancel disabled={pending} onClick={() => setStaleOpen(false)}>Keep editing</AlertDialogCancel>
+            <AlertDialogAction disabled={pending} onClick={(event) => { event.preventDefault(); void reloadLatest() }}>Reload</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

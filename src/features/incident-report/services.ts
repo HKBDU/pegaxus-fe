@@ -33,6 +33,8 @@ export interface IncidentApiEnvelope<T> {
 export type IncidentMutationResult = IncidentMutationResponse;
 
 function errorFromResponse(error: unknown): IncidentApiError {
+  if (error instanceof Error && error.name === "IncidentApiError")
+    return error as IncidentApiError;
   const axiosError = error as AxiosError<IncidentApiEnvelope<unknown>>;
   const payload = axiosError.response?.data;
   const result = new Error(

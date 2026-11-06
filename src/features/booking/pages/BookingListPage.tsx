@@ -42,6 +42,8 @@ export default function BookingListPage({ audience = "customer" }: { audience?: 
           <PageHeader
             title={audience === "manager" ? "TRANSPORT REQUESTS" : "MY BOOKING LIST"}
             backHref={audience === "manager" ? "/admin/transport-requests" : "/"}
+            backLabel="BACK TO HOME"
+            showBack={audience === "customer"}
             action={audience === "customer" ? (
               <Button
                 type="button"

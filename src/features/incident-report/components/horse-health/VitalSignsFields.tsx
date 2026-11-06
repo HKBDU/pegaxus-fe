@@ -1,4 +1,6 @@
 import { Input } from "@/shared/components/ui/input";
+import { IncidentFieldError } from "../IncidentFieldError";
+import type { IncidentFieldErrors } from "../../validation";
 
 export interface VitalSignsValue {
   bodyTemperatureCelsius: string;
@@ -10,6 +12,7 @@ export interface VitalSignsFieldsProps {
   onChange: (value: VitalSignsValue) => void;
   warnings?: string[];
   disabled?: boolean;
+  errors?: IncidentFieldErrors;
 }
 
 export function VitalSignsFields({
@@ -17,6 +20,7 @@ export function VitalSignsFields({
   onChange,
   warnings = [],
   disabled = false,
+  errors = {},
 }: VitalSignsFieldsProps) {
   const update = <K extends keyof VitalSignsValue>(
     field: K,
@@ -32,39 +36,45 @@ export function VitalSignsFields({
         Vital signs
       </legend>
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="grid gap-2 text-sm font-semibold">
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-semibold">
           Temperature °C
           <Input
             type="number"
             step="0.1"
             value={value.bodyTemperatureCelsius}
+            aria-invalid={Boolean(errors.bodyTemperatureCelsius)}
             onChange={(event) =>
               update("bodyTemperatureCelsius", event.target.value)
             }
             className="min-h-12 rounded-[2px] text-base"
           />
+          <IncidentFieldError message={errors.bodyTemperatureCelsius} />
         </label>
-        <label className="grid gap-2 text-sm font-semibold">
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-semibold">
           Heart rate bpm
           <Input
             type="number"
             min="0"
             value={value.heartRateBpm}
+            aria-invalid={Boolean(errors.heartRateBpm)}
             onChange={(event) => update("heartRateBpm", event.target.value)}
             className="min-h-12 rounded-[2px] text-base"
           />
+          <IncidentFieldError message={errors.heartRateBpm} />
         </label>
-        <label className="grid gap-2 text-sm font-semibold">
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-semibold">
           Respiratory rate bpm
           <Input
             type="number"
             min="0"
             value={value.respiratoryRateBpm}
+            aria-invalid={Boolean(errors.respiratoryRateBpm)}
             onChange={(event) =>
               update("respiratoryRateBpm", event.target.value)
             }
             className="min-h-12 rounded-[2px] text-base"
           />
+          <IncidentFieldError message={errors.respiratoryRateBpm} />
         </label>
       </div>
       {warnings.length > 0 && (

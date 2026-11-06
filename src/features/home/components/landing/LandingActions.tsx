@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { useLandingAuth } from "../../hooks/useLandingAuth";
 import { useUser } from "@/features/auth/hooks/useAuth";
 import { useAuthStore } from "@/features/auth/store";
-import { NotificationBell } from "@/features/notification";
 import { ProfileDropdown } from "@/shared/components/ProfileDropdown";
 
 export function CustomerAccountTools() {
@@ -21,7 +20,6 @@ export function CustomerAccountTools() {
       };
   return (
     <div className="brand-account-tools">
-      <NotificationBell />
       <ProfileDropdown isLoggedIn user={user} />
     </div>
   );

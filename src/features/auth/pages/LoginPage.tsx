@@ -4,6 +4,7 @@ import { LoaderCircle } from "lucide-react";
 import { env } from "@/lib/env";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import { loginSchema, type LoginFormValues } from "../schema";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import {
@@ -18,6 +19,7 @@ import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttempt
 
 export default function LoginPage() {
   const mutation = useLoginMutation();
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
@@ -28,10 +30,12 @@ export default function LoginPage() {
 
   async function submit(values: LoginFormValues) {
     if (attempt.isBlocked) return;
+    setUnverifiedEmail(null);
     try {
       await attempt.run(() => mutation.mutateAsync(values));
     } catch (error) {
       const apiError = getAuthApiError(error);
+      if (apiError?.errorCode === "ACCOUNT_NOT_VERIFIED") setUnverifiedEmail(values.email);
 
       for (const item of apiError?.errors ?? []) {
         if (item.field === "email" || item.field === "password") {
@@ -91,6 +95,11 @@ export default function LoginPage() {
             disabled={isPending}
             placeholder="•••••••••"
           />
+          {unverifiedEmail && (
+            <p role="status" className="text-sm text-neutral-700">
+              Your email is not verified. <Link to="/verify-email" state={{ email: unverifiedEmail, needsResend: true }} className="font-semibold text-[#d47d00] underline underline-offset-4">Continue verification or request a new code</Link>
+            </p>
+          )}
           <Button
             type="submit"
             disabled={isPending || attempt.isBlocked}

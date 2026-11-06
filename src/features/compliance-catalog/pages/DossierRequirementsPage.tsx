@@ -62,11 +62,18 @@ export function DossierRequirementsPanel() {
   const allLines = useMemo(() => allLinesQuery.data?.data ?? [], [allLinesQuery.data])
   const locked = Boolean(overview?.writeLocked)
 
-  // The booking's horses are not part of D7, so the horses that already have lines are the ones offered.
-  const horses = useMemo(
-    () => [...new Map(allLines.filter((line) => line.horseId !== null).map((line) => [String(line.horseId), { id: line.horseId as string | number, name: line.horseName ?? String(line.horseId) }])).values()],
-    [allLines],
-  )
+  // The booking's horses come from D7; the horses that already have lines are added in case a line names one D7 no longer lists.
+  // Offering only the horses with lines left the "Applies to horse" list empty for a dossier without any horse-specific line.
+  const bookingHorses = overview?.bookingSummary.horses
+  const horses = useMemo(() => {
+    const byId = new Map<string, { id: string | number; name: string }>()
+    for (const horse of bookingHorses ?? []) byId.set(String(horse.horseId), { id: horse.horseId, name: horse.horseName })
+    for (const line of allLines) {
+      if (line.horseId === null || byId.has(String(line.horseId))) continue
+      byId.set(String(line.horseId), { id: line.horseId, name: line.horseName ?? String(line.horseId) })
+    }
+    return [...byId.values()]
+  }, [allLines, bookingHorses])
 
   const horseOptions = useMemo<DataTableRadioOption[]>(
     () => [{ value: "ALL", label: "All horses" }, ...horses.map((horse) => ({ value: String(horse.id), label: horse.name }))],
@@ -169,7 +176,7 @@ export function DossierRequirementsPanel() {
               onClick={() => setAddOpen(true)}
             >
               <Plus className="size-4" />
-              Add DossierRequirement
+              Add Dossier Requirement
             </Button>
           </div>
         ) : null}

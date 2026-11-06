@@ -24,13 +24,6 @@ import {
 } from "@/shared/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/shared/components/ui/alert-dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/shared/components/ui/select";
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -43,7 +36,11 @@ import {
   OutsourceSegmentDialog,
   type OutsourceSegmentSelection,
 } from "./OutsourceSegmentDialog";
-import type { Provider, RoutePlanStatus, RouteType, Vehicle } from "../types";
+import type { RoutePlanStatus, RouteType, Vehicle, VehicleBrief } from "../types";
+import type { DraftSegment } from "../builder-types";
+import { assignmentStatusAllowed } from "../builder-segments";
+export type { DraftSegment } from "../builder-types";
+import { Checkbox } from "@/shared/components/ui/checkbox";
 
 export type WizardStep = 0 | 1 | 2;
 
@@ -52,55 +49,46 @@ function AssignVehicleDialog({
   open,
   onOpenChange,
   vehicles,
-  selectedId,
+  selectedIds,
+  selectedDetails,
   onConfirm,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   vehicles: Vehicle[];
-  selectedId: string | null;
-  onConfirm: (vehicleId: string | null) => void;
+  selectedIds: string[];
+  selectedDetails: VehicleBrief[];
+  onConfirm: (vehicleIds: string[]) => void;
 }) {
-  const [choice, setChoice] = useState(selectedId ?? "");
-  const selected = vehicles.find((vehicle) => vehicle.vehicleId === choice);
+  const [choice, setChoice] = useState<string[]>(selectedIds);
+  const options = [...vehicles, ...selectedDetails.filter((v) => selectedIds.includes(v.vehicleId) && !vehicles.some((item) => item.vehicleId === v.vehicleId))];
 
   return (
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (nextOpen) setChoice(selectedId ?? "");
+        if (nextOpen) setChoice([...selectedIds]);
         onOpenChange(nextOpen);
       }}
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Assign vehicle</DialogTitle>
-          <DialogDescription>Select an available fleet vehicle for this segment.</DialogDescription>
+          <DialogTitle>Select vehicles</DialogTitle>
+          <DialogDescription>Select all fleet vehicles needed for this segment. Existing selections remain until you change them.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
-          <label className="grid gap-2 text-sm font-medium">
-            Fleet Vehicle <span className="text-destructive">*</span>
-            <Select value={choice} onValueChange={setChoice}>
-              <SelectTrigger className="h-9 w-full rounded border bg-background px-3 font-normal *:data-[slot=select-value]:truncate">
-                <SelectValue placeholder="Select vehicle" />
-              </SelectTrigger>
-              <SelectContent className="max-w-[420px] max-h-60 text-sm">
-                <SelectItem value="NONE">-- No vehicle assigned --</SelectItem>
-                {vehicles.map((vehicle) => (
-                  <SelectItem key={vehicle.vehicleId} value={vehicle.vehicleId}>
-                    {vehicle.vehicleName} ({vehicle.capacityHorses} horses)
-                    {vehicle.licensePlate ? ` • ${vehicle.licensePlate}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-          {selected && (
-            <Badge variant="outline">
-              {selected.vehicleCode}
-              {selected.country ? ` · ${selected.country}` : ""}
-            </Badge>
-          )}
+          <fieldset className="grid max-h-72 gap-2 overflow-y-auto">
+            <legend className="mb-2 text-sm font-medium">Fleet vehicles</legend>
+            {options.map((vehicle) => (
+              <label key={vehicle.vehicleId} className="flex min-w-0 items-start gap-3 rounded-[2px] border p-3 text-sm">
+                <Checkbox checked={choice.includes(vehicle.vehicleId)} onCheckedChange={(checked) => setChoice((current) => checked === true ? [...new Set([...current, vehicle.vehicleId])] : current.filter((id) => id !== vehicle.vehicleId))} />
+                <span className="min-w-0 break-words">{vehicle.vehicleName} · {vehicle.vehicleCode}{vehicle.licensePlate ? ` · ${vehicle.licensePlate}` : ""}{vehicle.capacityHorses != null ? ` (${vehicle.capacityHorses} horses)` : ""}</span>
+              </label>
+            ))}
+            {selectedIds.filter((id) => !options.some((v) => v.vehicleId === id)).map((id) => (
+              <label key={id} className="flex items-start gap-3 break-all border p-3 text-sm"><Checkbox checked={choice.includes(id)} onCheckedChange={(checked) => setChoice((current) => checked === true ? [...new Set([...current, id])] : current.filter((value) => value !== id))} /><span>{id} · Current selection</span></label>
+            ))}
+          </fieldset>
           {vehicles.length === 0 && (
             <p className="m-0 text-sm text-muted-foreground">No fleet vehicle is available for this time slot.</p>
           )}
@@ -109,8 +97,8 @@ function AssignVehicleDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" disabled={!choice} onClick={() => onConfirm(choice === "NONE" ? null : choice)}>
-            Confirm vehicle
+          <Button type="button" onClick={() => onConfirm(choice)}>
+            Confirm vehicles
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -144,22 +132,6 @@ export type RoutePlanBuilderMetadata = Partial<
   requestedArrivalAt?: string | null;
 };
 
-export type DraftSegment = {
-  id: string;
-  sequenceNo?: number;
-  route: MapRoute;
-  arrangement: "INTERNAL" | "OUTSOURCED";
-  stopType: "REST_STOP" | "BCP" | "DESTINATION";
-  provider?: Provider;
-  /** Type the segment was saved with (a BACKUP plan also holds PRIMARY segments). Absent for a segment added in this session. */
-  routeType?: RouteType;
-  note?: string;
-  dwellAfterMinutes?: number;
-  plannedDepartureAt?: string;
-  plannedArrivalAt?: string;
-  vehicleIds?: string[];
-  isDisconnected?: boolean;
-};
 
 export function arrangementForRoute(
   route: MapRoute,
@@ -262,7 +234,7 @@ export function SegmentCard({
   routePlanId?: string;
   lastUpdatedAt?: string;
 }) {
-  const [pendingVehicleId, setPendingVehicleId] = useState<string | null>(null);
+  const [pendingVehicleIds, setPendingVehicleIds] = useState<string[] | null>(null);
   const [vehicleOpen, setVehicleOpen] = useState(false);
   const [providerOpen, setProviderOpen] = useState(false);
   const [modeChoice, setModeChoice] = useState<"INTERNAL" | "OUTSOURCED" | null>(null);
@@ -275,30 +247,29 @@ export function SegmentCard({
   const canManageOutsource = canAccess(principal, {
     anyRole: ["LOGISTICS_MANAGER"],
   });
+  const canChangeArrangement = canAssignResources || canManageOutsource;
   const mode = modeChoice ?? segment.arrangement;
-  const assignedVehicleId = segment.vehicleIds?.[0] ?? null;
-  const assignedVehicle = availableVehicles.find((vehicle) => vehicle.vehicleId === assignedVehicleId);
+  const assignedVehicleIds = segment.vehicleIds ?? [];
+  const assignedVehicles = assignedVehicleIds.map((id) => availableVehicles.find((v) => v.vehicleId === id) ?? segment.vehicleDetails?.find((v) => v.vehicleId === id));
 
-  function commitVehicle(vehicleId: string | null) {
+  function commitVehicle(vehicleIds: string[]) {
     if (segment.arrangement === "OUTSOURCED") onOutsource(null);
-    onVehicleChange?.(vehicleId ? [vehicleId] : []);
+    onVehicleChange?.(vehicleIds);
     setModeChoice(null);
   }
 
-  function applyVehicle(vehicleId: string | null) {
+  function applyVehicle(vehicleIds: string[]) {
     setVehicleOpen(false);
-    if (!vehicleId) {
-      commitVehicle(null);
-      return;
-    }
-    const selected = availableVehicles.find((vehicle) => vehicle.vehicleId === vehicleId);
     const originCountry = segment.route.fromLocation?.country?.trim().toUpperCase();
-    const vehicleCountry = selected?.country?.trim().toUpperCase();
-    if (originCountry && vehicleCountry && originCountry !== vehicleCountry) {
-      setPendingVehicleId(vehicleId);
+    if (vehicleIds.some((id) => {
+      const vehicle = availableVehicles.find((v) => v.vehicleId === id);
+      const country = vehicle?.country?.trim().toUpperCase();
+      return originCountry && country && originCountry !== country;
+    })) {
+      setPendingVehicleIds(vehicleIds);
       return;
     }
-    commitVehicle(vehicleId);
+    commitVehicle(vehicleIds);
   }
 
   const durationMins = segment.route.durationMinutes ?? 0;
@@ -464,7 +435,7 @@ export function SegmentCard({
               <div>
                 <span className="text-muted-foreground">Arrangement</span>
                 <div className="mt-1">
-                  {canManageOutsource ? (
+                  {canChangeArrangement ? (
                     <OutsourceSegmentDialog
                       routePlanId={routePlanId}
                       routePlanRouteId={segment.route.routePlanRouteId ?? String(segment.route.id)}
@@ -540,14 +511,15 @@ export function SegmentCard({
               <span className="shrink-0 text-muted-foreground">
                 {segment.arrangement === "OUTSOURCED" ? "Provider:" : "Fleet Vehicle:"}
               </span>
-              <span className="min-w-0 flex-1 truncate font-semibold text-slate-800">
+              <span className="min-w-0 flex-1 break-words font-semibold text-slate-800">
                 {segment.arrangement === "OUTSOURCED"
-                  ? (segment.provider?.providerName ?? "Provider linked")
-                  : assignedVehicle
-                    ? `${assignedVehicle.vehicleName} (${assignedVehicle.capacityHorses} horses)${assignedVehicle.licensePlate ? ` • ${assignedVehicle.licensePlate}` : ""}`
-                    : assignedVehicleId
-                      ? "Vehicle assigned"
-                      : "Not assigned"}
+                  ? (segment.provider?.providerName ?? "Select provider")
+                  : assignedVehicleIds.length
+                    ? assignedVehicleIds.map((id, i) => {
+                        const vehicle = assignedVehicles[i];
+                        return vehicle ? `${vehicle.vehicleName} · ${vehicle.vehicleCode}${vehicle.licensePlate ? ` · ${vehicle.licensePlate}` : ""}` : id;
+                      }).join("; ")
+                    : "Select vehicle"}
               </span>
               {(segment.arrangement === "OUTSOURCED" ? canManageOutsource : canAssignResources) && (
                 <Button
@@ -559,20 +531,23 @@ export function SegmentCard({
                 >
                   {mode === "OUTSOURCED"
                     ? segment.arrangement === "OUTSOURCED" ? "Change provider" : "Assign provider"
-                    : assignedVehicleId && segment.arrangement === "INTERNAL" ? "Change vehicle" : "Assign vehicle"}
+                    : assignedVehicleIds.length && segment.arrangement === "INTERNAL" ? "Change vehicle" : "Select vehicle"}
                 </Button>
               )}
             </div>
-            {canAssignResources && (
-              <>
-                <AssignVehicleDialog
-                  open={vehicleOpen}
-                  onOpenChange={setVehicleOpen}
-                  vehicles={availableVehicles}
-                  selectedId={segment.arrangement === "INTERNAL" ? assignedVehicleId : null}
-                  onConfirm={applyVehicle}
-                />
-              </>
+            {segment.assignmentOrigin === "inherited" && segment.arrangement === "INTERNAL" && (
+              <p className="mt-1 text-xs text-amber-800">Inherited from PRIMARY · Segment {segment.inheritanceSource}</p>
+            )}
+            {segment.assignmentReason && <p className="mt-1 text-xs text-muted-foreground">{segment.assignmentReason}</p>}
+            {canAssignResources && vehicleOpen && (
+              <AssignVehicleDialog
+                open={vehicleOpen}
+                onOpenChange={setVehicleOpen}
+                vehicles={availableVehicles.filter((v) => assignmentStatusAllowed(v) && v.transportMode === segment.route.transportMode && v.isAvailable !== false)}
+                selectedIds={segment.arrangement === "INTERNAL" ? assignedVehicleIds : []}
+                selectedDetails={segment.vehicleDetails ?? []}
+                onConfirm={applyVehicle}
+              />
             )}
             {canManageOutsource && (
               <OutsourceSegmentDialog
@@ -593,7 +568,7 @@ export function SegmentCard({
                 <span className="sr-only">Assign provider</span>
               </OutsourceSegmentDialog>
             )}
-            <AlertDialog open={Boolean(pendingVehicleId)} onOpenChange={(open) => !open && setPendingVehicleId(null)}>
+            <AlertDialog open={Boolean(pendingVehicleIds)} onOpenChange={(open) => !open && setPendingVehicleIds(null)}>
               <AlertDialogContent className="rounded-[2px]">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Vehicle country differs from departure</AlertDialogTitle>
@@ -606,8 +581,8 @@ export function SegmentCard({
                   <AlertDialogAction
                     className="rounded-[2px]"
                     onClick={() => {
-                      if (pendingVehicleId) commitVehicle(pendingVehicleId);
-                      setPendingVehicleId(null);
+                      if (pendingVehicleIds) commitVehicle(pendingVehicleIds);
+                      setPendingVehicleIds(null);
                     }}
                   >
                     Continue selecting

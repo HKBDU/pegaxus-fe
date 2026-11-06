@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
-import { useEffect } from "react"
+import { useEffect, useRef, type BaseSyntheticEvent } from "react"
 import { useForm } from "react-hook-form"
 import { toast } from "sonner"
 
@@ -65,17 +65,29 @@ export function useProviderForm(provider: Provider | null, { enabled = true, onS
   const attempt = useRequestAttemptGuard()
   const form = useForm<ProviderFormValues>({ resolver: zodResolver(providerFormSchema), defaultValues: toDefaults(provider) })
   const isSaving = createProvider.isPending || updateProvider.isPending
+  const baseline = useRef(provider)
+  const wasEnabled = useRef(false)
 
   useEffect(() => {
-    if (enabled) form.reset(toDefaults(provider))
+    if (enabled && (!wasEnabled.current || baseline.current?.transportProviderId !== provider?.transportProviderId)) {
+      baseline.current = provider
+      form.reset(toDefaults(provider))
+    }
+    wasEnabled.current = enabled
   }, [enabled, provider, form])
 
-  const submit = form.handleSubmit(async (values) => {
+  function reload(latest: Provider | null) {
+    baseline.current = latest
+    form.reset(toDefaults(latest))
+  }
+
+  const submit = (event?: BaseSyntheticEvent) => form.handleSubmit(async (values) => {
     try {
       const guarded = await attempt.run(async () => {
         const payload = toPayload(values)
-        if (provider) {
-          await updateProvider.mutateAsync({ id: provider.transportProviderId, payload: { ...payload, lastUpdatedAt: provider.updatedAt } })
+        const current = baseline.current
+        if (current) {
+          await updateProvider.mutateAsync({ id: current.transportProviderId, payload: { ...payload, lastUpdatedAt: current.updatedAt } })
         } else {
           await createProvider.mutateAsync(payload)
         }
@@ -99,7 +111,7 @@ export function useProviderForm(provider: Provider | null, { enabled = true, onS
       }
       toast.error(message)
     }
-  })
+  })(event)
 
-  return { form, submit, isSaving }
+  return { form, submit, isSaving, reload }
 }

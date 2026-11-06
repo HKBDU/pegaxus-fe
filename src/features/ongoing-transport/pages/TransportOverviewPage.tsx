@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { Navigation, TriangleAlert } from "lucide-react";
+import { ChartNoAxesCombined, Navigation, TriangleAlert } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
 import { canAccess } from "@/features/auth/access-control";
 import { driverLocationSharingPath } from "@/features/location-sharing/navigation";
@@ -122,6 +122,16 @@ export default function TransportOverviewPage({
             </span>
           </div>
           <TransportJourneySummary overview={overview} />
+          {audience === "admin" && canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) ? (
+            <div className="flex justify-end">
+              <Button asChild variant="outline" className="rounded-xs">
+                <Link to={`/admin/transports/${encodeURIComponent(overview.transport.transportId)}/financial-summary`}>
+                  <ChartNoAxesCombined aria-hidden="true" className="size-4" />
+                  Financial summary
+                </Link>
+              </Button>
+            </div>
+          ) : null}
           <div className="grid items-start gap-3 lg:grid-cols-3">
             <TransportJourneyInformation overview={overview} />
             <TransportHorseHealthSummary

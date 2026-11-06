@@ -1,6 +1,7 @@
 // oxlint-disable react/only-export-components -- route configuration owns lazy page declarations
 import { lazy, Suspense } from "react";
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
+import { ROLE_ROUTES } from "@/app/route-config";
 import { ProtectedRoute } from "@/shared/components/guards";
 import { LoadingState } from "@/shared/components/common";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
@@ -11,6 +12,14 @@ const IncidentClaimReportPage = lazy(
 );
 const TransitTimePage = lazy(() => import("./pages/TransitTimePage"));
 export const managementReportRoutes: RouteObject[] = [
+  {
+    path: ROLE_ROUTES.dashboard,
+    element: (
+      <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
+        <Navigate to={ROLE_ROUTES.onTimeReport} replace />
+      </ProtectedRoute>
+    ),
+  },
   {
     path: "/admin/reports/transit-time",
     element: (

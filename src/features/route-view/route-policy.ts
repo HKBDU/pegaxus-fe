@@ -14,6 +14,11 @@ export function hasActivePrimary(routes: readonly Pick<RoutePlanSummary, "routeT
   return routes.some((route) => route.routeType === "PRIMARY" && route.status === "ACTIVE");
 }
 
+/** A non-cancelled PRIMARY already occupies the primary slot. */
+export function hasPrimaryRoute(routes: readonly Pick<RoutePlanSummary, "routeType" | "status">[]) {
+  return routes.some((route) => route.routeType === "PRIMARY" && route.status !== "CANCELLED");
+}
+
 export function hasOpenReturn(routes: readonly Pick<RoutePlanSummary, "routeType" | "status">[]) {
   return routes.some((route) => route.routeType === "RETURN" && ["DRAFT", "CONFIRMED", "ACTIVE"].includes(route.status));
 }
@@ -55,7 +60,7 @@ export function getPendingRouteActions(route: RoutePlanSummary, context: RouteWo
 
 export function getPendingRouteCreation(routes: RoutePlanSummary[], context: RouteWorkspaceContext, transportPlanId?: string): PendingRouteAction | null {
   if (getWorkspaceRole(context.principal) !== "coordinator" || context.planStatus !== "APPROVED" || !beforeDeparture(context.transportStatus) || !isDossierReady(context.dossierStatus)) return null;
-  if (!hasActivePrimary(routes)) return { label: "Create Primary Route", reason: "Create the primary route.", ...(transportPlanId ? { href: routePlanCreate(transportPlanId) } : {}) };
+  if (!hasPrimaryRoute(routes)) return { label: "Create Primary Route", reason: "Create the primary route.", ...(transportPlanId ? { href: routePlanCreate(transportPlanId) } : {}) };
   if (hasOpenBackup(routes)) return null;
   return { label: "Add Backup Route", reason: "Add a backup route.", ...(transportPlanId ? { href: contingencyRouteCreate(transportPlanId) } : {}) };
 }

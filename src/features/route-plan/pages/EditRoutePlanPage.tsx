@@ -6,16 +6,14 @@ import {
 } from "../components/RoutePlanBuilder";
 import { getRoutePlan, getRoutePlans } from "../services";
 import {
-  draftDataFromSegment,
-  type SegmentDraftData,
-} from "../segment-draft-data";
-import {
   loadAllLocations,
   loadAllRoutes,
   toMapLocation,
   toMapRoute,
 } from "../api-adapters";
 import type { RoutePlan, RouteSegment } from "../types";
+import { hydrateBuilderSegments } from "../builder-segments";
+import type { DraftSegment } from "../components/RoutePlanBuilderParts";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 
 function locationFromSegment(
@@ -30,31 +28,6 @@ function locationFromSegment(
     country: location.country,
     latitude: location.latitude,
     longitude: location.longitude,
-  };
-}
-
-function routeFromSegment(
-  segment: RouteSegment,
-  readonly = false,
-): MapRoute | null {
-  const fromLocation = locationFromSegment(segment.fromLocation);
-  const toLocation = locationFromSegment(segment.toLocation);
-  if (!fromLocation || !toLocation) return null;
-  return {
-    id: segment.route.routeId,
-    routePlanRouteId: segment.routePlanRouteId,
-    name: segment.route.routeName,
-    transportMode: segment.route.transportMode,
-    isOutsourced: segment.isOutsourced,
-    fromLocation,
-    toLocation,
-    distanceKm: segment.route.distanceKm,
-    durationMinutes: segment.route.estimatedDurationMinutes,
-    vehicleIds: segment.vehicles.map((vehicle) => vehicle.vehicleId),
-    dwellAfterMinutes: segment.dwellAfterMinutes,
-    plannedDepartureAt: segment.plannedDepartureAt,
-    plannedArrivalAt: segment.plannedArrivalAt,
-    readonly,
   };
 }
 
@@ -79,11 +52,8 @@ function metadataFromPlan(plan: RoutePlan): RoutePlanBuilderMetadata {
 export default function EditRoutePlanPage() {
   const { routePlanId } = useParams<{ routePlanId: string }>();
   const [plan, setPlan] = useState<RoutePlan | null>(null);
-  const [primaryRoutes, setPrimaryRoutes] = useState<MapRoute[]>([]);
-  // Vehicles / provider of each PRIMARY segment, same order as `primaryRoutes`.
-  const [primarySegmentData, setPrimarySegmentData] = useState<
-    SegmentDraftData[]
-  >([]);
+  const [primarySegments, setPrimarySegments] = useState<DraftSegment[]>([]);
+  const [savedSegments, setSavedSegments] = useState<DraftSegment[]>([]);
   const [catalog, setCatalog] = useState<{
     locations: MapLocation[];
     routes: MapRoute[];
@@ -98,6 +68,8 @@ export default function EditRoutePlanPage() {
       return;
     }
     let active = true;
+    setLoading(true);
+    setError(null);
     void Promise.all([
       getRoutePlan(routePlanId),
       loadAllLocations(),
@@ -105,6 +77,10 @@ export default function EditRoutePlanPage() {
     ])
       .then(async ([routePlan, locationResult, routeResult]) => {
         if (!active) return;
+        if (routePlan.segments.some((segment) => segment.driver || segment.escort)) {
+          throw new Error("This route has assigned crew. Editing is unavailable until those assignments can be preserved. Contact your Logistics Manager.");
+        }
+        setSavedSegments(hydrateBuilderSegments(routePlan.segments));
         setPlan(routePlan);
 
         const loadedLocations = locationResult.flatMap((item) => {
@@ -127,23 +103,14 @@ export default function EditRoutePlanPage() {
         const routePlans = await getRoutePlans(routePlan.transportPlanId, {
           routeType: "PRIMARY",
         });
+        if (!active) return;
         const primary = routePlans.items.find(
           (item) => item.routeType === "PRIMARY" && item.status !== "CANCELLED",
         );
-        // RP2 lists plans without their segments; the PRIMARY route is read from its detail (RP3).
-        const primaryDetail = primary
-          ? await getRoutePlan(primary.routePlanId)
-          : null;
+        if (!primary) throw new Error("No valid PRIMARY route plan found. Editing BACKUP requires its full itinerary.");
+        const primaryDetail = await getRoutePlan(primary.routePlanId);
         if (!active) return;
-        const primarySegments =
-          primaryDetail?.segments.flatMap((segment) => {
-            const route = routeFromSegment(segment, true);
-            return route
-              ? [{ route, data: draftDataFromSegment(segment) }]
-              : [];
-          }) ?? [];
-        setPrimaryRoutes(primarySegments.map((item) => item.route));
-        setPrimarySegmentData(primarySegments.map((item) => item.data));
+        setPrimarySegments(hydrateBuilderSegments(primaryDetail.segments));
       })
       .catch((requestError) => {
         if (active)
@@ -174,13 +141,11 @@ export default function EditRoutePlanPage() {
       </main>
     );
 
-  // Routes and their saved data are built together so both lists stay in the same order.
-  const initialSegments = plan.segments.flatMap((segment) => {
-    const route = routeFromSegment(segment);
-    return route ? [{ route, data: draftDataFromSegment(segment) }] : [];
-  });
-  const initialRoutes = initialSegments.map((item) => item.route);
-  const initialSegmentData = initialSegments.map((item) => item.data);
+  const editableSegments = plan.routeType === "BACKUP"
+    ? savedSegments.filter((segment) => segment.route.routePlanType === "BACKUP")
+    : savedSegments;
+  const initialRoutes = editableSegments.map((segment) => segment.route);
+  const primaryRoutes = primarySegments.map((segment) => ({ ...segment.route, readonly: true }));
 
   const allLocationsMap = new Map<string, MapLocation>();
   for (const loc of catalog.locations) allLocationsMap.set(String(loc.id), loc);
@@ -200,10 +165,11 @@ export default function EditRoutePlanPage() {
       routeType={plan.routeType}
       metadata={metadataFromPlan(plan)}
       initialRoutes={initialRoutes}
-      initialSegmentData={initialSegmentData}
+      initialSegments={editableSegments}
+      savedSegments={savedSegments}
+      primarySegments={primarySegments}
       initialRouteNote={plan.routeNote ?? ""}
       primaryRoutes={primaryRoutes}
-      primarySegmentData={primarySegmentData}
       primaryAvailable={plan.routeType !== "BACKUP" || primaryRoutes.length > 0}
       primaryError="No valid PRIMARY route plan found. Please create a PRIMARY route plan first."
       edit={{

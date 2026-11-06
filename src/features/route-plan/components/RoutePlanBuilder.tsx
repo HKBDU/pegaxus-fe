@@ -43,14 +43,12 @@ import {
 import { loadAllVehicles } from "../api-adapters";
 import {
   buildEffectiveBackupRoute,
-  sameRoute,
   validateRoutePlanRoute,
 } from "../route-continuity";
-import type { SegmentDraftData } from "../segment-draft-data";
 import { calculateRouteTimeline } from "../timeline-calculator";
+import { initializeBackupVehicles, resolveBackupItinerary, serializeBuilderSegment } from "../builder-segments";
 import type {
   CreateRoutePlanRequest,
-  RouteSegmentInput,
   RoutePlanStatus,
   RouteType,
   Vehicle,
@@ -117,16 +115,9 @@ export type RoutePlanBuilderProps = {
   primaryError?: string;
   metadata?: RoutePlanBuilderMetadata;
   initialRoutes?: MapRoute[];
-  /**
-   * What the saved plan already holds for each of `initialRoutes` (same order): vehicles, provider, note, dwell and times.
-   * Without it an edited plan starts with empty segments and saving would erase the vehicles and the provider.
-   */
-  initialSegmentData?: SegmentDraftData[];
-  /**
-   * BACKUP only: the vehicles / provider of each of `primaryRoutes` (same order). A backup segment on the very same route as a
-   * PRIMARY segment starts with that segment's resources, and the PRIMARY segments copied into the backup keep them when saving.
-   */
-  primarySegmentData?: SegmentDraftData[];
+  initialSegments?: DraftSegment[];
+  savedSegments?: DraftSegment[];
+  primarySegments?: DraftSegment[];
   initialRouteNote?: string;
   locations: MapLocation[];
   routes: MapRoute[];
@@ -149,8 +140,9 @@ export function RoutePlanBuilder({
   primaryError,
   metadata,
   initialRoutes = [],
-  initialSegmentData,
-  primarySegmentData,
+  initialSegments,
+  savedSegments = [],
+  primarySegments = [],
   initialRouteNote = "",
   locations: initialLocations,
   routes,
@@ -281,16 +273,31 @@ export function RoutePlanBuilder({
   function formatDraftSegments(
     rawSegments: DraftSegment[],
     baseStart?: string,
+    recalculateSavedTimes = false,
+    initializeAssignments = true,
   ): DraftSegment[] {
-    const startTime = baseStart || plan.departureAt || new Date().toISOString();
+    const mapping = isBackup ? resolveBackupItinerary(primarySegments, rawSegments) : null;
+    const branch = mapping?.replaced[0];
+    const startTime = branch?.plannedDepartureAt || baseStart || plan.departureAt;
     let timedSegments: DraftSegment[];
     try {
-      timedSegments = calculateRouteTimeline(startTime, rawSegments);
+      let cursor = startTime;
+      timedSegments = rawSegments.map((segment) => {
+        const duration = segment.plannedDepartureAt && segment.plannedArrivalAt
+          ? (Date.parse(segment.plannedArrivalAt) - Date.parse(segment.plannedDepartureAt)) / 60000
+          : segment.route.durationMinutes;
+        const timed = segment.preserveTiming && !recalculateSavedTimes
+          ? segment
+          : calculateRouteTimeline(cursor, [{ ...segment, durationMinutes: duration }])[0];
+        if (timed.plannedArrivalAt) cursor = new Date(Date.parse(timed.plannedArrivalAt) + (timed.dwellAfterMinutes ?? 0) * 60000).toISOString();
+        return timed;
+      });
     } catch {
       timedSegments = rawSegments;
     }
-
-    return timedSegments.map((seg, index) => {
+    // Inheritance is tied to a user topology edit; it never runs in a state effect.
+    const initialized = isBackup && initializeAssignments ? initializeBackupVehicles(primarySegments, timedSegments, availableVehicles) : timedSegments;
+    return initialized.map((seg, index) => {
       const isDisconnected =
         index > 0 &&
         String(seg.route.fromLocation?.id) !==
@@ -304,32 +311,8 @@ export function RoutePlanBuilder({
   }
 
   const [segments, setSegments] = useState<DraftSegment[]>(() =>
-    initialRoutes.every((route) => route.plannedDepartureAt && route.plannedArrivalAt)
-      ? initialRoutes.map((route, index, routes) => ({
-          id: `${route.id}-${index}`,
-          route,
-          arrangement: arrangementForRoute(route),
-          stopType:
-            route.toLocation?.id === metadata?.to?.id
-              ? "DESTINATION"
-              : isBcpLocation(route.toLocation)
-                ? "BCP"
-                : "REST_STOP",
-          dwellAfterMinutes: route.dwellAfterMinutes ?? 0,
-          plannedDepartureAt: route.plannedDepartureAt,
-          plannedArrivalAt: route.plannedArrivalAt,
-          vehicleIds: route.vehicleIds,
-          // The saved provider, note and segment type are not on the route; without this spread an outsourced segment would
-          // come back as unassigned and a backup's PRIMARY segments would lose their type.
-          ...initialSegmentData?.[index],
-          sequenceNo: index + 1,
-          isDisconnected:
-            index > 0 &&
-            String(route.fromLocation?.id) !==
-              String(routes[index - 1]?.toLocation?.id),
-        }))
-      : formatDraftSegments(
-          initialRoutes.map((route, index) => ({
+    initialSegments ?? formatDraftSegments(
+      initialRoutes.map((route, index) => ({
         id: `${route.id}-${index}`,
         route,
         arrangement: arrangementForRoute(route),
@@ -340,7 +323,6 @@ export function RoutePlanBuilder({
               ? "BCP"
               : "REST_STOP",
         dwellAfterMinutes: 0,
-        ...initialSegmentData?.[index],
       })),
       metadata?.departureAt,
     ),
@@ -410,7 +392,7 @@ export function RoutePlanBuilder({
       transportPlanId,
     })
       .then((items) => {
-        setAvailableVehicles(items.filter((v) => v.status === "AVAILABLE"));
+        setAvailableVehicles(items);
       })
       .catch((error) => toast.error(getRoutePlanError(error).message));
   }, [initialVehicles, plan.departureAt, plan.arrivalAt, transportPlanId]);
@@ -739,12 +721,7 @@ export function RoutePlanBuilder({
     const arrangement =
       currentSegment?.arrangement ?? arrangementForRoute(routeToSplit);
     const sharedSegmentData = currentSegment
-      ? {
-          arrangement,
-          provider: currentSegment.provider,
-          note: currentSegment.note,
-          vehicleIds: currentSegment.vehicleIds,
-        }
+      ? { arrangement, provider: currentSegment.provider, note: currentSegment.note, vehicleIds: currentSegment.vehicleIds, vehicleDetails: currentSegment.vehicleDetails, assignmentOrigin: currentSegment.assignmentOrigin === "saved" ? "manual" as const : currentSegment.assignmentOrigin }
       : { arrangement };
     const seg1: DraftSegment = {
       id: `seg-${now}-1`,
@@ -1182,22 +1159,6 @@ export function RoutePlanBuilder({
     return null;
   }
 
-  /** Vehicles / provider / note of the PRIMARY segment that runs on exactly this route, if there is one. */
-  function primaryResourcesFor(route: MapRoute) {
-    const index = readonlyPrimaryRoutes.findIndex((primary) =>
-      sameRoute(primary, route),
-    );
-    const data = index >= 0 ? primarySegmentData?.[index] : undefined;
-    if (!data?.vehicleIds?.length && !data?.provider) return undefined;
-    // The builder assigns one vehicle per segment: with 2+ vehicles on the PRIMARY segment the coordinator chooses again.
-    if ((data.vehicleIds?.length ?? 0) >= 2) return undefined;
-    return {
-      ...(data.vehicleIds?.length ? { vehicleIds: data.vehicleIds } : {}),
-      ...(data.provider ? { provider: data.provider } : {}),
-      ...(data.note ? { note: data.note } : {}),
-    };
-  }
-
   function addSegment(route: MapRoute, insertIndex?: number) {
     if (route.readonly) {
       setBuildMessage(
@@ -1220,16 +1181,10 @@ export function RoutePlanBuilder({
       return;
     }
     setBuildMessage(null);
-    // A backup segment on the same route as a PRIMARY segment starts with its vehicles / provider (the coordinator can still change
-    // them). A route that only partly overlaps PRIMARY has no single source, so it stays unassigned and the coordinator assigns it.
-    const inherited = isBackup ? primaryResourcesFor(route) : undefined;
     const newSegment: DraftSegment = {
       id: `${route.id}-${Date.now()}`,
       route,
-      arrangement: inherited?.provider
-        ? "OUTSOURCED"
-        : arrangementForRoute(route),
-      ...inherited,
+      arrangement: arrangementForRoute(route),
       stopType:
         route.toLocation?.id === plan.to?.id
           ? "DESTINATION"
@@ -1286,13 +1241,16 @@ export function RoutePlanBuilder({
       const updated = current.map((seg, idx) =>
         idx === index ? { ...seg, dwellAfterMinutes: minutes } : seg,
       );
-      return formatDraftSegments(updated, plan.departureAt);
+      return formatDraftSegments(updated, plan.departureAt, true, false);
     });
   }
 
   function handleVehicleChange(index: number, vehicleIds: string[]) {
     setSegments((current) =>
-      current.map((seg, idx) => (idx === index ? { ...seg, vehicleIds } : seg)),
+      current.map((seg, idx) => (idx === index ? { ...seg, vehicleIds: [...vehicleIds], assignmentOrigin: "manual", inheritanceSource: undefined, assignmentReason: undefined, vehicleDetails: vehicleIds.flatMap((id) => {
+        const vehicle = availableVehicles.find((v) => v.vehicleId === id) ?? seg.vehicleDetails?.find((v) => v.vehicleId === id);
+        return vehicle ? [vehicle] : [];
+      }) } : seg)),
     );
   }
 
@@ -1534,117 +1492,17 @@ export function RoutePlanBuilder({
   function toPayload(
     action: CreateRoutePlanRequest["action"],
   ): CreateRoutePlanRequest {
-    const payloadRoutes = isBackup
-      ? continuity.effectiveRoutes.map((route) => {
-          const backupSegment = segments.find(
-            (segment) => segment.route === route,
-          );
-          return backupSegment
-            ? {
-                route,
-                // Keep the saved type: the BE takes the first BACKUP segment as the branch point, so PRIMARY segments of a BACKUP plan must stay PRIMARY.
-                routeType: backupSegment.routeType ?? ("BACKUP" as const),
-                plannedDepartureAt:
-                  backupSegment.plannedDepartureAt || plan.departureAt,
-                plannedArrivalAt:
-                  backupSegment.plannedArrivalAt || plan.arrivalAt,
-                dwellAfterMinutes: backupSegment.dwellAfterMinutes ?? 0,
-                vehicleIds: backupSegment.vehicleIds,
-                note: backupSegment.note,
-                outsourcing:
-                  backupSegment.arrangement === "OUTSOURCED" &&
-                  backupSegment.provider
-                    ? {
-                        transportProviderId:
-                          backupSegment.provider.transportProviderId,
-                        note: backupSegment.note,
-                      }
-                    : undefined,
-              }
-            : (() => {
-                // PRIMARY segments copied into the backup keep the PRIMARY's own vehicles / provider (RP4 replaces the whole plan).
-                const primaryData =
-                  primarySegmentData?.[readonlyPrimaryRoutes.indexOf(route)];
-                return {
-                  route,
-                  routeType: "PRIMARY" as const,
-                  plannedDepartureAt: plan.departureAt,
-                  plannedArrivalAt: plan.arrivalAt,
-                  // 2+ vehicles on the PRIMARY segment: saved unassigned, so the coordinator picks again (Assign vehicle in Edit).
-                  vehicleIds:
-                    (primaryData?.vehicleIds?.length ?? 0) >= 2
-                      ? undefined
-                      : primaryData?.vehicleIds,
-                  note: primaryData?.note,
-                  outsourcing: primaryData?.provider
-                    ? {
-                        transportProviderId:
-                          primaryData.provider.transportProviderId,
-                        note: primaryData.note,
-                      }
-                    : undefined,
-                };
-              })();
-        })
-      : segments.map((segment) => ({
-          route: segment.route,
-          routeType,
-          plannedDepartureAt: segment.plannedDepartureAt || plan.departureAt,
-          plannedArrivalAt: segment.plannedArrivalAt || plan.arrivalAt,
-          dwellAfterMinutes: segment.dwellAfterMinutes ?? 0,
-          vehicleIds: segment.vehicleIds,
-          note: segment.note,
-          outsourcing:
-            segment.arrangement === "OUTSOURCED" && segment.provider
-              ? {
-                  transportProviderId: segment.provider.transportProviderId,
-                  note: segment.note,
-                }
-              : undefined,
-        }));
-
+    const itinerary = isBackup
+      ? resolveBackupItinerary(primarySegments, segments, savedSegments)?.segments
+      : segments;
+    if (!itinerary) throw new Error("The PRIMARY replacement region cannot be verified. Reload the PRIMARY route before saving.");
     return {
       routeType: plan.routeType,
       action,
-      ...(isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
-      segments: payloadRoutes.map(
-        (
-          {
-            route,
-            routeType: segmentRouteType,
-            plannedDepartureAt,
-            plannedArrivalAt,
-            vehicleIds,
-            note,
-            outsourcing,
-          },
-          index,
-        ): RouteSegmentInput => {
-          const isCatalogRoute = Boolean(
-            route.id && !String(route.id).startsWith("dynamic-"),
-          );
-          return {
-            sequenceNo: index + 1,
-            ...(isBackup || isReturn ? { routeType: segmentRouteType } : {}),
-            ...(isCatalogRoute
-              ? { routeId: String(route.id) }
-              : {
-                  fromLocationId: String(route.fromLocation?.id ?? ""),
-                  toLocationId: String(route.toLocation?.id ?? ""),
-                  transportMode: route.transportMode ?? "ROAD",
-                }),
-            plannedDepartureAt,
-            plannedArrivalAt,
-            ...(outsourcing
-              ? { outsourcing }
-              : vehicleIds?.length
-                ? { vehicleIds }
-                : {}),
-            // The BE keeps the segment note from this field; `outsourcing.note` is ignored when a plan is saved.
-            ...(note?.trim() ? { note: note.trim() } : {}),
-          };
-        },
-      ),
+      ...(initialRouteNote || isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
+      segments: itinerary.map((segment, index) => serializeBuilderSegment(
+        segment, index, isBackup ? (segments.includes(segment) ? "BACKUP" : "PRIMARY") : routeType,
+      )),
     };
   }
 
@@ -1654,6 +1512,31 @@ export function RoutePlanBuilder({
     setSaveNotice(null);
     if (!segments.length) {
       setSaveError("Add at least one segment before saving.");
+      return;
+    }
+    const invalidCoordinateSegment = segments.findIndex((segment) => {
+      const locations = [segment.route.fromLocation, segment.route.toLocation];
+      return locations.some(
+        (location) =>
+          !Number.isFinite(location?.latitude) ||
+          !Number.isFinite(location?.longitude) ||
+          Math.abs(location.latitude) > 90 ||
+          Math.abs(location.longitude) > 180,
+      );
+    });
+    if (invalidCoordinateSegment >= 0) {
+      const segment = segments[invalidCoordinateSegment];
+      const location = [segment.route.fromLocation, segment.route.toLocation].find(
+        (item) =>
+          !Number.isFinite(item?.latitude) ||
+          !Number.isFinite(item?.longitude) ||
+          Math.abs(item.latitude) > 90 ||
+          Math.abs(item.longitude) > 180,
+      );
+      setSaveError(
+        `Segment ${invalidCoordinateSegment + 1} has invalid coordinates for ${location?.name ?? "a location"}. Select or update the location before saving.`,
+      );
+      setStep(0);
       return;
     }
     if (!continuity.valid) {
@@ -1711,6 +1594,13 @@ export function RoutePlanBuilder({
       setSaveError("Update reason is required.");
       return;
     }
+    let payload: CreateRoutePlanRequest;
+    try {
+      payload = toPayload(action);
+    } catch (validationError) {
+      setSaveError(validationError instanceof Error ? validationError.message : "Check the route segment data before saving.");
+      return;
+    }
     setIsSaving(true);
     try {
       // Pre-save check: ensure all locations in segments have feasible road coordinates in the backend
@@ -1727,12 +1617,12 @@ export function RoutePlanBuilder({
         await updateRoutePlan(edit.routePlanId, {
           lastUpdatedAt: edit.lastUpdatedAt,
           updateReason: updateReason.trim(),
-          routeNote: routeNote.trim() || undefined,
+          routeNote: routeNote,
           action,
-          segments: toPayload(action).segments,
+          segments: payload.segments,
         });
       } else {
-        await createRoutePlan(transportPlanId, toPayload(action));
+        await createRoutePlan(transportPlanId, payload);
       }
       const successMessage =
         action === "SAVE_DRAFT"
@@ -2388,8 +2278,6 @@ export function RoutePlanBuilder({
                         handleVehicleChange(index, vIds)
                       }
                       availableVehicles={availableVehicles}
-                      routePlanId={edit?.routePlanId}
-                      lastUpdatedAt={edit?.lastUpdatedAt}
                       onOutsource={(selection) =>
                         setSegments((items) =>
                           items.map((item) =>
@@ -2400,10 +2288,11 @@ export function RoutePlanBuilder({
                                     ? "OUTSOURCED"
                                     : "INTERNAL",
                                   provider: selection?.provider,
-                                  note: selection?.note,
-                                  vehicleIds: selection
-                                    ? undefined
-                                    : item.vehicleIds,
+                                  note: selection ? selection.note : item.note,
+                                  assignmentOrigin: "manual",
+                                  assignmentReason: undefined,
+                                  inheritanceSource: undefined,
+                                  vehicleIds: selection ? undefined : item.vehicleIds,
                                 }
                               : item,
                           ),

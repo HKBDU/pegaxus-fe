@@ -1,3 +1,4 @@
+import "@/shared/components/report-dashboard.css";
 import { useLocation } from "react-router-dom";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
@@ -10,7 +11,7 @@ import {
   useReportAccess,
 } from "../hooks";
 import { reportError, terminalReportError } from "../services";
-import { reportTime } from "../presentation";
+import { ReportTabs } from "../components/ReportTabs";
 import { ReportFilters } from "../components/ReportFilters";
 import { IncidentOverview } from "../components/IncidentOverview";
 import { IncidentCharts } from "../components/IncidentCharts";
@@ -33,9 +34,10 @@ function IncidentWorkspace() {
   const report = query.data;
   const busy = Boolean(exporting.pending);
   return (
-    <main className="mx-auto w-full min-w-0 max-w-[1440px] space-y-4 px-4 py-6 sm:px-6">
+    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-3 px-3 py-4 sm:px-4">
       <PageHeader
-        title="Incident & claim analytics"
+        title="Dashboard"
+        showBack={false}
         backHref="/admin"
         backLabel="Workspace"
         action={
@@ -48,16 +50,8 @@ function IncidentWorkspace() {
           />
         }
       />
+      <ReportTabs />
       <ReportModeNotice />
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-500">
-        <p className="m-0">
-          Operational incidents, claims and approved emergency costs.
-        </p>
-        <p className="m-0">
-          Applied period: {String(state.raw.dateFrom)} –{" "}
-          {String(state.raw.dateTo)} (UTC)
-        </p>
-      </div>
       <ReportFilters
         variant="incident-claim-frequency"
         draft={state.draft}
@@ -107,13 +101,9 @@ function IncidentWorkspace() {
           ) : null}
           {report ? (
             <>
-              <div
-                role="status"
-                className="flex min-h-5 flex-wrap items-center justify-between gap-2 text-xs text-slate-500"
-              >
-                <span>Generated: {reportTime(report.generatedAt)}</span>
-                <span>{query.isFetching ? "Updating report…" : ""}</span>
-              </div>
+              <p role="status" className="sr-only">
+                {query.isFetching ? "Updating report…" : ""}
+              </p>
               <IncidentOverview report={report} />
               <IncidentCharts report={report} />
               <VehicleReliability report={report} />

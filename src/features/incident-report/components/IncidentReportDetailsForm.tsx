@@ -6,6 +6,8 @@ import type { IncidentSeverity } from "@/shared/types/incident";
 import { Input } from "@/shared/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/shared/components/ui/radio-group";
 import { Textarea } from "@/shared/components/ui/textarea";
+import type { IncidentFieldErrors } from "../validation";
+import { IncidentFieldError } from "./IncidentFieldError";
 
 export interface IncidentReportDetailsValue {
   severity: IncidentSeverity;
@@ -18,6 +20,7 @@ export interface IncidentReportDetailsFormProps {
   value: IncidentReportDetailsValue;
   onChange: (value: IncidentReportDetailsValue) => void;
   disabled?: boolean;
+  errors?: IncidentFieldErrors;
 }
 
 const severityOptions = [
@@ -32,6 +35,7 @@ export function IncidentReportDetailsForm({
   value,
   onChange,
   disabled = false,
+  errors = {},
 }: IncidentReportDetailsFormProps) {
   const update = <K extends keyof IncidentReportDetailsValue>(
     field: K,
@@ -40,7 +44,7 @@ export function IncidentReportDetailsForm({
 
   return (
     <section className="space-y-5" aria-label="Incident details">
-      <fieldset className="space-y-2">
+      <fieldset className="space-y-2" data-incident-field>
         <legend className="text-sm font-bold uppercase tracking-[0.04em] text-slate-900">
           Severity <span className="text-red-600">*</span>
         </legend>
@@ -63,6 +67,7 @@ export function IncidentReportDetailsForm({
             </label>
           ))}
         </RadioGroup>
+        <IncidentFieldError message={errors.severity} />
       </fieldset>
 
       <label className="block space-y-2 text-sm text-slate-900">
@@ -70,11 +75,13 @@ export function IncidentReportDetailsForm({
         <Input
           value={value.title}
           maxLength={200}
+          aria-invalid={Boolean(errors.title)}
           disabled={disabled}
           onChange={(event) => update("title", event.target.value)}
           placeholder="Briefly describe the incident"
           className="h-12 rounded-[2px] bg-white text-[1em]"
         />
+        <IncidentFieldError message={errors.title} />
         <span className="block text-right text-xs font-normal text-slate-500">
           {value.title.length}/200
         </span>
@@ -85,13 +92,15 @@ export function IncidentReportDetailsForm({
         <Textarea
           value={value.immediateAction}
           disabled={disabled}
+          aria-invalid={Boolean(errors.immediateAction)}
           onChange={(event) => update("immediateAction", event.target.value)}
           placeholder="What did you do to keep the horse and transport safe?"
-          className="min-h-28 resize-y rounded-[2px] bg-white text-[1em]"
+          className="min-h-24 w-full min-w-0 max-w-full resize-y rounded-[2px] bg-white text-base"
         />
+        <IncidentFieldError message={errors.immediateAction} />
       </label>
 
-      <fieldset className="space-y-2">
+      <fieldset className="space-y-2" data-incident-field>
         <legend className="text-sm font-bold uppercase tracking-[0.04em] text-slate-900">
           Emergency Settlement
         </legend>
@@ -114,6 +123,7 @@ export function IncidentReportDetailsForm({
             </label>
           ))}
         </RadioGroup>
+        <IncidentFieldError message={errors.emergencySettlementRequired} />
       </fieldset>
     </section>
   );
