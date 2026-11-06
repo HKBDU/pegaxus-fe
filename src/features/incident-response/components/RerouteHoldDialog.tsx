@@ -253,12 +253,12 @@ export function RerouteHoldDialog({
                             max={120}
                             step={1}
                             inputMode="numeric"
-                            placeholder="Backend default: 30 minutes"
+                            placeholder="Default: 30 minutes"
                             className={controlClass}
                           />
                         </FormControl>
                         <p className="m-0 text-[11px] text-muted-foreground">
-                          Leave empty for the backend default, or enter 10–120
+                          Leave empty to use the default, or enter 10–120
                           minutes.
                         </p>
                         <div className="min-h-5">
@@ -307,7 +307,7 @@ export function RerouteHoldDialog({
                   ? monitor >= 10 && monitor <= 120
                     ? `${monitor} min`
                     : "—"
-                  : "Backend default (30 min)"}
+                  : "Default (30 min)"}
               </p>
               <p className="m-0 break-all">
                 Stop: {values.safeStopLocationId || "Not specified"}

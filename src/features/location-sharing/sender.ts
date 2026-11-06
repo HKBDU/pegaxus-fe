@@ -515,8 +515,8 @@ export class LocationSender {
         this.stopWith(
           "stopped",
           accepted.reason === "NOT_CURRENT_SEGMENT_DRIVER"
-            ? "Bạn đã bàn giao chặng này. Định vị đã tự động dừng."
-            : "Máy chủ không nhận vị trí cho chặng hiện tại. Định vị đã dừng.",
+            ? "You have handed over this segment. Location sharing stopped automatically."
+            : "The server did not accept a location for the current segment. Location sharing stopped.",
         );
         this.publish({ acceptance: "rejected", restartBlocked: true });
         this.rejectedRevision = this.context.revision;

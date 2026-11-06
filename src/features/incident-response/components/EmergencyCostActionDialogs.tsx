@@ -377,8 +377,8 @@ export function DecisionCostDialog(
               role="alert"
               className="m-0 rounded-[2px] border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
             >
-              Phê duyệt sẽ khóa xe {vehicleDetail.vehicle.vehicleCode} (Out of
-              service).
+              Approval will lock vehicle {vehicleDetail.vehicle.vehicleCode} (Out
+              of service).
             </p>
           ) : checkingReplacement && !vehicleDetail ? (
             <p role="status" className="m-0 text-xs text-muted-foreground">

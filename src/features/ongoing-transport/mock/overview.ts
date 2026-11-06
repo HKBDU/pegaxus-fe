@@ -146,6 +146,8 @@ function buildOverview(
       ? {
           routePlanId: id("00000064"),
           routePlanCode: `RP-20261017-${String(number).padStart(4, "0")}`,
+          legalReviewRequested: false,
+          legalReviewRequestedAt: null,
           status:
             item.status === "READY"
               ? "CONFIRMED"

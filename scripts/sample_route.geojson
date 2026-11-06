@@ -4,7 +4,7 @@
     {
       "type": "Feature",
       "properties": {
-        "name": "Sample Demo Route Hanoi to Danang Highway Segment"
+        "name": "Sample Demo Route Chantilly to Dover Cross-Channel Segment"
       },
       "geometry": {
         "type": "LineString",

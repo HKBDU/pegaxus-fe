@@ -55,7 +55,7 @@ export function useProfile(customerId?: string) {
     }
 
     try {
-      if (customerId) throw new Error("Backend does not expose a customer profile endpoint")
+      if (customerId) throw new Error("Customer profile information is not available yet")
       const nextProfile = await profileApi.getMe()
       if (!isCurrentRequest()) return
       if (!nextProfile) throw new Error("Profile response is empty")
@@ -103,7 +103,7 @@ export function useProfile(customerId?: string) {
       }
 
       if (customerId) {
-        throw new Error("Backend does not expose a customer profile update endpoint")
+        throw new Error("Customer profile updates are not available yet")
       }
 
       const apiInput: UpdateProfileRequest = input.avatar instanceof File

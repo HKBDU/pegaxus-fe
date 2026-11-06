@@ -75,8 +75,8 @@ export const routeSegmentSchema = z.object({
   if (hasRoute && (segment.fromLocationId || segment.toLocationId || segment.transportMode)) {
     context.addIssue({ code: 'custom', path: ['routeId'], message: 'Use either routeId or the route location/mode fields, not both' })
   }
-  if (new Date(segment.plannedArrivalAt) <= new Date(segment.plannedDepartureAt)) {
-    context.addIssue({ code: 'custom', path: ['plannedArrivalAt'], message: 'Arrival must be after departure.' })
+  if (new Date(segment.plannedArrivalAt).getTime() - new Date(segment.plannedDepartureAt).getTime() < 24 * 60 * 60 * 1000) {
+    context.addIssue({ code: 'custom', path: ['plannedArrivalAt'], message: 'Arrival must be at least 24 hours after departure.' })
   }
   if (segment.outsourcing && segment.vehicleIds?.length) {
     context.addIssue({ code: 'custom', path: ['vehicleIds'], message: 'Outsourced segments cannot have vehicles.' })
@@ -122,7 +122,37 @@ export const legalReviewSchema = z.object({
   if (!value.isFeasible && !value.note?.trim()) {
     context.addIssue({ code: 'custom', path: ['note'], message: 'A note is required when the route is not feasible.' })
   }
+  if (value.isFeasible && value.blockedSegments?.length) {
+    context.addIssue({
+      code: 'custom',
+      path: ['blockedSegments'],
+      message: 'A feasible route cannot contain blocked segments.',
+    })
+  }
 })
+
+export const routePlanMutationResultSchema = z.object({
+  routePlanId: entityId,
+  status: z.string().min(1),
+  legalReviewRequested: z.boolean(),
+  legalReviewRequestedAt: dateTime.nullable(),
+  updatedAt: dateTime,
+}).passthrough()
+
+export const legalReviewResultSchema = routePlanMutationResultSchema.extend({
+  legalReview: z.object({
+    isFeasible: z.boolean(),
+    note: z.string().nullable().optional(),
+    blockedSegments: z.array(z.number().int().positive()).default([]),
+  }).passthrough(),
+  customerUploadEnabled: z.boolean().optional(),
+  personnelAssignmentPhase2Enabled: z.boolean().optional(),
+}).passthrough()
+
+export const outsourceSegmentResultSchema = routePlanMutationResultSchema.extend({
+  segment: z.unknown(),
+  isPersonnelComplete: z.boolean(),
+}).passthrough()
 
 function validateSequence(segments: RouteSegmentInput[], context: z.RefinementCtx) {
   segments.forEach((segment, index) => {

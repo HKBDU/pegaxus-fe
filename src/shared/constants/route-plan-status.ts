@@ -22,7 +22,7 @@ export const ROUTE_PLAN_STATUS_LABELS: Record<RoutePlanStatus, string> = {
   ACTIVE: "Active",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
-  REJECTED_BY_MANAGER: "LM đã từ chối",
+  REJECTED_BY_MANAGER: "Rejected by Logistics Manager",
 };
 
 export function canEditRoutePlan(status: RoutePlanStatus): boolean {

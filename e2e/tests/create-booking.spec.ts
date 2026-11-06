@@ -117,13 +117,13 @@ test.describe("Create booking", () => {
       await expect(booking.page.locator("button[data-day='12/29/2026']")).toBeEnabled()
     })
 
-    test("BOOKING-09 the arrival date cannot be before the departure date", async () => {
+    test("BOOKING-09 the arrival date must be at least 24 hours after departure", async () => {
       await booking.pickPlace("London", /London Riding Stables/)
       await booking.pickPlace("Manchester", /Manchester Equestrian Centre/)
       await booking.chooseDeparture("2026-12-15")
 
-      await expect(await booking.calendarDay(booking.arrivalDate, "2026-12-14")).toBeDisabled()
-      await expect(booking.page.locator("button[data-day='12/15/2026']")).toBeEnabled()
+      await expect(await booking.calendarDay(booking.arrivalDate, "2026-12-15")).toBeDisabled()
+      await expect(booking.page.locator("button[data-day='12/16/2026']")).toBeEnabled()
     })
 
     test("BOOKING-10 Cancel leaves the form for the booking list without creating anything", async ({ api, page }) => {

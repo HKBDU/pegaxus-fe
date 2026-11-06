@@ -15,7 +15,7 @@ import type { Horse } from "@/features/horse/types"
 import { useAvailableHorses, useBookingEditLock, useBookingRequestGuard, useCreateBooking, useUpdateBooking } from "@/features/booking/hooks"
 import { DepartureDateGuide } from "@/features/booking/components/DepartureDateGuide"
 import { getDepartureRule } from "@/features/booking/lib/departure-rule"
-import { bookingFormSchema, type BookingFormSchemaValues } from "@/features/booking/schemas"
+import { addDays, bookingFormSchema, type BookingFormSchemaValues } from "@/features/booking/schemas"
 import type { AvailableHorse, Booking, BookingFormValues } from "@/features/booking/types"
 import { formatSex, getBookingErrorMessage } from "@/features/booking/utils"
 import { cn } from "@/lib/utils"
@@ -681,7 +681,7 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
                     type="date"
                     min={departureRule.minDate}
                   />
-                  <BookingField control={form.control} name="requestedArrivalDate" label="Expected arrival date" type="date" min={form.watch("requestedDepartureDate")} />
+                  <BookingField control={form.control} name="requestedArrivalDate" label="Expected arrival date" type="date" min={form.watch("requestedDepartureDate") ? addDays(form.watch("requestedDepartureDate"), 1) : undefined} />
                 </div>
               </FormSection>
 

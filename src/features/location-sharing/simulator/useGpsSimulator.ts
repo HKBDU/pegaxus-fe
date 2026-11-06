@@ -121,11 +121,11 @@ const FALLBACK_COORDINATES: Record<
   "Newmarket Stables": { latitude: 52.2435, longitude: 0.4057 },
   "Paris Airport": { latitude: 49.0097, longitude: 2.5479 },
   "London Airport": { latitude: 51.47, longitude: -0.4543 },
-  "Hanoi Equine Quarantine Facility": {
-    latitude: 21.0285,
-    longitude: 105.8544,
+  "Chantilly Equine Quarantine Facility": {
+    latitude: 49.1944,
+    longitude: 2.4858,
   },
-  "Danang Transit Terminal": { latitude: 16.0544, longitude: 108.2022 },
+  "Dover Equine Transit Terminal": { latitude: 51.1279, longitude: 1.3134 },
 };
 
 function resolveEndpoint(endpoint: SegmentEndpoint): {
