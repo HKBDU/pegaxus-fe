@@ -176,7 +176,7 @@ export function DossierRequirementsPanel() {
               onClick={() => setAddOpen(true)}
             >
               <Plus className="size-4" />
-              Add DossierRequirement
+              Add Dossier Requirement
             </Button>
           </div>
         ) : null}
