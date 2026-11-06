@@ -1,4 +1,4 @@
-import { PRICE_LIST_TIERS, type PriceListTier } from "@/features/price-list/constants"
+import { PRICE_LIST_TIERS, type PriceListItemType, type PriceListTier } from "@/features/price-list/constants"
 import type { PriceListItem } from "@/features/price-list/types"
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -31,4 +31,24 @@ export function getMissingTiers(items: readonly Pick<PriceListItem, "vehicleTier
 /** The seeded list has no creator; a real account id is not shown because there is no API to resolve its name. */
 export function getCreatedByLabel(createdByAccountId: string | null) {
   return createdByAccountId === null ? "System" : null
+}
+
+/** "NONE" is the lines that apply to every tier (`vehicleTier = null`). */
+export type PriceListTierFilter = "ALL" | "NONE" | PriceListTier
+export type PriceListTypeFilter = "ALL" | PriceListItemType
+
+export interface PriceListItemFilters {
+  search: string
+  tier: PriceListTierFilter
+  type: PriceListTypeFilter
+}
+
+/** Filters the lines on screen only. The order the BE sent (`sortOrder`, then `itemCode`) is kept. */
+export function filterPriceListItems(items: readonly PriceListItem[], { search, tier, type }: PriceListItemFilters) {
+  const text = search.trim().toLowerCase()
+  return items.filter((item) => {
+    if (text && !item.itemCode.toLowerCase().includes(text) && !item.itemName.toLowerCase().includes(text)) return false
+    if (tier === "NONE" ? item.vehicleTier !== null : tier !== "ALL" && item.vehicleTier !== tier) return false
+    return type === "ALL" || item.itemType === type
+  })
 }

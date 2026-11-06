@@ -1,13 +1,12 @@
-import { Plus } from "lucide-react"
 import {
   ActivatePriceListDialog,
   ClonePriceListButton,
   DeletePriceListItemDialog,
   PriceListFormDialog,
-  PriceListItemsTable,
 } from "@/features/price-list/components/ExternalPlaceholders"
 import { PriceListHeaderCard } from "@/features/price-list/components/PriceListHeaderCard"
 import { PriceListItemFormDialog } from "@/features/price-list/components/PriceListItemFormDialog"
+import { PriceListItemsTable } from "@/features/price-list/components/PriceListItemsTable"
 import { PriceListLockedBanner } from "@/features/price-list/components/PriceListLockedBanner"
 import { PriceListNotFound } from "@/features/price-list/components/PriceListNotFound"
 import { outlineButtonClass, panelClass, primaryButtonClass } from "@/features/price-list/components/PriceListPrimitives"
@@ -62,12 +61,8 @@ export default function PriceListDetailPage() {
             {page.isActive ? (
               <PriceListLockedBanner action={clone} />
             ) : (
-              <div className={cn(panelClass, "flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between")}>
+              <div className={cn(panelClass, "px-4 py-3")}>
                 <PriceListTierCoverage items={priceList.items} />
-                <Button type="button" variant="outline" className={outlineButtonClass} onClick={() => page.openItemForm()}>
-                  <Plus aria-hidden="true" className="size-3.5" />
-                  Add price line
-                </Button>
               </div>
             )}
 
