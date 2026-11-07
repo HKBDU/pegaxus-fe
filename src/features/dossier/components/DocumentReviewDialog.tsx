@@ -245,7 +245,7 @@ function ReviewContent({
                 className="rounded-[2px] text-sm"
               />
               <p className="text-xs text-slate-500">
-                The backend may require justification when expiry precedes
+                You may need to provide justification when expiry precedes
                 departure. Approval does not mark the dossier ready.
               </p>
             </div>

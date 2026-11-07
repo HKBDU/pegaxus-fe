@@ -37,6 +37,7 @@ import type {
   RouteMutationResponse,
   RouteResponse,
 } from "@/features/route-plan/types";
+import { roundCoordinate } from "@/shared/constants/validation-limits";
 
 const LOCATION_SEARCH_CATEGORIES = [
   "airport",
@@ -136,6 +137,8 @@ async function searchGeoapifyLocationPlaces(
 }
 
 function toMapLocation(item: LocationResponse): MapLocation {
+  const latitude = item.latitude == null ? Number.NaN : Number(item.latitude);
+  const longitude = item.longitude == null ? Number.NaN : Number(item.longitude);
   return {
     id: item.locationId,
     name: item.locationName,
@@ -144,8 +147,8 @@ function toMapLocation(item: LocationResponse): MapLocation {
     city: item.city,
     stateProvince: item.stateProvince,
     country: item.country,
-    latitude: Number(item.latitude),
-    longitude: Number(item.longitude),
+    latitude: Number.isFinite(latitude) ? roundCoordinate(latitude) : latitude,
+    longitude: Number.isFinite(longitude) ? roundCoordinate(longitude) : longitude,
     note: item.locationNote,
     updatedAt: item.updatedAt ?? item.lastUpdatedAt,
   };
@@ -919,6 +922,7 @@ export default function MapAssetsPage() {
               />
             ) : locationEditor?.location ? (
               <EditLocationForm
+                key={`${locationEditor.location.id}:${locationEditor.location.latitude}:${locationEditor.location.longitude}`}
                 initialValues={locationFormValues(locationEditor.location)}
                 onSubmit={updateLocation}
                 onCancel={() => setLocationEditor(null)}

@@ -519,7 +519,7 @@ export function DocumentSubmissionDialog({
               {mode === "edit" ? (
                 <p className="rounded-[2px] bg-sky-50 p-3 text-xs text-sky-800">
                   Files replace the current version only when it has never been
-                  reviewed. Otherwise, the backend creates a new version. Saving
+                  reviewed. Otherwise, a new version is created. Saving
                   metadata only does not replace files.
                 </p>
               ) : null}
@@ -682,7 +682,7 @@ export function DocumentSubmissionDialog({
                     <Info className="mt-0.5 size-3.5 shrink-0 text-sky-700" />
                     {mode === "initial"
                       ? "All selected files will be grouped into one DocumentVersion v1."
-                      : "The backend decides whether this updates the current version or creates a new one."}
+                      : "The system will update the current version or create a new one based on its review status."}
                   </p>
                 </section>
                 <section

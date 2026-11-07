@@ -24,6 +24,7 @@ interface CountrySelectProps {
   emptyLabel?: string;
   allowCustomValue?: boolean;
   "aria-describedby"?: string;
+  "aria-label"?: string;
   "data-slot"?: string;
   "aria-invalid"?: boolean;
 }
@@ -37,6 +38,7 @@ export function CountrySelect({
   emptyLabel,
   allowCustomValue = false,
   "aria-describedby": ariaDescribedBy,
+  "aria-label": ariaLabel,
   "data-slot": dataSlot,
   "aria-invalid": ariaInvalid,
 }: CountrySelectProps) {
@@ -77,9 +79,10 @@ export function CountrySelect({
           variant="outline"
           aria-expanded={open}
           aria-describedby={ariaDescribedBy}
+          aria-label={ariaLabel}
           aria-invalid={ariaInvalid}
           className={cn(
-            "h-8 w-full min-w-0 justify-between rounded-[2px] border-[#f3aa3b] bg-transparent px-3 py-1 text-left text-xs font-normal text-[#181818] shadow-none hover:bg-transparent",
+            "h-8 w-full min-w-0 justify-between rounded-[2px] border-input bg-background px-3 py-1 text-left text-xs font-normal text-[#181818] shadow-none hover:bg-accent",
             !value && "text-muted-foreground",
             className,
           )}
@@ -125,7 +128,7 @@ export function CountrySelect({
             <button
               type="button"
               onClick={() => selectCountry("")}
-              className="flex w-full items-center gap-2 rounded-[2px] px-2 py-2 text-left text-sm text-muted-foreground outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
+              className="flex w-full items-center gap-2 rounded-[2px] px-2 py-1.5 text-left text-sm text-muted-foreground outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 aria-pressed:bg-accent"
             >
               {emptyLabel}
             </button>
@@ -136,7 +139,7 @@ export function CountrySelect({
             <button
               type="button"
               onClick={() => selectCountry(query.trim())}
-              className="flex w-full items-center rounded-[2px] px-2 py-2 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
+              className="flex w-full items-center rounded-[2px] px-2 py-1.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 aria-pressed:bg-accent"
             >
               <span className="min-w-0 break-words">Use “{query.trim()}”</span>
             </button>
@@ -148,7 +151,7 @@ export function CountrySelect({
                 key={country.iso2}
                 aria-pressed={country.name === value}
                 onClick={() => selectCountry(country.name)}
-                className="flex w-full items-center gap-2 rounded-[2px] px-2 py-2 text-left text-sm text-foreground outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
+                className="flex w-full items-center gap-2 rounded-[2px] px-2 py-1.5 text-left text-sm text-foreground outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 aria-pressed:bg-accent"
               >
                 <span className="truncate">{country.name}</span>
                 <span className="ml-auto shrink-0 text-[10px] text-slate-400">
@@ -157,7 +160,7 @@ export function CountrySelect({
                 <Check
                   aria-hidden="true"
                   className={cn(
-                    "size-3.5 shrink-0 text-primary",
+                    "size-3.5 shrink-0 text-selection-accent!",
                     country.name === value ? "opacity-100" : "opacity-0",
                   )}
                 />

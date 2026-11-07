@@ -517,7 +517,7 @@ export function getEmergencyCostError(
           ? "This emergency cost request does not exist or is no longer available."
           : code === "INCIDENT_NOT_FOUND"
             ? "This incident does not exist or is not available."
-            : "This endpoint or record is unavailable on the backend. No success is assumed.",
+            : "This record or action is currently unavailable. No success is assumed.",
       retryable: false,
       submissionBlocked: true,
     };
@@ -525,7 +525,7 @@ export function getEmergencyCostError(
     return {
       message: mutation
         ? "The result could not be verified. The server may have processed it; reload the request or check the list before submitting again."
-        : "The backend returned an unexpected emergency cost response. No financial data is displayed.",
+        : "We received an unexpected emergency cost response. No financial data is displayed.",
       retryable: false,
       outcomeUnknown: mutation,
     };
@@ -561,8 +561,8 @@ export function getEmergencyCostError(
     return {
       message:
         operation === "list"
-          ? "The backend rejected these filters. Review the selected filters and date range."
-          : "The backend rejected the request. Review the fields and supporting uploads.",
+          ? "These filters could not be applied. Review the selected filters and date range."
+          : "This request could not be completed. Review the fields and supporting uploads.",
       retryable: false,
     };
   if (mutation)

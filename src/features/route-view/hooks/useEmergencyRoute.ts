@@ -25,7 +25,8 @@ import type {
   RoutePlanDetail,
   RoutePlanSummary,
 } from "../types";
-import type { RouteWorkspaceContext } from "../workspace-actions";
+import type { RouteWorkspaceContext } from "../types";
+import { hasActivePrimary, hasOpenReturn } from "../route-policy";
 import { refreshTransportProgress } from "@/features/ongoing-transport/hooks/useTransportProgressRefresh";
 import { getVehiclePropagationMessage } from "../vehicle-change";
 
@@ -108,16 +109,11 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
         principal,
         planStatus: transport.data!.status,
         transportStatus: transport.data!.transport.status,
-        dossierStatus: booking.data!.complianceDossier?.status,
-        hasActivePrimary: routes.data.items.some(
-          (route) => route.routeType === "PRIMARY" && route.status === "ACTIVE",
-        ),
-        hasOpenReturn: routes.data.items.some(
-          (route) =>
-            route.routeType === "RETURN" &&
-            route.status !== "CANCELLED" &&
-            route.status !== "REJECTED_BY_MANAGER",
-        ),
+        // RETURN legal review uses the EXTRA dossier; PRIMARY/BACKUP use MAIN.
+        // Keep the workspace status aligned with the dossier selected below.
+        dossierStatus: legalDossier?.status,
+        hasActivePrimary: hasActivePrimary(routes.data.items),
+        hasOpenReturn: hasOpenReturn(routes.data.items),
       },
       transportCode: transport.data!.transport.transportCode,
       activeRoutes: routes.data.items.filter(

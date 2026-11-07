@@ -175,7 +175,7 @@ export function getRerouteError(error: unknown) {
   if (status === 400 || status === 422)
     return {
       message:
-        "The backend rejected this incident identifier or rerouting request.",
+        "This incident identifier or rerouting request could not be processed.",
       retryable: false,
     };
   return {
@@ -297,7 +297,7 @@ export function getRerouteEscalationError(error: unknown) {
   if (status === 400)
     return {
       message:
-        "The backend rejected these details. Check the reason, duration and selected routes; your input is preserved.",
+        "These details could not be processed. Check the reason, duration, and selected routes; your input is preserved.",
       blocked: false,
       refreshContext: false,
     };

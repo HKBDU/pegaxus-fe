@@ -35,11 +35,12 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
               <button
                 type="button"
                 key={column.id}
+                aria-pressed={column.getIsVisible()}
                 onClick={() => column.toggleVisibility(!column.getIsVisible())}
-                className="flex w-full cursor-pointer items-center rounded-[2px] px-1.5 py-1 text-left text-[0.7rem] text-slate-700 outline-none transition-colors duration-150 hover:bg-amber-50 focus-visible:bg-amber-50 active:bg-amber-50"
+                className="flex w-full cursor-pointer items-center rounded-[2px] px-1.5 py-1 text-left text-[0.7rem] text-slate-700 outline-none transition-colors duration-150 hover:bg-accent focus-visible:bg-accent active:bg-accent aria-pressed:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
               >
                 <span className="truncate">{label}</span>
-                <Check className={`ml-auto size-3.5 text-amber-600! ${column.getIsVisible() ? "opacity-100" : "opacity-0"}`} />
+                <Check className={`ml-auto size-3.5 text-selection-accent! ${column.getIsVisible() ? "opacity-100" : "opacity-0"}`} />
               </button>
             )
           })}

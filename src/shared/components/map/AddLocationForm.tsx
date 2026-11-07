@@ -43,6 +43,7 @@ export function AddLocationForm({
   return (
     <form className="grid gap-5" onSubmit={form.handleSubmit(submit)}>
       <LocationFormFields
+        control={form.control}
         register={form.register}
         errors={form.formState.errors}
       />

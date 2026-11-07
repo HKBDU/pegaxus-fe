@@ -138,6 +138,8 @@ const routeSummarySchema = z.object({
   routePlanId: entityIdSchema,
   routePlanCode: z.string(),
   status: routePlanStatusSchema,
+  legalReviewRequested: z.boolean(),
+  legalReviewRequestedAt: z.iso.datetime({ offset: true }).nullish().transform((v) => v ?? null),
 });
 const bookingFields = {
   bookingId: entityIdSchema,

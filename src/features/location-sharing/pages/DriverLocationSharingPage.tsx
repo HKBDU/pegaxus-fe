@@ -101,8 +101,8 @@ export default function DriverLocationSharingPage() {
           />
           {!FEATURES.segmentArrival ? (
             <p role="status" className="m-0 text-sm text-muted-foreground">
-              Arrival confirmation is unavailable on the verified backend
-              version. GPS sharing remains separate; this page does not confirm
+              Arrival confirmation is not available in the current release.
+              GPS sharing remains separate; this page does not confirm
               arrival locally.
             </p>
           ) : null}
@@ -129,7 +129,7 @@ export default function DriverLocationSharingPage() {
               <p>
                 {source === "mock"
                   ? "MOCK DATA — real GPS sharing is disabled."
-                  : "C9 is waiting for verified current-segment ownership from the backend."}
+                  : "We’re verifying that this is your current segment before enabling arrival confirmation."}
               </p>
               <Button type="button" variant="outline" onClick={reload}>
                 Reload journey context

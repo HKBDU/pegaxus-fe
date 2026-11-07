@@ -1,8 +1,8 @@
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import {
   beforeDeparture,
-  type RouteWorkspaceContext,
-} from "./workspace-actions";
+} from "./route-policy";
+import type { RouteWorkspaceContext } from "./types";
 import type { RoutePlanDetail, RouteSegment } from "./types";
 import type { RerouteContext } from "@/features/incident-response/reroute-schemas";
 
@@ -133,7 +133,7 @@ export function collectVehicleChangeCandidates(
     unverified,
     blocker:
       unverified.length > 0
-        ? "Some segments have no authoritative eligibility confirmation and cannot be selected. Backend propagation still applies to eligible unlisted segments."
+        ? "Some segments have no confirmed eligibility and cannot be selected. Updates still apply to eligible unlisted segments."
         : eligibleForSubmission.length === 0
           ? "No eligible internal segments could be verified for replacement."
           : null,

@@ -51,9 +51,9 @@ export function DataTableRadioFilter({
       <PopoverContent
         align="start"
         sideOffset={2}
-        className="w-max min-w-[var(--radix-popover-trigger-width)] max-w-[min(22rem,calc(100vw-2rem))] rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md"
+        className="w-max min-w-[var(--radix-popover-trigger-width)] max-w-[min(22rem,calc(100vw-2rem))] rounded-[2px] border-slate-200 bg-white p-0.5 shadow-md overflow-hidden"
       >
-        <div role="radiogroup" aria-label={ariaLabel ?? title} aria-orientation="vertical" className="grid max-h-72 gap-1 overflow-y-auto"
+        <div role="radiogroup" aria-label={ariaLabel ?? title} aria-orientation="vertical" className="grid max-h-[min(18rem,calc(var(--radix-popover-content-available-height)-0.5rem))] gap-1 overflow-y-auto overscroll-contain"
           onKeyDown={(event) => {
             if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return
             const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]'))
@@ -72,14 +72,14 @@ export function DataTableRadioFilter({
               tabIndex={option.value === (selectedOption?.value ?? options[0]?.value) ? 0 : -1}
               key={option.value}
               onClick={() => onValueChange(option.value)}
-              className="flex w-full cursor-pointer items-center gap-1.5 rounded-[2px] border-0 px-1.5 py-1 text-left text-xs outline-none transition-colors duration-150 hover:bg-amber-50 focus-visible:bg-amber-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary active:bg-amber-50"
+              className="flex w-full cursor-pointer items-center gap-1.5 rounded-[2px] border-0 px-1.5 py-1 text-left text-xs outline-none transition-colors duration-150 hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary aria-checked:bg-accent active:bg-accent"
             >
               <span className="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere]">
                 {renderOption ? renderOption(option) : option.label}
               </span>
               <Check
                 aria-hidden="true"
-                className={`size-3.5 shrink-0 text-amber-600! ${option.value === value ? "opacity-100" : "opacity-0"}`}
+                className={`size-3.5 shrink-0 text-selection-accent! ${option.value === value ? "opacity-100" : "opacity-0"}`}
               />
             </button>
           ))}
