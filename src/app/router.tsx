@@ -39,6 +39,7 @@ import {
   emergencyCostRoutes,
   emergencyRerouteRoutes,
 } from "@/features/incident-response";
+import { priceListRoutes } from "@/features/price-list/routes";
 import TestPage from "../Test";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
@@ -202,6 +203,7 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
+  ...priceListRoutes,
   ...transportAuditRoutes,
   ...emergencyCostRoutes,
   ...emergencyRerouteRoutes,
