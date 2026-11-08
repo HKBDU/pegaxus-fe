@@ -16,6 +16,7 @@ import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { handoverTabRoutes } from "@/features/handover";
 import { claimRoutes } from "@/features/claim";
+import { priceListRoutes } from "@/features/price-list/routes";
 import { incidentManagementRoutes } from "@/features/incident-management";
 import {
   APPROVED_BOOKINGS_ACCESS,
@@ -39,7 +40,6 @@ import {
   emergencyCostRoutes,
   emergencyRerouteRoutes,
 } from "@/features/incident-response";
-import { priceListRoutes } from "@/features/price-list/routes";
 import TestPage from "../Test";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
@@ -203,12 +203,12 @@ const bookingHistoryPage = (
 );
 
 export const router = createBrowserRouter([
-  ...priceListRoutes,
   ...transportAuditRoutes,
   ...emergencyCostRoutes,
   ...emergencyRerouteRoutes,
   ...financialReportRoutes,
   ...claimRoutes,
+  ...priceListRoutes,
   ...managementReportRoutes,
   {
     element: (

@@ -137,6 +137,7 @@ const adminHeaderRoutes = [
   { path: `${ROLE_ROUTES.invoices}/:invoiceId/edit`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "EDIT INVOICE" },
   { path: `${ROLE_ROUTES.invoices}/:invoiceId`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "INVOICE DETAILS" },
   { path: ROLE_ROUTES.invoices, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "" },
+  { path: `${ROLE_ROUTES.priceLists}/:priceListId`, label: "PRICE LISTS", href: ROLE_ROUTES.priceLists, title: "PRICE LIST DETAILS" },
   { path: ROLE_ROUTES.priceLists, label: "PRICE LISTS", href: ROLE_ROUTES.priceLists, title: "" },
   { path: `${ROLE_ROUTES.incidents}/:incidentReportId`, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "INCIDENT DETAILS" },
   { path: ROLE_ROUTES.incidents, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "" },
