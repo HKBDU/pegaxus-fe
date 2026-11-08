@@ -1,5 +1,4 @@
 import { Link, useLocation } from "react-router-dom";
-import { Badge } from "@/shared/components/ui/badge";
 import { EmptyState, TablePagination } from "@/shared/components/common";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import {
@@ -14,6 +13,7 @@ import { transportAudit } from "@/app/route-config";
 import type { PaginationMeta } from "@/shared/types";
 import type { TransportArchiveItem, TransportArchiveQuery } from "../types";
 import { formatAuditDateTime } from "../utils";
+import { TransportStatusBadge } from "./TransportStatusBadge";
 export function TransportArchiveTable({
   items,
   meta,
@@ -65,7 +65,7 @@ export function TransportArchiveTable({
                   <TableCell>{item.horseCount ?? 0}</TableCell>
                   <TableCell>{formatAuditDateTime(item.completedAt)}</TableCell>
                   <TableCell>
-                    <Badge>{item.status}</Badge>
+                    <TransportStatusBadge status={item.status} />
                   </TableCell>
                   <TableCell>
                     <Link

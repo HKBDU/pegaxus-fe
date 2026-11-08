@@ -1,5 +1,5 @@
-import { Badge } from "@/shared/components/ui/badge"
+import { StatusBadge } from "@/shared/components/ui/status-badge"
 
 export function PriceListStatusBadge({ isActive }: { isActive: boolean }) {
-  return <Badge variant={isActive ? "default" : "secondary"}>{isActive ? "Active" : "Inactive"}</Badge>
+  return <StatusBadge tone={isActive ? "emerald" : "slate"}>{isActive ? "Active" : "Inactive"}</StatusBadge>
 }

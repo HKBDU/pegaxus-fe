@@ -20,7 +20,8 @@ async function call<T>(request: Promise<unknown>): Promise<T> {
 export function getPriceLists(params: PriceListQueryParams, signal?: AbortSignal) {
   const { pageIndex = 1, pageSize = 10, sortBy = "createdAt:desc", search, isActive } = params
   return call<PriceListPage>(apiClient.get("/price-lists", {
-    params: { pageIndex, pageSize, sortBy, ...(search?.trim() ? { search: search.trim() } : {}), ...(typeof isActive === "boolean" ? { isActive } : {}) },
+    // The BE accepts a page size of 1 to 100 and answers 400 otherwise.
+    params: { pageIndex, pageSize: Math.min(Math.max(pageSize, 1), 100), sortBy, ...(search?.trim() ? { search: search.trim() } : {}), ...(typeof isActive === "boolean" ? { isActive } : {}) },
     signal,
   }))
 }
