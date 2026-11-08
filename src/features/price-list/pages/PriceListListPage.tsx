@@ -1,17 +1,19 @@
 import { useState } from "react"
-import { toast } from "sonner"
 
+import { ActivatePriceListDialog } from "@/features/price-list/components/ActivatePriceListDialog"
+import { ClonePriceListMenuItem } from "@/features/price-list/components/ClonePriceListMenuItem"
+import { PriceListFormDialog } from "@/features/price-list/components/PriceListFormDialog"
 import { PriceListTable } from "@/features/price-list/components/PriceListTable"
 import { usePriceListListPage } from "@/features/price-list/hooks/usePriceListListPage"
+import type { PriceListSummary } from "@/features/price-list/list.schemas"
 import { ErrorState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
-import { Button } from "@/shared/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
 
 /** UC-78 step 1: the price lists. Filters, paging and navigation live in `usePriceListListPage`. */
 export default function PriceListListPage() {
   const page = usePriceListListPage()
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [activateTarget, setActivateTarget] = useState<PriceListSummary>()
 
   return (
     <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
@@ -39,24 +41,37 @@ export default function PriceListListPage() {
             onPageSizeChange={page.setPageSize}
             onCreate={() => setIsCreateOpen(true)}
             onView={page.view}
-            // Placeholders until the real Clone and Activate dialogs are merged in.
-            onClone={(item) => toast.info(`Clone integration pending for “${item.name}”`)}
-            onActivate={(item) => toast.info(`Activate integration pending for “${item.name}”`)}
+            renderClone={(item) => (
+              <ClonePriceListMenuItem
+                priceList={item}
+                className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem]"
+                onCloned={page.view}
+              />
+            )}
+            onActivate={setActivateTarget}
           />
         )}
       </div>
 
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create price list</DialogTitle>
-            <DialogDescription>Price list form integration is pending. The create dialog is ready for PriceListFormDialog.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PriceListFormDialog
+        mode="create"
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onSaved={(created) => {
+          setIsCreateOpen(false)
+          page.view(created)
+        }}
+      />
+
+      {activateTarget ? (
+        <ActivatePriceListDialog
+          key={activateTarget.priceListId}
+          priceList={activateTarget}
+          open
+          onOpenChange={(open) => { if (!open) setActivateTarget(undefined) }}
+          onActivated={() => setActivateTarget(undefined)}
+        />
+      ) : null}
     </div>
   )
 }

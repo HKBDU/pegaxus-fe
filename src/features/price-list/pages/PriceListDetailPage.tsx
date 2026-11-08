@@ -1,8 +1,8 @@
-import {
-  ActivatePriceListDialog,
-  ClonePriceListButton,
-  PriceListFormDialog,
-} from "@/features/price-list/components/ExternalPlaceholders"
+import { Pencil, Play } from "lucide-react"
+
+import { ActivatePriceListDialog } from "@/features/price-list/components/ActivatePriceListDialog"
+import { ClonePriceListButton } from "@/features/price-list/components/ClonePriceListButton"
+import { PriceListFormDialog } from "@/features/price-list/components/PriceListFormDialog"
 import { DeletePriceListItemDialog } from "@/features/price-list/components/DeletePriceListItemDialog"
 import { PriceListHeaderCard } from "@/features/price-list/components/PriceListHeaderCard"
 import { PriceListItemFormDialog } from "@/features/price-list/components/PriceListItemFormDialog"
@@ -26,6 +26,7 @@ export default function PriceListDetailPage() {
   const clone = priceList ? (
     <ClonePriceListButton
       priceList={{ priceListId: priceList.priceListId, name: priceList.name }}
+      className={outlineButtonClass}
       onCloned={(copy) => page.goToPriceList(copy.priceListId)}
     />
   ) : null
@@ -48,11 +49,17 @@ export default function PriceListDetailPage() {
               actions={
                 <>
                   {page.canEdit ? (
-                    <Button type="button" variant="outline" className={outlineButtonClass} onClick={() => page.setEditHeaderOpen(true)}>Edit</Button>
+                    <Button type="button" variant="outline" className={outlineButtonClass} onClick={() => page.setEditHeaderOpen(true)}>
+                      <Pencil className="size-3.5" />
+                      Edit
+                    </Button>
                   ) : null}
                   {clone}
                   {page.canEdit ? (
-                    <Button type="button" className={primaryButtonClass} onClick={() => page.setActivateOpen(true)}>Activate</Button>
+                    <Button type="button" className={primaryButtonClass} onClick={() => page.setActivateOpen(true)}>
+                      <Play className="size-3.5" />
+                      Activate
+                    </Button>
                   ) : null}
                 </>
               }

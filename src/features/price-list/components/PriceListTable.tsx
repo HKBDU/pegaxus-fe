@@ -1,6 +1,6 @@
-import { useMemo } from "react"
+import { useMemo, type ReactNode } from "react"
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
-import { Copy, Eye, MoreVertical, Play } from "lucide-react"
+import { Eye, MoreVertical, Play } from "lucide-react"
 
 import { PriceListFilters } from "@/features/price-list/components/PriceListFilters"
 import { PriceListStatusBadge } from "@/features/price-list/components/PriceListStatusBadge"
@@ -29,19 +29,20 @@ interface PriceListTableProps {
   onPageSizeChange: (size: number) => void
   onCreate?: () => void
   onView: (item: PriceListSummary) => void
-  onClone?: (item: PriceListSummary) => void
+  /** The Clone item of a row's menu. It owns its request, so the table only gives it a place. */
+  renderClone?: (item: PriceListSummary) => ReactNode
   onActivate?: (item: PriceListSummary) => void
 }
 
 interface PriceListRowActionsProps {
   item: PriceListSummary
   onView: (item: PriceListSummary) => void
-  onClone?: (item: PriceListSummary) => void
+  renderClone?: (item: PriceListSummary) => ReactNode
   onActivate?: (item: PriceListSummary) => void
 }
 
 /** The three-dot menu of a row, same look as the transport request row menu. */
-function PriceListRowActions({ item, onView, onClone, onActivate }: PriceListRowActionsProps) {
+function PriceListRowActions({ item, onView, renderClone, onActivate }: PriceListRowActionsProps) {
   const itemClass = "gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem]"
   return (
     <DropdownMenu>
@@ -55,12 +56,7 @@ function PriceListRowActions({ item, onView, onClone, onActivate }: PriceListRow
           <Eye className="size-3.5 text-slate-600" />
           View details
         </DropdownMenuItem>
-        {onClone ? (
-          <DropdownMenuItem className={itemClass} onSelect={() => onClone(item)}>
-            <Copy className="size-3.5 text-amber-600" />
-            Clone
-          </DropdownMenuItem>
-        ) : null}
+        {renderClone?.(item)}
         {!item.isActive && onActivate ? (
           // An empty list cannot be activated, so say what is missing instead of only greying the item out.
           <DropdownMenuItem className={itemClass} disabled={item.itemCount === 0} onSelect={() => onActivate(item)}>
@@ -92,7 +88,7 @@ export function PriceListTable({
   onPageSizeChange,
   onCreate,
   onView,
-  onClone,
+  renderClone,
   onActivate,
 }: PriceListTableProps) {
   const columns = useMemo<ColumnDef<PriceListSummary>[]>(
@@ -152,12 +148,12 @@ export function PriceListTable({
         cell: ({ row }) => (
           // The row opens the detail page on click, so the menu must not bubble.
           <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
-            <PriceListRowActions item={row.original} onView={onView} onClone={onClone} onActivate={onActivate} />
+            <PriceListRowActions item={row.original} onView={onView} renderClone={renderClone} onActivate={onActivate} />
           </div>
         ),
       },
     ],
-    [onView, onClone, onActivate],
+    [onView, renderClone, onActivate],
   )
 
   const table = useReactTable({

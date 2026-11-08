@@ -295,7 +295,7 @@ export function InvoiceFormDialog({
   );
   // IV1 `isLocked` decides whether the server builds the lines; until it answers (or if it is for another type), the type decides.
   const suggestion =
-    suggestionQuery.data?.type === selectedType
+    !suggestionQuery.isError && suggestionQuery.data?.type === selectedType
       ? suggestionQuery.data
       : undefined;
   const locked = isEdit
@@ -307,8 +307,8 @@ export function InvoiceFormDialog({
   // QUOTATION, DEPOSIT and FINAL: the server builds the lines (IV1 while creating, the saved draft while editing), deposit deductions included.
   const generatedItems: InvoiceItem[] = useMemo(
     () =>
-      isEdit && invoice ? invoice.items : (suggestionQuery.data?.items ?? []),
-    [isEdit, invoice, suggestionQuery.data],
+      isEdit && invoice ? invoice.items : (suggestion?.items ?? []),
+    [isEdit, invoice, suggestion],
   );
   const depositDeductionItems = useMemo(
     () => generatedItems.filter((item) => item.isDepositDeduction),
@@ -320,7 +320,7 @@ export function InvoiceFormDialog({
   );
   const transportStatus = isEdit
     ? invoice?.transport?.status
-    : suggestionQuery.data?.transportStatus;
+    : suggestion?.transportStatus;
 
   const parsedLines = locked
     ? generatedLines.map((item) => ({
@@ -339,9 +339,13 @@ export function InvoiceFormDialog({
   const taxRatePercent =
     selectedType === INVOICE_TYPE.CREDIT_NOTE
       ? 0
-      : (suggestionQuery.data?.pricing?.taxRatePercent ??
+      : (suggestion?.pricing?.taxRatePercent ??
         invoice?.summary.taxRatePercent ??
         INVOICE_TAX_RATE_PERCENT);
+  const taxRateEstimated =
+    selectedType !== INVOICE_TYPE.CREDIT_NOTE &&
+    suggestion?.pricing?.taxRatePercent == null &&
+    invoice?.summary.taxRatePercent == null;
   const estimate = estimateSummary(
     parsedLines,
     locked ? depositDeductionItems : [],
@@ -452,6 +456,8 @@ export function InvoiceFormDialog({
     );
 
   function submitWith(next: Intent) {
+    // Enter submits the form too; disabled buttons alone do not enforce the IV1 precheck.
+    if (isSaving || !canSave) return;
     // Nothing changed on a saved draft: go straight to the issue confirmation.
     if (next === "issue" && isEdit && invoice && !isDirty)
       return setIssueTarget(invoice);
@@ -472,6 +478,10 @@ export function InvoiceFormDialog({
   const transportCancelled = transportStatus === "CANCELLED";
   const canSave =
     selectedType !== null &&
+    (isEdit ||
+      (suggestionQuery.isSuccess &&
+        Boolean(suggestion) &&
+        !suggestionQuery.isPlaceholderData)) &&
     !precheckError &&
     !depositBlocked &&
     !transportCancelled &&
@@ -795,11 +805,14 @@ export function InvoiceFormDialog({
                     </div>
                   </section>
 
-                  <BillingSummaryCard
-                    lines={summaryLines}
-                    summary={estimate}
-                    currency={DEFAULT_INVOICE_CURRENCY}
-                  />
+                  {isEdit || (suggestionQuery.isSuccess && !precheckError) ? (
+                    <BillingSummaryCard
+                      lines={summaryLines}
+                      summary={estimate}
+                      currency={DEFAULT_INVOICE_CURRENCY}
+                      taxRateEstimated={taxRateEstimated}
+                    />
+                  ) : null}
                 </div>
 
                 {locked ? (

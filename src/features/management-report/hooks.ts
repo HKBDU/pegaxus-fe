@@ -53,6 +53,7 @@ function useManagementReport<F, T>(
     cohort: (filters: F) => string;
     read: (filters: F, scope: string, signal: AbortSignal) => Promise<T>;
   },
+  enabled = true,
 ) {
   const { allowed, scope } = useReportAccess();
   const client = useQueryClient();
@@ -62,7 +63,7 @@ function useManagementReport<F, T>(
       if (!filters) throw new Error("Valid filters are required.");
       return definition.read(filters, scope, signal);
     },
-    enabled: allowed && filters !== null,
+    enabled: allowed && filters !== null && enabled,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -79,7 +80,7 @@ function useManagementReport<F, T>(
     },
   });
   const sameCohort =
-    allowed && filters && !query.data
+    allowed && enabled && filters && !query.data
       ? client
           .getQueryCache()
           .findAll({
@@ -106,33 +107,54 @@ function useManagementReport<F, T>(
     scope,
   };
 }
-export function useOnTimeDeliveryReport(filters: ReportFilters | null) {
-  return useManagementReport(filters, {
-    type: "on-time-delivery",
-    filterSchema: reportFiltersSchema,
-    responseSchema: onTimeReportSchema,
-    cohort: cohortKey,
-    read: getOnTimeReport,
-  });
+export function useOnTimeDeliveryReport(
+  filters: ReportFilters | null,
+  enabled = true,
+) {
+  return useManagementReport(
+    filters,
+    {
+      type: "on-time-delivery",
+      filterSchema: reportFiltersSchema,
+      responseSchema: onTimeReportSchema,
+      cohort: cohortKey,
+      read: getOnTimeReport,
+    },
+    enabled,
+  );
 }
-export function useIncidentClaimReport(filters: IncidentFilters | null) {
-  return useManagementReport(filters, {
-    type: "incident-claim-frequency",
-    filterSchema: incidentFiltersSchema,
-    responseSchema: incidentClaimReportSchema,
-    cohort: incidentCohortKey,
-    read: getIncidentClaimReport,
-  });
+export function useIncidentClaimReport(
+  filters: IncidentFilters | null,
+  enabled = true,
+) {
+  return useManagementReport(
+    filters,
+    {
+      type: "incident-claim-frequency",
+      filterSchema: incidentFiltersSchema,
+      responseSchema: incidentClaimReportSchema,
+      cohort: incidentCohortKey,
+      read: getIncidentClaimReport,
+    },
+    enabled,
+  );
 }
 
-export function useTransitTimeReport(filters: TransitFilters | null) {
-  return useManagementReport(filters, {
-    type: "transit-time",
-    filterSchema: transitFiltersSchema,
-    responseSchema: transitTimeReportSchema,
-    cohort: transitCohortKey,
-    read: getTransitTimeReport,
-  });
+export function useTransitTimeReport(
+  filters: TransitFilters | null,
+  enabled = true,
+) {
+  return useManagementReport(
+    filters,
+    {
+      type: "transit-time",
+      filterSchema: transitFiltersSchema,
+      responseSchema: transitTimeReportSchema,
+      cohort: transitCohortKey,
+      read: getTransitTimeReport,
+    },
+    enabled,
+  );
 }
 
 function useReportFileExport<F>(
