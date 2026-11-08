@@ -49,8 +49,6 @@ Mỗi lệnh được ghi rõ 3 điều:
 | ----------------------- | ----------------------------------------- | ------------ | ---------------------------- | ---------------------------------------------------------------- |
 | `pnpm test:e2e:codegen` | **Mở Chrome** + cửa sổ Inspector đang ghi | **Gen code** | **API thật** (không có mock) | Bạn bấm trên web, code test hiện ra bên cạnh theo thời gian thực |
 
-> Chi tiết hai cách gen code (codegen, debug + Record) ở mục 5.
->
 > **Codegen cần `pnpm dev` đang chạy ở cổng 5173** (nó mở `http://localhost:5173`). Vì chạy trên dev server nên các thao tác gọi Backend thật theo `.env`: đừng bấm Tạo/Xóa trên tài khoản thật nếu không muốn có dữ liệu mới.
 
 ### 2.4. Chạy một phần (thêm vào sau bất kỳ lệnh nào ở 2.1)
@@ -64,11 +62,9 @@ Mỗi lệnh được ghi rõ 3 điều:
 | `pnpm test:e2e:real:demo -g "REAL-BOOKING-01"` | Chỉ ca tạo booking với API thật, mở Chrome chậm      |
 | `pnpm typecheck:e2e`                           | Kiểm tra kiểu cho code test (không chạy trình duyệt) |
 
-> Với PowerShell, chuỗi có khoảng trắng hoặc dấu `|` phải bọc trong dấu nháy, ví dụ `-g "LOGIN-07"`. Mã không có khoảng trắng như trên thì dùng được cả hai.
-
 ---
 
-## 3. Cách chạy lệnh trên terminal (đọc kỹ nếu chưa quen)
+## 3. Cách chạy lệnh trên terminal
 
 ### 3.1. Cần mấy cửa sổ terminal, và quy tắc về cổng 5173
 
@@ -79,36 +75,15 @@ Trong cùng thư mục dự án:
 | **Terminal 2** | Gõ mọi lệnh Playwright (`pnpm test:e2e:demo ...`)                       | Cả buổi demo                            |
 | **Terminal 1** | Chạy `pnpm dev` (web ở `http://localhost:5173`). **Để yên, không tắt.** | **Chỉ từ phần của người 5** (xem mục 4) |
 
-**Quy tắc về cổng 5173** (quan trọng nhất của mục này):
+**Quy tắc về cổng 5173**
 
-- **Bộ mock (người 1 đến 4): cổng 5173 phải trống, không chạy `pnpm dev`.** Playwright tự dựng bản **build** của web ở cổng 5173 (nhanh) và tự tắt khi lệnh xong.
-- Nếu `pnpm dev` đang chạy ở 5173, Playwright **dùng luôn** dev server đó. Dev server chậm vì phải biên dịch khoảng 1000 module cho mỗi trang mới. Đã thử trên máy này với 4 worker: 8 trong 16 test Login quá thời gian ở bước `page.goto`. Cùng 16 test trên bản build thì chạy xong trong 32 đến 60 giây tùy số worker (xem phần Workers).
-- **Gen code trên API thật (`test:e2e:codegen`) và bộ API thật (người 5) cần web chạy bằng `pnpm dev`**, vì web phải gọi Backend thật theo `.env`. Với bộ API thật, nếu cổng trống thì Playwright tự bật dev server, nhưng trang đầu tiên rất chậm; bật `pnpm dev` và mở thử một lần trước sẽ ổn hơn.
+- **Bộ mock (1 đến 4): cổng 5173 phải trống, không chạy `pnpm dev`.** Playwright tự dựng bản **build** của web ở cổng 5173 (nhanh) và tự tắt khi lệnh xong.
+- **Gen code trên API thật (`test:e2e:codegen`) và bộ API thật (5) cần web chạy bằng `pnpm dev`**, vì phải gọi BE thật theo `.env`. Với bộ API thật, nếu cổng trống thì Playwright tự bật dev server, nhưng trang đầu tiên rất chậm; bật `pnpm dev` và mở thử một lần trước sẽ ổn hơn.
 
-### 3.2. Từng bước
+### 3.2. Chuẩn bị trước demo
 
-1. **Mở terminal.** Trong VS Code bấm `Ctrl + \`` (phím cạnh số 1), hoặc mở PowerShell. Nếu terminal chưa ở thư mục dự án thì gõ: `cd F:\SWP\FE\NEW_PROJECT`.
-2. **Kiểm tra cổng 5173 trống** (để chạy bộ mock): gõ `Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue`. Không in ra gì là trống. Nếu in ra một dòng thì có chương trình đang giữ cổng (thường là `pnpm dev`): bấm `Ctrl + C` ở cửa sổ đang chạy nó.
-3. **Terminal 2:** gõ `$env:E2E_SKIP_BUILD=1` một lần (chỉ sau khi đã build một lần, xem mục 3.4).
-4. **Terminal 2:** copy một lệnh từ bảng ở mục 4, dán vào, nhấn Enter. Ví dụ: `pnpm test:e2e:demo -g "LOGIN-07"`.
-5. **Chờ.** Cửa sổ Chrome tự mở và tự thao tác (với lệnh `demo`). Terminal 2 **bị chiếm** cho tới khi lệnh xong, đó là bình thường.
-6. **Xong:** terminal in `1 passed` (đạt) hoặc `failed` (hỏng), rồi trả lại dấu nhắc lệnh để bạn gõ lệnh kế tiếp.
-
-### 3.3. Dừng và đóng đúng cách
-
-| Tình huống                             | Cách làm                                                                              |
-| -------------------------------------- | ------------------------------------------------------------------------------------- |
-| Muốn dừng lệnh đang chạy               | Bấm `Ctrl + C` trong **Terminal 2**                                                   |
-| Lệnh có Inspector (`debug`, `codegen`) | **Đóng cửa sổ Chrome** hoặc bấm Resume. Đừng để mở quá lâu, vì lệnh đang chờ          |
-| Muốn tắt web chạy bằng `pnpm dev`      | `Ctrl + C` trong **Terminal 1** (hết phần của người 5, hoặc khi cần chạy lại bộ mock) |
-
-**Không** chạy hai lệnh Playwright cùng lúc ở hai terminal: chúng dùng chung thư mục kết quả nên có thể kẹt nhau. Đóng lệnh trước rồi mới chạy lệnh sau.
-
-### 3.4. Chuẩn bị trước buổi demo (làm một lần)
-
-1. `pnpm install` rồi `pnpm exec playwright install chromium` (tải trình duyệt của Playwright).
-2. Tắt `pnpm dev` nếu đang chạy (cổng 5173 phải trống), rồi build và chạy thử một test: `pnpm test:e2e -g "LOGIN-01"`. Lệnh này build **cả ứng dụng** (Đăng nhập, Thêm ngựa, Tạo booking đều nằm trong bản build), bản build nằm ở `e2e/.output/dist`. `-g "LOGIN-01"` chỉ chọn một test nhanh để chạy thử, không giới hạn phần được build. Lần này mất thêm thời gian build.
-3. Lúc demo, ở Terminal 2 gõ một lần:
+1. Tắt `pnpm dev` nếu đang chạy (port 5173 phải trống), rồi build và chạy thử một test: `pnpm test:e2e -g "LOGIN-01"`. Lệnh này build **cả ứng dụng** (Đăng nhập, Thêm ngựa, Tạo booking đều nằm trong bản build), bản build nằm ở `e2e/.output/dist`. `-g "LOGIN-01"` chỉ chọn một test nhanh để chạy thử, không giới hạn phần được build. Lần này mất thêm thời gian build.
+2. Lúc demo, ở Terminal 2 gõ một lần:
 
 ```
 $env:E2E_SKIP_BUILD=1
@@ -119,12 +94,6 @@ $env:E2E_SKIP_BUILD=1
 - Chỉ có tác dụng trong cửa sổ terminal đã gõ nó. Mở terminal mới thì gõ lại. Bỏ biến: `Remove-Item Env:E2E_SKIP_BUILD`. Trong Git Bash: `export E2E_SKIP_BUILD=1`; trong cmd: `set E2E_SKIP_BUILD=1`.
 - Chỉ đặt **sau** khi đã build ở bước 2. Chưa có bản build thì không có gì để phục vụ; bản build cũ thì test chạy trên code cũ.
 - Nếu sửa code web (`src`) sau khi build, bỏ biến (hoặc mở terminal mới) và chạy lại bước 2 để build bản mới.
-
-### 3.5. Chỉ cần nếu demo phần **API thật** (người 5)
-
-1. Có tài khoản CUSTOMER dành riêng cho test và điền `PLAYWRIGHT_BASE_URL`, `E2E_USER_EMAIL`, `E2E_USER_PASSWORD` trong `.env` hoặc `.env.e2e` (file bị git bỏ qua; không đưa giá trị này lên màn hình khi demo).
-2. Backend free host có thể "ngủ": mở thử web một lần trước buổi demo để đánh thức nó.
-3. Tắt các cửa sổ Chrome khác và chiếu màn hình **đúng một** cửa sổ để người xem không bị rối.
 
 ---
 
@@ -183,13 +152,13 @@ Mỗi người giữ **một chức năng** và chạy **lệnh của mình**. C
 - Con số CPU (bao nhiêu %) và RAM (bao nhiêu MB) **chưa đo**. Hãy mở **Task Manager** (Ctrl + Shift + Esc, tab Processes hoặc Details, tìm `chrome` và `node`) lúc chạy và đọc số thật cho người xem.
 - Nhiều worker hơn chưa chắc nhanh hơn. Trên máy này (Intel Core i7-4710HQ: 4 nhân, 8 luồng, RAM 16 GB) đã đo: từ 1 lên 2 worker nhanh gần gấp đôi (60 giây xuống 32 giây), nhưng 3 và 4 worker không nhanh hơn 2 worker (35 giây và 33 giây). Nhiều khả năng CPU đã hết chỗ (đây là suy luận, chưa đo CPU: xác nhận bằng Task Manager). File cấu hình của dự án cũng ghi lại việc máy này từng bị đứng khi chạy nhiều Chromium cùng lúc, nên mặc định chỉ để 1 worker.
 
-**Demo (chạy ngầm, so sánh thời gian):** chạy lần lượt 4 lệnh, ghi lại dòng cuối `(xx s)` của mỗi lần. Mỗi lệnh tự chạy bước đăng nhập chuẩn bị (`mock-setup`) rồi mới tới 16 ca Login.
+**Demo (chạy ngầm, so sánh thời gian):** chạy lần lượt 4 lệnh, ghi lại dòng cuối `(xx s)` của mỗi lần. Cờ `--no-deps` bỏ qua bước đăng nhập chuẩn bị (`mock-setup`) nên thời gian chỉ tính 16 ca Login. Cần đã có phiên đăng nhập lưu sẵn: bước 2 ở mục 3.4 (`pnpm test:e2e -g "LOGIN-01"`) đã tạo nó.
 
 ```
-pnpm test:e2e --reporter=list -g "LOGIN-" --workers=1
-pnpm test:e2e --reporter=list -g "LOGIN-" --workers=2
-pnpm test:e2e --reporter=list -g "LOGIN-" --workers=3
-pnpm test:e2e --reporter=list -g "LOGIN-" --workers=4
+pnpm test:e2e --no-deps --reporter=list -g "LOGIN-" --workers=1
+pnpm test:e2e --no-deps --reporter=list -g "LOGIN-" --workers=2
+pnpm test:e2e --no-deps --reporter=list -g "LOGIN-" --workers=3
+pnpm test:e2e --no-deps --reporter=list -g "LOGIN-" --workers=4
 ```
 
 Cả 4 lệnh chạy 16 ca Login và chỉ khác số worker.
@@ -201,12 +170,10 @@ Cả 4 lệnh chạy 16 ca Login và chỉ khác số worker.
 | 3         | 35 giây               | (điền khi tập)                |
 | 4         | 33 giây               | (điền khi tập)                |
 
-Thời gian trên đo bằng lệnh cũ có `--no-deps` (bỏ qua bước đăng nhập chuẩn bị). Chạy theo lệnh mới thì mỗi lần cộng thêm vài giây của bước này, nên tập lại và cập nhật bảng.
-
 **Demo nhìn thấy (tùy chọn):** mở 3 cửa sổ Chrome cùng lúc, mỗi cửa sổ một test. Chạy chậm vì mỗi thao tác đợi 1400 ms.
 
 ```
-pnpm test:e2e:demo --workers=3 -g "LOGIN-0[1-3]"
+pnpm test:e2e:demo --no-deps --workers=3 -g "LOGIN-0[1-3]"
 ```
 
 Lưu ý khi chạy phần này:
