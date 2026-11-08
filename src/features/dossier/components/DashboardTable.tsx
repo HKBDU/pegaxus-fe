@@ -67,10 +67,11 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         header: "ROUTE",
         enableSorting: false,
         cell: ({ row }) => (
-          <div className="flex items-center gap-1.5 whitespace-nowrap text-slate-800">
-            <span className="rounded-[2px] bg-slate-900 px-1 py-0.5 text-[0.65rem] font-bold leading-none text-white">{row.original.originCountry}</span>
-            <ArrowRight className="size-3 text-amber-500" aria-hidden="true" />
-            <span className="rounded-[2px] bg-slate-900 px-1 py-0.5 text-[0.65rem] font-bold leading-none text-white">{row.original.destinationCountry}</span>
+          // Same three-column grid as the transport request table: both countries get equal room, the arrow sits in the middle.
+          <div className="grid min-w-36 grid-cols-[minmax(3.5rem,1fr)_1.25rem_minmax(3.5rem,1fr)] items-center text-slate-700">
+            <span className="truncate">{row.original.originCountry}</span>
+            <ArrowRight className="mx-auto size-3 shrink-0 text-amber-500" aria-hidden="true" />
+            <span className="truncate pl-1.5">{row.original.destinationCountry}</span>
           </div>
         ),
       },
