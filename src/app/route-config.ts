@@ -26,6 +26,7 @@ export const ROLE_ROUTES = {
   mapAssets: "/admin/map-assets",
   personnelAssignment: "/admin/personnel-assignment",
   invoices: "/admin/invoices",
+  priceLists: "/admin/price-lists",
   claims: "/admin/claims",
   transportArchive: "/admin/transport-archive",
   incidents: "/admin/incidents",
@@ -136,6 +137,8 @@ const adminHeaderRoutes = [
   { path: `${ROLE_ROUTES.invoices}/:invoiceId/edit`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "EDIT INVOICE" },
   { path: `${ROLE_ROUTES.invoices}/:invoiceId`, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "INVOICE DETAILS" },
   { path: ROLE_ROUTES.invoices, label: "INVOICES", href: ROLE_ROUTES.invoices, title: "" },
+  { path: `${ROLE_ROUTES.priceLists}/:priceListId`, label: "PRICE LISTS", href: ROLE_ROUTES.priceLists, title: "PRICE LIST DETAILS" },
+  { path: ROLE_ROUTES.priceLists, label: "PRICE LISTS", href: ROLE_ROUTES.priceLists, title: "" },
   { path: `${ROLE_ROUTES.incidents}/:incidentReportId`, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "INCIDENT DETAILS" },
   { path: ROLE_ROUTES.incidents, label: "INCIDENTS", href: ROLE_ROUTES.incidents, title: "" },
   { path: `${ROLE_ROUTES.claims}/:claimId/resolve`, label: "CLAIMS", href: ROLE_ROUTES.claims, title: "RESOLVE CLAIM" },
@@ -174,4 +177,5 @@ export const TRANSPORT_PLANS_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAG
 export const ONGOING_TRANSPORT_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
 export const INCIDENT_ADMIN_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER", "FLEET_ROUTE_COORDINATOR", "TRANSPORT_SPECIALIST"] }
 export const LOGISTICS_MANAGER_READ: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER"] }
+export const priceListDetail = (priceListId: string) => `${ROLE_ROUTES.priceLists}/${encodeURIComponent(priceListId)}`
 export const PROFILE_ROLES: AccessPolicy = { anyRole: ["CUSTOMER", "LOGISTICS_MANAGER", "TRANSPORT_SPECIALIST", "FLEET_ROUTE_COORDINATOR", "DRIVER", "ESCORT"] }

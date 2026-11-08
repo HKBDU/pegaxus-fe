@@ -215,9 +215,7 @@ export function ComplianceTable({
           cell: ({ row }) => (
             <div className="flex justify-center">
               {row.original.country ? (
-                <span className={cn("inline-flex min-w-6 justify-center rounded-[2px] px-1 py-0.5 text-[0.65rem] font-bold leading-none text-white", muted(row.original) ? "bg-slate-400" : "bg-slate-900")}>
-                  {row.original.country}
-                </span>
+                <span className={textTone(row.original, "text-slate-700")}>{row.original.country}</span>
               ) : (
                 <span className="text-slate-400">—</span>
               )}
