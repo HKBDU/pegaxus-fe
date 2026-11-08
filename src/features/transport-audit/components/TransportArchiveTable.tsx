@@ -110,7 +110,14 @@ export function TransportArchiveTable({
       {
         accessorKey: "customerName",
         header: "CUSTOMER",
-        cell: ({ row }) => <span className="text-slate-700">{row.original.customerName ?? "—"}</span>,
+        cell: ({ row }) => (
+          <span
+            className="block max-w-44 truncate text-slate-700"
+            title={row.original.customerName ?? undefined}
+          >
+            {row.original.customerName ?? "—"}
+          </span>
+        ),
       },
       {
         accessorKey: "horseCount",

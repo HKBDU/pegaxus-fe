@@ -186,7 +186,7 @@ export function RequirementTable({
         accessorKey: "requirementName",
         header: "REQUIREMENT",
         cell: ({ row }) => (
-          <span className="font-semibold text-slate-900">
+          <span className="block min-w-48 max-w-80 whitespace-normal font-semibold leading-snug text-slate-900">
             {row.original.requirementName}
           </span>
         ),

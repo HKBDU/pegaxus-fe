@@ -508,9 +508,21 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
     {
       accessorKey: "horseName",
       header: "HORSE NAME",
-      cell: ({ row }) => <span className="font-semibold text-slate-900">{row.original.horseName}</span>,
+      cell: ({ row }) => (
+        <span className="block max-w-40 truncate font-semibold text-slate-900" title={row.original.horseName}>
+          {row.original.horseName}
+        </span>
+      ),
     },
-    { accessorKey: "breed", header: "BREED" },
+    {
+      accessorKey: "breed",
+      header: "BREED",
+      cell: ({ row }) => (
+        <span className="block max-w-36 truncate text-slate-700" title={row.original.breed ?? undefined}>
+          {row.original.breed ?? "—"}
+        </span>
+      ),
+    },
     {
       accessorKey: "sex",
       header: "SEX",

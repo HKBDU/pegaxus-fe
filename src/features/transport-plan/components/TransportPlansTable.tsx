@@ -80,7 +80,10 @@ export function TransportPlansTable({
         accessorKey: "customerName",
         header: "Customer",
         cell: ({ row }) => (
-          <span className="block min-w-32 max-w-48 whitespace-normal">
+          <span
+            className="block max-w-40 truncate"
+            title={row.original.customerName}
+          >
             {row.original.customerName}
           </span>
         ),

@@ -24,10 +24,23 @@ export function HorseTable({ horses, onAction, toolbar, addAction }: HorseTableP
         header: "HORSE NAME",
         enableSorting: false,
         filterFn: (row, _columnId, value) => [row.original.horseName, row.original.microchipNumber].some((field) => field?.toLowerCase().includes(String(value).toLowerCase())),
-        cell: ({ row }) => <span className="font-semibold text-slate-900">{row.original.horseName}</span>,
+        cell: ({ row }) => (
+          <span className="font-semibold text-slate-900" title={row.original.horseName}>
+            {row.original.horseName}
+          </span>
+        ),
       },
       { accessorKey: "sex", header: "SEX", enableSorting: false, cell: ({ row }) => row.original.sex ? HORSE_SEX_LABELS[row.original.sex] : "—" },
-      { accessorKey: "breed", header: "BREED", enableSorting: false, cell: ({ row }) => row.original.breed ?? "—" },
+      {
+        accessorKey: "breed",
+        header: "BREED",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span title={row.original.breed ?? undefined}>
+            {row.original.breed ?? "—"}
+          </span>
+        ),
+      },
       {
         id: "actions",
         header: () => <span className="block w-full text-center">ACTIONS</span>,

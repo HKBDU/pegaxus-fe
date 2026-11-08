@@ -209,7 +209,10 @@ export function EmergencyCostResults({
                 <TableCell>
                   <CostStatusBadge status={item.status} />
                 </TableCell>
-                <TableCell className="max-w-40 whitespace-normal break-words">
+                <TableCell
+                  className="max-w-40 truncate"
+                  title={item.requestedBy?.fullName ?? undefined}
+                >
                   {item.requestedBy?.fullName ?? "—"}
                 </TableCell>
                 <TableCell>

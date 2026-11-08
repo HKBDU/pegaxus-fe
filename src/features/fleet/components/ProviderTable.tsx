@@ -129,8 +129,14 @@ export function ProviderTable({ providers, filters, meta, isLoading, onSearchCha
         header: "CONTACT",
         cell: ({ row }) => (
           <div className="min-w-44 leading-tight">
-            <span className="block text-slate-900">{row.original.contactName ?? row.original.email ?? "—"}</span>
-            {row.original.contactName && row.original.email ? <span className="mt-1 block text-slate-700">{row.original.email}</span> : null}
+            <span className="block max-w-44 truncate text-slate-900" title={row.original.contactName ?? row.original.email ?? undefined}>
+              {row.original.contactName ?? row.original.email ?? "—"}
+            </span>
+            {row.original.contactName && row.original.email ? (
+              <span className="mt-1 block max-w-44 truncate text-slate-700" title={row.original.email}>
+                {row.original.email}
+              </span>
+            ) : null}
             <span className="mt-1 block text-[0.68rem] text-slate-400">{row.original.phone ?? "—"}</span>
           </div>
         ),
