@@ -129,11 +129,7 @@ export function SelectTemplateStep({ bookingId, selectedId, onSelect }: SelectTe
         header: "MATCHED COUNTRIES",
         cell: ({ row }) =>
           row.original.matchedCountries?.length ? (
-            <div className="flex gap-1">
-              {row.original.matchedCountries.map((code) => (
-                <span key={code} className="inline-flex min-w-6 justify-center rounded-[2px] bg-slate-900 px-1 py-0.5 text-[0.65rem] font-bold leading-none text-white">{code}</span>
-              ))}
-            </div>
+            <span className="text-slate-700">{row.original.matchedCountries.join(", ")}</span>
           ) : (
             <span className="text-slate-400">—</span>
           ),

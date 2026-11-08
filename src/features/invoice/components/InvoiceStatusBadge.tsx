@@ -1,7 +1,6 @@
-import { cn } from "@/lib/utils"
-import { Badge } from "@/shared/components/ui/badge"
-import { INVOICE_STATUS_COLORS, INVOICE_STATUS_LABELS, type InvoiceStatus } from "@/features/invoice/constants"
+import { INVOICE_STATUS_LABELS, INVOICE_STATUS_TONES, type InvoiceStatus } from "@/features/invoice/constants"
+import { StatusBadge } from "@/shared/components/ui/status-badge"
 
 export function InvoiceStatusBadge({ status, className }: { status: InvoiceStatus; className?: string }) {
-  return <Badge className={cn(INVOICE_STATUS_COLORS[status], className)}>{INVOICE_STATUS_LABELS[status]}</Badge>
+  return <StatusBadge tone={INVOICE_STATUS_TONES[status]} className={className}>{INVOICE_STATUS_LABELS[status]}</StatusBadge>
 }
