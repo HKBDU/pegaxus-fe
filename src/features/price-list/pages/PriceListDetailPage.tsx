@@ -1,8 +1,6 @@
-import {
-  ActivatePriceListDialog,
-  ClonePriceListButton,
-  PriceListFormDialog,
-} from "@/features/price-list/components/ExternalPlaceholders"
+import { ActivatePriceListDialog } from "@/features/price-list/components/ActivatePriceListDialog"
+import { ClonePriceListButton } from "@/features/price-list/components/ClonePriceListButton"
+import { PriceListFormDialog } from "@/features/price-list/components/PriceListFormDialog"
 import { DeletePriceListItemDialog } from "@/features/price-list/components/DeletePriceListItemDialog"
 import { PriceListHeaderCard } from "@/features/price-list/components/PriceListHeaderCard"
 import { PriceListItemFormDialog } from "@/features/price-list/components/PriceListItemFormDialog"
