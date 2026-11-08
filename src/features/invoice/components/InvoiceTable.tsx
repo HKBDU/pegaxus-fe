@@ -30,9 +30,6 @@ import { InvoiceTypeBadge } from "@/features/invoice/components/InvoiceTypeBadge
 import { MoneyText } from "@/features/invoice/components/MoneyText";
 import { invoiceDate } from "@/features/invoice/utils";
 
-/** Booking Details shows invoices as pills, like the other badges of that page. */
-const PILL = "h-5 rounded-full px-2 py-0 text-[0.65rem] leading-none";
-
 export function InvoiceTable({
   items,
   meta,
@@ -148,7 +145,7 @@ export function InvoiceTable({
                     </>
                   ) : null}
                   <TableCell className="text-left">
-                    <InvoiceTypeBadge type={item.type} className={embedded ? PILL : undefined} />
+                    <InvoiceTypeBadge type={item.type} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-right tabular-nums">
                     <MoneyText
@@ -157,7 +154,7 @@ export function InvoiceTable({
                     />
                   </TableCell>
                   <TableCell className="text-left">
-                    <InvoiceStatusBadge status={item.status} className={embedded ? PILL : undefined} />
+                    <InvoiceStatusBadge status={item.status} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-left">
                     {invoiceDate(item.dueDate)}

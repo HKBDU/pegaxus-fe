@@ -1,6 +1,8 @@
 import { PRICE_LIST_ERROR_MESSAGES, PRICE_LIST_TIER_MISSING } from "@/features/price-list/constants"
 import type { ApiFieldError } from "@/features/price-list/types"
 
+export type { ApiFieldError }
+
 /** Error(errorCode) so the UI reacts to the contract codes, never to the HTTP status (A-03). */
 export class PriceListApiError extends Error {
   backendMessage?: string

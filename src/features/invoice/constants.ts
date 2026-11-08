@@ -1,3 +1,5 @@
+import type { StatusBadgeTone } from "@/shared/components/ui/status-badge-tones"
+
 // ---- from shared/constants.ts ----
 export const INVOICE_TYPE = {
   QUOTATION: 'QUOTATION',
@@ -104,28 +106,28 @@ export const RECEIPT_STATUS_LABELS = {
   REFUNDED: 'Refunded',
 } as const
 
-export const INVOICE_STATUS_COLORS = {
-  DRAFT: 'bg-slate-100 text-slate-700',
-  ISSUED: 'bg-blue-100 text-blue-700',
-  PAID: 'bg-green-100 text-green-700',
-  OVERDUE: 'bg-amber-100 text-amber-700',
-  CANCELLED: 'bg-red-100 text-red-700',
-} as const
+export const INVOICE_STATUS_TONES = {
+  DRAFT: "slate",
+  ISSUED: "blue",
+  PAID: "emerald",
+  OVERDUE: "amber",
+  CANCELLED: "red",
+} as const satisfies Record<string, StatusBadgeTone>
 
-export const INVOICE_TYPE_COLORS = {
-  QUOTATION: 'bg-slate-100 text-slate-700',
-  DEPOSIT: 'bg-indigo-100 text-indigo-700',
-  FINAL: 'bg-purple-100 text-purple-700',
-  SUPPLEMENTARY: 'bg-cyan-100 text-cyan-700',
-  CREDIT_NOTE: 'bg-orange-100 text-orange-700',
-} as const
+export const INVOICE_TYPE_TONES = {
+  QUOTATION: "slate",
+  DEPOSIT: "indigo",
+  FINAL: "purple",
+  SUPPLEMENTARY: "cyan",
+  CREDIT_NOTE: "orange",
+} as const satisfies Record<string, StatusBadgeTone>
 
-export const RECEIPT_STATUS_COLORS = {
-  PENDING: 'bg-amber-100 text-amber-700',
-  CONFIRMED: 'bg-green-100 text-green-700',
-  FAILED: 'bg-red-100 text-red-700',
-  REFUNDED: 'bg-slate-100 text-slate-700',
-} as const
+export const RECEIPT_STATUS_TONES = {
+  PENDING: "amber",
+  CONFIRMED: "emerald",
+  FAILED: "red",
+  REFUNDED: "slate",
+} as const satisfies Record<string, StatusBadgeTone>
 
 export const QUOTATION_BANNER_TEXT = 'Reference quotation - No payment required'
 

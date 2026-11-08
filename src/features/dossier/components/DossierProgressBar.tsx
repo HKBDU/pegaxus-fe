@@ -22,10 +22,10 @@ export function DossierProgressBar({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(value)}
-        className="h-1.5 flex-1 overflow-hidden bg-slate-200"
+        className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200"
       >
         <div
-          className={cn("h-full", barColor(value))}
+          className={cn("h-full rounded-full", barColor(value))}
           style={{ width: `${value}%` }}
         />
       </div>
