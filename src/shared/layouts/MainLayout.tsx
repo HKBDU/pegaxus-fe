@@ -6,6 +6,7 @@ import { canAccess } from "@/features/auth/access-control"
 import { useUser } from "@/features/auth/hooks/useAuth"
 import type { AuthAccount } from "@/features/auth/types"
 import { IncidentAlertHost } from "@/features/incident-management/components/alerts/IncidentAlertHost"
+import { ProfileCompletionDialog } from "@/features/profile"
 import { Footer } from "@/shared/components/Footer"
 import { Header } from "@/shared/components/Header"
 import { useIsDesktop } from "@/shared/hooks"
@@ -66,6 +67,7 @@ export function MainLayout() {
   return (
     <div className={`flex min-h-screen flex-col${customerChrome && !isLanding ? " customer-workspace" : ""}`}>
       <IncidentAlertHost />
+      <ProfileCompletionDialog />
       {!isLanding && <Header variant={customerChrome ? "customer" : "default"} navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />}
       <main className="min-h-[calc(100svh-3rem)] flex-none">
         <Outlet /> {/* Outlet - React Router render route childs*/}
