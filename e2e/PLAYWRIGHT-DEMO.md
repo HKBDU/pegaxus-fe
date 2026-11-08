@@ -152,12 +152,12 @@ Mỗi người giữ **một chức năng** và chạy **lệnh của mình**. C
 - Với ca sai: báo lỗi, vẫn ở trang login, form dùng lại được. Nhấn mạnh test cả **đường lỗi**, không chỉ đường vui.
 - Nếu còn thời gian: nói về 16 ca Login (form rỗng, email sai định dạng, tài khoản bị khóa, mất mạng).
 
-#### Người 2, phần thêm: Workers (khoảng 2 phút, có demo)
+### Workers (có demo)
 
-**Lý thuyết (nói trong 1 phút):**
+**Lý thuyết (nói nhanh):**
 
-- **Worker** là một tiến trình chạy test. Nhiều worker thì nhiều test chạy cùng lúc **trên một máy**.
-- Mỗi worker chiếm: **1 tiến trình Node** (chạy code test) và **1 trình duyệt Chromium** (gồm vài tiến trình con), rồi mỗi test mở **1 context** (như một cửa sổ ẩn danh) trong trình duyệt đó. Việc tải trang và chạy JavaScript của web ngốn **CPU**, còn mỗi trình duyệt giữ **RAM** riêng.
+- **Worker** là một tiến trình chạy test. Nhiều worker thì chạy nhiều test cùng lúc **trên một máy**.
+- Mỗi worker chiếm: **1 tiến trình Node** (chạy code test) và **1 trình duyệt Chromium**, rồi mỗi test mở **1 context** (như một cửa sổ ẩn danh) trong trình duyệt đó. Việc tải trang và chạy JavaScript của web ngốn **CPU**, còn mỗi trình duyệt giữ **RAM** riêng.
 - Vì vậy tài nguyên tăng gần như tỉ lệ với số worker:
 
 | Số worker | Cùng lúc có                 | Chiếm tài nguyên                 |
@@ -167,7 +167,7 @@ Mỗi người giữ **một chức năng** và chạy **lệnh của mình**. C
 | 3 hoặc 4  | 3 hoặc 4 bộ như trên        | khoảng gấp 3 hoặc 4              |
 
 - Con số cụ thể (bao nhiêu % CPU, bao nhiêu MB RAM) **chưa đo trên máy này**. Hãy mở **Task Manager** (Ctrl + Shift + Esc, tab Processes hoặc Details, tìm `chrome` và `node`) lúc chạy và đọc số thật cho người xem.
-- Nhiều worker hơn chưa chắc nhanh hơn: tới một mức nào đó CPU và RAM của máy hết chỗ, test chậm lại hoặc đứng. File cấu hình của dự án cũng ghi lại việc máy này từng bị đứng khi chạy nhiều Chromium cùng lúc, nên mặc định chỉ để 1 worker.
+- Nhiều worker hơn chưa chắc nhanh hơn: tới một mức nào đó CPU và RAM của máy hết chỗ, test chậm hoặc đứng. File cấu hình của dự án cũng ghi lại việc máy này từng bị đứng khi chạy nhiều Chromium cùng lúc, nên mặc định chỉ để 1 worker.
 
 **Demo (chạy ngầm, so sánh thời gian):** chạy lần lượt 4 lệnh, ghi lại dòng cuối `(xx s)` của mỗi lần. Cần đã chạy `pnpm test:e2e` một lần trước đó (lưu phiên đăng nhập) vì có `--no-deps`.
 
@@ -178,7 +178,7 @@ pnpm test:e2e --no-deps --reporter=list -g "LOGIN-" --workers=3
 pnpm test:e2e --no-deps --reporter=list -g "LOGIN-" --workers=4
 ```
 
-Cả 4 lệnh chạy 16 ca Login và chỉ khác số worker. Tập trước một lần và điền số thật vào bảng này để nói cho chắc:
+Cả 4 lệnh chạy 16 ca Login và chỉ khác số worker.
 
 | Số worker | Thời gian 16 ca Login | CPU / RAM đọc từ Task Manager |
 | --------- | --------------------- | ----------------------------- |
@@ -197,7 +197,6 @@ Lưu ý khi chạy phần này:
 
 - Chạy khi **cổng 5173 trống** (tắt `pnpm dev`) để Playwright dùng bản build nhanh. Nếu `pnpm dev` đang ở 5173, Playwright dùng luôn dev server đó và mỗi trang tải rất chậm, nhiều worker sẽ càng chậm.
 - Thử 2, rồi 3, rồi 4. Dừng ngay (`Ctrl + C`) nếu thấy máy đứng, và nói rõ đó chính là giới hạn phần cứng.
-- Nếu thiếu giờ, Người 2 bỏ ca `LOGIN-10` ở bảng trên và chỉ chạy `LOGIN-07`.
 
 ### Người 3 (10 đến 15 phút): Thêm ngựa
 
@@ -210,11 +209,9 @@ Lưu ý khi chạy phần này:
 - HORSE-17: tải ảnh qua 3 bước ký chữ ký (xin chữ ký, gửi ảnh, xác nhận); test kiểm `POST /horses` chỉ mang `avatar.publicId`.
 - Nhắc các luật được test: hộ chiếu 15 ký tự HOA hoặc số, microchip 15 chữ số, cân nặng 20 đến 1500 kg, ngày sinh không ở tương lai.
 
-#### Người 3, phần thêm: Sharding (khoảng 1 đến 2 phút, **chỉ nói lý thuyết, không chạy**)
+### Sharding (nói lý thuyết, k demo)
 
-Lý do không chạy: trên **một máy** sharding vẫn tốn CPU và RAM y như worker, nên không thấy nhanh hơn. Phải có **nhiều máy** mới thấy lợi, mà buổi demo chỉ có một máy.
-
-**Nói gì:**
+Lý do không chạy: trên **một máy** sharding vẫn tốn CPU và RAM y như worker, nên không thấy nhanh hơn. Phải có **nhiều máy** mới thấy lợi, mà demo dùng nhiều máy bất tiện.
 
 - **Shard** là chia bộ test thành các phần, mỗi **máy** chạy một phần. Worker chia việc **trong một máy**, còn shard chia việc **giữa nhiều máy**.
 - Mỗi máy lại có thể chạy nhiều worker, nên hai thứ cộng lại:
@@ -223,7 +220,7 @@ Lý do không chạy: trên **một máy** sharding vẫn tốn CPU và RAM y nh
 số trình duyệt chạy cùng lúc = số máy (shard) x số worker mỗi máy
 ```
 
-- Ví dụ trên CI (hệ thống tự chạy test khi đẩy code) dùng 3 máy, mỗi máy 4 worker, thì 12 trình duyệt chạy cùng lúc mà không máy nào bị quá tải:
+- Ví dụ dùng 3 máy, mỗi máy 4 worker, thì 12 trình duyệt chạy cùng lúc mà không máy nào bị quá tải:
 
 ```
 Máy 1: pnpm test:e2e --shard=1/3 --workers=4 --reporter=blob
@@ -239,8 +236,6 @@ pnpm exec playwright merge-reports --reporter html ./all-blob-reports
 ```
 
 - Chốt lại: **worker** để tận dụng hết một máy, **shard** để thêm máy khi một máy không còn đủ, và **merge-reports** để mọi kết quả về cùng một báo cáo.
-
-Chưa kiểm chứng: mình mới xác nhận bằng `--help` là các lệnh `--shard`, `--workers`, `--reporter` và `merge-reports` tồn tại, chưa chạy thật chuỗi shard rồi gộp báo cáo nên chưa biết tên file blob chính xác trên bản Playwright này. Phần này chỉ nói bằng lời nên không ảnh hưởng demo.
 
 ### Người 4 (15 đến 20 phút): Tạo booking và gỡ lỗi
 

@@ -56,7 +56,9 @@ export class HorseFormPage {
   /** Country popover: search, then click the matching country. */
   async chooseCountry(country: string) {
     await this.field("COUNTRY OF ORIGIN").getByRole("button").click()
-    await this.page.getByPlaceholder("Search country...").fill(country)
+    // The search box is found by its accessible name ("Search countries"), not by its placeholder text, so a wording
+    // change of the placeholder does not break the test again.
+    await this.page.getByRole("textbox", { name: "Search countries" }).fill(country)
     await this.page.getByRole("button", { name: new RegExp(`^${escapeRegExp(country)}\\b`) }).first().click()
   }
 
