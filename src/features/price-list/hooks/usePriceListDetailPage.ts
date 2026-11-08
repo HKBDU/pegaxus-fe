@@ -1,14 +1,11 @@
 import { useState } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
-import { priceListDetail } from "@/app/route-config"
+import { priceListDetail, ROLE_ROUTES } from "@/app/route-config"
 import { PRICE_LIST_NOT_FOUND } from "@/features/price-list/constants"
 import { getPriceListErrorCode, getPriceListErrorMessage } from "@/features/price-list/errors"
 import { usePriceList } from "@/features/price-list/hooks/usePriceListDetail"
 import type { PriceListDetail, PriceListItem } from "@/features/price-list/types"
 import { getMissingTiers, isPriceListId } from "@/features/price-list/utils"
-
-/** The list page is Khuyên's (`ROLE_ROUTES.priceLists`); until both branches are merged the path is spelled out. */
-const PRICE_LISTS_PATH = "/admin/price-lists"
 
 interface ItemFormTarget {
   open: boolean
@@ -36,8 +33,9 @@ export function usePriceListDetailPage() {
   const priceList: PriceListDetail | undefined = query.data
   const notFound = !isPriceListId(priceListId) || getPriceListErrorCode(query.error) === PRICE_LIST_NOT_FOUND
   const isActive = Boolean(priceList?.isActive)
-  // The list page passes its query string along so "back" returns to the same filters.
-  const listSearch = (location.state as { listSearch?: string } | null)?.listSearch ?? ""
+  // The list page passes its path and query string along so "back" returns to the same filters.
+  const from = (location.state as { from?: string } | null)?.from
+  const backHref = from?.startsWith(ROLE_ROUTES.priceLists) ? from : ROLE_ROUTES.priceLists
 
   return {
     priceListId: priceListId ?? "",
@@ -47,8 +45,8 @@ export function usePriceListDetailPage() {
     notFound,
     errorMessage: getPriceListErrorMessage(query.error, "Unable to load this price list."),
     retry: () => void query.refetch(),
-    backHref: `${PRICE_LISTS_PATH}${listSearch}`,
-    listPath: PRICE_LISTS_PATH,
+    backHref,
+    listPath: ROLE_ROUTES.priceLists,
 
     isActive,
     // Header edit, activate and "Add price line" exist only while the list is not active (it is locked afterwards).

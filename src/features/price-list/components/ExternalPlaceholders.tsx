@@ -3,11 +3,10 @@
  * They have the exact export names and the frozen props, so the detail page can be built and tried before the real ones exist.
  *
  *   PriceListFormDialog, ActivatePriceListDialog, ClonePriceListButton   -> Dương (D-01, D-02)
- *   DeletePriceListItemDialog                                             -> Khuyên (K-02)
+ *   (DeletePriceListItemDialog is Khuyên's K-02 and is already the real one.)
  *
  * When the branches are merged: delete this file and point the imports in `pages/PriceListDetailPage.tsx`
- * at `components/PriceListFormDialog`, `ActivatePriceListDialog`, `ClonePriceListButton`
- * and `DeletePriceListItemDialog`. Nothing else changes.
+ * at `components/PriceListFormDialog`, `ActivatePriceListDialog` and `ClonePriceListButton`. Nothing else changes.
  */
 import { toast } from "sonner"
 import { outlineButtonClass } from "@/features/price-list/components/PriceListPrimitives"
@@ -69,15 +68,4 @@ export function ClonePriceListButton(_props: {
       Clone
     </Button>
   )
-}
-
-/** Khuyên, K-02. */
-export function DeletePriceListItemDialog(props: {
-  priceListId: string
-  item: { priceListItemId: string; itemCode: string }
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onDeleted: () => void
-}) {
-  return <PlaceholderDialog title={`Delete ${props.item.itemCode}`} owner="Khuyên (K-02)" open={props.open} onOpenChange={(open) => { props.onOpenChange(open); if (!open) props.onDeleted() }} />
 }

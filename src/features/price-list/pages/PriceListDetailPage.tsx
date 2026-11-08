@@ -1,9 +1,9 @@
 import {
   ActivatePriceListDialog,
   ClonePriceListButton,
-  DeletePriceListItemDialog,
   PriceListFormDialog,
 } from "@/features/price-list/components/ExternalPlaceholders"
+import { DeletePriceListItemDialog } from "@/features/price-list/components/DeletePriceListItemDialog"
 import { PriceListHeaderCard } from "@/features/price-list/components/PriceListHeaderCard"
 import { PriceListItemFormDialog } from "@/features/price-list/components/PriceListItemFormDialog"
 import { PriceListItemsTable } from "@/features/price-list/components/PriceListItemsTable"

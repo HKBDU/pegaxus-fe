@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
-import { PriceListStatusBadge, panelClass } from "@/features/price-list/components/PriceListPrimitives"
+import { PriceListStatusBadge } from "@/features/price-list/components/PriceListStatusBadge"
+import { panelClass } from "@/features/price-list/components/PriceListPrimitives"
 import type { PriceListDetail } from "@/features/price-list/types"
 import { formatRate, getCreatedByLabel } from "@/features/price-list/utils"
 import { cn } from "@/lib/utils"
