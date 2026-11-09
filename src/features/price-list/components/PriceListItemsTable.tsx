@@ -72,106 +72,114 @@ export function PriceListItemsTable({ items, currency, isActive, onEdit, onDelet
   const columns = useMemo<ColumnDef<PriceListItem>[]>(
     () => {
       const all: ColumnDef<PriceListItem>[] = [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <div className="flex justify-center">
-            <Checkbox
-              checked={table.getIsAllPageRowsSelected() ? true : table.getIsSomePageRowsSelected() ? "indeterminate" : false}
-              onCheckedChange={(checked) => table.toggleAllPageRowsSelected(Boolean(checked))}
-              aria-label="Select all price lines"
-              className="size-3.5 rounded-[2px] border-slate-300 shadow-none data-[state=checked]:text-white data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-white"
-            />
-          </div>
-        ),
-        enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex justify-center">
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(checked) => row.toggleSelected(Boolean(checked))}
-              aria-label={`Select ${row.original.itemCode}`}
-              className="size-3.5 rounded-[2px] border-slate-300 shadow-none data-[state=checked]:text-white"
-            />
-          </div>
-        ),
-      },
-      {
-        accessorKey: "itemCode",
-        enableHiding: false,
-        header: "CODE",
-        // An active list is read-only, so its code is plain text; otherwise the code opens the edit form.
-        cell: ({ row }) =>
-          isActive ? (
-            <span className="font-mono font-semibold text-slate-900">{row.original.itemCode}</span>
-          ) : (
-            <button type="button" className={`${codeLinkClassName} font-mono`} onClick={() => onEdit(row.original)}>
-              {row.original.itemCode}
-            </button>
+        {
+          id: "select",
+          header: ({ table }) => (
+            <div className="flex justify-center">
+              <Checkbox
+                checked={table.getIsAllPageRowsSelected() ? true : table.getIsSomePageRowsSelected() ? "indeterminate" : false}
+                onCheckedChange={(checked) => table.toggleAllPageRowsSelected(Boolean(checked))}
+                aria-label="Select all price lines"
+                className="size-3.5 rounded-[2px] border-slate-300 shadow-none data-[state=checked]:text-white data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-white"
+              />
+            </div>
           ),
-      },
-      { accessorKey: "itemName", header: "NAME", cell: ({ row }) => <span className="block min-w-48 text-slate-900">{row.original.itemName}</span> },
-      {
-        accessorKey: "itemType",
-        header: "TYPE",
-        cell: ({ row }) => <span className="block whitespace-nowrap text-slate-700">{PRICE_LIST_ITEM_TYPE_LABELS[row.original.itemType]}</span>,
-      },
-      {
-        accessorKey: "unit",
-        header: "UNIT",
-        cell: ({ row }) => <span className="block whitespace-nowrap text-slate-700">{PRICE_LIST_UNIT_LABELS[row.original.unit]}</span>,
-      },
-      {
-        accessorKey: "unitPrice",
-        header: `UNIT PRICE (${currency})`,
-        meta: { align: "right" },
-        cell: ({ row }) => <span className="block font-semibold tabular-nums text-slate-900">{formatAmount(row.original.unitPrice)}</span>,
-      },
-      {
-        accessorKey: "vehicleTier",
-        header: () => <span className="block w-full text-center">TIER</span>,
-        // Lines for every tier have no tier: they sort after S, M and L.
-        sortingFn: (a, b) => (a.original.vehicleTier ?? "~").localeCompare(b.original.vehicleTier ?? "~"),
-        cell: ({ row }) => (
-          <div className="flex justify-center">
-            {row.original.vehicleTier ? (
-              <Badge className="inline-flex h-5 w-fit items-center rounded-full border-amber-300 bg-amber-50 px-2 py-0 text-[0.65rem] font-medium leading-none text-amber-800">
-                {row.original.vehicleTier}
-              </Badge>
+          enableSorting: false,
+          cell: ({ row }) => (
+            <div className="flex justify-center">
+              <Checkbox
+                checked={row.getIsSelected()}
+                onCheckedChange={(checked) => row.toggleSelected(Boolean(checked))}
+                aria-label={`Select ${row.original.itemCode}`}
+                className="size-3.5 rounded-[2px] border-slate-300 shadow-none data-[state=checked]:text-white"
+              />
+            </div>
+          ),
+        },
+        {
+          accessorKey: "itemCode",
+          enableHiding: false,
+          header: "CODE",
+          // An active list is read-only, so its code is plain text; otherwise the code opens the edit form.
+          cell: ({ row }) =>
+            isActive ? (
+              <span className="font-mono font-semibold text-slate-900">{row.original.itemCode}</span>
             ) : (
-              <span className="text-slate-500">{ALL_TIERS_LABEL}</span>
-            )}
-          </div>
-        ),
-      },
-      {
-        accessorKey: "sortOrder",
-        header: () => <span className="block w-full text-center">ORDER</span>,
-        cell: ({ row }) => <span className="block text-center tabular-nums text-slate-900">{row.original.sortOrder}</span>,
-      },
-      {
-        accessorKey: "updatedAt",
-        header: "UPDATED AT",
-        // `updatedAt` is the raw BE string; ISO strings with one offset sort correctly as text.
-        sortingFn: "alphanumeric",
-        cell: ({ row }) => (
-          <div className="leading-tight">
-            <span className="block text-slate-900">{formatUtcDate(row.original.updatedAt)}</span>
-            <span className="mt-1 block text-[0.68rem] text-slate-400">{formatUtcTime(row.original.updatedAt)}</span>
-          </div>
-        ),
-      },
-      {
-        id: "actions",
-        enableHiding: false,
-        header: () => <span className="block w-full text-center">ACTIONS</span>,
-        enableSorting: false,
-        cell: ({ row }) => (
-          <div className="flex justify-center">
-            <RowActions item={row.original} canDelete={!isActive} onEdit={() => onEdit(row.original)} onDelete={() => onDelete(row.original)} />
-          </div>
-        ),
-      },
+              <button type="button" className={`${codeLinkClassName} font-mono`} onClick={() => onEdit(row.original)}>
+                {row.original.itemCode}
+              </button>
+            ),
+        },
+        {
+          accessorKey: "itemName",
+          header: "NAME",
+          cell: ({ row }) => (
+            <span className="block min-w-48 max-w-64 whitespace-normal text-slate-900">
+              {row.original.itemName}
+            </span>
+          ),
+        },
+        {
+          accessorKey: "itemType",
+          header: "TYPE",
+          cell: ({ row }) => <span className="block whitespace-nowrap text-slate-700">{PRICE_LIST_ITEM_TYPE_LABELS[row.original.itemType]}</span>,
+        },
+        {
+          accessorKey: "unit",
+          header: "UNIT",
+          cell: ({ row }) => <span className="block whitespace-nowrap text-slate-700">{PRICE_LIST_UNIT_LABELS[row.original.unit]}</span>,
+        },
+        {
+          accessorKey: "unitPrice",
+          header: `UNIT PRICE (${currency})`,
+          meta: { align: "right" },
+          cell: ({ row }) => <span className="block font-semibold tabular-nums text-slate-900">{formatAmount(row.original.unitPrice)}</span>,
+        },
+        {
+          accessorKey: "vehicleTier",
+          header: () => <span className="block w-full text-center">TIER</span>,
+          // Lines for every tier have no tier: they sort after S, M and L.
+          sortingFn: (a, b) => (a.original.vehicleTier ?? "~").localeCompare(b.original.vehicleTier ?? "~"),
+          cell: ({ row }) => (
+            <div className="flex justify-center">
+              {row.original.vehicleTier ? (
+                <Badge className="inline-flex h-5 w-fit items-center rounded-full border-amber-300 bg-amber-50 px-2 py-0 text-[0.65rem] font-medium leading-none text-amber-800">
+                  {row.original.vehicleTier}
+                </Badge>
+              ) : (
+                <span className="text-slate-500">{ALL_TIERS_LABEL}</span>
+              )}
+            </div>
+          ),
+        },
+        {
+          accessorKey: "sortOrder",
+          header: () => <span className="block w-full text-center">ORDER</span>,
+          cell: ({ row }) => <span className="block text-center tabular-nums text-slate-900">{row.original.sortOrder}</span>,
+        },
+        {
+          accessorKey: "updatedAt",
+          header: "UPDATED AT",
+          // `updatedAt` is the raw BE string; ISO strings with one offset sort correctly as text.
+          sortingFn: "alphanumeric",
+          cell: ({ row }) => (
+            <div className="leading-tight">
+              <span className="block text-slate-900">{formatUtcDate(row.original.updatedAt)}</span>
+              <span className="mt-1 block text-[0.68rem] text-slate-400">{formatUtcTime(row.original.updatedAt)}</span>
+            </div>
+          ),
+        },
+        {
+          id: "actions",
+          enableHiding: false,
+          header: () => <span className="block w-full text-center">ACTIONS</span>,
+          enableSorting: false,
+          cell: ({ row }) => (
+            <div className="flex justify-center">
+              <RowActions item={row.original} canDelete={!isActive} onEdit={() => onEdit(row.original)} onDelete={() => onDelete(row.original)} />
+            </div>
+          ),
+        },
       ]
       // The active list is read-only: no actions column.
       return all.filter((column) => !(isActive && column.id === "actions"))

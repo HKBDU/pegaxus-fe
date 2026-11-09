@@ -98,7 +98,14 @@ export function PriceListTable({
         enableHiding: false,
         enableSorting: false,
         header: "NAME",
-        cell: ({ row }) => <span className="block min-w-40 font-semibold text-slate-900">{row.original.name}</span>,
+        cell: ({ row }) => (
+          <span
+            className="block max-w-56 truncate font-semibold text-slate-900"
+            title={row.original.name}
+          >
+            {row.original.name}
+          </span>
+        ),
       },
       { accessorKey: "currency", enableSorting: false, header: "CURRENCY", cell: ({ row }) => <span className="text-slate-700">{row.original.currency}</span> },
       {

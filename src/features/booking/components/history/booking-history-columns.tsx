@@ -70,7 +70,10 @@ export const bookingHistoryColumns: ColumnDef<BookingHistoryItem>[] = [
     enableSorting: false,
     cell: ({ row }) => (
       <div className="min-w-0 whitespace-normal break-words">
-        <p className="text-xs font-semibold text-slate-900 uppercase">
+        <p
+          className="max-w-40 truncate text-xs font-semibold uppercase text-slate-900"
+          title={row.original.changedBy.fullName}
+        >
           {row.original.changedBy.fullName}
         </p>
         <p className="mt-1 text-[0.68rem] text-slate-400 uppercase">

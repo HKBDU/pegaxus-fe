@@ -5,7 +5,7 @@ import {
 import type { HorseIncidentType } from "@/shared/types/incident";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { DatePicker } from "@/shared/components/ui/date-picker";
-import { TimePicker } from "@/shared/components/ui/time-picker";
+import { TimePicker } from "@/shared/components/shadcn-studio/date-picker/date-picker-09";
 import { formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime";
 import {
   Select,

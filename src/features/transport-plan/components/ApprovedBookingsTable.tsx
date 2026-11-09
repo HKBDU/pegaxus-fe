@@ -88,8 +88,13 @@ export function ApprovedBookingsTable({
         accessorKey: "customerName",
         header: "Customer",
         cell: ({ row }) => (
-          <div className="min-w-32 whitespace-normal">
-            <p className="font-medium">{row.original.customerName}</p>
+          <div className="min-w-32">
+            <p
+              className="max-w-40 truncate font-medium"
+              title={row.original.customerName}
+            >
+              {row.original.customerName}
+            </p>
             {row.original.customerCode && (
               <p className="mt-1 text-[10px] text-slate-500">
                 {row.original.customerCode}

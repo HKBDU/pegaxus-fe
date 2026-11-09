@@ -9,7 +9,7 @@ import {
   Trash2,
   Truck,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { formatUtcDateTime, formatUtcTime } from "@/shared/utils/datetime";
@@ -36,6 +36,12 @@ import {
   OutsourceSegmentDialog,
   type OutsourceSegmentSelection,
 } from "./OutsourceSegmentDialog";
+import {
+  VehicleSelectorFilterBar,
+  filterVehicles,
+  INITIAL_VEHICLE_FILTER_STATE,
+  type VehicleFilterState,
+} from "./VehicleSelectorFilterBar";
 import type { RoutePlanStatus, RouteType, Vehicle, VehicleBrief } from "../types";
 import type { DraftSegment } from "../builder-types";
 import { assignmentStatusAllowed } from "../builder-segments";
@@ -61,30 +67,80 @@ function AssignVehicleDialog({
   onConfirm: (vehicleIds: string[]) => void;
 }) {
   const [choice, setChoice] = useState<string[]>(selectedIds);
-  const options = [...vehicles, ...selectedDetails.filter((v) => selectedIds.includes(v.vehicleId) && !vehicles.some((item) => item.vehicleId === v.vehicleId))];
+  const [filters, setFilters] = useState<VehicleFilterState>(INITIAL_VEHICLE_FILTER_STATE);
+
+  const options = useMemo(
+    () => [
+      ...vehicles,
+      ...selectedDetails.filter(
+        (v) => selectedIds.includes(v.vehicleId) && !vehicles.some((item) => item.vehicleId === v.vehicleId),
+      ),
+    ],
+    [vehicles, selectedDetails, selectedIds],
+  );
+
+  const availableTypes = useMemo(() => {
+    const types = new Set<string>();
+    for (const v of vehicles) {
+      if (v.vehicleType) types.add(v.vehicleType);
+    }
+    return Array.from(types).sort();
+  }, [vehicles]);
+
+  const filteredOptions = useMemo(
+    () => filterVehicles(options, filters),
+    [options, filters],
+  );
 
   return (
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (nextOpen) setChoice([...selectedIds]);
+        if (nextOpen) {
+          setChoice([...selectedIds]);
+          setFilters(INITIAL_VEHICLE_FILTER_STATE);
+        }
         onOpenChange(nextOpen);
       }}
     >
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Select vehicles</DialogTitle>
           <DialogDescription>Select all fleet vehicles needed for this segment. Existing selections remain until you change them.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4">
-          <fieldset className="grid max-h-72 gap-2 overflow-y-auto">
-            <legend className="mb-2 text-sm font-medium">Fleet vehicles</legend>
-            {options.map((vehicle) => (
-              <label key={vehicle.vehicleId} className="flex min-w-0 items-start gap-3 rounded-[2px] border p-3 text-sm">
+        <div className="grid gap-3">
+          {options.length > 0 && (
+            <VehicleSelectorFilterBar
+              filters={filters}
+              onFilterChange={setFilters}
+              availableTypes={availableTypes}
+              totalCount={options.length}
+              filteredCount={filteredOptions.length}
+              selectedCount={choice.length}
+            />
+          )}
+          <fieldset className="grid max-h-72 gap-2 overflow-y-auto pr-1">
+            <legend className="sr-only">Fleet vehicles</legend>
+            {filteredOptions.map((vehicle) => (
+              <label key={vehicle.vehicleId} className="flex min-w-0 items-start gap-3 rounded-[2px] border p-3 text-sm hover:bg-slate-50 transition-colors">
                 <Checkbox checked={choice.includes(vehicle.vehicleId)} onCheckedChange={(checked) => setChoice((current) => checked === true ? [...new Set([...current, vehicle.vehicleId])] : current.filter((id) => id !== vehicle.vehicleId))} />
                 <span className="min-w-0 break-words">{vehicle.vehicleName} · {vehicle.vehicleCode}{vehicle.licensePlate ? ` · ${vehicle.licensePlate}` : ""}{vehicle.capacityHorses != null ? ` (${vehicle.capacityHorses} horses)` : ""}</span>
               </label>
             ))}
+            {filteredOptions.length === 0 && options.length > 0 && (
+              <div className="rounded-[2px] border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-xs text-slate-600">
+                No vehicles match your filter criteria.
+                <Button
+                  type="button"
+                  variant="link"
+                  size="sm"
+                  onClick={() => setFilters(INITIAL_VEHICLE_FILTER_STATE)}
+                  className="ml-1 h-auto p-0 text-xs font-semibold text-amber-700 hover:underline"
+                >
+                  Reset filter
+                </Button>
+              </div>
+            )}
             {selectedIds.filter((id) => !options.some((v) => v.vehicleId === id)).map((id) => (
               <label key={id} className="flex items-start gap-3 break-all border p-3 text-sm"><Checkbox checked={choice.includes(id)} onCheckedChange={(checked) => setChoice((current) => checked === true ? [...new Set([...current, id])] : current.filter((value) => value !== id))} /><span>{id} · Current selection</span></label>
             ))}
