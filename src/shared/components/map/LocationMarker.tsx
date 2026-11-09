@@ -25,6 +25,7 @@ export function LocationMarker({
     >
       <button
         type="button"
+        data-marker-variant={variant}
         className={cn(
           "size-4 rounded-full border-2 border-white shadow transition-transform hover:scale-125 focus-visible:ring-2",
           variant === "start" && "bg-emerald-600 focus-visible:ring-emerald-500",
