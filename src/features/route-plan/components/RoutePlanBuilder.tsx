@@ -20,6 +20,7 @@ import {
 } from "@/shared/components/ui/select";
 import {
   MapViewer,
+  ROUTE_LINE_COLORS,
   type MapLocation,
   type MapPoint,
   type MapMode,
@@ -129,6 +130,29 @@ export type RoutePlanBuilderProps = {
     legalReviewRequestedAt: string | null;
   };
 };
+
+/** Explains the three line colours drawn while building a backup route. */
+function BackupRouteLegend() {
+  const items = [
+    { label: "Backup segment", color: ROUTE_LINE_COLORS.default },
+    { label: "Shared with primary", color: ROUTE_LINE_COLORS.sharedWithPrimary },
+    { label: "Primary only", color: ROUTE_LINE_COLORS.readonly },
+  ];
+  return (
+    <ul className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+      {items.map((item) => (
+        <li key={item.label} className="inline-flex items-center gap-1.5">
+          <span
+            className="h-[3px] w-4 rounded-full"
+            style={{ backgroundColor: item.color }}
+            aria-hidden="true"
+          />
+          {item.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function RoutePlanBuilder({
   transportPlanId,
@@ -437,19 +461,27 @@ export function RoutePlanBuilder({
     );
   }, [locationSearch, locations]);
 
-  const selectedRoutes = useMemo(
-    () =>
-      isBackup
-        ? [
-            ...readonlyPrimaryRoutes.map((route) => ({
-              ...route,
-              readonly: true,
-            })),
-            ...segments.map((segment) => segment.route),
-          ]
-        : segments.map((segment) => segment.route),
-    [isBackup, readonlyPrimaryRoutes, segments],
-  );
+  const selectedRoutes = useMemo(() => {
+    if (!isBackup) return segments.map((segment) => segment.route);
+    // A backup segment that reuses a primary route has the same id. Drawing both gave two map layers with one id, and
+    // the grey primary one won, so the backup leg looked uncoloured: draw it once, in the shared colour.
+    const primaryIds = new Set(
+      readonlyPrimaryRoutes.map((route) => String(route.id)),
+    );
+    const backupIds = new Set(
+      segments.map((segment) => String(segment.route.id)),
+    );
+    return [
+      ...readonlyPrimaryRoutes
+        .filter((route) => !backupIds.has(String(route.id)))
+        .map((route) => ({ ...route, readonly: true })),
+      ...segments.map((segment) =>
+        primaryIds.has(String(segment.route.id))
+          ? { ...segment.route, sharedWithPrimary: true }
+          : segment.route,
+      ),
+    ];
+  }, [isBackup, readonlyPrimaryRoutes, segments]);
 
   const builtRouteLocations = useMemo(() => {
     const selectedLocationIds = new Set(
@@ -1653,7 +1685,9 @@ export function RoutePlanBuilder({
   }
 
   return (
-    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 p-3 md:p-4">
+    // `clip` rather than `hidden` here and on the section: a hidden overflow makes a scroll container, which stops the
+    // sticky route map.
+    <main className="min-h-screen w-full max-w-full overflow-x-clip bg-slate-50 p-3 md:p-4">
       <div className="mx-auto grid w-full max-w-[1440px] min-w-0 gap-3">
         <PageHeader
           title={
@@ -1672,7 +1706,7 @@ export function RoutePlanBuilder({
         />
         <BuilderMetadata plan={plan} />
         <BuilderProgress step={step} onChange={setStep} />
-        <section className="w-full min-w-0 overflow-hidden rounded-b-[2px] bg-white p-3 md:p-4">
+        <section className="w-full min-w-0 overflow-clip rounded-b-[2px] bg-white p-3 md:p-4">
           {step === 0 && (
             <RoutePlanEndpointsStep
               from={plan.from}
@@ -1700,7 +1734,8 @@ export function RoutePlanBuilder({
 
           {step === 1 && (
             <div className="grid w-full min-w-0 gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,1fr)]">
-              <div className="w-full min-w-0 min-h-[560px]">
+              {/* Side by side (xl), the map stays below the sticky admin header while a long segment list scrolls. */}
+              <div className="w-full min-w-0 min-h-[560px] xl:sticky xl:top-16 xl:min-h-0 xl:self-start">
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-semibold text-slate-900">
@@ -1727,6 +1762,8 @@ export function RoutePlanBuilder({
                   </div>
                 )}
                 <MapViewer
+                  // The backup legend sits under the map, so the sticky map is shorter to keep it on screen.
+                  className={isBackup ? "xl:h-[calc(100svh-10rem)]" : "xl:h-[calc(100svh-8.5rem)]"}
                   locations={locations}
                   routes={selectedRoutes}
                   mode={mode}
@@ -1744,6 +1781,7 @@ export function RoutePlanBuilder({
                   buildStartLocation={plan.from}
                   buildEndLocation={plan.to}
                 />
+                {isBackup && <BackupRouteLegend />}
               </div>
 
               <div className="w-full min-w-0">
@@ -2429,6 +2467,7 @@ export function RoutePlanBuilder({
                   routes={selectedRoutes}
                   mode="view"
                 />
+                {isBackup && <BackupRouteLegend />}
               </div>
 
               <div className="w-full min-w-0 grid content-start gap-3">
