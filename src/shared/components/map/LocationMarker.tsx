@@ -29,26 +29,30 @@ export function LocationMarker({
       // Keep the start and end above every other marker.
       style={isEndpoint ? { zIndex: variant === "start" ? 3 : 2 } : undefined}
     >
-      <div className="flex flex-col items-center gap-0.5">
+      <div className="flex flex-col items-center gap-1">
         {isEndpoint ? (
-          <span
-            className={cn(
-              "pointer-events-none rounded-[2px] px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none text-white shadow",
-              variant === "start" ? "bg-emerald-600" : "bg-red-600",
-            )}
-          >
+          <span className="pointer-events-none inline-flex items-center gap-1 rounded-full bg-white/95 px-1.5 py-0.5 text-[10px] font-medium leading-none text-slate-700 shadow-[0_1px_4px_rgba(15,23,42,0.18)] ring-1 ring-slate-900/5 backdrop-blur-sm">
+            <span
+              className={cn(
+                "size-1.5 rounded-full",
+                variant === "start" ? "bg-emerald-500" : "bg-rose-500",
+              )}
+            />
             {ENDPOINT_LABELS[variant]}
           </span>
         ) : null}
         <button
           type="button"
           className={cn(
-            "rounded-full border-2 border-white shadow transition-transform hover:scale-125 focus-visible:ring-2",
-            isEndpoint ? "size-5 ring-2" : "size-4",
-            variant === "start" && "bg-emerald-600 ring-emerald-600/40 focus-visible:ring-emerald-500",
-            variant === "end" && "bg-red-600 ring-red-600/40 focus-visible:ring-red-500",
+            "rounded-full border-2 border-white transition-transform duration-150 hover:scale-110 focus-visible:outline-none",
+            isEndpoint
+              ? "size-3.5 shadow-[0_1px_3px_rgba(15,23,42,0.35)] ring-4"
+              : "size-4 shadow focus-visible:ring-2",
+            // The soft halo marks the endpoint; it deepens on keyboard focus.
+            variant === "start" && "bg-emerald-500 ring-emerald-500/20 focus-visible:ring-emerald-500/45",
+            variant === "end" && "bg-rose-500 ring-rose-500/20 focus-visible:ring-rose-500/45",
             variant === "default" && "bg-amber-600 focus-visible:ring-amber-500",
-            selected && "scale-125",
+            selected && "scale-110",
             selected && variant === "default" && "bg-slate-900",
           )}
           aria-label={
