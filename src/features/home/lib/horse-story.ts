@@ -37,6 +37,7 @@ export type LandingSceneState = HorseShot & {
   reducedMotion: boolean;
   lowPower: boolean;
   visible: boolean;
+  sceneStatus: "loading" | "ready" | "unavailable";
   inHero: boolean;
   inJourney: boolean;
   inMap: boolean;
@@ -153,6 +154,7 @@ export function createLandingStory(
     pointerActive: false,
     lowPower: profile !== "desktop",
     visible: true,
+    sceneStatus: "loading",
     inHero: true,
     inJourney: false,
     inMap: false,
