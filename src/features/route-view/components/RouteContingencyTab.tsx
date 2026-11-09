@@ -53,7 +53,8 @@ export function RouteContingencyTab({
       {!items.some((item) => item.routePlanId !== plan.routePlanId) && (
         <EmptyState message="No alternative routes have been prepared for this transport plan." />
       )}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] items-start gap-3">
+      {/* Cards stretch to the tallest one in their row (a backup carries an extra "Replaces" line). */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] items-stretch gap-3">
         {items.map((item) => (
           <article
             key={item.routePlanId}
@@ -96,7 +97,8 @@ export function RouteContingencyTab({
                 duration only
               </p>
             )}
-            <div className="flex items-center justify-end border-t border-slate-100 pt-3">
+            {/* Pinned to the bottom so the footers of a row line up, whatever the card holds above. */}
+            <div className="mt-auto flex min-h-11 items-center justify-end border-t border-slate-100 pt-3">
               {item.routePlanId === plan.routePlanId ? (
                 <p className="mr-auto flex items-center gap-1.5 text-xs font-medium text-primary">
                   <Check aria-hidden="true" className="size-3.5" />
