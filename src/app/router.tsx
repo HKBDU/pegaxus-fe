@@ -15,7 +15,7 @@ import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { handoverTabRoutes } from "@/features/handover";
-import { claimRoutes } from "@/features/claim";
+import { claimRoutes } from "@/features/claim/routes";
 import { priceListRoutes } from "@/features/price-list/routes";
 import { incidentManagementRoutes } from "@/features/incident-management";
 import {
