@@ -25,10 +25,14 @@ import { formatUtcDateTime } from "@/shared/utils/datetime";
 
 type FeasibilityStatus = "FEASIBLE" | "NOT FEASIBLE";
 
+type ReviewSegment = Pick<RouteSegment, "sequenceNo" | "route">;
+
 export type LegalFeasibilityPanelProps = {
   routePlanId: string;
   lastUpdatedAt: string;
-  segments: Pick<RouteSegment, "sequenceNo" | "route">[];
+  segments: ReviewSegment[];
+  /** Backups the coordinator submitted with this primary: one decision covers them all. */
+  backups?: { routePlanId: string; routePlanCode: string; segments: ReviewSegment[]; blockedSegments?: number[] }[];
   legalReview?: LegalReview | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -46,10 +50,16 @@ function formatReviewedAt(value: string | null | undefined) {
   return formatUtcDateTime(value);
 }
 
+/** A blocked segment is identified by its plan and its sequence number: primary and backup both count from 1. */
+const keyOf = (routePlanId: string, sequenceNo: number) => `${routePlanId}:${sequenceNo}`;
+
+const NO_BACKUPS: NonNullable<LegalFeasibilityPanelProps["backups"]> = [];
+
 export function LegalFeasibilityPanel({
   routePlanId,
   lastUpdatedAt,
   segments,
+  backups = NO_BACKUPS,
   legalReview,
   open,
   onOpenChange,
@@ -66,23 +76,27 @@ export function LegalFeasibilityPanel({
     initialStatus(legalReview),
   );
   const [note, setNote] = useState(legalReview?.note ?? "");
-  const [blockedSegments, setBlockedSegments] = useState<number[]>(
-    legalReview?.blockedSegments ?? [],
+  const groups = useMemo(
+    () => [
+      { routePlanId, label: "Primary", segments },
+      ...backups.map((backup) => ({ routePlanId: backup.routePlanId, label: `Backup ${backup.routePlanCode}`, segments: backup.segments })),
+    ],
+    [backups, routePlanId, segments],
   );
+  const [blockedSegments, setBlockedSegments] = useState<string[]>(() => [
+    ...(legalReview?.blockedSegments ?? []).map((sequenceNo) => keyOf(routePlanId, sequenceNo)),
+    ...backups.flatMap((backup) => (backup.blockedSegments ?? []).map((sequenceNo) => keyOf(backup.routePlanId, sequenceNo))),
+  ]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   const visibleOpen = open ?? internalOpen;
-  const selectedSegments = useMemo(
-    () =>
-      segments.filter((segment) =>
-        blockedSegments.includes(segment.sequenceNo),
-      ),
-    [blockedSegments, segments],
+  const allSegments = useMemo(
+    () => groups.flatMap((group) => group.segments.map((segment) => ({ ...segment, group, key: keyOf(group.routePlanId, segment.sequenceNo) }))),
+    [groups],
   );
-  const availableSegments = segments.filter(
-    (segment) => !blockedSegments.includes(segment.sequenceNo),
-  );
+  const selectedSegments = allSegments.filter((segment) => blockedSegments.includes(segment.key));
+  const availableSegments = allSegments.filter((segment) => !blockedSegments.includes(segment.key));
 
   if (!canReview) return null;
 
@@ -97,20 +111,14 @@ export function LegalFeasibilityPanel({
     if (nextStatus === "FEASIBLE") setBlockedSegments([]);
   }
 
-  function addBlockedSegment(sequenceNo: number) {
+  function addBlockedSegment(key: string) {
     setStatus("NOT FEASIBLE");
     setError(null);
-    setBlockedSegments((current) =>
-      current.includes(sequenceNo)
-        ? current
-        : [...current, sequenceNo].sort((a, b) => a - b),
-    );
+    setBlockedSegments((current) => (current.includes(key) ? current : [...current, key]));
   }
 
-  function removeBlockedSegment(sequenceNo: number) {
-    setBlockedSegments((current) =>
-      current.filter((item) => item !== sequenceNo),
-    );
+  function removeBlockedSegment(key: string) {
+    setBlockedSegments((current) => current.filter((item) => item !== key));
   }
 
   async function confirmReview() {
@@ -126,7 +134,16 @@ export function LegalFeasibilityPanel({
         lastUpdatedAt,
         isFeasible: status === "FEASIBLE",
         note: normalizedNote || undefined,
-        blockedSegments: status === "NOT FEASIBLE" ? blockedSegments : [],
+        blockedSegments:
+          status === "NOT FEASIBLE"
+            ? selectedSegments.filter((segment) => segment.group.routePlanId === routePlanId).map((segment) => segment.sequenceNo)
+            : [],
+        blockedBackupSegments:
+          status === "NOT FEASIBLE"
+            ? selectedSegments
+                .filter((segment) => segment.group.routePlanId !== routePlanId)
+                .map((segment) => ({ routePlanId: segment.group.routePlanId, sequenceNo: segment.sequenceNo }))
+            : [],
       });
       toast.success("Route feasibility review saved.");
       onConfirmed?.(result);
@@ -157,6 +174,14 @@ export function LegalFeasibilityPanel({
         </DialogTitle>
 
         <div className="grid gap-3">
+          {backups.length ? (
+            <p className="m-0 border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+              This review also covers {backups.length === 1 ? "backup" : "backups"}{" "}
+              <span className="font-semibold">{backups.map((backup) => backup.routePlanCode).join(", ")}</span>. Feasible confirms the
+              primary and {backups.length === 1 ? "that backup" : "those backups"}; any blocked segment sends all of them back to the Route
+              Coordinator.
+            </p>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-2">
             <section className="min-h-20 bg-slate-100 p-3">
               <p className="text-xs font-medium uppercase tracking-wide">
@@ -218,10 +243,10 @@ export function LegalFeasibilityPanel({
                     <DropdownMenuContent align="end" className="min-w-56">
                       {availableSegments.map((segment) => (
                         <DropdownMenuItem
-                          key={segment.sequenceNo}
-                          onSelect={() => addBlockedSegment(segment.sequenceNo)}
+                          key={segment.key}
+                          onSelect={() => addBlockedSegment(segment.key)}
                         >
-                          Segment {segment.sequenceNo}:{" "}
+                          {groups.length > 1 ? `${segment.group.label} · ` : ""}Segment {segment.sequenceNo}:{" "}
                           {segment.route.routeName}
                         </DropdownMenuItem>
                       ))}
@@ -233,14 +258,14 @@ export function LegalFeasibilityPanel({
                 {selectedSegments.length ? (
                   selectedSegments.map((segment) => (
                     <span
-                      key={segment.sequenceNo}
+                      key={segment.key}
                       className="inline-flex items-center gap-1 bg-slate-800 px-2 py-1 text-xs font-semibold text-white"
                     >
-                      SEGMENT {segment.sequenceNo}
+                      {groups.length > 1 ? `${segment.group.label.toUpperCase()} · ` : ""}SEGMENT {segment.sequenceNo}
                       <button
                         type="button"
-                        onClick={() => removeBlockedSegment(segment.sequenceNo)}
-                        aria-label={`Remove segment ${segment.sequenceNo}`}
+                        onClick={() => removeBlockedSegment(segment.key)}
+                        aria-label={`Remove ${segment.group.label} segment ${segment.sequenceNo}`}
                       >
                         <X className="size-3" />
                       </button>
