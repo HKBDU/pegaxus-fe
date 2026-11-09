@@ -205,12 +205,7 @@ export default function TransportAuditDetailPage() {
             <AuditRoutingBlock data={audit.routing} isManager={isManager} />
           </TabsContent>
           <TabsContent value="compliance">
-            <AuditComplianceBlock
-              data={audit.compliance}
-              onPreviewDoc={(title, url) =>
-                setDocumentDrawer({ open: true, title, url })
-              }
-            />
+            <AuditComplianceBlock data={audit.compliance} />
           </TabsContent>
           <TabsContent value="operations">
             <AuditOperationsBlock data={audit.operations} />

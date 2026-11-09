@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import type { AuditHorseHealthLog, AuditHorseItem } from "../../types";
-import { BlockCard, CopyValue, StatusPill } from "./block-utils";
+import { BlockCard, CopyValue, StatusPill, humanize } from "./block-utils";
 
 type Tone = "success" | "warning" | "danger" | "neutral";
 
@@ -29,9 +29,6 @@ const HEALTH_STATUS_TONES: Record<string, Tone> = {
   AT_RISK: "danger",
   CRITICAL: "danger",
 };
-
-const humanize = (value: string) =>
-  value.charAt(0) + value.slice(1).toLowerCase().replace(/_/g, " ");
 
 const healthTone = (status: string): Tone =>
   HEALTH_STATUS_TONES[status] ?? "neutral";
