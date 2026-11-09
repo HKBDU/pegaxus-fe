@@ -51,7 +51,9 @@ function PersonCell({ employee }: { employee: EmployeeBrief | null }) {
   if (!employee) return <span className="text-slate-400">—</span>
   return (
     <span className="grid leading-5">
-      <span className="font-medium text-slate-800">{employee.fullName}</span>
+      <span className="max-w-36 truncate font-medium text-slate-800" title={employee.fullName}>
+        {employee.fullName}
+      </span>
       <span className="text-[11px] text-slate-500">{employee.employeeCode}</span>
     </span>
   )

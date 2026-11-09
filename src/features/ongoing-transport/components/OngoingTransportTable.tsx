@@ -60,7 +60,10 @@ const createColumns = (
     accessorKey: "customerName",
     header: "Customer",
     cell: ({ getValue }) => (
-      <span className="block min-w-28 max-w-40 whitespace-normal font-medium">
+      <span
+        className="block max-w-36 truncate font-medium"
+        title={getValue<string>()}
+      >
         {getValue<string>()}
       </span>
     ),

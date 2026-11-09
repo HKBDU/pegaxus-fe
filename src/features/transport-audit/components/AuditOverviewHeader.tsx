@@ -97,9 +97,7 @@ export function AuditOverviewHeader({
         <div>
           <p className="text-[10px] uppercase font-semibold text-[#93c5fd]">Horses</p>
           <p className="text-lg font-bold !text-white" style={{ color: "#ffffff" }}>
-            {Array.isArray(audit.horses?.horses)
-              ? audit.horses.horses.length
-              : "—"}
+            {audit.horses ? audit.horses.length : "—"}
           </p>
         </div>
         <div>

@@ -154,9 +154,9 @@ export function AssignedTransportsTable({ transports }: { transports: AssignedTr
           if (!leg) return <span className="text-slate-400">Not started</span>
           return (
             <div className="grid min-w-64 grid-cols-[minmax(6.5rem,1fr)_1.25rem_minmax(7.5rem,1fr)] items-center text-slate-700">
-              <span className="truncate">{leg.fromLocationName}</span>
+              <span className="truncate" title={leg.fromLocationName}>{leg.fromLocationName}</span>
               <ArrowRight className="mx-auto size-3 shrink-0 text-amber-500" />
-              <span className="truncate pl-1.5">{leg.toLocationName}</span>
+              <span className="truncate pl-1.5" title={leg.toLocationName}>{leg.toLocationName}</span>
             </div>
           )
         },

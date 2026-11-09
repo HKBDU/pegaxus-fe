@@ -61,7 +61,15 @@ export function ClaimTable({ items, meta, isLoading, filtered, params, search, o
         cell: ({ row }) => <span className="font-semibold text-slate-900">{row.original.claimCode}</span>,
       },
       { accessorKey: "bookingCode", header: "BOOKING CODE" },
-      { accessorKey: "customerName", header: "CUSTOMER", cell: ({ row }) => <span className="block max-w-32 truncate">{row.original.customerName}</span> },
+      {
+        accessorKey: "customerName",
+        header: "CUSTOMER",
+        cell: ({ row }) => (
+          <span className="block max-w-40 truncate" title={row.original.customerName}>
+            {row.original.customerName}
+          </span>
+        ),
+      },
       { accessorKey: "claimType", header: "CLAIM TYPE", cell: ({ row }) => <ClaimTypeBadge type={row.original.claimType} /> },
       { accessorKey: "status", header: "STATUS", cell: ({ row }) => <ClaimStatusBadge status={row.original.status} /> },
       {

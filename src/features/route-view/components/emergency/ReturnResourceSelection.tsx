@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Label } from "@/shared/components/ui/label";
 import {
@@ -8,6 +9,12 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
+import {
+  VehicleSelectorFilterBar,
+  filterVehicles,
+  INITIAL_VEHICLE_FILTER_STATE,
+  type VehicleFilterState,
+} from "@/features/route-plan/components/VehicleSelectorFilterBar";
 import type {
   ReturnResourceOverride,
   SegmentResourceOptions,
@@ -32,6 +39,13 @@ export function ReturnResourceSelection({
   const id = `return-resources-${segment.routePlanRouteId}`;
   const mode = value?.outsourcing ? "provider" : value ? "vehicles" : "keep";
   const selected = value?.vehicleIds ?? [];
+  const [vehicleFilters, setVehicleFilters] = useState<VehicleFilterState>(INITIAL_VEHICLE_FILTER_STATE);
+
+  const allVehicles = options?.vehicles ?? [];
+  const filteredVehicles = useMemo(
+    () => filterVehicles(allVehicles, vehicleFilters),
+    [allVehicles, vehicleFilters],
+  );
   return (
     <fieldset
       disabled={disabled}
@@ -161,42 +175,59 @@ export function ReturnResourceSelection({
           />
         </>
       ) : value ? (
-        <div
-          className="max-h-48 space-y-2 overflow-y-auto rounded-[2px] border p-3"
-          role="group"
-          aria-label={`Vehicle overrides for segment ${segment.sequenceNo}`}
-        >
-          {options?.vehicles.map((vehicle) => (
-            <label
-              key={vehicle.vehicleId}
-              className="flex items-center gap-2 text-xs"
-            >
-              <Checkbox
-                disabled={disabled}
-                checked={selected.includes(vehicle.vehicleId)}
-                onCheckedChange={(checked) =>
-                  onChange({
-                    routePlanRouteId: segment.routePlanRouteId,
-                    vehicleIds:
-                      checked === true
-                        ? [...new Set([...selected, vehicle.vehicleId])]
-                        : selected.filter(
-                            (vehicleId) => vehicleId !== vehicle.vehicleId,
-                          ),
-                  })
-                }
-              />
-              {vehicle.licensePlate || vehicle.vehicleCode} ·{" "}
-              {vehicle.capacityHorses == null
-                ? "Capacity unavailable"
-                : `${vehicle.capacityHorses} horses`}
-            </label>
-          ))}
-          {!options?.vehicles.length ? (
-            <p className="text-xs text-slate-500">
-              No eligible vehicles returned. Keep existing resources or reload.
-            </p>
-          ) : null}
+        <div className="space-y-2">
+          {allVehicles.length > 0 && (
+            <VehicleSelectorFilterBar
+              filters={vehicleFilters}
+              onFilterChange={setVehicleFilters}
+              totalCount={allVehicles.length}
+              filteredCount={filteredVehicles.length}
+              selectedCount={selected.length}
+              placeholder="Filter vehicles..."
+            />
+          )}
+          <div
+            className="max-h-48 space-y-2 overflow-y-auto rounded-[2px] border p-3"
+            role="group"
+            aria-label={`Vehicle overrides for segment ${segment.sequenceNo}`}
+          >
+            {filteredVehicles.map((vehicle) => (
+              <label
+                key={vehicle.vehicleId}
+                className="flex items-center gap-2 text-xs"
+              >
+                <Checkbox
+                  disabled={disabled}
+                  checked={selected.includes(vehicle.vehicleId)}
+                  onCheckedChange={(checked) =>
+                    onChange({
+                      routePlanRouteId: segment.routePlanRouteId,
+                      vehicleIds:
+                        checked === true
+                          ? [...new Set([...selected, vehicle.vehicleId])]
+                          : selected.filter(
+                              (vehicleId) => vehicleId !== vehicle.vehicleId,
+                            ),
+                    })
+                  }
+                />
+                {vehicle.licensePlate || vehicle.vehicleCode} ·{" "}
+                {vehicle.capacityHorses == null
+                  ? "Capacity unavailable"
+                  : `${vehicle.capacityHorses} horses`}
+              </label>
+            ))}
+            {filteredVehicles.length === 0 && allVehicles.length > 0 ? (
+              <p className="text-xs text-slate-500 italic">
+                No vehicles match the filter criteria.
+              </p>
+            ) : null}
+            {!allVehicles.length ? (
+              <p className="text-xs text-slate-500">
+                No eligible vehicles returned. Keep existing resources or reload.
+              </p>
+            ) : null}
+          </div>
         </div>
       ) : null}
       {error ? (

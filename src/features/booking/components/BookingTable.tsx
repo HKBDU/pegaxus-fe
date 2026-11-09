@@ -140,7 +140,17 @@ export function BookingTable({
         cell: ({ row }) => <button type="button" className={codeLinkClassName} onClick={() => navigate(detailsPath(row.original.bookingId))}>{row.original.bookingCode}</button>,
       },
       ...(audience === "manager"
-        ? [{ accessorKey: "customerName", header: "CUSTOMER" } satisfies ColumnDef<BookingSummary>]
+        ? [
+            {
+              accessorKey: "customerName",
+              header: "CUSTOMER",
+              cell: ({ row }) => (
+                <span className="block max-w-44 truncate text-slate-900" title={row.original.customerName ?? undefined}>
+                  {row.original.customerName ?? "—"}
+                </span>
+              ),
+            } satisfies ColumnDef<BookingSummary>,
+          ]
         : []),
       {
         id: "route",
@@ -149,9 +159,9 @@ export function BookingTable({
         enableSorting: false,
         cell: ({ row }) => (
           <div className="grid min-w-64 grid-cols-[minmax(6.5rem,1fr)_1.25rem_minmax(7.5rem,1fr)] items-center text-slate-700">
-            <span className="truncate">{row.original.originCountry}</span>
+            <span className="truncate" title={row.original.originCountry}>{row.original.originCountry}</span>
             <ArrowRight className="mx-auto size-3 shrink-0 text-amber-500" />
-            <span className="truncate pl-1.5">{row.original.destinationCountry}</span>
+            <span className="truncate pl-1.5" title={row.original.destinationCountry}>{row.original.destinationCountry}</span>
           </div>
         ),
       },

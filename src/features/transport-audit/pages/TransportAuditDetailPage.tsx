@@ -113,7 +113,7 @@ export default function TransportAuditDetailPage() {
                 {
                   id: "horses",
                   label: "Horses & Health",
-                  count: audit.horses?.horses.length,
+                  count: audit.horses?.length,
                 },
                 { id: "booking", label: "Booking" },
                 { id: "routing", label: "Routing & Waypoints" },
@@ -205,12 +205,7 @@ export default function TransportAuditDetailPage() {
             <AuditRoutingBlock data={audit.routing} isManager={isManager} />
           </TabsContent>
           <TabsContent value="compliance">
-            <AuditComplianceBlock
-              data={audit.compliance}
-              onPreviewDoc={(title, url) =>
-                setDocumentDrawer({ open: true, title, url })
-              }
-            />
+            <AuditComplianceBlock data={audit.compliance} />
           </TabsContent>
           <TabsContent value="operations">
             <AuditOperationsBlock data={audit.operations} />

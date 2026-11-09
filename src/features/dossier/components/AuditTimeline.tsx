@@ -75,7 +75,7 @@ export function AuditTimeline({ events, isLoading, onViewVersionHistory }: Audit
                   <div className="flex min-w-0 items-center gap-2">
                     <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-slate-100 text-[0.65rem] font-semibold text-slate-600">{getInitials(event.actor.fullName)}</span>
                     <div className="min-w-0 text-xs">
-                      <p className="m-0 font-semibold text-slate-900 [overflow-wrap:anywhere]">{event.actor.fullName}</p>
+                      <p className="m-0 font-semibold text-slate-900 [overflow-wrap:anywhere]" title={event.actor.fullName}>{event.actor.fullName}</p>
                       <p className="m-0 text-[0.7rem] text-slate-500 [overflow-wrap:anywhere]">{getRoleLabel(event.actor.role)}</p>
                     </div>
                   </div>

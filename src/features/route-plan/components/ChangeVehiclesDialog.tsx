@@ -21,6 +21,12 @@ import { Textarea } from "@/shared/components/ui/textarea";
 import { VEHICLE_STATUS_LABELS } from "../constants";
 import { loadAllVehicles } from "../api-adapters";
 import {
+  VehicleSelectorFilterBar,
+  filterVehicles,
+  INITIAL_VEHICLE_FILTER_STATE,
+  type VehicleFilterState,
+} from "./VehicleSelectorFilterBar";
+import {
   getChangeRoutePlanVehiclesError,
   useChangeRoutePlanVehicles,
 } from "../hooks";
@@ -121,6 +127,7 @@ export function ChangeVehiclesDialog({
   const [reloading, setReloading] = useState(false);
   const [vehicleOptions, setVehicleOptions] = useState<VehicleOptions>({});
   const [selectedVehicles, setSelectedVehicles] = useState<Record<string, string[]>>({});
+  const [segmentFilters, setSegmentFilters] = useState<Record<string, VehicleFilterState>>({});
   const [reason, setReason] = useState("");
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(false);
   const [vehicleLoadError, setVehicleLoadError] = useState(false);
@@ -148,6 +155,7 @@ export function ChangeVehiclesDialog({
     setSnapshotSession({ accountId, sessionVersion, mode, incidentReportId });
     setSelectedVehicles(Object.fromEntries(segments.map((segment) => [segment.routePlanRouteId, segment.vehicles.map((vehicle) => vehicle.vehicleId)])));
     setSelectedSegments({});
+    setSegmentFilters({});
     setReason("");
     setResult(null);
     setNotice(null);
@@ -406,6 +414,11 @@ export function ChangeVehiclesDialog({
               {snapshotSegments.map((segment) => {
                 const selected = selectedVehicles[segment.routePlanRouteId] ?? [];
                 const options = vehicleOptions[segment.routePlanRouteId] ?? [];
+                const filters = segmentFilters[segment.routePlanRouteId] ?? INITIAL_VEHICLE_FILTER_STATE;
+                const filteredOptions = filterVehicles(options, filters);
+                const availableTypes = Array.from(
+                  new Set(options.map((v) => v.vehicleType).filter((t): t is string => Boolean(t))),
+                ).sort();
                 return (
                   <Card key={segment.routePlanRouteId} className="rounded-[2px] border-slate-300 bg-white shadow-sm">
                     <CardHeader className="border-b border-slate-200 px-4 py-3">
@@ -449,50 +462,86 @@ export function ChangeVehiclesDialog({
                           No vehicles found.
                         </p>
                       ) : (
-                        <div
-                          className="grid gap-2 sm:grid-cols-2"
-                          role="group"
-                          aria-label={`Choose vehicles for segment ${segment.sequenceNo}`}
-                        >
-                          {options.map((vehicle) => {
-                            const id = `vehicle-${segment.routePlanRouteId}-${vehicle.vehicleId}`;
-                            const checked = selected.includes(vehicle.vehicleId);
-                            return (
-                              <Label
-                                key={vehicle.vehicleId}
-                                htmlFor={id}
-                                className={`flex cursor-pointer items-start gap-3 rounded-[2px] border p-3 transition-colors ${
-                                  checked
-                                    ? "border-slate-900 bg-slate-100"
-                                    : "border-slate-300 bg-white hover:border-slate-500 hover:bg-slate-50"
-                                }`}
-                              >
-                                <Checkbox
-                                  id={id}
-                                  checked={checked}
-                                  disabled={locked || !selectedSegments[segment.routePlanRouteId]}
-                                  onCheckedChange={(value) =>
-                                    toggleVehicle(
-                                      segment.routePlanRouteId,
-                                      vehicle.vehicleId,
-                                      value === true,
-                                    )
+                        <div className="grid gap-2">
+                          <VehicleSelectorFilterBar
+                            filters={filters}
+                            onFilterChange={(next) =>
+                              setSegmentFilters((prev) => ({
+                                ...prev,
+                                [segment.routePlanRouteId]: next,
+                              }))
+                            }
+                            availableTypes={availableTypes}
+                            totalCount={options.length}
+                            filteredCount={filteredOptions.length}
+                            selectedCount={selected.length}
+                            className="pb-1"
+                          />
+                          <div
+                            className="grid gap-2 sm:grid-cols-2"
+                            role="group"
+                            aria-label={`Choose vehicles for segment ${segment.sequenceNo}`}
+                          >
+                            {filteredOptions.length === 0 ? (
+                              <div className="rounded-[2px] border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-xs text-slate-600 sm:col-span-2">
+                                No vehicles match your filter criteria.
+                                <Button
+                                  type="button"
+                                  variant="link"
+                                  size="sm"
+                                  onClick={() =>
+                                    setSegmentFilters((prev) => ({
+                                      ...prev,
+                                      [segment.routePlanRouteId]: INITIAL_VEHICLE_FILTER_STATE,
+                                    }))
                                   }
-                                  className="mt-0.5 rounded-[2px] border-slate-500 text-slate-900"
-                                />
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-sm font-bold text-slate-950">{vehicleName(vehicle)}</span>
-                                  <span className="mt-1 flex flex-wrap gap-1.5 text-xs font-medium text-slate-600">
-                                    <span>{vehicle.licensePlate ?? "No plate"}</span>
-                                    <span>{vehicle.capacityHorses} horses</span>
-                                    <Badge variant="outline" className="rounded-[2px] border-slate-400 px-1.5 py-0 text-[10px] text-slate-800">
-                                      {VEHICLE_STATUS_LABELS[vehicle.status]}
-                                    </Badge>
-                                  </span>
-                                </span>
-                              </Label>
-                            );
-                          })}
+                                  className="ml-1 h-auto p-0 text-xs font-semibold text-amber-700 hover:underline"
+                                >
+                                  Reset filter
+                                </Button>
+                              </div>
+                            ) : (
+                              filteredOptions.map((vehicle) => {
+                                const id = `vehicle-${segment.routePlanRouteId}-${vehicle.vehicleId}`;
+                                const checked = selected.includes(vehicle.vehicleId);
+                                return (
+                                  <Label
+                                    key={vehicle.vehicleId}
+                                    htmlFor={id}
+                                    className={`flex cursor-pointer items-start gap-3 rounded-[2px] border p-3 transition-colors ${
+                                      checked
+                                        ? "border-slate-900 bg-slate-100"
+                                        : "border-slate-300 bg-white hover:border-slate-500 hover:bg-slate-50"
+                                    }`}
+                                  >
+                                    <Checkbox
+                                      id={id}
+                                      checked={checked}
+                                      disabled={locked || !selectedSegments[segment.routePlanRouteId]}
+                                      onCheckedChange={(value) =>
+                                        toggleVehicle(
+                                          segment.routePlanRouteId,
+                                          vehicle.vehicleId,
+                                          value === true,
+                                        )
+                                      }
+                                      className="mt-0.5 rounded-[2px] border-slate-500 text-slate-900"
+                                    />
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block truncate text-sm font-bold text-slate-950">{vehicleName(vehicle)}</span>
+                                      <span className="mt-1 flex flex-wrap gap-1.5 text-xs font-medium text-slate-600">
+                                        <span>{vehicle.licensePlate ?? "No plate"}</span>
+                                        <span>{vehicle.capacityHorses} horses</span>
+                                        <Badge variant="outline" className="rounded-[2px] border-slate-400 px-1.5 py-0 text-[10px] text-slate-800">
+                                          {VEHICLE_STATUS_LABELS[vehicle.status]}
+                                        </Badge>
+                                      </span>
+                                    </span>
+                                  </Label>
+                                );
+                              })
+                            )}
+                          </div>
                         </div>
                       )}
                       {selectedSegments[segment.routePlanRouteId] && (

@@ -99,7 +99,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
-import { TimePicker } from "@/shared/components/ui/time-picker";
+import { TimePicker } from "@/shared/components/shadcn-studio/date-picker/date-picker-09";
 
 const DEFAULT_VALUES: InvoiceFormValues = {
   type: "QUOTATION",

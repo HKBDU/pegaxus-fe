@@ -61,7 +61,18 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         ),
       },
       { accessorKey: "bookingCode", header: "BOOKING REF", cell: ({ row }) => <span className="whitespace-nowrap text-slate-600">{row.original.bookingCode}</span> },
-      { accessorKey: "customerName", header: "CLIENT", cell: ({ row }) => <span className="block min-w-32 max-w-48 whitespace-normal font-semibold leading-snug text-slate-900">{row.original.customerName}</span> },
+      {
+        accessorKey: "customerName",
+        header: "CLIENT",
+        cell: ({ row }) => (
+          <span
+            className="block max-w-44 truncate font-semibold text-slate-900"
+            title={row.original.customerName}
+          >
+            {row.original.customerName}
+          </span>
+        ),
+      },
       {
         id: "route",
         header: "ROUTE",
@@ -69,9 +80,9 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         cell: ({ row }) => (
           // Same three-column grid as the transport request table: both countries get equal room, the arrow sits in the middle.
           <div className="grid min-w-36 grid-cols-[minmax(3.5rem,1fr)_1.25rem_minmax(3.5rem,1fr)] items-center text-slate-700">
-            <span className="truncate">{row.original.originCountry}</span>
+            <span className="truncate" title={row.original.originCountry}>{row.original.originCountry}</span>
             <ArrowRight className="mx-auto size-3 shrink-0 text-amber-500" aria-hidden="true" />
-            <span className="truncate pl-1.5">{row.original.destinationCountry}</span>
+            <span className="truncate pl-1.5" title={row.original.destinationCountry}>{row.original.destinationCountry}</span>
           </div>
         ),
       },

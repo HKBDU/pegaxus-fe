@@ -298,9 +298,9 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                       booking.horses.map((horse, index) => (
                         <TableRow key={horse.horseId} className={cn("booking-table-row h-11 border-slate-200 hover:bg-amber-50/60", index % 2 === 0 ? "bg-white" : "bg-[#f7f6f3]")}>
                           <TableCell className="px-2.5 py-1.5 text-center text-xs text-gray-400">{index + 1}</TableCell>
-                          <TableCell className="truncate px-2.5 py-1.5 text-xs font-semibold text-gray-900">{horse.horseName}</TableCell>
-                          <TableCell className="truncate px-2.5 py-1.5 font-mono text-xs text-gray-600">{horse.passportNumber}</TableCell>
-                          <TableCell className="truncate px-2.5 py-1.5 text-xs text-gray-600">{horse.breed}</TableCell>
+                          <TableCell className="truncate px-2.5 py-1.5 text-xs font-semibold text-gray-900" title={horse.horseName}>{horse.horseName}</TableCell>
+                          <TableCell className="truncate px-2.5 py-1.5 font-mono text-xs text-gray-600" title={horse.passportNumber}>{horse.passportNumber}</TableCell>
+                          <TableCell className="truncate px-2.5 py-1.5 text-xs text-gray-600" title={horse.breed ?? undefined}>{horse.breed}</TableCell>
                           <TableCell className="px-2.5 py-1.5 text-xs text-gray-600">{formatSex(horse.sex)}</TableCell>
                           <TableCell className="whitespace-normal break-words px-2.5 py-1.5 text-xs leading-4 text-gray-600">{horse.specialHandlingNotes || EMPTY_VALUE}</TableCell>
                         </TableRow>
