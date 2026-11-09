@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
-import { AlertTriangle } from "lucide-react"
 
 import { useAuthStore } from "@/features/auth/store"
 import { profileApi } from "@/features/profile/services"
@@ -94,12 +93,6 @@ export function ProfileCompletionDialog() {
     >
       <AlertDialogContent className="max-w-md rounded-[2px]">
         <AlertDialogHeader>
-          <div className="mb-1 flex items-center gap-2 text-amber-600">
-            <AlertTriangle className="size-5 shrink-0" />
-            <span className="font-heading text-xs font-semibold uppercase tracking-wider">
-              Profile Notice
-            </span>
-          </div>
           <AlertDialogTitle className="text-base font-semibold text-slate-900">
             Complete your profile
           </AlertDialogTitle>
