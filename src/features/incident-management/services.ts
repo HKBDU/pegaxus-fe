@@ -13,6 +13,7 @@ import { apiEnvelopeSchema, customerIncidentSchema, incidentListSchema, incident
 import type {
   CancelInput,
   CustomerIncident,
+  DetachHorseInput,
   Incident,
   IncidentList,
   IncidentListParams,
@@ -86,6 +87,14 @@ export const incidentService = {
   cancel(incidentReportId: string, input: CancelInput): Promise<Incident> {
     if (isIncidentMockMode()) return mockCancelIncident(incidentReportId, input).then((value) => incidentSchema.parse(value))
     return call(() => apiClient.post<unknown, unknown>(`${path(incidentReportId)}/cancel`, input), (value) => incidentSchema.parse(value))
+  },
+
+  /** LM leaves a horse that cannot continue at a stop of the route; the rest of the transport travels on. */
+  detachHorse(incidentReportId: string, horseId: string, input: DetachHorseInput): Promise<Incident> {
+    return call(
+      () => apiClient.post<unknown, unknown>(`${path(incidentReportId)}/horses/${encodeURIComponent(horseId)}/detach`, input),
+      (value) => incidentSchema.parse(value),
+    )
   },
 
   /** IN11 (DRV, ESC). */
