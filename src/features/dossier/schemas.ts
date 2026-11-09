@@ -200,6 +200,18 @@ export const dossierOverviewSchema = z.object({
   actions: z
     .object({ canUpload: z.boolean(), canReview: z.boolean() })
     .optional(),
+  /** Set on a return booking (a horse left behind mid-trip): the original trip whose documents can be reused. */
+  returnOf: z
+    .object({
+      transportId: z.string(),
+      transportCode: z.string(),
+      bookingId: z.string(),
+      bookingCode: z.string(),
+      dossierId: z.string().nullable(),
+      dossierCode: z.string().nullable(),
+      horseName: z.string().nullable(),
+    })
+    .nullish(),
 });
 
 export const documentRequestSummarySchema = z.object({

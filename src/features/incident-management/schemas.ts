@@ -108,6 +108,10 @@ const horseDetailSchema = z.object({
   outcomeNote: z.string().nullable(),
   horseTransportable: z.boolean().nullable(),
   updatedAt: z.string(),
+  /** Set when the LM left this horse at a stop (it no longer travels with the transport). */
+  detachment: z
+    .object({ detachedAt: z.string(), location: locationSchema.nullable(), incidentReportId: z.string().nullable() })
+    .nullish(),
 })
 
 const costDecisionSchema = z.object({
@@ -204,6 +208,8 @@ export const incidentSchema = z.object({
   }),
   canResolve: z.boolean(),
   availableActions: z.array(z.string()),
+  /** Stops where a horse may be left; filled only when DETACH_HORSE is available. */
+  detachLocations: z.array(locationSchema).optional(),
 })
 
 /** IN8 for the Customer: BE sends an allowlist DTO (no phone, costs, estimated cost, `availableActions`). */

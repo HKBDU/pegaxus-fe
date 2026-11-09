@@ -39,9 +39,10 @@ export default function TransportAuditDetailPage() {
   const requestedTab = searchParams.get("tab") ?? "timeline";
   const activeTab =
     requestedTab === "finance" && !isManager ? "timeline" : requestedTab;
+  // The header shows origin and destination, which only the booking block carries, so every tab also asks for it.
   const query = useTransportAudit(
     transportId,
-    activeTab === "timeline" ? undefined : activeTab,
+    activeTab === "timeline" ? undefined : activeTab === "booking" ? "booking" : `${activeTab},booking`,
   );
   const [exportOpen, setExportOpen] = useState(false);
   const [documentDrawer, setDocumentDrawer] = useState<{

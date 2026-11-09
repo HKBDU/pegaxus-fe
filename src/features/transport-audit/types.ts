@@ -93,6 +93,9 @@ export interface AuditHorseItem {
   weightKg?: number | null;
   heightCm?: number | null;
   healthLogs: AuditHorseHealthLog[];
+  /** Set when the horse was left behind mid-trip at `detachedLocationName`. */
+  detachedAt?: string | null;
+  detachedLocationName?: string | null;
 }
 export interface AuditRouteSegment {
   routePlanRouteId: string;

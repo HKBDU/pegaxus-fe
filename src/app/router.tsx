@@ -52,6 +52,9 @@ const BookingDetailsPage = lazy(
 const BookingFormPage = lazy(
   () => import("@/features/booking/pages/BookingFormPage"),
 );
+const ReturnBookingPage = lazy(
+  () => import("@/features/booking/pages/ReturnBookingPage"),
+);
 const BcpQuarantineProofPage = lazy(
   () => import("@/features/quarantine/pages/BcpQuarantineProofPage"),
 );
@@ -386,6 +389,16 @@ export const router = createBrowserRouter([
               <ProtectedRoute allowedRoles={["CUSTOMER"]}>
                 <Suspense fallback={<LoadingState />}>
                   <BookingListPage />
+                </Suspense>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "bookings/return",
+            element: (
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}>
+                  <ReturnBookingPage />
                 </Suspense>
               </ProtectedRoute>
             ),

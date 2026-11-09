@@ -19,6 +19,8 @@ import type {
   BookingSummary,
   BookingTransport,
   CreateBookingRequest,
+  CreateReturnBookingRequest,
+  ReturnBookingDraft,
   CreateBookingResult,
   HorseListParams,
   HorseListResponse,
@@ -329,6 +331,11 @@ export const bookingService = {
   getBookings: (params: BookingListParams) => bookingBaseService.getAll(params),
   getBooking: loadBooking,
   createBooking: (data: CreateBookingRequest) => bookingBaseService.create(data),
+  /** Pre-filled return booking of a horse left behind mid-trip (customer only). */
+  getReturnDraft: async (returnOfTransportId: string, horseId: string, config?: BookingRequestOptions): Promise<ReturnBookingDraft> =>
+    unwrapValue<ReturnBookingDraft>(await api.get<unknown>(`${BOOKING_ENDPOINT}/return-draft`, { ...config, params: { returnOfTransportId, horseId } })),
+  createReturnBooking: async (data: CreateReturnBookingRequest): Promise<CreateBookingResult> =>
+    unwrapValue<CreateBookingResult>(await api.post<unknown>(BOOKING_ENDPOINT, data)),
   updateBooking: updateBookingRequest,
 
   getAvailableHorses: (params: HorseListParams): Promise<HorseListResponse> => horseBaseService.getAll(params),

@@ -118,6 +118,18 @@ export const overviewDtoSchema = z.object({
   actions,
   writeLocked: z.boolean().optional(),
   writeLockReason: z.string().nullish(),
+  /** Set on a return booking: the original trip whose documents can be reused. */
+  returnOf: z
+    .object({
+      transportId: z.string(),
+      transportCode: z.string(),
+      bookingId: z.string(),
+      bookingCode: z.string(),
+      dossierId: z.string().nullable(),
+      dossierCode: z.string().nullable(),
+      horseName: z.string().nullable(),
+    })
+    .nullish(),
 });
 export const backendReminderEnvelopeSchema = backendEnvelopeSchema.extend({
   value: z.object({
@@ -229,6 +241,7 @@ export function mapBackendDossierOverview(payload: unknown) {
     },
     quarantineStatus: null,
     customsClearanceStatus: null,
+    returnOf: value.returnOf ?? null,
   });
 }
 

@@ -35,6 +35,10 @@ const bookingErrorMessages: Record<string, string> = {
   HORSE_NOT_IN_BOOKING: "This horse is not in the booking.",
   FORBIDDEN: "You do not have permission to do this.",
   UNAUTHORIZED: "Your session has expired. Please sign in again.",
+  RETURN_BOOKING_EXISTS: "This horse already has a return booking.",
+  DETACHED_HORSE_NOT_FOUND: "No horse was left behind by this transport.",
+  RETURN_BOOKING_HORSE_INVALID: "A return booking carries exactly the one horse that was left behind.",
+  DEPARTURE_DATE_OUT_OF_RANGE: "The departure date is not allowed.",
 }
 
 /** The booking service rethrows API failures as Error(errorCode); mock mode throws the same codes. */

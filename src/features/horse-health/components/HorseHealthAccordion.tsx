@@ -21,7 +21,7 @@ export function HorseHealthAccordion({ item, transportId, historyHref }: { item:
 
   return <article className="border border-slate-300 bg-white">
     <button type="button" className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left" aria-expanded={open} onClick={() => setOpen((value) => !value)}>
-      <span className="min-w-0 flex-1"><span className={`block truncate text-base font-bold ${horseNameTone}`}>{item.horse.horseName}</span><span className="mt-1 block truncate text-xs text-slate-500">Microchip: {item.horse.microchipNumber ?? "—"}</span><span className="block truncate text-xs text-slate-500">Passport: {item.horse.passportNumber ?? "—"}</span></span>
+      <span className="min-w-0 flex-1"><span className={`block truncate text-base font-bold ${horseNameTone}`}>{item.horse.horseName}</span>{item.detachedAt ? <span className="mt-1 inline-block border border-amber-300 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Left behind · {formatDate(item.detachedAt)}</span> : null}<span className="mt-1 block truncate text-xs text-slate-500">Microchip: {item.horse.microchipNumber ?? "—"}</span><span className="block truncate text-xs text-slate-500">Passport: {item.horse.passportNumber ?? "—"}</span></span>
       <ChevronDown className={`size-5 shrink-0 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
     </button>
     <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`} aria-hidden={!open}>
