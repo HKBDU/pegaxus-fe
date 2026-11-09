@@ -52,36 +52,37 @@ export const auditBookingSchema = z.object({
     )
     .optional(),
 });
-export const auditHorseVitalLogSchema = z.object({
-  logId: id,
-  recordedAt: z.string(),
-  locationName: z.string().optional(),
-  temperatureCelsius: amount,
-  heartRateBpm: amount,
-  respirationRate: amount.optional(),
-  stressLevel: z.enum(["LOW", "NORMAL", "HIGH", "CRITICAL"]).catch("NORMAL"),
-  isAbnormal: z.boolean().optional(),
-  notes: z.string().optional(),
-  veterinarianName: z.string().optional(),
+const note = z.string().nullish();
+const reading = z.number().nullish();
+export const auditHorseHealthLogSchema = z.object({
+  healthLogId: id,
+  checkedAt: z.string(),
+  logType: z.string().catch("OTHER"),
+  healthStatus: z.string().catch("NORMAL"),
+  temperatureCelsius: reading,
+  heartRateBpm: reading,
+  respiratoryRateBpm: reading,
+  symptomNote: note,
+  injuryNote: note,
+  treatmentProvided: note,
+  medicationGiven: note,
+  veterinarianRequired: z.boolean().catch(false),
+  veterinarianNote: note,
+  generalNote: note,
+  photoCount: z.number().catch(0),
 });
-export const auditHorsesSchema = z.object({
-  horses: z
-    .array(
-      z.object({
-        horseId: id,
-        horseName: z.string(),
-        microchipNumber: z.string(),
-        passportNumber: z.string(),
-        breed: z.string().optional(),
-        gender: z.string().optional(),
-        yearOfBirth: z.number().optional(),
-        weightKg: amount.optional(),
-        declaredValue: amount.optional(),
-        healthLogs: z.array(auditHorseVitalLogSchema).catch([]),
-      }),
-    )
-    .catch([]),
-});
+// The BE sends `horses` as a bare array. The old `{ horses: [...] }` object shape made every audit response fail to parse.
+export const auditHorsesSchema = z.array(
+  z.object({
+    horseId: id,
+    name: z.string().catch("—"),
+    microchipNumber: note,
+    passportNumber: note,
+    weightKg: reading,
+    heightCm: reading,
+    healthLogs: z.array(auditHorseHealthLogSchema).catch([]),
+  }),
+);
 export const auditRoutingSchema = z.object({
   routePlanId: z.string().optional(),
   routePlanCode: z.string().optional(),

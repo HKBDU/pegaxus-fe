@@ -113,7 +113,7 @@ export default function TransportAuditDetailPage() {
                 {
                   id: "horses",
                   label: "Horses & Health",
-                  count: audit.horses?.horses.length,
+                  count: audit.horses?.length,
                 },
                 { id: "booking", label: "Booking" },
                 { id: "routing", label: "Routing & Waypoints" },

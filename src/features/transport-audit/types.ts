@@ -77,32 +77,31 @@ export interface AuditBookingData {
     createdAt?: string;
   }>;
 }
-export interface AuditHorseVitalLog {
-  logId: string;
-  recordedAt: string;
-  locationName?: string;
-  temperatureCelsius: number;
-  heartRateBpm: number;
-  respirationRate?: number;
-  stressLevel: "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
-  isAbnormal?: boolean;
-  notes?: string;
-  veterinarianName?: string;
+export interface AuditHorseHealthLog {
+  healthLogId: string;
+  checkedAt: string;
+  logType: string;
+  healthStatus: string;
+  temperatureCelsius?: number | null;
+  heartRateBpm?: number | null;
+  respiratoryRateBpm?: number | null;
+  symptomNote?: string | null;
+  injuryNote?: string | null;
+  treatmentProvided?: string | null;
+  medicationGiven?: string | null;
+  veterinarianRequired: boolean;
+  veterinarianNote?: string | null;
+  generalNote?: string | null;
+  photoCount: number;
 }
 export interface AuditHorseItem {
   horseId: string;
-  horseName: string;
-  microchipNumber: string;
-  passportNumber: string;
-  breed?: string;
-  gender?: string;
-  yearOfBirth?: number;
-  weightKg?: number;
-  declaredValue?: number;
-  healthLogs: AuditHorseVitalLog[];
-}
-export interface AuditHorsesData {
-  horses: AuditHorseItem[];
+  name: string;
+  microchipNumber?: string | null;
+  passportNumber?: string | null;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  healthLogs: AuditHorseHealthLog[];
 }
 export interface AuditRouteLeg {
   legId: string;
@@ -229,7 +228,7 @@ export interface TransportAuditFull {
   destinationCountry?: string;
   viewMode?: "FULL" | "CUSTOMER";
   booking?: AuditBookingData;
-  horses?: AuditHorsesData;
+  horses?: AuditHorseItem[];
   routing?: AuditRoutingData;
   compliance?: AuditComplianceData;
   operations?: AuditOperationsData;
