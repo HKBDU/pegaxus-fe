@@ -78,18 +78,37 @@ export function MapViewer({
     [route, routeGeoJson, validLocations],
   );
 
+  const isBuilding = mode === "buildPlan" || mode === "pickPoint";
+  const startPoint = isBuilding ? toMapPoint(buildStartLocation ?? {}) : null;
+  const endPoint = isBuilding ? toMapPoint(buildEndLocation ?? {}) : null;
+  const [startLng, startLat] = startPoint ?? [];
+  const [endLng, endLat] = endPoint ?? [];
+  // While building a plan, open on its start and end so both are easy to find; otherwise fit every location.
+  // Keyed on the coordinates, since the endpoint objects may be rebuilt on every render.
+  const endpointBounds = useMemo(
+    () =>
+      startLat !== undefined && startLng !== undefined && endLat !== undefined && endLng !== undefined
+        ? boundsFromLocations([
+            { latitude: startLat, longitude: startLng },
+            { latitude: endLat, longitude: endLng },
+          ])
+        : null,
+    [startLat, startLng, endLat, endLng],
+  );
+  const initialBounds = endpointBounds ?? allBounds;
+
   useEffect(() => {
-    if (!allBounds) return;
+    if (!initialBounds) return;
     // Locations present at the first render are fitted before the map instance exists: retry for a moment.
     let frame = 0;
     let attempts = 0;
     const fit = () => {
-      if (viewport.current?.fitBounds(allBounds) || attempts++ > 120) return;
+      if (viewport.current?.fitBounds(initialBounds) || attempts++ > 120) return;
       frame = requestAnimationFrame(fit);
     };
     fit();
     return () => cancelAnimationFrame(frame);
-  }, [allBounds]);
+  }, [initialBounds]);
 
   useEffect(() => {
     return () => {
