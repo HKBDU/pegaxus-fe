@@ -36,14 +36,24 @@ export function MarqueeBand() {
     reducedMq.addEventListener("change", onReducedChange);
 
     // Pause animation when offscreen for performance.
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        onscreen = entry.isIntersecting;
-        syncPlayback();
-      },
-      { threshold: 0 },
-    );
-    observer.observe(band);
+    let observer: IntersectionObserver | undefined;
+    try {
+      if (typeof IntersectionObserver === "function") {
+        observer = new IntersectionObserver(
+          ([entry]) => {
+            if (disposed) return;
+            onscreen = entry?.isIntersecting ?? false;
+            syncPlayback();
+          },
+          { threshold: 0 },
+        );
+        observer.observe(band);
+      }
+    } catch {
+      observer?.disconnect();
+      observer = undefined;
+      // Keep the visible brand strip static if viewport observation is unavailable.
+    }
 
     // Recompute seamless-loop width on resize/font-load.
     const recompute = () => {
@@ -61,7 +71,7 @@ export function MarqueeBand() {
     return () => {
       disposed = true;
       reducedMq.removeEventListener("change", onReducedChange);
-      observer.disconnect();
+      observer?.disconnect();
       window.removeEventListener("resize", recompute);
       document.removeEventListener("visibilitychange", syncPlayback);
     };

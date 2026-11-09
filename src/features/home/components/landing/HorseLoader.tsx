@@ -1,64 +1,30 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
+import poseUrl from "@/assets/horse-loader-pose.webp?inline";
 
 export function HorseLoader({
-  pending,
+  status,
   onReveal,
 }: {
-  pending: boolean;
+  status: "loading" | "ready" | "unavailable";
   onReveal: () => void;
 }) {
-  const [expired, setExpired] = useState(false);
-  const revealed = useRef(false);
-  const opening = !pending || expired;
-  const reveal = useCallback(() => {
-    if (revealed.current) return;
-    revealed.current = true;
-    onReveal();
-  }, [onReveal]);
   useEffect(() => {
-    if (!pending) return;
-    const timeout = window.setTimeout(() => setExpired(true), 12000);
-    return () => window.clearTimeout(timeout);
-  }, [pending]);
-  useEffect(() => {
-    if (!opening) return;
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => {
-      if (reduced.matches) reveal();
-    };
-    update();
-    // A bounded exit also covers missing transitionend events or a suspended tab.
-    const timeout = window.setTimeout(reveal, 1100);
-    reduced.addEventListener("change", update);
-    return () => {
-      window.clearTimeout(timeout);
-      reduced.removeEventListener("change", update);
-    };
-  }, [opening, reveal]);
+    if (status === "ready") onReveal();
+  }, [status, onReveal]);
+  if (status === "ready") return null;
   return (
     <div
-      className={`landing-loader${opening ? " is-loaded" : ""}`}
+      className="landing-loader landing-scene-fallback"
       role="status"
       aria-live="polite"
-      aria-hidden={opening}
-      onTransitionEnd={(event) => {
-        if (
-          opening &&
-          event.propertyName === "transform" &&
-          event.target instanceof HTMLElement &&
-          event.target.classList.contains("landing-loader-panel")
-        )
-          reveal();
-      }}
     >
-      <div className="landing-loader-panel is-left" aria-hidden="true" />
-      <div className="landing-loader-panel is-right" aria-hidden="true" />
-      <div className="landing-loader-brand">
-        <span className="landing-eyebrow">PRECISION IN EVERY JOURNEY</span>
-        <p>PEGAXUS</p>
-        <span className="landing-loader-rule" aria-hidden="true" />
-        <span className="landing-loader-caption">Preparing the journey</span>
-      </div>
+      <img src={poseUrl} width="192" height="192" alt="" />
+      <span className="landing-eyebrow">FORWARD, WITH PURPOSE</span>
+      <small>
+        {status === "loading"
+          ? "Preparing the 3D journey. Explore while it loads."
+          : "3D preview unavailable. Explore the journey below."}
+      </small>
     </div>
   );
 }
