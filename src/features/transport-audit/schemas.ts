@@ -21,16 +21,10 @@ export const auditBookingSchema = z.object({
     .object({
       customerId: id,
       name: z.string().catch("—"),
-      email: z.string().optional(),
-      phone: z.string().optional(),
     })
     .catch({ customerId: "", name: "—" }),
-  contractNumber: z.string().optional(),
-  contractSignedAt: z.string().optional(),
   originCountry: z.string().catch("—"),
   destinationCountry: z.string().catch("—"),
-  pickupLocation: z.string().optional(),
-  deliveryLocation: z.string().optional(),
   invoices: z
     .array(
       z.object({
@@ -49,9 +43,6 @@ export const auditBookingSchema = z.object({
         claimId: id,
         claimCode: z.string(),
         status: z.string(),
-        claimType: z.string().optional(),
-        claimedAmount: amount.optional(),
-        createdAt: z.string().optional(),
       }),
     )
     .optional(),

@@ -15,17 +15,25 @@ import {
   Truck,
   UserRound,
   UsersRound,
-} from "lucide-react"
-import type { CSSProperties } from "react"
-import { NavLink, useLocation } from "react-router-dom"
+} from "lucide-react";
+import type { CSSProperties } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 
-import { BrandLogo } from "@/shared/components/BrandNavigation"
-import { canAccess } from "@/features/auth/access-control"
-import { useAuthStore } from "@/features/auth/store"
-import { APPROVED_BOOKINGS_ACCESS, INCIDENT_ADMIN_ACCESS, ONGOING_TRANSPORT_ACCESS, ROLE_ROUTES } from "@/app/route-config"
-import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu"
-import { cn } from "@/lib/utils"
-import type { AdminSidebarMenuProps, AdminSidebarProviderProps } from "@/shared/types/type"
+import { BrandLogo } from "@/shared/components/BrandNavigation";
+import { canAccess } from "@/features/auth/access-control";
+import { useAuthStore } from "@/features/auth/store";
+import {
+  APPROVED_BOOKINGS_ACCESS,
+  INCIDENT_ADMIN_ACCESS,
+  ONGOING_TRANSPORT_ACCESS,
+  ROLE_ROUTES,
+} from "@/app/route-config";
+import { SlidingSidebarMenu } from "@/shared/components/SlidingSidebarMenu";
+import { cn } from "@/lib/utils";
+import type {
+  AdminSidebarMenuProps,
+  AdminSidebarProviderProps,
+} from "@/shared/types/type";
 import {
   Sidebar,
   SidebarContent,
@@ -36,68 +44,122 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   useSidebar,
-} from "@/shared/components/ui/sidebar"
+} from "@/shared/components/ui/sidebar";
 
-const incidentsItem = { label: "Incidents", href: ROLE_ROUTES.incidents, icon: TriangleAlert }
+const incidentsItem = {
+  label: "Incidents",
+  href: ROLE_ROUTES.incidents,
+  icon: TriangleAlert,
+};
 
 const primaryItems = [
-  { label: "Dashboard", href: ROLE_ROUTES.dashboard, icon: ChartNoAxesCombined },
-  { label: "Transport Requests", href: "/admin/transport-requests", icon: Truck },
+  {
+    label: "Dashboard",
+    href: ROLE_ROUTES.dashboard,
+    icon: ChartNoAxesCombined,
+  },
+  {
+    label: "Transport Requests",
+    href: "/admin/transport-requests",
+    icon: Truck,
+  },
   { label: "Transport Plans", href: ROLE_ROUTES.transportPlans, icon: MapPin },
-  { label: "Ongoing Transports", href: ROLE_ROUTES.ongoingTransports, icon: Truck },
+  {
+    label: "Ongoing Transports",
+    href: ROLE_ROUTES.ongoingTransports,
+    icon: Truck,
+  },
   incidentsItem,
   { label: "Invoices", href: ROLE_ROUTES.invoices, icon: FileText },
   { label: "Price Lists", href: ROLE_ROUTES.priceLists, icon: ReceiptText },
   { label: "Claims", href: ROLE_ROUTES.claims, icon: MessageSquareWarning },
-  { label: "Transport Archive & Audit", href: ROLE_ROUTES.transportArchive, icon: Archive },
-  { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
-  { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
+  {
+    label: "Archive & Audit",
+    href: ROLE_ROUTES.transportArchive,
+    icon: Archive,
+  },
+  {
+    label: "Compliance Catalog",
+    href: ROLE_ROUTES.complianceRequirements,
+    icon: ClipboardCheck,
+  },
+  {
+    label: "Dossier Tracking",
+    href: ROLE_ROUTES.complianceDossiers,
+    icon: Gauge,
+  },
   { label: "Users", href: "/admin/users", icon: UsersRound },
   { label: "Vehicles", href: ROLE_ROUTES.vehicles, icon: CarFront },
-  { label: "Transport Providers", href: ROLE_ROUTES.transportProviders, icon: ThumbsUp },
-]
+  {
+    label: "Transport Providers",
+    href: ROLE_ROUTES.transportProviders,
+    icon: ThumbsUp,
+  },
+];
 
 const staffPrimaryItems = [
-  { label: "Compliance Catalog", href: ROLE_ROUTES.complianceRequirements, icon: ClipboardCheck },
-  { label: "Dossier Templates", href: ROLE_ROUTES.dossierTemplates, icon: FileStack },
-  { label: "Dossier Tracking", href: ROLE_ROUTES.complianceDossiers, icon: Gauge },
-]
+  {
+    label: "Compliance Catalog",
+    href: ROLE_ROUTES.complianceRequirements,
+    icon: ClipboardCheck,
+  },
+  {
+    label: "Dossier Templates",
+    href: ROLE_ROUTES.dossierTemplates,
+    icon: FileStack,
+  },
+  {
+    label: "Dossier Tracking",
+    href: ROLE_ROUTES.complianceDossiers,
+    icon: Gauge,
+  },
+];
 
 const routeCoordinatorItems = [
   { label: "Vehicles", href: ROLE_ROUTES.vehicles, icon: CarFront },
   { label: "Route Plans", href: ROLE_ROUTES.routePlans, icon: MapPin },
   { label: "Map Assets", href: ROLE_ROUTES.mapAssets, icon: MapPin },
-]
+];
 
 const crewItems = [
   { label: "Ongoing Transport", href: "/crew", icon: Gauge },
   { label: "Assigned Transports", href: "/crew/transports", icon: Truck },
-]
+];
 
-const approvedBookingsItem = { label: "Approved Bookings", href: ROLE_ROUTES.approvedBookings, icon: ClipboardCheck }
+const approvedBookingsItem = {
+  label: "Approved Bookings",
+  href: ROLE_ROUTES.approvedBookings,
+  icon: ClipboardCheck,
+};
 
 const staffSecondaryItems = [
   { label: "Profile", href: ROLE_ROUTES.customerProfile, icon: UserRound },
-]
+];
 
 const secondaryItems = [
   { label: "Profile", href: "/admin/profile", icon: UserRound },
-]
+];
 
-const logoutItem = { label: "Sign Out", href: "/logout", icon: LogOut }
+const logoutItem = { label: "Sign Out", href: "/logout", icon: LogOut };
 
 function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
-  const { pathname } = useLocation()
-  const { setOpenMobile } = useSidebar()
+  const { pathname } = useLocation();
+  const { setOpenMobile } = useSidebar();
 
   return (
     <SlidingSidebarMenu>
       {items.map((item) => {
-        const isActive = item.href === "/admin" || item.href === "/crew" ? pathname === item.href : pathname.startsWith(item.href)
-        const Icon = item.icon
+        const isActive =
+          item.href === "/admin" || item.href === "/crew"
+            ? pathname === item.href
+            : pathname.startsWith(item.href);
+        const Icon = item.icon;
 
         return (
-          <SidebarMenuItem key={item.href} data-active-item={isActive || undefined}>
+          <SidebarMenuItem
+            key={item.href}
+            data-active-item={isActive || undefined}
+          >
             <SidebarMenuButton
               asChild
               isActive={isActive}
@@ -111,35 +173,62 @@ function AdminSidebarMenu({ items, compact = false }: AdminSidebarMenuProps) {
             >
               <NavLink to={item.href} onClick={() => setOpenMobile(false)}>
                 <Icon className="size-4" />
-                <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                <span className="group-data-[collapsible=icon]:hidden">
+                  {item.label}
+                </span>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
-        )
+        );
       })}
     </SlidingSidebarMenu>
-  )
+  );
 }
 
 export function AdminSidebar() {
-  const { setOpenMobile } = useSidebar()
-  const principal = useAuthStore((state) => state.principal)
+  const { setOpenMobile } = useSidebar();
+  const principal = useAuthStore((state) => state.principal);
   // Logistics managers get the full admin menu; other employees (e.g. Transport Specialist) only their own pages.
-  const isManager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
-  const isRouteCoordinator = canAccess(principal, { anyRole: ["FLEET_ROUTE_COORDINATOR"] })
+  const isManager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] });
+  const isRouteCoordinator = canAccess(principal, {
+    anyRole: ["FLEET_ROUTE_COORDINATOR"],
+  });
   // Drivers and escorts only have their assigned transports.
-  const isCrew = canAccess(principal, { anyRole: ["DRIVER", "ESCORT"] })
-  const items = isCrew ? crewItems : isManager ? primaryItems : [
-    ...(canAccess(principal, APPROVED_BOOKINGS_ACCESS) ? [approvedBookingsItem] : []),
-    ...(canAccess(principal, ONGOING_TRANSPORT_ACCESS) ? [{ label: "Ongoing Transports", href: ROLE_ROUTES.ongoingTransports, icon: Truck }] : []),
-    ...(canAccess(principal, INCIDENT_ADMIN_ACCESS) ? [incidentsItem] : []),
-    ...(isRouteCoordinator ? routeCoordinatorItems : staffPrimaryItems),
-  ]
+  const isCrew = canAccess(principal, { anyRole: ["DRIVER", "ESCORT"] });
+  const items = isCrew
+    ? crewItems
+    : isManager
+      ? primaryItems
+      : [
+          ...(canAccess(principal, APPROVED_BOOKINGS_ACCESS)
+            ? [approvedBookingsItem]
+            : []),
+          ...(canAccess(principal, ONGOING_TRANSPORT_ACCESS)
+            ? [
+                {
+                  label: "Ongoing Transports",
+                  href: ROLE_ROUTES.ongoingTransports,
+                  icon: Truck,
+                },
+              ]
+            : []),
+          ...(canAccess(principal, INCIDENT_ADMIN_ACCESS)
+            ? [incidentsItem]
+            : []),
+          ...(isRouteCoordinator ? routeCoordinatorItems : staffPrimaryItems),
+        ];
 
   return (
-    <Sidebar fixed={false} collapsible="icon" className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white">
+    <Sidebar
+      fixed={false}
+      collapsible="icon"
+      className="sticky top-0 h-svh min-h-svh shrink-0 overflow-hidden border-r-0 bg-[#17191c] text-white"
+    >
       <div className="relative flex h-20 shrink-0 items-center justify-center bg-[#17191c] px-4 group-data-[collapsible=icon]:px-2">
-        <BrandLogo onClick={() => setOpenMobile(false)} className="w-full max-w-[170px] group-data-[collapsible=icon]:hidden" />
+        <BrandLogo
+          onClick={() => setOpenMobile(false)}
+          className="w-full max-w-[170px] group-data-[collapsible=icon]:hidden"
+        />
       </div>
       <SidebarContent className="overflow-y-auto overflow-x-hidden bg-[#17191c]">
         <SidebarGroup className="px-0">
@@ -149,7 +238,10 @@ export function AdminSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="shrink-0 border-white/10 bg-[#17191c] px-0 py-4">
-        <AdminSidebarMenu items={isManager ? secondaryItems : staffSecondaryItems} compact />
+        <AdminSidebarMenu
+          items={isManager ? secondaryItems : staffSecondaryItems}
+          compact
+        />
         <div className="lg:hidden">
           <AdminSidebarMenu items={[logoutItem]} compact />
         </div>
@@ -158,7 +250,7 @@ export function AdminSidebar() {
         </div>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
 
 export function AdminSidebarProvider({ children }: AdminSidebarProviderProps) {
@@ -171,5 +263,5 @@ export function AdminSidebarProvider({ children }: AdminSidebarProviderProps) {
       <AdminSidebar />
       {children}
     </SidebarProvider>
-  )
+  );
 }

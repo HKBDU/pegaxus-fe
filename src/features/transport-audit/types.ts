@@ -51,15 +51,9 @@ export interface AuditBookingData {
   customer: {
     customerId: string;
     name: string;
-    email?: string;
-    phone?: string;
   };
-  contractNumber?: string;
-  contractSignedAt?: string;
   originCountry: string;
   destinationCountry: string;
-  pickupLocation?: string;
-  deliveryLocation?: string;
   invoices?: Array<{
     invoiceId: string;
     invoiceNumber: string;
@@ -72,9 +66,6 @@ export interface AuditBookingData {
     claimId: string;
     claimCode: string;
     status: string;
-    claimType?: string;
-    claimedAmount?: number;
-    createdAt?: string;
   }>;
 }
 export interface AuditHorseHealthLog {
