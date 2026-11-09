@@ -17,7 +17,7 @@ import { IncidentLocation, IncidentOutcome, IncidentOverview } from "../componen
 import { IncidentTimeline } from "../components/IncidentTimeline"
 import { ResolveIncidentDialog } from "../components/ResolveIncidentDialog"
 import { EmergencyCostSection, HorseDetailsSection, IncidentResponseActions, VehicleDetailSection } from "../components/slots"
-import { actionButtonClass, dangerButtonClass, primaryButtonClass } from "../components/ui"
+import { actionButtonClass, dangerButtonClass, outlineButtonClass, primaryButtonClass } from "../components/ui"
 import { incidentRoutes, severityEdge } from "../constants"
 import { isNotFound } from "../errors"
 import { useIncident } from "../hooks/useIncidents"
@@ -123,6 +123,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
         lastUpdatedAt={incident.updatedAt}
         availableActions={incident.availableActions as IncidentAction[]}
         onChanged={refetch}
+        className={cn(actionButtonClass, outlineButtonClass, "min-h-0")}
       />
       {canResolve ? (
         <button type="button" className={cn(actionButtonClass, primaryButtonClass)} onClick={() => setResolveOpen(true)}>

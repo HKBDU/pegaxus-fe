@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ArrowUpDown } from "lucide-react";
 
 import {
   INCIDENT_ACTION,
@@ -11,6 +12,7 @@ import type {
   IncidentMutationResponse,
   IncidentSeverity,
 } from "@/shared/types/incident";
+import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import {
   Select,
@@ -44,6 +46,8 @@ export interface RaiseSeverityButtonProps {
   lastUpdatedAt: string;
   availableActions: IncidentAction[];
   onChanged?: (response: IncidentMutationResponse) => void;
+  /** Lets the page size the button like the other actions of its bar. */
+  className?: string;
 }
 
 export function RaiseSeverityButton({
@@ -52,6 +56,7 @@ export function RaiseSeverityButton({
   lastUpdatedAt,
   availableActions,
   onChanged,
+  className,
 }: RaiseSeverityButtonProps) {
   const [open, setOpen] = useState(false);
   const [nextSeverity, setNextSeverity] = useState<IncidentSeverity>(
@@ -102,8 +107,10 @@ export function RaiseSeverityButton({
           setNextSeverity(allowedSeverities[0]);
           setOpen(true);
         }}
-        className="min-h-12 rounded-[2px] bg-[#f39200] text-[#181818] hover:bg-[#d97f00]"
+        variant={className ? "outline" : "default"}
+        className={cn("min-h-12 rounded-[2px] bg-[#f39200] text-[#181818] hover:bg-[#d97f00]", className)}
       >
+        <ArrowUpDown className="size-4" aria-hidden="true" />
         Change severity
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

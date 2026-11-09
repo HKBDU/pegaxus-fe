@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { HorseLoader } from "@/shared/components/common/HorseLoader";
 import type { PriceListHeader } from "../header.schemas";
@@ -11,11 +12,14 @@ export interface ClonePriceListButtonProps {
   priceList: Pick<PriceListHeader, "priceListId" | "name">;
   onCloned: (priceList: PriceListHeader) => void;
   variant?: ComponentProps<typeof Button>["variant"];
+  /** Lets the page size the button like its neighbours; the default is the plain rounded button. */
+  className?: string;
 }
 export function ClonePriceListButton({
   priceList,
   onCloned,
   variant = "outline",
+  className,
 }: ClonePriceListButtonProps) {
   const mutation = useClonePriceList(priceList.priceListId);
   async function clone() {
@@ -36,7 +40,7 @@ export function ClonePriceListButton({
     <Button
       type="button"
       variant={variant}
-      className="rounded-[2px]"
+      className={cn("rounded-[2px]", className)}
       aria-label={`Clone ${priceList.name}`}
       aria-busy={mutation.isPending}
       title={
@@ -50,7 +54,7 @@ export function ClonePriceListButton({
       {mutation.isPending ? (
         <HorseLoader size="button" label="Cloning price list" />
       ) : (
-        <Copy aria-hidden="true" className="size-4" />
+        <Copy aria-hidden="true" className="size-3.5" />
       )}
       {mutation.isPending ? "Cloning..." : "Clone"}
     </Button>
