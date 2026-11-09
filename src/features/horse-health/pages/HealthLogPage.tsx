@@ -201,10 +201,7 @@ export default function HealthLogPage() {
 
         {/* Transport Overview Header Card */}
         <div className="border border-slate-300 bg-white p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Active Transport</p>
-            <p className="text-base font-bold text-[#181818]">{overview.data.transportId}</p>
-          </div>
+          <p className="text-xs font-semibold uppercase text-slate-500">Active Transport</p>
           <div className="flex items-center gap-2">
             <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
               {overview.data.horses.length} horses assigned
