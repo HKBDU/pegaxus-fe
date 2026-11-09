@@ -129,6 +129,18 @@ export const routePlanDetailSchema = z.object({
   routeNote: text,
   createdAt: responseTimestamp,
   updatedAt: responseTimestamp,
+  /** On a primary awaiting legal review: the backups submitted with it, reviewed in the same decision. */
+  submittedBackups: z
+    .array(
+      z.object({
+        routePlanId: z.string().min(1),
+        routePlanCode: z.string(),
+        segments: z.array(routeSegmentSchema),
+        legalReview: routeLegalReviewSchema.nullable().optional().transform((v) => v ?? null),
+      }),
+    )
+    .nullish()
+    .transform((v) => v ?? []),
 });
 export const routePlanSummarySchema = z.object({
   routePlanId: z.string().min(1),
