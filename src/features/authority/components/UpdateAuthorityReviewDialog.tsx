@@ -464,6 +464,13 @@ export function UpdateAuthorityReviewDialog({
                 )}
 
                 {decision === "REJECTED" && (
+                  <p className="m-0 border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                    A rejection from a required authority sends the dossier back to preparation. Fix the requirements or ask the
+                    customer for new documents, mark it ready for submission and submit it to this authority again.
+                  </p>
+                )}
+
+                {decision === "REJECTED" && (
                   <Field
                     label="OFFICIAL REJECTION REASON *"
                     error={errors.rejectionReason}
