@@ -40,6 +40,7 @@ export type EmergencyContext = {
   horseCount?: number;
   transportId: string;
   extraDossierStatus?: string;
+  bookingRestricted?: boolean;
 };
 
 export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
@@ -80,42 +81,50 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
     {},
     ready,
   );
-  const failures = [transport, booking, routes]
+  // Secondary query failures (such as booking 403 when RC is not assigned) should degrade gracefully
+  // rather than blocking access to the emergency workspace.
+  const coreFailures = [transport, routes]
     .filter((query) => query.isError)
     .map((query) => query.error);
-  const permissionFailure = failures.find((failure) => {
+  const permissionFailure = coreFailures.find((failure) => {
     const mapped = getEmergencyError(failure);
     return mapped.denied || mapped.unauthorized;
   });
-  const error = permissionFailure ?? failures[0] ?? null;
+  const error = permissionFailure ?? coreFailures[0] ?? null;
   const loading =
-    ready && (transport.isPending || booking.isPending || routes.isPending);
+    ready &&
+    (transport.isPending || routes.isPending || (booking.isPending && !booking.isError));
   let data: EmergencyContext | undefined;
+  const bookingMatches =
+    !booking.data ||
+    (booking.data.transportPlan?.transportPlanId === plan?.transportPlanId &&
+      booking.data.transport?.transportId ===
+        transport.data?.transport.transportId);
   const matches =
-    plan &&
-    transport.data?.booking.bookingId === plan.bookingId &&
-    booking.data?.transportPlan?.transportPlanId === plan.transportPlanId &&
-    booking.data.transport?.transportId ===
-      transport.data.transport.transportId;
-  if (ready && !permissionFailure && !loading && matches && routes.data) {
+    Boolean(plan) &&
+    transport.data?.booking.bookingId === plan?.bookingId &&
+    bookingMatches;
+  if (ready && !permissionFailure && !loading && matches && plan && routes.data && transport.data) {
     const legalDossier =
-      plan.routeType === "RETURN"
-        ? booking.data!.complianceDossiers.find(
-            (dossier) => dossier.dossierType === "EXTRA",
-          )
-        : booking.data!.complianceDossier;
+      booking.data
+        ? plan.routeType === "RETURN"
+          ? booking.data.complianceDossiers.find(
+              (dossier) => dossier.dossierType === "EXTRA",
+            )
+          : booking.data.complianceDossier
+        : undefined;
     data = {
       workspace: {
         principal,
-        planStatus: transport.data!.status,
-        transportStatus: transport.data!.transport.status,
+        planStatus: transport.data.status,
+        transportStatus: transport.data.transport.status,
         // RETURN legal review uses the EXTRA dossier; PRIMARY/BACKUP use MAIN.
         // Keep the workspace status aligned with the dossier selected below.
         dossierStatus: legalDossier?.status,
         hasActivePrimary: hasActivePrimary(routes.data.items),
         hasOpenReturn: hasOpenReturn(routes.data.items),
       },
-      transportCode: transport.data!.transport.transportCode,
+      transportCode: transport.data.transport.transportCode,
       activeRoutes: routes.data.items.filter(
         (route) => route.status === "ACTIVE",
       ),
@@ -123,15 +132,16 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
         (route) =>
           route.routeType === "PRIMARY" && route.status !== "CANCELLED",
       ),
-      dossierId: booking.data!.complianceDossier?.complianceDossierId,
+      dossierId: booking.data?.complianceDossier?.complianceDossierId,
       legalDossier: legalDossier?.complianceDossierId.trim()
         ? legalDossier
         : undefined,
-      horseCount: transport.data!.booking.totalHorses,
-      transportId: transport.data!.transport.transportId,
-      extraDossierStatus: booking.data!.complianceDossiers.find(
+      horseCount: transport.data.booking.totalHorses,
+      transportId: transport.data.transport.transportId,
+      extraDossierStatus: booking.data?.complianceDossiers.find(
         (dossier) => dossier.dossierType === "EXTRA",
       )?.status,
+      bookingRestricted: booking.isError,
     };
   }
   const mismatch =
@@ -144,11 +154,12 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
     data,
     error: error ?? mismatch,
     loading,
-    reload: () => Promise.all([
-      transport.refetch({ throwOnError: true }),
-      booking.refetch({ throwOnError: true }),
-      routes.refetch({ throwOnError: true }),
-    ]),
+    reload: () =>
+      Promise.all([
+        transport.refetch({ throwOnError: true }),
+        booking.refetch().catch(() => null),
+        routes.refetch({ throwOnError: true }),
+      ]),
   };
 }
 

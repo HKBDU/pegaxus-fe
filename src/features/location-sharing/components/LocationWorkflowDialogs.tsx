@@ -59,29 +59,29 @@ export function LocationWorkflowDialogs({
   const boundary =
     !segments.isError && !segments.isFetching
       ? segments.data?.handoverBoundaries.find(
-          (item) =>
-            item.boundaryNo === arrival?.boundaryNo &&
-            item.fromRoutePlanRouteId === arrival.fromRoutePlanRouteId &&
-            item.toRoutePlanRouteId === arrival.toRoutePlanRouteId,
-        )
+        (item) =>
+          item.boundaryNo === arrival?.boundaryNo &&
+          item.fromRoutePlanRouteId === arrival.fromRoutePlanRouteId &&
+          item.toRoutePlanRouteId === arrival.toRoutePlanRouteId,
+      )
       : undefined;
   const record = boundary?.existingHandover ?? arrival?.existingHandover;
   const handoverLink =
     record && (record.status === "PLANNED" || record.status === "IN_PROGRESS")
       ? handoverPaths.record("crew", transportId, record.handoverRecordId)
       : !record &&
-          boundary?.handoverRequired === true &&
-          !isSameDriverBoundary(boundary, segments.data?.segments ?? []) &&
-          boundary.canCreate &&
-          boundary.createModes?.includes("START_NOW")
+        boundary?.handoverRequired === true &&
+        !isSameDriverBoundary(boundary, segments.data?.segments ?? []) &&
+        boundary.canCreate &&
+        boundary.createModes?.includes("START_NOW")
         ? handoverPaths.start("crew", transportId, {
-            from: arrival?.fromRoutePlanRouteId,
-            to: arrival?.toRoutePlanRouteId,
-            handoverType:
-              boundary.allowedHandoverTypes.length === 1
-                ? boundary.allowedHandoverTypes[0]
-                : undefined,
-          })
+          from: arrival?.fromRoutePlanRouteId,
+          to: arrival?.toRoutePlanRouteId,
+          handoverType:
+            boundary.allowedHandoverTypes.length === 1
+              ? boundary.allowedHandoverTypes[0]
+              : undefined,
+        })
         : null;
   if (gate.applicable && gate.locked && pathname !== "/crew")
     return (

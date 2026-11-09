@@ -81,7 +81,7 @@ export function getCustomerDocumentActions(
   const document = requirement.document;
   if (!document) {
     return canUploadInitialDocument("CUSTOMER", dossier, requirement)
-      ? ["Upload Document"]
+      ? ["Upload Document", "View Requirement"]
       : ["View Requirement"];
   }
   const actions = ["View Document"];
@@ -121,7 +121,7 @@ export function getDossierRequirementActionLabels(
   if (role === "CUSTOMER") {
     if (!hasDocument)
       return status === "PENDING" || status === "REQUESTED"
-        ? ["Upload Document"]
+        ? ["Upload Document", "View Requirement"]
         : ["View Requirement"];
     if (status === "PROVIDED")
       return ["View Document", "Edit Document", "View Version History"];

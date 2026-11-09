@@ -412,13 +412,15 @@ export const documentReviewSchema = z.discriminatedUnion("result", [
   rejectionReview,
 ]);
 const backendReviewValue = z.object({
-  review: z.object({
-    documentReviewId: entityId,
-    reviewedByAccountId: entityId,
-    result: z.string(),
-    reviewComment: z.string().nullable(),
-    reviewedAt: timestamp,
-  }),
+  review: z
+    .object({
+      documentReviewId: entityId,
+      reviewedByAccountId: entityId,
+      result: z.string(),
+      reviewComment: z.string().nullable(),
+      reviewedAt: timestamp,
+    })
+    .passthrough(),
   requirementStatus: dossierRequirementStatusSchema,
   documentStatus: complianceDocumentStatusSchema,
   dossierStatus: dossierStatusSchema,
@@ -434,10 +436,11 @@ const backendReviewValue = z.object({
       dueDate: date.nullable(),
       requestedAt: timestamp,
     })
+    .passthrough()
     .optional(),
   emailSent: z.boolean().optional(),
   deliveryWarning: z.string().nullable().optional(),
-});
+}).passthrough();
 export const approveDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const rejectDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const documentReviewEnvelopeSchema = envelope(backendReviewValue);
