@@ -1653,7 +1653,9 @@ export function RoutePlanBuilder({
   }
 
   return (
-    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 p-3 md:p-4">
+    // `clip` rather than `hidden` here and on the section: a hidden overflow makes a scroll container, which stops the
+    // sticky route map.
+    <main className="min-h-screen w-full max-w-full overflow-x-clip bg-slate-50 p-3 md:p-4">
       <div className="mx-auto grid w-full max-w-[1440px] min-w-0 gap-3">
         <PageHeader
           title={
@@ -1672,7 +1674,7 @@ export function RoutePlanBuilder({
         />
         <BuilderMetadata plan={plan} />
         <BuilderProgress step={step} onChange={setStep} />
-        <section className="w-full min-w-0 overflow-hidden rounded-b-[2px] bg-white p-3 md:p-4">
+        <section className="w-full min-w-0 overflow-clip rounded-b-[2px] bg-white p-3 md:p-4">
           {step === 0 && (
             <RoutePlanEndpointsStep
               from={plan.from}
@@ -1700,7 +1702,8 @@ export function RoutePlanBuilder({
 
           {step === 1 && (
             <div className="grid w-full min-w-0 gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,1fr)]">
-              <div className="w-full min-w-0 min-h-[560px]">
+              {/* Side by side (xl), the map stays below the sticky admin header while a long segment list scrolls. */}
+              <div className="w-full min-w-0 min-h-[560px] xl:sticky xl:top-16 xl:min-h-0 xl:self-start">
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-semibold text-slate-900">
@@ -1727,6 +1730,7 @@ export function RoutePlanBuilder({
                   </div>
                 )}
                 <MapViewer
+                  className="xl:h-[calc(100svh-8.5rem)]"
                   locations={locations}
                   routes={selectedRoutes}
                   mode={mode}
