@@ -229,6 +229,15 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
               <SummaryCell label="Last updated"><DateTimeUtc value={booking.updatedAt} compact /></SummaryCell>
             </dl>
 
+            {booking.returnOf ? (
+              <section className="border border-amber-300 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
+                <span className="font-semibold">Return trip</span> of {booking.returnOf.horse?.horseName ?? "a horse"} left behind
+                {booking.returnOf.horse?.detachedLocationName ? ` at ${booking.returnOf.horse.detachedLocationName}` : ""} by transport{" "}
+                <span className="font-semibold">{booking.returnOf.transportCode}</span> (booking {booking.returnOf.bookingCode}). Its documents and route can be
+                reused from the original trip.
+              </section>
+            ) : null}
+
             <div className="grid gap-2.5 lg:grid-cols-[minmax(0,560fr)_minmax(0,792fr)]">
               <section className={cn(panelClass, "p-4")}>
                 <CardTitle>Customer information</CardTitle>
@@ -298,7 +307,14 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
                       booking.horses.map((horse, index) => (
                         <TableRow key={horse.horseId} className={cn("booking-table-row h-11 border-slate-200 hover:bg-amber-50/60", index % 2 === 0 ? "bg-white" : "bg-[#f7f6f3]")}>
                           <TableCell className="px-2.5 py-1.5 text-center text-xs text-gray-400">{index + 1}</TableCell>
-                          <TableCell className="truncate px-2.5 py-1.5 text-xs font-semibold text-gray-900" title={horse.horseName}>{horse.horseName}</TableCell>
+                          <TableCell className="truncate px-2.5 py-1.5 text-xs font-semibold text-gray-900" title={horse.horseName}>
+                            {horse.horseName}
+                            {horse.detachedAt ? (
+                              <span className="ml-1.5 rounded-[2px] border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800" title={horse.detachedLocationName ?? undefined}>
+                                Left behind
+                              </span>
+                            ) : null}
+                          </TableCell>
                           <TableCell className="truncate px-2.5 py-1.5 font-mono text-xs text-gray-600" title={horse.passportNumber}>{horse.passportNumber}</TableCell>
                           <TableCell className="truncate px-2.5 py-1.5 text-xs text-gray-600" title={horse.breed ?? undefined}>{horse.breed}</TableCell>
                           <TableCell className="px-2.5 py-1.5 text-xs text-gray-600">{formatSex(horse.sex)}</TableCell>

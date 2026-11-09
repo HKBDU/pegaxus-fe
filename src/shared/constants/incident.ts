@@ -78,6 +78,7 @@ export const INCIDENT_ACTION = {
   RAISE_SEVERITY: "RAISE_SEVERITY",
   LOWER_SEVERITY: "LOWER_SEVERITY",
   CANCEL_INCIDENT: "CANCEL_INCIDENT",
+  DETACH_HORSE: "DETACH_HORSE",
 } as const;
 
 export const EMERGENCY_COST_ACTION = {
@@ -164,6 +165,7 @@ export const INCIDENT_ACTION_LABELS: Record<
   RAISE_SEVERITY: "Raise Severity",
   LOWER_SEVERITY: "Lower Severity",
   CANCEL_INCIDENT: "Cancel Incident",
+  DETACH_HORSE: "Leave Horse Behind",
 };
 
 export const EMERGENCY_COST_ACTION_LABELS: Record<

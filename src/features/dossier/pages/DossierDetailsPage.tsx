@@ -18,6 +18,7 @@ import { DossierReadinessAction } from "../components/DossierReadinessAction";
 import { DossierRequirementsPreview } from "../components/DossierRequirementsPreview";
 import { useDossierOverview } from "../hooks/useDossier";
 import { useDossierRole } from "../hooks/useDossierRole";
+import { ReturnTripPanel } from "../components/ReturnTripPanel";
 import { getDossierLoadErrorKind } from "../source";
 
 const sections = [
@@ -118,6 +119,7 @@ export default function DossierDetailsPage() {
         ) : query.data ? (
           <>
             <DossierOverview dossier={query.data} />
+            <ReturnTripPanel dossier={query.data} role={role} />
             {query.data.status === "DRAFT" ? (
               <div
                 role="status"

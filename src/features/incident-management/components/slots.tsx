@@ -1,4 +1,4 @@
-import { HeartPulse, Truck } from "lucide-react"
+import { HeartPulse, MapPin, Truck } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { HORSE_INCIDENT_TYPE_LABELS, VEHICLE_INCIDENT_TYPE_LABELS } from "@/shared/constants/incident"
@@ -54,7 +54,8 @@ export function VehicleDetailSection({ incident }: { incident: IncidentLike }) {
   )
 }
 
-export function HorseDetailsSection({ incident }: { incident: IncidentLike }) {
+/** `onDetach` is passed only when the viewer may leave a horse behind (DETACH_HORSE). */
+export function HorseDetailsSection({ incident, onDetach }: { incident: IncidentLike; onDetach?: (horse: { horseId: string; horseName: string }) => void }) {
   if (!incident.horseDetails.length) return null
   return (
     <Panel title="Horse health incident details" icon={HeartPulse}>
@@ -67,6 +68,21 @@ export function HorseDetailsSection({ incident }: { incident: IncidentLike }) {
                 <span className="rounded-full border border-slate-300 bg-white px-2.5 py-0.5 text-xs font-medium text-slate-600">Microchip {detail.horse.microchipNumber}</span>
               ) : null}
               <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-xs font-semibold text-white">{labelOf(HORSE_INCIDENT_TYPE_LABELS, detail.incidentType)}</span>
+              {detail.detachment ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
+                  <MapPin className="size-3" aria-hidden="true" />
+                  Left behind{detail.detachment.location ? ` at ${detail.detachment.location.locationName}` : ""} · {formatDateTime(detail.detachment.detachedAt)}
+                </span>
+              ) : onDetach ? (
+                <button
+                  type="button"
+                  onClick={() => onDetach({ horseId: detail.horse.horseId, horseName: detail.horse.horseName })}
+                  className="ml-auto inline-flex h-7 items-center gap-1.5 rounded-[2px] border border-amber-400 bg-white px-2.5 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-50"
+                >
+                  <MapPin className="size-3.5" aria-hidden="true" />
+                  Leave horse behind
+                </button>
+              ) : null}
             </header>
 
             <div className="mb-3.5 grid grid-cols-3 gap-2">

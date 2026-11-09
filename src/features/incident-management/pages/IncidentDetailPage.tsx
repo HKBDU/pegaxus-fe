@@ -12,6 +12,7 @@ import { PageHeader } from "@/shared/components/PageHeader"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 
 import { CancelIncidentDialog } from "../components/CancelIncidentDialog"
+import { DetachHorseDialog } from "../components/DetachHorseDialog"
 import { IncidentHoldNotice } from "../components/IncidentHoldNotice"
 import { IncidentLocation, IncidentOutcome, IncidentOverview } from "../components/IncidentInfoPanels"
 import { IncidentTimeline } from "../components/IncidentTimeline"
@@ -87,6 +88,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   const incident = query.data
   const [resolveOpen, setResolveOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [detachHorse, setDetachHorse] = useState<{ horseId: string; horseName: string } | null>(null)
   const { isCoordinator } = useIncidentViewer()
 
   if (query.isError && isNotFound(query.error)) return <NotFoundPage />
@@ -184,7 +186,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
               <IncidentOverview incident={incident} transportHref={!isCrew && incident.transport ? incidentRoutes.transport(incident.transport.transportId) : undefined} compact={isCrew} />
               <IncidentLocation incident={incident} />
               {showVehicle ? <VehicleDetailSection incident={incident} /> : null}
-              {showHorse ? <HorseDetailsSection incident={incident} /> : null}
+              {showHorse ? <HorseDetailsSection incident={incident} onDetach={can(INCIDENT_ACTION.DETACH_HORSE) ? setDetachHorse : undefined} /> : null}
               <EmergencyCostSection incident={incident} onChanged={refetch} />
               <IncidentTimeline incident={incident} />
             </div>
@@ -198,6 +200,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
         <>
           <ResolveIncidentDialog incident={incident} mode={resolveMode} open={resolveOpen} onOpenChange={setResolveOpen} onReload={refetch} />
           <CancelIncidentDialog incident={incident} audience={audience} open={cancelOpen} onOpenChange={setCancelOpen} onReload={() => void query.refetch()} />
+          <DetachHorseDialog incident={incident} horse={detachHorse} onOpenChange={(next) => { if (!next) setDetachHorse(null) }} onReload={refetch} />
         </>
       ) : null}
     </div>

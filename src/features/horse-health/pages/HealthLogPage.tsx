@@ -33,7 +33,8 @@ export default function HealthLogPage() {
   const createMutation = useCreateHealthLog(transportId)
   const markAllMutation = useMarkAllNormal(transportId)
   const horseItems = overview.data?.horses
-  const horses = horseItems ?? []
+  // A horse left behind mid-trip is no longer checked by this crew.
+  const horses = (horseItems ?? []).filter((item) => !item.detachedAt)
   const [horseId, setHorseId] = useState("")
   const [logType, setLogType] = useState<LogType>("ROUTINE_CHECK")
   const [healthStatus, setHealthStatus] = useState<HealthLogInput["healthStatus"]>("NORMAL")
@@ -61,7 +62,8 @@ export default function HealthLogPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!horseId && horseItems?.[0]) setHorseId(horseItems[0].horse.horseId)
+    const first = horseItems?.find((item) => !item.detachedAt)
+    if (!horseId && first) setHorseId(first.horse.horseId)
   }, [horseId, horseItems])
 
   if (!isEscort) {
@@ -207,7 +209,7 @@ export default function HealthLogPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
-              {overview.data.horses.length} horses assigned
+              {horses.length} horses assigned
             </span>
             <span className="bg-[#f39200] px-2.5 py-1 text-xs font-bold uppercase text-[#181818]">
               {overview.data.transportStatus.replace("_", " ")}

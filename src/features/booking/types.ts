@@ -29,6 +29,52 @@ export interface BookedHorse {
   microchipNumber: string
   passportNumber: string
   specialHandlingNotes: string | null
+  /** Set when the horse was left behind mid-trip; it no longer travels with this booking's transport. */
+  detachedAt?: string | null
+  detachedLocationName?: string | null
+}
+
+/** On a return booking: the original trip that left the horse behind. */
+export interface BookingReturnOf {
+  transportId: string
+  transportCode: string
+  bookingId: string
+  bookingCode: string
+  horse: { horseId: string; horseName: string; detachedAt: string | null; detachedLocationName: string | null } | null
+}
+
+/** GET /bookings/return-draft: pre-filled values for the return booking of a horse left behind. */
+export interface ReturnBookingDraft {
+  returnOfTransportId: string
+  transportCode: string
+  bookingCode: string
+  horseId: string
+  horseName: string
+  originAddress: string
+  originCountry: string
+  originLatitude: number | null
+  originLongitude: number | null
+  destinationAddress: string
+  destinationCountry: string
+  destinationLatitude: number | null
+  destinationLongitude: number | null
+  existingReturnBookingId: string | null
+}
+
+export interface CreateReturnBookingRequest {
+  returnOfTransportId: string
+  originAddress: string
+  originCountry: string
+  originLatitude: number | null
+  originLongitude: number | null
+  destinationAddress: string
+  destinationCountry: string
+  destinationLatitude: number | null
+  destinationLongitude: number | null
+  requestedDepartureDate: string
+  requestedArrivalDate?: string
+  horses: BookingHorseInput[]
+  customerNote?: string
 }
 
 // Exactly what GET /horses returns; nothing else is mapped.
@@ -96,6 +142,8 @@ export interface Booking extends Omit<BookingSummary, "customerName"> {
   rejectionReason: string | null
   cancellationReason: string | null
   transport: BookingTransport | null
+  /** Set on a return booking. */
+  returnOf?: BookingReturnOf | null
   updatedAt: string
 }
 

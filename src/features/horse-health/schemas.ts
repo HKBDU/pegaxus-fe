@@ -79,6 +79,8 @@ export const horseHealthOverviewItemSchema = z.object({
   latestHealthStatus: healthStatusSchema.nullable(),
   latestLog: latestHealthLogSchema.nullable(),
   logCount: z.number().int().nonnegative(),
+  /** Set when the horse was left behind mid-trip; it is no longer checked. */
+  detachedAt: timestamp.nullish(),
 })
 
 export const horseHealthOverviewSchema = z.object({

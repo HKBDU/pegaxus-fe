@@ -135,6 +135,11 @@ export function AuditHorsesBlock({ data }: { data?: AuditHorseItem[] }) {
                     <span className="font-bold text-slate-900 truncate">
                       {horse.name}
                     </span>
+                    {horse.detachedAt ? (
+                      <span className="shrink-0 rounded-[2px] border border-amber-300 bg-amber-50 px-1.5 text-[10px] font-semibold text-amber-800" title={horse.detachedLocationName ?? undefined}>
+                        Left behind
+                      </span>
+                    ) : null}
                     {hasAlert ? (
                       <span className="size-2 rounded-full bg-amber-500 shrink-0" title="Health checkpoint needs attention" />
                     ) : (
@@ -350,6 +355,11 @@ export function AuditHorsesBlock({ data }: { data?: AuditHorseItem[] }) {
                     <TableRow key={horse.horseId}>
                       <TableCell className="font-bold text-slate-900 text-xs">
                         {horse.name}
+                        {horse.detachedAt ? (
+                          <span className="ml-1.5 block text-[10px] font-semibold text-amber-800">
+                            Left behind{horse.detachedLocationName ? ` at ${horse.detachedLocationName}` : ""}
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell>
                         {horse.microchipNumber ? (

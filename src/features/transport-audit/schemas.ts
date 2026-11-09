@@ -74,6 +74,9 @@ export const auditHorsesSchema = z.array(
     weightKg: reading,
     heightCm: reading,
     healthLogs: z.array(auditHorseHealthLogSchema).catch([]),
+    /** Set when the horse was left behind mid-trip at `detachedLocationName`. */
+    detachedAt: note,
+    detachedLocationName: note,
   }),
 );
 export const auditRouteSegmentSchema = z.object({
