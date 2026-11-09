@@ -105,31 +105,28 @@ export function DossierRequirementDetailsDialog({
             </div>
           ) : null}
         </dl>
-        {query.isPending ? (
-          <p role="status" className="text-xs">
-            Loading requests…
-          </p>
-        ) : query.isError ? (
-          <p role="alert" className="text-xs text-red-700">
-            Could not load requirement requests.
-          </p>
-        ) : (
-          query.data?.documentRequests.map((request) => (
-            <DocumentRequestComments
-              key={request.documentRequestId}
-              dossierId={dossierId}
-              requirementId={String(requirement.dossierRequirementId)}
-              request={request}
-              canReadComments={
-                role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST"
-              }
-              canComment={
-                (role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST") &&
-                request.status === "OPEN"
-              }
-            />
-          ))
-        )}
+        {!requirement.document && query.data?.documentRequests?.length ? (
+          <div className="space-y-4 border-t border-slate-200 pt-4">
+            <h4 className="font-heading text-sm font-bold uppercase text-slate-800">
+              Document Requests
+            </h4>
+            {query.data.documentRequests.map((request) => (
+              <DocumentRequestComments
+                key={request.documentRequestId}
+                dossierId={dossierId}
+                requirementId={String(requirement.dossierRequirementId)}
+                request={request}
+                canReadComments={
+                  role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST"
+                }
+                canComment={
+                  (role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST") &&
+                  request.status === "OPEN"
+                }
+              />
+            ))}
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

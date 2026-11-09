@@ -95,7 +95,7 @@ export default function BcpQuarantineProofPage() {
   const onSubmit = async (values: FormValues) => {
     if (photoFile && (photoFile.size === 0 || photoFile.size > UPLOAD_MAX_BYTES || !['image/jpeg', 'image/jpg', 'image/png'].includes(photoFile.type)))
       return setPhotoError(`Use a non-empty JPEG or PNG image of at most ${UPLOAD_MAX_MB} MiB.`)
-    if (isMandatoryRoute && !photoFile) {
+    if (!photoFile) {
       setPhotoError('Please attach a photo of the quarantine clearance sheet.')
       return
     }
@@ -230,6 +230,7 @@ export default function BcpQuarantineProofPage() {
               <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-6">
                 {/* Section 2: Photographic Proof (FileUploader & ImageViewer) */}
                 <PhotoCaptureSection
+                  documentLabel="Quarantine Clearance Sheet Photo *"
                   files={photoFile ? [photoFile] : []}
                   capturedAt={photoTakenAt ? [photoTakenAt] : []}
                   coordinates={photoCoordinates}

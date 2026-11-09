@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -65,6 +66,7 @@ export function RouteChangeDecisionPanel({
   const [baseline, setBaseline] = useState(plan.updatedAt);
   const [approveOpen, setApproveOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const navigate = useNavigate();
   const form = useForm({
     resolver: zodResolver(rejectionSchema),
     mode: "onTouched",
@@ -120,6 +122,7 @@ export function RouteChangeDecisionPanel({
             ? "This request was cancelled. We could not confirm that the LM note was sent to the driver and escort."
             : "Decision approved",
         );
+      navigate(`/admin/route-plans/${encodeURIComponent(plan.routePlanId)}`, { replace: true });
       onBack();
     } catch {
       setApproveOpen(false);

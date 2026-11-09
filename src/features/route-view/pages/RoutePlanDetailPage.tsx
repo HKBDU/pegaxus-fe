@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ComponentType } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
@@ -41,6 +41,14 @@ export default function RoutePlanDetailPage({
 } = {}) {
   const { routePlanId = "" } = useParams<{ routePlanId: string }>();
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const navigateToBase = () => {
+    if (routeDetailPath) {
+      navigate(routeDetailPath(routePlanId));
+    } else {
+      navigate(`/admin/route-plans/${encodeURIComponent(routePlanId)}`);
+    }
+  };
   const principal = useAuthStore((state) => state.principal);
   const allowed =
     canViewRoute(principal) &&
@@ -51,12 +59,11 @@ export default function RoutePlanDetailPage({
   const error = query.isError && (!query.data || readFailure?.denied || readFailure?.unauthorized)
     ? getRouteViewError(query.error) : null;
   const context = useEmergencyContext(query.data, allowed && !error);
-  // Current scoped reads gate the page; historical action failures stay in their own dialogs.
+  // Only route plan query errors gate the page; secondary emergency context errors should not crash the route plan page.
   const accessFailure =
-    context.error &&
-    (getEmergencyError(context.error).denied ||
-      getEmergencyError(context.error).unauthorized)
-      ? context.error
+    readFailure &&
+    (readFailure.denied || readFailure.unauthorized)
+      ? query.error
       : null;
   const mode = params.get("emergency") ?? emergencyView;
   const actions =
@@ -95,7 +102,7 @@ export default function RoutePlanDetailPage({
         <RouteChangeDecisionPanel
           plan={plan}
           context={context.data}
-          onBack={() => changeMode()}
+          onBack={navigateToBase}
         />
       );
     if (activeMode === "activation")
@@ -103,22 +110,32 @@ export default function RoutePlanDetailPage({
         <ReturnActivationPanel
           plan={plan}
           context={context.data}
-          onBack={() => changeMode()}
+          onBack={navigateToBase}
         />
       );
-    if (mode && mode !== "overview" && !activeMode)
+    if (mode && mode !== "overview" && !activeMode) {
+      const isAlreadyDecided =
+        mode === "decision" &&
+        ["ACTIVE", "REJECTED_BY_MANAGER", "CANCELLED", "COMPLETED"].includes(
+          plan.status,
+        );
+      const unavailableMessage = isAlreadyDecided || mode === "decision"
+        ? "This route change has already been decided."
+        : "This emergency action is unavailable for your role or the current route and transport state.";
+
       workspace = (
         <div className="space-y-3">
-          <ErrorState message="This emergency action is unavailable for your role or the current route and transport state." />
+          <ErrorState message={unavailableMessage} />
           <Button
             className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
             variant="outline"
-            onClick={() => changeMode()}
+            onClick={navigateToBase}
           >
             Back to Route Plan
           </Button>
         </div>
       );
+    }
   }
   return (
     <div
@@ -142,7 +159,7 @@ export default function RoutePlanDetailPage({
                 <Button
                   className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
                   variant="outline"
-                  onClick={() => changeMode()}
+                  onClick={navigateToBase}
                 >
                   Back to Route Plan
                 </Button>

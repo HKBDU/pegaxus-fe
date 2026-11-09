@@ -240,6 +240,8 @@ export interface CancelRoutePlanRequest {
   reason: string;
 }
 
+export type { CancelRoutePlanResult } from "./schemas";
+
 export interface LegalReviewRequest {
   lastUpdatedAt: string;
   isFeasible: boolean;

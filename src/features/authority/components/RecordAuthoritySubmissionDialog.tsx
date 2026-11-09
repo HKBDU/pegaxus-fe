@@ -146,9 +146,22 @@ export function RecordAuthoritySubmissionDialog({
       next.decisionNote = `Decision note must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
     }
 
-    if (proofFiles.length !== uploadedIds.length || proofFiles.some((file) => file.size === 0 || file.size > UPLOAD_MAX_BYTES || !ACCEPTED_PROOF_TYPES.split(",").includes(file.type)))
+    if (uploadedIds.length === 0) {
+      next.proofFiles = "Please attach at least 1 proof file.";
+    } else if (
+      proofFiles.length !== uploadedIds.length ||
+      proofFiles.some(
+        (file) =>
+          file.size === 0 ||
+          file.size > UPLOAD_MAX_BYTES ||
+          !ACCEPTED_PROOF_TYPES.split(",").includes(file.type),
+      )
+    ) {
       next.proofFiles = `Use non-empty PDF, JPEG or PNG files of at most ${UPLOAD_MAX_MB} MiB.`;
-    if (uploadIncomplete) next.proofFiles = "Finish or remove pending and failed proof uploads before submitting.";
+    }
+    if (uploadIncomplete)
+      next.proofFiles =
+        "Finish or remove pending and failed proof uploads before submitting.";
     if (Object.keys(next).length) return setErrors(next);
     try {
       await mutation.mutateAsync({
@@ -283,7 +296,7 @@ export function RecordAuthoritySubmissionDialog({
               }}
             />
           </Field>
-          <Field label="Proof files (optional)" error={errors.proofFiles}>
+          <Field label="Proof files *" error={errors.proofFiles}>
             <div
               className={
                 errors.proofFiles ? "rounded border border-red-500 p-1" : ""

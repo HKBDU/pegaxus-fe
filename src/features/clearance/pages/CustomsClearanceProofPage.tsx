@@ -85,12 +85,12 @@ export default function CustomsClearanceProofPage() {
   const onSubmit = async (values: FormValues) => {
     if (photoFile && (photoFile.size === 0 || photoFile.size > UPLOAD_MAX_BYTES || !['image/jpeg', 'image/jpg', 'image/png'].includes(photoFile.type)))
       return setPhotoError(`Use a non-empty JPEG or PNG image of at most ${UPLOAD_MAX_MB} MiB.`)
-    if (isMandatoryRoute && !photoFile) return setPhotoError('Please attach a customs release note / SAD document image.')
+    if (!photoFile) return setPhotoError('Please attach a customs release note / SAD document image.')
     if (uploadState === 'uploading') {
       toast.info('Photo is still uploading. Please wait a moment...')
       return
     }
-    if (isMandatoryRoute && uploadedPublicIds.length === 0) {
+    if (uploadedPublicIds.length === 0) {
       return setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
     }
     if (dossierId == null || !dossier || dossierFailed) return
@@ -207,7 +207,7 @@ export default function CustomsClearanceProofPage() {
                   files={photoFile ? [photoFile] : []}
                   capturedAt={photoTakenAt ? [photoTakenAt] : []}
                   coordinates={photoCoordinates}
-                  documentLabel="Customs Release Note / SAD Document Image"
+                  documentLabel="Customs Release Note / SAD Document Image *"
                   statusLabel="Pending Verification"
                   error={photoError}
                   presignedEntity="attachment"
