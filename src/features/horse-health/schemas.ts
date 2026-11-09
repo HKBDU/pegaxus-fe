@@ -43,7 +43,7 @@ export const healthLogSummarySchema = z.object({
   logType: logTypeSchema,
   healthStatus: healthStatusSchema,
   hydrationStatus: hydrationStatusSchema.nullable(),
-  checkedBy: crewMemberSchema,
+  checkedBy: checkedBySchema,
   veterinarianRequired: z.boolean(),
   hasPhoto: z.boolean(),
   latestNote: z.string().nullable().optional(),

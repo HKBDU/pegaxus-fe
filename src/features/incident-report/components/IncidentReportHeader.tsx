@@ -2,7 +2,6 @@ import { MapPin } from "lucide-react";
 import { PageHeader } from "@/shared/components/PageHeader";
 
 export interface IncidentReportHeaderProps {
-  transportId: string;
   longitude: number | string;
   latitude: number | string;
   locationDescription: string;
@@ -11,7 +10,6 @@ export interface IncidentReportHeaderProps {
 
 /** Compact, mobile-first context block shown at the top of an incident form. */
 export function IncidentReportHeader({
-  transportId,
   longitude,
   latitude,
   locationDescription,
@@ -26,10 +24,6 @@ export function IncidentReportHeader({
       />
 
       <div className="min-w-0 space-y-3 border-y border-slate-200 py-3 text-sm text-slate-800">
-        <p className="break-words font-semibold uppercase tracking-[0.04em]">
-          {transportId}
-        </p>
-
         <div className="flex items-start gap-2 leading-5">
           <MapPin
             className="mt-0.5 size-4 shrink-0 text-[#f39200]"

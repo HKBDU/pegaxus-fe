@@ -136,13 +136,6 @@ function EmergencyCostListContent({
           <p className="mt-1 mb-0 text-sm text-muted-foreground">
             View and monitor emergency expenses. Dates use your local timezone.
           </p>
-          {incidentReportId || transportId ? (
-            <p className="mt-1 mb-0 text-xs break-all text-muted-foreground">
-              {incidentReportId ? `Incident scope: ${incidentReportId}` : null}
-              {incidentReportId && transportId ? " · " : null}
-              {transportId ? `Transport scope: ${transportId}` : null}
-            </p>
-          ) : null}
         </header>
       )}
       {!embedded ? (
