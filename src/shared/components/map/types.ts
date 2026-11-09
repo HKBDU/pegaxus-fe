@@ -46,6 +46,8 @@ export type MapRoute = {
   plannedDepartureAt?: string;
   plannedArrivalAt?: string;
   readonly?: boolean;
+  /** A backup segment that reuses a primary route: drawn in its own colour so the overlap stays visible. */
+  sharedWithPrimary?: boolean;
 };
 
 export type MapPoint = { latitude: number; longitude: number };
