@@ -63,6 +63,10 @@ export function createJourneyScroll(
       bypassed = false;
       return;
     }
+    if (state.sceneStatus !== "ready") {
+      cancelEntry();
+      return;
+    }
     if (
       event.defaultPrevented ||
       !Number.isFinite(amount) ||
@@ -167,6 +171,11 @@ export function createJourneyScroll(
     if (event.defaultPrevented) touchOwned = true;
   };
   const scroll = () => {
+    if (state.sceneStatus !== "ready") {
+      cancelEntry();
+      onChange();
+      return;
+    }
     if (aligned() && !bypassed && !reverseInput && !state.reducedMotion) {
       if (!complete()) hold();
     } else {
@@ -221,6 +230,9 @@ export function createJourneyScroll(
   document.addEventListener("visibilitychange", visibility);
   scroll();
   return {
+    update() {
+      if (state.sceneStatus !== "ready") cancelEntry();
+    },
     destroy() {
       cancelEntry();
       window.removeEventListener("wheel", wheel, true);
