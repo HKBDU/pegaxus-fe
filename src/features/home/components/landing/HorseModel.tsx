@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
-import { useFrame } from "@react-three/fiber";
+import { addAfterEffect, useFrame, useThree } from "@react-three/fiber";
 import { useAnimations, useGLTF } from "@react-three/drei";
 import {
   AnimationMixer,
@@ -85,9 +85,11 @@ type PlaybackSnapshot = {
 export function HorseModel({
   story,
   onReady,
+  onPrepared,
 }: {
   story: RefObject<LandingSceneState>;
   onReady: () => void;
+  onPrepared: () => void;
 }) {
   const { scene, animations } = useGLTF(
     horseUrl,
@@ -210,6 +212,55 @@ export function HorseModel({
     ];
   }, [animations]);
   const { actions, mixer } = useAnimations(presentationClips, scene);
+  const gl = useThree((state) => state.gl);
+  const invalidate = useThree((state) => state.invalidate);
+  useLayoutEffect(() => {
+    let drawn = false;
+    let presentedFrames = 0;
+    const callbacks: {
+      mesh: SkinnedMesh;
+      previous: SkinnedMesh["onAfterRender"];
+      observe: SkinnedMesh["onAfterRender"];
+    }[] = [];
+    scene.traverse((node) => {
+      const mesh = node as SkinnedMesh;
+      if (!mesh.isSkinnedMesh) return;
+      const previous = mesh.onAfterRender;
+      const observe: SkinnedMesh["onAfterRender"] = function (
+        this: SkinnedMesh,
+        ...args
+      ) {
+        previous.apply(this, args);
+        if (args[0] === gl) drawn = true;
+      };
+      callbacks.push({ mesh, previous, observe });
+      mesh.onAfterRender = observe;
+    });
+    const restore = () => {
+      for (const { mesh, previous, observe } of callbacks)
+        if (mesh.onAfterRender === observe) mesh.onAfterRender = previous;
+    };
+    const stop = addAfterEffect(() => {
+      // A prepared scene or ground draw alone is not proof that the horse rendered.
+      if (!drawn || gl.getContext().isContextLost()) return;
+      drawn = false;
+      // The first world transform precedes the hoof camera's fresh anchor.
+      // Keep the intro paused through its next rendered pose, including demand mode.
+      if (++presentedFrames < 2) {
+        invalidate();
+        return;
+      }
+      stop();
+      restore();
+      onReady();
+    });
+    onPrepared();
+    invalidate();
+    return () => {
+      stop();
+      restore();
+    };
+  }, [scene, gl, invalidate, onReady, onPrepared]);
   const current = useRef<AnimationAction | null>(null);
   const controller = useRef<{
     settleMap: () => void;
@@ -225,7 +276,6 @@ export function HorseModel({
   const snapshots = useRef<
     Partial<Record<"hero" | "journey", PlaybackSnapshot>>
   >({});
-  const readyFrame = useRef(false);
   const journeyPose = useRef({ x: 0, z: 0, yaw: 0 });
   const journeyPlaying = useRef(false);
   const journeyDelta = useRef(0);
@@ -593,11 +643,6 @@ export function HorseModel({
     controller.current = { settleMap, synchronize };
     previousShot.current = "";
     synchronize(0);
-    // A deep link outside Hero may intentionally have no running Canvas frames.
-    if (!state.inHero && !readyFrame.current) {
-      readyFrame.current = true;
-      onReady();
-    }
     // Drei advances its mixer before our frame callback, including the first one.
     if ((state.inHero || state.inJourney) && !state.heroIntroReady) {
       // oxlint-disable-next-line react/immutability -- external Three.js mixer.
@@ -612,7 +657,7 @@ export function HorseModel({
       controller.current = null;
       outgoing.current = null;
     };
-  }, [actions, mixer, onReady, story, frame]);
+  }, [actions, mixer, story, frame]);
 
   useFrame((_frame, elapsed) => controller.current?.synchronize(elapsed), -1);
 
@@ -622,10 +667,6 @@ export function HorseModel({
       ? journeyDelta.current
       : Math.min(elapsed, 0.05);
     Object.assign(state, { horseFrameAt: performance.now() });
-    if (!readyFrame.current) {
-      readyFrame.current = true;
-      onReady();
-    }
     if ((state.inHero || state.inJourney) && !state.heroIntroReady) {
       if (state.inHero) {
         scene.updateWorldMatrix(true, true);

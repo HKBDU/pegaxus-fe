@@ -303,7 +303,6 @@ export default function HorseHealthIncidentPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-5 p-4 pb-28 sm:p-6">
       <IncidentReportHeader
-        transportId={form.values.transportId || "Current transport"}
         longitude={location.coordinates?.longitude ?? "Unavailable"}
         latitude={location.coordinates?.latitude ?? "Unavailable"}
         locationDescription={

@@ -31,6 +31,9 @@ export function JourneySection() {
           <span className="landing-departure-spotlight" />
         </div>
         <span className="landing-departure-floor" aria-hidden="true" />
+        <p className="landing-journey-loading landing-caption" role="status">
+          Preparing the 3D departure. Continue exploring while it loads.
+        </p>
         <div className="landing-copy" data-reveal>
           <p className="landing-eyebrow">02 / The departure</p>
           <h2 id="journey-title">
