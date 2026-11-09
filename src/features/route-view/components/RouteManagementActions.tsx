@@ -45,7 +45,7 @@ const legalActionClass =
 // The provider currently requires measured numeric fields even though it only displays routeName.
 // Do not turn absent measurements into zero to satisfy that public interface.
 function legalSegments(
-  plan: RoutePlanDetail,
+  plan: Pick<RoutePlanDetail, "segments">,
 ): LegalFeasibilityPanelProps["segments"] | null {
   const result: LegalFeasibilityPanelProps["segments"] = [];
   for (const segment of plan.segments) {
@@ -141,6 +141,16 @@ export function RouteManagementActions({
     );
   };
   const segments = legalSegments(review ?? plan);
+  // The backups submitted with this primary are reviewed in the same decision; one without measured legs cannot be shown yet.
+  const backupSegments = (review ?? plan).submittedBackups.map((backup) => ({
+    routePlanId: backup.routePlanId,
+    routePlanCode: backup.routePlanCode,
+    segments: legalSegments(backup),
+    blockedSegments: backup.legalReview?.isFeasible === false ? (backup.legalReview.blockedSegments ?? []) : [],
+  }));
+  const reviewBackups = backupSegments.every((backup) => backup.segments)
+    ? backupSegments.map((backup) => ({ ...backup, segments: backup.segments ?? [] }))
+    : null;
   return (
     <>
       {canViewDossier && legalDossier ? (
@@ -303,11 +313,12 @@ export function RouteManagementActions({
           onReload={() => refresh(true)}
         />
       ) : null}
-      {review && segments && canReview && !mockMode ? (
+      {review && segments && reviewBackups && canReview && !mockMode ? (
         <LegalFeasibilityPanel
           routePlanId={review.routePlanId}
           lastUpdatedAt={review.updatedAt}
           segments={segments}
+          backups={reviewBackups}
           legalReview={
             review.legalReview
               ? {
