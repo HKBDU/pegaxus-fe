@@ -43,6 +43,8 @@ export function LocationMarker({
         ) : null}
         <button
           type="button"
+          // E2E tests target the start and end markers by this attribute.
+          data-marker-variant={variant}
           className={cn(
             "rounded-full border-2 border-white transition-transform duration-150 hover:scale-110 focus-visible:outline-none",
             isEndpoint
@@ -55,11 +57,8 @@ export function LocationMarker({
             selected && "scale-110",
             selected && variant === "default" && "bg-slate-900",
           )}
-          aria-label={
-            isEndpoint
-              ? `${ENDPOINT_LABELS[variant]} point: ${location.name}`
-              : `Show details for ${location.name}`
-          }
+          // Same label for every marker: the route-plan E2E test matches it to find the start and end by name.
+          aria-label={`Show details for ${location.name}`}
           aria-pressed={selected}
           onClick={onClick}
           onMouseEnter={() => onHover(true)}

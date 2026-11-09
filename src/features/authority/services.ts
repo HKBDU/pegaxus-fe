@@ -7,6 +7,7 @@ import type {
   UpdateAuthorityReviewInput,
   UpdateAuthorityReviewResult,
   AuthoritySubmissionSummary,
+  RouteAuthorities,
 } from './types'
 
 export async function listAuthoritySubmissions(dossierId: string): Promise<AuthoritySubmissionSummary[]> {
@@ -15,6 +16,15 @@ export async function listAuthoritySubmissions(dossierId: string): Promise<Autho
   )
   if (!response.isSuccess) throw new Error(response.message)
   return response.value?.items ?? []
+}
+
+/** The countries on the dossier's route and the authorities a new submission may go to. */
+export async function getRouteAuthorities(dossierId: string): Promise<RouteAuthorities> {
+  const response = await apiClient.get<unknown, ApiEnvelope<{ routeAuthorities?: RouteAuthorities }>>(
+    `/compliance-dossiers/${encodeURIComponent(dossierId)}/authority-submissions`,
+  )
+  if (!response.isSuccess) throw new Error(response.message)
+  return response.value?.routeAuthorities ?? { routeCountries: [], allowedAuthorities: [] }
 }
 
 export async function recordAuthoritySubmission(
