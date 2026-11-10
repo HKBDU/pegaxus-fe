@@ -24,6 +24,14 @@ for (const file of [".env.e2e", ".env"]) {
     /* file absent: the real-api setup project reports missing variables; the mock suite needs none */
   }
 }
+/**
+ * A `.env` line such as `VITE_GEOAPIFY_API_KEY=$GEOAPIFY_API_KEY` is a reference that Vite expands itself. `loadEnvFile`
+ * does not expand it, so the literal text would be copied into the environment of the servers started below, win over the
+ * `.env` expansion, and the application would report "Geoapify API key is not configured". Drop such values here.
+ */
+for (const name of Object.keys(process.env)) {
+  if (name.startsWith("VITE_") && process.env[name]?.startsWith("$")) delete process.env[name];
+}
 
 /** The front end the real-API suite drives. Default: the Vite dev server a developer already keeps on 5173. */
 const REAL_BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5173";

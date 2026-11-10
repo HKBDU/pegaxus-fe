@@ -11,12 +11,18 @@ export const FIXED_NOW = "2026-10-29T10:00:00.000Z"
 
 /**
  * Calls the application's shell makes on every authenticated page, whatever the screen under test is
- * (profile avatar, notification bell). They are answered once here so the specs only declare what they test.
+ * (profile avatar, notification bell, profile-completion reminder). They are answered once here so the specs only
+ * declare what they test.
+ *
+ * The profile is COMPLETE (name, phone, address): the shell opens a modal "Complete your profile" dialog on every
+ * customer page when one of them is missing, and that modal covers the page and blocks every click of the test.
  */
 function declareShellDefaults(api: ApiMock) {
   api.ok("GET", "/accounts/me", {
     ...buildSession("CUSTOMER").user,
     email: "customer@e2e.test",
+    phone: "0900000000",
+    address: "1 Test Street, London, United Kingdom",
   })
   api.ok("GET", "/notifications", pagedValue([], 1, 20))
   api.ok("GET", "/notifications/unread-count", { count: 0 })
