@@ -1,4 +1,4 @@
-import { Ban, PlayCircle } from "lucide-react"
+import { ArrowLeft, Ban, PlayCircle } from "lucide-react"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -104,7 +104,12 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
           : undefined)
     : undefined
 
-  const barClass = cn("flex gap-2", mobile ? "fixed inset-x-0 bottom-0 z-20 border-t border-slate-300 bg-white px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] [&>button]:min-h-15 [&>button]:flex-1 [&>button]:text-base" : "flex-col-reverse sm:flex-row sm:justify-end [&>button]:min-h-11 sm:[&>button]:min-h-10")
+  const barClass = cn(
+    "flex gap-3",
+    mobile
+      ? "fixed bottom-0 right-0 z-20 left-0 md:left-[var(--sidebar-width,13rem)] border-t border-[#e5e2d9] bg-white px-3 sm:px-4 pt-2.5 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] shadow-[0_-4px_12px_rgba(0,0,0,0.05)] [&>button]:flex-1 [&>button]:min-h-11 sm:[&>button]:min-h-11"
+      : "flex-col-reverse sm:flex-row sm:justify-end gap-3 [&>button]:min-h-10",
+  )
 
   return (
     <PageFrame audience={audience} title="Handover record" backHref={back} backLabel="Return to handover records" action={status}>
@@ -151,10 +156,33 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
 
           {hasAction(shown, "START") ? (
             <div className={barClass}>
-              <Button type="button" variant="outline" onClick={() => navigate(back)} disabled={start.isPending} className="rounded-[2px]">Back</Button>
-              <Button type="button" onClick={() => void doStart()} disabled={start.isPending} className="gap-2 rounded-[2px] font-heading font-semibold tracking-[0.06em] uppercase shadow-[0.125rem_0.125rem_0_0_rgb(0_0_0/0.85)]">
-                <PlayCircle aria-hidden="true" className="size-4" />
-                {start.isPending ? "Starting…" : "Start handover"}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate(back)}
+                disabled={start.isPending}
+                className="rounded-[2px] border-[#e5e2d9] text-xs sm:text-sm font-medium hover:bg-slate-50 text-slate-700 gap-1.5 min-w-0 px-2 sm:px-4"
+              >
+                <ArrowLeft className="size-4 shrink-0" />
+                <span className="truncate">Back</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void doStart()}
+                disabled={start.isPending}
+                className="rounded-[2px] font-heading font-semibold text-xs sm:text-sm tracking-[0.03em] sm:tracking-[0.06em] uppercase bg-[#f39200] text-[#181818] hover:bg-[#dc8400] shadow-sm gap-1.5 sm:gap-2 px-2 sm:px-4 disabled:opacity-50 min-w-0"
+              >
+                <PlayCircle aria-hidden="true" className="size-4 shrink-0" />
+                <span className="truncate">
+                  {start.isPending ? (
+                    "Starting…"
+                  ) : (
+                    <>
+                      <span>Start</span>
+                      <span className="hidden min-[400px]:inline">&nbsp;handover</span>
+                    </>
+                  )}
+                </span>
               </Button>
             </div>
           ) : null}
