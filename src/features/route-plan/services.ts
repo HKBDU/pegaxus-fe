@@ -1,6 +1,7 @@
 import apiClient from "@/lib/axios";
 import { ROUTE_PLAN_ENDPOINTS, ROUTE_PLAN_ERROR_MESSAGES } from "./constants";
 import {
+  cancelRoutePlanResultSchema,
   legalReviewSchema,
   legalReviewResultSchema,
   outsourceSegmentResultSchema,
@@ -9,6 +10,7 @@ import {
 import type {
   ApiEnvelope,
   CancelRoutePlanRequest,
+  CancelRoutePlanResult,
   ChangeRoutePlanVehiclesRequest,
   ChangeRoutePlanVehiclesResult,
   CreateRoutePlanRequest,
@@ -181,7 +183,7 @@ export const cancelRoutePlan = (
       `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/cancel`,
       payload,
     ),
-  ).then((value) => routePlanMutationResultSchema.parse(value) as RoutePlanMutationResult);
+  ).then((value) => cancelRoutePlanResultSchema.parse(value) as CancelRoutePlanResult);
 export const submitLegalReview = (
   routePlanId: string,
   payload: LegalReviewRequest,

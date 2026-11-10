@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
 import {
   boundsFromLocations,
   boundsFromRoute,
@@ -48,6 +49,7 @@ export function MapViewer({
   buildStartLocation,
   buildEndLocation,
   children,
+  className,
 }: MapViewerProps) {
   const viewport = useRef<MapViewportHandle>(null);
   const popupHideTimer = useRef<number | null>(null);
@@ -76,18 +78,37 @@ export function MapViewer({
     [route, routeGeoJson, validLocations],
   );
 
+  const isBuilding = mode === "buildPlan" || mode === "pickPoint";
+  const startPoint = isBuilding ? toMapPoint(buildStartLocation ?? {}) : null;
+  const endPoint = isBuilding ? toMapPoint(buildEndLocation ?? {}) : null;
+  const [startLng, startLat] = startPoint ?? [];
+  const [endLng, endLat] = endPoint ?? [];
+  // While building a plan, open on its start and end so both are easy to find; otherwise fit every location.
+  // Keyed on the coordinates, since the endpoint objects may be rebuilt on every render.
+  const endpointBounds = useMemo(
+    () =>
+      startLat !== undefined && startLng !== undefined && endLat !== undefined && endLng !== undefined
+        ? boundsFromLocations([
+            { latitude: startLat, longitude: startLng },
+            { latitude: endLat, longitude: endLng },
+          ])
+        : null,
+    [startLat, startLng, endLat, endLng],
+  );
+  const initialBounds = endpointBounds ?? allBounds;
+
   useEffect(() => {
-    if (!allBounds) return;
+    if (!initialBounds) return;
     // Locations present at the first render are fitted before the map instance exists: retry for a moment.
     let frame = 0;
     let attempts = 0;
     const fit = () => {
-      if (viewport.current?.fitBounds(allBounds) || attempts++ > 120) return;
+      if (viewport.current?.fitBounds(initialBounds) || attempts++ > 120) return;
       frame = requestAnimationFrame(fit);
     };
     fit();
     return () => cancelAnimationFrame(frame);
-  }, [allBounds]);
+  }, [initialBounds]);
 
   useEffect(() => {
     return () => {
@@ -156,7 +177,7 @@ export function MapViewer({
   }
 
   return (
-    <div className="relative h-[min(87vh,720px)] min-h-[420px] w-full overflow-hidden rounded border bg-muted">
+    <div className={cn("relative h-[min(87vh,720px)] min-h-[420px] w-full overflow-hidden rounded border bg-muted", className)}>
       {error && (
         <div className="absolute inset-0 z-20 grid place-items-center bg-white/90 p-4 text-center text-sm text-destructive">
           {error}

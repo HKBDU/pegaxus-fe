@@ -138,7 +138,10 @@ export function InvoiceTable({
                         {item.bookingCode}
                       </TableCell>
                       <TableCell className="text-left">
-                        <span className="block min-w-32 max-w-48 break-words whitespace-normal">
+                        <span
+                          className="block max-w-44 truncate"
+                          title={item.customerName}
+                        >
                           {item.customerName}
                         </span>
                       </TableCell>

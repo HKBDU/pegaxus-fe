@@ -19,9 +19,10 @@ import { Input } from "@/shared/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
+import { COMPETENT_AUTHORITIES } from "@/shared/constants/competent-authorities";
 import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { todayUtc } from "@/shared/utils/datetime";
-import { useRecordAuthoritySubmission } from "../hooks";
+import { useRecordAuthoritySubmission, useRouteAuthorities } from "../hooks";
 import type { AuthoritySubmissionStatus } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
 
@@ -66,6 +67,11 @@ export function RecordAuthoritySubmissionDialog({
   const [uploadedIds, setUploadedIds] = useState<string[]>([]);
   const [uploadIncomplete, setUploadIncomplete] = useState(false);
   const [open, setOpen] = useState(false);
+  const route = useRouteAuthorities(dossierId, open);
+  // Only authorities of a country on the route, and only names the shared list knows (the BE checks both again).
+  const allowedAuthorities = COMPETENT_AUTHORITIES.filter((authority) =>
+    route.data?.allowedAuthorities.some((item) => item.name === authority.name),
+  );
   const [authorityName, setAuthorityName] = useState("");
   const [submissionReference, setSubmissionReference] = useState("");
   const [submissionMethod, setSubmissionMethod] = useState("ONLINE_PORTAL");
@@ -110,9 +116,9 @@ export function RecordAuthoritySubmissionDialog({
       );
     const next: Errors = {};
     if (!authorityName.trim()) {
-      next.authorityName = "Authority Portal is required.";
-    } else if (authorityName.trim().length > 200) {
-      next.authorityName = "Authority Portal must not exceed 200 characters.";
+      next.authorityName = "Competent authority is required.";
+    } else if (!allowedAuthorities.some((authority) => authority.name === authorityName)) {
+      next.authorityName = "Choose a competent authority of a country on this route.";
     }
 
     if (!submissionReference.trim()) {
@@ -140,9 +146,22 @@ export function RecordAuthoritySubmissionDialog({
       next.decisionNote = `Decision note must not exceed ${VALIDATION_LIMITS.noteMaxLength} characters.`;
     }
 
-    if (proofFiles.length !== uploadedIds.length || proofFiles.some((file) => file.size === 0 || file.size > UPLOAD_MAX_BYTES || !ACCEPTED_PROOF_TYPES.split(",").includes(file.type)))
+    if (uploadedIds.length === 0) {
+      next.proofFiles = "Please attach at least 1 proof file.";
+    } else if (
+      proofFiles.length !== uploadedIds.length ||
+      proofFiles.some(
+        (file) =>
+          file.size === 0 ||
+          file.size > UPLOAD_MAX_BYTES ||
+          !ACCEPTED_PROOF_TYPES.split(",").includes(file.type),
+      )
+    ) {
       next.proofFiles = `Use non-empty PDF, JPEG or PNG files of at most ${UPLOAD_MAX_MB} MiB.`;
-    if (uploadIncomplete) next.proofFiles = "Finish or remove pending and failed proof uploads before submitting.";
+    }
+    if (uploadIncomplete)
+      next.proofFiles =
+        "Finish or remove pending and failed proof uploads before submitting.";
     if (Object.keys(next).length) return setErrors(next);
     try {
       await mutation.mutateAsync({
@@ -198,20 +217,39 @@ export function RecordAuthoritySubmissionDialog({
           className="min-w-0 space-y-5"
         >
           <div className="grid min-w-0 items-start gap-4 sm:grid-cols-2">
-            <Field reserveErrorSpace label="Authority Portal *" error={errors.authorityName}>
-              <Input
-                className={
-                  errors.authorityName
-                    ? "border-red-500 focus-visible:ring-red-500"
-                    : ""
-                }
+            {/* A fixed list: a resubmission to the same authority must match its earlier submission by name. */}
+            <Field reserveErrorSpace label="Competent Authority *" error={errors.authorityName}>
+              <Select
                 value={authorityName}
-                onChange={(event) => {
-                  setAuthorityName(event.target.value);
+                onValueChange={(value) => {
+                  setAuthorityName(value);
                   clearError("authorityName");
                 }}
-                placeholder="TRACES-NT, APHA IPAFFS, CDS"
-              />
+              >
+                <SelectTrigger
+                  aria-label="Competent Authority"
+                  className={errors.authorityName ? "w-full border-red-500" : "w-full"}
+                >
+                  <SelectValue placeholder="Select an authority" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allowedAuthorities.map((authority) => (
+                    <SelectItem key={authority.name} value={authority.name}>
+                      {authority.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-[11px] leading-4 text-slate-500">
+                {route.isPending
+                  ? "Loading the countries on this route…"
+                  : route.data?.routeCountries.length
+                    ? `On this route: ${route.data.routeCountries.join(" → ")}`
+                    : "The route has no countries yet."}
+                {route.data && !route.isPending && allowedAuthorities.length === 0
+                  ? " No listed authority covers these countries."
+                  : ""}
+              </p>
             </Field>
             <Field
               reserveErrorSpace
@@ -258,7 +296,7 @@ export function RecordAuthoritySubmissionDialog({
               }}
             />
           </Field>
-          <Field label="Proof files (optional)" error={errors.proofFiles}>
+          <Field label="Proof files *" error={errors.proofFiles}>
             <div
               className={
                 errors.proofFiles ? "rounded border border-red-500 p-1" : ""

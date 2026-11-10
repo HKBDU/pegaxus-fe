@@ -139,6 +139,14 @@ export const routePlanMutationResultSchema = z.object({
   updatedAt: dateTime,
 }).passthrough()
 
+export const cancelRoutePlanResultSchema = z.object({
+  routePlanId: entityId,
+  status: z.string().min(1),
+  cancelledAt: dateTime.optional(),
+  bookingStatus: z.string().optional(),
+}).passthrough()
+export type CancelRoutePlanResult = z.infer<typeof cancelRoutePlanResultSchema>
+
 export const legalReviewResultSchema = routePlanMutationResultSchema.extend({
   legalReview: z.object({
     isFeasible: z.boolean(),

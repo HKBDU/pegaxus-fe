@@ -110,3 +110,8 @@ export interface AuthoritySubmissionDetail {
     }
   }>
 }
+
+export interface RouteAuthorities {
+  routeCountries: string[]
+  allowedAuthorities: { name: string; countryCode: string }[]
+}

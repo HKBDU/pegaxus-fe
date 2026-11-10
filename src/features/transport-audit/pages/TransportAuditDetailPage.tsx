@@ -39,9 +39,10 @@ export default function TransportAuditDetailPage() {
   const requestedTab = searchParams.get("tab") ?? "timeline";
   const activeTab =
     requestedTab === "finance" && !isManager ? "timeline" : requestedTab;
+  // The header shows origin and destination, which only the booking block carries, so every tab also asks for it.
   const query = useTransportAudit(
     transportId,
-    activeTab === "timeline" ? undefined : activeTab,
+    activeTab === "timeline" ? undefined : activeTab === "booking" ? "booking" : `${activeTab},booking`,
   );
   const [exportOpen, setExportOpen] = useState(false);
   const [documentDrawer, setDocumentDrawer] = useState<{
@@ -113,7 +114,7 @@ export default function TransportAuditDetailPage() {
                 {
                   id: "horses",
                   label: "Horses & Health",
-                  count: audit.horses?.horses.length,
+                  count: audit.horses?.length,
                 },
                 { id: "booking", label: "Booking" },
                 { id: "routing", label: "Routing & Waypoints" },
@@ -205,12 +206,7 @@ export default function TransportAuditDetailPage() {
             <AuditRoutingBlock data={audit.routing} isManager={isManager} />
           </TabsContent>
           <TabsContent value="compliance">
-            <AuditComplianceBlock
-              data={audit.compliance}
-              onPreviewDoc={(title, url) =>
-                setDocumentDrawer({ open: true, title, url })
-              }
-            />
+            <AuditComplianceBlock data={audit.compliance} />
           </TabsContent>
           <TabsContent value="operations">
             <AuditOperationsBlock data={audit.operations} />

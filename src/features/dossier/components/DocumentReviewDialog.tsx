@@ -251,7 +251,7 @@ function ReviewContent({
             </div>
             <Button
               className="h-auto min-h-9 w-full whitespace-normal rounded-[2px] py-2"
-              disabled={!canApprove || mutation.isPending}
+              disabled={!canApprove || mutation.isPending || mutation.outcomeUnknown}
               onClick={() => setConfirmationOpen(true)}
             >
               <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
@@ -260,12 +260,17 @@ function ReviewContent({
             <Button
               variant="outline"
               className="h-auto min-h-9 w-full whitespace-normal rounded-[2px] border-destructive/30 py-2 text-destructive hover:bg-destructive/5 hover:text-destructive"
-              disabled={!canReject || mutation.isPending}
+              disabled={!canReject || mutation.isPending || mutation.outcomeUnknown}
               onClick={() => setRejectionOpen(true)}
             >
               <ShieldX aria-hidden="true" className="size-4 shrink-0" /> Reject
               &amp; Request Revision
             </Button>
+            {mutation.outcomeUnknown && (
+              <p className="text-xs text-destructive">
+                The operation outcome could not be confirmed. Reload data before trying again.
+              </p>
+            )}
           </section>
         </div>
       </div>
@@ -290,6 +295,16 @@ function ReviewContent({
         />
       ) : null}
     </>
+  );
+}
+
+function isCanceledError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { name?: string; code?: string; message?: string };
+  return (
+    e.name === "CanceledError" ||
+    e.code === "ERR_CANCELED" ||
+    e.message === "canceled"
   );
 }
 
@@ -318,6 +333,7 @@ export function DocumentReviewDialog({
   async function refresh() {
     if (!requirement.document || pending || refreshing) return;
     setRefreshing(true);
+    setError(null);
     try {
       await invalidateComplianceDocument(
         client,
@@ -325,6 +341,7 @@ export function DocumentReviewDialog({
         String(dossier.complianceDossierId),
         requirement.dossierRequirementId,
       );
+      await query.refetch();
     } finally {
       setRefreshing(false);
     }
@@ -362,7 +379,7 @@ export function DocumentReviewDialog({
               >
                 {refreshing || query.isFetching
                   ? "Loading latest data…"
-                  : "Load latest review data"}
+                  : "Reload data"}
               </Button>
             ) : null}
             <details className="mt-2">
@@ -379,9 +396,13 @@ export function DocumentReviewDialog({
           </p>
         ) : query.isError || !query.data ? (
           <div role="alert" className="space-y-3 text-sm text-red-700">
-            <p>{mapDocumentReviewError(query.error).message}</p>
-            <Button variant="outline" onClick={() => void query.refetch()}>
-              Retry
+            <p>
+              {isCanceledError(query.error)
+                ? "Loading was interrupted. Reload to try again."
+                : "Unable to load the document. Reload to try again."}
+            </p>
+            <Button variant="outline" onClick={() => void refresh()}>
+              Reload data
             </Button>
           </div>
         ) : (

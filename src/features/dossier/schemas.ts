@@ -200,6 +200,18 @@ export const dossierOverviewSchema = z.object({
   actions: z
     .object({ canUpload: z.boolean(), canReview: z.boolean() })
     .optional(),
+  /** Set on a return booking (a horse left behind mid-trip): the original trip whose documents can be reused. */
+  returnOf: z
+    .object({
+      transportId: z.string(),
+      transportCode: z.string(),
+      bookingId: z.string(),
+      bookingCode: z.string(),
+      dossierId: z.string().nullable(),
+      dossierCode: z.string().nullable(),
+      horseName: z.string().nullable(),
+    })
+    .nullish(),
 });
 
 export const documentRequestSummarySchema = z.object({
@@ -400,13 +412,15 @@ export const documentReviewSchema = z.discriminatedUnion("result", [
   rejectionReview,
 ]);
 const backendReviewValue = z.object({
-  review: z.object({
-    documentReviewId: entityId,
-    reviewedByAccountId: entityId,
-    result: z.string(),
-    reviewComment: z.string().nullable(),
-    reviewedAt: timestamp,
-  }),
+  review: z
+    .object({
+      documentReviewId: entityId,
+      reviewedByAccountId: entityId,
+      result: z.string(),
+      reviewComment: z.string().nullable(),
+      reviewedAt: timestamp,
+    })
+    .passthrough(),
   requirementStatus: dossierRequirementStatusSchema,
   documentStatus: complianceDocumentStatusSchema,
   dossierStatus: dossierStatusSchema,
@@ -422,10 +436,11 @@ const backendReviewValue = z.object({
       dueDate: date.nullable(),
       requestedAt: timestamp,
     })
+    .passthrough()
     .optional(),
   emailSent: z.boolean().optional(),
   deliveryWarning: z.string().nullable().optional(),
-});
+}).passthrough();
 export const approveDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const rejectDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const documentReviewEnvelopeSchema = envelope(backendReviewValue);

@@ -278,7 +278,6 @@ export default function Test() {
       <div className="mx-auto max-w-3xl space-y-5">
         {previewSwitcher}
         <IncidentReportHeader
-          transportId={value.transportId}
           latitude={value.latitude ?? "Unavailable"}
           longitude={value.longitude ?? "Unavailable"}
           locationDescription={value.locationDescription}

@@ -94,6 +94,7 @@ export function ReturnActivationPanel({
   const versionChanged = baseline !== plan.updatedAt && !mutation.data;
   // RP7 is authoritative through CONFIRMED. Display dossier readiness only when actually read.
   const dossierBlocked =
+    context.bookingRestricted ||
     context.workspace.dossierStatus !== "APPROVED" ||
     context.extraDossierStatus !== "APPROVED";
   const blocked =
@@ -191,8 +192,9 @@ export function ReturnActivationPanel({
           </dl>
           {dossierBlocked && (
             <p className="text-xs text-destructive">
-              MAIN and EXTRA must both be APPROVED before activation. Missing
-              EXTRA information is not treated as approval.
+              {context.bookingRestricted
+                ? "Booking details are restricted for this transport."
+                : "MAIN and EXTRA must both be APPROVED before activation. Missing EXTRA information is not treated as approval."}
             </p>
           )}
         </Section>

@@ -168,7 +168,11 @@ export default function NotificationsPage() {
                     >
                       <TableCell className="px-3"><NotificationTypeIcon type={notification.type} className="rounded-[2px]" /></TableCell>
                       <TableCell className={cn("truncate px-3 text-sm text-slate-900", unread ? "font-bold" : "font-medium")} title={notification.title}>{notification.title}</TableCell>
-                      <TableCell className="truncate px-3 text-sm text-slate-600" title={notification.message}>{notification.message}</TableCell>
+                      <TableCell className="px-3 text-sm text-slate-600" title={notification.message}>
+                        <span className="line-clamp-2 whitespace-normal leading-snug">
+                          {notification.message}
+                        </span>
+                      </TableCell>
                       <TableCell className="px-3">
                         {related ? <span className="block max-w-full truncate rounded-[2px] bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700" title={related}>{related}</span> : null}
                       </TableCell>

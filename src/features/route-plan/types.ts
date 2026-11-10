@@ -240,11 +240,15 @@ export interface CancelRoutePlanRequest {
   reason: string;
 }
 
+export type { CancelRoutePlanResult } from "./schemas";
+
 export interface LegalReviewRequest {
   lastUpdatedAt: string;
   isFeasible: boolean;
   note?: string;
   blockedSegments?: number[];
+  /** Segments of the backups submitted with the primary. Any blocked segment sends the whole pair back. */
+  blockedBackupSegments?: { routePlanId: string; sequenceNo: number }[];
 }
 
 export interface OutsourceSegmentRequest {

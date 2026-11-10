@@ -37,6 +37,15 @@ const errorCategories = [
   [5, "Metadata mismatch"],
   [6, "Other"],
 ] as const;
+
+// BE DossierRequirementStatus: 2 = REQUESTED, 5 = REJECTED
+const REQUIREMENT_STATUS_OPTIONS = [
+  [2, "Requested"],
+  [5, "Rejected"],
+] as const;
+
+// BE ComplianceDossierStatus: 2 = IN_PREPARATION (fixed default in rejection payload)
+const DEFAULT_DOSSIER_STATUS_IN_PREPARATION = 2;
 import { mapDocumentReviewError } from "../lib/document-review";
 import { documentRequestFormSchema } from "../schemas";
 import type {
@@ -73,7 +82,7 @@ export function RejectDocumentDialog({
       rejectionNote: "",
       revisionDeadline: "",
       requirementStatus: 5,
-      dossierStatus: 2,
+      dossierStatus: DEFAULT_DOSSIER_STATUS_IN_PREPARATION,
     },
   });
   const pending = isPending || form.formState.isSubmitting;
@@ -108,12 +117,12 @@ export function RejectDocumentDialog({
       >
         <DialogHeader className="shrink-0 border-b border-border px-5 py-5 sm:px-6">
           <div className="flex flex-wrap items-center gap-3 pr-6">
-            <DialogTitle className="font-heading text-xl uppercase sm:text-2xl">
+            <DialogTitle className="font-heading text-xl uppercase sm:text-2xl text-primary">
               Reject Document &amp; Create DocumentRequest
             </DialogTitle>
             <DossierStatusBadge status="REJECTED" />
           </div>
-          <DialogDescription className="pt-1 text-sm">
+          <DialogDescription className="pt-1 text-sm text-slate-500">
             {documentName} · {requirement.horseName ?? "Trip-level"} · Version v
             {versionNo}
           </DialogDescription>
@@ -220,7 +229,7 @@ export function RejectDocumentDialog({
                 render={({ field }) => (
                   <FormItem className="sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-x-5">
                     <FormLabel className="sm:pt-2">
-                      Revision Deadline *
+                      Revision Deadline <span className="text-destructive">*</span>
                     </FormLabel>
                     <div className="min-w-0 space-y-2">
                       <FormControl>
@@ -251,49 +260,41 @@ export function RejectDocumentDialog({
                   </FormItem>
                 )}
               />
-              {(["requirementStatus", "dossierStatus"] as const).map((name) => (
-                <FormField
-                  key={name}
-                  control={form.control}
-                  name={name}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        {name === "requirementStatus"
-                          ? "Requirement Status"
-                          : "Dossier Status"}
-                      </FormLabel>
+              <FormField
+                control={form.control}
+                name="requirementStatus"
+                render={({ field }) => (
+                  <FormItem className="sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-x-5">
+                    <FormLabel className="sm:pt-2">
+                      Requirement Status <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <div className="min-w-0 space-y-2">
                       <Select
                         value={String(field.value)}
                         onValueChange={(value) => field.onChange(Number(value))}
+                        disabled={pending || !canReject}
                       >
                         <FormControl>
-                          <SelectTrigger className="rounded-[2px]">
+                          <SelectTrigger className="w-full rounded-[2px]">
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {(name === "requirementStatus"
-                            ? [
-                                [2, "Requested"],
-                                [5, "Rejected"],
-                              ]
-                            : [
-                                [2, "In preparation"],
-                                [7, "Rejected"],
-                              ]
-                          ).map(([value, label]) => (
+                          {REQUIREMENT_STATUS_OPTIONS.map(([value, label]) => (
                             <SelectItem key={value} value={String(value)}>
                               {label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormDescription className="text-xs">
+                        Target status for this requirement after rejection.
+                      </FormDescription>
                       <DossierFormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
+                    </div>
+                  </FormItem>
+                )}
+              />
             </fieldset>
             {error ? (
               <div
@@ -301,10 +302,14 @@ export function RejectDocumentDialog({
                 className="rounded-[2px] border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive"
               >
                 <p>{error.message}</p>
-                <details className="mt-2 text-xs">
-                  <summary>Technical details</summary>
-                  {error.code}: {error.backendMessage}
-                </details>
+                {error.backendMessage && (
+                  <details className="mt-2 text-xs">
+                    <summary>Technical details</summary>
+                    <p className="mt-1 break-words">
+                      {error.code}: {error.backendMessage}
+                    </p>
+                  </details>
+                )}
               </div>
             ) : null}
           </form>
@@ -322,8 +327,8 @@ export function RejectDocumentDialog({
           <Button
             type="submit"
             form={formId}
-            disabled={pending || !canReject}
-            className="rounded-[2px]"
+            disabled={pending || !canReject || Boolean(error?.outcomeUnknown)}
+            className="rounded-[2px] bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {pending ? "Submitting…" : "Submit DocumentRequest"}
           </Button>

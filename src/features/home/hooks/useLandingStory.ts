@@ -23,6 +23,12 @@ export function useLandingStory(
   const [active, setActive] = useState<LandingChapter>("home");
   const [scrolled, setScrolled] = useState(false);
   const [horsePresent, setHorsePresent] = useState(true);
+  const updateSceneStatus = useCallback((status: "ready" | "unavailable") => {
+    const state = scene.current;
+    if (state.sceneStatus === "unavailable" && status === "ready") return false;
+    Object.assign(state, { sceneStatus: status });
+    return true;
+  }, []);
   const revealHero = useCallback(() => {
     const state = scene.current;
     Object.assign(state, { heroIntroReady: true });
@@ -81,6 +87,7 @@ export function useLandingStory(
           const resumeMap = state.inMap || initialMapAnchor.current;
           initialMapAnchor.current = false;
           const previous = {
+            sceneStatus: state.sceneStatus,
             heroCompleted: state.heroCompleted,
             heroLifecycle: state.heroLifecycle,
             heroEffectTime: state.heroEffectTime,
@@ -176,7 +183,9 @@ export function useLandingStory(
           let journeyVisibleAt = 0;
           let departurePortrait = -1;
           let presentationLayer: HTMLDivElement | null = null;
+          let journeyScroll: ReturnType<typeof createJourneyScroll> | undefined;
           const syncJourneyText = () => {
+            journeyScroll?.update();
             if (canvasLayer.current !== presentationLayer) {
               presentationLayer = canvasLayer.current;
               requestUpdate();
@@ -204,6 +213,7 @@ export function useLandingStory(
               return;
             }
             if (
+              state.sceneStatus !== "ready" ||
               !state.inJourney ||
               !state.journeyReady ||
               !state.visible ||
@@ -413,7 +423,7 @@ export function useLandingStory(
               updatePresentation();
             });
           };
-          const journeyScroll = createJourneyScroll(journey, state, () => {
+          journeyScroll = createJourneyScroll(journey, state, () => {
             requestUpdate();
             syncJourneyText();
           });
@@ -610,7 +620,7 @@ export function useLandingStory(
             cancelAnimationFrame(frame);
             cancelAnimationFrame(refreshFrame);
             resize.disconnect();
-            journeyScroll.destroy();
+            journeyScroll?.destroy();
             traversal.destroy();
             gsap.ticker.remove(syncJourneyText);
             window.removeEventListener("scroll", requestUpdate);
@@ -633,5 +643,12 @@ export function useLandingStory(
     },
     { scope: root, dependencies: [root, canvasLayer] },
   );
-  return { scene, active, scrolled, horsePresent, revealHero };
+  return {
+    scene,
+    active,
+    scrolled,
+    horsePresent,
+    revealHero,
+    updateSceneStatus,
+  };
 }

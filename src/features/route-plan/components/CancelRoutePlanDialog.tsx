@@ -17,7 +17,7 @@ import {
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { cancelRoutePlan, getRoutePlanError } from "../services";
-import type { RoutePlanMutationResult, RoutePlanStatus } from "../types";
+import type { CancelRoutePlanResult, RoutePlanStatus } from "../types";
 
 type CancelRoutePlanDialogProps = {
   routePlanId: string;
@@ -25,7 +25,7 @@ type CancelRoutePlanDialogProps = {
   lastUpdatedAt: string;
   routePlanCode?: string;
   children?: ReactNode;
-  onCancelled?: (result: RoutePlanMutationResult) => void;
+  onCancelled?: (result: CancelRoutePlanResult) => void;
 };
 
 export function CancelRoutePlanDialog({

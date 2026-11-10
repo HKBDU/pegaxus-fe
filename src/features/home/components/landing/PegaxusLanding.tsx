@@ -22,6 +22,8 @@ import { FinalCtaSection } from "./FinalCtaSection";
 import { LandingFooter } from "./LandingFooter";
 import { HorseLoader } from "./HorseLoader";
 import "../../landing.css";
+import { preload } from "react-dom";
+import horseUrl from "../../assets/horse-meshopt.glb?url&no-inline";
 
 import { MarqueeBand } from "./MarqueeBand";
 import { scrollToLandingSection } from "../../lib/landing-navigation";
@@ -40,22 +42,13 @@ class HorseSceneBoundary extends Component<
     this.props.onUnavailable();
   }
   render() {
-    return this.state.failed ? (
-      <div
-        className="landing-experience landing-scene-fallback"
-        aria-hidden="true"
-      >
-        <span className="landing-eyebrow">THE JOURNEY CONTINUES</span>
-        <p>Movement, with purpose.</p>
-        <small>3D preview unavailable. Explore the story below.</small>
-      </div>
-    ) : (
-      this.props.children
-    );
+    return this.state.failed ? null : this.props.children;
   }
 }
 
 export function PegaxusLanding() {
+  // Home-only: fetch the same GLB while the separate renderer chunk is loading.
+  preload(horseUrl, { as: "fetch", crossOrigin: "anonymous" });
   const root = useRef<HTMLDivElement>(null);
   const canvasLayer = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -76,12 +69,24 @@ export function PegaxusLanding() {
       else html.style.removeProperty("--landing-scrollbar-gap");
     };
   }, []);
-  const { scene, active, scrolled, horsePresent, revealHero } = useLandingStory(
-    root,
-    canvasLayer,
-  );
-  const [pending, setPending] = useState(true);
-  const ready = useCallback(() => setPending(false), []);
+  const {
+    scene,
+    active,
+    scrolled,
+    horsePresent,
+    revealHero,
+    updateSceneStatus,
+  } = useLandingStory(root, canvasLayer);
+  const [sceneStatus, setSceneStatus] = useState<
+    "loading" | "ready" | "unavailable"
+  >("loading");
+  const ready = useCallback(() => {
+    if (updateSceneStatus("ready")) setSceneStatus("ready");
+  }, [updateSceneStatus]);
+  const unavailable = useCallback(() => {
+    updateSceneStatus("unavailable");
+    setSceneStatus("unavailable");
+  }, [updateSceneStatus]);
   const navigateSection = (event: MouseEvent<HTMLDivElement>) => {
     if (
       event.defaultPrevented ||
@@ -106,7 +111,12 @@ export function PegaxusLanding() {
     });
   };
   return (
-    <div className="pegaxus-landing" ref={root} onClick={navigateSection}>
+    <div
+      className="pegaxus-landing"
+      data-scene-status={sceneStatus}
+      ref={root}
+      onClick={navigateSection}
+    >
       <div className="landing-scroll-progress" aria-hidden="true">
         <span />
       </div>
@@ -114,19 +124,21 @@ export function PegaxusLanding() {
         Skip to content
       </a>
       <LandingNavbar active={active} scrolled={scrolled} />
-      <HorseLoader pending={pending} onReveal={revealHero} />
-      <HorseSceneBoundary onUnavailable={ready}>
+      <HorseSceneBoundary onUnavailable={unavailable}>
         <Suspense fallback={null}>
           <HorseExperience
             story={scene}
             canvasLayer={canvasLayer}
             horsePresent={horsePresent}
             onReady={ready}
+            onUnavailable={unavailable}
           />
         </Suspense>
       </HorseSceneBoundary>
       <div className="landing-story">
-        <HeroSection />
+        <HeroSection>
+          <HorseLoader status={sceneStatus} onReveal={revealHero} />
+        </HeroSection>
         <MarqueeBand />
         <JourneySection />
         <ComplianceSection />

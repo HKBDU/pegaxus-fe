@@ -102,6 +102,8 @@ export interface HorseHealthOverviewItem {
   latestHealthStatus: HealthStatus | null
   latestLog: LatestHealthLog | null
   logCount: number
+  /** Set when the horse was left behind mid-trip; it is no longer checked. */
+  detachedAt?: string | null
 }
 
 export interface HorseHealthOverview {

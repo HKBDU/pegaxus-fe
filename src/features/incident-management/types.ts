@@ -56,6 +56,12 @@ export interface SelfResolveInput {
   lastUpdatedAt: string
   resolutionSummary: string
 }
+export interface DetachHorseInput {
+  lastUpdatedAt: string
+  locationId: string
+  note?: string
+}
+
 export interface CancelInput {
   lastUpdatedAt: string
   cancellationReason: string

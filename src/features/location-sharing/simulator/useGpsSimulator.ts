@@ -13,8 +13,8 @@ import { resolveRouteGeometry } from "@/shared/components/map/route-geometry-cac
 export type SimulatorStatus = "idle" | "running" | "paused" | "completed";
 
 export interface SegmentEndpoint {
-  latitude: number | null;
-  longitude: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   locationName?: string;
 }
 

@@ -228,6 +228,10 @@ export function createMapTraversal(
     state.invalidate?.();
   };
   const constrain = (amount: number) => {
+    if (state.sceneStatus !== "ready") {
+      release();
+      return false;
+    }
     if (amount !== 0) navigationUntil = 0;
     if (amount < 0) {
       reverseInput = true;
@@ -327,6 +331,11 @@ export function createMapTraversal(
   };
   const scroll = () => {
     const y = scrollY;
+    if (state.sceneStatus !== "ready") {
+      release();
+      lastY = y;
+      return;
+    }
     if (correctedY !== undefined && Math.abs(y - correctedY) <= 1) {
       correctedY = undefined;
       lastY = y;
@@ -374,6 +383,7 @@ export function createMapTraversal(
     state.invalidate?.();
   };
   const tick = () => {
+    if (state.sceneStatus !== "ready" && waiting) release();
     const now = performance.now();
     const rect = section.getBoundingClientRect();
     const moving =

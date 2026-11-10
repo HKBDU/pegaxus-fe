@@ -43,7 +43,7 @@ export const healthLogSummarySchema = z.object({
   logType: logTypeSchema,
   healthStatus: healthStatusSchema,
   hydrationStatus: hydrationStatusSchema.nullable(),
-  checkedBy: crewMemberSchema,
+  checkedBy: checkedBySchema,
   veterinarianRequired: z.boolean(),
   hasPhoto: z.boolean(),
   latestNote: z.string().nullable().optional(),
@@ -79,6 +79,8 @@ export const horseHealthOverviewItemSchema = z.object({
   latestHealthStatus: healthStatusSchema.nullable(),
   latestLog: latestHealthLogSchema.nullable(),
   logCount: z.number().int().nonnegative(),
+  /** Set when the horse was left behind mid-trip; it is no longer checked. */
+  detachedAt: timestamp.nullish(),
 })
 
 export const horseHealthOverviewSchema = z.object({
