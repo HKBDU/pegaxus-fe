@@ -66,9 +66,9 @@ export function MainLayout() {
 
   return (
     <div className={`flex min-h-screen flex-col${customerChrome && !isLanding ? " customer-workspace" : ""}`}>
-      <IncidentAlertHost />
       <ProfileCompletionDialog />
       {!isLanding && <Header variant={customerChrome ? "customer" : "default"} navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />}
+      <IncidentAlertHost />
       <main className="min-h-[calc(100svh-3rem)] flex-none">
         <Outlet /> {/* Outlet - React Router render route childs*/}
       </main>
