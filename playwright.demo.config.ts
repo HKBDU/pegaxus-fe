@@ -1,6 +1,6 @@
-import { defineConfig } from "@playwright/test"
+import { defineConfig } from "@playwright/test";
 
-import base from "./playwright.config.ts"
+import base from "./playwright.config.ts";
 
 /**
  * "Demo" mode: the same tests, but the browser window is visible and every action is slowed down, so a person can
@@ -8,7 +8,7 @@ import base from "./playwright.config.ts"
  *
  * `pnpm test:e2e:demo` - the pace is 700 ms per action; change `SLOW_MO_MS` below to go faster or slower.
  */
-const SLOW_MO_MS = 700
+const SLOW_MO_MS = 1400;
 
 export default defineConfig({
   ...base,
@@ -21,4 +21,4 @@ export default defineConfig({
     headless: false,
     launchOptions: { slowMo: SLOW_MO_MS },
   },
-})
+});

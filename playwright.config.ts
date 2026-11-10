@@ -24,6 +24,14 @@ for (const file of [".env.e2e", ".env"]) {
     /* file absent: the real-api setup project reports missing variables; the mock suite needs none */
   }
 }
+/**
+ * A `.env` line such as `VITE_GEOAPIFY_API_KEY=$GEOAPIFY_API_KEY` is a reference that Vite expands itself. `loadEnvFile`
+ * does not expand it, so the literal text would be copied into the environment of the servers started below, win over the
+ * `.env` expansion, and the application would report "Geoapify API key is not configured". Drop such values here.
+ */
+for (const name of Object.keys(process.env)) {
+  if (name.startsWith("VITE_") && process.env[name]?.startsWith("$")) delete process.env[name];
+}
 
 /** The front end the real-API suite drives. Default: the Vite dev server a developer already keeps on 5173. */
 const REAL_BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:5173";
@@ -51,11 +59,6 @@ const PREVIEW = `pnpm exec vite preview --outDir ${DIST} --port ${PORT} --strict
  * and `--project=mock` must not start a dev server). Without `--project` everything is started.
  */
 const requestedProjects = [...process.argv.join(" ").matchAll(/--project[= ]+([\w-]+)/g)].map((match) => match[1]);
-/**
- * The workers do not see the command line, so the playground flag travels as an environment variable (workers inherit
- * it); otherwise the worker would not know a project that only the main process registered.
- */
-if (requestedProjects.includes("playground")) process.env.E2E_PLAYGROUND = "1";
 const runs = (...names: string[]) => requestedProjects.length === 0 || names.some((name) => requestedProjects.includes(name));
 
 const realUrl = new URL(REAL_BASE_URL);
@@ -119,29 +122,6 @@ export default defineConfig({
       },
     },
 
-    // ------------------------------------------------------------------------------------------------- playground
-    /**
-     * Demo helper, only registered when asked for (`pnpm test:e2e:playground`): a visible Chrome on the MOCKED backend that
-     * pauses with the Inspector open, so new steps can be recorded without touching the real backend.
-     */
-    ...(process.env.E2E_PLAYGROUND
-      ? [
-          {
-            name: "playground",
-            testDir: "./e2e/playground",
-            dependencies: ["mock-setup"],
-            timeout: 0,
-            use: {
-              ...devices["Desktop Chrome"],
-              baseURL: BASE_URL,
-              viewport: { width: 1440, height: 900 },
-              storageState: "e2e/.auth/customer.json",
-              headless: false,
-            },
-          },
-        ]
-      : []),
-
     // ----------------------------------------------------------------------------------------------- real-API suite
     /** Signs in ONCE with the real test account (E2E_USER_EMAIL / E2E_USER_PASSWORD) and stores the session. */
     {
@@ -180,7 +160,7 @@ export default defineConfig({
 
   webServer: [
     /** Mock suite: builds and serves the real application (no mock server): the tests exercise the actual React app. */
-    ...(runs("mock", "mock-setup", "playground")
+    ...(runs("mock", "mock-setup")
       ? [
           {
             command: process.env.E2E_SKIP_BUILD ? PREVIEW : `${BUILD} && ${PREVIEW}`,
