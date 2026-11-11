@@ -295,7 +295,7 @@ export function buildOrderTimeline(params: BuildOrderTimelineParams): OrderTimel
   const inTransitEvents: OrderTimelineEvent[] = [];
 
   // 7. Pickup Handover
-  const pickupHandover = effectiveHandovers.find((h) => h.handoverType === "PICKUP");
+  const pickupHandover = effectiveHandovers.find((h) => h.handoverType === "PICKUP" && h.status !== "CANCELLED");
   if (pickupHandover && pickupHandover.status === "COMPLETED") {
     inTransitEvents.push({
       id: "pickup-handover",
@@ -467,7 +467,7 @@ export function buildOrderTimeline(params: BuildOrderTimelineParams): OrderTimel
   }
 
   // 11. Delivery Handover
-  const deliveryHandover = effectiveHandovers.find((h) => h.handoverType === "DELIVERY");
+  const deliveryHandover = effectiveHandovers.find((h) => h.handoverType === "DELIVERY" && h.status !== "CANCELLED");
   if (deliveryHandover && deliveryHandover.status === "COMPLETED") {
     completedEvents.push({
       id: "delivery-handover",
