@@ -1,4 +1,3 @@
-import { crewTurnErrorMessage } from "@/shared/constants/crew-turn"
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -15,16 +14,31 @@ import { cn } from "@/lib/utils"
 import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
 
 import { CrewShell } from "../components/CrewShell"
-import { fieldControl, fieldLabel, fieldTextarea, healthHeading, healthPanel, noticeError, noticeMuted } from "../components/health-ui"
+import { fieldControl, fieldErrorText, fieldLabel, fieldTextarea, healthHeading, healthPanel, noticeError, noticeMuted } from "../components/health-ui"
 import { HEALTH_STATUSES, HEALTH_STATUS_LABELS, HORSE_HEALTH_ROUTES, HYDRATION_STATUSES, LOG_TYPES } from "../constants"
+import { fieldErrorsFrom, healthErrorMessage } from "../errors"
 import { useCreateHealthLog, useHorseHealthOverview, useMarkAllNormal } from "../hooks/useHorseHealth"
+import { healthLogInputSchema, markAllNormalInputSchema } from "../schemas"
 import type { HealthLogInput, LogType } from "../types"
 
 const sectionClass = `${healthPanel} space-y-3 p-4`
+const NOTE_FIELDS = [
+  ["generalNote", "General note"],
+  ["behaviorNote", "Behavior note"],
+  ["feedingNote", "Feeding note"],
+  ["hydrationNote", "Hydration note"],
+  ["symptomNote", "Symptom note"],
+  ["injuryNote", "Injury note"],
+  ["locationDescription", "Location"],
+  ["treatmentProvided", "Treatment"],
+  ["medicationGiven", "Medication"],
+  ["veterinarianNote", "Veterinarian note"],
+] as const
 const humanize = (value: string) => value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ")
 
+// A typed "38,5" is read as 38.5; anything else that is not a number stays NaN so the schema flags the field.
 function toNumber(value: string) {
-  return value.trim() ? Number(value) : undefined
+  return value.trim() ? Number(value.trim().replace(",", ".")) : undefined
 }
 
 export default function HealthLogPage() {
@@ -63,6 +77,19 @@ export default function HealthLogPage() {
   const [uploadedPublicIds, setUploadedPublicIds] = useState<string[]>([])
   const [photoUploadState, setPhotoUploadState] = useState<"idle" | "uploading" | "ready" | "error">("idle")
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  /** Clears a field's message once the escort edits it. */
+  const edited = (field: string) =>
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  const invalid = (field: string) => (fieldErrors[field] ? true : undefined)
+  const fieldError = (field: string) =>
+    fieldErrors[field] ? <span className={fieldErrorText}>{fieldErrors[field]}</span> : null
 
   useEffect(() => {
     const first = horseItems?.find((item) => !item.detachedAt)
@@ -96,7 +123,8 @@ export default function HealthLogPage() {
     return (
       <CrewShell>
         <div className={`${noticeError} mx-auto max-w-6xl`}>
-          Unable to load horse context. {overview.error ? String(overview.error) : "Please try again."}
+          Unable to load horse context.{" "}
+          {overview.error ? healthErrorMessage(overview.error, "Please try again.") : "Please try again."}
         </div>
       </CrewShell>
     )
@@ -135,10 +163,17 @@ export default function HealthLogPage() {
 
   const save = async () => {
     setError(null)
-    if (!horseId) {
-      setError("Horse is required.")
+    // Validate with the input schema first: invalid vitals used to go out as NaN and come back as a bare 400.
+    const parsed = healthLogInputSchema.safeParse(buildInput())
+    const errors = parsed.success ? {} : fieldErrorsFrom(parsed.error)
+    // The schema's id is a plain string, so an empty selection passes it.
+    if (!horseId) errors.horseId = "Select a horse."
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors)
+      setError("Check the highlighted fields.")
       return
     }
+    setFieldErrors({})
     if (files.length > 0 && uploadedPublicIds.length !== files.length) {
       setError("Please wait until every image is verified before saving.")
       return
@@ -156,7 +191,7 @@ export default function HealthLogPage() {
       toast.success("Health log saved.")
       navigate(HORSE_HEALTH_ROUTES.health(transportId))
     } catch (cause) {
-      setError(crewTurnErrorMessage(cause) ?? (cause instanceof Error ? cause.message : "Unable to save health log."))
+      setError(healthErrorMessage(cause, "Unable to save the health log."))
     }
   }
 
@@ -175,20 +210,28 @@ export default function HealthLogPage() {
       setError("Please wait until every image is verified before marking all horses normal.")
       return
     }
+    const input = {
+      logType,
+      checkedAt: new Date().toISOString(),
+      locationDescription: locationDescription || undefined,
+      generalNote: generalNote || undefined,
+      photoPublicIds: uploadedPublicIds,
+      latitude: coordinates[0]?.latitude,
+      longitude: coordinates[0]?.longitude,
+    }
+    const parsed = markAllNormalInputSchema.safeParse(input)
+    if (!parsed.success) {
+      setFieldErrors(fieldErrorsFrom(parsed.error))
+      setError("Check the highlighted fields.")
+      return
+    }
+    setFieldErrors({})
     try {
-      await markAllMutation.mutateAsync({
-        logType,
-        checkedAt: new Date().toISOString(),
-        locationDescription: locationDescription || undefined,
-        generalNote: generalNote || undefined,
-        photoPublicIds: uploadedPublicIds,
-        latitude: coordinates[0]?.latitude,
-        longitude: coordinates[0]?.longitude,
-      })
+      await markAllMutation.mutateAsync(input)
       toast.success("All horses marked normal.")
       navigate(HORSE_HEALTH_ROUTES.health(transportId))
     } catch (cause) {
-      setError(crewTurnErrorMessage(cause) ?? (cause instanceof Error ? cause.message : "Unable to mark all horses normal."))
+      setError(healthErrorMessage(cause, "Unable to mark all horses normal."))
     }
   }
 
@@ -229,8 +272,14 @@ export default function HealthLogPage() {
               </h2>
               <label className={fieldLabel}>
                 Horse
-                <Select value={horseId} onValueChange={setHorseId}>
-                  <SelectTrigger className={selectClass}>
+                <Select
+                  value={horseId}
+                  onValueChange={(value) => {
+                    setHorseId(value)
+                    edited("horseId")
+                  }}
+                >
+                  <SelectTrigger className={selectClass} aria-invalid={invalid("horseId")}>
                     <SelectValue placeholder="Select horse" />
                   </SelectTrigger>
                   <SelectContent>
@@ -241,6 +290,7 @@ export default function HealthLogPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {fieldError("horseId")}
               </label>
 
               <label className={fieldLabel}>
@@ -311,9 +361,14 @@ export default function HealthLogPage() {
                     inputMode="decimal"
                     placeholder="e.g. 38.0"
                     value={temperature}
-                    onChange={(event) => setTemperature(event.target.value)}
+                    onChange={(event) => {
+                      setTemperature(event.target.value)
+                      edited("temperatureCelsius")
+                    }}
+                    aria-invalid={invalid("temperatureCelsius")}
                     className={fieldControl}
                   />
+                  {fieldError("temperatureCelsius")}
                 </label>
                 <label className={fieldLabel}>
                   Heart rate (bpm)
@@ -321,9 +376,14 @@ export default function HealthLogPage() {
                     inputMode="numeric"
                     placeholder="e.g. 36"
                     value={heartRate}
-                    onChange={(event) => setHeartRate(event.target.value)}
+                    onChange={(event) => {
+                      setHeartRate(event.target.value)
+                      edited("heartRateBpm")
+                    }}
+                    aria-invalid={invalid("heartRateBpm")}
                     className={fieldControl}
                   />
+                  {fieldError("heartRateBpm")}
                 </label>
                 <label className={fieldLabel}>
                   Respiratory rate (bpm)
@@ -331,9 +391,14 @@ export default function HealthLogPage() {
                     inputMode="numeric"
                     placeholder="e.g. 12"
                     value={respiratoryRate}
-                    onChange={(event) => setRespiratoryRate(event.target.value)}
+                    onChange={(event) => {
+                      setRespiratoryRate(event.target.value)
+                      edited("respiratoryRateBpm")
+                    }}
+                    aria-invalid={invalid("respiratoryRateBpm")}
                     className={fieldControl}
                   />
+                  {fieldError("respiratoryRateBpm")}
                 </label>
               </div>
               <p className="m-0 text-[11px] text-slate-500">
@@ -348,20 +413,32 @@ export default function HealthLogPage() {
               </h2>
               <textarea
                 value={generalNote}
-                onChange={(event) => setGeneralNote(event.target.value)}
+                onChange={(event) => {
+                  setGeneralNote(event.target.value)
+                  edited("generalNote")
+                }}
+                aria-invalid={invalid("generalNote")}
                 placeholder="General note"
                 className={`${fieldTextarea} min-h-24`}
               />
               <div className="grid gap-3 sm:grid-cols-2">
                 <textarea
                   value={behaviorNote}
-                  onChange={(event) => setBehaviorNote(event.target.value)}
+                  onChange={(event) => {
+                    setBehaviorNote(event.target.value)
+                    edited("behaviorNote")
+                  }}
+                  aria-invalid={invalid("behaviorNote")}
                   placeholder="Behavior note (optional)"
                   className={fieldTextarea}
                 />
                 <textarea
                   value={feedingNote}
-                  onChange={(event) => setFeedingNote(event.target.value)}
+                  onChange={(event) => {
+                    setFeedingNote(event.target.value)
+                    edited("feedingNote")
+                  }}
+                  aria-invalid={invalid("feedingNote")}
                   placeholder="Feeding note (optional)"
                   className={fieldTextarea}
                 />
@@ -369,26 +446,42 @@ export default function HealthLogPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <textarea
                   value={hydrationNote}
-                  onChange={(event) => setHydrationNote(event.target.value)}
+                  onChange={(event) => {
+                    setHydrationNote(event.target.value)
+                    edited("hydrationNote")
+                  }}
+                  aria-invalid={invalid("hydrationNote")}
                   placeholder="Hydration note (optional)"
                   className={fieldTextarea}
                 />
                 <textarea
                   value={symptomNote}
-                  onChange={(event) => setSymptomNote(event.target.value)}
+                  onChange={(event) => {
+                    setSymptomNote(event.target.value)
+                    edited("symptomNote")
+                  }}
+                  aria-invalid={invalid("symptomNote")}
                   placeholder="Symptom note (optional)"
                   className={fieldTextarea}
                 />
               </div>
               <textarea
                 value={injuryNote}
-                onChange={(event) => setInjuryNote(event.target.value)}
+                onChange={(event) => {
+                  setInjuryNote(event.target.value)
+                  edited("injuryNote")
+                }}
+                aria-invalid={invalid("injuryNote")}
                 placeholder="Injury note (optional)"
                 className={fieldTextarea}
               />
               <input
                 value={locationDescription}
-                onChange={(event) => setLocationDescription(event.target.value)}
+                onChange={(event) => {
+                  setLocationDescription(event.target.value)
+                  edited("locationDescription")
+                }}
+                aria-invalid={invalid("locationDescription")}
                 maxLength={500}
                 placeholder="Location description (optional)"
                 className={fieldControl}
@@ -396,13 +489,21 @@ export default function HealthLogPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <input
                   value={treatment}
-                  onChange={(event) => setTreatment(event.target.value)}
+                  onChange={(event) => {
+                    setTreatment(event.target.value)
+                    edited("treatmentProvided")
+                  }}
+                  aria-invalid={invalid("treatmentProvided")}
                   placeholder="Treatment provided (optional)"
                   className={fieldControl}
                 />
                 <input
                   value={medication}
-                  onChange={(event) => setMedication(event.target.value)}
+                  onChange={(event) => {
+                    setMedication(event.target.value)
+                    edited("medicationGiven")
+                  }}
+                  aria-invalid={invalid("medicationGiven")}
                   placeholder="Medication given (optional)"
                   className={fieldControl}
                 />
@@ -419,10 +520,24 @@ export default function HealthLogPage() {
               {veterinarianRequired && (
                 <textarea
                   value={veterinarianNote}
-                  onChange={(event) => setVeterinarianNote(event.target.value)}
+                  onChange={(event) => {
+                    setVeterinarianNote(event.target.value)
+                    edited("veterinarianNote")
+                  }}
+                  aria-invalid={invalid("veterinarianNote")}
                   placeholder="Veterinarian note"
                   className={`${fieldTextarea} min-h-24`}
                 />
+              )}
+              {/* Note fields have no labels of their own, so their messages are listed here under the section. */}
+              {NOTE_FIELDS.some(([field]) => fieldErrors[field]) && (
+                <ul className="m-0 list-none space-y-0.5 p-0" role="alert">
+                  {NOTE_FIELDS.filter(([field]) => fieldErrors[field]).map(([field, label]) => (
+                    <li key={field} className="text-[11px] text-red-600">
+                      {label}: {fieldErrors[field]}
+                    </li>
+                  ))}
+                </ul>
               )}
             </section>
           </div>

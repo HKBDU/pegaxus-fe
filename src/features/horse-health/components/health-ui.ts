@@ -13,7 +13,10 @@ export const fieldLabel = "block text-xs font-medium text-slate-600";
 
 /** 40px on phones for touch, 36px from `sm` up, like the shared inputs. */
 export const fieldControl =
-  "mt-1 h-10 w-full rounded-xs border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-xs outline-none transition-colors placeholder:text-slate-400 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 sm:h-9";
+  "mt-1 h-10 w-full rounded-xs border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-xs outline-none transition-colors placeholder:text-slate-400 focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 aria-[invalid=true]:border-red-400 aria-[invalid=true]:focus-visible:ring-red-200 sm:h-9";
+
+/** Inline message under a field that failed validation. */
+export const fieldErrorText = "mt-1 block text-[11px] font-normal text-red-600";
 
 export const fieldTextarea = `${fieldControl} h-auto min-h-20 py-2 sm:h-auto`;
 
