@@ -132,7 +132,8 @@ export default function TransportOverviewPage({
               </Button>
             </div>
           ) : null}
-          <div className="grid items-start gap-3 lg:grid-cols-3">
+          {/* Stretch the three panels to the tallest (usually Current staff / Provider) so their edges line up. */}
+          <div className="grid items-stretch gap-3 lg:grid-cols-3">
             <TransportJourneyInformation overview={overview} />
             <TransportHorseHealthSummary
               summary={overview.horseHealthSummary}
