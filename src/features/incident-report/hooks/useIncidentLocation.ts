@@ -23,12 +23,14 @@ export interface UseIncidentLocationOptions {
   locationId?: string;
   initialCoordinates?: GpsCoordinates | null;
   locationDescription?: string;
+  allowDeviceGps?: boolean;
 }
 
 export function useIncidentLocation({
   locationId,
   initialCoordinates,
   locationDescription,
+  allowDeviceGps = true,
 }: UseIncidentLocationOptions = {}) {
   const [coordinates, setCoordinates] = useState<GpsCoordinates | null>(
     initialCoordinates ?? null,
@@ -66,11 +68,13 @@ export function useIncidentLocation({
     }
 
     setStatus("locating");
-    const current = coordinates ?? (await getCurrentGpsCoordinates());
+    const current = coordinates ?? (allowDeviceGps ? await getCurrentGpsCoordinates() : null);
     if (!current) {
       setStatus("unavailable");
       setError(
-        "GPS is unavailable. The incident can be saved with a location selected by the host flow.",
+        allowDeviceGps
+          ? "GPS is unavailable. The incident can be saved with a location selected by the host flow."
+          : "Waiting for the Driver's shared GPS or a saved transport location.",
       );
       return null;
     }
@@ -109,7 +113,7 @@ export function useIncidentLocation({
       );
       return null;
     }
-  }, [coordinates, locationDescription, locationId]);
+  }, [allowDeviceGps, coordinates, locationDescription, locationId]);
 
   useEffect(() => {
     if (startedRef.current) return;

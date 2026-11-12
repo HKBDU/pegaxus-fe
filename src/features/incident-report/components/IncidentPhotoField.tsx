@@ -23,6 +23,7 @@ export interface IncidentPhotoFieldProps {
   error?: string | null;
   onUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
   onError?: (message: string | null) => void;
+  gpsCoordinates?: { latitude: number; longitude: number } | null;
 }
 
 export function IncidentPhotoField({
@@ -33,6 +34,7 @@ export function IncidentPhotoField({
   error,
   onUploadStateChange,
   onError,
+  gpsCoordinates,
 }: IncidentPhotoFieldProps) {
   const latest = useRef(value);
   useLayoutEffect(() => {
@@ -52,6 +54,8 @@ export function IncidentPhotoField({
         maxFiles={maxFiles}
         capturedAt={value.capturedAt}
         coordinates={value.coordinates}
+        gpsCoordinates={gpsCoordinates}
+        useDeviceGps={false}
         captions={value.captions}
         error={photoError ?? error}
         onError={(message) => {

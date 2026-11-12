@@ -39,7 +39,7 @@ function reducer(state: LiveState, action: LiveAction): LiveState {
  * Everything the Tab GPS needs about the vehicle: GP1 snapshot, the samples that follow (hub, or GP1 polling when the
  * stream flag is off), the trail drawn from them, and the signal state. Mount it under a `key` of the transport id.
  */
-export function useLiveTruck(transportId: string) {
+export function useLiveTruck(transportId: string, options: { pollSnapshot?: boolean } = {}) {
   const realtime = FEATURES.realtimeStream
   const [live, dispatch] = useReducer(reducer, initialState)
   const [streamState, setStreamState] = useState<RealtimeConnectionState>("idle")
@@ -48,7 +48,7 @@ export function useLiveTruck(transportId: string) {
   const refreshedAtRef = useRef(0)
   const now = useNow(SIGNAL_TICK_MS)
 
-  const query = useTrackingSnapshot(transportId, !realtime, (snapshot) => {
+  const query = useTrackingSnapshot(transportId, !realtime || options.pollSnapshot === true, (snapshot) => {
     legRef.current = snapshot.truck?.routePlanRouteId ?? legRef.current
     dispatch({ type: "snapshot", snapshot, receivedAt: Date.now() })
   })

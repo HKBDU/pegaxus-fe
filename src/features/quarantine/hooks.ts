@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { dossierKeys } from '@/features/dossier/hooks/useDossier'
 import { finalizeQuarantineProof, getDossierContext, getQuarantineProof, submitQuarantineProof } from './services'
 import type { FinalizeQuarantineProofResponse, SubmitQuarantineProofResponse } from './types'
 
@@ -55,6 +56,7 @@ export function useSubmitQuarantineProof(dossierId: string) {
     mutationFn: (payload) => submitQuarantineProof(dossierId, payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: quarantineKeys.dossier(dossierId) })
+      void qc.invalidateQueries({ queryKey: dossierKeys.overview(dossierId) })
     },
   })
 }

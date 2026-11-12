@@ -39,6 +39,7 @@ export interface HorseHealthIncidentFormProps {
     | "unavailable"
     | "error";
   locationError?: string | null;
+  gpsCoordinates?: { latitude: number; longitude: number } | null;
   onPhotoUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
   onPhotoError?: (message: string | null) => void;
 }
@@ -57,6 +58,7 @@ export function HorseHealthIncidentForm({
   errors = {},
   locationStatus,
   locationError,
+  gpsCoordinates,
   onPhotoUploadStateChange,
   onPhotoError,
 }: HorseHealthIncidentFormProps) {
@@ -81,6 +83,7 @@ export function HorseHealthIncidentForm({
         errors={errors}
         locationStatus={locationStatus}
         locationError={locationError}
+        gpsCoordinates={gpsCoordinates}
         showPhotos={false}
         showDescription={false}
       />
@@ -129,6 +132,7 @@ export function HorseHealthIncidentForm({
       </section>
       <IncidentPhotoField
         value={photos}
+        gpsCoordinates={gpsCoordinates}
         onChange={onPhotosChange}
         disabled={disabled}
         maxFiles={5}

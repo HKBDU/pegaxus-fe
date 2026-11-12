@@ -91,8 +91,7 @@ export function CrewHomeActions({
                 ? HORSE_HEALTH_ROUTES.clearance(transport.complianceDossierId)
                 : undefined
             }
-            disabled={locked || !transport.complianceDossierId}
-            disabledReason={locked ? lockReason : undefined}
+            disabled={!transport.complianceDossierId}
           />
         ) : (
           <ActionButton

@@ -1,3 +1,4 @@
+import { NOT_CURRENT_SEGMENT_CREW, NOT_CURRENT_SEGMENT_CREW_MESSAGE } from '@/shared/constants/crew-turn'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
@@ -109,6 +110,7 @@ export default function CustomsClearanceProofPage() {
       const code = error instanceof Error ? error.message : 'UNKNOWN'
       const messages: Record<string, string> = {
         NOT_ASSIGNED_TO_TRIP: 'You are not assigned to this transport.',
+        [NOT_CURRENT_SEGMENT_CREW]: NOT_CURRENT_SEGMENT_CREW_MESSAGE,
         QUARANTINE_NOT_PASSED: 'Quarantine must be passed before customs submission.',
         DOSSIER_NOT_APPROVED: 'The dossier must be APPROVED before submitting customs proof.',
         QUICK_NOTE_REQUIRED: 'Quick note is required when held.',

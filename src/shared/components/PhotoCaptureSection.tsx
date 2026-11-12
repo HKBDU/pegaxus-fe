@@ -42,6 +42,9 @@ export interface PhotoCaptureSectionProps {
   maxFileSizeBytes?: number
   capturedAt: (Date | null)[]
   coordinates?: Coordinates[]
+  /** Use the transport's shared Driver position instead of this device's GPS. */
+  gpsCoordinates?: Coordinates
+  useDeviceGps?: boolean
   captions?: string[]
   documentLabel?: string
   statusLabel?: string
@@ -111,6 +114,8 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
     maxFileSizeBytes = UPLOAD_MAX_BYTES,
     capturedAt,
     coordinates,
+    gpsCoordinates,
+    useDeviceGps = true,
     captions = [],
     documentLabel = "Photographic Proof",
     statusLabel = "Pending Verification",
@@ -403,7 +408,9 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
     callbacks.current.onError?.([...new Set(errors)].join(" ") || null)
     if (!newEntries.length) return
     publishSelection(next)
-    const gpsPromise = getCurrentGpsCoordinates()
+    const gpsPromise = useDeviceGps
+      ? getCurrentGpsCoordinates()
+      : Promise.resolve(gpsCoordinates ?? null)
     for (const entry of newEntries) void processAndUpload(entry, gpsPromise)
   }
 

@@ -4,7 +4,6 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { LocationSharingControl } from "../components/LocationSharingControl";
 import { LocationSharingSummary } from "../components/LocationSharingDetails";
-import { GpsSimulatorWidget } from "../simulator/GpsSimulatorWidget";
 import { useDriverLocationSession } from "../hooks/useDriverLocationSession";
 import { driverTransportOverviewPath } from "../navigation";
 import { FEATURES } from "../features";
@@ -17,13 +16,11 @@ export default function DriverLocationSharingPage() {
     state,
     canStart,
     start,
-    restart,
     stop,
     context,
     source,
     reload,
     gate,
-    currentSegment,
   } = useDriverLocationSession();
   const isDemo = transportId === "demo";
   const unavailableReason =
@@ -137,22 +134,6 @@ export default function DriverLocationSharingPage() {
             </div>
           ) : null}
         </Card>
-        <aside
-          aria-label="Driver GPS simulator"
-          className="min-w-0 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-2"
-        >
-          <GpsSimulatorWidget
-            currentSegment={currentSegment}
-            sharingActive={state.active}
-            onStartSharing={canStart ? start : undefined}
-            onMockGpsEnabled={() => {
-              if (state.active) restart();
-            }}
-            onMockGpsDisabled={() => {
-              if (state.active) restart();
-            }}
-          />
-        </aside>
       </div>
     </main>
   );
