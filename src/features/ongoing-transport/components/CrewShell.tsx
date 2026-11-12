@@ -6,11 +6,19 @@ import { useIsDesktop } from "@/shared/hooks";
 import { BrandLogo } from "@/shared/components/BrandNavigation";
 import { useAuthStore } from "@/features/auth/store";
 import { GpsSimulatorDrawer } from "@/features/location-sharing/simulator/GpsSimulatorDrawer";
+import { useDriverLocationSession } from "@/features/location-sharing/hooks/useDriverLocationSession";
 
 export function CrewShell() {
   const isDesktop = useIsDesktop();
   const isDriver = useAuthStore((state) => state.principal?.roles.includes("DRIVER") ?? false);
-  const simulator = isDriver ? <GpsSimulatorDrawer /> : null;
+  const { restart, currentSegment } = useDriverLocationSession();
+  const simulator = isDriver ? (
+    <GpsSimulatorDrawer
+      currentSegment={currentSegment ?? null}
+      onMockGpsEnabled={restart}
+      onMockGpsDisabled={restart}
+    />
+  ) : null;
   // Desktop: the shell of the other employees (sidebar + header). Phones keep the compact crew header below.
   if (isDesktop) return <><AdminLayout />{simulator}</>;
   return (
