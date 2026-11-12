@@ -43,6 +43,7 @@ import {
 import TestPage from "../Test";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const AssistantPage = lazy(() => import("@/features/assistant/pages/AssistantPage"));
 const BookingListPage = lazy(
   () => import("@/features/booking/pages/BookingListPage"),
 );
@@ -1118,6 +1119,15 @@ export const router = createBrowserRouter([
         },
       ]
     : []),
+  {
+    path: "/assistant",
+    element: (
+      <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+        <MainLayout />
+      </ProtectedRoute>
+    ),
+    children: [{ index: true, element: <Suspense fallback={<LoadingState />}><AssistantPage /></Suspense> }],
+  },
   {
     path: "/unauthorized",
     element: <UnauthorizedPage />,

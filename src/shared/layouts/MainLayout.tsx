@@ -6,6 +6,7 @@ import { canAccess } from "@/features/auth/access-control"
 import { useUser } from "@/features/auth/hooks/useAuth"
 import type { AuthAccount } from "@/features/auth/types"
 import { IncidentAlertHost } from "@/features/incident-management/components/alerts/IncidentAlertHost"
+import { AssistantChatWidget } from "@/features/assistant/components/AssistantChatWidget"
 import { ProfileCompletionDialog } from "@/features/profile"
 import { Footer } from "@/shared/components/Footer"
 import { Header } from "@/shared/components/Header"
@@ -19,6 +20,7 @@ const customerNavItems: HeaderNavItem[] = [
   { label: "My Horses", href: "/my-horses" },
   // A customer opens a compliance dossier from a booking (notification link), so it belongs to BOOKING.
   { label: "Bookings", href: "/bookings", alsoActiveFor: ["/compliance-dossiers"] },
+
 ]
 
 const crewNavItems: HeaderNavItem[] = [
@@ -54,7 +56,9 @@ export function MainLayout() {
     return <AdminLayout />
   }
 
-  const navItems = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] }) ? customerNavItems : isCrewRoute ? crewNavItems : []
+  const baseNavItems = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] }) ? customerNavItems : isCrewRoute ? crewNavItems : []
+  const isCustomer = Boolean(accessToken && canAccess(principal, { anyRole: ["CUSTOMER"] }))
+  const navItems = isCustomer ? [...baseNavItems, { label: "AI Assistant", href: "/assistant" }] : baseNavItems
   const customerChrome = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] })
   const user: ProfileDropdownUser | null = accessToken && account
     ? toHeaderUser(account)
@@ -73,6 +77,7 @@ export function MainLayout() {
         <Outlet /> {/* Outlet - React Router render route childs*/}
       </main>
       {!isLanding && !isCrewRoute && <Footer />}
+      {isCustomer && <AssistantChatWidget />}
     </div>
   )
 }
