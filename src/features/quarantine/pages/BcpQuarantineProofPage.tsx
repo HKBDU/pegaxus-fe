@@ -1,3 +1,4 @@
+import { NOT_CURRENT_SEGMENT_CREW, NOT_CURRENT_SEGMENT_CREW_MESSAGE } from '@/shared/constants/crew-turn'
 import { useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
@@ -129,6 +130,7 @@ export default function BcpQuarantineProofPage() {
       const code = err instanceof Error ? err.message : 'UNKNOWN'
       const messages: Record<string, string> = {
         NOT_ASSIGNED_TO_TRIP: 'You are not assigned to this transport.',
+        [NOT_CURRENT_SEGMENT_CREW]: NOT_CURRENT_SEGMENT_CREW_MESSAGE,
         DOSSIER_NOT_APPROVED: 'The dossier must be APPROVED before submitting quarantine proof.',
         FILE_TOO_LARGE: `One or more files exceed the ${UPLOAD_MAX_MB} MiB limit.`,
         INVALID_FILE_TYPE: 'Invalid file type. Only images are accepted.',

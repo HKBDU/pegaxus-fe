@@ -1,3 +1,4 @@
+import { crewTurnErrorMessage } from "@/shared/constants/crew-turn";
 import { ZodError } from "zod";
 import type { IncidentApiError } from "./services";
 import type { PhotoUploadState } from "@/shared/components/PhotoCaptureSection";
@@ -91,6 +92,8 @@ export function incidentErrorMessage(
   const apiError = error as Partial<IncidentApiError>;
   if (apiError.status === 401)
     return "Your session has expired. Sign in again; your draft remains on this page.";
+  const crewTurn = crewTurnErrorMessage(apiError);
+  if (crewTurn) return crewTurn;
   if (apiError.status === 403)
     return "You do not have permission to report this incident for this transport.";
   if (apiError.status === undefined && apiError.errorCode === "NETWORK_ERROR") {
