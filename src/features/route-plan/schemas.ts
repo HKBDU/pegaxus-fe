@@ -157,10 +157,49 @@ export const legalReviewResultSchema = routePlanMutationResultSchema.extend({
   personnelAssignmentPhase2Enabled: z.boolean().optional(),
 }).passthrough()
 
-export const outsourceSegmentResultSchema = routePlanMutationResultSchema.extend({
-  segment: z.unknown(),
-  isPersonnelComplete: z.boolean(),
+// OS1 returns its own shape (BE RouteOutsourcingService.Response), not the route plan mutation result: the status is
+// `routePlanStatus` and there is no `isPersonnelComplete`. Requiring those failed every successful switch, so the UI
+// showed an error, kept the old arrangement and its stale lastUpdatedAt, and the next try hit ROUTE_PLAN_MODIFIED.
+const outsourcedProviderSchema = z.object({
+  transportProviderId: entityId,
+  providerCode: z.string(),
+  providerName: z.string(),
+  status: z.string(),
+  supportedModes: z.array(z.string()),
 }).passthrough()
+const outsourcedEmployeeSchema = z.object({
+  employeeId: entityId,
+  employeeCode: z.string(),
+  fullName: z.string(),
+  role: z.string(),
+}).passthrough()
+export const outsourceSegmentResultSchema = z.object({
+  routePlanId: entityId,
+  routePlanStatus: z.string().min(1),
+  legalReviewRequested: z.boolean(),
+  legalReviewRequestedAt: dateTime.nullable(),
+  segment: z.object({
+    routePlanRouteId: entityId,
+    sequenceNo: z.number().int(),
+    isOutsourced: z.boolean(),
+    vehicles: z.array(z.object({
+      vehicleId: entityId,
+      vehicleCode: z.string(),
+      vehicleName: z.string().nullable(),
+      licensePlate: z.string().nullable(),
+      transportMode: z.string(),
+      capacityHorses: z.number().nullable(),
+    }).passthrough()),
+    outsourcing: z.object({ provider: outsourcedProviderSchema }).passthrough().nullable(),
+    driver: outsourcedEmployeeSchema.nullable(),
+    escort: outsourcedEmployeeSchema.nullable(),
+    note: z.string().nullable(),
+  }).passthrough(),
+  clearedPersonnel: z.boolean(),
+  clearedVehicles: z.boolean(),
+  updatedAt: dateTime,
+}).passthrough()
+export type OutsourceSegmentResult = z.infer<typeof outsourceSegmentResultSchema>
 
 function validateSequence(segments: RouteSegmentInput[], context: z.RefinementCtx) {
   segments.forEach((segment, index) => {

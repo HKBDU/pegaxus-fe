@@ -388,7 +388,10 @@ export function RouteSegmentOutsourceAction({
         "management",
         context.dossierId,
       );
-      toast.success("Segment switched to internal fleet.");
+      // The LM switches the arrangement only; vehicles of a PRIMARY plan are assigned by the Route Coordinator.
+      toast.success("Segment switched to internal fleet.", {
+        description: "The Route Coordinator assigns its vehicles.",
+      });
     } catch (requestError) {
       toast.error(getRoutePlanError(requestError).message);
     } finally {

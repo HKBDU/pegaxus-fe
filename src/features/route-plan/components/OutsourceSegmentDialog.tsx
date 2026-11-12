@@ -26,7 +26,7 @@ import {
   getRoutePlanError,
   updateSegmentOutsourcing,
 } from "../services";
-import type { Provider, RouteSegment, TransportMode } from "../types";
+import type { OutsourceSegmentResult, Provider, TransportMode } from "../types";
 import type { BuilderProvider } from "../builder-types";
 
 export type OutsourceSegmentSelection = {
@@ -47,7 +47,7 @@ type OutsourceSegmentDialogProps = {
   children?: ReactNode;
   onChanged?: (
     selection: OutsourceSegmentSelection | null,
-    segment?: RouteSegment,
+    segment?: OutsourceSegmentResult["segment"],
   ) => void;
 };
 
