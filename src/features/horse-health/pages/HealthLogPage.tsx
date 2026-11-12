@@ -60,7 +60,8 @@ function NoteField({
         }}
         aria-invalid={errors[field] ? true : undefined}
         placeholder={placeholder}
-        className="mt-1 min-h-0 bg-white"
+        // The shared textarea grows with its content (field-sizing-content); cap it and scroll inside instead.
+        className="mt-1 max-h-24 min-h-0 resize-none overflow-y-auto bg-white"
       />
       {errors[field] ? <span className={fieldErrorText}>{errors[field]}</span> : null}
     </label>
