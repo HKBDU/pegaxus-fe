@@ -7,7 +7,6 @@ import { ErrorState, LoadingState } from "@/shared/components/common"
 import { Button } from "@/shared/components/ui/button"
 import { CancelHandoverDialog } from "../components/CancelHandoverDialog"
 import { CompleteForm } from "../components/CompleteForm"
-import { GpsSimulatorDrawer } from "@/features/location-sharing/simulator/GpsSimulatorDrawer"
 import { PageFrame } from "../components/PageFrame"
 import { PartiesSection } from "../components/PartyBlock"
 import { ReadOnlyRecord } from "../components/ReadOnlyRecord"
@@ -177,15 +176,6 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
             serverError={cancel.error && !modified ? describeError(cancel.error) : undefined}
             onSubmit={(reason) => void submitCancel(reason)}
           />
-          {audience === "crew" && simulatorSegment ? (
-            <GpsSimulatorDrawer
-              currentSegment={{
-                fromLocation: simulatorSegment.fromLocation,
-                toLocation: simulatorSegment.toLocation,
-                routePlanRouteId: simulatorSegment.routePlanRouteId,
-              }}
-            />
-          ) : null}
         </>
       )}
       <ReloadDialog open={modified} onReload={onReload} />

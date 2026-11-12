@@ -4,11 +4,15 @@ import { IncidentAlertHost } from "@/features/incident-management/components/ale
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { useIsDesktop } from "@/shared/hooks";
 import { BrandLogo } from "@/shared/components/BrandNavigation";
+import { useAuthStore } from "@/features/auth/store";
+import { GpsSimulatorDrawer } from "@/features/location-sharing/simulator/GpsSimulatorDrawer";
 
 export function CrewShell() {
   const isDesktop = useIsDesktop();
+  const isDriver = useAuthStore((state) => state.principal?.roles.includes("DRIVER") ?? false);
+  const simulator = isDriver ? <GpsSimulatorDrawer /> : null;
   // Desktop: the shell of the other employees (sidebar + header). Phones keep the compact crew header below.
-  if (isDesktop) return <AdminLayout />;
+  if (isDesktop) return <><AdminLayout />{simulator}</>;
   return (
     <div className="min-h-svh min-w-0 bg-[#f4f2ed] font-sans">
       <IncidentAlertHost />
@@ -27,6 +31,7 @@ export function CrewShell() {
         </div>
       </header>
       <Outlet />
+      {simulator}
     </div>
   );
 }

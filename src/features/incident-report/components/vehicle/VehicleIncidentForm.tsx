@@ -36,6 +36,7 @@ export interface VehicleIncidentFormProps {
     | "unavailable"
     | "error";
   locationError?: string | null;
+  gpsCoordinates?: { latitude: number; longitude: number } | null;
   onPhotoUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
   onPhotoError?: (message: string | null) => void;
 }
@@ -52,6 +53,7 @@ export function VehicleIncidentForm({
   errors = {},
   locationStatus,
   locationError,
+  gpsCoordinates,
   onPhotoUploadStateChange,
   onPhotoError,
 }: VehicleIncidentFormProps) {
@@ -79,6 +81,7 @@ export function VehicleIncidentForm({
         errors={errors}
         locationStatus={locationStatus}
         locationError={locationError}
+        gpsCoordinates={gpsCoordinates}
         onPhotoUploadStateChange={onPhotoUploadStateChange}
         onPhotoError={onPhotoError}
       />

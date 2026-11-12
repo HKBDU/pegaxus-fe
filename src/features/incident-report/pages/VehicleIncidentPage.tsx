@@ -15,6 +15,7 @@ import {
   type IncidentFieldErrors,
 } from "../validation";
 import { useIncidentLocation } from "../hooks/useIncidentLocation";
+import { useTransportIncidentGps } from "../hooks/useTransportIncidentGps";
 import { useIncidentMutations } from "../hooks/useIncidentMutations";
 import { useIncidentReport } from "../hooks/useIncidentReport";
 import { useAssignedTransports } from "@/features/horse-health/hooks/useAssignedTransports";
@@ -67,6 +68,7 @@ export default function VehicleIncidentPage() {
   const overviewVehicleId =
     transportOverview.data?.currentSegment?.vehicles[0]?.vehicleId;
   const vehicleId = routeState.vehicleId ?? overviewVehicleId ?? "";
+  const driverGps = useTransportIncidentGps(activeTransportId);
   const [photos, setPhotos] = useState(initialPhotos);
   const [fieldErrors, setFieldErrors] = useState<IncidentFieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -77,7 +79,9 @@ export default function VehicleIncidentPage() {
   const location = useIncidentLocation({
     locationId,
     locationDescription: routeState.locationDescription,
+    allowDeviceGps: false,
   });
+  const incidentCoordinates = driverGps.coordinates;
   const mutations = useIncidentMutations();
   const initialValue = useMemo<VehicleIncidentFormValue>(
     () => ({
@@ -93,8 +97,8 @@ export default function VehicleIncidentPage() {
       occurredAt: nowLocal(),
       locationId,
       locationDescription: location.locationDescription,
-      latitude: location.coordinates?.latitude,
-      longitude: location.coordinates?.longitude,
+      latitude: incidentCoordinates?.latitude,
+      longitude: incidentCoordinates?.longitude,
       vehicleOperable: true,
       vehicleCondition: "",
       damageDescription: "",
@@ -106,7 +110,7 @@ export default function VehicleIncidentPage() {
       repairNote: "",
     }),
     [
-      location.coordinates,
+      incidentCoordinates,
       location.locationDescription,
       locationId,
       activeTransportId,
@@ -115,6 +119,7 @@ export default function VehicleIncidentPage() {
   );
 
   const form = useIncidentReport<VehicleIncidentFormValue>(initialValue);
+  const patchForm = form.patch;
 
   useEffect(() => {
     const nextValues: Partial<VehicleIncidentFormValue> = {};
@@ -144,11 +149,32 @@ export default function VehicleIncidentPage() {
     locationId,
   ]);
 
+  useEffect(() => {
+    const coordinates = driverGps.coordinates;
+    if (!coordinates) return;
+    if (
+      form.values.latitude === coordinates.latitude &&
+      form.values.longitude === coordinates.longitude &&
+      form.values.locationDescription === "Driver shared GPS" &&
+      !form.values.locationId
+    ) return;
+    patchForm({
+      locationId: undefined,
+      locationDescription: "Driver shared GPS",
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+    });
+  }, [driverGps.coordinates, form.values, patchForm]);
+
   const submit = () => {
     if (submitting.current || mutations.vehicle.isPending) return;
     setSubmitError(null);
     setFieldErrors({});
     mutations.vehicle.reset();
+    if (!driverGps.coordinates) {
+      setSubmitError("Waiting for a fresh GPS position shared by the Driver.");
+      return;
+    }
     if (!areIncidentPhotosReady({ ...photos, uploadState: photoUploadState })) {
       setSubmitError(
         "Wait for every selected photo to upload, or retry/remove failed photos before submitting.",
@@ -156,6 +182,7 @@ export default function VehicleIncidentPage() {
       return;
     }
     const value = form.values;
+    const submitCoordinates = driverGps.coordinates;
     const input: VehicleIncidentRequest = {
       transportId: value.transportId,
       vehicleId: value.vehicleId,
@@ -183,10 +210,10 @@ export default function VehicleIncidentPage() {
         : undefined,
       emergencySettlementRequired: value.emergencySettlementRequired,
       occurredAt: toUtcIso(value.occurredAt) ?? value.occurredAt,
-      locationId: value.locationId,
+      locationId: undefined,
       locationDescription: value.locationDescription || undefined,
-      latitude: value.latitude,
-      longitude: value.longitude,
+      latitude: submitCoordinates?.latitude,
+      longitude: submitCoordinates?.longitude,
       photoFiles: photos.uploadedPublicIds.map((publicId) => ({ publicId })),
     };
     const parsed = vehicleIncidentRequestSchema.safeParse(input);
@@ -217,11 +244,9 @@ export default function VehicleIncidentPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-5 p-4 pb-28 sm:p-6">
       <IncidentReportHeader
-        longitude={location.coordinates?.longitude ?? "Unavailable"}
-        latitude={location.coordinates?.latitude ?? "Unavailable"}
-        locationDescription={
-          location.locationDescription || "Resolving location…"
-        }
+        longitude={incidentCoordinates?.longitude ?? "Unavailable"}
+        latitude={incidentCoordinates?.latitude ?? "Unavailable"}
+        locationDescription={driverGps.coordinates ? "Driver shared GPS" : location.locationDescription || "Resolving location…"}
       />
       <VehicleIncidentForm
         value={form.values}
@@ -233,8 +258,9 @@ export default function VehicleIncidentPage() {
         disabled={mutations.vehicle.isPending}
         error={error ?? photoError}
         errors={errors}
-        locationStatus={location.status}
-        locationError={location.error}
+        locationStatus={driverGps.coordinates ? "ready" : "unavailable"}
+        locationError={driverGps.coordinates ? null : "Waiting for a fresh GPS position shared by the Driver."}
+        gpsCoordinates={driverGps.coordinates}
         onPhotoUploadStateChange={setPhotoUploadState}
         onPhotoError={setPhotoError}
       />

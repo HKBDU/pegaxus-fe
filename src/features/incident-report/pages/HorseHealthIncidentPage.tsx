@@ -28,6 +28,7 @@ import {
 import type { HorseHealthFieldsValue } from "../components/horse-health/HorseHealthFields";
 import { HorseIncidentSelectionStep } from "../components/horse-health/HorseIncidentSelectionStep";
 import { useIncidentLocation } from "../hooks/useIncidentLocation";
+import { useTransportIncidentGps } from "../hooks/useTransportIncidentGps";
 import { useIncidentMutations } from "../hooks/useIncidentMutations";
 import { useIncidentReport } from "../hooks/useIncidentReport";
 
@@ -68,7 +69,6 @@ function createHorseDetails(): HorseHealthFieldsValue {
     horseTransportable: null,
   };
 }
-
 function createHorseDetailsMap(horseIds: string[]) {
   return Object.fromEntries(
     horseIds.map((horseId) => [horseId, createHorseDetails()]),
@@ -87,6 +87,7 @@ export default function HorseHealthIncidentPage() {
     )?.transportId ??
     null;
   const overview = useHorseHealthOverview(transportId);
+  const driverGps = useTransportIncidentGps(transportId ?? "");
   const [step, setStep] = useState<"selection" | "form">("selection");
   const [selectedHorseIds, setSelectedHorseIds] = useState<string[]>(
     routeState.horseIds ?? [],
@@ -105,7 +106,9 @@ export default function HorseHealthIncidentPage() {
   const location = useIncidentLocation({
     locationId,
     locationDescription: routeState.locationDescription,
+    allowDeviceGps: false,
   });
+  const incidentCoordinates = driverGps.coordinates;
   const mutations = useIncidentMutations();
   const selectedHorses = useMemo(
     () =>
@@ -126,12 +129,12 @@ export default function HorseHealthIncidentPage() {
       occurredAt: nowLocal(),
       locationId,
       locationDescription: location.locationDescription,
-      latitude: location.coordinates?.latitude,
-      longitude: location.coordinates?.longitude,
+      latitude: incidentCoordinates?.latitude,
+      longitude: incidentCoordinates?.longitude,
       horses: createHorseDetailsMap(selectedHorseIds),
     }),
     [
-      location.coordinates,
+      incidentCoordinates,
       location.locationDescription,
       locationId,
       selectedHorseIds,
@@ -139,6 +142,7 @@ export default function HorseHealthIncidentPage() {
     ],
   );
   const form = useIncidentReport<HorseHealthIncidentFormValue>(initialValue);
+  const patchForm = form.patch;
 
   useEffect(() => {
     if (!location.locationId || location.locationId === locationId) return;
@@ -156,6 +160,23 @@ export default function HorseHealthIncidentPage() {
     location.locationId,
     locationId,
   ]);
+
+  useEffect(() => {
+    const coordinates = driverGps.coordinates;
+    if (!coordinates) return;
+    if (
+      form.values.latitude === coordinates.latitude &&
+      form.values.longitude === coordinates.longitude &&
+      form.values.locationDescription === "Driver shared GPS" &&
+      !form.values.locationId
+    ) return;
+    patchForm({
+      locationId: undefined,
+      locationDescription: "Driver shared GPS",
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+    });
+  }, [driverGps.coordinates, form.values, patchForm]);
 
   const toggleHorse = (horseId: string) => {
     setSelectedHorseIds((current) =>
@@ -175,6 +196,10 @@ export default function HorseHealthIncidentPage() {
     setSubmitError(null);
     setFieldErrors({});
     mutations.horseHealth.reset();
+    if (!driverGps.coordinates) {
+      setSubmitError("Waiting for a fresh GPS position shared by the Driver.");
+      return;
+    }
     if (!areIncidentPhotosReady({ ...photos, uploadState: photoUploadState })) {
       setSubmitError(
         "Wait for every selected photo to upload, or retry/remove failed photos before submitting.",
@@ -182,6 +207,7 @@ export default function HorseHealthIncidentPage() {
       return;
     }
     const value = form.values;
+    const submitCoordinates = driverGps.coordinates;
     const input: HorseHealthIncidentRequest = {
       transportId: value.transportId,
       severity: value.severity,
@@ -189,10 +215,10 @@ export default function HorseHealthIncidentPage() {
       immediateAction: value.immediateAction || undefined,
       emergencySettlementRequired: value.emergencySettlementRequired,
       occurredAt: toUtcIso(value.occurredAt) ?? value.occurredAt,
-      locationId: value.locationId,
+      locationId: undefined,
       locationDescription: value.locationDescription || undefined,
-      latitude: value.latitude,
-      longitude: value.longitude,
+      latitude: submitCoordinates?.latitude,
+      longitude: submitCoordinates?.longitude,
       horses: selectedHorseIds.map((horseId) => {
         const details = value.horses[horseId];
         return {
@@ -303,11 +329,9 @@ export default function HorseHealthIncidentPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-5 p-4 pb-28 sm:p-6">
       <IncidentReportHeader
-        longitude={location.coordinates?.longitude ?? "Unavailable"}
-        latitude={location.coordinates?.latitude ?? "Unavailable"}
-        locationDescription={
-          location.locationDescription || "Resolving location…"
-        }
+        longitude={incidentCoordinates?.longitude ?? "Unavailable"}
+        latitude={incidentCoordinates?.latitude ?? "Unavailable"}
+        locationDescription={driverGps.coordinates ? "Driver shared GPS" : location.locationDescription || "Resolving location…"}
       />
       <button
         type="button"
@@ -329,8 +353,9 @@ export default function HorseHealthIncidentPage() {
         disabled={mutations.horseHealth.isPending || Boolean(createdIncidentId)}
         error={error ?? photoError}
         errors={errors}
-        locationStatus={location.status}
-        locationError={location.error}
+        locationStatus={driverGps.coordinates ? "ready" : "unavailable"}
+        locationError={driverGps.coordinates ? null : "Waiting for a fresh GPS position shared by the Driver."}
+        gpsCoordinates={driverGps.coordinates}
         onPhotoUploadStateChange={setPhotoUploadState}
         onPhotoError={setPhotoError}
       />
