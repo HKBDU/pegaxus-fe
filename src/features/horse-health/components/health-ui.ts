@@ -18,8 +18,6 @@ export const fieldControl =
 /** Inline message under a field that failed validation. */
 export const fieldErrorText = "mt-1 block text-[11px] font-normal text-red-600";
 
-export const fieldTextarea = `${fieldControl} h-auto min-h-20 py-2 sm:h-auto`;
-
 export const noticeMuted =
   "rounded-xs border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600";
 

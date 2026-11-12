@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { Activity, CheckCheck, ClipboardList, MapPin, NotebookPen, Save } from "lucide-react"
+import { Activity, CheckCheck, ClipboardList, MapPin, NotebookPen, Pill, Save } from "lucide-react"
 
 import { normalizeRole } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
@@ -9,12 +9,15 @@ import { LoadingState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { PhotoCaptureSection } from "@/shared/components/PhotoCaptureSection"
 import { Button } from "@/shared/components/ui/button"
+import { Checkbox } from "@/shared/components/ui/checkbox"
+import { Input } from "@/shared/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
+import { Textarea } from "@/shared/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
 
 import { CrewShell } from "../components/CrewShell"
-import { fieldControl, fieldErrorText, fieldLabel, fieldTextarea, healthHeading, healthPanel, noticeError, noticeMuted } from "../components/health-ui"
+import { fieldControl, fieldErrorText, fieldLabel, healthHeading, healthPanel, noticeError, noticeMuted } from "../components/health-ui"
 import { HEALTH_STATUSES, HEALTH_STATUS_LABELS, HORSE_HEALTH_ROUTES, HYDRATION_STATUSES, LOG_TYPES } from "../constants"
 import { fieldErrorsFrom, healthErrorMessage } from "../errors"
 import { useCreateHealthLog, useHorseHealthOverview, useMarkAllNormal } from "../hooks/useHorseHealth"
@@ -22,18 +25,47 @@ import { healthLogInputSchema, markAllNormalInputSchema } from "../schemas"
 import type { HealthLogInput, LogType } from "../types"
 
 const sectionClass = `${healthPanel} space-y-3 p-4`
-const NOTE_FIELDS = [
-  ["generalNote", "General note"],
-  ["behaviorNote", "Behavior note"],
-  ["feedingNote", "Feeding note"],
-  ["hydrationNote", "Hydration note"],
-  ["symptomNote", "Symptom note"],
-  ["injuryNote", "Injury note"],
-  ["locationDescription", "Location"],
-  ["treatmentProvided", "Treatment"],
-  ["medicationGiven", "Medication"],
-  ["veterinarianNote", "Veterinarian note"],
-] as const
+
+/** A labelled note, like the web's other forms: label (and "optional") above the shared textarea, error below. */
+function NoteField({
+  label,
+  optional,
+  field,
+  value,
+  onChange,
+  placeholder,
+  rows = 2,
+  errors,
+  onEdited,
+}: {
+  label: string
+  optional?: boolean
+  field: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  rows?: number
+  errors: Record<string, string>
+  onEdited: (field: string) => void
+}) {
+  return (
+    <label className={fieldLabel}>
+      {label} {optional ? <span className="font-normal text-slate-400">(optional)</span> : null}
+      <Textarea
+        value={value}
+        rows={rows}
+        onChange={(event) => {
+          onChange(event.target.value)
+          onEdited(field)
+        }}
+        aria-invalid={errors[field] ? true : undefined}
+        placeholder={placeholder}
+        className="mt-1 min-h-0 bg-white"
+      />
+      {errors[field] ? <span className={fieldErrorText}>{errors[field]}</span> : null}
+    </label>
+  )
+}
 const humanize = (value: string) => value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ")
 
 // A typed "38,5" is read as 38.5; anything else that is not a number stays NaN so the schema flags the field.
@@ -90,6 +122,7 @@ export default function HealthLogPage() {
   const invalid = (field: string) => (fieldErrors[field] ? true : undefined)
   const fieldError = (field: string) =>
     fieldErrors[field] ? <span className={fieldErrorText}>{fieldErrors[field]}</span> : null
+  const noteProps = { errors: fieldErrors, onEdited: edited }
 
   useEffect(() => {
     const first = horseItems?.find((item) => !item.detachedAt)
@@ -411,133 +444,75 @@ export default function HealthLogPage() {
                 <NotebookPen aria-hidden="true" />
                 Field notes & observations
               </h2>
-              <textarea
-                value={generalNote}
-                onChange={(event) => {
-                  setGeneralNote(event.target.value)
-                  edited("generalNote")
-                }}
-                aria-invalid={invalid("generalNote")}
-                placeholder="General note"
-                className={`${fieldTextarea} min-h-24`}
-              />
+              <NoteField label="General note" field="generalNote" value={generalNote} onChange={setGeneralNote} placeholder="Overall condition at this check" rows={3} {...noteProps} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <textarea
-                  value={behaviorNote}
-                  onChange={(event) => {
-                    setBehaviorNote(event.target.value)
-                    edited("behaviorNote")
-                  }}
-                  aria-invalid={invalid("behaviorNote")}
-                  placeholder="Behavior note (optional)"
-                  className={fieldTextarea}
-                />
-                <textarea
-                  value={feedingNote}
-                  onChange={(event) => {
-                    setFeedingNote(event.target.value)
-                    edited("feedingNote")
-                  }}
-                  aria-invalid={invalid("feedingNote")}
-                  placeholder="Feeding note (optional)"
-                  className={fieldTextarea}
-                />
+                <NoteField label="Behavior" optional field="behaviorNote" value={behaviorNote} onChange={setBehaviorNote} placeholder="e.g. Calm, alert" {...noteProps} />
+                <NoteField label="Feeding" optional field="feedingNote" value={feedingNote} onChange={setFeedingNote} placeholder="e.g. Ate full ration" {...noteProps} />
+                <NoteField label="Hydration" optional field="hydrationNote" value={hydrationNote} onChange={setHydrationNote} placeholder="e.g. Drank 10 L" {...noteProps} />
+                <NoteField label="Symptoms" optional field="symptomNote" value={symptomNote} onChange={setSymptomNote} placeholder="e.g. Light cough" {...noteProps} />
               </div>
+              <NoteField label="Injury" optional field="injuryNote" value={injuryNote} onChange={setInjuryNote} placeholder="Describe any wound or lameness" {...noteProps} />
+            </section>
+
+            <section className={sectionClass}>
+              <h2 className={healthHeading}>
+                <Pill aria-hidden="true" />
+                Treatment & location
+              </h2>
+              <label className={fieldLabel}>
+                Location <span className="font-normal text-slate-400">(optional)</span>
+                <Input
+                  value={locationDescription}
+                  onChange={(event) => {
+                    setLocationDescription(event.target.value)
+                    edited("locationDescription")
+                  }}
+                  aria-invalid={invalid("locationDescription")}
+                  maxLength={500}
+                  placeholder="e.g. Rest stop A4, near Dresden"
+                  className="mt-1 bg-white"
+                />
+                {fieldError("locationDescription")}
+              </label>
               <div className="grid gap-3 sm:grid-cols-2">
-                <textarea
-                  value={hydrationNote}
-                  onChange={(event) => {
-                    setHydrationNote(event.target.value)
-                    edited("hydrationNote")
-                  }}
-                  aria-invalid={invalid("hydrationNote")}
-                  placeholder="Hydration note (optional)"
-                  className={fieldTextarea}
-                />
-                <textarea
-                  value={symptomNote}
-                  onChange={(event) => {
-                    setSymptomNote(event.target.value)
-                    edited("symptomNote")
-                  }}
-                  aria-invalid={invalid("symptomNote")}
-                  placeholder="Symptom note (optional)"
-                  className={fieldTextarea}
-                />
+                <label className={fieldLabel}>
+                  Treatment provided <span className="font-normal text-slate-400">(optional)</span>
+                  <Input
+                    value={treatment}
+                    onChange={(event) => {
+                      setTreatment(event.target.value)
+                      edited("treatmentProvided")
+                    }}
+                    aria-invalid={invalid("treatmentProvided")}
+                    placeholder="e.g. Cleaned and dressed wound"
+                    className="mt-1 bg-white"
+                  />
+                  {fieldError("treatmentProvided")}
+                </label>
+                <label className={fieldLabel}>
+                  Medication given <span className="font-normal text-slate-400">(optional)</span>
+                  <Input
+                    value={medication}
+                    onChange={(event) => {
+                      setMedication(event.target.value)
+                      edited("medicationGiven")
+                    }}
+                    aria-invalid={invalid("medicationGiven")}
+                    placeholder="e.g. Bute 2 g"
+                    className="mt-1 bg-white"
+                  />
+                  {fieldError("medicationGiven")}
+                </label>
               </div>
-              <textarea
-                value={injuryNote}
-                onChange={(event) => {
-                  setInjuryNote(event.target.value)
-                  edited("injuryNote")
-                }}
-                aria-invalid={invalid("injuryNote")}
-                placeholder="Injury note (optional)"
-                className={fieldTextarea}
-              />
-              <input
-                value={locationDescription}
-                onChange={(event) => {
-                  setLocationDescription(event.target.value)
-                  edited("locationDescription")
-                }}
-                aria-invalid={invalid("locationDescription")}
-                maxLength={500}
-                placeholder="Location description (optional)"
-                className={fieldControl}
-              />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  value={treatment}
-                  onChange={(event) => {
-                    setTreatment(event.target.value)
-                    edited("treatmentProvided")
-                  }}
-                  aria-invalid={invalid("treatmentProvided")}
-                  placeholder="Treatment provided (optional)"
-                  className={fieldControl}
-                />
-                <input
-                  value={medication}
-                  onChange={(event) => {
-                    setMedication(event.target.value)
-                    edited("medicationGiven")
-                  }}
-                  aria-invalid={invalid("medicationGiven")}
-                  placeholder="Medication given (optional)"
-                  className={fieldControl}
-                />
-              </div>
-              <label className="flex min-h-10 cursor-pointer items-center gap-2.5 text-sm font-medium text-slate-800">
-                <input
-                  type="checkbox"
+              <label className="flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-slate-800">
+                <Checkbox
                   checked={veterinarianRequired}
-                  onChange={(event) => setVeterinarianRequired(event.target.checked)}
-                  className="size-4 accent-primary"
+                  onCheckedChange={(checked) => setVeterinarianRequired(checked === true)}
                 />
                 Veterinarian required
               </label>
               {veterinarianRequired && (
-                <textarea
-                  value={veterinarianNote}
-                  onChange={(event) => {
-                    setVeterinarianNote(event.target.value)
-                    edited("veterinarianNote")
-                  }}
-                  aria-invalid={invalid("veterinarianNote")}
-                  placeholder="Veterinarian note"
-                  className={`${fieldTextarea} min-h-24`}
-                />
-              )}
-              {/* Note fields have no labels of their own, so their messages are listed here under the section. */}
-              {NOTE_FIELDS.some(([field]) => fieldErrors[field]) && (
-                <ul className="m-0 list-none space-y-0.5 p-0" role="alert">
-                  {NOTE_FIELDS.filter(([field]) => fieldErrors[field]).map(([field, label]) => (
-                    <li key={field} className="text-[11px] text-red-600">
-                      {label}: {fieldErrors[field]}
-                    </li>
-                  ))}
-                </ul>
+                <NoteField label="Veterinarian note" field="veterinarianNote" value={veterinarianNote} onChange={setVeterinarianNote} placeholder="What the veterinarian should know" rows={3} {...noteProps} />
               )}
             </section>
           </div>
