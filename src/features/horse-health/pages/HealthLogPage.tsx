@@ -197,7 +197,8 @@ export default function HealthLogPage() {
 
   return (
     <CrewShell>
-      <div className="mx-auto max-w-2xl space-y-4 pb-28 lg:max-w-6xl lg:pb-12 xl:max-w-7xl">
+      {/* The phone action bar grows when it carries an error, so the page keeps more room under the last field. */}
+      <div className={cn("mx-auto max-w-2xl space-y-4 lg:max-w-6xl lg:pb-12 xl:max-w-7xl", error ? "pb-44" : "pb-28")}>
         <PageHeader
           title="Record horse health"
           size="compact"
@@ -217,12 +218,6 @@ export default function HealthLogPage() {
             </span>
           </div>
         </div>
-
-        {error && (
-          <p className={noticeError} role="alert">
-            {error}
-          </p>
-        )}
 
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
           {/* Left column: form fields */}
@@ -496,6 +491,12 @@ export default function HealthLogPage() {
               </dl>
 
               <div className="space-y-2 border-t border-slate-100 pt-3">
+                {/* Shown next to the buttons that triggered it: at the top of the page it was out of sight. */}
+                {error && (
+                  <p className={`${noticeError} m-0 text-xs`} role="alert">
+                    {error}
+                  </p>
+                )}
                 <Button type="button" disabled={isSubmitting} onClick={() => void save()} className="w-full rounded-xs">
                   <Save aria-hidden="true" />
                   {isSubmitting ? "Saving…" : "Save health log"}
@@ -517,6 +518,11 @@ export default function HealthLogPage() {
 
         {/* Mobile fixed bottom action bar */}
         <div className="fixed right-0 bottom-0 left-0 z-40 border-t border-[rgb(203_196_184/0.65)] bg-white px-3 pt-2.5 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] shadow-[0_-4px_12px_rgba(0,0,0,0.05)] lg:hidden">
+          {error && (
+            <p className={`${noticeError} mx-auto mb-2 max-w-2xl text-xs`} role="alert">
+              {error}
+            </p>
+          )}
           <div className="mx-auto flex max-w-2xl gap-2">
             <Button
               type="button"
