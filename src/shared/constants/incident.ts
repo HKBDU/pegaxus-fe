@@ -1,3 +1,4 @@
+import { NOT_CURRENT_SEGMENT_CREW, NOT_CURRENT_SEGMENT_CREW_MESSAGE } from "./crew-turn";
 export const INCIDENT_CATEGORY = {
   VEHICLE: "VEHICLE",
   HORSE_HEALTH: "HORSE_HEALTH",
@@ -97,6 +98,7 @@ export const INCIDENT_ERROR_MESSAGES: Record<string, string> = {
   SEVERITY_LOWER_MANAGER_ONLY:
     "Only the Logistics Manager can lower incident severity.",
   SEVERITY_UNCHANGED: "Choose a different severity before saving.",
+  [NOT_CURRENT_SEGMENT_CREW]: NOT_CURRENT_SEGMENT_CREW_MESSAGE,
   NETWORK_ERROR: "Cannot reach the server. Check your connection and try again.",
 };
 

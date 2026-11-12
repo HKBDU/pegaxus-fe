@@ -1,3 +1,4 @@
+import { NOT_CURRENT_SEGMENT_CREW, NOT_CURRENT_SEGMENT_CREW_MESSAGE } from "@/shared/constants/crew-turn"
 import { ROLE_ROUTES } from "@/app/route-config"
 
 import type { IncidentSort } from "./types"
@@ -37,6 +38,7 @@ export const STATUS_FILTER_OPTIONS = [
 /** Message per BE `errorCode` (contract IN9-IN11); the UI branches on the code, never on the HTTP status. */
 export const INCIDENT_ERROR_MESSAGES: Record<string, string> = {
   FORBIDDEN: "You do not have permission to do this.",
+  [NOT_CURRENT_SEGMENT_CREW]: NOT_CURRENT_SEGMENT_CREW_MESSAGE,
   INCIDENT_MODIFIED: "This incident was changed by someone else. Reload to see the latest version.",
   INVALID_INCIDENT_STATUS: "This incident can no longer be changed in its current status.",
   SEVERITY_LOWER_MANAGER_ONLY: "Only the Logistics Manager can lower incident severity.",

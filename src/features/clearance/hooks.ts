@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { dossierKeys } from '@/features/dossier/hooks/useDossier'
 import { finalizeCustomsClearanceProof, getCustomsClearanceProof, getDossierContext, submitCustomsClearanceProof } from './services'
 import type { FinalizeCustomsClearanceProofResponse, SubmitCustomsClearanceProofResponse } from './types'
 
@@ -51,6 +52,7 @@ export function useSubmitCustomsClearanceProof(dossierId: string) {
     mutationFn: (payload) => submitCustomsClearanceProof(dossierId, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: clearanceKeys.dossier(dossierId) })
+      void queryClient.invalidateQueries({ queryKey: dossierKeys.overview(dossierId) })
     },
   })
 }

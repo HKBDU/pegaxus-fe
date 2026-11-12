@@ -30,6 +30,7 @@ export interface IncidentCommonFormProps {
   photoError?: string | null;
   locationStatus?: IncidentLocationStatus;
   locationError?: string | null;
+  gpsCoordinates?: { latitude: number; longitude: number } | null;
   onPhotoUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
   onPhotoError?: (message: string | null) => void;
 }
@@ -47,6 +48,7 @@ export function IncidentCommonForm({
   photoError,
   locationStatus = "idle",
   locationError,
+  gpsCoordinates,
   onPhotoUploadStateChange,
   onPhotoError,
 }: IncidentCommonFormProps) {
@@ -89,6 +91,7 @@ export function IncidentCommonForm({
       {showPhotos && (
         <IncidentPhotoField
           value={photos}
+          gpsCoordinates={gpsCoordinates}
           onChange={onPhotosChange}
           disabled={disabled}
           maxFiles={maxPhotos}

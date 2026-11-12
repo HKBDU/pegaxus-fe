@@ -82,6 +82,13 @@ export const vehicleIncidentRequestSchema = z
         message: "BOTH incidents must use CRITICAL severity",
       });
     }
+    if (!value.locationId && !(value.latitude !== undefined && value.longitude !== undefined)) {
+      context.addIssue({
+        code: "custom",
+        path: ["latitude"],
+        message: "A saved location or both GPS coordinates are required.",
+      });
+    }
   });
 
 export const horseHealthDetailRequestSchema = z.object({
@@ -122,6 +129,14 @@ export const horseHealthIncidentRequestSchema = z.object({
         });
     }),
   photoFiles: horsePhotoFilesSchema,
+}).superRefine((value, context) => {
+  if (!value.locationId && !(value.latitude !== undefined && value.longitude !== undefined)) {
+    context.addIssue({
+      code: "custom",
+      path: ["latitude"],
+      message: "A saved location or both GPS coordinates are required.",
+    });
+  }
 });
 
 export const addHorseDetailsRequestSchema = z.object({

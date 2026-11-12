@@ -1011,11 +1011,7 @@ export const router = createBrowserRouter([
             path: "/compliance-dossiers/:dossierId/bcp-quarantine-proof",
             element: (
               <ProtectedRoute
-                allowedRoles={[
-                  "ESCORT",
-                  "TRANSPORT_SPECIALIST",
-                  "LOGISTICS_MANAGER",
-                ]}
+                allowedRoles={["ESCORT"]}
               >
                 <Suspense fallback={<LoadingState />}>
                   <BcpQuarantineProofPage />
@@ -1027,11 +1023,7 @@ export const router = createBrowserRouter([
             path: "/compliance-dossiers/:dossierId/quarantine-proof",
             element: (
               <ProtectedRoute
-                allowedRoles={[
-                  "ESCORT",
-                  "TRANSPORT_SPECIALIST",
-                  "LOGISTICS_MANAGER",
-                ]}
+                allowedRoles={["ESCORT"]}
               >
                 <Suspense fallback={<LoadingState />}>
                   <BcpQuarantineProofPage />
@@ -1043,11 +1035,7 @@ export const router = createBrowserRouter([
             path: "/compliance-dossiers/:dossierId/customs-clearance-proof",
             element: (
               <ProtectedRoute
-                allowedRoles={[
-                  "DRIVER",
-                  "TRANSPORT_SPECIALIST",
-                  "LOGISTICS_MANAGER",
-                ]}
+                allowedRoles={["DRIVER"]}
               >
                 <Suspense fallback={<LoadingState />}>
                   <CustomsClearanceProofPage />
