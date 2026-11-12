@@ -1,5 +1,5 @@
 import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
-import { FileText, History } from "lucide-react";
+import { History } from "lucide-react";
 import { useState } from "react";
 import { formatBookingDate } from "@/features/booking/utils";
 import {
@@ -25,8 +25,14 @@ import { RevokeDocumentReviewDialog } from "./RevokeDocumentReviewDialog";
 // audit/reference, but this flag must remain false until the contract changes.
 const REVOKE_REVIEW_FEATURE_ENABLED = false;
 
-function VersionFiles({ files }: { files: DocumentVersion["files"] }) {
-  const [open, setOpen] = useState(false);
+function VersionFiles({
+  files,
+  initiallyOpen = false,
+}: {
+  files: DocumentVersion["files"];
+  initiallyOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(initiallyOpen);
   return (
     <div className="mt-3 space-y-3">
       <Button
@@ -79,19 +85,6 @@ export function DocumentVersionHistory({
             {version.files.length}{" "}
             {version.files.length === 1 ? "file" : "files"}
           </p>
-          <ul className="mt-2 space-y-1">
-            {version.files.map((file) => (
-              <li
-                key={`${file.sortOrder}-${file.fileName}`}
-                className="flex min-w-0 items-start gap-2 text-slate-700"
-              >
-                <FileText className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                <span className="min-w-0 [overflow-wrap:anywhere]">
-                  {file.fileName}
-                </span>
-              </li>
-            ))}
-          </ul>
           {version.files.length ? (
             <VersionFiles
               key={`${version.documentVersionId}-${version.uploadedAt}`}
@@ -175,6 +168,14 @@ export function DocumentDetailsDialog({
   );
   const [revokeOpen, setRevokeOpen] = useState(false);
   const document = query.data;
+  const currentRequest = document?.openRequest;
+  const otherRequests = (document?.documentRequests ?? []).filter(
+    (request) =>
+      String(request.documentRequestId) !==
+      String(currentRequest?.documentRequestId),
+  );
+  const canReadComments =
+    role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST";
   const latestVersion = (history.data ?? document?.versions)?.[0];
   const close = () => {
     setRevokeOpen(false);
@@ -189,10 +190,10 @@ export function DocumentDetailsDialog({
         <DialogHeader>
           <DialogTitle className="font-heading text-xl uppercase text-primary">
             {view === "request"
-              ? "Document Request"
+              ? "Revision Request"
               : view === "history"
                 ? "Document Version / Review History"
-                : "Document Details"}
+                : "Submitted Document"}
           </DialogTitle>
           <DialogDescription>
             {view === "request"
@@ -205,29 +206,53 @@ export function DocumentDetailsDialog({
         {query.isPending ? (
           <p className="text-sm text-slate-500">Loading document details...</p>
         ) : query.isError || !document ? (
-          <p role="alert" className="text-sm text-red-700">
-            Could not load document details.
-          </p>
+          <div
+            role="alert"
+            className="space-y-2 rounded-[2px] border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          >
+            <p>Could not load document details.</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void query.refetch()}
+            >
+              Retry document details
+            </Button>
+          </div>
         ) : (
           <div className="min-w-0 space-y-4">
             {view === "request" ? (
               <>
-                {document.openRequest ? (
-                  <DocumentRequestAlert
-                    request={document.openRequest}
-                    action={
-                      document.status === "REJECTED" && onUpdate ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="rounded-[2px]"
-                          onClick={onUpdate}
-                        >
-                          Update Document
-                        </Button>
-                      ) : undefined
-                    }
-                  />
+                {currentRequest ? (
+                  <div className="space-y-3">
+                    <DocumentRequestAlert
+                      request={currentRequest}
+                      action={
+                        document.status === "REJECTED" && onUpdate ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="rounded-[2px]"
+                            onClick={onUpdate}
+                          >
+                            Update Document
+                          </Button>
+                        ) : undefined
+                      }
+                    />
+                    <DocumentRequestComments
+                      key={currentRequest.documentRequestId}
+                      dossierId={dossierId}
+                      requirementId={requirementId}
+                      request={currentRequest}
+                      showRequestSummary={false}
+                      canReadComments={canReadComments}
+                      canComment={
+                        canReadComments && currentRequest.status === "OPEN"
+                      }
+                    />
+                  </div>
                 ) : (
                   <p
                     role="status"
@@ -237,25 +262,33 @@ export function DocumentDetailsDialog({
                     fulfilled by a newer upload.
                   </p>
                 )}
-                {(document.documentRequests ?? []).map((request) => (
-                  <DocumentRequestComments
-                    key={request.documentRequestId}
-                    dossierId={dossierId}
-                    requirementId={requirementId}
-                    request={request}
-                    showRequestSummary={
-                      String(request.documentRequestId) !==
-                      String(document.openRequest?.documentRequestId)
-                    }
-                    canReadComments={
-                      role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST"
-                    }
-                    canComment={
-                      (role === "CUSTOMER" || role === "TRANSPORT_SPECIALIST") &&
-                      request.status === "OPEN"
-                    }
-                  />
-                ))}
+                {otherRequests.length ? (
+                  <details
+                    key={document.complianceDocumentId}
+                    className="rounded-[2px] border border-slate-200 bg-white p-4"
+                  >
+                    <summary className="cursor-pointer rounded-[2px] text-sm font-semibold text-slate-700 focus-visible:outline-2 focus-visible:outline-primary">
+                      Other requests ({otherRequests.length})
+                    </summary>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Previous and related follow-ups for this requirement.
+                    </p>
+                    <div className="mt-3 space-y-4">
+                      {otherRequests.map((request) => (
+                        <DocumentRequestComments
+                          key={request.documentRequestId}
+                          dossierId={dossierId}
+                          requirementId={requirementId}
+                          request={request}
+                          canReadComments={canReadComments}
+                          canComment={
+                            canReadComments && request.status === "OPEN"
+                          }
+                        />
+                      ))}
+                    </div>
+                  </details>
+                ) : null}
               </>
             ) : view === "history" ? (
               history.isError ? (
@@ -313,30 +346,19 @@ export function DocumentDetailsDialog({
                 </dl>
                 {latestVersion?.files?.length ? (
                   <div className="space-y-2 rounded-[2px] border border-slate-200 bg-white p-4 text-xs">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <h4 className="font-heading text-xs font-bold uppercase text-slate-700">
-                        Latest Submitted Files (Version v{latestVersion.versionNo})
+                        Latest Submitted Files (Version v
+                        {latestVersion.versionNo})
                       </h4>
                       <span className="text-slate-500">
                         <DateTimeUtc value={latestVersion.uploadedAt} compact />
                       </span>
                     </div>
-                    <ul className="space-y-1">
-                      {latestVersion.files.map((file) => (
-                        <li
-                          key={`${file.sortOrder}-${file.fileName}`}
-                          className="flex min-w-0 items-start gap-2 text-slate-700"
-                        >
-                          <FileText className="mt-0.5 size-3.5 shrink-0 text-primary" />
-                          <span className="min-w-0 [overflow-wrap:anywhere]">
-                            {file.fileName}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
                     <VersionFiles
                       key={`${latestVersion.documentVersionId}-${latestVersion.uploadedAt}`}
                       files={latestVersion.files}
+                      initiallyOpen
                     />
                     {latestVersion.uploadNote ? (
                       <p className="mt-2 text-slate-600">
@@ -357,7 +379,10 @@ export function DocumentDetailsDialog({
                 ) &&
                 document.status === "APPROVED" &&
                 document.versions[0]?.review?.result === "APPROVED" ? (
-                  <Button variant="destructive" onClick={() => setRevokeOpen(true)}>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setRevokeOpen(true)}
+                  >
                     Revoke Approval
                   </Button>
                 ) : null}

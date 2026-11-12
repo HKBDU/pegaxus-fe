@@ -69,8 +69,8 @@ export function FinancialOverview({ report }: { report: FinancialReport }) {
           role="status"
           className="m-0 border-l-2 border-amber-500 bg-amber-50 px-3 py-2 text-sm text-amber-900"
         >
-          Source data has changed. These figures remain the saved snapshot until
-          you refresh financial data.
+          Source data has changed. The saved figures are shown until automatic
+          synchronization completes.
         </p>
       ) : null}
       {report.warnings
