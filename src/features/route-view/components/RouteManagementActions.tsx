@@ -367,9 +367,10 @@ export function RouteSegmentOutsourceAction({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [savingInternal, setSavingInternal] = useState(false);
   const role = getWorkspaceRole(context.workspace.principal);
-  // The Logistics Manager and Route Coordinator may link or remove a provider (OS1).
-  if (plan.status !== "DRAFT" || (role !== "manager" && role !== "coordinator"))
-    return null;
+  // OS1 (PUT …/segments/{id}/outsourcing) is Logistics Manager only: the BE policy and service both reject anyone else
+  // with 403, so a Route Coordinator got "You do not have permission". The coordinator sets providers while building or
+  // editing the route plan, which saves through the route plan itself; here they only see the arrangement badge.
+  if (plan.status !== "DRAFT" || role !== "manager") return null;
   async function switchToInternal() {
     setSavingInternal(true);
     try {
