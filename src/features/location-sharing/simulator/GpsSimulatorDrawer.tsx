@@ -1,4 +1,4 @@
-import { useState, useRef, type ChangeEvent } from "react";
+import { useState, useRef, useEffect, type ChangeEvent } from "react";
 import {
   Play,
   Pause,
@@ -13,7 +13,9 @@ import {
   SlidersHorizontal,
   FileCode,
   Sparkles,
+  GripVertical,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Switch } from "@/shared/components/ui/switch";
@@ -128,43 +130,149 @@ export function GpsSimulatorDrawer({
   const fromName = currentSegment?.fromLocation?.locationName ?? "Origin";
   const toName = currentSegment?.toLocation?.locationName ?? "Destination";
 
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{ startX: number; startY: number; initX: number; initY: number }>({
+    startX: 0,
+    startY: 0,
+    initX: 0,
+    initY: 0,
+  });
+  const hasMovedRef = useRef(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!position) return;
+    const handleResize = () => {
+      const elWidth = btnRef.current?.offsetWidth ?? 160;
+      const elHeight = btnRef.current?.offsetHeight ?? 40;
+      const maxX = Math.max(0, window.innerWidth - elWidth - 8);
+      const maxY = Math.max(0, window.innerHeight - elHeight - 8);
+      setPosition((prev) => {
+        if (!prev) return null;
+        return {
+          x: Math.min(Math.max(8, prev.x), maxX),
+          y: Math.min(Math.max(8, prev.y), maxY),
+        };
+      });
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [position]);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return;
+    const rect = btnRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    isDraggingRef.current = true;
+    hasMovedRef.current = false;
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initX: position ? position.x : rect.left,
+      initY: position ? position.y : rect.top,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isDraggingRef.current) return;
+    const dx = e.clientX - dragStartRef.current.startX;
+    const dy = e.clientY - dragStartRef.current.startY;
+
+    if (Math.hypot(dx, dy) > 5) {
+      hasMovedRef.current = true;
+    }
+
+    if (hasMovedRef.current) {
+      const elWidth = btnRef.current?.offsetWidth ?? 160;
+      const elHeight = btnRef.current?.offsetHeight ?? 40;
+      const maxX = Math.max(0, window.innerWidth - elWidth - 8);
+      const maxY = Math.max(0, window.innerHeight - elHeight - 8);
+      const newX = Math.min(Math.max(8, dragStartRef.current.initX + dx), maxX);
+      const newY = Math.min(Math.max(8, dragStartRef.current.initY + dy), maxY);
+      setPosition({ x: newX, y: newY });
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // Ignored
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (hasMovedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      hasMovedRef.current = false;
+      return;
+    }
+    setIsOpen(true);
+  };
+
   return (
     <>
       {/* 1. Unobtrusive Trigger Button (Floating or custom) */}
       {trigger ? (
         <div onClick={() => setIsOpen(true)}>{trigger}</div>
       ) : (
-        <div className="fixed bottom-4 right-4 z-40 print:hidden">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsOpen(true)}
-            className="flex items-center gap-2 rounded-full border border-indigo-500/40 bg-background/95 px-3.5 py-2 text-xs font-medium shadow-lg backdrop-blur-md transition-all hover:border-indigo-500 hover:bg-background"
-            aria-label="Open GPS Simulator Controls"
-          >
-            <Radio className="size-3.5 animate-pulse text-indigo-500" />
-            <span className="font-semibold">GPS Simulator</span>
-            {simulator.isEnabled ? (
-              <Badge
-                variant="default"
-                className={`h-4.5 px-1.5 text-[9px] font-semibold text-white ${
-                  simulator.isSignalLoss
-                    ? "bg-amber-600"
-                    : simulator.status === "running"
-                      ? "bg-emerald-600"
-                      : "bg-indigo-600"
-                }`}
-              >
-                {simulator.isSignalLoss
-                  ? `CUT (${simulator.signalLossSec}s)`
+        <Button
+          ref={btnRef}
+          type="button"
+          variant="outline"
+          size="sm"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onClick={handleClick}
+          style={
+            position
+              ? {
+                  position: "fixed",
+                  left: `${position.x}px`,
+                  top: `${position.y}px`,
+                  bottom: "auto",
+                  right: "auto",
+                  zIndex: 50,
+                }
+              : undefined
+          }
+          className={cn(
+            "z-50 print:hidden select-none touch-none cursor-grab active:cursor-grabbing",
+            "flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-background/95 px-3 py-1.5 text-xs font-medium shadow-lg backdrop-blur-md transition-shadow hover:border-indigo-500 hover:bg-background",
+            !position && "fixed bottom-18 sm:bottom-4 right-4"
+          )}
+          aria-label="Open GPS Simulator Controls (Drag to move)"
+        >
+          <GripVertical className="size-3 text-slate-400 shrink-0" />
+          <Radio className="size-3.5 animate-pulse text-indigo-500 shrink-0" />
+          <span className="font-semibold">GPS Simulator</span>
+          {simulator.isEnabled ? (
+            <Badge
+              variant="default"
+              className={`h-4.5 px-1.5 text-[9px] font-semibold text-white ${
+                simulator.isSignalLoss
+                  ? "bg-amber-600"
                   : simulator.status === "running"
-                    ? `${simulator.speedKmh} km/h`
-                    : "ARMED"}
-              </Badge>
-            ) : null}
-          </Button>
-        </div>
+                    ? "bg-emerald-600"
+                    : "bg-indigo-600"
+              }`}
+            >
+              {simulator.isSignalLoss
+                ? `CUT (${simulator.signalLossSec}s)`
+                : simulator.status === "running"
+                  ? `${simulator.speedKmh} km/h`
+                  : "ARMED"}
+            </Badge>
+          ) : null}
+        </Button>
       )}
 
       {/* 2. Slide-over Sheet Drawer */}

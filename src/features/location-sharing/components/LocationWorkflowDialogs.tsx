@@ -158,16 +158,6 @@ export function LocationWorkflowDialogs({
           {state.message}
         </p>
       ) : null}
-      {gate.status === "waiting_current_segment" && source === "real" ? (
-        <div
-          className="mx-auto max-w-4xl px-4 py-3 text-sm text-muted-foreground"
-          role="status"
-        >
-          We’re verifying that this is your current segment before enabling
-          arrival confirmation. You can still view the trip and open location
-          sharing.
-        </div>
-      ) : null}
       <Dialog
         open={Boolean(arrival)}
         onOpenChange={(open) => {

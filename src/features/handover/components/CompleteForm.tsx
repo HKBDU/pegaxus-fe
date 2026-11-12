@@ -1,4 +1,4 @@
-import { CheckCircle2, PencilLine } from "lucide-react"
+import { ArrowLeft, CheckCircle2, PencilLine } from "lucide-react"
 import { useRef, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/shared/components/ui/button"
@@ -143,10 +143,10 @@ export function CompleteForm({ record, mobile, pending, target, geofenced, onSub
   }
 
   const bar = cn(
-    "flex gap-2",
+    "flex gap-3",
     mobile
-      ? "fixed inset-x-0 bottom-0 z-20 border-t border-slate-300 bg-white px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] [&>button]:min-h-15 [&>button]:flex-1 [&>button]:text-base"
-      : "flex-col-reverse sm:flex-row sm:justify-end [&>button]:min-h-11 sm:[&>button]:min-h-10",
+      ? "fixed bottom-0 right-0 z-20 left-0 md:left-[var(--sidebar-width,13rem)] border-t border-[#e5e2d9] bg-white px-3 sm:px-4 pt-2.5 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] shadow-[0_-4px_12px_rgba(0,0,0,0.05)] [&>button]:flex-1 [&>button]:min-h-11 sm:[&>button]:min-h-11"
+      : "flex-col-reverse sm:flex-row sm:justify-end gap-3 [&>button]:min-h-10",
   )
 
   return (
@@ -224,12 +224,33 @@ export function CompleteForm({ record, mobile, pending, target, geofenced, onSub
       </p>
 
       <div className={bar}>
-        <Button type="button" variant="outline" onClick={onBack} disabled={pending} className="rounded-[2px]">
-          Back
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onBack}
+          disabled={pending}
+          className="rounded-[2px] border-[#e5e2d9] text-xs sm:text-sm font-medium hover:bg-slate-50 text-slate-700 gap-1.5 min-w-0 px-2 sm:px-4"
+        >
+          <ArrowLeft className="size-4 shrink-0" />
+          <span className="truncate">Back</span>
         </Button>
-        <Button type="submit" disabled={pending || !canComplete} className="gap-2 rounded-[2px] font-heading font-semibold tracking-[0.06em] uppercase shadow-[0.125rem_0.125rem_0_0_rgb(0_0_0/0.85)]">
-          <CheckCircle2 aria-hidden="true" className="size-4" />
-          {pending ? "Completing…" : "Complete handover record"}
+        <Button
+          type="submit"
+          disabled={pending || !canComplete}
+          className="rounded-[2px] font-heading font-semibold text-xs sm:text-sm tracking-[0.03em] sm:tracking-[0.06em] uppercase bg-[#f39200] text-[#181818] hover:bg-[#dc8400] shadow-sm gap-1.5 sm:gap-2 px-2 sm:px-4 disabled:opacity-50 min-w-0"
+        >
+          <CheckCircle2 aria-hidden="true" className="size-4 shrink-0" />
+          <span className="truncate">
+            {pending ? (
+              "Completing…"
+            ) : (
+              <>
+                <span>Complete</span>
+                <span className="hidden min-[400px]:inline">&nbsp;handover</span>
+                <span className="hidden sm:inline">&nbsp;record</span>
+              </>
+            )}
+          </span>
         </Button>
       </div>
     </form>
