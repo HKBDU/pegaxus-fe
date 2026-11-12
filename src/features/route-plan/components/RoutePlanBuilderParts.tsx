@@ -1,15 +1,19 @@
 import {
   AlertCircle,
   AlertTriangle,
+  ArrowLeftRight,
+  Building2,
   ChevronDown,
   ChevronUp,
   Clock,
+  Handshake,
   PlusCircle,
   ShieldAlert,
   Trash2,
   Truck,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { forwardRef, useMemo, useState, type ComponentPropsWithoutRef } from "react";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { formatUtcDateTime, formatUtcTime } from "@/shared/utils/datetime";
@@ -254,6 +258,68 @@ export function Progress({
     </div>
   );
 }
+
+const ARRANGEMENT_STYLES = {
+  INTERNAL: {
+    label: "Internal fleet",
+    icon: Building2,
+    tone: "border-slate-300 bg-slate-50 text-slate-800",
+    hover: "hover:border-slate-400 hover:bg-slate-100",
+  },
+  OUTSOURCED: {
+    label: "Outsourced",
+    icon: Handshake,
+    tone: "border-amber-300 bg-amber-50 text-amber-900",
+    hover: "hover:border-amber-400 hover:bg-amber-100",
+  },
+} as const;
+
+type ArrangementChipProps = ComponentPropsWithoutRef<"button"> & {
+  arrangement: "INTERNAL" | "OUTSOURCED";
+  /** Read-only roles see the same chip without the switch affordance. */
+  interactive?: boolean;
+};
+
+/**
+ * The segment's fleet arrangement. When it can be changed it reads as a button (border, hover, a switch icon) so the
+ * coordinator knows a click switches between the internal fleet and an outsourced provider.
+ */
+const ArrangementChip = forwardRef<HTMLButtonElement, ArrangementChipProps>(
+  ({ arrangement, interactive = true, className, ...props }, ref) => {
+    const style = ARRANGEMENT_STYLES[arrangement];
+    const Icon = style.icon;
+    const content = (
+      <>
+        <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+        <span className="truncate">{style.label}</span>
+      </>
+    );
+    const base =
+      "inline-flex h-7 max-w-full items-center gap-1.5 rounded-[2px] border px-2 text-xs font-semibold";
+    if (!interactive)
+      return <span className={cn(base, style.tone, className)}>{content}</span>;
+    return (
+      <button
+        ref={ref}
+        type="button"
+        title="Switch between the internal fleet and an outsourced provider"
+        aria-label={`Arrangement: ${style.label}. Change arrangement`}
+        className={cn(
+          base,
+          style.tone,
+          style.hover,
+          "cursor-pointer shadow-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 motion-reduce:transition-none",
+          className,
+        )}
+        {...props}
+      >
+        {content}
+        <ArrowLeftRight aria-hidden="true" className="ml-0.5 size-3 shrink-0 opacity-60" />
+      </button>
+    );
+  },
+);
+ArrangementChip.displayName = "ArrangementChip";
 
 export function SegmentCard({
   segment,
@@ -505,18 +571,10 @@ export function SegmentCard({
                         if (sel) onVehicleChange?.([]);
                       }}
                     >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="h-auto p-0 font-semibold hover:bg-transparent"
-                      >
-                        {segment.arrangement === "OUTSOURCED" ? "Outsource" : "Internal"}
-                      </Button>
+                      <ArrangementChip arrangement={segment.arrangement} />
                     </OutsourceSegmentDialog>
                   ) : (
-                    <span className="font-semibold">
-                      {segment.arrangement === "OUTSOURCED" ? "Outsource" : "Internal"}
-                    </span>
+                    <ArrangementChip arrangement={segment.arrangement} interactive={false} />
                   )}
                 </div>
               </div>
