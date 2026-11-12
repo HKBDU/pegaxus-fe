@@ -1,3 +1,4 @@
+import { crewTurnErrorMessage } from "@/shared/constants/crew-turn"
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -153,7 +154,7 @@ export default function HealthLogPage() {
       toast.success("Health log saved.")
       navigate(HORSE_HEALTH_ROUTES.health(transportId))
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to save health log.")
+      setError(crewTurnErrorMessage(cause) ?? (cause instanceof Error ? cause.message : "Unable to save health log."))
     }
   }
 
@@ -185,7 +186,7 @@ export default function HealthLogPage() {
       toast.success("All horses marked normal.")
       navigate(HORSE_HEALTH_ROUTES.health(transportId))
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to mark all horses normal.")
+      setError(crewTurnErrorMessage(cause) ?? (cause instanceof Error ? cause.message : "Unable to mark all horses normal."))
     }
   }
 
