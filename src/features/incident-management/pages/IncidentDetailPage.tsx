@@ -117,7 +117,8 @@ function CrewDesktopActions({ children }: { children: ReactNode }) {
   return (
     <section aria-label="Incident actions" className={cn(panelClass, "p-3 has-[>div:empty]:hidden")}>
       <p className="m-0 mb-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">Actions</p>
-      <div className="flex flex-col gap-2 [&>div]:flex [&>div]:w-full [&>div]:flex-col [&>div]:gap-2 [&_[data-slot=button]]:h-9 [&_[data-slot=button]]:min-h-0 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:text-sm [&_[data-slot=button]]:font-medium">
+      {/* Row groups (other than the closing pair) stack their buttons; the closing pair keeps its own two-column grid. */}
+      <div className="flex flex-col gap-2 [&>div:not([data-row])]:flex [&>div:not([data-row])]:w-full [&>div:not([data-row])]:flex-col [&>div:not([data-row])]:gap-2 [&_[data-slot=button]]:h-9 [&_[data-slot=button]]:min-h-0 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:text-sm [&_[data-slot=button]]:font-medium">
         {children}
       </div>
     </section>
@@ -191,8 +192,6 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   ) : null
   const buttons = incident ? (
     <>
-      {/* On desktop the main action leads and the destructive one closes the list. */}
-      {crewDesktop ? resolveButton : null}
       <IncidentResponseActions incident={incident} />
       <RaiseSeverityButton
         incidentReportId={incident.incidentReportId}
@@ -202,8 +201,21 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
         onChanged={refetch}
         className={crewDesktop ? cn(deskButtonClass, deskOutlineClass, "min-h-0") : cn(actionButtonClass, outlineButtonClass, "min-h-0")}
       />
-      {crewDesktop ? null : resolveButton}
-      {cancelButton}
+      {crewDesktop ? (
+        // Desktop: the two closing actions share the last row; one alone takes the whole row.
+        resolveButton || cancelButton ? (
+          // Half of the 316px column: tighter padding and 13px text keep "Mark as resolved" on one line.
+          <div data-row="closing" className="grid grid-flow-col auto-cols-fr gap-2 [&>button]:gap-1.5 [&>button]:px-2 [&>button]:text-[13px]">
+            {resolveButton}
+            {cancelButton}
+          </div>
+        ) : null
+      ) : (
+        <>
+          {resolveButton}
+          {cancelButton}
+        </>
+      )}
     </>
   ) : null
 
