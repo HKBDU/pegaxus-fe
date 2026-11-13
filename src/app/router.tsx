@@ -1,6 +1,6 @@
 // oxlint-disable react/only-export-components -- router modules intentionally export configuration
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, type RouteObject } from "react-router-dom";
 import { DriverLocationSession } from "@/features/location-sharing/components/DriverLocationSession";
 import {
   LoadingState,
@@ -15,6 +15,7 @@ import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { handoverTabRoutes } from "@/features/handover";
+import { authRoutes } from "@/features/auth/routes";
 import { claimRoutes } from "@/features/claim/routes";
 import { priceListRoutes } from "@/features/price-list/routes";
 import { incidentManagementRoutes } from "@/features/incident-management";
@@ -24,7 +25,6 @@ import {
   ROLE_ROUTES,
   routePlanDetail,
 } from "./route-config";
-import { AuthShell } from "@/features/auth/components/AuthShell";
 import { liveTrackingTabRoutes } from "@/features/live-tracking";
 import {
   horseHealthCrewFormRoutes,
@@ -33,6 +33,8 @@ import {
 } from "@/features/horse-health";
 import { incidentRoutes } from "@/features/incident-report";
 import { transportAuditRoutes } from "@/features/transport-audit";
+import { routePlanRoutes } from "@/features/route-plan/routes";
+import { RouteErrorBoundary } from "./RouteErrorBoundary";
 import { ongoingTransportRoutes } from "@/features/ongoing-transport";
 import { financialReportRoutes } from "@/features/financial-report";
 import { managementReportRoutes } from "@/features/management-report";
@@ -67,7 +69,6 @@ const CustomsClearanceProofPage = lazy(
 const CustomsClearanceReviewPage = lazy(
   () => import("@/features/clearance/pages/CustomsClearanceReviewPage"),
 );
-const LogoutPage = lazy(() => import("@/features/auth/pages/LogoutPage"));
 const ManageUserAccountsPage = lazy(
   () => import("@/features/accounts/pages/ManageUserAccountsPage"),
 );
@@ -79,26 +80,6 @@ const ViewUserAccountPage = lazy(
 );
 const EditUserAccountPage = lazy(
   () => import("@/features/accounts/pages/EditUserAccountPage"),
-);
-const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
-const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
-const GoogleCallbackPage = lazy(
-  () => import("@/features/auth/pages/GoogleCallbackPage"),
-);
-const ForgotPasswordPage = lazy(
-  () => import("@/features/auth/pages/ForgotPasswordPage"),
-);
-const ForgotPasswordOtpPage = lazy(
-  () => import("@/features/auth/pages/ForgotPasswordOtpPage"),
-);
-const ResetPasswordPage = lazy(
-  () => import("@/features/auth/pages/ResetPasswordPage"),
-);
-const VerifyEmailPage = lazy(
-  () => import("@/features/auth/pages/VerifyEmailPage"),
-);
-const ChangePasswordPage = lazy(
-  () => import("@/features/auth/pages/ChangePasswordPage"),
 );
 const NotificationsPage = lazy(
   () => import("@/features/notification/pages/NotificationsPage"),
@@ -156,18 +137,6 @@ const ProviderDetailPage = lazy(
 const ProviderEditPage = lazy(
   () => import("@/features/fleet/pages/ProviderEditPage"),
 );
-const CreateRoutePlanPage = lazy(
-  () => import("@/features/route-plan/pages/CreateRoutePlanPage"),
-);
-const CreateContingencyRoutePage = lazy(
-  () => import("@/features/route-plan/pages/CreateContingencyRoutePage"),
-);
-const CreateReturnRoutePage = lazy(
-  () => import("@/features/route-plan/pages/CreateReturnRoutePage"),
-);
-const EditRoutePlanPage = lazy(
-  () => import("@/features/route-plan/pages/EditRoutePlanPage"),
-);
 const MapAssetsPage = lazy(
   () => import("@/features/route-plan/pages/MapAssetsPage"),
 );
@@ -205,8 +174,10 @@ const bookingHistoryPage = (
   </Suspense>
 );
 
-export const router = createBrowserRouter([
+const routes: RouteObject[] = [
   ...transportAuditRoutes,
+  ...authRoutes,
+  ...routePlanRoutes,
   ...emergencyCostRoutes,
   ...emergencyRerouteRoutes,
   ...financialReportRoutes,
@@ -315,7 +286,7 @@ export const router = createBrowserRouter([
           {
             path: "compliance-dossiers/:dossierId",
             element: (
-              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+              <ProtectedRoute allowedRoles={["CUSTOMER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
                 <Suspense fallback={<LoadingState />}>
                   <DossierDetailsPage />
                 </Suspense>
@@ -693,103 +664,6 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    path: "/admin/route-plans",
-    element: (
-      <ProtectedRoute
-        allowedRoles={[
-          "LOGISTICS_MANAGER",
-          "FLEET_ROUTE_COORDINATOR",
-          "TRANSPORT_SPECIALIST",
-        ]}
-      >
-        <AdminLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      // There is no route plan list: plans are reached from a transport plan, so the menu entry opens the approved bookings.
-      {
-        index: true,
-        element: <Navigate to={ROLE_ROUTES.approvedBookings} replace />,
-      },
-      {
-        path: "new/:transportPlanId",
-        element: (
-          <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}>
-            <Suspense fallback={<LoadingState />}>
-              <CreateRoutePlanPage />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: ":routePlanId/edit",
-        element: (
-          <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}>
-            <Suspense fallback={<LoadingState />}>
-              <EditRoutePlanPage />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "new/:transportPlanId/contingency",
-        element: (
-          <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}>
-            <Suspense fallback={<LoadingState />}>
-              <CreateContingencyRoutePage />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "new/:transportPlanId/return",
-        element: (
-          <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}>
-            <Suspense fallback={<LoadingState />}>
-              <CreateReturnRoutePage />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-      // UC-38 route plan detail (LM, RC, TS): the page itself checks the assignment through the BE.
-      {
-        path: ":routePlanId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <RoutePlanDetailPage routeDetailPath={routePlanDetail} />
-          </Suspense>
-        ),
-      },
-      // UC-48 deep links used by notifications (Logistics Manager only).
-      {
-        path: ":routePlanId/change-decision",
-        element: (
-          <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
-            <Suspense fallback={<LoadingState />}>
-              <RoutePlanDetailPage
-                emergencyView="decision"
-                routeDetailPath={routePlanDetail}
-              />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: ":routePlanId/return-activation",
-        element: (
-          <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
-            <Suspense fallback={<LoadingState />}>
-              <RoutePlanDetailPage
-                emergencyView="activation"
-                routeDetailPath={routePlanDetail}
-              />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-    ],
-  },
-  {
     // Flow 2 catalog: TS manages it, LM reads it (API contract C1-C6).
     path: ROLE_ROUTES.complianceRequirements,
     element: (
@@ -925,59 +799,6 @@ export const router = createBrowserRouter([
       {
         path: ":dossierId/audit-history",
         element: <Navigate to="../details?tab=audit" relative="path" replace />,
-      },
-    ],
-  },
-  {
-    path: "/logout",
-    element: (
-      <ProtectedRoute>
-        <Suspense fallback={<LoadingState />}>
-          <LogoutPage />
-        </Suspense>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/compliance-dossiers/:dossierId",
-    element: (
-      <ProtectedRoute
-        allowedRoles={["CUSTOMER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}
-      >
-        <MainLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      {
-        index: true,
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <DossierDetailsPage />
-          </Suspense>
-        ),
-      },
-    ],
-  },
-  {
-    element: <AuthShell />,
-    children: [
-      { path: "/login", element: <LoginPage /> },
-      { path: "/auth/google/callback", element: <GoogleCallbackPage /> },
-      { path: "/register", element: <RegisterPage /> },
-      { path: "/forgot-password", element: <ForgotPasswordPage /> },
-      { path: "/verify-email", element: <VerifyEmailPage /> },
-      {
-        path: "/forgot-password/verify-otp",
-        element: <ForgotPasswordOtpPage />,
-      },
-      { path: "/reset-password", element: <ResetPasswordPage /> },
-      {
-        path: "/change-password",
-        element: (
-          <ProtectedRoute>
-            <ChangePasswordPage />
-          </ProtectedRoute>
-        ),
       },
     ],
   },
@@ -1138,5 +959,12 @@ export const router = createBrowserRouter([
   {
     path: "*",
     element: <NotFoundPage />,
+  },
+];
+
+export const router = createBrowserRouter([
+  {
+    errorElement: <RouteErrorBoundary />,
+    children: routes,
   },
 ]);
