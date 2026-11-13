@@ -33,7 +33,7 @@ export function IncidentLocationField({
 }: IncidentLocationFieldProps) {
   return (
     <section
-      className="grid min-w-0 items-start gap-4 border border-slate-200 bg-white p-4 sm:grid-cols-2 sm:p-5"
+      className="grid min-w-0 items-start gap-4 break-words border border-slate-200 bg-white p-4 [overflow-wrap:anywhere] sm:grid-cols-2 sm:p-5 xl:grid-cols-1"
       aria-label="Incident time and location"
     >
       <div className="space-y-2 text-sm font-bold text-slate-900">
@@ -56,7 +56,7 @@ export function IncidentLocationField({
         </p>
         <IncidentFieldError message={errors.locationDescription} />
       </div>
-      <div className="text-xs font-medium text-slate-500 sm:col-span-2">
+      <div className="min-w-0 text-xs font-medium text-slate-500 sm:col-span-2 xl:col-span-1">
         <p>Location ID: {value.locationId ?? "Pending GPS resolution"}</p>
         <p>
           GPS:{" "}
