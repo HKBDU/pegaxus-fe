@@ -42,6 +42,7 @@ export function useGpsSimulator(initialSegment?: {
     cumDistances: [],
     totalDistance: 0,
   });
+  const routeLoadVersionRef = useRef(0);
 
   const [totalDistance, setTotalDistance] = useState(0);
   const distanceRef = useRef(0);
@@ -144,6 +145,7 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
   // Load from segment points
   const loadSegmentRoute = useCallback(
     async (from: SegmentEndpoint, to: SegmentEndpoint) => {
+      const loadVersion = ++routeLoadVersionRef.current;
       const fromCoord = resolveEndpoint(from);
       const toCoord = resolveEndpoint(to);
 
@@ -169,6 +171,7 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
             longitude: toCoord.longitude,
           },
         });
+        if (loadVersion !== routeLoadVersionRef.current) return;
         // `estimated` is the resolver's straight-line fallback. Never use it
         // for GPS simulation: the vehicle must follow a real Geoapify road
         // geometry or remain stopped until one can be loaded.
@@ -178,21 +181,18 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
             : resolved.line.coordinates.flat();
           if (coordinates.length >= 2) {
             applyCoordinates(coordinates, "segment");
-            setIsLoadingRoute(false);
             return;
           }
         }
         // Never substitute the endpoint-to-endpoint line here. A missing road
         // geometry must leave the simulator stopped, otherwise fake GPS can
         // cut across terrain/water between two route endpoints.
-        if (resolved.estimated || !resolved.line) {
-          setIsLoadingRoute(false);
-        }
         routeDataRef.current = { coordinates: [], cumDistances: [], totalDistance: 0 };
         setTotalDistance(0);
         setDistanceTraveled(0);
         setRouteSource("none");
       } catch (err) {
+        if (loadVersion !== routeLoadVersionRef.current) return;
         console.warn(
           "[GpsSimulator] Road geometry failed; simulator will remain stopped:",
           err,
@@ -203,7 +203,7 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
         setRouteSource("none");
       }
 
-      setIsLoadingRoute(false);
+      if (loadVersion === routeLoadVersionRef.current) setIsLoadingRoute(false);
     },
     [applyCoordinates],
   );
@@ -213,6 +213,9 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
     (geoJsonInput: unknown) => {
       const coords = parseGeoJsonToCoordinates(geoJsonInput);
       if (coords.length >= 2) {
+        // A late segment lookup must not replace a custom route chosen by the driver.
+        routeLoadVersionRef.current += 1;
+        setIsLoadingRoute(false);
         applyCoordinates(coords, "custom");
         return true;
       }

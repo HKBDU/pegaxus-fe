@@ -101,7 +101,7 @@ function ProtectedFilePreview({ files }: { files: DocumentVersionFile[] }) {
         <p className="min-w-0 break-all text-slate-600">
           {files.length > 1
             ? `${files.length} images in this document version`
-            : `${file.fileName} · ${file.mimeType}`}
+            : file.mimeType || "Document file"}
         </p>
         {resource ? (
           <Button asChild size="sm" variant="outline" className="rounded-[2px]">
@@ -162,6 +162,9 @@ function ProtectedFilePreview({ files }: { files: DocumentVersionFile[] }) {
               />
             ) : (
               <p role="status" className="p-4 text-sm text-slate-600">
+                <span className="mb-2 block break-all font-medium">
+                  {file.fileName}
+                </span>
                 {preview?.reason}
               </p>
             )}
@@ -194,12 +197,14 @@ export function DocumentFilesPreview({
         No files are available in this version.
       </p>
     );
+  const choices = ordered.filter(
+    (item) => !isGalleryImage(item) || item === images[0],
+  );
   return (
     <div className="min-w-0 space-y-3">
-      <div className="flex flex-wrap gap-2" aria-label="Version files">
-        {ordered
-          .filter((item) => !isGalleryImage(item) || item === images[0])
-          .map((item) => (
+      {choices.length > 1 ? (
+        <div className="flex flex-wrap gap-2" aria-label="Version files">
+          {choices.map((item) => (
             <Button
               key={`${item.sortOrder}-${item.fileUrl}`}
               type="button"
@@ -220,7 +225,8 @@ export function DocumentFilesPreview({
                 : `${ordered.indexOf(item) + 1}. ${item.fileName}`}
             </Button>
           ))}
-      </div>
+        </div>
+      ) : null}
       <ProtectedFilePreview
         key={previewFiles.map((item) => item.fileUrl).join("|")}
         files={previewFiles}

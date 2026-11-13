@@ -55,35 +55,38 @@ export function DocumentRequestComments({
   }
   return (
     <section
-      className="min-w-0 space-y-3 rounded-[2px] border border-border bg-white p-4 [overflow-wrap:anywhere]"
+      className="min-w-0 space-y-3 border-t border-border pt-4 [overflow-wrap:anywhere]"
       aria-label={`Request ${request.requestCode}`}
     >
       {showRequestSummary ? (
         <DocumentRequestAlert request={request} />
       ) : (
-        <h3 className="text-sm font-semibold">
-          Comments · {request.requestCode}
-        </h3>
+        <h3 className="text-sm font-semibold">Discussion</h3>
       )}
-      <p className="text-xs text-muted-foreground">
-        Request status: {request.status ?? "—"}
-      </p>
       {canReadComments ? (
         query.isPending ? (
           <p role="status" className="text-xs">
             Loading comments…
           </p>
         ) : query.isError ? (
-          <div role="alert" className="text-xs">
-            <p>Could not load comments.</p>
+          <div
+            role="alert"
+            className="space-y-2 rounded-[2px] border border-red-200 bg-red-50 p-3 text-xs text-red-800"
+          >
+            <p>
+              Comments could not be loaded. The document request above is still
+              available.
+            </p>
             <Button
               variant="outline"
               size="sm"
               onClick={() => void query.refetch()}
             >
-              Retry
+              Retry comments
             </Button>
           </div>
+        ) : !query.data?.length ? (
+          <p className="text-xs text-muted-foreground">No comments yet.</p>
         ) : (
           <ul className="space-y-2">
             {query.data?.map((comment) => (

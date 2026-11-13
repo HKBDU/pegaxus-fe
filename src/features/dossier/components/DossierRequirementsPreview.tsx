@@ -68,6 +68,12 @@ import { useMissingDossierRequirements } from "../hooks/useMissingDocumentRemind
 import { RequestMissingDocumentsDialog } from "./RequestMissingDocumentsDialog";
 import { DossierRequirementDetailsDialog } from "./DossierRequirementDetailsDialog";
 
+const readActionLabels: Record<string, string> = {
+  "View Document": "View submitted document",
+  "View Requirement": "View requirement details",
+  "View Request": "View revision request",
+};
+
 type SubmissionMode = "initial" | "edit" | "update";
 
 function RequirementRowActions({
@@ -126,10 +132,7 @@ function RequirementRowActions({
             !item.document
           ) {
             disabledReason = "No document submitted";
-          } else if (
-            label === "View Request" &&
-            !item.openRequest
-          ) {
+          } else if (label === "View Request" && !item.openRequest) {
             disabledReason = "No document request";
           }
 
@@ -153,7 +156,8 @@ function RequirementRowActions({
                   label === "View Review History" ||
                   label === "View Request" ||
                   (role === "CUSTOMER" &&
-                    (label === "Edit Document" || label === "Update Document")))));
+                    (label === "Edit Document" ||
+                      label === "Update Document")))));
           const Icon = label.startsWith("Upload")
             ? Upload
             : label.startsWith("Edit")
@@ -177,7 +181,9 @@ function RequirementRowActions({
               className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem] data-[disabled]:opacity-100"
             >
               <Icon className="size-3.5" />
-              <span className="min-w-0 flex-1">{label}</span>
+              <span className="min-w-0 flex-1">
+                {readActionLabels[label] ?? label}
+              </span>
             </DropdownMenuItem>
           );
         })}

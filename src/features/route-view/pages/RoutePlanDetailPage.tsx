@@ -108,6 +108,7 @@ export default function RoutePlanDetailPage({
     if (!hasPlan || waitingForAction || mode === "request" || mode === "notice")
       return;
     const heading = pageRef.current?.querySelector<HTMLElement>("h1");
+    heading?.setAttribute("tabindex", "-1");
     heading?.focus({ preventScroll: true });
     pageRef.current?.scrollIntoView({ block: "start" });
   }, [routePlanId, mode, hasPlan, waitingForAction]);

@@ -71,7 +71,7 @@ export function TransportPageHeader({
   const title = transportCode ?? viewLabel[isCrew ? "overview" : view];
   return (
     <>
-      <header className="flex flex-wrap items-start justify-between gap-3">
+      <header className="min-w-0">
         <div className="min-w-0">
           <div>
             <PageHeader

@@ -21,16 +21,21 @@ export function TransportOverviewSkeleton() {
           </div>
         ))}
       </div>
-      <div
-        aria-hidden="true"
-        className="overview-panel grid divide-y divide-slate-100 lg:grid-cols-3 lg:divide-x lg:divide-y-0"
-      >
+      <div aria-hidden="true" className="overview-panel overview-summary">
         {Array.from({ length: 3 }, (_, index) => (
-          <div key={index} className="space-y-4 p-4">
+          <div key={index} className="overview-cell space-y-4">
             <Skeleton className="h-5 w-40" />
-            {Array.from({ length: 5 }, (_, row) => (
-              <Skeleton key={row} className="h-6 w-full" />
-            ))}
+            {index === 1 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {Array.from({ length: 4 }, (_, tile) => (
+                  <Skeleton key={tile} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : (
+              Array.from({ length: 5 }, (_, row) => (
+                <Skeleton key={row} className="h-6 w-full" />
+              ))
+            )}
           </div>
         ))}
       </div>
