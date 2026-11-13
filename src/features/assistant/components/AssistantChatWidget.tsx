@@ -1,6 +1,6 @@
 import {useState,type FormEvent,type KeyboardEvent} from "react"
 import mascot from "@/assets/mascot.png"
-import {LoaderCircle,MessageCircle,RotateCcw,Send,Sparkles} from "lucide-react"
+import {LoaderCircle,MessageCircle,RotateCcw,Send} from "lucide-react"
 import {useParams,useLocation} from "react-router-dom"
 import {useAssistantChat} from "../hooks/useAssistantChat"
 import {formatAssistantMessage,shouldShowAssistantReferences} from "../formatMessage"
