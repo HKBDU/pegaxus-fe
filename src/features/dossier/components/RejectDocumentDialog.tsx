@@ -161,8 +161,8 @@ export function RejectDocumentDialog({
                 control={form.control}
                 name="errorCategory"
                 render={({ field }) => (
-                  <FormItem className="sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-x-5">
-                    <FormLabel className="sm:pt-2">
+                  <FormItem className="items-start sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-x-5">
+                    <FormLabel className="self-start leading-5 sm:min-h-9">
                       Error Category <span className="text-destructive">*</span>
                     </FormLabel>
                     <div className="min-w-0 space-y-2">
@@ -175,7 +175,7 @@ export function RejectDocumentDialog({
                           <SelectTrigger
                             ref={field.ref}
                             onBlur={field.onBlur}
-                            className="w-full rounded-[2px]"
+                            className="h-9 w-full rounded-[2px]"
                           >
                             <SelectValue />
                           </SelectTrigger>
@@ -200,8 +200,8 @@ export function RejectDocumentDialog({
                 control={form.control}
                 name="rejectionNote"
                 render={({ field }) => (
-                  <FormItem className="sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-x-5">
-                    <FormLabel className="leading-relaxed sm:pt-2">
+                  <FormItem className="items-start sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-x-5">
+                    <FormLabel className="self-start leading-5 sm:min-h-9">
                       Instructions for Customer{" "}
                       <span className="text-destructive">*</span>
                     </FormLabel>
@@ -227,9 +227,10 @@ export function RejectDocumentDialog({
                 control={form.control}
                 name="revisionDeadline"
                 render={({ field }) => (
-                  <FormItem className="sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-x-5">
-                    <FormLabel className="sm:pt-2">
-                      Revision Deadline <span className="text-destructive">*</span>
+                  <FormItem className="items-start sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-x-5">
+                    <FormLabel className="self-start leading-5 sm:min-h-9">
+                      Revision Deadline{" "}
+                      <span className="text-destructive">*</span>
                     </FormLabel>
                     <div className="min-w-0 space-y-2">
                       <FormControl>
@@ -241,20 +242,21 @@ export function RejectDocumentDialog({
                           className="rounded-[2px]"
                         />
                       </FormControl>
-                      {field.value ? (
+                      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                        <FormDescription className="text-xs">
+                          Required deadline, today or later (UTC).
+                        </FormDescription>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
+                          disabled={!field.value}
                           onClick={() => field.onChange("")}
-                          className="h-auto px-0 py-1 text-xs"
+                          className={`h-auto px-0 py-1 text-xs ${field.value ? "" : "invisible"}`}
                         >
                           Clear deadline
                         </Button>
-                      ) : null}
-                      <FormDescription className="text-xs">
-                        Required deadline, today or later (UTC).
-                      </FormDescription>
+                      </div>
                       <DossierFormMessage />
                     </div>
                   </FormItem>
@@ -264,9 +266,10 @@ export function RejectDocumentDialog({
                 control={form.control}
                 name="requirementStatus"
                 render={({ field }) => (
-                  <FormItem className="sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-x-5">
-                    <FormLabel className="sm:pt-2">
-                      Requirement Status <span className="text-destructive">*</span>
+                  <FormItem className="items-start sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-x-5">
+                    <FormLabel className="self-start leading-5 sm:min-h-9">
+                      Requirement Status{" "}
+                      <span className="text-destructive">*</span>
                     </FormLabel>
                     <div className="min-w-0 space-y-2">
                       <Select
@@ -275,7 +278,7 @@ export function RejectDocumentDialog({
                         disabled={pending || !canReject}
                       >
                         <FormControl>
-                          <SelectTrigger className="w-full rounded-[2px]">
+                          <SelectTrigger className="h-9 w-full rounded-[2px]">
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>

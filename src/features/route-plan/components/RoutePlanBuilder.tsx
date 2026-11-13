@@ -2623,7 +2623,7 @@ export function RoutePlanBuilder({
               setStep((value) => Math.max(0, value - 1) as WizardStep)
             }
           >
-            <ArrowLeft className="mr-1 size-4" /> Back
+            <ArrowLeft className="mr-1 size-4" /> Previous step
           </Button>
           <Button
             className="rounded-[2px]"

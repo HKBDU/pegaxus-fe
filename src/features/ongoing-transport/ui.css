@@ -13,6 +13,35 @@
   padding: 0.75rem;
 }
 
+.transport-overview .overview-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.transport-overview .overview-summary > .overview-cell {
+  padding: 1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.transport-overview .overview-summary > .overview-cell + .overview-cell {
+  border-top: 1px solid #e2e8f0;
+}
+
+@media (min-width: 1024px) {
+  .transport-overview .overview-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .transport-overview .overview-summary > .overview-cell + .overview-cell {
+    border-top: 0;
+    border-left: 1px solid #e2e8f0;
+  }
+}
+
 .route-tracking .route-timeline {
   position: relative;
   margin-left: 0.75rem;

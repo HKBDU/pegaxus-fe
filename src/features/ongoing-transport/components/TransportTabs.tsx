@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import type { TransportAudience } from "../types";
 import {
@@ -20,11 +21,13 @@ export function TransportTabs({
   bookingId,
   audience,
   canViewGpsTab,
+  action,
 }: {
   transportId: string;
   bookingId?: string;
   audience: TransportAudience;
   canViewGpsTab: boolean;
+  action?: ReactNode;
 }) {
   const location = useLocation();
   const tabs = [
@@ -59,24 +62,27 @@ export function TransportTabs({
     },
   ];
   return (
-    <nav
-      aria-label="Transport views"
-      className="overflow-x-auto border-b border-slate-200 px-1"
-    >
-      <div className="flex w-max min-w-full items-stretch gap-5">
-        {tabs.map((tab) => (
-          <NavLink
-            key={tab.to}
-            end={tab.end}
-            to={tab.to}
-            state={location.state}
-            preventScrollReset={audience === "crew"}
-            className={tabClass}
-          >
-            {tab.label}
-          </NavLink>
-        ))}
-      </div>
-    </nav>
+    <div className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-200">
+      <nav
+        aria-label="Transport views"
+        className="min-w-0 flex-1 overflow-x-auto px-1"
+      >
+        <div className="flex w-max min-w-full items-stretch gap-5">
+          {tabs.map((tab) => (
+            <NavLink
+              key={tab.to}
+              end={tab.end}
+              to={tab.to}
+              state={location.state}
+              preventScrollReset={audience === "crew"}
+              className={tabClass}
+            >
+              {tab.label}
+            </NavLink>
+          ))}
+        </div>
+      </nav>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </div>
   );
 }

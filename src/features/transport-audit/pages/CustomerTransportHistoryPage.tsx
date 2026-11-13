@@ -30,6 +30,7 @@ export default function CustomerTransportHistoryPage() {
         <PageHeader
           title="TRANSPORT HISTORY"
           backHref={`/bookings/${encodeURIComponent(bookingId)}`}
+          backLabel="Back to Booking"
         />
         <CustomerTransportAuditSummary
           bookingId={bookingId}

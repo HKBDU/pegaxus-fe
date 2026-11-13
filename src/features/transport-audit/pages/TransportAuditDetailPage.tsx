@@ -84,7 +84,11 @@ export default function TransportAuditDetailPage() {
   return (
     <main className="min-h-screen bg-[#f4f2ed] px-3 py-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1280px] space-y-3.5">
-        <PageHeader title="AUDIT DOSSIER" backHref={backHref} />
+        <PageHeader
+          title="AUDIT DOSSIER"
+          backHref={backHref}
+          backLabel="Back to Transport Archive"
+        />
         <AuditOverviewHeader
           audit={audit}
           onExport={() => setExportOpen(true)}

@@ -191,7 +191,7 @@ export function getApprovedBookingActions(
     const dossierAction: ApprovedBookingAction | undefined = dossier
       ? {
           kind: "viewComplianceDossier",
-          label: "View Compliance Dossier",
+          label: "Open dossier",
           targetId: dossier.complianceDossierId,
           href: dossierDetail(
             dossier.complianceDossierId,
@@ -208,21 +208,10 @@ export function getApprovedBookingActions(
             href: `${ROLE_ROUTES.complianceDossiers}/new/${encodeURIComponent(booking.bookingId)}`,
           }
         : undefined;
-    const requirementsAction: ApprovedBookingAction[] = dossier
-      ? [
-          {
-            kind: "viewDossierRequirements",
-            label: "View Requirements",
-            targetId: dossier.complianceDossierId,
-            href: `${ROLE_ROUTES.complianceDossiers}/${encodeURIComponent(dossier.complianceDossierId)}/requirements`,
-          },
-        ]
-      : [];
     return [
       ...(dossierAction && (dossier || plan?.status === "APPROVED")
         ? [dossierAction]
         : []),
-      ...requirementsAction,
       ...viewRoute,
     ];
   }

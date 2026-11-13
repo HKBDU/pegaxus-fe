@@ -191,12 +191,6 @@ export function TransportWorkspace({
               ),
             )}
           </div>
-          {booking.complianceDossier && (
-            <p className="text-xs text-slate-500">
-              Open the dossier to view and manage its requirements using the
-              existing Requirements tab.
-            </p>
-          )}
           {!legalActions.length && (
             <p className="text-xs text-slate-500">
               Legal preparation requires an approved plan, Phase 1 assignment
