@@ -34,10 +34,11 @@ const date = (value: string) => (
   </time>
 );
 
+// The web's panel: warm border, white, 14px semibold heading over a hairline (the 20px upper-case title read like a phone).
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="min-w-0 space-y-3 rounded-xs border border-border bg-card p-4 sm:p-5">
-      <h2 className="m-0 font-heading text-xl uppercase tracking-wide">
+    <section className="min-w-0 space-y-3 rounded-xs border border-[#e5e2d9] bg-white p-4">
+      <h2 className="m-0 border-b border-[#eceae3] pb-2 text-sm font-semibold text-slate-800">
         {title}
       </h2>
       {children}
@@ -63,11 +64,14 @@ export function EmergencyCostDetailSections({
   evidence,
   audience,
   mock,
+  showAmounts = true,
 }: {
   request: EmergencyCostDetail;
   evidence: readonly CostEvidencePreview[];
   audience: EmergencyCostAudience;
   mock: boolean;
+  /** The detail page shows the amounts in its summary card instead. */
+  showAmounts?: boolean;
 }) {
   const incident = request.incidentSummary;
   const health = request.horseHealthSummary;
@@ -75,6 +79,7 @@ export function EmergencyCostDetailSections({
   const decision = request.decision;
   return (
     <>
+      {showAmounts ? (
       <section
         className="grid min-w-0 gap-3 rounded-xs border border-primary/25 bg-primary/5 p-4 sm:grid-cols-2 sm:p-5"
         aria-label="Request amounts"
@@ -100,7 +105,10 @@ export function EmergencyCostDetailSections({
           </p>
         </div>
       </section>
-      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
+      ) : null}
+      {/* Container query: the sections may sit in a narrow column (page side layout or the incident page). */}
+      <div className="@container min-w-0">
+      <div className="grid min-w-0 items-start gap-4 @3xl:grid-cols-2">
         <Section title="Request information">
           <Details
             rows={[
@@ -236,6 +244,7 @@ export function EmergencyCostDetailSections({
             </p>
           ) : null}
         </Section>
+      </div>
       </div>
       <Section title="Other cost requests for this incident">
         {request.otherRequests.length ? (
