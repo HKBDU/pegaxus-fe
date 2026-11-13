@@ -44,6 +44,8 @@ export interface FileUploaderProps {
   hint?: string
   errorMessages?: Record<string, string>
   className?: string
+  /** Keeps uploaded files listed, with a thumbnail for images, instead of hiding them a few seconds after upload. */
+  keepUploaded?: boolean
 }
 
 export type FileRejection = { file: File; reason: string }
