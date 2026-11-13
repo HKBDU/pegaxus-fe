@@ -1192,21 +1192,41 @@ export function RoutePlanBuilder({
     }
   }
 
-  function getSegmentContinuityError(routeList: MapRoute[]) {
-    for (let index = 0; index < routeList.length; index += 1) {
-      const route = routeList[index];
-      if (!route.fromLocation?.id || !route.toLocation?.id) {
-        return `Segment ${index + 1} has an unresolved origin or destination.`;
-      }
-      if (
-        index > 0 &&
-        String(route.fromLocation.id) !==
-          String(routeList[index - 1].toLocation?.id)
-      ) {
-        return `Segment ${index + 1} does not connect to segment ${index}. Choose a route with a matching endpoint.`;
-      }
-    }
-    return null;
+  function joins(before?: MapRoute, after?: MapRoute) {
+    const end = before?.toLocation?.id;
+    const start = after?.fromLocation?.id;
+    return end != null && start != null && String(end) === String(start);
+  }
+
+  // Joints between consecutive segments that do not meet. A deleted segment leaves one, and save stays blocked until it is filled.
+  function countBrokenJoints(routeList: MapRoute[]) {
+    return routeList.filter((route, index) => index > 0 && !joins(routeList[index - 1], route)).length;
+  }
+
+  /**
+   * Where a new route goes. A route that starts where a segment ends (or ends where one starts) is placed at that open
+   * joint, so the coordinator can delete a blocked segment in the middle and draw its replacement in the same place.
+   */
+  function findInsertionPoint(route: MapRoute, routeList: MapRoute[]): number | null {
+    if (!routeList.length) return 0;
+    const last = routeList.length;
+    const isOpenAt = (point: number) =>
+      point === 0
+        ? String(routeList[0].fromLocation?.id) !== String(plan.from?.id)
+        : point === last
+          ? String(routeList[last - 1].toLocation?.id) !== String(plan.to?.id)
+          : !joins(routeList[point - 1], routeList[point]);
+    const startsAfter = (point: number) =>
+      point === 0 ? String(route.fromLocation?.id) === String(plan.from?.id) : joins(routeList[point - 1], route);
+    const endsBefore = (point: number) =>
+      point === last ? String(route.toLocation?.id) === String(plan.to?.id) : joins(route, routeList[point]);
+    const openPoints = Array.from({ length: last + 1 }, (_, point) => point).filter(isOpenAt);
+    return (
+      openPoints.find((point) => startsAfter(point) && endsBefore(point)) ??
+      openPoints.find(startsAfter) ??
+      openPoints.find(endsBefore) ??
+      null
+    );
   }
 
   function addSegment(route: MapRoute, insertIndex?: number) {
@@ -1216,18 +1236,22 @@ export function RoutePlanBuilder({
       );
       return;
     }
+    if (!route.fromLocation?.id || !route.toLocation?.id) {
+      const message = "This route has an unresolved origin or destination.";
+      setBuildMessage(message);
+      toast.error("Route was not added", { description: message });
+      return;
+    }
+    const currentRoutes = segments.map((segment) => segment.route);
     const insertionPoint =
-      insertIndex !== undefined &&
-      insertIndex >= 0 &&
-      insertIndex < segments.length
+      insertIndex !== undefined && insertIndex >= 0 && insertIndex < segments.length
         ? insertIndex + 1
-        : segments.length;
-    const candidateRoutes = [...segments.map((segment) => segment.route)];
-    candidateRoutes.splice(insertionPoint, 0, route);
-    const continuityError = getSegmentContinuityError(candidateRoutes);
-    if (continuityError) {
-      setBuildMessage(continuityError);
-      toast.error("Route was not added", { description: continuityError });
+        : findInsertionPoint(route, currentRoutes);
+    if (insertionPoint === null) {
+      const message =
+        "This route does not connect to any open point. Start it where a segment ends, or end it where the next segment starts.";
+      setBuildMessage(message);
+      toast.error("Route was not added", { description: message });
       return;
     }
     setBuildMessage(null);
@@ -1246,15 +1270,7 @@ export function RoutePlanBuilder({
 
     setSegments((current) => {
       const updated = [...current];
-      if (
-        insertIndex !== undefined &&
-        insertIndex >= 0 &&
-        insertIndex < updated.length
-      ) {
-        updated.splice(insertIndex + 1, 0, newSegment);
-      } else {
-        updated.push(newSegment);
-      }
+      updated.splice(Math.min(insertionPoint, updated.length), 0, newSegment);
       return formatDraftSegments(updated, plan.departureAt);
     });
   }
@@ -1264,10 +1280,11 @@ export function RoutePlanBuilder({
     const updatedRoutes = segments.map((segment) => segment.route);
     const [movedRoute] = updatedRoutes.splice(fromIndex, 1);
     updatedRoutes.splice(toIndex, 0, movedRoute);
-    const continuityError = getSegmentContinuityError(updatedRoutes);
-    if (continuityError) {
-      setBuildMessage(continuityError);
-      toast.error("Segment was not moved", { description: continuityError });
+    // An existing gap does not block a move; only a move that breaks another joint does.
+    if (countBrokenJoints(updatedRoutes) > countBrokenJoints(segments.map((segment) => segment.route))) {
+      const message = "Moving this segment would disconnect it from its neighbours.";
+      setBuildMessage(message);
+      toast.error("Segment was not moved", { description: message });
       return;
     }
     setBuildMessage(null);
