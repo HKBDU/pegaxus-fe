@@ -482,6 +482,10 @@ export function RoutePlanBuilder({
     [blockedRouteIds],
   );
   const blockedCount = segments.filter(isBlockedSegment).length;
+  // The Transport Specialist would only block the same segments again, so they must be changed before a new submit.
+  const blockedSubmitMessage = blockedCount
+    ? `Change the ${blockedCount === 1 ? "segment" : `${blockedCount} segments`} blocked by the Transport Specialist before submitting for legal review.`
+    : null;
 
   const selectedRoutes = useMemo(() => {
     const withBlock = (segment: DraftSegment) =>
@@ -1618,6 +1622,11 @@ export function RoutePlanBuilder({
       setSaveError(continuity.message ?? "Route segments are not continuous.");
       return;
     }
+    if (action === "SUBMIT_FOR_LEGAL_REVIEW" && blockedSubmitMessage) {
+      setSaveError(blockedSubmitMessage);
+      setStep(0);
+      return;
+    }
     if (action === "SUBMIT_FOR_LEGAL_REVIEW" && bcpRequirement) {
       setSaveError(bcpRequirement);
       setStep(2);
@@ -2651,7 +2660,8 @@ export function RoutePlanBuilder({
                     <Button
                       variant="outline"
                       className="rounded-[2px]"
-                      disabled={isSaving}
+                      disabled={isSaving || Boolean(blockedSubmitMessage)}
+                      title={blockedSubmitMessage ?? undefined}
                       onClick={() => void save("SUBMIT_FOR_LEGAL_REVIEW")}
                     >
                       {isSaving ? (
@@ -2665,6 +2675,9 @@ export function RoutePlanBuilder({
                     </Button>
                   )}
                 </div>
+                {!isReturn && blockedSubmitMessage ? (
+                  <p className="m-0 text-xs text-red-700">{blockedSubmitMessage} Save Draft is still available.</p>
+                ) : null}
               </div>
             </div>
           )}
