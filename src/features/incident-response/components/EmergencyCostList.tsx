@@ -140,7 +140,7 @@ function EmergencyCostListContent({
       )}
       {!embedded ? (
         <div>
-          <dl className="m-0 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Requests by status">
+          <dl className="m-0 grid grid-cols-4 gap-1.5 sm:gap-2" aria-label="Requests by status">
             {emergencyCostStatuses.map((status) => {
               const count =
                 page?.counts?.[
@@ -151,14 +151,15 @@ function EmergencyCostListContent({
                 <div
                   key={status}
                   className={cn(
-                    "flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-[2px] border border-l-4 border-[#e5e2d9] bg-white px-3 py-2.5 shadow-[0_1px_2px_rgb(23_25_28/0.035)]",
+                    "flex min-w-0 flex-col items-start gap-1 rounded-[2px] border border-l-4 border-[#e5e2d9] bg-white px-2 py-2 shadow-[0_1px_2px_rgb(23_25_28/0.035)] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 sm:px-3 sm:py-2.5",
                     summaryAccent[EMERGENCY_COST_STATUS_OPTIONS[status].tone],
                   )}
                 >
-                  <dt className="text-xs font-semibold">
+                  {/* About 76px wide on phones: the badge may not overflow its tile. */}
+                  <dt className="min-w-0 max-w-full overflow-hidden text-xs font-semibold [&>*]:max-w-full [&>*]:truncate">
                     <CostStatusBadge status={status} />
                   </dt>
-                  <dd className="m-0 text-xl font-semibold tabular-nums text-slate-900">
+                  <dd className="m-0 text-lg leading-none font-semibold tabular-nums text-slate-900 sm:text-xl">
                     {count == null ? (
                       <span aria-label="Count unavailable">—</span>
                     ) : (

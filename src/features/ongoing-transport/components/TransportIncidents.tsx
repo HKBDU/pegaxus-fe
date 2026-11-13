@@ -1,5 +1,6 @@
+import type { KeyboardEvent, MouseEvent } from "react";
 import { ArrowRight, HeartPulse, Route, TriangleAlert, Truck } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -67,10 +68,38 @@ export function TransportIncidents({
    */
   detailHref?: (incident: Incident) => string | null;
 }) {
+  const navigate = useNavigate();
   const showSeverity = incidents.some(
     (incident) => incident.severity !== undefined,
   );
   const hasLinks = Boolean(detailHref) && incidents.some((incident) => detailHref?.(incident));
+  /**
+   * The whole row (or phone card) opens the incident, not only its button. Clicks on the row's own links and buttons are
+   * left to them, so the button does not navigate twice. Enter and Space open it from the keyboard.
+   */
+  const rowProps = (incident: Incident) => {
+    const href = detailHref?.(incident);
+    if (!href) return {};
+    const open = () => navigate(href);
+    return {
+      role: "link" as const,
+      tabIndex: 0,
+      "aria-label": `Open incident ${incident.incidentCode}`,
+      className:
+        "cursor-pointer transition-colors hover:bg-orange-50/40 focus-visible:bg-orange-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40",
+      onClick: (event: MouseEvent<HTMLElement>) => {
+        if ((event.target as HTMLElement).closest("a, button")) return;
+        open();
+      },
+      onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open();
+        }
+      },
+    };
+  };
   if (incidents.length === 0) return null;
   return (
     <section
@@ -105,7 +134,8 @@ export function TransportIncidents({
             {incidents.map((incident) => (
               <TableRow
                 key={incident.incidentReportId}
-                className="hover:bg-orange-50/30"
+                {...rowProps(incident)}
+                className={`hover:bg-orange-50/30 ${rowProps(incident).className ?? ""}`}
               >
                 <TableCell>
                   <IncidentCategory incident={incident} />
@@ -150,7 +180,11 @@ export function TransportIncidents({
       </div>
       <ul className="m-0 list-none divide-y divide-slate-100 p-0 md:hidden">
         {incidents.map((incident) => (
-          <li key={incident.incidentReportId} className="space-y-2 px-4 py-3">
+          <li
+            key={incident.incidentReportId}
+            {...rowProps(incident)}
+            className={`space-y-2 px-4 py-3 ${rowProps(incident).className ?? ""}`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <IncidentCategory incident={incident} />
               <IncidentStatus status={incident.status} />

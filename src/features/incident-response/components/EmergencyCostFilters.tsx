@@ -1,4 +1,5 @@
-import { Search } from "lucide-react";
+import { useId, useState } from "react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { DatePicker } from "@/shared/components/ui/date-picker";
@@ -36,7 +37,7 @@ export type EmergencyCostFilterPatch = Partial<
   >
 >;
 const controlClass =
-  "h-11 rounded-[2px] border-input bg-background font-sans text-xs font-normal shadow-none focus-visible:border-primary focus-visible:ring-primary/20 sm:h-8";
+  "h-10 rounded-[2px] border-input bg-background font-sans text-xs font-normal shadow-none focus-visible:border-primary focus-visible:ring-primary/20 sm:h-8";
 
 export function EmergencyCostFilters({
   params,
@@ -49,6 +50,16 @@ export function EmergencyCostFilters({
 }) {
   const selected = params.status?.split(",") ?? [];
   const all = selected.length === emergencyCostStatuses.length;
+  // Narrow containers (phones) show only the search and a "Filters" toggle; the five controls took four rows there.
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const activeFilters = [
+    !all && selected.length > 0,
+    Boolean(params.category),
+    Boolean(params.fromDate),
+    Boolean(params.toDate),
+    Boolean(params.sortBy) && params.sortBy !== "requestedAt:desc",
+  ].filter(Boolean).length;
   return (
     <div className="space-y-2">
       <div
@@ -68,20 +79,44 @@ export function EmergencyCostFilters({
           aria-label="Emergency cost filters"
           className="grid w-full min-w-0 grid-cols-2 items-center gap-2 @2xl:grid-cols-5 @6xl:grid-cols-[minmax(14rem,1fr)_repeat(5,minmax(0,9.5rem))]"
         >
-          <div className="relative col-span-2 min-w-0 @2xl:col-span-5 @6xl:col-span-1">
-            <Search
-              aria-hidden="true"
-              className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              type="search"
-              aria-label="Search request or incident code"
-              placeholder="Search request / incident code..."
-              value={params.keyword ?? ""}
-              onChange={(event) => onChange({ keyword: event.target.value })}
-              className={`${controlClass} pl-8`}
-            />
+          <div className="col-span-2 flex min-w-0 gap-2 @2xl:col-span-5 @6xl:col-span-1">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                type="search"
+                aria-label="Search request or incident code"
+                placeholder="Search request / incident code..."
+                value={params.keyword ?? ""}
+                onChange={(event) => onChange({ keyword: event.target.value })}
+                className={`${controlClass} pl-8`}
+              />
+            </div>
+            {/* Only in a narrow container: opens the other filters; the badge counts the ones in use. */}
+            <Button
+              type="button"
+              variant="outline"
+              aria-expanded={open}
+              aria-controls={panelId}
+              onClick={() => setOpen((value) => !value)}
+              className={`${controlClass} shrink-0 gap-1.5 px-3 @2xl:hidden`}
+            >
+              <SlidersHorizontal aria-hidden="true" className="size-3.5" />
+              Filters
+              {activeFilters ? (
+                <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 font-semibold text-gray-900">
+                  {activeFilters}
+                </span>
+              ) : null}
+            </Button>
           </div>
+          {/* Collapsed under 672px unless opened; from 672px its controls join the parent grid (display: contents). */}
+          <div
+            id={panelId}
+            className={`col-span-2 grid grid-cols-2 gap-2 @2xl:contents ${open ? "" : "hidden"}`}
+          >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -182,7 +217,7 @@ export function EmergencyCostFilters({
             />
           </div>
           {/* Alone on its row in a narrow container, one even cell from 672px. */}
-          <div className="col-span-2 min-w-0 @2xl:col-span-1 [&>button]:h-11 [&>button]:w-full [&>button]:border-input [&>button]:bg-background [&>button]:text-foreground sm:[&>button]:h-8">
+          <div className="col-span-2 min-w-0 @2xl:col-span-1 [&>button]:h-10 [&>button]:w-full [&>button]:border-input [&>button]:bg-background [&>button]:text-foreground sm:[&>button]:h-8">
             <DataTableRadioFilter
               title="Newest requests"
               ariaLabel="Sort emergency cost requests"
@@ -197,6 +232,7 @@ export function EmergencyCostFilters({
                 onChange({ sortBy: emergencyCostSortSchema.parse(value) })
               }
             />
+          </div>
           </div>
         </div>
       </div>
