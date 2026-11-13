@@ -22,7 +22,6 @@ import { normalizeRole } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
 import { LoadingState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
-import { TablePagination } from "@/shared/components/common"
 import ImageViewer from "@/shared/components/file-viewer/ImageViewer"
 import { PhotoCaptureSection } from "@/shared/components/PhotoCaptureSection"
 import { Button } from "@/shared/components/ui/button"
@@ -36,6 +35,9 @@ import { HEALTH_STATUS_LABELS, HEALTH_STATUSES, HORSE_HEALTH_ROUTES, LOG_TYPES }
 import { healthErrorMessage } from "../errors"
 import { useAddHealthLogPhotos, useHealthLogDetail, useHealthLogHistory, useHorseHealthOverview } from "../hooks/useHorseHealth"
 import type { LogType } from "../types"
+
+/** The BE maximum page size for the history (ListRequestValidator: 1–100). */
+const HISTORY_PAGE_SIZE = 100
 
 // Compact filter chips: 32px, xs text, as wide as their value instead of a full-width labelled field.
 const filterTrigger =
@@ -113,16 +115,15 @@ export default function HealthHistoryPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [logType, setLogType] = useState("")
   const [healthStatus, setHealthStatus] = useState("")
-  const [pageIndex, setPageIndex] = useState(0)
-  const [pageSize, setPageSize] = useState(20)
   const overview = useHorseHealthOverview(transportId)
-  const history = useHealthLogHistory(transportId, horseId, { logType: logType ? logType as LogType : undefined, healthStatus: healthStatus === "ABNORMAL" ? "OBSERVATION_REQUIRED,AT_RISK,CRITICAL" : healthStatus || undefined, pageIndex, pageSize })
+  // No pagination: one page of the BE maximum, newest first, which covers a trip's checks for one horse.
+  const history = useHealthLogHistory(transportId, horseId, { logType: logType ? logType as LogType : undefined, healthStatus: healthStatus === "ABNORMAL" ? "OBSERVATION_REQUIRED,AT_RISK,CRITICAL" : healthStatus || undefined, pageIndex: 0, pageSize: HISTORY_PAGE_SIZE })
   const selectedLogId = searchParams.get("logId")
   const detail = useHealthLogDetail(selectedLogId)
   const horse = overview.data?.horses.find((item) => item.horse.horseId === horseId)?.horse ?? history.data?.horse
   const rows = history.data?.items ?? []
 
-  const meta = history.data ? { totalItems: history.data.totalItems, totalPages: history.data.totalPages, itemsPerPage: history.data.pageSize, currentPage: history.data.pageIndex + 1, hasPreviousPage: history.data.pageIndex > 0, hasNextPage: history.data.pageIndex + 1 < history.data.totalPages } : { totalItems: 0, totalPages: 0, itemsPerPage: pageSize, currentPage: 1, hasPreviousPage: false, hasNextPage: false }
+  const hiddenCount = Math.max(0, (history.data?.totalItems ?? 0) - rows.length)
   const closeDetail = () => { const next = new URLSearchParams(searchParams); next.delete("logId"); setSearchParams(next) }
   const log = detail.data
 
@@ -142,7 +143,7 @@ export default function HealthHistoryPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={logType || "ALL"} onValueChange={(value) => { setLogType(value === "ALL" ? "" : value); setPageIndex(0) }}>
+          <Select value={logType || "ALL"} onValueChange={(value) => { setLogType(value === "ALL" ? "" : value) }}>
             <SelectTrigger size="sm" aria-label="Filter by log type" className={filterTrigger}>
               <ListFilter aria-hidden="true" className="size-3.5 text-slate-400" />
               <SelectValue />
@@ -152,7 +153,7 @@ export default function HealthHistoryPage() {
               {LOG_TYPES.map((value) => <SelectItem key={value} value={value}>{humanize(value)}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={healthStatus || "ALL"} onValueChange={(value) => { setHealthStatus(value === "ALL" ? "" : value); setPageIndex(0) }}>
+          <Select value={healthStatus || "ALL"} onValueChange={(value) => { setHealthStatus(value === "ALL" ? "" : value) }}>
             <SelectTrigger size="sm" aria-label="Filter by health status" className={filterTrigger}>
               <HeartPulse aria-hidden="true" className="size-3.5 text-slate-400" />
               <SelectValue />
@@ -210,8 +211,15 @@ export default function HealthHistoryPage() {
               <p className="m-0 text-xs text-slate-500">No health checks found for these filters.</p>
             </div>
           )}
-          <TablePagination meta={meta} onPageChange={(page) => setPageIndex(page - 1)} onPageSizeChange={(size) => { setPageSize(size); setPageIndex(0) }} />
-          <p className="m-0 text-[11px] text-slate-500">Select a check to view all of its details.</p>
+          {/* Never hide checks silently: say so if a horse has more than one page of them. */}
+          {hiddenCount > 0 && (
+            <p className="m-0 rounded-xs border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+              Showing the latest {rows.length} of {history.data?.totalItems} checks. Use the filters to narrow the list.
+            </p>
+          )}
+          {rows.length > 0 && (
+            <p className="m-0 text-[11px] text-slate-500">Select a check to view all of its details.</p>
+          )}
         </>
       )}
 
