@@ -76,6 +76,12 @@ describe("canSpecialistReviewRoute", () => {
     expect(canSpecialistReviewRoute(route("PRIMARY"), specialistContext({ dossierStatus: "APPROVED" }))).toBe(false);
     expect(canSpecialistReviewRoute(route("PRIMARY"), { ...specialistContext(), principal: coordinator })).toBe(false);
   });
+
+  it("allows a submitted BACKUP once the main dossier moved past DRAFT", () => {
+    for (const dossierStatus of ["IN_PREPARATION", "APPROVED"]) {
+      expect(canSpecialistReviewRoute(route("BACKUP", { legalReviewRequested: true }), specialistContext({ dossierStatus }))).toBe(true);
+    }
+  });
 });
 
 describe("primary and backup route presence", () => {

@@ -1,6 +1,7 @@
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 import type { RouteGeometry } from "@/shared/utils/map/geojson";
 import type { RouteLocation, RoutePlanDetail } from "../types";
+import { currentBlockedSegments } from "@/features/route-plan/legal-blocks";
 
 function coordinate(value: unknown, limit: number) {
   if (typeof value !== "number" && (typeof value !== "string" || !value.trim()))
@@ -75,10 +76,16 @@ export function verifiedRouteGeometry(input: unknown): RouteGeometry | null {
   return null;
 }
 
+/** Segments the latest legal review blocked, until the coordinator saves new segments over them. */
+export function blockedSegmentNumbers(plan: Pick<RoutePlanDetail, "legalReview" | "updatedAt">): Set<number> {
+  return new Set(currentBlockedSegments(plan));
+}
+
 export function toRouteMapData(
   plan: RoutePlanDetail,
   suppliedGeometry?: unknown,
 ) {
+  const blocked = blockedSegmentNumbers(plan);
   // RP3 currently has no saved geometry field. Build segment routes from the
   // verified endpoints so MapViewer can resolve and render their line geometry.
   const geometry = verifiedRouteGeometry(suppliedGeometry);
@@ -105,6 +112,8 @@ export function toRouteMapData(
           durationMinutes: segment.route.estimatedDurationMinutes,
           routePlanType: segment.routeType,
           isOutsourced: segment.isOutsourced,
+          // Drawn red on the map so the coordinator finds the segment the legal review blocked.
+          blocked: blocked.has(segment.sequenceNo),
         },
       ];
     });

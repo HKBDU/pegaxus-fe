@@ -257,15 +257,7 @@ export interface OutsourceSegmentRequest {
   note?: string;
 }
 
-export interface OutsourceSegmentResult {
-  routePlanId: string;
-  status: RoutePlanStatus;
-  legalReviewRequested: boolean;
-  legalReviewRequestedAt: string | null;
-  segment: RouteSegment;
-  isPersonnelComplete: boolean;
-  updatedAt: string;
-}
+export type { OutsourceSegmentResult } from "./schemas";
 
 export type ChangeVehiclesMode = "before-departure" | "mid-trip";
 

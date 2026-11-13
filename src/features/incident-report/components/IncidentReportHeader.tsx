@@ -6,6 +6,7 @@ export interface IncidentReportHeaderProps {
   latitude: number | string;
   locationDescription: string;
   backHref?: string;
+  backLabel?: string;
 }
 
 /** Compact, mobile-first context block shown at the top of an incident form. */
@@ -13,13 +14,15 @@ export function IncidentReportHeader({
   longitude,
   latitude,
   locationDescription,
-  backHref = "/crew",
+  backHref = "/crew/transports",
+  backLabel = "Back to Assigned Transports",
 }: IncidentReportHeaderProps) {
   return (
     <header className="space-y-4">
       <PageHeader
         title="Incident Report"
         backHref={backHref}
+        backLabel={backLabel}
         className="gap-0 [&_h1]:!my-0 [&_h1]:text-[32px] [&_h1]:leading-9 [&_h1]:tracking-[-0.8px]"
       />
 

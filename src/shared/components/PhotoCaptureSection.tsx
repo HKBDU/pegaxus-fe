@@ -12,6 +12,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
 import ImageViewer from "@/shared/components/file-viewer/ImageViewer"
 import { Button } from "@/shared/components/ui/button"
+import { Input } from "@/shared/components/ui/input"
 import { formatFileSize } from "@/shared/components/file-uploader/utils"
 import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
 import {
@@ -577,21 +578,25 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
                   width="100%"
                 />
               </div>
-              <input
-                value={captions[index] ?? ""}
-                onChange={(event) =>
-                  onCaptionsChange?.(
-                    files.map((_, current) =>
-                      current === index
-                        ? event.target.value
-                        : (captions[current] ?? ""),
-                    ),
-                  )
-                }
-                placeholder="Caption (optional)"
-                aria-label={`Caption for ${file.name}`}
-                className="min-h-12 w-full min-w-0 rounded-[2px] border border-slate-200 px-3 text-base outline-none focus:border-[#f39200]"
-              />
+              {/* Labelled shared input, like the web's other fields (it was a bare 48px box with only a placeholder). */}
+              <label className="block text-xs font-medium text-slate-600">
+                Caption <span className="font-normal text-slate-400">(optional)</span>
+                <Input
+                  value={captions[index] ?? ""}
+                  onChange={(event) =>
+                    onCaptionsChange?.(
+                      files.map((_, current) =>
+                        current === index
+                          ? event.target.value
+                          : (captions[current] ?? ""),
+                      ),
+                    )
+                  }
+                  placeholder="What this photo shows"
+                  aria-label={`Caption for ${file.name}`}
+                  className="mt-1 h-10 bg-white sm:h-9"
+                />
+              </label>
               {(presignedEntity ||
                 uploadStatuses[index] === "processing" ||
                 uploadStatuses[index] === "error") && (

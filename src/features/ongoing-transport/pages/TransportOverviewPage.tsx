@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { ChartNoAxesCombined, Navigation, TriangleAlert } from "lucide-react";
+import { Navigation, TriangleAlert } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
 import { canAccess } from "@/features/auth/access-control";
 import { driverLocationSharingPath } from "@/features/location-sharing/navigation";
@@ -18,6 +18,7 @@ import { useTransportOverview } from "../hooks/useTransportOverview";
 import { formatTransportDate, formatTransportTime } from "../format";
 import { getOngoingTransportError } from "../services";
 import type { TransportAudience } from "../types";
+import { incidentRoutes } from "@/features/incident-management/constants";
 
 export default function TransportOverviewPage({
   audience,
@@ -74,9 +75,8 @@ export default function TransportOverviewPage({
             className="mt-0.5 size-4 shrink-0"
           />
           <span>
-            Showing cached data from{" "}
-            {formatTransportTime(overview.serverTime)}. Automatically reconnecting
-            when network is available…
+            Showing cached data from {formatTransportTime(overview.serverTime)}.
+            Automatically reconnecting when network is available…
           </span>
         </div>
       ) : null}
@@ -122,27 +122,32 @@ export default function TransportOverviewPage({
             </span>
           </div>
           <TransportJourneySummary overview={overview} />
-          {audience === "admin" && canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) ? (
-            <div className="flex justify-end">
-              <Button asChild variant="outline" className="rounded-xs">
-                <Link to={`/admin/transports/${encodeURIComponent(overview.transport.transportId)}/financial-summary`}>
-                  <ChartNoAxesCombined aria-hidden="true" className="size-4" />
-                  Financial summary
-                </Link>
-              </Button>
-            </div>
-          ) : null}
-          <div className="grid items-start gap-3 lg:grid-cols-3">
+          <section
+            className="overview-panel overview-summary"
+            aria-label="Transport essentials"
+          >
             <TransportJourneyInformation overview={overview} />
             <TransportHorseHealthSummary
               summary={overview.horseHealthSummary}
             />
             <TransportStaff segment={overview.currentSegment} />
-          </div>
+          </section>
           <TransportDossiers dossiers={overview.complianceDossiers} />
           {audience !== "customer" &&
           !canAccess(principal, { anyRole: ["CUSTOMER"] }) ? (
-            <TransportIncidents incidents={overview.activeIncidents} />
+            <TransportIncidents
+              incidents={overview.activeIncidents}
+              detailHref={(incident) =>
+                audience === "crew"
+                  ? incidentRoutes.crewDetail(incident.incidentReportId)
+                  : audience === "admin"
+                    ? incidentRoutes.adminDetail(incident.incidentReportId)
+                    : // The BE lets a customer read only HIGH/CRITICAL incidents (IN8); any other link would 404.
+                      bookingId && transportId && (incident.severity === "HIGH" || incident.severity === "CRITICAL")
+                      ? incidentRoutes.customerDetail(bookingId, transportId, incident.incidentReportId)
+                      : null
+              }
+            />
           ) : null}
         </>
       )}

@@ -71,9 +71,9 @@ export function TransportPageHeader({
   const title = transportCode ?? viewLabel[isCrew ? "overview" : view];
   return (
     <>
-      <header className="flex flex-wrap items-start justify-between gap-3">
+      <header className="min-w-0">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div>
             <PageHeader
               title={title}
               backHref={
@@ -99,11 +99,15 @@ export function TransportPageHeader({
                   <OngoingTransportStatusBadge status={status} />
                 ) : undefined
               }
+              // Right after the title text: placed after the whole PageHeader, it drifted away on Overview, whose back
+              // link ("Back to Ongoing Transports") is wider than the transport code.
+              titleAddon={
+                !isCrew && status ? (
+                  <OngoingTransportStatusBadge status={status} />
+                ) : undefined
+              }
               className="w-auto gap-1"
             />
-            {!isCrew && status ? (
-              <OngoingTransportStatusBadge status={status} />
-            ) : null}
           </div>
           <p className="mt-2 mb-0 text-xs text-slate-500 sm:text-sm">
             {viewDescription[isCrew ? "overview" : view]}

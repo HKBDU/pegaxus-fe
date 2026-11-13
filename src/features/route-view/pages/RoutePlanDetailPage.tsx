@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ComponentType } from "react";
+import { useIsMutating } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
@@ -70,7 +71,22 @@ export default function RoutePlanDetailPage({
     query.data && context.data && !readFailure && !context.error
       ? getEmergencyActions(query.data, context.data.workspace)
       : [];
-  const activeMode = actions.find((action) => action === mode);
+  const fullPageAction =
+    mode === "decision" || mode === "activation" ? mode : undefined;
+  // A decision or activation refreshes the route before its request settles, and the new status (for example ACTIVE)
+  // drops the action from `actions`. Unmounting the panel then made the request fail its "still mounted" check, so it
+  // never returned to the route and the page showed "already decided". Keep the panel while its own request runs.
+  const panelRequestRunning =
+    useIsMutating({
+      mutationKey: ["route-view", "emergency"],
+      predicate: (mutation) =>
+        String(mutation.options.mutationKey?.[2] ?? "").endsWith(
+          `:${routePlanId}:${fullPageAction}`,
+        ),
+    }) > 0;
+  const activeMode =
+    actions.find((action) => action === mode) ??
+    (fullPageAction && panelRequestRunning ? fullPageAction : undefined);
   const changeMode = (action?: EmergencyAction) =>
     setParams((current) => {
       const next = new URLSearchParams(current);
@@ -92,6 +108,7 @@ export default function RoutePlanDetailPage({
     if (!hasPlan || waitingForAction || mode === "request" || mode === "notice")
       return;
     const heading = pageRef.current?.querySelector<HTMLElement>("h1");
+    heading?.setAttribute("tabindex", "-1");
     heading?.focus({ preventScroll: true });
     pageRef.current?.scrollIntoView({ block: "start" });
   }, [routePlanId, mode, hasPlan, waitingForAction]);
