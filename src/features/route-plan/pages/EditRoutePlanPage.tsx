@@ -13,6 +13,7 @@ import {
 } from "../api-adapters";
 import type { RoutePlan, RouteSegment } from "../types";
 import { hydrateBuilderSegments } from "../builder-segments";
+import { currentBlockedSegments } from "../legal-blocks";
 import type { DraftSegment } from "../components/RoutePlanBuilderParts";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 
@@ -154,6 +155,18 @@ export default function EditRoutePlanPage() {
     if (route.toLocation) allLocationsMap.set(String(route.toLocation.id), route.toLocation);
   }
 
+  // Segments the Transport Specialist blocked in the legal review (by their saved id, so a replaced route drops the mark).
+  // A plan saved after the review no longer carries the blocked segments, so nothing is marked until the next review.
+  const blockedNumbers = currentBlockedSegments(plan);
+  const legalBlock = blockedNumbers.length
+    ? {
+        routePlanRouteIds: plan.segments
+          .filter((segment) => blockedNumbers.includes(segment.sequenceNo))
+          .map((segment) => segment.routePlanRouteId),
+        note: plan.legalReview?.note ?? null,
+      }
+    : undefined;
+
   const allRoutesMap = new Map<string, MapRoute>();
   for (const r of catalog.routes) allRoutesMap.set(String(r.id), r);
   for (const r of [...initialRoutes, ...primaryRoutes]) allRoutesMap.set(String(r.id), r);
@@ -169,6 +182,7 @@ export default function EditRoutePlanPage() {
       savedSegments={savedSegments}
       primarySegments={primarySegments}
       initialRouteNote={plan.routeNote ?? ""}
+      legalBlock={legalBlock}
       primaryRoutes={primaryRoutes}
       primaryAvailable={plan.routeType !== "BACKUP" || primaryRoutes.length > 0}
       primaryError="No valid PRIMARY route plan found. Please create a PRIMARY route plan first."

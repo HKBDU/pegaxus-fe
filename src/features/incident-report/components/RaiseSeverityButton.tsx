@@ -48,6 +48,11 @@ export interface RaiseSeverityButtonProps {
   onChanged?: (response: IncidentMutationResponse) => void;
   /** Lets the page size the button like the other actions of its bar. */
   className?: string;
+  /** Controlled dialog, so a page can open it from a menu item instead of this component's own button. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Render only the dialog; the page provides its own trigger (for example a menu item). */
+  hideTrigger?: boolean;
 }
 
 export function RaiseSeverityButton({
@@ -57,8 +62,13 @@ export function RaiseSeverityButton({
   availableActions,
   onChanged,
   className,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: RaiseSeverityButtonProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [nextSeverity, setNextSeverity] = useState<IncidentSeverity>(
     INCIDENT_SEVERITY.HIGH,
   );
@@ -77,17 +87,20 @@ export function RaiseSeverityButton({
 
   if ((!canRaise && !canLower) || allowedSeverities.length === 0) return null;
 
+  // Opened from a page's menu, the trigger's reset does not run: fall back to the first allowed value.
+  const selectedSeverity = allowedSeverities.includes(nextSeverity) ? nextSeverity : allowedSeverities[0];
+
   const submit = () => {
-    const isLowering = severityOrder.indexOf(nextSeverity) < severityOrder.indexOf(severity);
+    const isLowering = severityOrder.indexOf(selectedSeverity) < severityOrder.indexOf(severity);
     if (
       reason.trim().length < 10 ||
-      !allowedSeverities.includes(nextSeverity) ||
+      !allowedSeverities.includes(selectedSeverity) ||
       (isLowering && !canLower)
     ) return;
     mutation.mutate(
       {
         incidentReportId,
-        input: { lastUpdatedAt, severity: nextSeverity, reason: reason.trim() },
+        input: { lastUpdatedAt, severity: selectedSeverity, reason: reason.trim() },
       },
       {
         onSuccess: (response) => {
@@ -101,18 +114,20 @@ export function RaiseSeverityButton({
 
   return (
     <>
-      <Button
-        type="button"
-        onClick={() => {
-          setNextSeverity(allowedSeverities[0]);
-          setOpen(true);
-        }}
-        variant={className ? "outline" : "default"}
-        className={cn("min-h-12 rounded-[2px] bg-[#f39200] text-[#181818] hover:bg-[#d97f00]", className)}
-      >
-        <ArrowUpDown className="size-4" aria-hidden="true" />
-        Change severity
-      </Button>
+      {hideTrigger ? null : (
+        <Button
+          type="button"
+          onClick={() => {
+            setNextSeverity(allowedSeverities[0]);
+            setOpen(true);
+          }}
+          variant={className ? "outline" : "default"}
+          className={cn("min-h-12 rounded-[2px] bg-[#f39200] text-[#181818] hover:bg-[#d97f00]", className)}
+        >
+          <ArrowUpDown className="size-4" aria-hidden="true" />
+          Change severity
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="rounded-[2px] sm:max-w-lg">
           <DialogHeader>
@@ -129,7 +144,7 @@ export function RaiseSeverityButton({
             <label className="grid gap-2 text-sm font-semibold">
               New severity
               <Select
-                value={nextSeverity}
+                value={selectedSeverity}
                 onValueChange={(value) =>
                   setNextSeverity(value as IncidentSeverity)
                 }

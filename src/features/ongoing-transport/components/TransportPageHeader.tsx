@@ -73,35 +73,42 @@ export function TransportPageHeader({
     <>
       <header className="min-w-0">
         <div className="min-w-0">
-          <PageHeader
-            title={title}
-            backHref={
-              backToOverview
-                ? transportOverviewPath(transportId!, audience, bookingId)
-                : backPath
-            }
-            backLabel={
-              backToOverview
-                ? `Back to ${transportCode ?? "Transport overview"}`
-                : `Back to ${backLabel}`
-            }
-            backState={
-              backToOverview
-                ? location.state
-                : audience === "admin" && returnState
-                  ? { ongoingTransportList: returnState }
-                  : undefined
-            }
-            size="compact"
-            action={
-              <>
-                {status ? (
+          <div>
+            <PageHeader
+              title={title}
+              backHref={
+                backToOverview
+                  ? transportOverviewPath(transportId!, audience, bookingId)
+                  : backPath
+              }
+              backLabel={
+                backToOverview
+                  ? `Back to ${transportCode ?? "Transport overview"}`
+                  : `Back to ${backLabel}`
+              }
+              backState={
+                backToOverview
+                  ? location.state
+                  : audience === "admin" && returnState
+                    ? { ongoingTransportList: returnState }
+                    : undefined
+              }
+              size="compact"
+              action={
+                isCrew && status ? (
                   <OngoingTransportStatusBadge status={status} />
-                ) : null}
-              </>
-            }
-            className="gap-1 [&>div]:justify-start [&_h1]:flex-none [&_h1]:basis-auto"
-          />
+                ) : undefined
+              }
+              // Right after the title text: placed after the whole PageHeader, it drifted away on Overview, whose back
+              // link ("Back to Ongoing Transports") is wider than the transport code.
+              titleAddon={
+                !isCrew && status ? (
+                  <OngoingTransportStatusBadge status={status} />
+                ) : undefined
+              }
+              className="w-auto gap-1"
+            />
+          </div>
           <p className="mt-2 mb-0 text-xs text-slate-500 sm:text-sm">
             {viewDescription[isCrew ? "overview" : view]}
           </p>

@@ -15,6 +15,7 @@ import {
   type ChangeVehiclesSnapshot,
 } from "@/features/route-plan/components/ChangeVehiclesDialog";
 import { OutsourceSegmentDialog } from "@/features/route-plan/components/OutsourceSegmentDialog";
+import { currentBlockedSegments } from "@/features/route-plan/legal-blocks";
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import { isFlow3MockMode } from "@/features/transport-plan/source";
 import {
@@ -146,7 +147,8 @@ export function RouteManagementActions({
     routePlanId: backup.routePlanId,
     routePlanCode: backup.routePlanCode,
     segments: legalSegments(backup),
-    blockedSegments: backup.legalReview?.isFeasible === false ? (backup.legalReview.blockedSegments ?? []) : [],
+    // A backup listed here was submitted again after its last review, so that review's blocked segments are outdated.
+    blockedSegments: [],
   }));
   const reviewBackups = backupSegments.every((backup) => backup.segments)
     ? backupSegments.map((backup) => ({ ...backup, segments: backup.segments ?? [] }))
@@ -179,7 +181,7 @@ export function RouteManagementActions({
           </Button>
         </>
       ) : null}
-      {role === "specialist" && plan.status === "DRAFT" && !dossierReady ? (
+      {role === "specialist" && plan.status === "DRAFT" && plan.routeType !== "BACKUP" && !dossierReady ? (
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-slate-600">
           <span>
             {plan.routeType === "RETURN"
@@ -324,7 +326,8 @@ export function RouteManagementActions({
               ? {
                   ...review.legalReview,
                   note: review.legalReview.note ?? null,
-                  blockedSegments: review.legalReview.blockedSegments ?? [],
+                  // The specialist starts from the segments still blocked; a resubmitted plan starts clean.
+                  blockedSegments: currentBlockedSegments(review),
                   reviewedAt: review.legalReview.reviewedAt ?? null,
                   reviewedBy: review.legalReview.reviewedBy
                     ? {
@@ -367,9 +370,10 @@ export function RouteSegmentOutsourceAction({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [savingInternal, setSavingInternal] = useState(false);
   const role = getWorkspaceRole(context.workspace.principal);
-  // The Logistics Manager and Route Coordinator may link or remove a provider (OS1).
-  if (plan.status !== "DRAFT" || (role !== "manager" && role !== "coordinator"))
-    return null;
+  // OS1 (PUT …/segments/{id}/outsourcing) is Logistics Manager only: the BE policy and service both reject anyone else
+  // with 403, so a Route Coordinator got "You do not have permission". The coordinator sets providers while building or
+  // editing the route plan, which saves through the route plan itself; here they only see the arrangement badge.
+  if (plan.status !== "DRAFT" || role !== "manager") return null;
   async function switchToInternal() {
     setSavingInternal(true);
     try {
@@ -387,7 +391,10 @@ export function RouteSegmentOutsourceAction({
         "management",
         context.dossierId,
       );
-      toast.success("Segment switched to internal fleet.");
+      // The LM switches the arrangement only; vehicles of a PRIMARY plan are assigned by the Route Coordinator.
+      toast.success("Segment switched to internal fleet.", {
+        description: "The Route Coordinator assigns its vehicles.",
+      });
     } catch (requestError) {
       toast.error(getRoutePlanError(requestError).message);
     } finally {

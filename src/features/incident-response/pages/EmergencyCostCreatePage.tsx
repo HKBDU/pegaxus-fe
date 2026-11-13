@@ -1,7 +1,6 @@
-import { ArrowLeft } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { ErrorState } from "@/shared/components/common";
-import { Button } from "@/shared/components/ui/button";
+import { PageHeader } from "@/shared/components/PageHeader";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { EmergencyCostModeNotice } from "../components/EmergencyCostModeNotice";
 import { EmergencyCostForm } from "../components/EmergencyCostForm";
@@ -27,28 +26,24 @@ export default function EmergencyCostCreatePage({
     : null;
   const incident = query.data;
   return (
-    <main className="mx-auto w-full min-w-0 max-w-3xl space-y-4 p-4 font-sans sm:p-6">
-      <Button variant="ghost" asChild className="min-h-11 rounded-xs">
-        <Link
-          to={emergencyCostScopedListPath(
+    // Same page frame as the web's other screens: a compact header with its back link, then one readable 896px column.
+    <main className="mx-auto w-full min-w-0 max-w-4xl space-y-4 p-4 font-sans sm:p-6">
+      <div>
+        <PageHeader
+          title="New emergency cost request"
+          size="compact"
+          backHref={emergencyCostScopedListPath(
             audience,
             query.validId ? incidentId! : undefined,
           )}
-        >
-          <ArrowLeft aria-hidden className="size-4" />
-          Emergency costs
-        </Link>
-      </Button>
-      <EmergencyCostModeNotice />
-      <header>
-        <h1 className="m-0 font-heading text-3xl uppercase">
-          New emergency cost request
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+          backLabel="Emergency costs"
+        />
+        <p className="mt-1 mb-0 text-xs text-slate-500 sm:text-sm">
           Request a review of necessary emergency expenses. This form does not
           approve spending.
         </p>
-      </header>
+      </div>
+      <EmergencyCostModeNotice />
       {!query.allowed ? (
         <ErrorState message="Only an authorized Driver, Escort or Fleet & Route Coordinator can create a request." />
       ) : !query.validId ? (
@@ -59,27 +54,13 @@ export default function EmergencyCostCreatePage({
           onRetry={error.retryable ? () => void query.refetch() : undefined}
         />
       ) : incident ? (
-        <>
+        // One column: the incident sits in the form's own header strip (no raw incident ID is shown).
+        <div className="min-w-0 space-y-3">
           {error ? (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="m-0 rounded-xs border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error.message}
             </p>
           ) : null}
-          <section
-            className="space-y-1 rounded-xs border border-border bg-card p-3 text-sm [overflow-wrap:anywhere]"
-            aria-label="Incident context"
-          >
-            <p className="m-0 font-semibold">
-              {incident.incidentCode} · {incident.transport.transportCode}
-            </p>
-            <p className="m-0 text-muted-foreground">{incident.title}</p>
-            <p className="m-0 text-xs text-muted-foreground">
-              {incident.status} · {incident.transport.status}
-            </p>
-            <p className="m-0 text-xs text-muted-foreground">
-              Incident ID: {incident.incidentReportId}
-            </p>
-          </section>
           <EmergencyCostForm
             key={`${scope}:${source}:${incident.incidentReportId}`}
             audience={audience}
@@ -88,7 +69,7 @@ export default function EmergencyCostCreatePage({
               query.isFetching || query.isError || !query.isEnabled
             }
           />
-        </>
+        </div>
       ) : (
         <div role="status" aria-label="Loading incident context">
           <Skeleton className="h-24 w-full rounded-xs" />

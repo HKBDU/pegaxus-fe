@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react"
-import { ArrowLeft, CheckCircle2, Clock, Truck, XCircle } from "lucide-react"
+import { ArrowLeft, ArrowUpDown, CheckCircle2, ChevronDown, Clock, Coins, MoreHorizontal, Truck, XCircle } from "lucide-react"
 import { Link, useParams } from "react-router-dom"
 
 import { cn } from "@/lib/utils"
@@ -10,6 +10,17 @@ import { ErrorState, NotFoundPage } from "@/shared/components/common"
 import { RaiseSeverityButton } from "@/features/incident-report"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Skeleton } from "@/shared/components/ui/skeleton"
+import { useIsDesktop } from "@/shared/hooks"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/components/ui/dropdown-menu"
+import { useAuthStore } from "@/features/auth/store"
+import { emergencyCostCreatePath } from "@/features/incident-response/navigation"
+import { canCreateEmergencyCosts } from "@/features/incident-response/services"
 
 import { CancelIncidentDialog } from "../components/CancelIncidentDialog"
 import { DetachHorseDialog } from "../components/DetachHorseDialog"
@@ -18,7 +29,7 @@ import { IncidentLocation, IncidentOutcome, IncidentOverview } from "../componen
 import { IncidentTimeline } from "../components/IncidentTimeline"
 import { ResolveIncidentDialog } from "../components/ResolveIncidentDialog"
 import { EmergencyCostSection, HorseDetailsSection, IncidentResponseActions, VehicleDetailSection } from "../components/slots"
-import { actionButtonClass, dangerButtonClass, outlineButtonClass, primaryButtonClass } from "../components/ui"
+import { actionButtonClass, dangerButtonClass, outlineButtonClass, panelClass, primaryButtonClass } from "../components/ui"
 import { incidentRoutes, severityEdge } from "../constants"
 import { isNotFound } from "../errors"
 import { useIncident } from "../hooks/useIncidents"
@@ -36,43 +47,118 @@ function DetailSkeleton() {
   )
 }
 
-/** Phone header of the crew page: dark card, severity colour on its edge, the facts a driver needs at a glance. */
-function CrewHero({ incident }: { incident: Incident }) {
+/** Crew summary (phone and desktop): the page's white panel with the severity colour on its left edge. */
+function CrewSummaryCard({ incident, children }: { incident: Incident; children?: ReactNode }) {
   return (
-    <section aria-label="Incident summary" className={cn("rounded-[2px] border-l-[5px] bg-[#17191c] p-4 text-white shadow-sm", severityEdge[incident.severity] ?? "border-l-slate-400")}>
+    <section aria-label="Incident summary" className={cn(panelClass, "border-l-4 p-4", severityEdge[incident.severity] ?? "border-l-slate-400")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="m-0 font-heading text-[11px] font-medium uppercase tracking-[0.14em] text-white/60">Incident</p>
-          <h1 className="m-0! font-heading text-[28px]! leading-8! font-bold! tracking-normal! text-white!">{incident.incidentCode}</h1>
+          <p className="m-0 text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">Incident</p>
+          <h1 className="m-0! mt-0.5 font-heading text-lg! leading-6! font-semibold! tracking-normal! text-slate-900!">{incident.incidentCode}</h1>
         </div>
         <SeverityBadge severity={incident.severity} />
       </div>
-      <p className="m-0 mt-2 text-base font-semibold leading-6 text-white">{incident.title}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+      <p className="m-0 mt-2 text-sm font-medium leading-5 text-slate-800">{incident.title}</p>
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
         <CategoryBadge category={incident.category} />
         <StatusBadge status={incident.status} />
       </div>
-      <dl className="m-0 mt-3.5 grid gap-1.5 border-t border-white/15 pt-3 text-[13px] text-white/80">
+      <dl className="m-0 mt-3 grid gap-1.5 border-t border-[#eceae3] pt-3 text-xs text-slate-600">
         <div className="flex items-center gap-2">
-          <Clock className="size-4 shrink-0 text-white/50" aria-hidden="true" />
-          <dd className="m-0">{formatDateTime(incident.occurredAt)} <span className="text-white/55">· {timeAgo(incident.occurredAt, new Date(incident.serverTime).getTime())}</span></dd>
+          <Clock className="size-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+          <dd className="m-0">{formatDateTime(incident.occurredAt)} <span className="text-slate-400">· {timeAgo(incident.occurredAt, new Date(incident.serverTime).getTime())}</span></dd>
         </div>
         {incident.transport ? (
           <div className="flex items-center gap-2">
-            <Truck className="size-4 shrink-0 text-white/50" aria-hidden="true" />
+            <Truck className="size-3.5 shrink-0 text-slate-400" aria-hidden="true" />
             <dd className="m-0">{incident.transport.transportCode}</dd>
           </div>
         ) : null}
       </dl>
+      {/* The actions toolbar sits at the bottom of the summary instead of in a block of its own. */}
+      {children}
     </section>
   )
 }
 
-/** The crew's actions stay in reach of a thumb: pinned to the bottom of the screen, full-size buttons. */
-function CrewActionBar({ children }: { children: ReactNode }) {
+/** Crew buttons: small sentence-case 32px buttons, as wide as their label, so the actions take one line. */
+const deskButtonClass =
+  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-[2px] border px-2.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-3.5"
+const deskPrimaryClass = "border-primary bg-primary text-gray-900 hover:border-primary-hover hover:bg-primary-hover"
+const deskOutlineClass = "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+
+/**
+ * The crew's actions: one primary button and a "more" menu for everything else, always on one line. Separate buttons
+ * wrapped onto several rows on a phone and in the side column; a bar pinned to the bottom covered the timeline.
+ */
+function CrewActions({
+  resolveLabel,
+  onResolve,
+  costHref,
+  onChangeSeverity,
+  onCancel,
+  className,
+}: {
+  /** Shown as the primary button when the crew may resolve the incident. */
+  resolveLabel?: string
+  onResolve?: () => void
+  costHref?: string
+  onChangeSeverity?: () => void
+  onCancel?: () => void
+  className?: string
+}) {
+  const hasMenu = Boolean(costHref || onChangeSeverity || onCancel)
+  if (!onResolve && !hasMenu) return null
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 has-[>div:empty]:hidden border-t border-slate-200 bg-white/95 px-3 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_20px_rgba(15,23,42,0.08)] backdrop-blur">
-      <div className="mx-auto flex w-full max-w-3xl flex-wrap gap-2 [&>*]:h-12 [&>*]:min-w-[8rem] [&>*]:flex-1 [&>*]:text-xs">{children}</div>
+    <div role="toolbar" aria-label="Incident actions" className={cn("flex items-center gap-1.5", className)}>
+      {onResolve ? (
+        <button type="button" className={cn(deskButtonClass, deskPrimaryClass, "min-w-0 flex-1")} onClick={onResolve}>
+          <CheckCircle2 aria-hidden="true" />
+          <span className="truncate">{resolveLabel}</span>
+        </button>
+      ) : null}
+      {hasMenu ? (
+        // Not modal: a dialog opened from a modal menu can leave the page with pointer events locked.
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            {onResolve ? (
+              <button type="button" aria-label="More incident actions" className={cn(deskButtonClass, deskOutlineClass, "w-8 shrink-0 px-0")}>
+                <MoreHorizontal aria-hidden="true" />
+              </button>
+            ) : (
+              <button type="button" className={cn(deskButtonClass, deskOutlineClass)}>
+                Actions
+                <ChevronDown aria-hidden="true" />
+              </button>
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52 rounded-[2px]">
+            {costHref ? (
+              <DropdownMenuItem asChild className="text-xs">
+                <Link to={costHref}>
+                  <Coins aria-hidden="true" />
+                  Request emergency cost
+                </Link>
+              </DropdownMenuItem>
+            ) : null}
+            {onChangeSeverity ? (
+              <DropdownMenuItem className="text-xs" onSelect={onChangeSeverity}>
+                <ArrowUpDown aria-hidden="true" />
+                Change severity
+              </DropdownMenuItem>
+            ) : null}
+            {onCancel ? (
+              <>
+                {costHref || onChangeSeverity ? <DropdownMenuSeparator /> : null}
+                <DropdownMenuItem variant="destructive" className="text-xs" onSelect={onCancel}>
+                  <XCircle aria-hidden="true" />
+                  Cancel report
+                </DropdownMenuItem>
+              </>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
     </div>
   )
 }
@@ -89,11 +175,17 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   const [resolveOpen, setResolveOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [detachHorse, setDetachHorse] = useState<{ horseId: string; horseName: string } | null>(null)
+  const [severityOpen, setSeverityOpen] = useState(false)
   const { isCoordinator } = useIncidentViewer()
+  const isDesktop = useIsDesktop()
+  const principal = useAuthStore((state) => state.principal)
 
   if (query.isError && isNotFound(query.error)) return <NotFoundPage />
 
   const isCrew = audience === "crew"
+  // The crew page was built for a phone (one 768px column and a bottom action bar), which left a narrow strip in the middle
+  // of a desktop screen. From 1024px it uses two columns: the sections, and a sticky summary with the actions.
+  const crewDesktop = isCrew && isDesktop
   const actions = incident?.availableActions ?? []
   const can = (action: string) => actions.includes(action)
   const resolveMode = can(INCIDENT_ACTION.RESOLVE) ? "manager" : "self"
@@ -116,6 +208,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
     (incident?.status === "REPORTED" || incident?.status === "PENDING") &&
     Boolean(incident?.costRequests.some((request) => request.category === EMERGENCY_COST_CATEGORY.REPLACEMENT_VEHICLE && request.status === EMERGENCY_COST_STATUS.APPROVED))
 
+  // Staff header buttons: unchanged.
   const buttons = incident ? (
     <>
       <IncidentResponseActions incident={incident} />
@@ -136,22 +229,50 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
       {canCancel ? (
         <button type="button" className={cn(actionButtonClass, dangerButtonClass)} onClick={() => setCancelOpen(true)}>
           <XCircle className="size-4" aria-hidden="true" />
-          {isCrew ? "Cancel report" : "Cancel incident"}
+          Cancel incident
         </button>
       ) : null}
     </>
   ) : null
 
+  // Crew: the same rules as the staff buttons. For the crew the response actions only ever hold the cost request
+  // (rerouting and vehicle replacement are the LM's and RC's), so it becomes a menu link under the same conditions.
+  const canChangeSeverity = can(INCIDENT_ACTION.RAISE_SEVERITY) || can("LOWER_SEVERITY")
+  const crewCostHref =
+    incident &&
+    can(INCIDENT_ACTION.REQUEST_COST) &&
+    ["REPORTED", "PENDING"].includes(incident.status) &&
+    incident.transport?.status === "IN_TRANSIT" &&
+    canCreateEmergencyCosts(principal)
+      ? emergencyCostCreatePath("crew", incident.incidentReportId)
+      : undefined
+  const crewActions = (className?: string) =>
+    incident ? (
+      <CrewActions
+        className={className}
+        resolveLabel={resolveMode === "manager" ? "Resolve incident" : "Mark as resolved"}
+        onResolve={canResolve ? () => setResolveOpen(true) : undefined}
+        costHref={crewCostHref}
+        onChangeSeverity={canChangeSeverity ? () => setSeverityOpen(true) : undefined}
+        onCancel={canCancel ? () => setCancelOpen(true) : undefined}
+      />
+    ) : null
+
   return (
-    <div className={cn("booking-page-shell min-h-[70dvh] bg-[#f4f2ed] font-sans", isCrew ? cn("px-3 pt-3", hasButtons ? "pb-28" : "pb-6") : "px-4 pt-5 pb-8 sm:px-6 lg:px-10")}>
+    <div className={cn("booking-page-shell min-h-[70dvh] bg-[#f4f2ed] font-sans", isCrew ? "px-3 pt-3 pb-8 lg:px-10 lg:pt-5" : "px-4 pt-5 pb-8 sm:px-6 lg:px-10")}>
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         {isCrew ? (
-          <div className="mx-auto mb-3 max-w-3xl">
+          <div className={cn("mb-3", !crewDesktop && "mx-auto max-w-3xl")}>
             <Link to="/crew/transports" className="mb-2.5 inline-flex items-center gap-1.5 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-amber-700">
               <ArrowLeft className="size-3.5" aria-hidden="true" />
               Assigned transports
             </Link>
-            {incident ? <CrewHero incident={incident} /> : null}
+            {incident && !crewDesktop ? (
+              // The same white summary as the desktop side column (the dark hero card looked out of place).
+              <CrewSummaryCard incident={incident}>
+                {crewActions("mt-3 border-t border-[#eceae3] pt-3")}
+              </CrewSummaryCard>
+            ) : null}
           </div>
         ) : (
           <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
@@ -175,30 +296,53 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
           </div>
         )}
 
-        <div className={cn(isCrew && "mx-auto max-w-3xl")}>
-          {query.isLoading ? <DetailSkeleton /> : null}
-          {query.isError && !isNotFound(query.error) ? <ErrorState message="Unable to load this incident." onRetry={() => void query.refetch()} /> : null}
+        <div className={cn(isCrew && !crewDesktop && "mx-auto max-w-3xl", crewDesktop && "grid grid-cols-[minmax(0,1fr)_340px] items-start gap-4")}>
+          <div className="min-w-0">
+            {query.isLoading ? <DetailSkeleton /> : null}
+            {query.isError && !isNotFound(query.error) ? <ErrorState message="Unable to load this incident." onRetry={() => void query.refetch()} /> : null}
 
-          {incident ? (
-            <div className="booking-stagger space-y-2.5">
-              {incident.hold ? <IncidentHoldNotice hold={incident.hold} /> : null}
-              <IncidentOutcome incident={incident} />
-              <IncidentOverview incident={incident} transportHref={!isCrew && incident.transport ? incidentRoutes.transport(incident.transport.transportId) : undefined} compact={isCrew} />
-              <IncidentLocation incident={incident} />
-              {showVehicle ? <VehicleDetailSection incident={incident} /> : null}
-              {showHorse ? <HorseDetailsSection incident={incident} onDetach={can(INCIDENT_ACTION.DETACH_HORSE) ? setDetachHorse : undefined} /> : null}
-              <EmergencyCostSection incident={incident} onChanged={refetch} />
-              <IncidentTimeline incident={incident} />
-            </div>
+            {incident ? (
+              <div className="booking-stagger space-y-2.5">
+                {incident.hold ? <IncidentHoldNotice hold={incident.hold} /> : null}
+                <IncidentOutcome incident={incident} />
+                {/* Compact for the crew on every screen: the summary card already shows the code and the time. */}
+                <IncidentOverview incident={incident} transportHref={!isCrew && incident.transport ? incidentRoutes.transport(incident.transport.transportId) : undefined} compact={isCrew} />
+                <IncidentLocation incident={incident} />
+                {showVehicle ? <VehicleDetailSection incident={incident} /> : null}
+                {showHorse ? <HorseDetailsSection incident={incident} onDetach={can(INCIDENT_ACTION.DETACH_HORSE) ? setDetachHorse : undefined} /> : null}
+                <EmergencyCostSection incident={incident} onChanged={refetch} />
+                <IncidentTimeline incident={incident} />
+              </div>
+            ) : null}
+          </div>
+
+          {crewDesktop && incident ? (
+            <aside className="sticky top-16">
+              <CrewSummaryCard incident={incident}>
+                {crewActions("mt-3 border-t border-[#eceae3] pt-3")}
+              </CrewSummaryCard>
+            </aside>
           ) : null}
         </div>
       </div>
 
-      {incident && isCrew && hasButtons ? <CrewActionBar>{buttons}</CrewActionBar> : null}
 
       {incident ? (
         <>
           <ResolveIncidentDialog incident={incident} mode={resolveMode} open={resolveOpen} onOpenChange={setResolveOpen} onReload={refetch} />
+          {/* The crew opens the severity dialog from the actions menu, so only its dialog is mounted here. */}
+          {isCrew && canChangeSeverity ? (
+            <RaiseSeverityButton
+              hideTrigger
+              open={severityOpen}
+              onOpenChange={setSeverityOpen}
+              incidentReportId={incident.incidentReportId}
+              severity={incident.severity}
+              lastUpdatedAt={incident.updatedAt}
+              availableActions={incident.availableActions as IncidentAction[]}
+              onChanged={refetch}
+            />
+          ) : null}
           <CancelIncidentDialog incident={incident} audience={audience} open={cancelOpen} onOpenChange={setCancelOpen} onReload={() => void query.refetch()} />
           <DetachHorseDialog incident={incident} horse={detachHorse} onOpenChange={(next) => { if (!next) setDetachHorse(null) }} onReload={refetch} />
         </>

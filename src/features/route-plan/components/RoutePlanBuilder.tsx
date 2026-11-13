@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
@@ -120,6 +120,8 @@ export type RoutePlanBuilderProps = {
   savedSegments?: DraftSegment[];
   primarySegments?: DraftSegment[];
   initialRouteNote?: string;
+  /** Segments the legal review blocked (saved ids) and the reviewer's note, highlighted for the coordinator. */
+  legalBlock?: { routePlanRouteIds: string[]; note?: string | null };
   locations: MapLocation[];
   routes: MapRoute[];
   vehicles?: Vehicle[];
@@ -168,6 +170,7 @@ export function RoutePlanBuilder({
   savedSegments = [],
   primarySegments = [],
   initialRouteNote = "",
+  legalBlock,
   locations: initialLocations,
   routes,
   vehicles: initialVehicles,
@@ -310,7 +313,13 @@ export function RoutePlanBuilder({
         const duration = segment.plannedDepartureAt && segment.plannedArrivalAt
           ? (Date.parse(segment.plannedArrivalAt) - Date.parse(segment.plannedDepartureAt)) / 60000
           : segment.route.durationMinutes;
-        const timed = segment.preserveTiming && !recalculateSavedTimes
+        // A saved segment keeps its times unless an earlier change (e.g. a longer replacement route) makes it depart
+        // before the previous segment arrives; then it shifts after that arrival with the same duration.
+        const keepsSavedTimes =
+          segment.preserveTiming &&
+          !recalculateSavedTimes &&
+          (!segment.plannedDepartureAt || !cursor || Date.parse(segment.plannedDepartureAt) >= Date.parse(cursor));
+        const timed = keepsSavedTimes
           ? segment
           : calculateRouteTimeline(cursor, [{ ...segment, durationMinutes: duration }])[0];
         if (timed.plannedArrivalAt) cursor = new Date(Date.parse(timed.plannedArrivalAt) + (timed.dwellAfterMinutes ?? 0) * 60000).toISOString();
@@ -461,8 +470,27 @@ export function RoutePlanBuilder({
     );
   }, [locationSearch, locations]);
 
+  // Saved segments the legal review blocked; a segment whose route was replaced no longer carries the saved id, so its
+  // red mark goes away once the coordinator fixes it.
+  const blockedRouteIds = useMemo(
+    () => new Set(legalBlock?.routePlanRouteIds ?? []),
+    [legalBlock],
+  );
+  const isBlockedSegment = useCallback(
+    (segment: DraftSegment) =>
+      Boolean(segment.route.routePlanRouteId) && blockedRouteIds.has(String(segment.route.routePlanRouteId)),
+    [blockedRouteIds],
+  );
+  const blockedCount = segments.filter(isBlockedSegment).length;
+  // The Transport Specialist would only block the same segments again, so they must be changed before a new submit.
+  const blockedSubmitMessage = blockedCount
+    ? `Change the ${blockedCount === 1 ? "segment" : `${blockedCount} segments`} blocked by the Transport Specialist before submitting for legal review.`
+    : null;
+
   const selectedRoutes = useMemo(() => {
-    if (!isBackup) return segments.map((segment) => segment.route);
+    const withBlock = (segment: DraftSegment) =>
+      isBlockedSegment(segment) ? { ...segment.route, blocked: true } : segment.route;
+    if (!isBackup) return segments.map(withBlock);
     // A backup segment that reuses a primary route has the same id. Drawing both gave two map layers with one id, and
     // the grey primary one won, so the backup leg looked uncoloured: draw it once, in the shared colour.
     const primaryIds = new Set(
@@ -477,11 +505,11 @@ export function RoutePlanBuilder({
         .map((route) => ({ ...route, readonly: true })),
       ...segments.map((segment) =>
         primaryIds.has(String(segment.route.id))
-          ? { ...segment.route, sharedWithPrimary: true }
-          : segment.route,
+          ? { ...withBlock(segment), sharedWithPrimary: true }
+          : withBlock(segment),
       ),
     ];
-  }, [isBackup, readonlyPrimaryRoutes, segments]);
+  }, [isBackup, isBlockedSegment, readonlyPrimaryRoutes, segments]);
 
   const builtRouteLocations = useMemo(() => {
     const selectedLocationIds = new Set(
@@ -1174,21 +1202,41 @@ export function RoutePlanBuilder({
     }
   }
 
-  function getSegmentContinuityError(routeList: MapRoute[]) {
-    for (let index = 0; index < routeList.length; index += 1) {
-      const route = routeList[index];
-      if (!route.fromLocation?.id || !route.toLocation?.id) {
-        return `Segment ${index + 1} has an unresolved origin or destination.`;
-      }
-      if (
-        index > 0 &&
-        String(route.fromLocation.id) !==
-          String(routeList[index - 1].toLocation?.id)
-      ) {
-        return `Segment ${index + 1} does not connect to segment ${index}. Choose a route with a matching endpoint.`;
-      }
-    }
-    return null;
+  function joins(before?: MapRoute, after?: MapRoute) {
+    const end = before?.toLocation?.id;
+    const start = after?.fromLocation?.id;
+    return end != null && start != null && String(end) === String(start);
+  }
+
+  // Joints between consecutive segments that do not meet. A deleted segment leaves one, and save stays blocked until it is filled.
+  function countBrokenJoints(routeList: MapRoute[]) {
+    return routeList.filter((route, index) => index > 0 && !joins(routeList[index - 1], route)).length;
+  }
+
+  /**
+   * Where a new route goes. A route that starts where a segment ends (or ends where one starts) is placed at that open
+   * joint, so the coordinator can delete a blocked segment in the middle and draw its replacement in the same place.
+   */
+  function findInsertionPoint(route: MapRoute, routeList: MapRoute[]): number | null {
+    if (!routeList.length) return 0;
+    const last = routeList.length;
+    const isOpenAt = (point: number) =>
+      point === 0
+        ? String(routeList[0].fromLocation?.id) !== String(plan.from?.id)
+        : point === last
+          ? String(routeList[last - 1].toLocation?.id) !== String(plan.to?.id)
+          : !joins(routeList[point - 1], routeList[point]);
+    const startsAfter = (point: number) =>
+      point === 0 ? String(route.fromLocation?.id) === String(plan.from?.id) : joins(routeList[point - 1], route);
+    const endsBefore = (point: number) =>
+      point === last ? String(route.toLocation?.id) === String(plan.to?.id) : joins(route, routeList[point]);
+    const openPoints = Array.from({ length: last + 1 }, (_, point) => point).filter(isOpenAt);
+    return (
+      openPoints.find((point) => startsAfter(point) && endsBefore(point)) ??
+      openPoints.find(startsAfter) ??
+      openPoints.find(endsBefore) ??
+      null
+    );
   }
 
   function addSegment(route: MapRoute, insertIndex?: number) {
@@ -1198,18 +1246,22 @@ export function RoutePlanBuilder({
       );
       return;
     }
+    if (!route.fromLocation?.id || !route.toLocation?.id) {
+      const message = "This route has an unresolved origin or destination.";
+      setBuildMessage(message);
+      toast.error("Route was not added", { description: message });
+      return;
+    }
+    const currentRoutes = segments.map((segment) => segment.route);
     const insertionPoint =
-      insertIndex !== undefined &&
-      insertIndex >= 0 &&
-      insertIndex < segments.length
+      insertIndex !== undefined && insertIndex >= 0 && insertIndex < segments.length
         ? insertIndex + 1
-        : segments.length;
-    const candidateRoutes = [...segments.map((segment) => segment.route)];
-    candidateRoutes.splice(insertionPoint, 0, route);
-    const continuityError = getSegmentContinuityError(candidateRoutes);
-    if (continuityError) {
-      setBuildMessage(continuityError);
-      toast.error("Route was not added", { description: continuityError });
+        : findInsertionPoint(route, currentRoutes);
+    if (insertionPoint === null) {
+      const message =
+        "This route does not connect to any open point. Start it where a segment ends, or end it where the next segment starts.";
+      setBuildMessage(message);
+      toast.error("Route was not added", { description: message });
       return;
     }
     setBuildMessage(null);
@@ -1228,15 +1280,7 @@ export function RoutePlanBuilder({
 
     setSegments((current) => {
       const updated = [...current];
-      if (
-        insertIndex !== undefined &&
-        insertIndex >= 0 &&
-        insertIndex < updated.length
-      ) {
-        updated.splice(insertIndex + 1, 0, newSegment);
-      } else {
-        updated.push(newSegment);
-      }
+      updated.splice(Math.min(insertionPoint, updated.length), 0, newSegment);
       return formatDraftSegments(updated, plan.departureAt);
     });
   }
@@ -1246,10 +1290,11 @@ export function RoutePlanBuilder({
     const updatedRoutes = segments.map((segment) => segment.route);
     const [movedRoute] = updatedRoutes.splice(fromIndex, 1);
     updatedRoutes.splice(toIndex, 0, movedRoute);
-    const continuityError = getSegmentContinuityError(updatedRoutes);
-    if (continuityError) {
-      setBuildMessage(continuityError);
-      toast.error("Segment was not moved", { description: continuityError });
+    // An existing gap does not block a move; only a move that breaks another joint does.
+    if (countBrokenJoints(updatedRoutes) > countBrokenJoints(segments.map((segment) => segment.route))) {
+      const message = "Moving this segment would disconnect it from its neighbours.";
+      setBuildMessage(message);
+      toast.error("Segment was not moved", { description: message });
       return;
     }
     setBuildMessage(null);
@@ -1577,6 +1622,11 @@ export function RoutePlanBuilder({
       setSaveError(continuity.message ?? "Route segments are not continuous.");
       return;
     }
+    if (action === "SUBMIT_FOR_LEGAL_REVIEW" && blockedSubmitMessage) {
+      setSaveError(blockedSubmitMessage);
+      setStep(0);
+      return;
+    }
     if (action === "SUBMIT_FOR_LEGAL_REVIEW" && bcpRequirement) {
       setSaveError(bcpRequirement);
       setStep(2);
@@ -1796,6 +1846,20 @@ export function RoutePlanBuilder({
                 </div>
 
                 <div className="grid gap-2 min-w-0">
+                  {/* Points the coordinator at the segments the legal review blocked; they are outlined red below and
+                      drawn red on the map, and the mark goes once their route is replaced. */}
+                  {blockedCount > 0 && (
+                    <div role="status" className="flex items-start gap-2 rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
+                      <ShieldAlert className="mt-0.5 size-4 shrink-0 text-red-500" aria-hidden="true" />
+                      <span>
+                        <strong className="font-semibold">
+                          {blockedCount} {blockedCount === 1 ? "segment was" : "segments were"} blocked by the Transport Specialist.
+                        </strong>{" "}
+                        Change {blockedCount === 1 ? "it" : "them"} before submitting for legal review again.
+                        {legalBlock?.note ? <span className="mt-1 block text-red-800">Review note: {legalBlock.note}</span> : null}
+                      </span>
+                    </div>
+                  )}
                   {bcpRequirement && (
                     <div className="flex items-start gap-2 rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
                       <ShieldAlert className="mt-0.5 size-4 shrink-0 text-red-600" />
@@ -2297,6 +2361,7 @@ export function RoutePlanBuilder({
                     <BuilderSegmentCard
                       key={segment.id}
                       segment={segment}
+                      blocked={isBlockedSegment(segment)}
                       index={index}
                       totalSegments={segments.length}
                       isLatest={index === segments.length - 1}
@@ -2595,7 +2660,8 @@ export function RoutePlanBuilder({
                     <Button
                       variant="outline"
                       className="rounded-[2px]"
-                      disabled={isSaving}
+                      disabled={isSaving || Boolean(blockedSubmitMessage)}
+                      title={blockedSubmitMessage ?? undefined}
                       onClick={() => void save("SUBMIT_FOR_LEGAL_REVIEW")}
                     >
                       {isSaving ? (
@@ -2609,6 +2675,9 @@ export function RoutePlanBuilder({
                     </Button>
                   )}
                 </div>
+                {!isReturn && blockedSubmitMessage ? (
+                  <p className="m-0 text-xs text-red-700">{blockedSubmitMessage} Save Draft is still available.</p>
+                ) : null}
               </div>
             </div>
           )}

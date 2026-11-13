@@ -14,6 +14,7 @@ import {
 import { getRoutePlanError, updateRoutePlan } from "../services";
 import type { RouteSegmentInput, UpdateRoutePlanRequest } from "../types";
 import { refreshRouteAfterSubmit } from "@/features/route-view/hooks/useRoutePlanDetail";
+import { currentBlockedSegments } from "../legal-blocks";
 
 /** The parts of a saved route plan (RP3) the update call needs. */
 type SavedRoutePlan = {
@@ -32,6 +33,7 @@ type SavedRoutePlan = {
     outsourcing: { provider: { transportProviderId: string } } | null;
     note?: string | null;
   }[];
+  legalReview?: { isFeasible: boolean; blockedSegments?: number[] | null; reviewedAt?: string | null } | null;
 };
 
 const UPDATE_REASON = "Submitted for legal review";
@@ -94,6 +96,11 @@ export function SubmitForLegalReviewButton({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const request = buildSubmitForReviewRequest(plan);
+  // Unchanged since the review that blocked these segments: submitting as is would only be rejected again.
+  const blocked = currentBlockedSegments(plan);
+  const blockedReason = blocked.length
+    ? `${blocked.length === 1 ? "Segment" : "Segments"} ${blocked.join(", ")} ${blocked.length === 1 ? "was" : "were"} blocked by the Transport Specialist. Edit the route plan to change ${blocked.length === 1 ? "it" : "them"} first.`
+    : null;
 
   async function submit() {
     if (!request) return;
@@ -133,11 +140,12 @@ export function SubmitForLegalReviewButton({
         type="button"
         size="sm"
         variant="outline"
-        disabled={disabled || !request}
+        disabled={disabled || !request || Boolean(blockedReason)}
         title={
-          request
+          blockedReason ??
+          (request
             ? undefined
-            : "A segment has no planned times. Open Edit to complete the route first."
+            : "A segment has no planned times. Open Edit to complete the route first.")
         }
         onClick={() => setOpen(true)}
       >

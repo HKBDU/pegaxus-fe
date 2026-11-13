@@ -126,24 +126,21 @@ function EmergencyCostListContent({
       className={cn("w-full min-w-0 max-w-full space-y-3 font-sans", className)}
     >
       {!hideHeading && (
-        <header className="border-b border-border pb-3">
+        <header className="border-b border-[#eceae3] pb-2.5">
           <h2
             id={headingId}
-            className="m-0 font-heading text-xl font-semibold uppercase tracking-wide text-foreground sm:text-2xl"
+            className="m-0! font-sans! text-sm! leading-5! font-semibold! tracking-normal! text-slate-800!"
           >
             {embedded ? "Emergency costs" : "Emergency cost requests"}
           </h2>
-          <p className="mt-1 mb-0 text-sm text-muted-foreground">
+          <p className="mt-0.5 mb-0 text-xs text-slate-500">
             View and monitor emergency expenses. Dates use your local timezone.
           </p>
         </header>
       )}
       {!embedded ? (
         <div>
-          <p className="mb-1 text-xs text-muted-foreground">
-            Server status totals
-          </p>
-          <dl className="m-0 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <dl className="m-0 grid grid-cols-4 gap-1.5 sm:gap-2" aria-label="Requests by status">
             {emergencyCostStatuses.map((status) => {
               const count =
                 page?.counts?.[
@@ -154,14 +151,15 @@ function EmergencyCostListContent({
                 <div
                   key={status}
                   className={cn(
-                    "flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-[2px] border border-l-4 border-border bg-card px-3 py-3 text-card-foreground shadow-xs",
+                    "flex min-w-0 flex-col items-start gap-1 rounded-[2px] border border-l-4 border-[#e5e2d9] bg-white px-2 py-2 shadow-[0_1px_2px_rgb(23_25_28/0.035)] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-2 sm:px-3 sm:py-2.5",
                     summaryAccent[EMERGENCY_COST_STATUS_OPTIONS[status].tone],
                   )}
                 >
-                  <dt className="text-xs font-semibold">
+                  {/* About 76px wide on phones: the badge may not overflow its tile. */}
+                  <dt className="min-w-0 max-w-full overflow-hidden text-xs font-semibold [&>*]:max-w-full [&>*]:truncate">
                     <CostStatusBadge status={status} />
                   </dt>
-                  <dd className="m-0 text-2xl font-semibold tabular-nums text-foreground">
+                  <dd className="m-0 text-lg leading-none font-semibold tabular-nums text-slate-900 sm:text-xl">
                     {count == null ? (
                       <span aria-label="Count unavailable">—</span>
                     ) : (
@@ -174,6 +172,7 @@ function EmergencyCostListContent({
           </dl>
         </div>
       ) : null}
+      <div>
       <EmergencyCostFilters
         params={params}
         dateError={
@@ -185,7 +184,7 @@ function EmergencyCostListContent({
       <div
         role="status"
         aria-live="polite"
-        className="min-h-5 text-xs text-muted-foreground"
+        className="mt-1.5 min-h-4 px-1 text-[11px] text-slate-500"
       >
         {validation
           ? "Review the filters before loading requests."
@@ -197,10 +196,11 @@ function EmergencyCostListContent({
                 ? `${page.totalItems} matching requests`
                 : ""}
       </div>
+      </div>
       {validation ? (
         <p
           role="alert"
-          className="rounded-xs border border-destructive/30 p-3 text-sm text-destructive"
+          className="m-0 rounded-xs border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
         >
           {validation.issues[0]?.message}
         </p>
@@ -212,7 +212,7 @@ function EmergencyCostListContent({
           />
         </div>
       ) : (
-        <div className="min-w-0 rounded-xs border border-border bg-card">
+        <div className="min-w-0 overflow-hidden rounded-xs border border-[#e5e2d9] bg-white shadow-[0_1px_2px_rgb(23_25_28/0.035),0_5px_18px_rgb(63_49_27/0.025)]">
           <EmergencyCostResults
             items={page?.items ?? []}
             loading={!page}

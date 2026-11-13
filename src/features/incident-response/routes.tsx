@@ -1,10 +1,10 @@
 // oxlint-disable react/only-export-components -- route module declares lazy pages and exports route configuration
 import { lazy, Suspense, type ReactNode } from "react";
-import type { RouteObject } from "react-router-dom";
+import { Outlet, type RouteObject } from "react-router-dom";
 import { LoadingState } from "@/shared/components/common";
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
-import { CrewShell } from "@/features/ongoing-transport/components/CrewShell";
+import { MainLayout } from "@/shared/layouts/MainLayout";
 import type { EmergencyCostAudience } from "./navigation";
 
 const ListPage = lazy(() => import("./pages/EmergencyCostListPage"));
@@ -57,12 +57,24 @@ export const emergencyCostRoutes: RouteObject[] = [
   },
   {
     path: "/crew/emergency-costs",
+    // MainLayout, like the crew's incident page they come from (/crew/incidents/:id) and /crew, /crew/transports. The
+    // CrewShell (admin sidebar on a desktop, dark "Crew workspace" bar on a phone) changed the whole header in between.
     element: (
       <ProtectedRoute allowedRoles={["DRIVER", "ESCORT"]}>
-        <CrewShell />
+        <MainLayout />
       </ProtectedRoute>
     ),
-    children: children("crew"),
+    children: [
+      {
+        // MainLayout has no page background: give these pages the web's warm one, as the incident page has.
+        element: (
+          <div className="booking-page-shell min-h-[70dvh] bg-[#f4f2ed]">
+            <Outlet />
+          </div>
+        ),
+        children: children("crew"),
+      },
+    ],
   },
 ];
 

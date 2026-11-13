@@ -1,5 +1,8 @@
-import { HeartPulse, Route, TriangleAlert, Truck } from "lucide-react";
+import type { KeyboardEvent, MouseEvent } from "react";
+import { ArrowRight, HeartPulse, Route, TriangleAlert, Truck } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
 import {
   Table,
   TableBody,
@@ -43,10 +46,60 @@ function IncidentStatus({ status }: { status: Incident["status"] }) {
   );
 }
 
-export function TransportIncidents({ incidents }: { incidents: Incident[] }) {
+function ViewIncident({ href, code }: { href: string; code: string }) {
+  return (
+    <Button asChild variant="outline" size="xs" className="rounded-xs">
+      <Link to={href} aria-label={`View incident ${code}`}>
+        View details
+        <ArrowRight aria-hidden="true" />
+      </Link>
+    </Button>
+  );
+}
+
+export function TransportIncidents({
+  incidents,
+  detailHref,
+}: {
+  incidents: Incident[];
+  /**
+   * Where an incident opens, or null when the viewer cannot read it. Without it the panel was read-only, so the crew had
+   * no way from here to the detail page where they resolve, cancel or raise the severity of the incident.
+   */
+  detailHref?: (incident: Incident) => string | null;
+}) {
+  const navigate = useNavigate();
   const showSeverity = incidents.some(
     (incident) => incident.severity !== undefined,
   );
+  const hasLinks = Boolean(detailHref) && incidents.some((incident) => detailHref?.(incident));
+  /**
+   * The whole row (or phone card) opens the incident, not only its button. Clicks on the row's own links and buttons are
+   * left to them, so the button does not navigate twice. Enter and Space open it from the keyboard.
+   */
+  const rowProps = (incident: Incident) => {
+    const href = detailHref?.(incident);
+    if (!href) return {};
+    const open = () => navigate(href);
+    return {
+      role: "link" as const,
+      tabIndex: 0,
+      "aria-label": `Open incident ${incident.incidentCode}`,
+      className:
+        "cursor-pointer transition-colors hover:bg-orange-50/40 focus-visible:bg-orange-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40",
+      onClick: (event: MouseEvent<HTMLElement>) => {
+        if ((event.target as HTMLElement).closest("a, button")) return;
+        open();
+      },
+      onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open();
+        }
+      },
+    };
+  };
   if (incidents.length === 0) return null;
   return (
     <section
@@ -74,13 +127,15 @@ export function TransportIncidents({ incidents }: { incidents: Incident[] }) {
               <TableHead>Summary</TableHead>
               <TableHead>Reported at</TableHead>
               <TableHead>Status</TableHead>
+              {hasLinks ? <TableHead className="text-right">Details</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {incidents.map((incident) => (
               <TableRow
                 key={incident.incidentReportId}
-                className="hover:bg-orange-50/30"
+                {...rowProps(incident)}
+                className={`hover:bg-orange-50/30 ${rowProps(incident).className ?? ""}`}
               >
                 <TableCell>
                   <IncidentCategory incident={incident} />
@@ -111,6 +166,13 @@ export function TransportIncidents({ incidents }: { incidents: Incident[] }) {
                 <TableCell>
                   <IncidentStatus status={incident.status} />
                 </TableCell>
+                {hasLinks ? (
+                  <TableCell className="text-right">
+                    {detailHref?.(incident) ? (
+                      <ViewIncident href={detailHref(incident)!} code={incident.incidentCode} />
+                    ) : null}
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))}
           </TableBody>
@@ -118,7 +180,11 @@ export function TransportIncidents({ incidents }: { incidents: Incident[] }) {
       </div>
       <ul className="m-0 list-none divide-y divide-slate-100 p-0 md:hidden">
         {incidents.map((incident) => (
-          <li key={incident.incidentReportId} className="space-y-2 px-4 py-3">
+          <li
+            key={incident.incidentReportId}
+            {...rowProps(incident)}
+            className={`space-y-2 px-4 py-3 ${rowProps(incident).className ?? ""}`}
+          >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <IncidentCategory incident={incident} />
               <IncidentStatus status={incident.status} />
@@ -142,6 +208,11 @@ export function TransportIncidents({ incidents }: { incidents: Incident[] }) {
                 {formatTransportDate(incident.occurredAt)}
               </time>
             </div>
+            {detailHref?.(incident) ? (
+              <div className="flex justify-end">
+                <ViewIncident href={detailHref(incident)!} code={incident.incidentCode} />
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>

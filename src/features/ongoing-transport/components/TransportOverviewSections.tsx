@@ -33,14 +33,16 @@ export function TransportJourneyInformation({
 }) {
   return (
     <section
-      className="overview-panel overview-cell"
+      className="overview-panel overview-cell flex flex-col"
       aria-labelledby="journey-information"
     >
       <h2 id="journey-information" className="overview-heading">
         <UserRound aria-hidden="true" />
         Journey information
       </h2>
-      <dl className="mt-3 mb-0 space-y-2">
+      {/* The overview stretches this panel to the staff panel: spread the rows over that height instead of leaving a
+          blank block at the bottom. */}
+      <dl className="mt-2 mb-0 flex flex-1 flex-col justify-between divide-y divide-slate-100 [&>div]:py-2 [&>div:first-child]:pt-1 [&>div:last-child]:pb-0">
         <InfoRow label="Booking code">{overview.booking.bookingCode}</InfoRow>
         <InfoRow label="Customer">{overview.booking.customerName}</InfoRow>
         <InfoRow label="Origin">
@@ -100,7 +102,7 @@ export function TransportHorseHealthSummary({
   ];
   return (
     <section
-      className="overview-panel overview-cell"
+      className="overview-panel overview-cell flex flex-col"
       aria-labelledby="horse-health-summary"
     >
       <h2 id="horse-health-summary" className="overview-heading">
@@ -117,11 +119,13 @@ export function TransportHorseHealthSummary({
         aria-label="Proportion of horses with normal health"
         className="h-1.5 bg-slate-100 [&_[data-slot=progress-indicator]]:bg-emerald-500"
       />
-      <dl className="mt-3 mb-0 grid grid-cols-2 gap-2">
+      {/* Tiles share the remaining height so the panel matches its stretched neighbours; the fifth tile spans both
+          columns instead of sitting alone. */}
+      <dl className="mt-3 mb-0 grid flex-1 auto-rows-fr grid-cols-2 gap-1.5">
         {categories.map((category) => (
           <div
             key={category.label}
-            className={`rounded-xs border px-2 py-3 text-center ${category.color}`}
+            className={`flex flex-col items-center justify-center rounded-xs border px-2 py-2 text-center last:col-span-2 ${category.color}`}
           >
             <dd className="m-0 text-lg leading-none font-semibold tabular-nums">
               {category.value}
