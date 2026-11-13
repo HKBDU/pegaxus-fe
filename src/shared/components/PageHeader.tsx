@@ -14,7 +14,14 @@ export function PageHeader({
   showBack = true,
   className,
   action,
+  titleAddon,
 }: PageHeaderProps) {
+  const titleClass = cn(
+    "m-0! min-w-0 tracking-tight! [overflow-wrap:anywhere]",
+    size === "compact"
+      ? "font-heading text-[24px]! leading-tight! font-semibold! text-primary! uppercase sm:text-[28px]!"
+      : "font-heading text-[28px]! leading-[1.15]! font-bold! text-primary! uppercase sm:text-[36px]! xl:text-[40px]!",
+  );
   return (
     <section
       className={cn(
@@ -38,16 +45,17 @@ export function PageHeader({
         </NavLink>
       )}
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-        <h1
-          className={cn(
-            "m-0! min-w-0 flex-1 basis-full tracking-tight! [overflow-wrap:anywhere] sm:basis-[min(100%,12rem)]",
-            size === "compact"
-              ? "font-heading text-[24px]! leading-tight! font-semibold! text-primary! uppercase sm:text-[28px]!"
-              : "font-heading text-[28px]! leading-[1.15]! font-bold! text-primary! uppercase sm:text-[36px]! xl:text-[40px]!",
-          )}
-        >
-          {title}
-        </h1>
+        {titleAddon ? (
+          // Title and addon share one group, so the addon sits right after the title text.
+          <div className="flex min-w-0 flex-1 basis-full flex-wrap items-center gap-x-3 gap-y-1 sm:basis-[min(100%,12rem)]">
+            <h1 className={titleClass}>{title}</h1>
+            {titleAddon}
+          </div>
+        ) : (
+          <h1 className={cn(titleClass, "flex-1 basis-full sm:basis-[min(100%,12rem)]")}>
+            {title}
+          </h1>
+        )}
         {action}
       </div>
     </section>

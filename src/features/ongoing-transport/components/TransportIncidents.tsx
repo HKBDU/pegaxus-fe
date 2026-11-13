@@ -1,5 +1,7 @@
-import { HeartPulse, Route, TriangleAlert, Truck } from "lucide-react";
+import { ArrowRight, HeartPulse, Route, TriangleAlert, Truck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
 import {
   Table,
   TableBody,
@@ -43,10 +45,32 @@ function IncidentStatus({ status }: { status: Incident["status"] }) {
   );
 }
 
-export function TransportIncidents({ incidents }: { incidents: Incident[] }) {
+function ViewIncident({ href, code }: { href: string; code: string }) {
+  return (
+    <Button asChild variant="outline" size="xs" className="rounded-xs">
+      <Link to={href} aria-label={`View incident ${code}`}>
+        View details
+        <ArrowRight aria-hidden="true" />
+      </Link>
+    </Button>
+  );
+}
+
+export function TransportIncidents({
+  incidents,
+  detailHref,
+}: {
+  incidents: Incident[];
+  /**
+   * Where an incident opens, or null when the viewer cannot read it. Without it the panel was read-only, so the crew had
+   * no way from here to the detail page where they resolve, cancel or raise the severity of the incident.
+   */
+  detailHref?: (incident: Incident) => string | null;
+}) {
   const showSeverity = incidents.some(
     (incident) => incident.severity !== undefined,
   );
+  const hasLinks = Boolean(detailHref) && incidents.some((incident) => detailHref?.(incident));
   if (incidents.length === 0) return null;
   return (
     <section
@@ -74,6 +98,7 @@ export function TransportIncidents({ incidents }: { incidents: Incident[] }) {
               <TableHead>Summary</TableHead>
               <TableHead>Reported at</TableHead>
               <TableHead>Status</TableHead>
+              {hasLinks ? <TableHead className="text-right">Details</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -111,6 +136,13 @@ export function TransportIncidents({ incidents }: { incidents: Incident[] }) {
                 <TableCell>
                   <IncidentStatus status={incident.status} />
                 </TableCell>
+                {hasLinks ? (
+                  <TableCell className="text-right">
+                    {detailHref?.(incident) ? (
+                      <ViewIncident href={detailHref(incident)!} code={incident.incidentCode} />
+                    ) : null}
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))}
           </TableBody>
@@ -142,6 +174,11 @@ export function TransportIncidents({ incidents }: { incidents: Incident[] }) {
                 {formatTransportDate(incident.occurredAt)}
               </time>
             </div>
+            {detailHref?.(incident) ? (
+              <div className="flex justify-end">
+                <ViewIncident href={detailHref(incident)!} code={incident.incidentCode} />
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>

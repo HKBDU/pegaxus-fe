@@ -73,8 +73,7 @@ export function TransportPageHeader({
     <>
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          {/* Bottom-aligned: centring against the whole PageHeader (back link + title) lifted the badge above the title. */}
-          <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+          <div>
             <PageHeader
               title={title}
               backHref={
@@ -100,14 +99,15 @@ export function TransportPageHeader({
                   <OngoingTransportStatusBadge status={status} />
                 ) : undefined
               }
+              // Right after the title text: placed after the whole PageHeader, it drifted away on Overview, whose back
+              // link ("Back to Ongoing Transports") is wider than the transport code.
+              titleAddon={
+                !isCrew && status ? (
+                  <OngoingTransportStatusBadge status={status} />
+                ) : undefined
+              }
               className="w-auto gap-1"
             />
-            {!isCrew && status ? (
-              // One title line tall (compact title: 24px / 28px with leading-tight), so the badge sits on its centre.
-              <span className="flex h-[30px] items-center sm:h-[35px]">
-                <OngoingTransportStatusBadge status={status} />
-              </span>
-            ) : null}
           </div>
           <p className="mt-2 mb-0 text-xs text-slate-500 sm:text-sm">
             {viewDescription[isCrew ? "overview" : view]}

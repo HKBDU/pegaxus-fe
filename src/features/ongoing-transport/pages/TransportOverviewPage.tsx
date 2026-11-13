@@ -18,6 +18,7 @@ import { useTransportOverview } from "../hooks/useTransportOverview";
 import { formatTransportDate, formatTransportTime } from "../format";
 import { getOngoingTransportError } from "../services";
 import type { TransportAudience } from "../types";
+import { incidentRoutes } from "@/features/incident-management/constants";
 
 export default function TransportOverviewPage({
   audience,
@@ -143,7 +144,19 @@ export default function TransportOverviewPage({
           <TransportDossiers dossiers={overview.complianceDossiers} />
           {audience !== "customer" &&
           !canAccess(principal, { anyRole: ["CUSTOMER"] }) ? (
-            <TransportIncidents incidents={overview.activeIncidents} />
+            <TransportIncidents
+              incidents={overview.activeIncidents}
+              detailHref={(incident) =>
+                audience === "crew"
+                  ? incidentRoutes.crewDetail(incident.incidentReportId)
+                  : audience === "admin"
+                    ? incidentRoutes.adminDetail(incident.incidentReportId)
+                    : // The BE lets a customer read only HIGH/CRITICAL incidents (IN8); any other link would 404.
+                      bookingId && transportId && (incident.severity === "HIGH" || incident.severity === "CRITICAL")
+                      ? incidentRoutes.customerDetail(bookingId, transportId, incident.incidentReportId)
+                      : null
+              }
+            />
           ) : null}
         </>
       )}
