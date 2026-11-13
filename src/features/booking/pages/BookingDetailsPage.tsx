@@ -238,9 +238,8 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
           audience === "customer" && activeCustomerTab === "order-tracking" ? (
             <OrderTrackingTimeline booking={booking} onSelectTab={handleTabChange} />
           ) : audience === "customer" && activeCustomerTab === "history" ? (
-            <div className={cn(panelClass, "p-4 sm:p-6")}>
-              <BookingHistoryView bookingId={String(booking.bookingId)} />
-            </div>
+            // Sits on the page background like the standalone history page; the table keeps its own border.
+            <BookingHistoryView bookingId={String(booking.bookingId)} />
           ) : (
             <BookingInformationSections
               booking={booking}
