@@ -9,5 +9,5 @@ export const ROUTE_LINE_COLORS = {
   /** A backup segment that reuses a primary route: distinct from the blue backup legs and the grey primary. */
   sharedWithPrimary: "#8b5cf6",
   /** A segment blocked by the Transport Specialist's legal review, so the coordinator finds it at once. */
-  blocked: "#dc2626",
+  blocked: "#c8414b",
 } as const;

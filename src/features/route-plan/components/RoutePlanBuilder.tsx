@@ -1834,8 +1834,8 @@ export function RoutePlanBuilder({
                   {/* Points the coordinator at the segments the legal review blocked; they are outlined red below and
                       drawn red on the map, and the mark goes once their route is replaced. */}
                   {blockedCount > 0 && (
-                    <div role="status" className="flex items-start gap-2 rounded-[2px] border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-900">
-                      <ShieldAlert className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden="true" />
+                    <div role="status" className="flex items-start gap-2 rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
+                      <ShieldAlert className="mt-0.5 size-4 shrink-0 text-red-500" aria-hidden="true" />
                       <span>
                         <strong className="font-semibold">
                           {blockedCount} {blockedCount === 1 ? "segment was" : "segments were"} blocked by the Transport Specialist.

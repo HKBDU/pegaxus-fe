@@ -45,8 +45,8 @@ export function RouteLayer({ route, routes = [], geoJson }: RouteLayerProps) {
                       : index === 0 && route
                         ? ROUTE_LINE_COLORS.focused
                         : ROUTE_LINE_COLORS.default,
-                "line-width": item.blocked ? 5 : item.readonly ? 3 : index === 0 && route ? 4 : 3,
-                "line-opacity": item.blocked ? 0.95 : item.readonly ? 0.35 : 0.85,
+                "line-width": item.blocked ? 3.5 : item.readonly ? 3 : index === 0 && route ? 4 : 3,
+                "line-opacity": item.blocked ? 0.9 : item.readonly ? 0.35 : 0.85,
               }}
             />
           </Source>

@@ -132,7 +132,7 @@ export function RouteSegmentList({
             >
               <span
                 aria-hidden="true"
-                className={`absolute top-2 -left-[27px] size-3 rounded-full border-2 border-white sm:-left-[35px] ${blocked ? "bg-red-600" : review && !impact?.highlighted ? "bg-slate-700" : "bg-primary"}`}
+                className={`absolute top-2 -left-[27px] size-3 rounded-full border-2 border-white sm:-left-[35px] ${blocked ? "bg-red-500" : review && !impact?.highlighted ? "bg-slate-700" : "bg-primary"}`}
               />
               <p className="mb-2 text-xs font-medium text-slate-500">
                 {segment.fromLocation.locationName}
@@ -141,7 +141,7 @@ export function RouteSegmentList({
                 title={`Segment ${String(segment.sequenceNo).padStart(2, "0")}`}
                 className={
                   blocked
-                    ? "border-red-300 bg-red-50/40 ring-1 ring-red-200"
+                    ? "border-red-300 border-l-4 border-l-red-500 bg-red-50/70"
                     : impact?.highlighted
                       ? "border-primary/30 bg-primary/[0.025]"
                       : undefined
@@ -163,7 +163,7 @@ export function RouteSegmentList({
                   {blocked ? (
                     <Badge
                       variant="outline"
-                      className="rounded-xs border-red-300 bg-red-50 text-[10px] font-semibold text-red-700"
+                      className="rounded-xs border-red-300 bg-red-50 text-[10px] font-semibold text-red-600"
                     >
                       Blocked by legal review
                     </Badge>
