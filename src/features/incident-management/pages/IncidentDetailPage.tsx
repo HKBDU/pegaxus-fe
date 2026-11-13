@@ -47,39 +47,7 @@ function DetailSkeleton() {
   )
 }
 
-/** Phone header of the crew page: dark card, severity colour on its edge, the facts a driver needs at a glance. */
-function CrewHero({ incident }: { incident: Incident }) {
-  return (
-    <section aria-label="Incident summary" className={cn("rounded-[2px] border-l-[5px] bg-[#17191c] p-4 text-white shadow-sm", severityEdge[incident.severity] ?? "border-l-slate-400")}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="m-0 font-heading text-[11px] font-medium uppercase tracking-[0.14em] text-white/60">Incident</p>
-          <h1 className="m-0! font-heading text-[28px]! leading-8! font-bold! tracking-normal! text-white!">{incident.incidentCode}</h1>
-        </div>
-        <SeverityBadge severity={incident.severity} />
-      </div>
-      <p className="m-0 mt-2 text-base font-semibold leading-6 text-white">{incident.title}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        <CategoryBadge category={incident.category} />
-        <StatusBadge status={incident.status} />
-      </div>
-      <dl className="m-0 mt-3.5 grid gap-1.5 border-t border-white/15 pt-3 text-[13px] text-white/80">
-        <div className="flex items-center gap-2">
-          <Clock className="size-4 shrink-0 text-white/50" aria-hidden="true" />
-          <dd className="m-0">{formatDateTime(incident.occurredAt)} <span className="text-white/55">· {timeAgo(incident.occurredAt, new Date(incident.serverTime).getTime())}</span></dd>
-        </div>
-        {incident.transport ? (
-          <div className="flex items-center gap-2">
-            <Truck className="size-4 shrink-0 text-white/50" aria-hidden="true" />
-            <dd className="m-0">{incident.transport.transportCode}</dd>
-          </div>
-        ) : null}
-      </dl>
-    </section>
-  )
-}
-
-/** Desktop summary: the page's white panel with the severity on its left edge, instead of the phone's dark hero card. */
+/** Crew summary (phone and desktop): the page's white panel with the severity colour on its left edge. */
 function CrewSummaryCard({ incident, children }: { incident: Incident; children?: ReactNode }) {
   return (
     <section aria-label="Incident summary" className={cn(panelClass, "border-l-4 p-4", severityEdge[incident.severity] ?? "border-l-slate-400")}>
@@ -300,10 +268,10 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
               Assigned transports
             </Link>
             {incident && !crewDesktop ? (
-              <div className="space-y-2">
-                <CrewHero incident={incident} />
-                {crewActions()}
-              </div>
+              // The same white summary as the desktop side column (the dark hero card looked out of place).
+              <CrewSummaryCard incident={incident}>
+                {crewActions("mt-3 border-t border-[#eceae3] pt-3")}
+              </CrewSummaryCard>
             ) : null}
           </div>
         ) : (
