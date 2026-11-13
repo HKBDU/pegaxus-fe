@@ -338,6 +338,7 @@ export function SegmentCard({
   availableVehicles = [],
   routePlanId,
   lastUpdatedAt,
+  blocked = false,
 }: {
   segment: DraftSegment;
   index: number;
@@ -355,6 +356,8 @@ export function SegmentCard({
   availableVehicles?: Vehicle[];
   routePlanId?: string;
   lastUpdatedAt?: string;
+  /** The legal review blocked this saved segment: outlined red with a label so the coordinator finds it. */
+  blocked?: boolean;
 }) {
   const [pendingVehicleIds, setPendingVehicleIds] = useState<string[] | null>(null);
   const [vehicleOpen, setVehicleOpen] = useState(false);
@@ -399,14 +402,25 @@ export function SegmentCard({
 
   return (
     <Card
+      data-blocked={blocked || undefined}
       className={`w-full min-w-0 overflow-hidden gap-2 rounded-[2px] py-2 shadow-sm transition ${
-        segment.isDisconnected ? "border-red-300 bg-red-50/10" : ""
+        blocked
+          ? "border-red-400 border-l-4 border-l-red-600 bg-red-50/50 ring-1 ring-red-200"
+          : segment.isDisconnected
+            ? "border-red-300 bg-red-50/10"
+            : ""
       }`}
     >
       <CardContent className="px-3 min-w-0 w-full overflow-hidden">
+        {blocked ? (
+          <p className="m-0 mb-2 flex items-center gap-1.5 text-[11px] font-semibold text-red-700">
+            <ShieldAlert aria-hidden="true" className="size-3.5 shrink-0" />
+            Blocked by Transport Specialist · change this segment
+          </p>
+        ) : null}
         <div className="flex items-start gap-2 min-w-0 w-full overflow-hidden">
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-[2px] bg-slate-700 text-xs font-bold text-white">
+            <span className={`mt-0.5 grid size-6 shrink-0 place-items-center rounded-[2px] text-xs font-bold text-white ${blocked ? "bg-red-600" : "bg-slate-700"}`}>
               {index + 1}
             </span>
             {isLatest && totalSegments > 1 && (

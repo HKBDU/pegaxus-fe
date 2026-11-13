@@ -13,6 +13,7 @@ import { RoutePlanHeader } from "./RoutePlanHeader";
 import { RoutePlanOverview } from "./RoutePlanOverview";
 import { RoutePlanMapPanel } from "./RoutePlanMapPanel";
 import { RouteSegmentList } from "./RouteSegmentList";
+import { blockedSegmentNumbers } from "../adapters/route-plan-map.adapter";
 import { RouteContingencyTab } from "./RouteContingencyTab";
 import { RouteLegalReview } from "./RouteLegalReview";
 
@@ -81,6 +82,7 @@ export function RoutePlanDetails({
           <RouteSegmentList
             segments={plan.segments}
             segmentActions={segmentActions}
+            blockedSegments={blockedSegmentNumbers(plan)}
           />
         </Tabs.Content>
         <Tabs.Content

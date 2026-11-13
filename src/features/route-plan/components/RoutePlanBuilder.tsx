@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import {
@@ -120,6 +120,8 @@ export type RoutePlanBuilderProps = {
   savedSegments?: DraftSegment[];
   primarySegments?: DraftSegment[];
   initialRouteNote?: string;
+  /** Segments the legal review blocked (saved ids) and the reviewer's note, highlighted for the coordinator. */
+  legalBlock?: { routePlanRouteIds: string[]; note?: string | null };
   locations: MapLocation[];
   routes: MapRoute[];
   vehicles?: Vehicle[];
@@ -168,6 +170,7 @@ export function RoutePlanBuilder({
   savedSegments = [],
   primarySegments = [],
   initialRouteNote = "",
+  legalBlock,
   locations: initialLocations,
   routes,
   vehicles: initialVehicles,
@@ -461,8 +464,23 @@ export function RoutePlanBuilder({
     );
   }, [locationSearch, locations]);
 
+  // Saved segments the legal review blocked; a segment whose route was replaced no longer carries the saved id, so its
+  // red mark goes away once the coordinator fixes it.
+  const blockedRouteIds = useMemo(
+    () => new Set(legalBlock?.routePlanRouteIds ?? []),
+    [legalBlock],
+  );
+  const isBlockedSegment = useCallback(
+    (segment: DraftSegment) =>
+      Boolean(segment.route.routePlanRouteId) && blockedRouteIds.has(String(segment.route.routePlanRouteId)),
+    [blockedRouteIds],
+  );
+  const blockedCount = segments.filter(isBlockedSegment).length;
+
   const selectedRoutes = useMemo(() => {
-    if (!isBackup) return segments.map((segment) => segment.route);
+    const withBlock = (segment: DraftSegment) =>
+      isBlockedSegment(segment) ? { ...segment.route, blocked: true } : segment.route;
+    if (!isBackup) return segments.map(withBlock);
     // A backup segment that reuses a primary route has the same id. Drawing both gave two map layers with one id, and
     // the grey primary one won, so the backup leg looked uncoloured: draw it once, in the shared colour.
     const primaryIds = new Set(
@@ -477,11 +495,11 @@ export function RoutePlanBuilder({
         .map((route) => ({ ...route, readonly: true })),
       ...segments.map((segment) =>
         primaryIds.has(String(segment.route.id))
-          ? { ...segment.route, sharedWithPrimary: true }
-          : segment.route,
+          ? { ...withBlock(segment), sharedWithPrimary: true }
+          : withBlock(segment),
       ),
     ];
-  }, [isBackup, readonlyPrimaryRoutes, segments]);
+  }, [isBackup, isBlockedSegment, readonlyPrimaryRoutes, segments]);
 
   const builtRouteLocations = useMemo(() => {
     const selectedLocationIds = new Set(
@@ -1796,6 +1814,20 @@ export function RoutePlanBuilder({
                 </div>
 
                 <div className="grid gap-2 min-w-0">
+                  {/* Points the coordinator at the segments the legal review blocked; they are outlined red below and
+                      drawn red on the map, and the mark goes once their route is replaced. */}
+                  {blockedCount > 0 && (
+                    <div role="status" className="flex items-start gap-2 rounded-[2px] border border-red-300 bg-red-50 px-3 py-2 text-xs text-red-900">
+                      <ShieldAlert className="mt-0.5 size-4 shrink-0 text-red-600" aria-hidden="true" />
+                      <span>
+                        <strong className="font-semibold">
+                          {blockedCount} {blockedCount === 1 ? "segment was" : "segments were"} blocked by the Transport Specialist.
+                        </strong>{" "}
+                        Change {blockedCount === 1 ? "it" : "them"} before submitting for legal review again.
+                        {legalBlock?.note ? <span className="mt-1 block text-red-800">Review note: {legalBlock.note}</span> : null}
+                      </span>
+                    </div>
+                  )}
                   {bcpRequirement && (
                     <div className="flex items-start gap-2 rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
                       <ShieldAlert className="mt-0.5 size-4 shrink-0 text-red-600" />
@@ -2297,6 +2329,7 @@ export function RoutePlanBuilder({
                     <BuilderSegmentCard
                       key={segment.id}
                       segment={segment}
+                      blocked={isBlockedSegment(segment)}
                       index={index}
                       totalSegments={segments.length}
                       isLatest={index === segments.length - 1}

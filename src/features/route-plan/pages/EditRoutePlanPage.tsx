@@ -154,6 +154,17 @@ export default function EditRoutePlanPage() {
     if (route.toLocation) allLocationsMap.set(String(route.toLocation.id), route.toLocation);
   }
 
+  // Segments the Transport Specialist blocked in the legal review (by their saved id, so a replaced route drops the mark).
+  const blockedNumbers = plan.legalReview?.isFeasible === false ? (plan.legalReview.blockedSegments ?? []) : [];
+  const legalBlock = blockedNumbers.length
+    ? {
+        routePlanRouteIds: plan.segments
+          .filter((segment) => blockedNumbers.includes(segment.sequenceNo))
+          .map((segment) => segment.routePlanRouteId),
+        note: plan.legalReview?.note ?? null,
+      }
+    : undefined;
+
   const allRoutesMap = new Map<string, MapRoute>();
   for (const r of catalog.routes) allRoutesMap.set(String(r.id), r);
   for (const r of [...initialRoutes, ...primaryRoutes]) allRoutesMap.set(String(r.id), r);
@@ -169,6 +180,7 @@ export default function EditRoutePlanPage() {
       savedSegments={savedSegments}
       primarySegments={primarySegments}
       initialRouteNote={plan.routeNote ?? ""}
+      legalBlock={legalBlock}
       primaryRoutes={primaryRoutes}
       primaryAvailable={plan.routeType !== "BACKUP" || primaryRoutes.length > 0}
       primaryError="No valid PRIMARY route plan found. Please create a PRIMARY route plan first."

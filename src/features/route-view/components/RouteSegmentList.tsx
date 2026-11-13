@@ -16,10 +16,13 @@ export function RouteSegmentList({
   segments,
   review,
   segmentActions,
+  blockedSegments,
 }: {
   segments: RouteSegment[];
   review?: { title: string; impact: (segment: RouteSegment) => SegmentImpact };
   segmentActions?: (segment: RouteSegment) => ReactNode;
+  /** Sequence numbers the legal review blocked: those cards are outlined red so the coordinator finds them. */
+  blockedSegments?: Set<number>;
 }) {
   if (!segments.length)
     return (
@@ -118,16 +121,18 @@ export function RouteSegmentList({
               )}
             </>
           );
+          const blocked = blockedSegments?.has(segment.sequenceNo) ?? false;
           return (
             <li
               key={segment.routePlanRouteId}
+              data-blocked={blocked || undefined}
               data-impact={impact?.kind}
               data-assignment={segment.isOutsourced ? "outsourced" : "internal"}
               className="relative min-w-0"
             >
               <span
                 aria-hidden="true"
-                className={`absolute top-2 -left-[27px] size-3 rounded-full border-2 border-white sm:-left-[35px] ${review && !impact?.highlighted ? "bg-slate-700" : "bg-primary"}`}
+                className={`absolute top-2 -left-[27px] size-3 rounded-full border-2 border-white sm:-left-[35px] ${blocked ? "bg-red-600" : review && !impact?.highlighted ? "bg-slate-700" : "bg-primary"}`}
               />
               <p className="mb-2 text-xs font-medium text-slate-500">
                 {segment.fromLocation.locationName}
@@ -135,9 +140,11 @@ export function RouteSegmentList({
               <Section
                 title={`Segment ${String(segment.sequenceNo).padStart(2, "0")}`}
                 className={
-                  impact?.highlighted
-                    ? "border-primary/30 bg-primary/[0.025]"
-                    : undefined
+                  blocked
+                    ? "border-red-300 bg-red-50/40 ring-1 ring-red-200"
+                    : impact?.highlighted
+                      ? "border-primary/30 bg-primary/[0.025]"
+                      : undefined
                 }
                 actions={
                   impact ? (
@@ -153,6 +160,14 @@ export function RouteSegmentList({
                 }
               >
                 <div className="flex flex-wrap gap-2">
+                  {blocked ? (
+                    <Badge
+                      variant="outline"
+                      className="rounded-xs border-red-300 bg-red-50 text-[10px] font-semibold text-red-700"
+                    >
+                      Blocked by legal review
+                    </Badge>
+                  ) : null}
                   <ApprovedBookingBadge value={segment.route.transportMode} />
                   <ApprovedBookingBadge
                     value={segment.isOutsourced ? "OUTSOURCED" : "INTERNAL"}

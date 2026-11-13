@@ -48,6 +48,8 @@ export type MapRoute = {
   readonly?: boolean;
   /** A backup segment that reuses a primary route: drawn in its own colour so the overlap stays visible. */
   sharedWithPrimary?: boolean;
+  /** A segment the Transport Specialist blocked in the legal review: drawn red above every other colour. */
+  blocked?: boolean;
 };
 
 export type MapPoint = { latitude: number; longitude: number };

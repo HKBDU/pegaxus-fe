@@ -75,10 +75,21 @@ export function verifiedRouteGeometry(input: unknown): RouteGeometry | null {
   return null;
 }
 
+/**
+ * Sequence numbers of the segments the Transport Specialist blocked in the legal review. The list only means something
+ * on a review that found the plan not feasible.
+ */
+export function blockedSegmentNumbers(plan: Pick<RoutePlanDetail, "legalReview">): Set<number> {
+  return new Set(
+    plan.legalReview?.isFeasible === false ? (plan.legalReview.blockedSegments ?? []) : [],
+  );
+}
+
 export function toRouteMapData(
   plan: RoutePlanDetail,
   suppliedGeometry?: unknown,
 ) {
+  const blocked = blockedSegmentNumbers(plan);
   // RP3 currently has no saved geometry field. Build segment routes from the
   // verified endpoints so MapViewer can resolve and render their line geometry.
   const geometry = verifiedRouteGeometry(suppliedGeometry);
@@ -105,6 +116,8 @@ export function toRouteMapData(
           durationMinutes: segment.route.estimatedDurationMinutes,
           routePlanType: segment.routeType,
           isOutsourced: segment.isOutsourced,
+          // Drawn red on the map so the coordinator finds the segment the legal review blocked.
+          blocked: blocked.has(segment.sequenceNo),
         },
       ];
     });
