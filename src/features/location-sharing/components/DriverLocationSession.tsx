@@ -14,6 +14,7 @@ import {
 import { DriverLocationSessionContext } from "../hooks/useDriverLocationSession";
 import { LocationWorkflowDialogs } from "./LocationWorkflowDialogs";
 import type { DriverTransportReadState } from "../types";
+import { GpsSimulatorDrawer } from "../simulator/GpsSimulatorDrawer";
 
 const DEMO_ASSIGNMENT = {
   transportId: "demo",
@@ -237,6 +238,15 @@ export function DriverLocationSession({ children }: { children: ReactNode }) {
       }}
     >
       {children}
+      {driver ? (
+        <GpsSimulatorDrawer
+          currentSegment={
+            isDemo ? DEMO_SEGMENT : query.data?.currentSegment ?? null
+          }
+          onMockGpsEnabled={sharing.restart}
+          onMockGpsDisabled={sharing.restart}
+        />
+      ) : null}
       {driver && transportId ? (
         <LocationWorkflowDialogs key={transportId} transportId={transportId} />
       ) : null}
