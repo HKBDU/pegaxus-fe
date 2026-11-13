@@ -55,14 +55,20 @@ export function EmergencyCostFilters({
         role="region"
         tabIndex={0}
         aria-label="Emergency cost filter toolbar"
-        className="w-full min-w-0 max-w-full rounded-[2px] p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
+        className="@container w-full min-w-0 max-w-full rounded-[2px] p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-inset"
       >
+        {/*
+          A fixed grid, not flex-wrap: the controls had different fixed widths (~1000px together) and wrapped at random
+          points. The breakpoints are container queries, not viewport ones: the list is also embedded in the narrow column
+          of the incident page, where a viewport breakpoint switched to the one-row layout and pushed the last filters past
+          the border. Under 672px: search, pairs, sort. From 672px: search, then five even cells. From 1152px: one row.
+        */}
         <div
           role="group"
           aria-label="Emergency cost filters"
-          className="flex w-full min-w-0 flex-wrap items-center gap-2"
+          className="grid w-full min-w-0 grid-cols-2 items-center gap-2 @2xl:grid-cols-5 @6xl:grid-cols-[minmax(14rem,1fr)_repeat(5,minmax(0,9.5rem))]"
         >
-          <div className="relative min-w-0 basis-full sm:basis-56 sm:flex-1">
+          <div className="relative col-span-2 min-w-0 @2xl:col-span-5 @6xl:col-span-1">
             <Search
               aria-hidden="true"
               className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
@@ -81,7 +87,7 @@ export function EmergencyCostFilters({
               <Button
                 type="button"
                 variant="outline"
-                className={`${controlClass} w-36 shrink-0 justify-start`}
+                className={`${controlClass} w-full min-w-0 justify-start`}
                 aria-label="Filter emergency cost statuses"
                 title={all ? "All statuses" : selected.join(", ")}
               >
@@ -143,7 +149,7 @@ export function EmergencyCostFilters({
           >
             <SelectTrigger
               aria-label="Filter emergency cost category"
-              className={`${controlClass} w-44 shrink-0`}
+              className={`${controlClass} w-full min-w-0`}
             >
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
@@ -156,7 +162,7 @@ export function EmergencyCostFilters({
               ))}
             </SelectContent>
           </Select>
-          <div className="w-36 shrink-0">
+          <div className="min-w-0">
             <DatePicker
               aria-label="Requested from date"
               placeholder="From date"
@@ -165,7 +171,7 @@ export function EmergencyCostFilters({
               className={controlClass}
             />
           </div>
-          <div className="w-36 shrink-0">
+          <div className="min-w-0">
             <DatePicker
               aria-label="Requested to date"
               placeholder="To date"
@@ -175,7 +181,8 @@ export function EmergencyCostFilters({
               className={controlClass}
             />
           </div>
-          <div className="w-34 shrink-0 [&>button]:h-11 [&>button]:w-full [&>button]:border-input [&>button]:bg-background [&>button]:text-foreground sm:[&>button]:h-8">
+          {/* Alone on its row in a narrow container, one even cell from 672px. */}
+          <div className="col-span-2 min-w-0 @2xl:col-span-1 [&>button]:h-11 [&>button]:w-full [&>button]:border-input [&>button]:bg-background [&>button]:text-foreground sm:[&>button]:h-8">
             <DataTableRadioFilter
               title="Newest requests"
               ariaLabel="Sort emergency cost requests"
