@@ -313,7 +313,13 @@ export function RoutePlanBuilder({
         const duration = segment.plannedDepartureAt && segment.plannedArrivalAt
           ? (Date.parse(segment.plannedArrivalAt) - Date.parse(segment.plannedDepartureAt)) / 60000
           : segment.route.durationMinutes;
-        const timed = segment.preserveTiming && !recalculateSavedTimes
+        // A saved segment keeps its times unless an earlier change (e.g. a longer replacement route) makes it depart
+        // before the previous segment arrives; then it shifts after that arrival with the same duration.
+        const keepsSavedTimes =
+          segment.preserveTiming &&
+          !recalculateSavedTimes &&
+          (!segment.plannedDepartureAt || !cursor || Date.parse(segment.plannedDepartureAt) >= Date.parse(cursor));
+        const timed = keepsSavedTimes
           ? segment
           : calculateRouteTimeline(cursor, [{ ...segment, durationMinutes: duration }])[0];
         if (timed.plannedArrivalAt) cursor = new Date(Date.parse(timed.plannedArrivalAt) + (timed.dwellAfterMinutes ?? 0) * 60000).toISOString();
