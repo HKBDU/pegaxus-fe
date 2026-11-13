@@ -32,7 +32,9 @@ export function canSpecialistReviewRoute(
   context: RouteWorkspaceContext,
 ) {
   if (getWorkspaceRole(context.principal) !== "specialist" || route.status !== "DRAFT") return false;
-  if (!isDossierReady(context.dossierStatus)) return false;
+  // BE checks the dossier only for PRIMARY and RETURN. A BACKUP submitted after the primary was confirmed is reviewed
+  // while the main dossier is already IN_PREPARATION or later.
+  if (route.routeType !== "BACKUP" && !isDossierReady(context.dossierStatus)) return false;
   if (route.routeType === "RETURN") return context.transportStatus === "IN_TRANSIT";
   return route.legalReviewRequested === true;
 }

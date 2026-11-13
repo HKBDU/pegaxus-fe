@@ -181,7 +181,7 @@ export function RouteManagementActions({
           </Button>
         </>
       ) : null}
-      {role === "specialist" && plan.status === "DRAFT" && !dossierReady ? (
+      {role === "specialist" && plan.status === "DRAFT" && plan.routeType !== "BACKUP" && !dossierReady ? (
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-slate-600">
           <span>
             {plan.routeType === "RETURN"
