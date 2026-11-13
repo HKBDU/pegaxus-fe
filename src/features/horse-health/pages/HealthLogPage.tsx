@@ -1,26 +1,77 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { MapPin } from "lucide-react"
+import { Activity, CheckCheck, ClipboardList, MapPin, NotebookPen, Pill, Save } from "lucide-react"
 
 import { normalizeRole } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
 import { LoadingState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { PhotoCaptureSection } from "@/shared/components/PhotoCaptureSection"
+import { Button } from "@/shared/components/ui/button"
+import { Checkbox } from "@/shared/components/ui/checkbox"
+import { Input } from "@/shared/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
+import { Textarea } from "@/shared/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
 
 import { CrewShell } from "../components/CrewShell"
-import { HEALTH_STATUSES, HORSE_HEALTH_ROUTES, HYDRATION_STATUSES, LOG_TYPES } from "../constants"
+import { fieldControl, fieldErrorText, fieldLabel, healthHeading, healthPanel, noticeError, noticeMuted } from "../components/health-ui"
+import { HEALTH_STATUSES, HEALTH_STATUS_LABELS, HORSE_HEALTH_ROUTES, HYDRATION_STATUSES, LOG_TYPES } from "../constants"
+import { fieldErrorsFrom, healthErrorMessage } from "../errors"
 import { useCreateHealthLog, useHorseHealthOverview, useMarkAllNormal } from "../hooks/useHorseHealth"
+import { healthLogInputSchema, markAllNormalInputSchema } from "../schemas"
 import type { HealthLogInput, LogType } from "../types"
 
-const inputClass = "mt-1 min-h-12 w-full border border-slate-300 bg-white px-3 text-base text-[#181818] outline-none focus:border-[#f39200]"
-const sectionClass = "space-y-3 border border-slate-300 bg-white p-4 sm:p-5"
+const sectionClass = `${healthPanel} space-y-3 p-4`
 
+/** A labelled note, like the web's other forms: label (and "optional") above the shared textarea, error below. */
+function NoteField({
+  label,
+  optional,
+  field,
+  value,
+  onChange,
+  placeholder,
+  rows = 2,
+  errors,
+  onEdited,
+}: {
+  label: string
+  optional?: boolean
+  field: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  rows?: number
+  errors: Record<string, string>
+  onEdited: (field: string) => void
+}) {
+  return (
+    <label className={fieldLabel}>
+      {label} {optional ? <span className="font-normal text-slate-400">(optional)</span> : null}
+      <Textarea
+        value={value}
+        rows={rows}
+        onChange={(event) => {
+          onChange(event.target.value)
+          onEdited(field)
+        }}
+        aria-invalid={errors[field] ? true : undefined}
+        placeholder={placeholder}
+        // The shared textarea grows with its content (field-sizing-content); cap it and scroll inside instead.
+        className="mt-1 max-h-24 min-h-0 resize-none overflow-y-auto bg-white"
+      />
+      {errors[field] ? <span className={fieldErrorText}>{errors[field]}</span> : null}
+    </label>
+  )
+}
+const humanize = (value: string) => value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ")
+
+// A typed "38,5" is read as 38.5; anything else that is not a number stays NaN so the schema flags the field.
 function toNumber(value: string) {
-  return value.trim() ? Number(value) : undefined
+  return value.trim() ? Number(value.trim().replace(",", ".")) : undefined
 }
 
 export default function HealthLogPage() {
@@ -32,7 +83,8 @@ export default function HealthLogPage() {
   const createMutation = useCreateHealthLog(transportId)
   const markAllMutation = useMarkAllNormal(transportId)
   const horseItems = overview.data?.horses
-  const horses = horseItems ?? []
+  // A horse left behind mid-trip is no longer checked by this crew.
+  const horses = (horseItems ?? []).filter((item) => !item.detachedAt)
   const [horseId, setHorseId] = useState("")
   const [logType, setLogType] = useState<LogType>("ROUTINE_CHECK")
   const [healthStatus, setHealthStatus] = useState<HealthLogInput["healthStatus"]>("NORMAL")
@@ -58,17 +110,32 @@ export default function HealthLogPage() {
   const [uploadedPublicIds, setUploadedPublicIds] = useState<string[]>([])
   const [photoUploadState, setPhotoUploadState] = useState<"idle" | "uploading" | "ready" | "error">("idle")
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+
+  /** Clears a field's message once the escort edits it. */
+  const edited = (field: string) =>
+    setFieldErrors((current) => {
+      if (!current[field]) return current
+      const next = { ...current }
+      delete next[field]
+      return next
+    })
+  const invalid = (field: string) => (fieldErrors[field] ? true : undefined)
+  const fieldError = (field: string) =>
+    fieldErrors[field] ? <span className={fieldErrorText}>{fieldErrors[field]}</span> : null
+  const noteProps = { errors: fieldErrors, onEdited: edited }
 
   useEffect(() => {
-    if (!horseId && horseItems?.[0]) setHorseId(horseItems[0].horse.horseId)
+    const first = horseItems?.find((item) => !item.detachedAt)
+    if (!horseId && first) setHorseId(first.horse.horseId)
   }, [horseId, horseItems])
 
   if (!isEscort) {
     return (
       <CrewShell>
-        <div className="mx-auto max-w-3xl border border-slate-300 bg-white p-6 text-sm text-[#181818]">
+        <div className={`${healthPanel} mx-auto max-w-3xl p-5 text-sm text-slate-700`}>
           Only an Escort can record horse health.{" "}
-          <Link className="font-semibold text-[#f39200]" to={HORSE_HEALTH_ROUTES.health(transportId)}>
+          <Link className="font-semibold text-primary hover:underline" to={HORSE_HEALTH_ROUTES.health(transportId)}>
             Back to health overview
           </Link>
         </div>
@@ -89,8 +156,9 @@ export default function HealthLogPage() {
   if (overview.error || !overview.data) {
     return (
       <CrewShell>
-        <div className="mx-auto max-w-6xl border border-red-600 bg-red-50 p-4 text-sm text-red-600">
-          Unable to load horse context. {overview.error ? String(overview.error) : "Please try again."}
+        <div className={`${noticeError} mx-auto max-w-6xl`}>
+          Unable to load horse context.{" "}
+          {overview.error ? healthErrorMessage(overview.error, "Please try again.") : "Please try again."}
         </div>
       </CrewShell>
     )
@@ -129,10 +197,17 @@ export default function HealthLogPage() {
 
   const save = async () => {
     setError(null)
-    if (!horseId) {
-      setError("Horse is required.")
+    // Validate with the input schema first: invalid vitals used to go out as NaN and come back as a bare 400.
+    const parsed = healthLogInputSchema.safeParse(buildInput())
+    const errors = parsed.success ? {} : fieldErrorsFrom(parsed.error)
+    // The schema's id is a plain string, so an empty selection passes it.
+    if (!horseId) errors.horseId = "Select a horse."
+    if (Object.keys(errors).length) {
+      setFieldErrors(errors)
+      setError("Check the highlighted fields.")
       return
     }
+    setFieldErrors({})
     if (files.length > 0 && uploadedPublicIds.length !== files.length) {
       setError("Please wait until every image is verified before saving.")
       return
@@ -150,7 +225,7 @@ export default function HealthLogPage() {
       toast.success("Health log saved.")
       navigate(HORSE_HEALTH_ROUTES.health(transportId))
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to save health log.")
+      setError(healthErrorMessage(cause, "Unable to save the health log."))
     }
   }
 
@@ -169,67 +244,76 @@ export default function HealthLogPage() {
       setError("Please wait until every image is verified before marking all horses normal.")
       return
     }
+    const input = {
+      logType,
+      checkedAt: new Date().toISOString(),
+      locationDescription: locationDescription || undefined,
+      generalNote: generalNote || undefined,
+      photoPublicIds: uploadedPublicIds,
+      latitude: coordinates[0]?.latitude,
+      longitude: coordinates[0]?.longitude,
+    }
+    const parsed = markAllNormalInputSchema.safeParse(input)
+    if (!parsed.success) {
+      setFieldErrors(fieldErrorsFrom(parsed.error))
+      setError("Check the highlighted fields.")
+      return
+    }
+    setFieldErrors({})
     try {
-      await markAllMutation.mutateAsync({
-        logType,
-        checkedAt: new Date().toISOString(),
-        locationDescription: locationDescription || undefined,
-        generalNote: generalNote || undefined,
-        photoPublicIds: uploadedPublicIds,
-        latitude: coordinates[0]?.latitude,
-        longitude: coordinates[0]?.longitude,
-      })
+      await markAllMutation.mutateAsync(input)
       toast.success("All horses marked normal.")
       navigate(HORSE_HEALTH_ROUTES.health(transportId))
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Unable to mark all horses normal.")
+      setError(healthErrorMessage(cause, "Unable to mark all horses normal."))
     }
   }
 
-  const selectClass = `${inputClass} justify-between`
+  const selectClass = `${fieldControl} justify-between`
   const selectedHorseName = horses.find((h) => h.horse.horseId === horseId)?.horse.horseName ?? "Select horse"
 
   return (
     <CrewShell>
-      <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl space-y-4 pb-28 lg:pb-12">
+      {/* The phone action bar grows when it carries an error, so the page keeps more room under the last field. */}
+      <div className={cn("mx-auto max-w-2xl space-y-4 lg:max-w-6xl lg:pb-12 xl:max-w-7xl", error ? "pb-44" : "pb-28")}>
         <PageHeader
-          title="RECORD HORSE HEALTH"
+          title="Record horse health"
+          size="compact"
           backHref={HORSE_HEALTH_ROUTES.health(transportId)}
           backLabel="Health overview"
         />
 
-        {/* Transport Overview Header Card */}
-        <div className="border border-slate-300 bg-white p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
-            <p className="text-xs font-semibold uppercase text-slate-500">Active Transport</p>
-            <p className="text-base font-bold text-[#181818]">{overview.data.transportId}</p>
-          </div>
+        {/* Transport context */}
+        <div className={`${healthPanel} flex flex-wrap items-center justify-between gap-2 px-4 py-2.5`}>
+          <p className="m-0 text-xs font-medium text-slate-500">Active transport</p>
           <div className="flex items-center gap-2">
-            <span className="bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-700">
-              {overview.data.horses.length} horses assigned
+            <span className="rounded-xs border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+              {horses.length} {horses.length === 1 ? "horse" : "horses"} assigned
             </span>
-            <span className="bg-[#f39200] px-2.5 py-1 text-xs font-bold uppercase text-[#181818]">
-              {overview.data.transportStatus.replace("_", " ")}
+            <span className="rounded-xs border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+              {humanize(overview.data.transportStatus)}
             </span>
           </div>
         </div>
 
-        {error && (
-          <p className="border border-red-600 bg-red-50 p-3.5 text-sm text-red-600" role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: Form Fields */}
-          <div className="lg:col-span-7 space-y-4">
-            {/* Horse Selection & Status */}
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-12">
+          {/* Left column: form fields */}
+          <div className="space-y-4 lg:col-span-7">
             <section className={sectionClass}>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-[#181818]">Horse & Log Details</h2>
-              <label className="block text-sm font-semibold text-[#181818]">
+              <h2 className={healthHeading}>
+                <ClipboardList aria-hidden="true" />
+                Horse & log details
+              </h2>
+              <label className={fieldLabel}>
                 Horse
-                <Select value={horseId} onValueChange={setHorseId}>
-                  <SelectTrigger className={selectClass}>
+                <Select
+                  value={horseId}
+                  onValueChange={(value) => {
+                    setHorseId(value)
+                    edited("horseId")
+                  }}
+                >
+                  <SelectTrigger className={selectClass} aria-invalid={invalid("horseId")}>
                     <SelectValue placeholder="Select horse" />
                   </SelectTrigger>
                   <SelectContent>
@@ -240,9 +324,10 @@ export default function HealthLogPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {fieldError("horseId")}
               </label>
 
-              <label className="block text-sm font-semibold text-[#181818]">
+              <label className={fieldLabel}>
                 Log type
                 <Select value={logType} onValueChange={(value) => setLogType(value as LogType)}>
                   <SelectTrigger className={selectClass}>
@@ -251,7 +336,7 @@ export default function HealthLogPage() {
                   <SelectContent>
                     {LOG_TYPES.map((value) => (
                       <SelectItem key={value} value={value}>
-                        {value.replaceAll("_", " ")}
+                        {humanize(value)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -259,7 +344,7 @@ export default function HealthLogPage() {
               </label>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="text-sm font-semibold text-[#181818]">
+                <label className={fieldLabel}>
                   Health status
                   <Select
                     value={healthStatus}
@@ -271,13 +356,13 @@ export default function HealthLogPage() {
                     <SelectContent>
                       {HEALTH_STATUSES.map((value) => (
                         <SelectItem key={value} value={value}>
-                          {value.replaceAll("_", " ")}
+                          {HEALTH_STATUS_LABELS[value]}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </label>
-                <label className="text-sm font-semibold text-[#181818]">
+                <label className={fieldLabel}>
                   Hydration status
                   <Select
                     value={hydrationStatus}
@@ -289,7 +374,7 @@ export default function HealthLogPage() {
                     <SelectContent>
                       {HYDRATION_STATUSES.map((value) => (
                         <SelectItem key={value} value={value}>
-                          {value.replaceAll("_", " ")}
+                          {humanize(value)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -298,132 +383,143 @@ export default function HealthLogPage() {
               </div>
             </section>
 
-            {/* Vitals */}
             <section className={sectionClass}>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-[#181818]">Vitals</h2>
+              <h2 className={healthHeading}>
+                <Activity aria-hidden="true" />
+                Vitals
+              </h2>
               <div className="grid gap-3 sm:grid-cols-3">
-                <label className="text-sm text-[#181818]">
-                  Temperature °C
+                <label className={fieldLabel}>
+                  Temperature (°C)
                   <input
                     inputMode="decimal"
-                    placeholder="1,000.01"
+                    placeholder="e.g. 38.0"
                     value={temperature}
-                    onChange={(event) => setTemperature(event.target.value)}
-                    className={inputClass}
+                    onChange={(event) => {
+                      setTemperature(event.target.value)
+                      edited("temperatureCelsius")
+                    }}
+                    aria-invalid={invalid("temperatureCelsius")}
+                    className={fieldControl}
                   />
+                  {fieldError("temperatureCelsius")}
                 </label>
-                <label className="text-sm text-[#181818]">
-                  Heart rate
+                <label className={fieldLabel}>
+                  Heart rate (bpm)
                   <input
                     inputMode="numeric"
                     placeholder="e.g. 36"
                     value={heartRate}
-                    onChange={(event) => setHeartRate(event.target.value)}
-                    className={inputClass}
+                    onChange={(event) => {
+                      setHeartRate(event.target.value)
+                      edited("heartRateBpm")
+                    }}
+                    aria-invalid={invalid("heartRateBpm")}
+                    className={fieldControl}
                   />
+                  {fieldError("heartRateBpm")}
                 </label>
-                <label className="text-sm text-[#181818]">
-                  Respiratory rate
+                <label className={fieldLabel}>
+                  Respiratory rate (bpm)
                   <input
                     inputMode="numeric"
                     placeholder="e.g. 12"
                     value={respiratoryRate}
-                    onChange={(event) => setRespiratoryRate(event.target.value)}
-                    className={inputClass}
+                    onChange={(event) => {
+                      setRespiratoryRate(event.target.value)
+                      edited("respiratoryRateBpm")
+                    }}
+                    aria-invalid={invalid("respiratoryRateBpm")}
+                    className={fieldControl}
                   />
+                  {fieldError("respiratoryRateBpm")}
                 </label>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="m-0 text-[11px] text-slate-500">
                 Normal hints: 37.5–38.5 °C · 28–44 bpm · 8–16 bpm. Values outside the hint are allowed.
               </p>
             </section>
 
-            {/* Notes */}
             <section className={sectionClass}>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-[#181818]">Field Notes & Observations</h2>
-              <textarea
-                value={generalNote}
-                onChange={(event) => setGeneralNote(event.target.value)}
-                placeholder="General note"
-                className={`${inputClass} min-h-24 py-3`}
-              />
+              <h2 className={healthHeading}>
+                <NotebookPen aria-hidden="true" />
+                Field notes & observations
+              </h2>
+              <NoteField label="General note" field="generalNote" value={generalNote} onChange={setGeneralNote} placeholder="Overall condition at this check" rows={3} {...noteProps} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <textarea
-                  value={behaviorNote}
-                  onChange={(event) => setBehaviorNote(event.target.value)}
-                  placeholder="Behavior note (optional)"
-                  className={`${inputClass} min-h-20 py-3`}
-                />
-                <textarea
-                  value={feedingNote}
-                  onChange={(event) => setFeedingNote(event.target.value)}
-                  placeholder="Feeding note (optional)"
-                  className={`${inputClass} min-h-20 py-3`}
-                />
+                <NoteField label="Behavior" optional field="behaviorNote" value={behaviorNote} onChange={setBehaviorNote} placeholder="e.g. Calm, alert" {...noteProps} />
+                <NoteField label="Feeding" optional field="feedingNote" value={feedingNote} onChange={setFeedingNote} placeholder="e.g. Ate full ration" {...noteProps} />
+                <NoteField label="Hydration" optional field="hydrationNote" value={hydrationNote} onChange={setHydrationNote} placeholder="e.g. Drank 10 L" {...noteProps} />
+                <NoteField label="Symptoms" optional field="symptomNote" value={symptomNote} onChange={setSymptomNote} placeholder="e.g. Light cough" {...noteProps} />
               </div>
+              <NoteField label="Injury" optional field="injuryNote" value={injuryNote} onChange={setInjuryNote} placeholder="Describe any wound or lameness" {...noteProps} />
+            </section>
+
+            <section className={sectionClass}>
+              <h2 className={healthHeading}>
+                <Pill aria-hidden="true" />
+                Treatment & location
+              </h2>
+              <label className={fieldLabel}>
+                Location <span className="font-normal text-slate-400">(optional)</span>
+                <Input
+                  value={locationDescription}
+                  onChange={(event) => {
+                    setLocationDescription(event.target.value)
+                    edited("locationDescription")
+                  }}
+                  aria-invalid={invalid("locationDescription")}
+                  maxLength={500}
+                  placeholder="e.g. Rest stop A4, near Dresden"
+                  className="mt-1 bg-white"
+                />
+                {fieldError("locationDescription")}
+              </label>
               <div className="grid gap-3 sm:grid-cols-2">
-                <textarea
-                  value={hydrationNote}
-                  onChange={(event) => setHydrationNote(event.target.value)}
-                  placeholder="Hydration note (optional)"
-                  className={`${inputClass} min-h-20 py-3`}
-                />
-                <textarea
-                  value={symptomNote}
-                  onChange={(event) => setSymptomNote(event.target.value)}
-                  placeholder="Symptom note (optional)"
-                  className={`${inputClass} min-h-20 py-3`}
-                />
+                <label className={fieldLabel}>
+                  Treatment provided <span className="font-normal text-slate-400">(optional)</span>
+                  <Input
+                    value={treatment}
+                    onChange={(event) => {
+                      setTreatment(event.target.value)
+                      edited("treatmentProvided")
+                    }}
+                    aria-invalid={invalid("treatmentProvided")}
+                    placeholder="e.g. Cleaned and dressed wound"
+                    className="mt-1 bg-white"
+                  />
+                  {fieldError("treatmentProvided")}
+                </label>
+                <label className={fieldLabel}>
+                  Medication given <span className="font-normal text-slate-400">(optional)</span>
+                  <Input
+                    value={medication}
+                    onChange={(event) => {
+                      setMedication(event.target.value)
+                      edited("medicationGiven")
+                    }}
+                    aria-invalid={invalid("medicationGiven")}
+                    placeholder="e.g. Bute 2 g"
+                    className="mt-1 bg-white"
+                  />
+                  {fieldError("medicationGiven")}
+                </label>
               </div>
-              <textarea
-                value={injuryNote}
-                onChange={(event) => setInjuryNote(event.target.value)}
-                placeholder="Injury note (optional)"
-                className={`${inputClass} min-h-20 py-3`}
-              />
-              <input
-                value={locationDescription}
-                onChange={(event) => setLocationDescription(event.target.value)}
-                maxLength={500}
-                placeholder="Location description (optional)"
-                className={inputClass}
-              />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  value={treatment}
-                  onChange={(event) => setTreatment(event.target.value)}
-                  placeholder="Treatment provided (optional)"
-                  className={inputClass}
-                />
-                <input
-                  value={medication}
-                  onChange={(event) => setMedication(event.target.value)}
-                  placeholder="Medication given (optional)"
-                  className={inputClass}
-                />
-              </div>
-              <label className="flex min-h-12 items-center gap-3 text-sm font-semibold text-[#181818]">
-                <input
-                  type="checkbox"
+              <label className="flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-slate-800">
+                <Checkbox
                   checked={veterinarianRequired}
-                  onChange={(event) => setVeterinarianRequired(event.target.checked)}
-                  className="size-5 accent-[#f39200]"
+                  onCheckedChange={(checked) => setVeterinarianRequired(checked === true)}
                 />
                 Veterinarian required
               </label>
               {veterinarianRequired && (
-                <textarea
-                  value={veterinarianNote}
-                  onChange={(event) => setVeterinarianNote(event.target.value)}
-                  placeholder="Veterinarian note"
-                  className={`${inputClass} min-h-24 py-3`}
-                />
+                <NoteField label="Veterinarian note" field="veterinarianNote" value={veterinarianNote} onChange={setVeterinarianNote} placeholder="What the veterinarian should know" rows={3} {...noteProps} />
               )}
             </section>
           </div>
 
-          {/* Right Column: Photos & Sticky Desktop Action Card */}
-          <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-6">
+          {/* Right column: photos and the sticky desktop action card */}
+          <div className="space-y-4 lg:sticky lg:top-6 lg:col-span-5">
             <PhotoCaptureSection
               files={files}
               capturedAt={capturedAt}
@@ -437,90 +533,102 @@ export default function HealthLogPage() {
               onUploadStateChange={setPhotoUploadState}
               presignedEntity="attachment"
               documentLabel="Health check photo"
+              maxFileSizeBytes={UPLOAD_MAX_BYTES}
             />
 
-            {/* GPS Status Indicator */}
             {coordinates[0] ? (
-              <div className="border border-emerald-300 bg-emerald-50 px-3.5 py-2.5 text-xs text-emerald-800 flex items-center gap-2 font-medium">
-                <MapPin className="size-3.5 text-emerald-600 shrink-0" />
+              <div className="flex items-center gap-2 rounded-xs border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
+                <MapPin className="size-3.5 shrink-0 text-emerald-600" aria-hidden="true" />
                 <span>
-                  GPS stamped: <strong className="font-mono">{coordinates[0].latitude.toFixed(4)}, {coordinates[0].longitude.toFixed(4)}</strong>
+                  GPS stamped:{" "}
+                  <strong className="font-mono">
+                    {coordinates[0].latitude.toFixed(4)}, {coordinates[0].longitude.toFixed(4)}
+                  </strong>
                 </span>
               </div>
             ) : (
-              <div className="border border-slate-300 bg-slate-100 px-3.5 py-2.5 text-xs text-slate-700 flex items-center gap-2">
-                <MapPin className="size-3.5 text-slate-500 shrink-0" />
+              <div className={`${noticeMuted} flex items-center gap-2`}>
+                <MapPin className="size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
                 <span>GPS coordinates and timestamp are automatically stamped on captured photos.</span>
               </div>
             )}
 
-            {/* Desktop Action & Summary Card */}
-            <div className="hidden lg:block border border-slate-300 bg-white p-5 space-y-4 shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#181818] border-b border-slate-200 pb-2">
-                Health Check Summary
+            <div className={`${healthPanel} hidden space-y-3 p-4 lg:block`}>
+              <h3 className={`${healthHeading} border-b border-slate-100 pb-2`}>
+                <ClipboardList aria-hidden="true" />
+                Health check summary
               </h3>
-              <dl className="grid grid-cols-2 gap-2 text-xs">
+              <dl className="m-0 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                 <div>
-                  <dt className="text-slate-500">Selected Horse</dt>
-                  <dd className="font-semibold text-slate-800 truncate">{selectedHorseName}</dd>
+                  <dt className="text-slate-500">Selected horse</dt>
+                  <dd className="m-0 truncate font-medium text-slate-800">{selectedHorseName}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Check Type</dt>
-                  <dd className="font-semibold text-slate-800">{logType.replaceAll("_", " ")}</dd>
+                  <dt className="text-slate-500">Check type</dt>
+                  <dd className="m-0 font-medium text-slate-800">{humanize(logType)}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Health Status</dt>
-                  <dd className={cn("font-semibold", healthStatus === "NORMAL" ? "text-emerald-700" : "text-amber-600")}>
-                    {healthStatus}
+                  <dt className="text-slate-500">Health status</dt>
+                  <dd className={cn("m-0 font-medium", healthStatus === "NORMAL" ? "text-emerald-700" : "text-amber-700")}>
+                    {HEALTH_STATUS_LABELS[healthStatus]}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Photos Attached</dt>
-                  <dd className="font-semibold text-slate-800">{files.length} photo{files.length === 1 ? "" : "s"}</dd>
+                  <dt className="text-slate-500">Photos attached</dt>
+                  <dd className="m-0 font-medium text-slate-800">
+                    {files.length} {files.length === 1 ? "photo" : "photos"}
+                  </dd>
                 </div>
               </dl>
 
-              <div className="space-y-2 pt-2">
-                <button
+              <div className="space-y-2 border-t border-slate-100 pt-3">
+                {/* Shown next to the buttons that triggered it: at the top of the page it was out of sight. */}
+                {error && (
+                  <p className={`${noticeError} m-0 text-xs`} role="alert">
+                    {error}
+                  </p>
+                )}
+                <Button type="button" disabled={isSubmitting} onClick={() => void save()} className="w-full rounded-xs">
+                  <Save aria-hidden="true" />
+                  {isSubmitting ? "Saving…" : "Save health log"}
+                </Button>
+                <Button
                   type="button"
-                  disabled={isSubmitting}
-                  onClick={() => void save()}
-                  className="w-full min-h-12 bg-[#f39200] px-4 text-sm font-bold text-[#181818] hover:bg-[#e08600] active:bg-[#c97800] transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
-                >
-                  {isSubmitting ? "Saving…" : "Save Health Log ✓"}
-                </button>
-                <button
-                  type="button"
+                  variant="outline"
                   disabled={isSubmitting}
                   onClick={() => void markAllNormal()}
-                  className="w-full min-h-11 bg-slate-200 px-4 text-sm font-bold text-[#181818] hover:bg-slate-300 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="w-full rounded-xs"
                 >
-                  Mark All Normal
-                </button>
+                  <CheckCheck aria-hidden="true" />
+                  Mark all normal
+                </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Mobile Fixed Bottom Action Bar */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-300 bg-white p-3 lg:hidden">
+        {/* Mobile fixed bottom action bar */}
+        <div className="fixed right-0 bottom-0 left-0 z-40 border-t border-[rgb(203_196_184/0.65)] bg-white px-3 pt-2.5 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] shadow-[0_-4px_12px_rgba(0,0,0,0.05)] lg:hidden">
+          {error && (
+            <p className={`${noticeError} mx-auto mb-2 max-w-2xl text-xs`} role="alert">
+              {error}
+            </p>
+          )}
           <div className="mx-auto flex max-w-2xl gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={isSubmitting}
               onClick={() => void markAllNormal()}
-              className="min-h-12 flex-1 bg-slate-200 px-3 text-sm font-bold text-[#181818] disabled:opacity-50"
+              className="h-11 flex-1 rounded-xs"
             >
+              <CheckCheck aria-hidden="true" />
               Mark all normal
-            </button>
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => void save()}
-              className="min-h-14 flex-1 bg-[#f39200] px-3 text-sm font-bold text-[#181818] disabled:opacity-50"
-            >
+            </Button>
+            <Button type="button" disabled={isSubmitting} onClick={() => void save()} className="h-11 flex-1 rounded-xs">
+              <Save aria-hidden="true" />
               {isSubmitting ? "Saving…" : "Save health log"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -51,15 +51,9 @@ export interface AuditBookingData {
   customer: {
     customerId: string;
     name: string;
-    email?: string;
-    phone?: string;
   };
-  contractNumber?: string;
-  contractSignedAt?: string;
   originCountry: string;
   destinationCountry: string;
-  pickupLocation?: string;
-  deliveryLocation?: string;
   invoices?: Array<{
     invoiceId: string;
     invoiceNumber: string;
@@ -72,153 +66,202 @@ export interface AuditBookingData {
     claimId: string;
     claimCode: string;
     status: string;
-    claimType?: string;
-    claimedAmount?: number;
-    createdAt?: string;
   }>;
 }
-export interface AuditHorseVitalLog {
-  logId: string;
-  recordedAt: string;
-  locationName?: string;
-  temperatureCelsius: number;
-  heartRateBpm: number;
-  respirationRate?: number;
-  stressLevel: "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
-  isAbnormal?: boolean;
-  notes?: string;
-  veterinarianName?: string;
+export interface AuditHorseHealthLog {
+  healthLogId: string;
+  checkedAt: string;
+  logType: string;
+  healthStatus: string;
+  temperatureCelsius?: number | null;
+  heartRateBpm?: number | null;
+  respiratoryRateBpm?: number | null;
+  symptomNote?: string | null;
+  injuryNote?: string | null;
+  treatmentProvided?: string | null;
+  medicationGiven?: string | null;
+  veterinarianRequired: boolean;
+  veterinarianNote?: string | null;
+  generalNote?: string | null;
+  photoCount: number;
 }
 export interface AuditHorseItem {
   horseId: string;
-  horseName: string;
-  microchipNumber: string;
-  passportNumber: string;
-  breed?: string;
-  gender?: string;
-  yearOfBirth?: number;
-  weightKg?: number;
-  declaredValue?: number;
-  healthLogs: AuditHorseVitalLog[];
+  name: string;
+  microchipNumber?: string | null;
+  passportNumber?: string | null;
+  weightKg?: number | null;
+  heightCm?: number | null;
+  healthLogs: AuditHorseHealthLog[];
+  /** Set when the horse was left behind mid-trip at `detachedLocationName`. */
+  detachedAt?: string | null;
+  detachedLocationName?: string | null;
 }
-export interface AuditHorsesData {
-  horses: AuditHorseItem[];
+export interface AuditRouteSegment {
+  routePlanRouteId: string;
+  sequenceNo: number;
+  routeType: string;
+  status: string;
+  from: string;
+  to: string;
+  transportMode: string;
+  executedBy: string;
+  providerName?: string | null;
+  outsourcingCost?: number | null;
+  outsourcingCurrency?: string | null;
+  vehicleCode?: string | null;
+  licensePlate?: string | null;
+  driverName?: string | null;
+  escortName?: string | null;
+  plannedDepartureAt?: string | null;
+  plannedArrivalAt?: string | null;
+  actualDepartureAt?: string | null;
+  actualArrivalAt?: string | null;
+  supersededAt?: string | null;
 }
-export interface AuditRouteLeg {
-  legId: string;
-  legOrder: number;
-  legType: "ROAD_DOMESTIC" | "FERRY" | "CHUNNEL" | "ROAD_INTERNATIONAL";
-  fromLocation: string;
-  toLocation: string;
-  plannedDepartureAt?: string;
-  actualDepartureAt?: string;
-  plannedArrivalAt?: string;
-  actualArrivalAt?: string;
-  truckPlate?: string;
-  trailerPlate?: string;
-  driverName?: string;
-  driverLicense?: string;
-  isOutsourced: boolean;
-  subcontractorName?: string;
-  outsourcingCost?: number;
+export interface AuditRoutePlan {
+  routePlanId: string;
+  routePlanCode: string;
+  status: string;
+  totalDistanceKm?: number | null;
+  estimatedDurationMinutes?: number | null;
+  segments: AuditRouteSegment[];
 }
 export interface AuditRoutingData {
-  routePlanId?: string;
-  routePlanCode?: string;
-  totalDistanceKm?: number;
-  totalDurationHours?: number;
-  legs: AuditRouteLeg[];
+  primary?: AuditRoutePlan | null;
+  alternatives: AuditRoutePlan[];
+}
+export interface AuditDocumentVersion {
+  documentVersionId: string;
+  versionNo: number;
+  fileName: string;
+  uploadedAt: string;
+  reviews?: Array<{
+    result: string;
+    reviewComment?: string | null;
+    reviewedAt: string;
+  }> | null;
 }
 export interface AuditComplianceDocument {
-  documentId: string;
-  documentType: string;
-  title: string;
-  version?: number;
-  verifiedAt?: string;
-  status: "APPROVED" | "PENDING" | "REJECTED";
-  fileUrl?: string;
+  complianceDocumentId: string;
+  documentCode: string;
+  documentName: string;
+  status: string;
+  documentNumber?: string | null;
+  issuingAuthority?: string | null;
+  issuedDate?: string | null;
+  expiryDate?: string | null;
+  versions: AuditDocumentVersion[];
+}
+export interface AuditDossierRequirement {
+  dossierRequirementId: string;
+  requirementName: string;
+  horseId?: string | null;
+  status: string;
+  isMandatory: boolean;
+  document?: AuditComplianceDocument | null;
+}
+export interface AuditQuarantineProof {
+  quarantineProofId: string;
+  status: string;
+  bcpName: string;
+  inspectionAt?: string | null;
+  verifiedAt?: string | null;
+  officialVeterinarianName?: string | null;
+  conditions?: string | null;
+  verificationNote?: string | null;
+}
+export interface AuditCustomsClearanceProof {
+  customsClearanceProofId: string;
+  status: string;
+  customsPortName: string;
+  mrnNumber?: string | null;
+  clearanceAt?: string | null;
+  verifiedAt?: string | null;
+  verificationNote?: string | null;
+}
+export interface AuditComplianceDossier {
+  complianceDossierId: string;
+  dossierCode: string;
+  dossierType: string;
+  status: string;
+  openedAt?: string | null;
+  approvedAt?: string | null;
+  requirements: AuditDossierRequirement[];
+  quarantineProof?: AuditQuarantineProof | null;
+  customsClearanceProof?: AuditCustomsClearanceProof | null;
 }
 export interface AuditComplianceData {
-  dossiers: Array<{
-    dossierId: string;
-    dossierCode: string;
-    type: "MAIN" | "EXTRA";
-    status: string;
-    documents: AuditComplianceDocument[];
-  }>;
-  customsClearance?: {
-    mrnNumber: string;
-    clearedAt?: string;
-    borderControlPostName?: string;
-    inspectionType?: "PHYSICAL" | "DOCUMENTARY" | "EXEMPT";
-    status: string;
-    proofUrl?: string;
-  };
-  veterinarianNotes?: string;
+  dossiers: AuditComplianceDossier[];
 }
 export interface AuditHandoverRecord {
   handoverRecordId: string;
   handoverCode: string;
-  handoverType: "PICKUP" | "TRANSIT" | "DELIVERY";
+  handoverType: string;
   status: string;
-  completedAt: string;
-  handedOverBy?: string;
-  receivedBy?: string;
-  digitalSignatureVerified: boolean;
-  downloadUrl?: string;
+  completedAt?: string | null;
 }
 export interface AuditIncidentRecord {
   incidentReportId: string;
   incidentCode: string;
   category: string;
-  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-  status: "OPEN" | "INVESTIGATING" | "RESOLVED";
+  severity: string;
+  status: string;
   occurredAt: string;
-  location?: string;
-  summary: string;
-  resolutionNotes?: string;
+}
+export interface AuditDossierEntry {
+  auditDossierId: string;
+  actionType: string;
+  targetEntity: string;
+  summary?: string | null;
+  visibility: "PUBLIC" | "INTERNAL";
+  createdAt: string;
 }
 export interface AuditOperationsData {
   handovers: AuditHandoverRecord[];
   incidents: AuditIncidentRecord[];
-  auditDossiers?: Array<{
-    auditDossierId: string;
-    actionType: string;
-    summary: string;
-    visibility: "PUBLIC" | "INTERNAL";
-    createdAt: string;
-  }>;
+  auditDossiers: AuditDossierEntry[];
+}
+export interface AuditReceipt {
+  receiptId: string;
+  receiptCode: string;
+  status: string;
+  paymentMethod: string;
+  amount: number;
+  paidAt?: string | null;
+  confirmedAt?: string | null;
+}
+export interface AuditFinanceInvoice {
+  invoiceId: string;
+  invoiceNumber: string;
+  type: string;
+  status: string;
+  totalAmount: number;
+  currency: string;
+  issuedAt?: string | null;
+  dueDate?: string | null;
+  paidAt?: string | null;
+  receipts: AuditReceipt[];
+}
+export interface AuditFinancialReport {
+  reportCode: string;
+  totalInvoicedAmount: number;
+  totalPaidAmount: number;
+  totalEmergencyCost: number;
+  outstandingAmount: number;
+  summaryNote?: string | null;
+  generatedAt?: string | null;
+}
+export interface AuditEmergencyCost {
+  requestCode: string;
+  incidentCode?: string | null;
+  category: string;
+  approvedAmount: number;
 }
 export interface AuditFinanceData {
-  invoices: Array<{
-    invoiceId: string;
-    invoiceNumber: string;
-    type: string;
-    status: string;
-    totalAmount: number;
-    currency: string;
-    issuedAt?: string;
-    paidAt?: string;
-  }>;
-  emergencyExpenses?: Array<{
-    expenseId: string;
-    expenseCode: string;
-    category: string;
-    amount: number;
-    currency: string;
-    reason: string;
-    approvedAt?: string;
-    approvedBy?: string;
-  }>;
-  summary?: {
-    baseFareAmount: number;
-    ferryChunnelFee: number;
-    bcpQuarantineFee: number;
-    insuranceFee: number;
-    emergencyCost: number;
-    totalPaidAmount: number;
-    currency: string;
-  };
+  invoices: AuditFinanceInvoice[];
+  financialReport?: AuditFinancialReport | null;
+  emergencyCosts: AuditEmergencyCost[];
 }
 export interface TransportAuditFull {
   transportId: EntityId;
@@ -229,7 +272,7 @@ export interface TransportAuditFull {
   destinationCountry?: string;
   viewMode?: "FULL" | "CUSTOMER";
   booking?: AuditBookingData;
-  horses?: AuditHorsesData;
+  horses?: AuditHorseItem[];
   routing?: AuditRoutingData;
   compliance?: AuditComplianceData;
   operations?: AuditOperationsData;

@@ -68,6 +68,12 @@ import { useMissingDossierRequirements } from "../hooks/useMissingDocumentRemind
 import { RequestMissingDocumentsDialog } from "./RequestMissingDocumentsDialog";
 import { DossierRequirementDetailsDialog } from "./DossierRequirementDetailsDialog";
 
+const readActionLabels: Record<string, string> = {
+  "View Document": "View submitted document",
+  "View Requirement": "View requirement details",
+  "View Request": "View revision request",
+};
+
 type SubmissionMode = "initial" | "edit" | "update";
 
 function RequirementRowActions({
@@ -93,8 +99,6 @@ function RequirementRowActions({
             label !== "Review Document" ||
             canOpenDocumentReview(role, dossier, item),
         );
-  if (item.openRequest?.status === "OPEN" && !labels.includes("View Request"))
-    labels.push("View Request");
 
   return (
     <DropdownMenu>
@@ -119,25 +123,41 @@ function RequirementRowActions({
           </DropdownMenuItem>
         ) : null}
         {labels.map((label) => {
+          let disabledReason: string | undefined;
+          if (
+            (label === "View Document" ||
+              label === "View Review Result" ||
+              label === "View Version History" ||
+              label === "View Review History") &&
+            !item.document
+          ) {
+            disabledReason = "No document submitted";
+          } else if (label === "View Request" && !item.openRequest) {
+            disabledReason = "No document request";
+          }
+
           const actionEnabled =
-            label === "View Requirement" ||
-            (label === "View Request" && item.openRequest?.status === "OPEN") ||
-            ((label === "Request Missing Document" ||
-              label === "Send Reminder Again") &&
-              canSendMissingDocumentReminder(role, dossier) &&
-              isMissingDossierRequirement(item)) ||
-            (label === "Upload Document" &&
-              canUploadInitialDocument(role, dossier, item)) ||
-            (label === "Review Document" &&
-              canOpenDocumentReview(role, dossier, item)) ||
-            (Boolean(item.document) &&
-              (label === "View Document" ||
-                label === "View Version History" ||
-                label === "View Review Result" ||
-                label === "View Review History" ||
-                label === "View Request" ||
-                (role === "CUSTOMER" &&
-                  (label === "Edit Document" || label === "Update Document"))));
+            !disabledReason &&
+            (label === "View Requirement" ||
+              (label === "View Request" &&
+                item.openRequest?.status === "OPEN") ||
+              ((label === "Request Missing Document" ||
+                label === "Send Reminder Again") &&
+                canSendMissingDocumentReminder(role, dossier) &&
+                isMissingDossierRequirement(item)) ||
+              (label === "Upload Document" &&
+                canUploadInitialDocument(role, dossier, item)) ||
+              (label === "Review Document" &&
+                canOpenDocumentReview(role, dossier, item)) ||
+              (Boolean(item.document) &&
+                (label === "View Document" ||
+                  label === "View Version History" ||
+                  label === "View Review Result" ||
+                  label === "View Review History" ||
+                  label === "View Request" ||
+                  (role === "CUSTOMER" &&
+                    (label === "Edit Document" ||
+                      label === "Update Document")))));
           const Icon = label.startsWith("Upload")
             ? Upload
             : label.startsWith("Edit")
@@ -153,14 +173,17 @@ function RequirementRowActions({
               disabled={!actionEnabled}
               onSelect={actionEnabled ? () => onAction(item, label) : undefined}
               title={
-                actionEnabled
+                disabledReason ??
+                (actionEnabled
                   ? undefined
-                  : `${label} is unavailable in the current dossier state`
+                  : `${label} is unavailable in the current dossier state`)
               }
               className="gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem] data-[disabled]:opacity-100"
             >
               <Icon className="size-3.5" />
-              <span className="min-w-0 flex-1">{label}</span>
+              <span className="min-w-0 flex-1">
+                {readActionLabels[label] ?? label}
+              </span>
             </DropdownMenuItem>
           );
         })}
@@ -186,7 +209,7 @@ export function RequirementTable({
         accessorKey: "requirementName",
         header: "REQUIREMENT",
         cell: ({ row }) => (
-          <span className="font-semibold text-slate-900">
+          <span className="block min-w-48 max-w-80 whitespace-normal font-semibold leading-snug text-slate-900">
             {row.original.requirementName}
           </span>
         ),
@@ -388,8 +411,8 @@ export function DossierRequirementFilters({
       <div className="w-full sm:w-44 [&>button]:w-full">
         <DataTableRadioFilter
           title="Sort"
-          value={params.sortBy ?? "createdAt:asc"}
-          defaultValue="createdAt:asc"
+          value={params.sortBy ?? "createdAt:desc"}
+          defaultValue="createdAt:desc"
           options={dossierRequirementSortOptions}
           hideTitleWhenFiltered
           onValueChange={(sortBy) =>
@@ -461,10 +484,6 @@ export function DossierRequirementsPreview({
       label === "View Review History" ||
       label === "View Request"
     ) {
-      if (label === "View Request" && !item.document) {
-        setDetailsRequirement(item);
-        return;
-      }
       if (item.document) {
         setViewRequirement(item);
         setViewDocumentId(String(item.document.complianceDocumentId));

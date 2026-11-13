@@ -54,9 +54,10 @@ export function toIncidentError(error: unknown): IncidentApiError {
 }
 
 /** Text for a toast / inline alert: our message per `errorCode`, else the BE message. */
-export function incidentErrorMessage(error: unknown, fallback = "Something went wrong. Please try again."): string {
+export function incidentErrorMessage(error: unknown, fallback = "Something went wrong. Please try again.", overrides?: Record<string, string>): string {
   const apiError = toIncidentError(error)
-  return (apiError.errorCode && INCIDENT_ERROR_MESSAGES[apiError.errorCode]) || apiError.message || fallback
+  const code = apiError.errorCode
+  return (code && (overrides?.[code] ?? INCIDENT_ERROR_MESSAGES[code])) || apiError.message || fallback
 }
 
 /** `404` for a missing, forbidden-by-scope (DRV/ESC) or hidden (Customer, LOW/MEDIUM) incident: shown as "not found". */

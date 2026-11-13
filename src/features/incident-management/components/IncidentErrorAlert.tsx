@@ -27,17 +27,19 @@ interface IncidentErrorAlertProps {
   error: unknown
   /** Offered for `INCIDENT_MODIFIED`: re-read the incident instead of overwriting someone else's change. */
   onReload?: () => void
+  /** Wording that replaces the default message of an `errorCode` (the crew reads other advice than the manager). */
+  messages?: Record<string, string>
 }
 
 /** Error box of the write dialogs: message by `errorCode`, the blocking cost requests, field errors, and Reload on a conflict. */
-export function IncidentErrorAlert({ error, onReload }: IncidentErrorAlertProps) {
+export function IncidentErrorAlert({ error, onReload, messages }: IncidentErrorAlertProps) {
   const apiError = toIncidentError(error)
   const requests = blockingRequests(apiError.value)
   return (
     <div role="alert" className="grid gap-1.5 rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
       <p className="m-0 flex items-start gap-1.5 font-medium">
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-        <span>{incidentErrorMessage(apiError)}</span>
+        <span>{incidentErrorMessage(apiError, undefined, messages)}</span>
       </p>
       {requests.length ? (
         <ul className="m-0 grid list-none gap-0.5 p-0 pl-5">

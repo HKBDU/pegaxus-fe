@@ -1,21 +1,11 @@
-const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+import { formatUtcDateTime, formatUtcTime } from "@/shared/utils/datetime";
 
 export function formatTransportDate(value: string | null | undefined) {
-  if (value == null) return "Not available";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "Not available"
-    : dateTimeFormat.format(date);
+  return formatUtcDateTime(value);
 }
 
 export function formatTransportTime(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  return formatUtcTime(value);
 }
 
 export function formatTransportLabel(value: string) {

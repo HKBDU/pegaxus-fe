@@ -1,3 +1,6 @@
+import type { z } from "zod"
+import type { markAllNormalResultSchema } from "./schemas"
+
 export type CrewRole = "DRIVER" | "ESCORT"
 
 export interface AssignedTransportSegment {
@@ -38,6 +41,9 @@ export interface CrewMember {
   phone?: string | null
 }
 
+/** Who recorded a log: the BE sends only the id, code and name. */
+export type CheckedBy = Omit<CrewMember, "role"> & { role?: string }
+
 export interface HorseBrief {
   horseId: string
   horseName: string
@@ -60,12 +66,15 @@ export interface HealthLogSummary {
   logType: LogType
   healthStatus: HealthStatus
   hydrationStatus: HydrationStatus | null
-  checkedBy: CrewMember
+  checkedBy: CheckedBy
   veterinarianRequired: boolean
   hasPhoto: boolean
   latestNote?: string | null
   locationDescription?: string | null
 }
+
+/** The overview's latest log: no horse (it is the row's horse) and no hasPhoto. */
+export type LatestHealthLog = Omit<HealthLogSummary, "horse" | "hasPhoto">
 
 export interface HealthLog extends HealthLogSummary {
   transportId: string
@@ -91,8 +100,10 @@ export interface HealthLog extends HealthLogSummary {
 export interface HorseHealthOverviewItem {
   horse: HorseBrief
   latestHealthStatus: HealthStatus | null
-  latestLog: HealthLogSummary | null
+  latestLog: LatestHealthLog | null
   logCount: number
+  /** Set when the horse was left behind mid-trip; it is no longer checked. */
+  detachedAt?: string | null
 }
 
 export interface HorseHealthOverview {
@@ -167,3 +178,5 @@ export interface ApiErrorShape {
   errorCode?: string
   message?: string
 }
+
+export type MarkAllNormalResult = z.infer<typeof markAllNormalResultSchema>

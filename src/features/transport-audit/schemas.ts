@@ -10,6 +10,10 @@ export const auditTimelineItemSchema = z.object({
 });
 const id = z.union([z.string(), z.number()]).transform(String);
 const amount = z.number().catch(0);
+const note = z.string().nullish();
+const reading = z.number().nullish();
+// Block shapes mirror the BE contract in AuditService/Response.cs. Fields are lenient (nullish/catch) so that one odd
+// record degrades to "—" instead of failing the item, its whole list, or the entire audit response.
 export const auditBookingSchema = z.object({
   bookingId: id,
   bookingCode: z.string().catch("—"),
@@ -17,16 +21,10 @@ export const auditBookingSchema = z.object({
     .object({
       customerId: id,
       name: z.string().catch("—"),
-      email: z.string().optional(),
-      phone: z.string().optional(),
     })
     .catch({ customerId: "", name: "—" }),
-  contractNumber: z.string().optional(),
-  contractSignedAt: z.string().optional(),
   originCountry: z.string().catch("—"),
   destinationCountry: z.string().catch("—"),
-  pickupLocation: z.string().optional(),
-  deliveryLocation: z.string().optional(),
   invoices: z
     .array(
       z.object({
@@ -45,125 +43,155 @@ export const auditBookingSchema = z.object({
         claimId: id,
         claimCode: z.string(),
         status: z.string(),
-        claimType: z.string().optional(),
-        claimedAmount: amount.optional(),
-        createdAt: z.string().optional(),
       }),
     )
     .optional(),
 });
-export const auditHorseVitalLogSchema = z.object({
-  logId: id,
-  recordedAt: z.string(),
-  locationName: z.string().optional(),
-  temperatureCelsius: amount,
-  heartRateBpm: amount,
-  respirationRate: amount.optional(),
-  stressLevel: z.enum(["LOW", "NORMAL", "HIGH", "CRITICAL"]).catch("NORMAL"),
-  isAbnormal: z.boolean().optional(),
-  notes: z.string().optional(),
-  veterinarianName: z.string().optional(),
+export const auditHorseHealthLogSchema = z.object({
+  healthLogId: id,
+  checkedAt: z.string(),
+  logType: z.string().catch("OTHER"),
+  healthStatus: z.string().catch("NORMAL"),
+  temperatureCelsius: reading,
+  heartRateBpm: reading,
+  respiratoryRateBpm: reading,
+  symptomNote: note,
+  injuryNote: note,
+  treatmentProvided: note,
+  medicationGiven: note,
+  veterinarianRequired: z.boolean().catch(false),
+  veterinarianNote: note,
+  generalNote: note,
+  photoCount: z.number().catch(0),
 });
-export const auditHorsesSchema = z.object({
-  horses: z
-    .array(
-      z.object({
-        horseId: id,
-        horseName: z.string(),
-        microchipNumber: z.string(),
-        passportNumber: z.string(),
-        breed: z.string().optional(),
-        gender: z.string().optional(),
-        yearOfBirth: z.number().optional(),
-        weightKg: amount.optional(),
-        declaredValue: amount.optional(),
-        healthLogs: z.array(auditHorseVitalLogSchema).catch([]),
-      }),
-    )
-    .catch([]),
+// The BE sends `horses` as a bare array. The old `{ horses: [...] }` object shape made every audit response fail to parse.
+export const auditHorsesSchema = z.array(
+  z.object({
+    horseId: id,
+    name: z.string().catch("—"),
+    microchipNumber: note,
+    passportNumber: note,
+    weightKg: reading,
+    heightCm: reading,
+    healthLogs: z.array(auditHorseHealthLogSchema).catch([]),
+    /** Set when the horse was left behind mid-trip at `detachedLocationName`. */
+    detachedAt: note,
+    detachedLocationName: note,
+  }),
+);
+export const auditRouteSegmentSchema = z.object({
+  routePlanRouteId: id,
+  sequenceNo: z.number().catch(0),
+  routeType: z.string().catch("PRIMARY"),
+  status: z.string().catch("—"),
+  from: z.string().catch("—"),
+  to: z.string().catch("—"),
+  transportMode: z.string().catch("ROAD"),
+  executedBy: z.string().catch("INTERNAL"),
+  providerName: note,
+  outsourcingCost: reading,
+  outsourcingCurrency: note,
+  vehicleCode: note,
+  licensePlate: note,
+  driverName: note,
+  escortName: note,
+  plannedDepartureAt: note,
+  plannedArrivalAt: note,
+  actualDepartureAt: note,
+  actualArrivalAt: note,
+  supersededAt: note,
+});
+export const auditRoutePlanSchema = z.object({
+  routePlanId: id,
+  routePlanCode: z.string().catch("—"),
+  status: z.string().catch("—"),
+  totalDistanceKm: reading,
+  estimatedDurationMinutes: reading,
+  segments: z.array(auditRouteSegmentSchema).catch([]),
 });
 export const auditRoutingSchema = z.object({
-  routePlanId: z.string().optional(),
-  routePlanCode: z.string().optional(),
-  totalDistanceKm: amount.optional(),
-  totalDurationHours: amount.optional(),
-  legs: z
-    .array(
-      z.object({
-        legId: id,
-        legOrder: z.number(),
-        legType: z.enum([
-          "ROAD_DOMESTIC",
-          "FERRY",
-          "CHUNNEL",
-          "ROAD_INTERNATIONAL",
-        ]),
-        fromLocation: z.string(),
-        toLocation: z.string(),
-        plannedDepartureAt: z.string().optional(),
-        actualDepartureAt: z.string().optional(),
-        plannedArrivalAt: z.string().optional(),
-        actualArrivalAt: z.string().optional(),
-        truckPlate: z.string().optional(),
-        trailerPlate: z.string().optional(),
-        driverName: z.string().optional(),
-        driverLicense: z.string().optional(),
-        isOutsourced: z.boolean().catch(false),
-        subcontractorName: z.string().optional(),
-        outsourcingCost: amount.optional(),
-      }),
-    )
-    .catch([]),
+  primary: auditRoutePlanSchema.nullish(),
+  alternatives: z.array(auditRoutePlanSchema).catch([]),
+});
+const auditDocumentReviewSchema = z.object({
+  result: z.string(),
+  reviewComment: note,
+  reviewedAt: z.string(),
+});
+const auditDocumentVersionSchema = z.object({
+  documentVersionId: id,
+  versionNo: z.number().catch(0),
+  fileName: z.string().catch("—"),
+  uploadedAt: z.string(),
+  reviews: z.array(auditDocumentReviewSchema).nullish(),
+});
+const auditComplianceDocumentSchema = z.object({
+  complianceDocumentId: id,
+  documentCode: z.string().catch("—"),
+  documentName: z.string().catch("—"),
+  status: z.string().catch("—"),
+  documentNumber: note,
+  issuingAuthority: note,
+  issuedDate: note,
+  expiryDate: note,
+  versions: z.array(auditDocumentVersionSchema).catch([]),
+});
+const auditDossierRequirementSchema = z.object({
+  dossierRequirementId: id,
+  requirementName: z.string().catch("—"),
+  horseId: id.nullish(),
+  status: z.string().catch("—"),
+  isMandatory: z.boolean().catch(false),
+  document: auditComplianceDocumentSchema.nullish(),
+});
+const auditQuarantineProofSchema = z.object({
+  quarantineProofId: id,
+  status: z.string().catch("—"),
+  bcpName: z.string().catch("—"),
+  inspectionAt: note,
+  verifiedAt: note,
+  officialVeterinarianName: note,
+  conditions: note,
+  verificationNote: note,
+});
+const auditCustomsClearanceProofSchema = z.object({
+  customsClearanceProofId: id,
+  status: z.string().catch("—"),
+  customsPortName: z.string().catch("—"),
+  mrnNumber: note,
+  clearanceAt: note,
+  verifiedAt: note,
+  verificationNote: note,
 });
 export const auditComplianceSchema = z.object({
   dossiers: z
     .array(
       z.object({
-        dossierId: id,
-        dossierCode: z.string(),
-        type: z.enum(["MAIN", "EXTRA"]),
-        status: z.string(),
-        documents: z
-          .array(
-            z.object({
-              documentId: id,
-              documentType: z.string(),
-              title: z.string(),
-              version: z.number().optional(),
-              verifiedAt: z.string().optional(),
-              status: z.enum(["APPROVED", "PENDING", "REJECTED"]),
-              fileUrl: z.string().optional(),
-            }),
-          )
-          .catch([]),
+        complianceDossierId: id,
+        dossierCode: z.string().catch("—"),
+        dossierType: z.string().catch("MAIN"),
+        status: z.string().catch("—"),
+        openedAt: note,
+        approvedAt: note,
+        requirements: z.array(auditDossierRequirementSchema).catch([]),
+        quarantineProof: auditQuarantineProofSchema.nullish().catch(null),
+        customsClearanceProof: auditCustomsClearanceProofSchema
+          .nullish()
+          .catch(null),
       }),
     )
     .catch([]),
-  customsClearance: z
-    .object({
-      mrnNumber: z.string(),
-      clearedAt: z.string().optional(),
-      borderControlPostName: z.string().optional(),
-      inspectionType: z.enum(["PHYSICAL", "DOCUMENTARY", "EXEMPT"]).optional(),
-      status: z.string(),
-      proofUrl: z.string().optional(),
-    })
-    .optional(),
-  veterinarianNotes: z.string().optional(),
 });
 export const auditOperationsSchema = z.object({
   handovers: z
     .array(
       z.object({
         handoverRecordId: id,
-        handoverCode: z.string(),
-        handoverType: z.enum(["PICKUP", "TRANSIT", "DELIVERY"]),
-        status: z.string(),
-        completedAt: z.string(),
-        handedOverBy: z.string().optional(),
-        receivedBy: z.string().optional(),
-        digitalSignatureVerified: z.boolean().catch(false),
-        downloadUrl: z.string().optional(),
+        handoverCode: z.string().catch("—"),
+        // The BE also sends TRANSFER, BORDER_HANDOVER, CARRIER_HANDOVER and OTHER, and completedAt is null until signed.
+        handoverType: z.string().catch("OTHER"),
+        status: z.string().catch("—"),
+        completedAt: note,
       }),
     )
     .catch([]),
@@ -171,14 +199,23 @@ export const auditOperationsSchema = z.object({
     .array(
       z.object({
         incidentReportId: id,
-        incidentCode: z.string(),
-        category: z.string(),
-        severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]),
-        status: z.enum(["OPEN", "INVESTIGATING", "RESOLVED"]),
-        occurredAt: z.string(),
-        location: z.string().optional(),
-        summary: z.string(),
-        resolutionNotes: z.string().optional(),
+        incidentCode: z.string().catch("—"),
+        category: z.string().catch("—"),
+        severity: z.string().catch("—"),
+        status: z.string().catch("—"),
+        occurredAt: z.string().catch(""),
+      }),
+    )
+    .catch([]),
+  auditDossiers: z
+    .array(
+      z.object({
+        auditDossierId: id,
+        actionType: z.string().catch("—"),
+        targetEntity: z.string().catch("—"),
+        summary: note,
+        visibility: z.enum(["PUBLIC", "INTERNAL"]).catch("INTERNAL"),
+        createdAt: z.string().catch(""),
       }),
     )
     .catch([]),
@@ -188,41 +225,53 @@ export const auditFinanceSchema = z.object({
     .array(
       z.object({
         invoiceId: id,
-        invoiceNumber: z.string(),
-        type: z.string(),
-        status: z.string(),
+        invoiceNumber: z.string().catch("—"),
+        type: z.string().catch("—"),
+        status: z.string().catch("—"),
         totalAmount: amount,
         currency: z.string().catch("VND"),
-        issuedAt: z.string().optional(),
-        paidAt: z.string().optional(),
+        issuedAt: note,
+        dueDate: note,
+        // Null until the invoice is paid; a non-nullable shape here used to empty the whole invoice list.
+        paidAt: note,
+        receipts: z
+          .array(
+            z.object({
+              receiptId: id,
+              receiptCode: z.string().catch("—"),
+              status: z.string().catch("—"),
+              paymentMethod: z.string().catch("—"),
+              amount,
+              paidAt: note,
+              confirmedAt: note,
+            }),
+          )
+          .catch([]),
       }),
     )
     .catch([]),
-  emergencyExpenses: z
+  financialReport: z
+    .object({
+      reportCode: z.string().catch("—"),
+      totalInvoicedAmount: amount,
+      totalPaidAmount: amount,
+      totalEmergencyCost: amount,
+      outstandingAmount: amount,
+      summaryNote: note,
+      generatedAt: note,
+    })
+    .nullish()
+    .catch(null),
+  emergencyCosts: z
     .array(
       z.object({
-        expenseId: id,
-        expenseCode: z.string(),
-        category: z.string(),
-        amount,
-        currency: z.string().catch("VND"),
-        reason: z.string(),
-        approvedAt: z.string().optional(),
-        approvedBy: z.string().optional(),
+        requestCode: z.string().catch("—"),
+        incidentCode: note,
+        category: z.string().catch("—"),
+        approvedAmount: amount,
       }),
     )
-    .optional(),
-  summary: z
-    .object({
-      baseFareAmount: amount,
-      ferryChunnelFee: amount,
-      bcpQuarantineFee: amount,
-      insuranceFee: amount,
-      emergencyCost: amount,
-      totalPaidAmount: amount,
-      currency: z.string().catch("VND"),
-    })
-    .optional(),
+    .catch([]),
 });
 const itemSchema = z.preprocess(
   (raw) => {
@@ -346,6 +395,30 @@ export const auditResponseSchema = z.preprocess(
             ? target.Transport
             : {}
       ) as Record<string, unknown>;
+      const rawTimeline = target.timeline ?? target.Timeline ?? [];
+      const timeline = Array.isArray(rawTimeline)
+        ? rawTimeline.map((item) => {
+            if (!item || typeof item !== "object") return item;
+            const entry = item as Record<string, unknown>;
+            return {
+              ...entry,
+              // The API contract calls these fields refId/source/at; the UI uses
+              // the normalized id/type/occurredAt names.
+              id:
+                entry.id ??
+                entry.Id ??
+                entry.refId ??
+                entry.RefId ??
+                `${String(entry.source ?? entry.Source ?? "EVENT")}-${String(entry.at ?? entry.At ?? "")}`,
+              type: entry.type ?? entry.Type ?? entry.source ?? entry.Source,
+              occurredAt:
+                entry.occurredAt ??
+                entry.OccurredAt ??
+                entry.at ??
+                entry.At,
+            };
+          })
+        : [];
       return {
         transportId:
           target.transportId ??
@@ -378,7 +451,6 @@ export const auditResponseSchema = z.preprocess(
           transport.destinationCountry ??
           transport.DestinationCountry,
         viewMode: target.viewMode ?? target.ViewMode,
-        timeline: target.timeline ?? target.Timeline ?? [],
         booking: target.booking ?? target.Booking,
         horses: target.horses ?? target.Horses,
         routing: target.routing ?? target.Routing,
@@ -388,6 +460,9 @@ export const auditResponseSchema = z.preprocess(
         epod: target.epod ?? target.Epod,
         ...transport,
         ...target,
+        // After the spreads on purpose: `...target` carries the raw timeline (at/source/refId, no id), which would replace the
+        // normalized one, fail validation, and silently turn the whole timeline into [].
+        timeline,
       };
     }
     return raw;

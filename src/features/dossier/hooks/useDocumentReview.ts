@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createRequestAttemptGuard } from "@/shared/hooks/request-attempt-guard";
 import { mapDocumentReviewError } from "../lib/document-review";
@@ -16,7 +16,7 @@ export function useDocumentReview(
   onPendingChange?: (pending: boolean) => void,
 ) {
   const client = useQueryClient();
-  const outcomeUnknown = useRef(false);
+  const [outcomeUnknown, setOutcomeUnknown] = useState(false);
   const guard = useRef(
     createRequestAttemptGuard((state) => onPendingChange?.(state.isRunning)),
   );
@@ -27,16 +27,18 @@ export function useDocumentReview(
         ? dossierService.revokeDocumentReview(input)
         : loadDocumentReview(input),
     retry: false,
-    onSuccess: (_response, input) =>
-      invalidateComplianceDocument(
+    onSuccess: (_response, input) => {
+      setOutcomeUnknown(false);
+      return invalidateComplianceDocument(
         client,
         input.documentId,
         input.dossierId,
         input.requirementId,
-      ),
+      );
+    },
     onError: (error, input) => {
       const mapped = mapDocumentReviewError(error);
-      if (mapped.outcomeUnknown) outcomeUnknown.current = true;
+      if (mapped.outcomeUnknown) setOutcomeUnknown(true);
       if (
         mapped.refresh ||
         (error as { response?: { status?: number } }).response?.status === 409
@@ -50,13 +52,15 @@ export function useDocumentReview(
     },
   });
   const review = (input: DocumentReviewInput | RevokeDocumentReviewInput) => {
-    if (outcomeUnknown.current)
+    if (outcomeUnknown)
       return Promise.resolve({ started: false } as const);
     guard.current.reset();
     return guard.current.run(() => mutation.mutateAsync(input));
   };
   return {
     ...mutation,
+    outcomeUnknown,
+    resetOutcomeUnknown: () => setOutcomeUnknown(false),
     approve: (input: ApproveDocumentInput) => review(input),
     reject: (
       input: Omit<DocumentReviewInput, "review"> & {

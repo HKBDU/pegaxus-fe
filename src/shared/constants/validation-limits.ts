@@ -95,6 +95,37 @@ export function countDecimalPlaces(num: number): number {
   return decimalPart ? decimalPart.replace(/0+$/, "").length : 0;
 }
 
+/** Round a coordinate to the precision accepted by the API. */
+export function roundCoordinate(value: number): number {
+  return Number(value.toFixed(VALIDATION_LIMITS.coordinateScale));
+}
+
+/** Normalize coordinate fields in an arbitrary JSON payload before sending it. */
+export function normalizeCoordinatePayload<T>(payload: T): T {
+  if (Array.isArray(payload)) {
+    return payload.map((item) => normalizeCoordinatePayload(item)) as T;
+  }
+  if (payload === null || typeof payload !== "object") return payload;
+
+  const result = { ...(payload as Record<string, unknown>) };
+  for (const key of ["latitude", "longitude"]) {
+    const value = result[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      result[key] = roundCoordinate(value);
+    } else if (typeof value === "string" && value.trim() !== "") {
+      const numericValue = Number(value);
+      if (Number.isFinite(numericValue)) result[key] = roundCoordinate(numericValue);
+    }
+  }
+
+  for (const [key, value] of Object.entries(result)) {
+    if (key !== "latitude" && key !== "longitude" && value && typeof value === "object") {
+      result[key] = normalizeCoordinatePayload(value);
+    }
+  }
+  return result as T;
+}
+
 /**
  * Checks if a coordinate pair is within valid ranges, has <= 4 decimal places,
  * and is not the (0, 0) placeholder coordinate.

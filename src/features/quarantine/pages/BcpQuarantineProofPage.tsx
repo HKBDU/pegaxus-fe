@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { NOT_CURRENT_SEGMENT_CREW, NOT_CURRENT_SEGMENT_CREW_MESSAGE } from '@/shared/constants/crew-turn'
+import { useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -7,11 +8,14 @@ import { toast } from 'sonner'
 import { Navigation } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDossierContext, useSubmitQuarantineProof } from '../hooks'
+import { ErrorState } from '@/shared/components/common'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Form } from '@/shared/components/ui/form'
+import { formatUtcTime } from '@/shared/utils/datetime'
 import { PhotoCaptureSection } from '@/shared/components/PhotoCaptureSection'
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from '@/shared/constants/upload'
 import {
   BcpLocationSection,
   QuickNotesSection,
@@ -54,7 +58,7 @@ export default function BcpQuarantineProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
   const dossierId = dossierIdParam ?? null
 
-  const { data: dossier, isLoading: dossierLoading } = useDossierContext(dossierId)
+  const { data: dossier, isLoading: dossierLoading, isError: dossierFailed, refetch: reloadDossier } = useDossierContext(dossierId)
   const { mutateAsync: submitProof, isPending } = useSubmitQuarantineProof(dossierId ?? '')
 
   // ─── Photo state ──────────────────────────────────────────────────────────
@@ -69,9 +73,7 @@ export default function BcpQuarantineProofPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      bcpName: dossier?.bookingSummary?.originCountry
-        ? `${dossier.bookingSummary.originCountry} BCP`
-        : 'Dublin Port BCP (IE DUB)',
+      bcpName: '',
       officialVetName: '',
       bcpReceiptNumber: '',
       isHoldback: false,
@@ -79,11 +81,6 @@ export default function BcpQuarantineProofPage() {
     },
   })
 
-  useEffect(() => {
-    const originCountry = dossier?.bookingSummary?.originCountry
-    if (!originCountry) return
-    form.setValue('bcpName', `${originCountry} BCP`)
-  }, [dossier, form])
 
   const isHoldback = form.watch('isHoldback')
 
@@ -97,7 +94,9 @@ export default function BcpQuarantineProofPage() {
 
   // ─── Submit Handler ────────────────────────────────────────────────────────
   const onSubmit = async (values: FormValues) => {
-    if (isMandatoryRoute && !photoFile) {
+    if (photoFile && (photoFile.size === 0 || photoFile.size > UPLOAD_MAX_BYTES || !['image/jpeg', 'image/jpg', 'image/png'].includes(photoFile.type)))
+      return setPhotoError(`Use a non-empty JPEG or PNG image of at most ${UPLOAD_MAX_MB} MiB.`)
+    if (!photoFile) {
       setPhotoError('Please attach a photo of the quarantine clearance sheet.')
       return
     }
@@ -109,7 +108,7 @@ export default function BcpQuarantineProofPage() {
       setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
       return
     }
-    if (dossierId == null) return
+    if (dossierId == null || !dossier || dossierFailed) return
 
     try {
       await submitProof({
@@ -131,8 +130,9 @@ export default function BcpQuarantineProofPage() {
       const code = err instanceof Error ? err.message : 'UNKNOWN'
       const messages: Record<string, string> = {
         NOT_ASSIGNED_TO_TRIP: 'You are not assigned to this transport.',
+        [NOT_CURRENT_SEGMENT_CREW]: NOT_CURRENT_SEGMENT_CREW_MESSAGE,
         DOSSIER_NOT_APPROVED: 'The dossier must be APPROVED before submitting quarantine proof.',
-        FILE_TOO_LARGE: 'One or more files exceed the 5 MB limit.',
+        FILE_TOO_LARGE: `One or more files exceed the ${UPLOAD_MAX_MB} MiB limit.`,
         INVALID_FILE_TYPE: 'Invalid file type. Only images are accepted.',
         EVIDENCE_UNCLEAR: 'Upload failed or image unclear. Please retake photo.',
       }
@@ -141,6 +141,8 @@ export default function BcpQuarantineProofPage() {
   }
 
   // ─── Loading Skeleton ─────────────────────────────────────────────────────
+  if (dossierFailed || (!dossierLoading && !dossier)) return <ErrorState message="Unable to load the transport dossier. Retry before submitting proof." onRetry={() => void reloadDossier()} />
+
   if (dossierLoading) {
     return (
       <div className="mx-auto max-w-6xl space-y-5 p-6">
@@ -230,6 +232,7 @@ export default function BcpQuarantineProofPage() {
               <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-6">
                 {/* Section 2: Photographic Proof (FileUploader & ImageViewer) */}
                 <PhotoCaptureSection
+                  documentLabel="Quarantine Clearance Sheet Photo *"
                   files={photoFile ? [photoFile] : []}
                   capturedAt={photoTakenAt ? [photoTakenAt] : []}
                   coordinates={photoCoordinates}
@@ -276,7 +279,7 @@ export default function BcpQuarantineProofPage() {
                     <div>
                       <dt className="text-slate-500 font-medium">Timestamp</dt>
                       <dd className="font-semibold text-slate-800 font-mono text-[11px]">
-                        {photoTakenAt ? photoTakenAt.toLocaleTimeString("en-GB") : "Live stamp"}
+                        {photoTakenAt ? formatUtcTime(photoTakenAt) : "Live stamp"}
                       </dd>
                     </div>
                   </dl>

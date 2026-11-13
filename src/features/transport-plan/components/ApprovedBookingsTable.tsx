@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -7,6 +8,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { approvedBookingDetail } from "@/app/route-config";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { formatBookingDate } from "@/features/booking/utils";
 import type { PaginationMeta } from "@/shared/types";
 import { TablePagination } from "@/shared/components/common/TablePagination";
@@ -59,7 +61,7 @@ export function ApprovedBookingsTable({
         enableSorting: false,
         cell: ({ row }) => (
           <Link
-            className="font-semibold text-slate-900 underline decoration-primary/50 underline-offset-2 hover:decoration-primary"
+            className={codeLinkClassName}
             to={approvedBookingDetail(row.original.bookingId)}
           >
             {row.original.transportPlan
@@ -86,8 +88,13 @@ export function ApprovedBookingsTable({
         accessorKey: "customerName",
         header: "Customer",
         cell: ({ row }) => (
-          <div className="min-w-32 whitespace-normal">
-            <p className="font-medium">{row.original.customerName}</p>
+          <div className="min-w-32">
+            <p
+              className="max-w-40 truncate font-medium"
+              title={row.original.customerName}
+            >
+              {row.original.customerName}
+            </p>
             {row.original.customerCode && (
               <p className="mt-1 text-[10px] text-slate-500">
                 {row.original.customerCode}
@@ -135,7 +142,7 @@ export function ApprovedBookingsTable({
         enableSorting: true,
         cell: ({ row }) =>
           row.original.approvedAt
-            ? formatBookingDate(row.original.approvedAt, true)
+            ? <DateTimeUtc value={row.original.approvedAt} compact />
             : "—",
       },
       {
@@ -207,7 +214,7 @@ export function ApprovedBookingsTable({
       const parsed = approvedBookingSortSchema.safeParse(
         sort
           ? `${sort.id}:${sort.desc ? "desc" : "asc"}`
-          : "requestedDepartureDate:asc",
+          : "requestedDepartureDate:desc",
       );
       if (parsed.success) onChange({ sortBy: parsed.data });
     },

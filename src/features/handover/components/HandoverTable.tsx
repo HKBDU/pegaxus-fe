@@ -16,8 +16,6 @@ interface Props {
   hasFilters: boolean
   hrefFor: (item: HandoverListItem) => string
   filters: ReactNode
-  /** Rendered in the empty state (e.g. a "create" button). */
-  emptyAction?: ReactNode
 }
 
 const dim = (item: HandoverListItem) => item.status === "CANCELLED"
@@ -27,7 +25,7 @@ const dash = <span className="text-gray-400">—</span>
  * Same table at every width: on narrow screens it scrolls sideways instead of turning into cards. Sorting, paging and search run on the loaded
  * records: one transport has a handful of handover points, so HO1 returns them all in one page.
  */
-export function HandoverTable({ items, isLoading, hasFilters, hrefFor, filters, emptyAction }: Props) {
+export function HandoverTable({ items, isLoading, hasFilters, hrefFor, filters }: Props) {
   const [sorting, setSorting] = useState<SortingState>([{ id: "sequenceNo", desc: false }])
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
 
@@ -45,8 +43,32 @@ export function HandoverTable({ items, isLoading, hasFilters, hrefFor, filters, 
       },
       { accessorKey: "sequenceNo", header: "SEQ", cell: ({ row }) => <span className="text-gray-500 tabular-nums">{row.original.sequenceNo}</span> },
       { accessorKey: "handoverType", header: "Type", enableSorting: false, cell: ({ row }) => <span className={cn("font-semibold uppercase", dim(row.original) && "text-gray-400")}>{typeLabel(row.original.handoverType)}</span> },
-      { accessorKey: "fromPartyName", header: "From party", enableSorting: false, cell: ({ row }) => <span className={cn("block min-w-28 whitespace-normal", dim(row.original) && "text-gray-400")}>{row.original.fromPartyName || dash}</span> },
-      { accessorKey: "toPartyName", header: "To party", enableSorting: false, cell: ({ row }) => <span className={cn("block min-w-28 whitespace-normal", dim(row.original) && "text-gray-400")}>{row.original.toPartyName || dash}</span> },
+      {
+        accessorKey: "fromPartyName",
+        header: "From party",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span
+            className={cn("block max-w-36 truncate", dim(row.original) && "text-gray-400")}
+            title={row.original.fromPartyName || undefined}
+          >
+            {row.original.fromPartyName || dash}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "toPartyName",
+        header: "To party",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span
+            className={cn("block max-w-36 truncate", dim(row.original) && "text-gray-400")}
+            title={row.original.toPartyName || undefined}
+          >
+            {row.original.toPartyName || dash}
+          </span>
+        ),
+      },
       { accessorKey: "locationName", header: "Location", enableSorting: false, cell: ({ row }) => <span className={cn("block min-w-28 whitespace-normal", dim(row.original) && "text-gray-400")}>{row.original.locationName || dash}</span> },
       { accessorKey: "plannedHandoverAt", header: "PLANNED AT", cell: ({ row }) => <span className="whitespace-nowrap text-gray-500 tabular-nums">{formatDateTime(row.original.plannedHandoverAt)}</span> },
       { accessorKey: "actualHandoverAt", header: "HANDOVER TIME", cell: ({ row }) => <span className={cn("whitespace-nowrap tabular-nums", dim(row.original) && "text-gray-400")}>{row.original.actualHandoverAt ? formatDateTime(row.original.actualHandoverAt) : dash}</span> },
@@ -86,9 +108,8 @@ export function HandoverTable({ items, isLoading, hasFilters, hrefFor, filters, 
     hasNextPage: table.getCanNextPage(),
   }
   const empty = (
-    <div className="space-y-3 text-center">
+    <div className="text-center">
       <EmptyState message={hasFilters ? "No handover records match your filters." : "There are no handover records for this transport yet."} />
-      {!hasFilters && emptyAction ? <div className="flex justify-center">{emptyAction}</div> : null}
     </div>
   )
 

@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { AuthPrincipal } from "@/features/auth/types";
 import type {
   routePlanDetailSchema,
   routePlanSummarySchema,
@@ -20,6 +21,16 @@ import type {
 
 export type RoutePlanDetail = z.infer<typeof routePlanDetailSchema>;
 export type RoutePlanSummary = z.infer<typeof routePlanSummarySchema>;
+export type RouteWorkspaceContext = {
+  principal: AuthPrincipal | null;
+  planStatus: string;
+  transportStatus?: string | null;
+  dossierStatus?: string | null;
+  hasActivePrimary?: boolean;
+  hasOpenReturn?: boolean;
+  hasOpenBackup?: boolean;
+  routeDetailPath?: (routePlanId: string) => string;
+};
 export type RoutePlansQuery = z.infer<typeof routePlansQuerySchema>;
 export type RouteSegment = z.infer<typeof routeSegmentSchema>;
 export type RouteLegalReviewData = z.infer<typeof routeLegalReviewSchema>;

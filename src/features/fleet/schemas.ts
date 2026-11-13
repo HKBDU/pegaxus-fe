@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { PROVIDER_NOTE_MAX, VEHICLE_CAPACITY_MAX, VEHICLE_CAPACITY_MIN } from "@/features/fleet/constants/fleet.constants"
 import { MANUAL_VEHICLE_STATUSES, TRANSPORT_MODES } from "@/features/fleet/types"
-import { todayIso } from "@/features/fleet/utils"
+import { todayUtc } from "@/features/fleet/utils"
 import {
   PHONE_MESSAGE,
   VALIDATION_LIMITS,
@@ -14,7 +14,7 @@ const optionalText = (max: number, label: string) => z.string().trim().max(max, 
 
 function maxFutureDateIso(years = VALIDATION_LIMITS.dateWindowYears): string {
   const date = new Date()
-  date.setFullYear(date.getFullYear() + years)
+  date.setUTCFullYear(date.getUTCFullYear() + years)
   return date.toISOString().slice(0, 10)
 }
 
@@ -22,10 +22,10 @@ function maxFutureDateIso(years = VALIDATION_LIMITS.dateWindowYears): string {
 const futureDate = (label: string) =>
   z
     .string()
-    .refine((value) => !value || value > todayIso(), `${label} must be in the future.`)
+    .refine((value) => !value || value > todayUtc(), `${label} must be in the future (UTC date).`)
     .refine(
       (value) => !value || value <= maxFutureDateIso(),
-      `${label} must be within ${VALIDATION_LIMITS.dateWindowYears} years from today.`,
+      `${label} must be within ${VALIDATION_LIMITS.dateWindowYears} years from today (UTC date).`,
     )
 
 export const vehicleFormSchema = z

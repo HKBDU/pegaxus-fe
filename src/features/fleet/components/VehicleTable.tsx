@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
@@ -42,7 +43,7 @@ export function VehicleTable({ vehicles, filters, meta, isLoading, onSearchChang
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
-          <button type="button" title="View vehicle details" onClick={() => navigate(vehicleDetailPath(row.original.vehicleId))} className="font-semibold text-slate-900 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+          <button type="button" title="View vehicle details" onClick={() => navigate(vehicleDetailPath(row.original.vehicleId))} className={codeLinkClassName}>
             {row.original.vehicleCode}
           </button>
         ),

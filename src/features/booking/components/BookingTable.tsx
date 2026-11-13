@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useCallback, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type RowSelectionState, type SortingState } from "@tanstack/react-table"
@@ -7,7 +8,8 @@ import { BookingStatusBadge } from "@/features/booking/components/BookingStatusB
 import { CancelBookingDialog } from "@/features/booking/components/CancelBookingDialog"
 import { BookingFilters } from "@/features/booking/components/BookingFilters"
 import type { BookingAudience, BookingListParams, BookingSort, BookingStatus, BookingSummary } from "@/features/booking/types"
-import { formatBookingDate, formatBookingTime } from "@/features/booking/utils"
+import { formatBookingDate } from "@/features/booking/utils"
+import { formatUtcDate, formatUtcTime } from "@/shared/utils/datetime"
 import type { EntityId, PaginationMeta } from "@/shared/types"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { Button } from "@/shared/components/ui/button"
@@ -135,10 +137,20 @@ export function BookingTable({
         accessorKey: "bookingCode",
         enableHiding: false,
         header: "REQUEST CODE",
-        cell: ({ row }) => <span className="font-semibold text-slate-900">{row.original.bookingCode}</span>,
+        cell: ({ row }) => <button type="button" className={codeLinkClassName} onClick={() => navigate(detailsPath(row.original.bookingId))}>{row.original.bookingCode}</button>,
       },
       ...(audience === "manager"
-        ? [{ accessorKey: "customerName", header: "CUSTOMER" } satisfies ColumnDef<BookingSummary>]
+        ? [
+            {
+              accessorKey: "customerName",
+              header: "CUSTOMER",
+              cell: ({ row }) => (
+                <span className="block max-w-44 truncate text-slate-900" title={row.original.customerName ?? undefined}>
+                  {row.original.customerName ?? "—"}
+                </span>
+              ),
+            } satisfies ColumnDef<BookingSummary>,
+          ]
         : []),
       {
         id: "route",
@@ -147,9 +159,9 @@ export function BookingTable({
         enableSorting: false,
         cell: ({ row }) => (
           <div className="grid min-w-64 grid-cols-[minmax(6.5rem,1fr)_1.25rem_minmax(7.5rem,1fr)] items-center text-slate-700">
-            <span className="truncate">{row.original.originCountry}</span>
+            <span className="truncate" title={row.original.originCountry}>{row.original.originCountry}</span>
             <ArrowRight className="mx-auto size-3 shrink-0 text-amber-500" />
-            <span className="truncate pl-1.5">{row.original.destinationCountry}</span>
+            <span className="truncate pl-1.5" title={row.original.destinationCountry}>{row.original.destinationCountry}</span>
           </div>
         ),
       },
@@ -157,10 +169,7 @@ export function BookingTable({
         accessorKey: "requestedDepartureDate",
         header: "EXPECTED DEPARTURE",
         cell: ({ row }) => (
-          <div className="leading-tight">
-            <span className="block text-slate-900">{formatBookingDate(row.original.requestedDepartureDate)}</span>
-            <span className="mt-1 block text-[0.68rem] text-slate-400">{formatBookingTime(row.original.requestedDepartureDate)}</span>
-          </div>
+          <span className="block text-slate-900">{formatBookingDate(row.original.requestedDepartureDate)}</span>
         ),
       },
       {
@@ -180,8 +189,8 @@ export function BookingTable({
         header: "CREATED AT",
         cell: ({ row }) => (
           <div className="leading-tight">
-            <span className="block text-slate-900">{formatBookingDate(row.original.createdAt)}</span>
-            <span className="mt-1 block text-[0.68rem] text-slate-400">{formatBookingTime(row.original.createdAt)}</span>
+            <span className="block text-slate-900">{formatUtcDate(row.original.createdAt)}</span>
+            <span className="mt-1 block text-[0.68rem] text-slate-400">{formatUtcTime(row.original.createdAt)}</span>
           </div>
         ),
       },

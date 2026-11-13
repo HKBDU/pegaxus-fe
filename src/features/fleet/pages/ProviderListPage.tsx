@@ -35,7 +35,7 @@ export default function ProviderListPage() {
     <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
       <div className="booking-page-enter mx-auto grid w-full max-w-[1152px] gap-5">
         <div>
-          <PageHeader title="TRANSPORT PROVIDERS" backHref="/admin" backLabel="RETURN TO FLEET OVERVIEW" />
+          <PageHeader title="TRANSPORT PROVIDERS" backHref="/admin" showBack={false} />
           <p className="m-0 text-sm text-slate-500">Manage third-party animal transport partners across Europe.</p>
         </div>
 

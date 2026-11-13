@@ -1,27 +1,29 @@
 import { z } from "zod"
-import { addDays, addMonths, format, parseISO } from "date-fns"
 
+import { DEPARTURE_TOO_SOON_MESSAGE, SAME_COUNTRY_MESSAGE, getDepartureRule } from "@/features/booking/lib/departure-rule"
 import { COUNTRY_MESSAGE, isBookingCountry } from "@/features/booking/lib/place"
 import { BOOKING_STATUSES } from "@/features/booking/types"
+import { countDecimalPlaces } from "@/shared/constants/validation-limits"
 
 // The BE stores coordinates as decimal(10,4); a missing or out-of-range value is rejected with INVALID_COORDINATES.
-const latitudeSchema = (message: string) => z.number({ error: message }).min(-90, message).max(90, message)
-const longitudeSchema = (message: string) => z.number({ error: message }).min(-180, message).max(180, message)
+const latitudeSchema = (message: string) =>
+  z
+    .number({ error: message })
+    .finite(message)
+    .min(-90, message)
+    .max(90, message)
+    .refine((value) => countDecimalPlaces(value) <= 4, "Latitude must be between -90 and 90 (up to 4 decimal places).")
+const longitudeSchema = (message: string) =>
+  z
+    .number({ error: message })
+    .finite(message)
+    .min(-180, message)
+    .max(180, message)
+    .refine((value) => countDecimalPlaces(value) <= 4, "Longitude must be between -180 and 180 (up to 4 decimal places).")
 
 const optionalText = (max: number) => z.string().trim().max(max)
 
-const DATE_FORMAT = "yyyy-MM-dd"
-
 export const bookingIdSchema = z.string()
-
-export function getBookingDepartureDateRange(now = new Date()) {
-  const utcToday = parseISO(now.toISOString().slice(0, 10))
-
-  return {
-    minDate: format(addDays(utcToday, 21), DATE_FORMAT),
-    maxDate: format(addMonths(utcToday, 2), DATE_FORMAT),
-  }
-}
 
 export const bookingFiltersSchema = z.object({
   search: z.string().trim().max(100, "Search is limited to 100 characters"),
@@ -65,32 +67,44 @@ export const bookingFormSchema = z
       }),
   })
   .superRefine((values, context) => {
-    if (values.requestedDepartureDate) {
-      const { minDate, maxDate } = getBookingDepartureDateRange()
-      if (values.requestedDepartureDate < minDate || values.requestedDepartureDate > maxDate) {
-        context.addIssue({
-          code: "custom",
-          message: "Departure date must be between 3 weeks and 2 months from today",
-          path: ["requestedDepartureDate"],
-        })
-      }
+    const rule = getDepartureRule(values.originCountry, values.destinationCountry)
+    if (rule.kind === "unsupported") {
+      context.addIssue({ code: "custom", message: SAME_COUNTRY_MESSAGE, path: ["destinationCountry"] })
+    }
+    if (values.requestedDepartureDate && values.requestedDepartureDate < rule.minDate) {
+      context.addIssue({
+        code: "custom",
+        message: DEPARTURE_TOO_SOON_MESSAGE[rule.kind],
+        path: ["requestedDepartureDate"],
+      })
     }
 
     if (
       values.requestedArrivalDate &&
       values.requestedDepartureDate &&
-      values.requestedArrivalDate < values.requestedDepartureDate
+      values.requestedArrivalDate < addDays(values.requestedDepartureDate, 1)
     ) {
       context.addIssue({
         code: "custom",
-        message: "Arrival date cannot be before departure",
+        message: "Arrival date must be at least 24 hours after departure",
         path: ["requestedArrivalDate"],
       })
     }
   })
 
+export function addDays(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
 export const reasonSchema = z.object({
   reason: z.string().trim().min(10, "Please provide at least 10 characters").max(500),
+})
+
+/** The Logistics Manager reason is required and at most 2000 characters (the customer one keeps its own limits). */
+export const managerCancelBookingSchema = z.object({
+  reason: z.string().trim().min(1, "Please enter a reason.").max(2000, "The reason must be at most 2000 characters."),
 })
 
 export const cancelBookingSchema = reasonSchema
@@ -99,4 +113,5 @@ export const rejectBookingSchema = reasonSchema
 export type BookingFiltersFormValues = z.infer<typeof bookingFiltersSchema>
 export type BookingFormSchemaValues = z.infer<typeof bookingFormSchema>
 export type CancelBookingFormValues = z.infer<typeof cancelBookingSchema>
+export type ManagerCancelBookingFormValues = z.infer<typeof managerCancelBookingSchema>
 export type RejectBookingFormValues = z.infer<typeof rejectBookingSchema>

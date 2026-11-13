@@ -11,26 +11,18 @@ import { HorseModel } from "./HorseModel";
 import { HorseScene } from "./HorseScene";
 import type { LandingSceneState } from "../../hooks/useLandingStory";
 
-function HorseUnavailable({ onReady }: { onReady: () => void }) {
-  useEffect(onReady, [onReady]);
-  return (
-    <div className="landing-scene-fallback">
-      <p>Movement, with purpose.</p>
-      <small>WebGL unavailable. Explore the journey below.</small>
-    </div>
-  );
-}
-
 export default function HorseExperience({
   story,
   canvasLayer,
   horsePresent,
   onReady,
+  onUnavailable,
 }: {
   story: RefObject<LandingSceneState>;
   canvasLayer: RefObject<HTMLDivElement | null>;
   horsePresent: boolean;
   onReady: () => void;
+  onUnavailable: () => void;
 }) {
   const [failed, setFailed] = useState(false);
   const [quality, setQuality] = useState(() => ({
@@ -40,8 +32,11 @@ export default function HorseExperience({
   }));
   const contextLost = useCallback(() => {
     setFailed(true);
-    onReady();
-  }, [onReady]);
+    onUnavailable();
+  }, [onUnavailable]);
+  const prepared = useCallback(() => {
+    canvasLayer.current?.setAttribute("data-prepared", "true");
+  }, [canvasLayer]);
   useEffect(() => {
     const compact = matchMedia("(max-width: 1023px)");
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
@@ -90,17 +85,11 @@ export default function HorseExperience({
   }, [canvasLayer, story]);
   return (
     <div className="landing-experience" ref={canvasLayer} aria-hidden="true">
-      {failed ? (
-        <div className="landing-scene-fallback">
-          <p>Movement, with purpose.</p>
-          <small>
-            3D preview unavailable. All navigation remains available.
-          </small>
-        </div>
-      ) : (
+      {!failed && (
         <div className="landing-canvas-layer">
           <Canvas
             camera={{ position: [0, 0.45, 6.9], fov: 32, near: 0.1, far: 40 }}
+            resize={{ scroll: false, debounce: 0 }}
             dpr={lowPower ? 1 : [1, 1.5]}
             frameloop={
               !quality.visible || !horsePresent
@@ -114,7 +103,9 @@ export default function HorseExperience({
               alpha: true,
               powerPreference: lowPower ? "low-power" : "high-performance",
             }}
-            fallback={<HorseUnavailable onReady={onReady} />}
+            fallback={
+              <span>3D preview unavailable. Explore the journey below.</span>
+            }
             onCreated={({ gl }) => {
               gl.setClearColor("#111311", 0);
             }}
@@ -125,7 +116,11 @@ export default function HorseExperience({
                 lowPower={lowPower}
                 onContextLost={contextLost}
               >
-                <HorseModel story={story} onReady={onReady} />
+                <HorseModel
+                  story={story}
+                  onReady={onReady}
+                  onPrepared={prepared}
+                />
               </HorseScene>
             </Suspense>
           </Canvas>

@@ -1,6 +1,6 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import "@/shared/components/report-dashboard.css";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { RefreshCw } from "lucide-react";
 import { REPORT_MOCK_MODE } from "@/lib/report-mode";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
@@ -55,6 +55,7 @@ function LoadedReport({
   const [feedback, setFeedback] = useState("");
   const [conflictOpen, setConflictOpen] = useState(false);
   const alive = useRef(true);
+  const attemptedRefresh = useRef<string | null>(null);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -69,6 +70,7 @@ function LoadedReport({
     (error) => error && isFinancialTerminal(error),
   );
   const busy = api.refresh.isPending || api.save.isPending;
+  const dirty = draft.text.trim() !== draft.baseline;
   const persisted =
     !report.isProvisional &&
     report.financialReportId !== null &&
@@ -81,7 +83,7 @@ function LoadedReport({
     !terminal &&
     operationError?.code !== "TRANSPORT_NOT_COMPLETED";
 
-  function failed(error: unknown) {
+  const failed = useCallback((error: unknown) => {
     if (!alive.current) return;
     const failure = financialError(error);
     setOperationError(failure);
@@ -90,7 +92,56 @@ function LoadedReport({
       dispatch({ type: "conflict" });
       setConflictOpen(true);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (!report.isStale) {
+      attemptedRefresh.current = null;
+      return;
+    }
+    if (
+      REPORT_MOCK_MODE ||
+      !editable ||
+      !report.updatedAt ||
+      dirty ||
+      draft.needsReview ||
+      busy ||
+      api.query.isFetching ||
+      document.visibilityState !== "visible" ||
+      !navigator.onLine ||
+      attemptedRefresh.current === report.updatedAt
+    )
+      return;
+    let cancelled = false;
+    // Let StrictMode cleanup cancel the first setup before issuing a write.
+    queueMicrotask(() => {
+      if (cancelled || attemptedRefresh.current === report.updatedAt) return;
+      // One attempt per saved version; a failed POST must not loop on polling.
+      attemptedRefresh.current = report.updatedAt;
+      void api.refresh
+        .mutateAsync()
+        .then((confirmed) => {
+          if (!alive.current) return;
+          attemptedRefresh.current = confirmed.updatedAt;
+          setOperationError(null);
+          setFeedback("Financial data synchronized.");
+        })
+        .catch(failed);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    api.refresh,
+    api.query.isFetching,
+    busy,
+    dirty,
+    draft.needsReview,
+    editable,
+    failed,
+    report.isStale,
+    report.updatedAt,
+  ]);
 
   async function reload() {
     if (busy || api.query.isFetching) return;
@@ -102,26 +153,13 @@ function LoadedReport({
       return;
     }
     if (result.data) {
+      attemptedRefresh.current = null;
       dispatch({ type: "reload", report: result.data });
       setOperationError(null);
       setConflictOpen(false);
       setFeedback(
         "Latest report loaded. Your unsaved note is kept; review it before saving.",
       );
-    }
-  }
-
-  async function refresh() {
-    if (REPORT_MOCK_MODE) return;
-    if (!editable || busy || api.query.isFetching || draft.needsReview) return;
-    setOperationError(null);
-    setFeedback("");
-    try {
-      await api.refresh.mutateAsync();
-      if (alive.current)
-        setFeedback("Financial figures refreshed from the server.");
-    } catch (error) {
-      failed(error);
     }
   }
 
@@ -161,7 +199,7 @@ function LoadedReport({
 
   return (
     <div className="min-w-0 space-y-4" aria-busy={busy || api.query.isFetching}>
-      <section className="min-w-0 border-b border-slate-200 pb-4">
+      <section className="report-financial-context min-w-0">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-2">
             <p className="m-0 break-words text-sm font-medium text-slate-800">
@@ -176,27 +214,6 @@ function LoadedReport({
               <span>Currency: {report.currency}</span>
             </div>
           </div>
-          <Button
-            type="button"
-            variant={report.isStale ? "default" : "outline"}
-            onClick={() => void refresh()}
-            disabled={
-              REPORT_MOCK_MODE ||
-              !editable ||
-              busy ||
-              api.query.isFetching ||
-              draft.needsReview
-            }
-            className="h-auto min-h-10 max-w-full whitespace-normal rounded-[2px] text-left"
-          >
-            <RefreshCw
-              aria-hidden="true"
-              className={`size-4 shrink-0 ${api.refresh.isPending ? "animate-spin" : ""}`}
-            />
-            {api.refresh.isPending
-              ? "Refreshing financial data…"
-              : "Refresh financial data"}
-          </Button>
         </div>
         <dl className="mt-3 mb-0 flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-500">
           {(
@@ -228,7 +245,7 @@ function LoadedReport({
             onClick={() => void reload()}
             className="rounded-[2px]"
           >
-            Load latest report
+            Retry loading report
           </Button>
         </div>
       ) : null}
@@ -237,10 +254,13 @@ function LoadedReport({
         aria-live="polite"
         className="min-h-5 text-xs text-emerald-800"
       >
-        {feedback ||
-          (api.query.isFetching
-            ? "Loading the latest report; your current view is kept."
-            : "")}
+        {api.refresh.isPending
+          ? "Synchronizing financial data…"
+          : api.query.isFetching
+            ? "Updating report; your current view is kept."
+            : report.isStale && dirty
+              ? "Automatic financial sync is paused while you have unsaved note changes."
+              : feedback}
       </div>
       <FinancialOverview report={report} />
       <ReconciliationSection report={report} />
@@ -308,16 +328,16 @@ function FinancialWorkspace({ transportId }: { transportId: string }) {
   }
 
   return (
-    <main className="mx-auto w-full min-w-0 max-w-7xl space-y-4 px-4 py-6 sm:px-6">
+    <main className="report-dashboard mx-auto w-full min-w-0 max-w-[1440px] space-y-3 px-3 py-4 sm:px-4">
       <PageHeader
         title="Financial summary"
         backHref={
           REPORT_MOCK_MODE
-            ? "/admin/reports/on-time-delivery"
+            ? ROLE_ROUTES.dashboard
             : `${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(transportId)}`
         }
         backLabel={
-          REPORT_MOCK_MODE ? "Management reports" : "Transport details"
+          REPORT_MOCK_MODE ? "Back to Dashboard" : "Back to Transport Details"
         }
       />
       <FinancialDemoNotice />
@@ -414,7 +434,7 @@ export default function FinancialSummaryPage() {
         <PageHeader
           title="Financial summary"
           backHref={ROLE_ROUTES.ongoingTransports}
-          backLabel="Ongoing transports"
+          backLabel="Back to Ongoing Transports"
         />
         <ErrorState message="A valid transport ID is required. Open this page from the correct transport context." />
       </div>

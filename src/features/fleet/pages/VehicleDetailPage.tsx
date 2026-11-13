@@ -92,7 +92,6 @@ export default function VehicleDetailPage() {
                 <InfoRow label="Vehicle name" value={vehicle.vehicleName} />
                 <InfoRow label="License plate" value={vehicle.licensePlate} />
                 <InfoRow label="Transport mode" value={<VehicleModeBadge mode={vehicle.transportMode} />} />
-                <InfoRow label="Internal system ref" value={<span className="break-all">{vehicle.vehicleId}</span>} />
               </InfoCard>
 
               <InfoCard title="Specifications & technical">

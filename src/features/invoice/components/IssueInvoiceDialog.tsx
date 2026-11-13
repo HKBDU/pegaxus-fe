@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query"
-import { format, isValid, parseISO } from "date-fns"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 import { BadgeCheck, Building2, Calendar, CircleDot, Coins, FileText, Mail, Send, TriangleAlert } from "lucide-react"
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -9,7 +9,7 @@ import { ISSUE_CONFIRMATION_TEXT } from "@/features/invoice/constants"
 import { getInvoiceErrorCode, getInvoiceErrorMessage } from "@/features/invoice/errors"
 import { invoiceKeys, useIssueInvoice } from "@/features/invoice/hooks/useInvoiceCompose"
 import type { Invoice, InvoiceType, IssuedInvoice } from "@/features/invoice/types"
-import { formatMoney } from "@/features/invoice/utils"
+import { formatMoney, invoiceDate } from "@/features/invoice/utils"
 import { Button } from "@/shared/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/shared/components/ui/dialog"
 
@@ -28,10 +28,7 @@ interface IssueInvoiceDialogProps {
   onBackToEdit?: () => void
 }
 
-const day = (value: string) => {
-  const date = parseISO(value)
-  return isValid(date) ? format(date, "dd MMM yyyy") : "—"
-}
+const day = (value: string) => formatUtcDateTime(value)
 
 /** Second bullet of "What happens when you issue this invoice?", per UC-68 step 6. */
 const NOTIFICATION_TEXT: Record<InvoiceType, string> = {
@@ -127,7 +124,7 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
             </div>
             <div className="space-y-4">
               <Detail icon={<Calendar />} label="Invoice Date" value={day(invoice.invoiceDate)} />
-              <Detail icon={<Calendar />} label={invoice.type === "QUOTATION" ? "Valid Until" : "Due Date"} value={day(invoice.dueDate)} />
+              <Detail icon={<Calendar />} label={invoice.type === "QUOTATION" ? "Valid Until" : "Due Date"} value={invoiceDate(invoice.dueDate)} />
               <Detail
                 icon={<Coins />}
                 label={invoice.type === "QUOTATION" ? "Estimated Total" : "Total Amount"}

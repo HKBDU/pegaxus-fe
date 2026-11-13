@@ -1,10 +1,23 @@
-import type { FieldErrors, UseFormRegister } from "react-hook-form";
+import {
+  Controller,
+  type Control,
+  type FieldErrors,
+  type UseFormRegister,
+} from "react-hook-form";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import type { LocationFormValues } from "./types";
 
 type LocationFormFieldsProps = {
   register: UseFormRegister<LocationFormValues>;
+  control: Control<LocationFormValues>;
   errors: FieldErrors<LocationFormValues>;
 };
 
@@ -20,6 +33,7 @@ const locationTypes = [
 
 export function LocationFormFields({
   register,
+  control,
   errors,
 }: LocationFormFieldsProps) {
   return (
@@ -33,17 +47,38 @@ export function LocationFormFields({
       </label>
       <label className="grid gap-1 text-sm">
         Type
-        <select
-          className="h-9 rounded border px-3 text-sm"
-          {...register("type")}
-        >
-          <option value="">Select type</option>
-          {locationTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
+        <Controller
+          control={control}
+          name="type"
+          render={({ field }) => (
+            <Select
+              name={field.name}
+              value={field.value || "__NO_LOCATION_TYPE__"}
+              onValueChange={(type) =>
+                field.onChange(type === "__NO_LOCATION_TYPE__" ? "" : type)
+              }
+            >
+              <SelectTrigger
+                ref={field.ref}
+                onBlur={field.onBlur}
+                aria-label="Location type"
+                className="w-full"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__NO_LOCATION_TYPE__">
+                  Select type
+                </SelectItem>
+                {locationTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        />
       </label>
       <label className="grid gap-1 text-sm">
         Country

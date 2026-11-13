@@ -5,10 +5,14 @@ export type ApiEnvelope<T> = { isSuccess?: boolean; code?: number; message?: str
 export const TRANSPORT_MODES = ["ROAD", "SEA", "AIR"] as const
 export type TransportMode = (typeof TRANSPORT_MODES)[number]
 
-export const VEHICLE_STATUSES = ["AVAILABLE", "ASSIGNED", "IN_USE", "MAINTENANCE", "INACTIVE"] as const
+/** All 7 values of the BE vehicle status enum (DB V8). `GET /vehicles` can return any of them. */
+export const VEHICLE_STATUSES = ["AVAILABLE", "ASSIGNED", "IN_USE", "MAINTENANCE", "INACTIVE", "SUSPENDED", "OUT_OF_SERVICE"] as const
 export type VehicleStatus = (typeof VEHICLE_STATUSES)[number]
 
-/** ASSIGNED / IN_USE are system-managed (UC-46); only these can be set by hand. */
+/** The BE sets these itself (an OUT_OF_SERVICE vehicle is handled by the fleet team), so they cannot be changed by hand. */
+export const SYSTEM_MANAGED_STATUSES: ReadonlySet<VehicleStatus> = new Set<VehicleStatus>(["ASSIGNED", "IN_USE", "SUSPENDED", "OUT_OF_SERVICE"])
+
+/** Only these can be set by hand (UC-46). */
 export const MANUAL_VEHICLE_STATUSES = ["AVAILABLE", "MAINTENANCE", "INACTIVE"] as const
 export type ManualVehicleStatus = (typeof MANUAL_VEHICLE_STATUSES)[number]
 

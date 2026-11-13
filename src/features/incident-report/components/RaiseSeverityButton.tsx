@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import { ArrowUpDown } from "lucide-react";
 
 import {
   INCIDENT_ACTION,
+  INCIDENT_ERROR_MESSAGES,
   INCIDENT_SEVERITY,
   INCIDENT_SEVERITY_OPTIONS,
 } from "@/shared/constants/incident";
@@ -10,6 +12,7 @@ import type {
   IncidentMutationResponse,
   IncidentSeverity,
 } from "@/shared/types/incident";
+import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import {
   Select,
@@ -43,6 +46,13 @@ export interface RaiseSeverityButtonProps {
   lastUpdatedAt: string;
   availableActions: IncidentAction[];
   onChanged?: (response: IncidentMutationResponse) => void;
+  /** Lets the page size the button like the other actions of its bar. */
+  className?: string;
+  /** Controlled dialog, so a page can open it from a menu item instead of this component's own button. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Render only the dialog; the page provides its own trigger (for example a menu item). */
+  hideTrigger?: boolean;
 }
 
 export function RaiseSeverityButton({
@@ -51,29 +61,46 @@ export function RaiseSeverityButton({
   lastUpdatedAt,
   availableActions,
   onChanged,
+  className,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: RaiseSeverityButtonProps) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [nextSeverity, setNextSeverity] = useState<IncidentSeverity>(
     INCIDENT_SEVERITY.HIGH,
   );
   const [reason, setReason] = useState("");
   const mutation = useIncidentMutations().raiseSeverity;
   const canRaise = availableActions.includes(INCIDENT_ACTION.RAISE_SEVERITY);
-  const higherSeverities = useMemo(
+  const canLower = availableActions.includes(INCIDENT_ACTION.LOWER_SEVERITY);
+  const selectableSeverities = useMemo(
     () => severityOrder.slice(severityOrder.indexOf(severity) + 1),
     [severity],
   );
+  const allowedSeverities = canLower
+    ? severityOrder.filter((option) => option !== severity)
+    : selectableSeverities;
   const reasonTooShort = reason.trim().length > 0 && reason.trim().length < 10;
 
-  if (!canRaise || higherSeverities.length === 0) return null;
+  if ((!canRaise && !canLower) || allowedSeverities.length === 0) return null;
+
+  // Opened from a page's menu, the trigger's reset does not run: fall back to the first allowed value.
+  const selectedSeverity = allowedSeverities.includes(nextSeverity) ? nextSeverity : allowedSeverities[0];
 
   const submit = () => {
-    if (reason.trim().length < 10 || !higherSeverities.includes(nextSeverity))
-      return;
+    const isLowering = severityOrder.indexOf(selectedSeverity) < severityOrder.indexOf(severity);
+    if (
+      reason.trim().length < 10 ||
+      !allowedSeverities.includes(selectedSeverity) ||
+      (isLowering && !canLower)
+    ) return;
     mutation.mutate(
       {
         incidentReportId,
-        input: { lastUpdatedAt, severity: nextSeverity, reason: reason.trim() },
+        input: { lastUpdatedAt, severity: selectedSeverity, reason: reason.trim() },
       },
       {
         onSuccess: (response) => {
@@ -87,22 +114,29 @@ export function RaiseSeverityButton({
 
   return (
     <>
-      <Button
-        type="button"
-        onClick={() => {
-          setNextSeverity(higherSeverities[0]);
-          setOpen(true);
-        }}
-        className="min-h-12 rounded-[2px] bg-[#f39200] text-[#181818] hover:bg-[#d97f00]"
-      >
-        Raise severity
-      </Button>
+      {hideTrigger ? null : (
+        <Button
+          type="button"
+          onClick={() => {
+            setNextSeverity(allowedSeverities[0]);
+            setOpen(true);
+          }}
+          variant={className ? "outline" : "default"}
+          className={cn("min-h-12 rounded-[2px] bg-[#f39200] text-[#181818] hover:bg-[#d97f00]", className)}
+        >
+          <ArrowUpDown className="size-4" aria-hidden="true" />
+          Change severity
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="rounded-[2px] sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Raise incident severity</DialogTitle>
+            <DialogTitle>Change incident severity</DialogTitle>
             <DialogDescription>
-              Severity can only move upward. The current value is{" "}
+              {canLower
+                ? "Logistics Manager can move severity up or down."
+                : "Severity can only move upward."}{" "}
+              The current value is{" "}
               {INCIDENT_SEVERITY_OPTIONS[severity].label}.
             </DialogDescription>
           </DialogHeader>
@@ -110,7 +144,7 @@ export function RaiseSeverityButton({
             <label className="grid gap-2 text-sm font-semibold">
               New severity
               <Select
-                value={nextSeverity}
+                value={selectedSeverity}
                 onValueChange={(value) =>
                   setNextSeverity(value as IncidentSeverity)
                 }
@@ -119,7 +153,7 @@ export function RaiseSeverityButton({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {higherSeverities.map((option) => (
+                  {allowedSeverities.map((option) => (
                     <SelectItem key={option} value={option}>
                       {INCIDENT_SEVERITY_OPTIONS[option].label}
                     </SelectItem>
@@ -146,7 +180,9 @@ export function RaiseSeverityButton({
           )}
           {mutation.error instanceof Error && (
             <p role="alert" className="text-sm text-red-600">
-              {mutation.error.message}
+              {INCIDENT_ERROR_MESSAGES[
+                (mutation.error as { errorCode?: string }).errorCode ?? ""
+              ] ?? mutation.error.message}
             </p>
           )}
           {mutation.data?.effects?.customerNotified && (
@@ -155,6 +191,14 @@ export function RaiseSeverityButton({
               className="bg-emerald-50 p-3 text-sm text-emerald-800"
             >
               Customer was notified.
+            </p>
+          )}
+          {mutation.data?.effects?.vehicleStatusChanged && (
+            <p
+              role="status"
+              className="border border-slate-300 bg-slate-50 p-3 text-sm text-slate-800"
+            >
+              Vehicle status was updated by this incident change.
             </p>
           )}
           <DialogFooter>
@@ -171,7 +215,7 @@ export function RaiseSeverityButton({
               onClick={submit}
               className="bg-[#f39200] text-[#181818] hover:bg-[#d97f00]"
             >
-              {mutation.isPending ? "Saving…" : "Raise severity"}
+              {mutation.isPending ? "Saving…" : "Change severity"}
             </Button>
           </DialogFooter>
         </DialogContent>

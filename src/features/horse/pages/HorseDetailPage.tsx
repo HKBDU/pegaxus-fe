@@ -29,7 +29,7 @@ function HorseDetailSkeleton() {
   return (
     <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
       <div className="mx-auto w-full max-w-[1152px]">
-        <PageHeader title="VIEW HORSE" backHref="/my-horses" />
+        <PageHeader title="VIEW HORSE" backHref="/my-horses" backLabel="Back to My Horses" />
         <div className="grid gap-4 pt-4 lg:grid-cols-2">
           {["front", "back"].map((side) => (
             <div key={side} className={`relative aspect-[20/10] w-full ${side === "back" ? "lg:ml-[40px] lg:mt-[70px]" : ""}`}>
@@ -93,21 +93,21 @@ export function HorseDetailPage() {
       navigate("/my-horses")
     } catch (error) {
       setIsDeleteOpen(false)
-      setError(getHorseApiErrorMessage(error, "Unable to delete horse. Please try again."))
+      toast.error(getHorseApiErrorMessage(error, "Unable to delete horse. Please try again."))
     }
   }
 
   return (
     <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
       <div className="mx-auto flex w-full max-w-[1152px] flex-col gap-0">
-        <PageHeader title="VIEW HORSE" backHref="/my-horses" />
+        <PageHeader title="VIEW HORSE" backHref="/my-horses" backLabel="Back to My Horses" />
         <div className="flex flex-col gap-4 pt-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
           <div className="horse-card-front-enter relative w-full lg:aspect-[20/10]">
           <article className="relative z-10 min-h-0 w-full overflow-hidden rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#f8fafc_58%,#eef2f7_100%)] shadow-[0_22px_50px_rgba(15,23,42,0.16)] lg:absolute lg:inset-0">
             <div className="h-1.5 bg-[#f39200]" />
             <div className="relative grid h-full min-h-0 lg:grid-cols-[250px_1fr]">
               <div className="hidden lg:flex items-center justify-center border-b border-slate-200/90 bg-white lg:border-b-0 lg:border-r ">
-                <img src={horseCard} alt="Horse" className="block max-h-full w-full object-contain " />
+                <img src={horse.avatarUrl ?? horseCard} alt={horse.avatarUrl ? `${horse.horseName} avatar` : "Horse"} className="block max-h-full w-full object-contain " />
               </div>
               <div className="relative min-h-0 overflow-hidden p-3.5 sm:p-4 lg:p-4">
                 <img src={logo} alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 m-auto h-[72%] w-[72%] object-contain opacity-[0.035]" />

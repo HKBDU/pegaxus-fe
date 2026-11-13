@@ -1,9 +1,11 @@
 /* Must stay above the Tailwind import: @import is ignored once other rules precede it. */
 @import url("https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap");
-@import "tailwindcss";
+/* Disable workspace-wide discovery and scan only the files that can contain
+   utility classes. This avoids Tailwind traversing generated assets/fixtures. */
+@import "tailwindcss" source(none);
+@source "./**/*.{ts,tsx,js,jsx,html}";
 
 @custom-variant dark (&:is(.dark *));
-@source not "./features/home/assets/horse.glb";
 :root {
   --text: #171717;
   --text-h: #181818;
@@ -36,6 +38,7 @@
   --secondary-foreground: 222.2 47.4% 11.2%;
   /* Light orange used for every hover/focus highlight (menus, selects, ghost buttons). */
   --hover-accent: 36 100% 93%;
+  --selection-accent: #f39200;
 
   --sans: system-ui, "Segoe UI", Roboto, sans-serif;
   --heading: "Oswald", system-ui, sans-serif;
@@ -90,6 +93,7 @@
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
   --color-accent: hsl(var(--hover-accent));
+  --color-selection-accent: var(--selection-accent);
   --color-accent-foreground: hsl(var(--foreground));
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -731,4 +735,44 @@ html:has(.booking-page-shell) {
 
 html:has([data-slot="sidebar-inset"]) {
   background: #f4f2ed;
+}
+
+@keyframes assistant-widget-enter {
+  from { opacity: 0; transform: translateY(1rem) scale(0.75); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes assistant-message-enter {
+  from { opacity: 0; transform: translateY(1rem) scale(0.98); clip-path: inset(0 0 100%); }
+  to { opacity: 1; transform: translateY(0) scale(1); clip-path: inset(0); }
+}
+.assistant-message-enter { animation: assistant-message-enter 800ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .assistant-widget-enter, .assistant-message-enter { animation: none; }
+}
+@keyframes assistant-sidebar-open {
+  from { width: 0; }
+  to { width: min(100vw, 440px); }
+}
+@keyframes assistant-sidebar-close {
+  from { width: min(100vw, 440px); }
+  to { width: 0; }
+}
+.assistant-sidebar {
+  box-sizing: border-box;
+  width: 0;
+  overflow: hidden;
+  transition: none !important;
+}
+.assistant-sidebar[data-state="open"] {
+  width: min(100vw, 440px);
+  transform: translateX(0) !important;
+  animation: assistant-sidebar-open 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.assistant-sidebar[data-state="closed"] {
+  width: 0;
+  transform: translateX(0) !important;
+  animation: assistant-sidebar-close 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant-sidebar { animation: none; }
 }

@@ -116,18 +116,35 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   position: fixed;
   z-index: 30;
   inset: 3px 0 auto;
-  height: 94px;
+  height: 76px;
   padding: 0 4vw;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 2rem;
-  transition: background 200ms;
+  gap: clamp(1rem, 2vw, 2rem);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  -webkit-backdrop-filter: blur(0);
+  backdrop-filter: blur(0);
+  transition:
+    background 240ms,
+    border-color 240ms,
+    backdrop-filter 240ms;
 }
 .landing-navbar.is-scrolled {
   height: 76px;
-  background: rgb(16 18 16 / 95%);
+  background: rgb(23 25 28 / 68%);
+  -webkit-backdrop-filter: blur(14px) saturate(110%);
+  backdrop-filter: blur(14px) saturate(110%);
   border-bottom: 1px solid var(--landing-line);
+}
+.landing-navbar .brand-nav-link {
+  text-shadow:
+    0 1px 3px #000,
+    0 0 12px #000a;
+}
+.landing-navbar > .brand-logo {
+  filter: drop-shadow(0 1px 3px #0009);
 }
 .landing-brand {
   display: inline-flex;
@@ -396,6 +413,15 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   height: 1.2rem;
   opacity: 0.6;
 }
+.landing-journey-viewport {
+  position: relative;
+  min-height: 100dvh;
+}
+.landing-journey-viewport > .landing-journey {
+  position: relative;
+  min-height: 100dvh;
+  scroll-margin-top: 0;
+}
 .landing-journey {
   min-height: clamp(660px, 88svh, 820px);
   padding-block: clamp(4.5rem, 8svh, 6rem);
@@ -433,26 +459,17 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   outline: 1px solid #f39200;
   outline-offset: 2px;
 }
-.landing-journey-perspective {
+.landing-departure-floor {
   position: absolute;
-  inset: 15% 50% 8% -10%;
+  inset: auto 50% 0 2%;
+  height: 24%;
   pointer-events: none;
-  opacity: 0.45;
-  transform: perspective(500px) rotateX(58deg) rotateZ(-12deg);
-  transform-origin: center bottom;
-  border-bottom: 1px solid var(--landing-line);
-}
-.landing-journey-perspective span {
-  position: absolute;
-  inset: 0;
-  border: 1px solid var(--landing-line);
-  border-radius: 50%;
-}
-.landing-journey-perspective span:nth-child(2) {
-  inset: 20%;
-}
-.landing-journey-perspective span:nth-child(3) {
-  inset: 40%;
+  background: radial-gradient(
+    ellipse at 52% 65%,
+    #f3920026,
+    #f3920010 36%,
+    transparent 72%
+  );
 }
 .landing-departure-stage {
   position: absolute;
@@ -486,39 +503,22 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   stroke-opacity: 0.22;
   stroke-width: 1;
 }
+.landing-departure-base {
+  fill: none;
+  stroke: #f39200;
+  stroke-width: 2;
+  stroke-opacity: 0.48;
+  filter: drop-shadow(0 0 4px #f3920050);
+}
 .landing-departure-atmosphere,
-.landing-departure-sweep,
 .landing-departure-spotlight {
   position: absolute;
   inset: 0;
 }
 .landing-departure-atmosphere {
   background:
-    radial-gradient(ellipse at 52% 75%, #9697800c, transparent 60%),
-    radial-gradient(ellipse at 52% 35%, #f3920009, transparent 65%);
-}
-.landing-departure-sweep {
-  opacity: var(--departure-motion, 0);
-}
-.landing-departure-sweep::after {
-  content: "";
-  position: absolute;
-  inset: 26% -45% 24%;
-  background: linear-gradient(
-    180deg,
-    transparent 30%,
-    #f3920010 47%,
-    #f3920036 50%,
-    #f3920010 53%,
-    transparent 70%
-  );
-  animation: landing-departure-sweep 1.8s ease-in-out infinite paused;
-}
-.landing-journey[data-lifecycle="PLAYING"][data-phase="RUNNING"]
-  .landing-departure-sweep::after,
-.landing-journey[data-lifecycle="PLAYING"][data-phase="STOPPING"]
-  .landing-departure-sweep::after {
-  animation-play-state: running;
+    radial-gradient(ellipse at 52% 77%, #f3920018, transparent 66%),
+    radial-gradient(ellipse at 50% 43%, #f3920010, transparent 68%);
 }
 .landing-departure-spotlight {
   opacity: var(--departure-portrait, 0);
@@ -528,14 +528,6 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
     #f3920007 42%,
     transparent 70%
   );
-}
-@keyframes landing-departure-sweep {
-  from {
-    transform: translateX(-45%);
-  }
-  to {
-    transform: translateX(45%);
-  }
 }
 .pegaxus-landing figure {
   overflow: hidden;
@@ -1116,74 +1108,55 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   font-size: 0.68rem;
 }
 .pegaxus-landing .landing-loader {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  pointer-events: none;
-  transition: visibility 0s 1.05s;
-}
-.landing-loader-panel {
   position: absolute;
-  inset: 0;
-  transition: transform 1s cubic-bezier(0.76, 0, 0.24, 1);
-}
-.landing-loader-panel.is-left {
-  clip-path: polygon(0 0, 56.1% 0, 44.1% 100%, 0 100%);
-  background: linear-gradient(125deg, #101210 20%, #20221c);
-}
-.landing-loader-panel.is-right {
-  clip-path: polygon(56% 0, 100% 0, 100% 100%, 44% 100%);
-  background: linear-gradient(125deg, #1b1d18, #101210 80%);
-}
-.landing-loader-brand {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  gap: 1.3rem;
-  padding: 1.5rem;
+  inset: 10% 2% auto auto;
+  z-index: 2;
+  width: 44%;
+  height: 75%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
   text-align: center;
-  transition:
-    opacity 0.25s,
-    transform 0.35s;
+  pointer-events: none;
 }
-.landing-loader-brand .landing-eyebrow {
+.landing-loader .landing-eyebrow {
   margin: 0;
-  font-size: clamp(0.5rem, 1.2vw, 0.65rem);
-  letter-spacing: 0.24em;
 }
-.landing-loader-brand p {
-  margin: 0;
-  font: 500 clamp(3rem, 10vw, 7rem)/1 var(--heading);
-  letter-spacing: 0.06em;
-  color: var(--landing-ivory);
+.landing-loader img {
+  width: 192px;
+  max-width: 100%;
+  height: auto;
 }
-.landing-loader-rule {
-  width: clamp(4rem, 12vw, 8rem);
-  height: 1px;
-  background: var(--landing-orange);
-  box-shadow: 0 0 18px #f3920040;
-}
-.landing-loader-caption {
-  color: var(--landing-muted);
-  font: 0.6rem var(--mono);
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-}
-.pegaxus-landing .landing-loader.is-loaded {
+.pegaxus-landing:not([data-scene-status="ready"]) .landing-canvas-layer {
   visibility: hidden;
 }
-.landing-loader.is-loaded .landing-loader-panel.is-left {
-  transform: translateX(-58%);
+.pegaxus-landing[data-scene-status="unavailable"]
+  .landing-journey
+  .landing-copy
+  * {
+  opacity: 1 !important;
+  transform: none !important;
 }
-.landing-loader.is-loaded .landing-loader-panel.is-right {
-  transform: translateX(58%);
+.landing-journey-loading {
+  display: none;
+  position: absolute;
+  inset: auto 4vw 2rem 56%;
+  z-index: 3;
 }
-.landing-loader.is-loaded .landing-loader-brand {
-  opacity: 0;
-  transform: translateY(-12px);
+.pegaxus-landing[data-scene-status="loading"] .landing-journey-loading {
+  display: block;
+}
+@media (max-width: 1023px) {
+  .landing-journey-loading {
+    left: 4vw;
+  }
+  .pegaxus-landing .landing-loader {
+    inset: 75px 0 auto;
+    width: 100%;
+    height: 43svh;
+    padding: 1rem;
+  }
 }
 .landing-scene-fallback {
   display: flex;
@@ -1315,10 +1288,10 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
 @media (max-width: 1023px) {
   .landing-navbar {
     height: 76px;
-    padding-inline: 5vw;
+    padding-inline: 4vw;
   }
   .landing-navbar.is-scrolled {
-    height: 68px;
+    height: 76px;
   }
   .landing-experience {
     top: 75px;
@@ -1359,7 +1332,7 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
     padding-bottom: 3rem;
   }
   .pegaxus-landing .landing-experience[data-shot="journey"] {
-    top: 75px;
+    top: 0;
     height: 46svh;
   }
   .landing-journey > .landing-copy {
@@ -1369,6 +1342,10 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   .landing-departure-stage {
     inset: 0 0 auto;
     height: 46svh;
+  }
+  .landing-departure-floor {
+    inset: 36svh 0 auto;
+    height: 14svh;
   }
   .landing-movement {
     height: 100svh;
@@ -1396,10 +1373,6 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   .landing-movement .landing-journey-map svg {
     height: 100%;
     transform: translateY(1.5rem) scale(1.15);
-  }
-  .landing-journey-perspective {
-    inset: 3rem -15% auto;
-    height: 38svh;
   }
   .landing-shot-caption {
     display: none;
@@ -1484,7 +1457,7 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
   }
   .landing-navbar {
     padding-inline: 1.25rem;
-    height: 70px;
+    height: 76px;
   }
   .landing-brand img {
     width: 145px;

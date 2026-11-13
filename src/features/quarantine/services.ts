@@ -36,6 +36,8 @@ export async function submitQuarantineProof(
   const payload = {
     bcpName: params.bcpName || undefined,
     locationId: params.locationId != null ? String(params.locationId) : undefined,
+    officialVetName: params.officialVetName || undefined,
+    bcpReceiptNumber: params.bcpReceiptNumber || undefined,
     inspectionAt: params.inspectionAt || new Date().toISOString(),
     isHoldback: params.isHoldback ?? false,
     quickNote: params.quickNote || undefined,

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { formatBookingDate } from "@/features/booking/utils";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge";
 import {
   Field,
@@ -10,15 +10,19 @@ import { distanceLabel, durationLabel } from "../display";
 import type { RouteSegment } from "../types";
 import type { SegmentImpact } from "../route-comparison";
 import { Badge } from "@/shared/components/ui/badge";
+import { RouteVehicleStatus } from "./RouteVehicleStatus";
 
 export function RouteSegmentList({
   segments,
   review,
   segmentActions,
+  blockedSegments,
 }: {
   segments: RouteSegment[];
   review?: { title: string; impact: (segment: RouteSegment) => SegmentImpact };
   segmentActions?: (segment: RouteSegment) => ReactNode;
+  /** Sequence numbers the legal review blocked: those cards are outlined red so the coordinator finds them. */
+  blockedSegments?: Set<number>;
 }) {
   if (!segments.length)
     return (
@@ -46,12 +50,12 @@ export function RouteSegmentList({
               >
                 <Field label="Planned departure">
                   {segment.plannedDepartureAt
-                    ? formatBookingDate(segment.plannedDepartureAt, true)
+                    ? <DateTimeUtc value={segment.plannedDepartureAt} compact />
                     : "Not scheduled"}
                 </Field>
                 <Field label="Planned arrival">
                   {segment.plannedArrivalAt
-                    ? formatBookingDate(segment.plannedArrivalAt, true)
+                    ? <DateTimeUtc value={segment.plannedArrivalAt} compact />
                     : "Not scheduled"}
                 </Field>
                 <Field label="Distance">
@@ -62,12 +66,12 @@ export function RouteSegmentList({
                 </Field>
                 {segment.actualDepartureAt && (
                   <Field label="Actual departure">
-                    {formatBookingDate(segment.actualDepartureAt, true)}
+                    <DateTimeUtc value={segment.actualDepartureAt} compact />
                   </Field>
                 )}
                 {segment.actualArrivalAt && (
                   <Field label="Actual arrival">
-                    {formatBookingDate(segment.actualArrivalAt, true)}
+                    <DateTimeUtc value={segment.actualArrivalAt} compact />
                   </Field>
                 )}
                 {segment.dwellAfterMinutes != null && (
@@ -90,6 +94,7 @@ export function RouteSegmentList({
                               {vehicle.capacityHorses == null
                                 ? "Capacity unavailable"
                                 : `${vehicle.capacityHorses} horses`}
+                              <RouteVehicleStatus vehicleId={vehicle.vehicleId} />
                             </li>
                           ))}
                         </ul>
@@ -116,16 +121,18 @@ export function RouteSegmentList({
               )}
             </>
           );
+          const blocked = blockedSegments?.has(segment.sequenceNo) ?? false;
           return (
             <li
               key={segment.routePlanRouteId}
+              data-blocked={blocked || undefined}
               data-impact={impact?.kind}
               data-assignment={segment.isOutsourced ? "outsourced" : "internal"}
               className="relative min-w-0"
             >
               <span
                 aria-hidden="true"
-                className={`absolute top-2 -left-[27px] size-3 rounded-full border-2 border-white sm:-left-[35px] ${review && !impact?.highlighted ? "bg-slate-700" : "bg-primary"}`}
+                className={`absolute top-2 -left-[27px] size-3 rounded-full border-2 border-white sm:-left-[35px] ${blocked ? "bg-red-500" : review && !impact?.highlighted ? "bg-slate-700" : "bg-primary"}`}
               />
               <p className="mb-2 text-xs font-medium text-slate-500">
                 {segment.fromLocation.locationName}
@@ -133,9 +140,11 @@ export function RouteSegmentList({
               <Section
                 title={`Segment ${String(segment.sequenceNo).padStart(2, "0")}`}
                 className={
-                  impact?.highlighted
-                    ? "border-primary/30 bg-primary/[0.025]"
-                    : undefined
+                  blocked
+                    ? "border-red-300 border-l-4 border-l-red-500 bg-red-50/70"
+                    : impact?.highlighted
+                      ? "border-primary/30 bg-primary/[0.025]"
+                      : undefined
                 }
                 actions={
                   impact ? (
@@ -151,6 +160,14 @@ export function RouteSegmentList({
                 }
               >
                 <div className="flex flex-wrap gap-2">
+                  {blocked ? (
+                    <Badge
+                      variant="outline"
+                      className="rounded-xs border-red-300 bg-red-50 text-[10px] font-semibold text-red-600"
+                    >
+                      Blocked by legal review
+                    </Badge>
+                  ) : null}
                   <ApprovedBookingBadge value={segment.route.transportMode} />
                   <ApprovedBookingBadge
                     value={segment.isOutsourced ? "OUTSOURCED" : "INTERNAL"}
@@ -170,7 +187,7 @@ export function RouteSegmentList({
                     <p className="text-xs text-slate-600">
                       Planned arrival ·{" "}
                       {segment.plannedArrivalAt
-                        ? formatBookingDate(segment.plannedArrivalAt, true)
+                        ? <DateTimeUtc value={segment.plannedArrivalAt} compact />
                         : "Not scheduled"}
                     </p>
                     <details className="border-t border-slate-100 pt-3">

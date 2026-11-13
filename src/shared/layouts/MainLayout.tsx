@@ -4,19 +4,23 @@ import { useLocation } from "react-router-dom"
 import { useAuthStore } from "@/features/auth/store"
 import { canAccess } from "@/features/auth/access-control"
 import { useUser } from "@/features/auth/hooks/useAuth"
+import { AssistantChatWidget } from "@/features/assistant/components/AssistantChatWidget"
 import type { AuthAccount } from "@/features/auth/types"
 import { IncidentAlertHost } from "@/features/incident-management/components/alerts/IncidentAlertHost"
+import { ProfileCompletionDialog } from "@/features/profile"
 import { Footer } from "@/shared/components/Footer"
 import { Header } from "@/shared/components/Header"
+import { useIsDesktop } from "@/shared/hooks"
 import { AdminLayout } from "@/shared/layouts/AdminLayout"
 import type { ProfileDropdownUser } from "@/shared/components/ProfileDropdown"
 import type { HeaderNavItem } from "@/shared/types/type"
 
 const customerNavItems: HeaderNavItem[] = [
-  { label: "HOME", href: "/" },
-  { label: "HORSE", href: "/my-horses" },
+  { label: "Home", href: "/" },
+  { label: "My Horses", href: "/my-horses" },
   // A customer opens a compliance dossier from a booking (notification link), so it belongs to BOOKING.
-  { label: "BOOKING", href: "/bookings", alsoActiveFor: ["/compliance-dossiers"] },
+  { label: "Bookings", href: "/bookings", alsoActiveFor: ["/compliance-dossiers"] },
+
 ]
 
 const crewNavItems: HeaderNavItem[] = [
@@ -38,6 +42,12 @@ export function MainLayout() {
   const { data: account } = useUser()
   const accessToken = useAuthStore((state) => state.accessToken)
   const principal = useAuthStore((state) => state.principal)
+  const isDesktop = useIsDesktop()
+
+  // Drivers and escorts use the same desktop shell (sidebar + header) as the other employees; phones keep the crew header.
+  if (isDesktop && pathname !== "/" && accessToken && principal && canAccess(principal, { anyRole: ["DRIVER", "ESCORT"] })) {
+    return <AdminLayout />
+  }
 
   // Employee-facing routes use the desktop admin shell consistently, including
   // roles whose routes are shared with the customer-facing application.
@@ -46,7 +56,10 @@ export function MainLayout() {
     return <AdminLayout />
   }
 
-  const navItems = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] }) ? customerNavItems : isCrewRoute ? crewNavItems : []
+  const baseNavItems = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] }) ? customerNavItems : isCrewRoute ? crewNavItems : []
+  const isCustomer = Boolean(accessToken && canAccess(principal, { anyRole: ["CUSTOMER"] }))
+  const navItems = baseNavItems
+  const customerChrome = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] })
   const user: ProfileDropdownUser | null = accessToken && account
     ? toHeaderUser(account)
     : accessToken && principal
@@ -56,13 +69,15 @@ export function MainLayout() {
         : null
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className={`flex min-h-screen flex-col${customerChrome && !isLanding ? " customer-workspace" : ""}`}>
+      <ProfileCompletionDialog />
+      {!isLanding && <Header variant={customerChrome ? "customer" : "default"} navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />}
       <IncidentAlertHost />
-      {!isLanding && <Header navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />}
       <main className="min-h-[calc(100svh-3rem)] flex-none">
         <Outlet /> {/* Outlet - React Router render route childs*/}
       </main>
       {!isLanding && !isCrewRoute && <Footer />}
+      {isCustomer && <AssistantChatWidget />}
     </div>
   )
 }

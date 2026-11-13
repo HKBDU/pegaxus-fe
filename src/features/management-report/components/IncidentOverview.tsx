@@ -1,4 +1,11 @@
-import { Info } from "lucide-react";
+import {
+  CircleAlert,
+  FileText,
+  Info,
+  Percent,
+  Truck,
+  Wallet,
+} from "lucide-react";
 import {
   Tooltip,
   TooltipTrigger,
@@ -17,6 +24,7 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
   const metrics = [
     {
       label: "Completed transports",
+      icon: Truck,
       kpi: kpi.completedTransports,
       format: reportNumber,
       change: signedNumber,
@@ -24,6 +32,7 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
     },
     {
       label: "Total incidents",
+      icon: CircleAlert,
       kpi: kpi.totalIncidents,
       format: reportNumber,
       change: signedNumber,
@@ -31,6 +40,7 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
     },
     {
       label: "Incident rate",
+      icon: Percent,
       kpi: kpi.incidentRate,
       format: reportRate,
       change: (value: number | null) =>
@@ -39,6 +49,7 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
     },
     {
       label: "Total claims",
+      icon: FileText,
       kpi: kpi.totalClaims,
       format: reportNumber,
       change: signedNumber,
@@ -46,6 +57,7 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
     },
     {
       label: "Claim rate",
+      icon: Percent,
       kpi: kpi.claimRate,
       format: reportRate,
       change: (value: number | null) =>
@@ -54,6 +66,7 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
     },
     {
       label: "Approved emergency cost",
+      icon: Wallet,
       kpi: kpi.totalEmergencyCost,
       format: reportMoney,
       change: (value: number | null) =>
@@ -66,13 +79,13 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
       aria-label="Incident and claim overview"
       className="min-w-0 space-y-2"
     >
-      <div className="grid min-w-0 grid-cols-1 rounded-[2px] border border-slate-200 bg-white sm:grid-cols-2 xl:grid-cols-3">
-        {metrics.map((metric, index) => (
-          <div
-            key={metric.label}
-            className={`min-w-0 border-slate-200 p-4 ${index > 0 ? "border-t" : ""} ${index % 2 === 0 ? "sm:border-r" : ""} ${index < 2 ? "sm:border-t-0" : ""} ${index % 3 !== 2 ? "xl:border-r" : "xl:border-r-0"} ${index < 3 ? "xl:border-t-0" : ""}`}
-          >
+      <div className="report-kpi-grid report-kpi-grid-six">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="report-kpi">
             <div className="flex items-center gap-2">
+              <span className="report-kpi-icon">
+                <metric.icon aria-hidden="true" className="size-4" />
+              </span>
               <h2 className="m-0 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 {metric.label}
               </h2>
@@ -91,7 +104,7 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
                 </TooltipContent>
               </Tooltip>
             </div>
-            <p className="mt-2 mb-2 break-words text-2xl font-semibold tabular-nums text-slate-900">
+            <p className="report-kpi-value mt-2 mb-2 break-words text-2xl font-semibold tabular-nums text-slate-900">
               {metric.format(metric.kpi.value)}
             </p>
             <p className="m-0 text-xs tabular-nums text-slate-500">
@@ -103,12 +116,6 @@ export function IncidentOverview({ report }: { report: IncidentClaimReport }) {
           </div>
         ))}
       </div>
-      <p className="m-0 text-xs text-slate-500">
-        Previous period: {report.period.previousDateFrom} –{" "}
-        {report.period.previousDateTo}. Rates use the completed-transport
-        cohort; event counts use occurrence/submission dates. A missing
-        denominator is shown as —.
-      </p>
     </section>
   );
 }

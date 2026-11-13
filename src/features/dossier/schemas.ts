@@ -1,4 +1,6 @@
+import { todayUtc } from "@/shared/utils/datetime";
 import { z } from "zod";
+import { UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { BOOKING_STATUSES } from "@/features/booking/types";
 import {
   DOSSIER_REQUIREMENT_STATUSES,
@@ -39,7 +41,6 @@ const timestamp = z
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/,
   );
 const date = z.iso.date();
-const utcToday = () => new Date().toISOString().slice(0, 10);
 
 export const dossierStatusSchema = z.enum([
   "DRAFT",
@@ -75,8 +76,8 @@ export const dossierUploadedAssetSchema = z.object({
   fileSizeBytes: z
     .number()
     .int()
-    .nonnegative()
-    .max(UPLOAD_MAX_FILE_BYTES, "Each file must be 10 MB or smaller."),
+    .positive("Uploaded files must not be empty.")
+    .max(UPLOAD_MAX_FILE_BYTES, `Each file must be ${UPLOAD_MAX_MB} MiB or smaller.`),
 });
 export const dossierUploadedAssetsSchema = z
   .array(dossierUploadedAssetSchema)
@@ -99,7 +100,7 @@ export function validateUploadedAssets(
     : issue.path.includes("mimeType")
       ? "INVALID_FILE_TYPE"
       : issue.path.includes("fileSizeBytes")
-        ? "FILE_TOO_LARGE"
+        ? issue.code === "too_small" ? "EMPTY_FILE" : "FILE_TOO_LARGE"
         : "INVALID_UPLOAD_REFERENCE";
   return { code, message: issue.message };
 }
@@ -199,6 +200,18 @@ export const dossierOverviewSchema = z.object({
   actions: z
     .object({ canUpload: z.boolean(), canReview: z.boolean() })
     .optional(),
+  /** Set on a return booking (a horse left behind mid-trip): the original trip whose documents can be reused. */
+  returnOf: z
+    .object({
+      transportId: z.string(),
+      transportCode: z.string(),
+      bookingId: z.string(),
+      bookingCode: z.string(),
+      dossierId: z.string().nullable(),
+      dossierCode: z.string().nullable(),
+      horseName: z.string().nullable(),
+    })
+    .nullish(),
 });
 
 export const documentRequestSummarySchema = z.object({
@@ -274,7 +287,7 @@ export const missingDocumentReminderSchema = z
         "Selected requirements must be unique.",
       ),
     dueDate: date.refine(
-      (value) => value >= utcToday(),
+      (value) => value >= todayUtc(),
       "Due date cannot be in the past.",
     ),
     note: z.string().trim().max(2000).optional(),
@@ -379,7 +392,7 @@ const rejectionReview = z.object({
   ]),
   rejectionNote: z.string().trim().min(15).max(2000),
   revisionDeadline: date.refine(
-    (value) => value >= utcToday(),
+    (value) => value >= todayUtc(),
     "Revision deadline cannot be in the past.",
   ),
   requirementStatus: z.union([z.literal(2), z.literal(5)]),
@@ -399,13 +412,15 @@ export const documentReviewSchema = z.discriminatedUnion("result", [
   rejectionReview,
 ]);
 const backendReviewValue = z.object({
-  review: z.object({
-    documentReviewId: entityId,
-    reviewedByAccountId: entityId,
-    result: z.string(),
-    reviewComment: z.string().nullable(),
-    reviewedAt: timestamp,
-  }),
+  review: z
+    .object({
+      documentReviewId: entityId,
+      reviewedByAccountId: entityId,
+      result: z.string(),
+      reviewComment: z.string().nullable(),
+      reviewedAt: timestamp,
+    })
+    .passthrough(),
   requirementStatus: dossierRequirementStatusSchema,
   documentStatus: complianceDocumentStatusSchema,
   dossierStatus: dossierStatusSchema,
@@ -421,14 +436,19 @@ const backendReviewValue = z.object({
       dueDate: date.nullable(),
       requestedAt: timestamp,
     })
+    .passthrough()
     .optional(),
   emailSent: z.boolean().optional(),
   deliveryWarning: z.string().nullable().optional(),
-});
+}).passthrough();
 export const approveDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const rejectDocumentEnvelopeSchema = envelope(backendReviewValue);
 export const documentReviewEnvelopeSchema = envelope(backendReviewValue);
-export const readyForSubmissionEnvelopeSchema = envelope(z.null());
+// Swagger documents only the 200 status, so keep the undocumented result
+// object forward-compatible until the API publishes its response schema.
+export const readyForSubmissionEnvelopeSchema = envelope(
+  z.record(z.string(), z.unknown()),
+);
 export const submitDocumentVersionEnvelopeSchema = z.union([
   envelope(
     z.object({
@@ -494,14 +514,14 @@ function validateMetadataDates(
   validUntil: string | null,
   plannedDepartureDate?: string | null,
 ) {
-  if (value.issuedDate && value.issuedDate > utcToday())
+  if (value.issuedDate && value.issuedDate > todayUtc())
     context.addIssue({
       code: "custom",
       path: ["issuedDate"],
       message: "Issued date cannot be in the future.",
     });
   if (!value.expiryDate) return;
-  if (value.expiryDate < utcToday()) {
+  if (value.expiryDate < todayUtc()) {
     context.addIssue({
       code: "custom",
       path: ["expiryDate"],
@@ -677,12 +697,13 @@ export const dossierRequirementsParamsSchema = z.object({
   sortBy: z
     .enum([
       "createdAt:asc",
+      "createdAt:desc",
       "dueDate:asc",
       "dueDate:desc",
       "status:asc",
       "status:desc",
     ])
-    .default("createdAt:asc"),
+    .default("createdAt:desc"),
 });
 
 /** One row of D1 (`GET /bookings/{id}/compliance-dossier`): enough to link to the dossier. */

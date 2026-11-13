@@ -134,6 +134,7 @@ export class LocationSender {
     }
   }
   private authorized() {
+    if (this.context.transportId === "demo") return true;
     const auth = useAuthStore.getState();
     return (
       this.context.eligible &&
@@ -248,6 +249,11 @@ export class LocationSender {
       notification: "none",
       message: null,
     });
+    this.acquire();
+  };
+  /** Rebind the browser watcher after a geolocation provider (such as Mock GPS) changes. */
+  restart = () => {
+    if (!this.state.active || !this.authorized()) return;
     this.acquire();
   };
   stop = () =>
@@ -509,8 +515,8 @@ export class LocationSender {
         this.stopWith(
           "stopped",
           accepted.reason === "NOT_CURRENT_SEGMENT_DRIVER"
-            ? "Bạn đã bàn giao chặng này. Định vị đã tự động dừng."
-            : "Máy chủ không nhận vị trí cho chặng hiện tại. Định vị đã dừng.",
+            ? "You have handed over this segment. Location sharing stopped automatically."
+            : "The server did not accept a location for the current segment. Location sharing stopped.",
         );
         this.publish({ acceptance: "rejected", restartBlocked: true });
         this.rejectedRevision = this.context.revision;

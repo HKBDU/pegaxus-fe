@@ -2,6 +2,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/features/auth/store'
 import { env } from '@/lib/env'
 import { requestRefreshToken } from '@/features/auth/services/refresh-token'
+import { normalizeCoordinatePayload } from '@/shared/constants/validation-limits'
 
 interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean
@@ -26,13 +27,15 @@ apiClient.interceptors.request.use((request) => {
   }
   config._authSessionVersion = sessionVersion
 
-  if (accessToken) {
+  if (accessToken && !accessToken.startsWith('demo-')) {
     config.headers.set('Authorization', `Bearer ${accessToken}`)
   }
 
   // Let the browser/Axios add the multipart boundary for profile uploads.
   if (config.data instanceof FormData) {
     config.headers.delete('Content-Type')
+  } else if (config.data && typeof config.data === 'object') {
+    config.data = normalizeCoordinatePayload(config.data)
   }
 
   return config
@@ -61,6 +64,9 @@ apiClient.interceptors.response.use(
     }
 
     const { accessToken, refreshToken, sessionVersion } = useAuthStore.getState()
+    if (accessToken?.startsWith('demo-')) {
+      return Promise.reject(error)
+    }
     if (originalRequest._authSessionVersion !== sessionVersion) return Promise.reject(error)
 
     if (originalRequest._retry || !accessToken || !refreshToken) {

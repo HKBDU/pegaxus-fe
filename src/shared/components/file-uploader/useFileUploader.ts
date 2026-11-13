@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { UPLOAD_MAX_BYTES } from '@/shared/constants/upload'
 import {
   PRESIGNED_UPLOAD_ERROR_CODES,
   isPresignedUploadError,
@@ -17,7 +18,7 @@ type UploadOptions = Pick<
 export function useFileUploader({
   entity = 'attachment',
   accept,
-  maxSize,
+  maxSize = UPLOAD_MAX_BYTES,
   maxFiles,
   multiple = true,
   disabled = false,
@@ -162,6 +163,7 @@ export function useFileUploader({
 
     for (const file of pool) {
       if (!matchesAcceptedType(file, accept)) rejected.push(describeFileRejection(file, 'file type is not supported.'))
+      else if (file.size === 0) rejected.push(describeFileRejection(file, 'file must not be empty.'))
       else if (maxSize && file.size > maxSize) rejected.push(describeFileRejection(file, `exceeds ${formatFileSize(maxSize)}.`))
       else if (room <= 0) rejected.push(describeFileRejection(file, `limit of ${maxFiles} files reached.`))
       else {

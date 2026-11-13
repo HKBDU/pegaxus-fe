@@ -9,6 +9,9 @@ import {
 } from "./HorseHealthFields";
 import type { IncidentPhotoFieldValue } from "../IncidentPhotoField";
 import { IncidentPhotoField } from "../IncidentPhotoField";
+import { areIncidentPhotosReady } from "../../validation";
+import { IncidentFieldError } from "../IncidentFieldError";
+import type { IncidentFieldErrors } from "../../validation";
 import type { HorseHealthOverviewItem } from "@/features/horse-health/types";
 
 export interface HorseHealthIncidentFormValue extends IncidentCommonFormValue {
@@ -26,6 +29,7 @@ export interface HorseHealthIncidentFormProps {
   disabled?: boolean;
   submitting?: boolean;
   error?: string | null;
+  errors?: IncidentFieldErrors;
   locationStatus?:
     | "idle"
     | "locating"
@@ -35,6 +39,9 @@ export interface HorseHealthIncidentFormProps {
     | "unavailable"
     | "error";
   locationError?: string | null;
+  gpsCoordinates?: { latitude: number; longitude: number } | null;
+  onPhotoUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
+  onPhotoError?: (message: string | null) => void;
 }
 
 export function HorseHealthIncidentForm({
@@ -48,8 +55,12 @@ export function HorseHealthIncidentForm({
   disabled = false,
   submitting = false,
   error,
+  errors = {},
   locationStatus,
   locationError,
+  gpsCoordinates,
+  onPhotoUploadStateChange,
+  onPhotoError,
 }: HorseHealthIncidentFormProps) {
   return (
     <form
@@ -57,18 +68,24 @@ export function HorseHealthIncidentForm({
         event.preventDefault();
         onSubmit();
       }}
-      className="space-y-5"
+      className="min-w-0 space-y-5"
     >
+      <IncidentFieldError
+        message={errors.transportId && `Transport: ${errors.transportId}`}
+      />
+      <IncidentFieldError message={errors.horses} />
       <IncidentCommonForm
         value={value}
         photos={photos}
         onChange={(next) => onChange({ ...value, ...next })}
         onPhotosChange={onPhotosChange}
         disabled={disabled}
-        photoError={error}
+        errors={errors}
         locationStatus={locationStatus}
         locationError={locationError}
+        gpsCoordinates={gpsCoordinates}
         showPhotos={false}
+        showDescription={false}
       />
       <section
         className="space-y-4"
@@ -100,20 +117,34 @@ export function HorseHealthIncidentForm({
             microchipNumber={horse.horse.microchipNumber}
             warnings={warnings}
             disabled={disabled}
+            errors={Object.fromEntries(
+              Object.entries(errors)
+                .filter(([key]) =>
+                  key.startsWith(`horses.${horse.horse.horseId}.`),
+                )
+                .map(([key, message]) => [
+                  key.slice(`horses.${horse.horse.horseId}.`.length),
+                  message,
+                ]),
+            )}
           />
         ))}
       </section>
       <IncidentPhotoField
         value={photos}
+        gpsCoordinates={gpsCoordinates}
         onChange={onPhotosChange}
         disabled={disabled}
         maxFiles={5}
-        error={error}
+        error={errors.photoFiles}
+        onUploadStateChange={onPhotoUploadStateChange}
+        onError={onPhotoError}
       />
       <IncidentSubmitBar
         isSubmitting={submitting}
-        disabled={disabled}
+        disabled={disabled || !areIncidentPhotosReady(photos)}
         error={error}
+        uploadState={photos.files.length > 0 ? photos.uploadState : undefined}
       />
     </form>
   );

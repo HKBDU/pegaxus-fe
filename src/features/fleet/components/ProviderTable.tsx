@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
@@ -97,7 +98,7 @@ export function ProviderTable({ providers, filters, meta, isLoading, onSearchCha
             type="button"
             title="View provider details"
             onClick={() => navigate(providerDetailPath(row.original.transportProviderId))}
-            className="font-semibold text-slate-900 underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+            className={codeLinkClassName}
           >
             {row.original.providerCode}
           </button>
@@ -128,8 +129,14 @@ export function ProviderTable({ providers, filters, meta, isLoading, onSearchCha
         header: "CONTACT",
         cell: ({ row }) => (
           <div className="min-w-44 leading-tight">
-            <span className="block text-slate-900">{row.original.contactName ?? row.original.email ?? "—"}</span>
-            {row.original.contactName && row.original.email ? <span className="mt-1 block text-slate-700">{row.original.email}</span> : null}
+            <span className="block max-w-44 truncate text-slate-900" title={row.original.contactName ?? row.original.email ?? undefined}>
+              {row.original.contactName ?? row.original.email ?? "—"}
+            </span>
+            {row.original.contactName && row.original.email ? (
+              <span className="mt-1 block max-w-44 truncate text-slate-700" title={row.original.email}>
+                {row.original.email}
+              </span>
+            ) : null}
             <span className="mt-1 block text-[0.68rem] text-slate-400">{row.original.phone ?? "—"}</span>
           </div>
         ),

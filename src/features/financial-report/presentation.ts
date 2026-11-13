@@ -1,3 +1,5 @@
+import { formatUtcDateTime } from "@/shared/utils/datetime";
+
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "VND",
@@ -51,12 +53,5 @@ export function pricingValue(value: unknown): string {
 }
 
 export function financialTime(value: string | null) {
-  if (value === null) return "—";
-  const date = new Date(value);
-  return Number.isFinite(date.getTime())
-    ? new Intl.DateTimeFormat("en-GB", {
-        dateStyle: "medium",
-        timeStyle: "medium",
-      }).format(date)
-    : "—";
+  return formatUtcDateTime(value);
 }

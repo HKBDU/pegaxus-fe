@@ -8,9 +8,11 @@ import {
   type EmergencyCostActionSubmission,
 } from "../services";
 import { useEmergencyCostScope } from "./useEmergencyCostScope";
+import type { EmergencyCostIncident } from "../schemas";
 
 export function useEmergencyCostAction() {
   const { scope, key, source } = useEmergencyCostScope();
+  const sessionVersion = useAuthStore((state) => state.sessionVersion);
   const client = useQueryClient();
   const controller = useRef<AbortController | null>(null);
   useEffect(() => {
@@ -39,8 +41,17 @@ export function useEmergencyCostAction() {
         if (controller.current === flight) controller.current = null;
       }
     },
-    onSuccess: (_result, submission) =>
-      Promise.all([
+    onSuccess: (_result, submission) => {
+      if (emergencyCostAuthScope() !== scope) return;
+      const incidentId = submission.snapshot.incident.incidentReportId;
+      const vehicleId =
+        submission.snapshot.incidentSummary?.vehicle?.vehicleId ??
+        client.getQueryData<EmergencyCostIncident>([
+          ...key,
+          "incident-context",
+          incidentId,
+        ])?.vehicleDetail?.vehicle.vehicleId;
+      return Promise.all([
         client.invalidateQueries({ queryKey: key }),
         client.invalidateQueries({
           queryKey: [
@@ -52,7 +63,30 @@ export function useEmergencyCostAction() {
           ],
           exact: true,
         }),
-      ]),
+        ...(source === "real" && submission.action === "decision"
+          ? [
+              // The Incident Detail host refetches through onChanged; avoid a second GET here.
+              client.invalidateQueries({
+                queryKey: ["incidents"],
+                refetchType: "none",
+                predicate: ({ queryKey }) =>
+                  queryKey[3] === sessionVersion &&
+                  (queryKey[1] === "list" ||
+                    ((queryKey[1] === "detail" || queryKey[1] === "alert") &&
+                      queryKey[2] === incidentId)),
+              }),
+              client.invalidateQueries({
+                queryKey: ["fleet", "vehicles"],
+                predicate: ({ queryKey }) =>
+                  queryKey[2] === "list" ||
+                  (Boolean(vehicleId) &&
+                    queryKey[2] === "detail" &&
+                    queryKey[3] === vehicleId),
+              }),
+            ]
+          : []),
+      ]);
+    },
     onError: (error, submission) => {
       const presentation = getEmergencyCostError(error, submission.action);
       if (

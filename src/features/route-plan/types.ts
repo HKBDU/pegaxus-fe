@@ -59,7 +59,13 @@ export type TransportMode = "ROAD" | "SEA" | "AIR";
 export type SegmentStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED";
 export type ProviderStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
 export type VehicleStatus =
-  "AVAILABLE" | "ASSIGNED" | "MAINTENANCE" | "INACTIVE";
+  | "AVAILABLE"
+  | "ASSIGNED"
+  | "IN_USE"
+  | "MAINTENANCE"
+  | "INACTIVE"
+  | "SUSPENDED"
+  | "OUT_OF_SERVICE";
 export type RoutePlanAction = "SAVE_DRAFT" | "SUBMIT_FOR_LEGAL_REVIEW";
 export type LocationType =
   | "CITY"
@@ -191,6 +197,8 @@ export interface RoutePlan {
   segments: RouteSegment[];
   isPersonnelComplete: boolean;
   legalReview: LegalReview | null;
+  legalReviewRequested: boolean;
+  legalReviewRequestedAt: string | null;
   routeNote: string | null;
   createdAt: string;
   updatedAt: string;
@@ -206,6 +214,7 @@ export interface RouteSegmentInput {
   transportMode?: TransportMode;
   plannedDepartureAt: string;
   plannedArrivalAt: string;
+  dwellAfterMinutes?: number;
   vehicleIds?: string[];
   outsourcing?: { transportProviderId: string; note?: string };
   note?: string;
@@ -231,29 +240,54 @@ export interface CancelRoutePlanRequest {
   reason: string;
 }
 
+
 export interface LegalReviewRequest {
   lastUpdatedAt: string;
   isFeasible: boolean;
   note?: string;
   blockedSegments?: number[];
+  /** Segments of the backups submitted with the primary. Any blocked segment sends the whole pair back. */
+  blockedBackupSegments?: { routePlanId: string; sequenceNo: number }[];
 }
 
 export interface OutsourceSegmentRequest {
+  lastUpdatedAt: string;
   outsourced: boolean;
   transportProviderId?: string;
   note?: string;
 }
 
-export interface OutsourceSegmentResult {
+export type { OutsourceSegmentResult } from "./schemas";
+
+export type ChangeVehiclesMode = "before-departure" | "mid-trip";
+
+export interface ChangeVehiclesSegment {
+  sequenceNo?: number;
+  routePlanRouteId?: string;
+  vehicleIds: string[];
+}
+
+export interface ChangeRoutePlanVehiclesRequest {
+  lastUpdatedAt: string;
+  reason: string;
+  incidentReportId?: string;
+  segments: ChangeVehiclesSegment[];
+}
+
+export interface ChangeRoutePlanVehiclesResult {
   routePlanId: string;
-  segment: RouteSegment;
-  isPersonnelComplete: boolean;
+  status: RoutePlanStatus;
+  releasedVehicleIds: string[];
+  maintenanceVehicleIds: string[];
+  appliedSegmentIds: string[];
   updatedAt: string;
 }
 
 export interface RoutePlanMutationResult {
   routePlanId: string;
   status: RoutePlanStatus;
+  legalReviewRequested: boolean;
+  legalReviewRequestedAt: string | null;
   totalDistanceKm?: number;
   estimatedDurationMinutes?: number;
   segmentCount?: number;
@@ -265,8 +299,8 @@ export interface RoutePlanMutationResult {
 
 export interface LegalReviewResult extends RoutePlanMutationResult {
   legalReview: LegalReview;
-  customerUploadEnabled: boolean;
-  personnelAssignmentPhase2Enabled: boolean;
+  customerUploadEnabled?: boolean;
+  personnelAssignmentPhase2Enabled?: boolean;
 }
 
 export interface RoutePlanListParams {

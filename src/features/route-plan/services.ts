@@ -1,8 +1,18 @@
 import apiClient from "@/lib/axios";
 import { ROUTE_PLAN_ENDPOINTS, ROUTE_PLAN_ERROR_MESSAGES } from "./constants";
+import {
+  cancelRoutePlanResultSchema,
+  legalReviewSchema,
+  legalReviewResultSchema,
+  outsourceSegmentResultSchema,
+  routePlanMutationResultSchema,
+} from "./schemas";
+import type { CancelRoutePlanResult } from "./schemas";
 import type {
   ApiEnvelope,
   CancelRoutePlanRequest,
+  ChangeRoutePlanVehiclesRequest,
+  ChangeRoutePlanVehiclesResult,
   CreateRoutePlanRequest,
   LegalReviewRequest,
   LegalReviewResult,
@@ -142,44 +152,59 @@ export const createRoutePlan = (
       payload,
     ),
   );
+/** RP4 PUT: overwrite the full route plan while it is still DRAFT. */
 export const updateRoutePlan = (
   routePlanId: string,
   payload: UpdateRoutePlanRequest,
 ) =>
-  request<RoutePlanMutationResult>(
+  request<unknown>(
     apiClient.put(`${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}`, payload),
+  ).then((value) => routePlanMutationResultSchema.parse(value) as RoutePlanMutationResult);
+
+/** K-01: replace vehicles on existing segments of a CONFIRMED/ACTIVE plan. */
+export const changeRoutePlanVehicles = (
+  routePlanId: string,
+  payload: ChangeRoutePlanVehiclesRequest,
+  signal?: AbortSignal,
+) =>
+  request<ChangeRoutePlanVehiclesResult>(
+    apiClient.patch(
+      `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/vehicles`,
+      payload,
+      { signal },
+    ),
   );
 export const cancelRoutePlan = (
   routePlanId: string,
   payload: CancelRoutePlanRequest,
 ) =>
-  request<RoutePlanMutationResult>(
+  request<unknown>(
     apiClient.post(
       `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/cancel`,
       payload,
     ),
-  );
+  ).then((value) => cancelRoutePlanResultSchema.parse(value) as CancelRoutePlanResult);
 export const submitLegalReview = (
   routePlanId: string,
   payload: LegalReviewRequest,
 ) =>
-  request<LegalReviewResult>(
+  request<unknown>(
     apiClient.post(
       `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/legal-review`,
-      payload,
+      legalReviewSchema.parse(payload),
     ),
-  );
+  ).then((value) => legalReviewResultSchema.parse(value) as unknown as LegalReviewResult);
 export const updateSegmentOutsourcing = (
   routePlanId: string,
   routePlanRouteId: string,
   payload: OutsourceSegmentRequest,
 ) =>
-  request<OutsourceSegmentResult>(
+  request<unknown>(
     apiClient.put(
       `${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/segments/${routePlanRouteId}/outsourcing`,
       payload,
     ),
-  );
+  ).then((value) => outsourceSegmentResultSchema.parse(value) as OutsourceSegmentResult);
 export const exportRoutePlanPdf = (routePlanId: string) =>
   apiClient.get(`${ROUTE_PLAN_ENDPOINTS.routePlans}/${routePlanId}/export`, {
     params: { format: "pdf" },
@@ -191,9 +216,44 @@ export function getRoutePlanError(error: unknown): {
   message: string;
 } {
   if (error instanceof RoutePlanApiError)
-    return { code: error.errorCode, message: error.message };
+    return {
+      code: error.errorCode,
+      message:
+        // The same code comes from different actions, so show the BE message (it names the status) rather than one fixed sentence.
+        error.errorCode === "INVALID_ROUTE_PLAN_STATUS"
+          ? error.message
+          : (ROUTE_PLAN_ERROR_MESSAGES[error.errorCode] ?? error.message),
+    };
   return {
     code: "UNKNOWN_ERROR",
-    message: "Unable to complete the route plan request.",
+    message:
+      (
+        error as {
+          response?: {
+            data?: { message?: string; error?: { message?: string } };
+          };
+        }
+      ).response?.data?.message ??
+      (
+        error as {
+          response?: { data?: { error?: { message?: string } } };
+        }
+      ).response?.data?.error?.message ??
+      "Unable to complete the route plan request.",
   };
+}
+
+export function getLegalReviewError(error: unknown): {
+  code: string;
+  message: string;
+} {
+  const mapped = getRoutePlanError(error);
+  if (mapped.code === "ROUTE_PLAN_NOT_SUBMITTED")
+    return {
+      ...mapped,
+      message: "This route plan has not been requested for legal review.",
+    };
+  if (mapped.code === "INVALID_ROUTE_PLAN_STATUS")
+    return { ...mapped, message: mapped.message || "Legal review requires a DRAFT route requested for review." };
+  return mapped;
 }

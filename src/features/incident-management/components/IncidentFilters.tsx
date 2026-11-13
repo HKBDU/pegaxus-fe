@@ -5,6 +5,7 @@ import { INCIDENT_CATEGORY_OPTIONS, INCIDENT_SEVERITY_OPTIONS } from "@/shared/c
 import { SeverityBadge } from "@/shared/components/incident"
 import { DataTableRadioFilter, type DataTableRadioOption } from "@/shared/components/ui/data-table-radio-filter"
 import { DatePicker } from "@/shared/components/ui/date-picker"
+import { FilterToolbar } from "@/shared/components/ui/filter-toolbar"
 import { Input } from "@/shared/components/ui/input"
 import { Switch } from "@/shared/components/ui/switch"
 import { useDebounce } from "@/shared/hooks"
@@ -42,9 +43,10 @@ export function IncidentFilters({ params, onChange, viewOptions }: IncidentFilte
   }, [debouncedSearch, onChange])
 
   return (
-    <div role="toolbar" className="grid gap-2">
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-[minmax(17rem,1fr)_9.5rem_9rem_11rem_10.5rem_auto]">
-        <div className="relative col-span-2 lg:col-span-1">
+    <FilterToolbar label="Incident filters"
+      activeCount={[Boolean(localSearch), Boolean(params.category), Boolean(params.severity), Boolean(params.status), Boolean(params.occurredFrom), Boolean(params.occurredTo), params.emergencySettlementRequired === true, params.sortBy !== DEFAULT_SORT].filter(Boolean).length}
+      onClear={() => { setLocalSearch(""); onChange({ search: "", category: "", severity: "", status: "", occurredFrom: "", occurredTo: "", emergencySettlementRequired: undefined, sortBy: DEFAULT_SORT }) }}
+      search={<div className="relative min-w-0">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
           <Input
             value={localSearch}
@@ -60,9 +62,17 @@ export function IncidentFilters({ params, onChange, viewOptions }: IncidentFilte
               <X className="size-3.5" />
             </button>
           ) : null}
-        </div>
-
-        <DataTableRadioFilter title="Category" defaultValue="" value={params.category} options={CATEGORY_OPTIONS} onValueChange={(category) => onChange({ category })} />
+        </div>}
+      sort={<DataTableRadioFilter
+          title="Sort"
+          defaultValue={DEFAULT_SORT}
+          value={params.sortBy}
+          options={SORT_OPTIONS}
+          onValueChange={(sortBy) => onChange({ sortBy: sortBy as IncidentSort })}
+        />}
+      actions={viewOptions}
+    >
+      <DataTableRadioFilter title="Category" defaultValue="" value={params.category} options={CATEGORY_OPTIONS} onValueChange={(category) => onChange({ category })} />
         <DataTableRadioFilter
           title="Severity"
           defaultValue=""
@@ -72,18 +82,7 @@ export function IncidentFilters({ params, onChange, viewOptions }: IncidentFilte
           renderOption={(option) => (option.value ? <SeverityBadge severity={option.value as IncidentSeverity} /> : <span>{option.label}</span>)}
         />
         <DataTableRadioFilter title="Status" defaultValue="" value={params.status} options={STATUS_FILTER_OPTIONS} onValueChange={(status) => onChange({ status })} />
-        <DataTableRadioFilter
-          title="Sort"
-          defaultValue={DEFAULT_SORT}
-          value={params.sortBy}
-          options={SORT_OPTIONS}
-          onValueChange={(sortBy) => onChange({ sortBy: sortBy as IncidentSort })}
-        />
-        <div className="col-span-2 flex items-center justify-end gap-1.5 lg:col-span-1">{viewOptions}</div>
-      </div>
-
-      <div className="grid grid-cols-2 items-end gap-2 lg:grid-cols-[minmax(17rem,1fr)_9.5rem_9.5rem_auto] lg:items-center">
-        <label className="col-span-2 flex h-8 cursor-pointer items-center gap-2 lg:col-span-1">
+      <label className="flex min-h-8 cursor-pointer items-center gap-2">
           <Switch
             checked={params.emergencySettlementRequired === true}
             onCheckedChange={(checked) => onChange({ emergencySettlementRequired: checked ? true : undefined })}
@@ -93,13 +92,12 @@ export function IncidentFilters({ params, onChange, viewOptions }: IncidentFilte
         </label>
         <div className="grid gap-1">
           <span className={fieldLabel}>Occurred from</span>
-          <DatePicker value={params.occurredFrom} maxDate={params.occurredTo || undefined} onChange={(occurredFrom) => onChange({ occurredFrom })} placeholder="From" displayFormat="dd MMM yyyy" className={datePickerClass} />
+          <DatePicker aria-label="Occurred from" value={params.occurredFrom} maxDate={params.occurredTo || undefined} onChange={(occurredFrom) => onChange({ occurredFrom })} placeholder="From" displayFormat="dd MMM yyyy" className={datePickerClass} />
         </div>
         <div className="grid gap-1">
           <span className={fieldLabel}>Occurred to</span>
-          <DatePicker value={params.occurredTo} minDate={params.occurredFrom || undefined} onChange={(occurredTo) => onChange({ occurredTo })} placeholder="To" displayFormat="dd MMM yyyy" className={datePickerClass} />
+          <DatePicker aria-label="Occurred to" value={params.occurredTo} minDate={params.occurredFrom || undefined} onChange={(occurredTo) => onChange({ occurredTo })} placeholder="To" displayFormat="dd MMM yyyy" className={datePickerClass} />
         </div>
-      </div>
-    </div>
+    </FilterToolbar>
   )
 }

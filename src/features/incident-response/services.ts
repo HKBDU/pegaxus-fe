@@ -1,6 +1,7 @@
 import { isAxiosError } from "axios";
 import { z } from "zod";
 import apiClient from "@/lib/axios";
+import { UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { canAccess, normalizeRole } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
 import type { AuthPrincipal } from "@/features/auth/types";
@@ -310,7 +311,7 @@ export const emergencyCostService = {
     signal?: AbortSignal,
     expectedScope?: string,
   ) {
-    const auth = authorize(true, expectedScope);
+    const auth = authorize(false, expectedScope);
     const id = emergencyCostIdSchema.parse(input);
     signal?.throwIfAborted();
     let value: unknown;
@@ -516,7 +517,7 @@ export function getEmergencyCostError(
           ? "This emergency cost request does not exist or is no longer available."
           : code === "INCIDENT_NOT_FOUND"
             ? "This incident does not exist or is not available."
-            : "This endpoint or record is unavailable on the backend. No success is assumed.",
+            : "This record or action is currently unavailable. No success is assumed.",
       retryable: false,
       submissionBlocked: true,
     };
@@ -524,7 +525,7 @@ export function getEmergencyCostError(
     return {
       message: mutation
         ? "The result could not be verified. The server may have processed it; reload the request or check the list before submitting again."
-        : "The backend returned an unexpected emergency cost response. No financial data is displayed.",
+        : "We received an unexpected emergency cost response. No financial data is displayed.",
       retryable: false,
       outcomeUnknown: mutation,
     };
@@ -553,15 +554,15 @@ export function getEmergencyCostError(
   )
     return {
       message:
-        "The supporting images were rejected. Use up to five confirmed JPG/PNG uploads of at most 5 MB each.",
+        `The supporting images were rejected. Use up to five confirmed JPG/PNG uploads of at most ${UPLOAD_MAX_MB} MiB each.`,
       retryable: false,
     };
   if (status === 400 || status === 422 || code === "VALIDATION_ERROR")
     return {
       message:
         operation === "list"
-          ? "The backend rejected these filters. Review the selected filters and date range."
-          : "The backend rejected the request. Review the fields and supporting uploads.",
+          ? "These filters could not be applied. Review the selected filters and date range."
+          : "This request could not be completed. Review the fields and supporting uploads.",
       retryable: false,
     };
   if (mutation)

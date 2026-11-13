@@ -30,8 +30,11 @@ export const useAuthStore = create<AuthState>()(
         expiresIn: null,
         user: null,
         principal: null,
-        setAuth: ({ accessToken, refreshToken, expiresIn, user }) =>
-          set((state) => ({
+        setAuth: ({ accessToken, refreshToken, expiresIn, user }) => {
+          if (typeof window !== "undefined" && user?.accountId) {
+            sessionStorage.removeItem(`profile_reminder_dismissed_${user.accountId}`);
+          }
+          return set((state) => ({
             sessionVersion: state.sessionVersion + 1,
             accessToken,
             refreshToken,
@@ -43,22 +46,32 @@ export const useAuthStore = create<AuthState>()(
               roles: [normalizeRole(user.role)],
               permissions: [],
             },
-          })),
+          }));
+        },
         setAccessToken: (accessToken) => set({ accessToken }),
         setTokens: (tokens) => set((state) => ({
           accessToken: tokens.accessToken,
           refreshToken: tokens.refreshToken ?? state.refreshToken,
           expiresIn: tokens.expiresIn ?? state.expiresIn,
         })),
-        clearAuth: () =>
-          set((state) => ({
+        clearAuth: () => {
+          if (typeof window !== "undefined") {
+            for (let i = sessionStorage.length - 1; i >= 0; i--) {
+              const key = sessionStorage.key(i);
+              if (key && key.startsWith("profile_reminder_dismissed_")) {
+                sessionStorage.removeItem(key);
+              }
+            }
+          }
+          return set((state) => ({
             sessionVersion: state.sessionVersion + 1,
             accessToken: null,
             refreshToken: null,
             expiresIn: null,
             user: null,
             principal: null,
-          })),
+          }));
+        },
       }),
       {
         name: "pegaxus-auth",

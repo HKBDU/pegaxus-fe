@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { MANUAL_STATUS_OPTION_LABEL } from "@/features/fleet/constants/fleet.constants"
 import { useChangeVehicleStatus } from "@/features/fleet/hooks"
 import { vehicleStatusSchema, type VehicleStatusFormValues } from "@/features/fleet/schemas"
-import { MANUAL_VEHICLE_STATUSES, type Vehicle } from "@/features/fleet/types"
+import { MANUAL_VEHICLE_STATUSES, SYSTEM_MANAGED_STATUSES, type Vehicle, type VehicleStatus } from "@/features/fleet/types"
 import { getFleetErrorCode, getFleetErrorMessage } from "@/features/fleet/utils"
 import { VehicleStatusBadge } from "@/features/fleet/components/VehicleBadges"
 import { Button } from "@/shared/components/ui/button"
@@ -21,6 +21,13 @@ const controlClass = "w-full rounded-[2px] border border-slate-300 bg-white px-3
 
 function defaultStatus(vehicle: Vehicle): VehicleStatusFormValues["status"] {
   return MANUAL_VEHICLE_STATUSES.find((status) => status !== vehicle.status) ?? "AVAILABLE"
+}
+
+const SYSTEM_MANAGED_REASON: Partial<Record<VehicleStatus, string>> = {
+  ASSIGNED: "assigned to a route",
+  IN_USE: "in use on an active trip",
+  SUSPENDED: "suspended",
+  OUT_OF_SERVICE: "out of service after an approved replacement-vehicle cost; the fleet team handles it",
 }
 
 interface VehicleStatusDialogProps {
@@ -43,7 +50,7 @@ export function VehicleStatusDialog({ vehicle, onOpenChange, onChanged }: Vehicl
     if (vehicle) form.reset({ status: defaultStatus(vehicle), reason: "" })
   }, [vehicle, form])
 
-  const isSystemManaged = vehicle?.status === "ASSIGNED" || vehicle?.status === "IN_USE"
+  const isSystemManaged = vehicle ? SYSTEM_MANAGED_STATUSES.has(vehicle.status) : false
 
   const submit = form.handleSubmit(async (values) => {
     if (!vehicle) return
@@ -87,7 +94,7 @@ export function VehicleStatusDialog({ vehicle, onOpenChange, onChanged }: Vehicl
 
                 {isSystemManaged ? (
                   <p role="alert" className="m-0 border-l-2 border-amber-500 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                    This vehicle is {vehicle.status === "ASSIGNED" ? "assigned to a route" : "in use on an active trip"}. Its status is managed automatically and cannot be changed manually.
+                    This vehicle is {SYSTEM_MANAGED_REASON[vehicle.status]}. Its status is managed automatically and cannot be changed manually.
                   </p>
                 ) : null}
 

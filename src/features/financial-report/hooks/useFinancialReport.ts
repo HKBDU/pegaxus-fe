@@ -1,8 +1,13 @@
 import { useEffect, useRef } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  onlineManager,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { canAccess } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
-import { REPORT_DATA_SOURCE } from "@/lib/report-mode";
+import { REPORT_DATA_SOURCE, REPORT_MOCK_MODE } from "@/lib/report-mode";
 import {
   transportIdSchema,
   type FinancialReport,
@@ -62,11 +67,20 @@ export function useFinancialReport(
     enabled: allowed && transportIdSchema.safeParse(transportId).success,
     retry: false,
     retryOnMount: false,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnMount: true,
+    refetchOnWindowFocus: () => !flight.current,
+    refetchOnReconnect: () => !flight.current,
+    refetchInterval: (current) =>
+      !REPORT_MOCK_MODE &&
+      !flight.current &&
+      onlineManager.isOnline() &&
+      current.state.data &&
+      !current.state.error
+        ? 30_000
+        : false,
+    refetchIntervalInBackground: false,
     networkMode: "always",
-    staleTime: Infinity,
+    staleTime: 15_000,
     gcTime: 15 * 60 * 1000,
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === scope &&
@@ -84,6 +98,7 @@ export function useFinancialReport(
     const controller = new AbortController();
     flight.current = controller;
     try {
+      await client.cancelQueries({ queryKey: baseKey });
       return await send(controller.signal);
     } finally {
       if (flight.current === controller) flight.current = null;

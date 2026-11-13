@@ -1,4 +1,9 @@
-import { PhotoCaptureSection } from "@/shared/components/PhotoCaptureSection";
+import { useLayoutEffect, useRef, useState } from "react";
+import {
+  PhotoCaptureSection,
+  type PhotoUploadState,
+  type UploadedPhoto,
+} from "@/shared/components/PhotoCaptureSection";
 
 export interface IncidentPhotoFieldValue {
   files: File[];
@@ -6,6 +11,8 @@ export interface IncidentPhotoFieldValue {
   coordinates: ({ latitude: number; longitude: number } | null)[];
   captions: string[];
   uploadedPublicIds: string[];
+  uploadState?: PhotoUploadState;
+  uploadedPhotos?: UploadedPhoto[];
 }
 
 export interface IncidentPhotoFieldProps {
@@ -14,6 +21,9 @@ export interface IncidentPhotoFieldProps {
   disabled?: boolean;
   maxFiles?: number;
   error?: string | null;
+  onUploadStateChange?: (state: "idle" | "uploading" | "ready" | "error") => void;
+  onError?: (message: string | null) => void;
+  gpsCoordinates?: { latitude: number; longitude: number } | null;
 }
 
 export function IncidentPhotoField({
@@ -22,28 +32,53 @@ export function IncidentPhotoField({
   disabled = false,
   maxFiles = 5,
   error,
+  onUploadStateChange,
+  onError,
+  gpsCoordinates,
 }: IncidentPhotoFieldProps) {
+  const latest = useRef(value);
+  useLayoutEffect(() => {
+    latest.current = value;
+  }, [value]);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  // Several metadata callbacks run in the same turn. Merge against the latest
+  // update, rather than spreading the same render's stale value each time.
+  const patch = (next: Partial<IncidentPhotoFieldValue>) => {
+    latest.current = { ...latest.current, ...next };
+    onChange(latest.current);
+  };
   return (
-    <fieldset disabled={disabled}>
+    <fieldset disabled={disabled} className="min-w-0">
       <PhotoCaptureSection
         files={value.files}
         maxFiles={maxFiles}
         capturedAt={value.capturedAt}
         coordinates={value.coordinates}
+        gpsCoordinates={gpsCoordinates}
+        useDeviceGps={false}
         captions={value.captions}
-        error={error}
+        error={photoError ?? error}
+        onError={(message) => {
+          setPhotoError(message);
+          onError?.(message);
+        }}
         documentLabel="Incident photos"
         statusLabel="Ready for incident report"
         presignedEntity="attachment"
-        onFilesChange={(files) => onChange({ ...value, files })}
-        onCapturedAtChange={(capturedAt) => onChange({ ...value, capturedAt })}
-        onCoordinatesChange={(coordinates) =>
-          onChange({ ...value, coordinates })
-        }
-        onCaptionsChange={(captions) => onChange({ ...value, captions })}
+        uploadedPublicIds={value.uploadedPublicIds}
+        uploadedPhotos={value.uploadedPhotos}
+        onUploadedPhotosChange={(uploadedPhotos) => patch({ uploadedPhotos })}
+        onFilesChange={(files) => patch({ files })}
+        onCapturedAtChange={(capturedAt) => patch({ capturedAt })}
+        onCoordinatesChange={(coordinates) => patch({ coordinates })}
+        onCaptionsChange={(captions) => patch({ captions })}
         onUploadedPublicIdsChange={(uploadedPublicIds) =>
-          onChange({ ...value, uploadedPublicIds })
+          patch({ uploadedPublicIds })
         }
+        onUploadStateChange={(uploadState) => {
+          patch({ uploadState });
+          onUploadStateChange?.(uploadState);
+        }}
       />
     </fieldset>
   );

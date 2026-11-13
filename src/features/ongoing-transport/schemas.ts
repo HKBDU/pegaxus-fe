@@ -140,7 +140,7 @@ const crewMemberSchema = z.object({
   employeeCode: z.string(),
   fullName: z.string(),
   role: z.enum(["DRIVER", "ESCORT"]),
-  phone: z.string().nullable(),
+  phone: z.string().nullish(),
 });
 
 export const trackingSegmentSchema = z.object({
@@ -171,14 +171,17 @@ export const trackingSegmentSchema = z.object({
       providerReference: z.string().nullable(),
     })
     .nullable(),
-  vehicles: z.array(
-    z.object({
-      vehicleId: z.string(),
-      vehicleCode: z.string(),
-      licensePlate: z.string().nullable(),
-    }),
-  ),
-  note: z.string().nullable(),
+  vehicles: z
+    .array(
+      z.object({
+        vehicleId: z.string(),
+        vehicleCode: z.string(),
+        licensePlate: z.string().nullish(),
+      }),
+    )
+    .nullish()
+    .transform((v) => v ?? []),
+  note: z.string().nullish(),
   updatedAt: timestampSchema,
 });
 
@@ -206,6 +209,8 @@ export const transportOverviewSchema = z.object({
     .object({
       routePlanId: z.string(),
       routePlanCode: z.string(),
+      legalReviewRequested: z.boolean().nullish().transform((v) => Boolean(v)),
+      legalReviewRequestedAt: z.iso.datetime({ offset: true }).nullish().transform((v) => v ?? null),
       status: z.enum([
         "DRAFT",
         "CONFIRMED",
@@ -233,27 +238,33 @@ export const transportOverviewSchema = z.object({
     critical: z.number().int().nonnegative(),
     noData: z.number().int().nonnegative(),
   }),
-  complianceDossiers: z.array(
-    z.object({
-      complianceDossierId: z.string(),
-      dossierCode: z.string(),
-      dossierType: z.enum(["MAIN", "EXTRA"]).nullable(),
-      status: z.enum(DOSSIER_STATUSES),
-    }),
-  ),
-  activeIncidents: z.array(
-    z.object({
-      incidentReportId: z.string(),
-      incidentCode: z.string(),
-      category: z.enum(INCIDENT_CATEGORIES),
-      status: z.enum(["REPORTED", "PENDING"]),
-      title: z.string(),
-      occurredAt: timestampSchema,
-      severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
-      description: z.string().optional(),
-    }),
-  ),
-  canViewGpsTab: z.boolean(),
+  complianceDossiers: z
+    .array(
+      z.object({
+        complianceDossierId: z.string(),
+        dossierCode: z.string(),
+        dossierType: z.enum(["MAIN", "EXTRA"]).nullable(),
+        status: z.enum(DOSSIER_STATUSES),
+      }),
+    )
+    .nullish()
+    .transform((v) => v ?? []),
+  activeIncidents: z
+    .array(
+      z.object({
+        incidentReportId: z.string(),
+        incidentCode: z.string(),
+        category: z.enum(INCIDENT_CATEGORIES),
+        status: z.enum(["REPORTED", "PENDING"]),
+        title: z.string(),
+        occurredAt: timestampSchema,
+        severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).nullish(),
+        description: z.string().nullish(),
+      }),
+    )
+    .nullish()
+    .transform((v) => v ?? []),
+  canViewGpsTab: z.boolean().optional().default(false),
 });
 
 export const ongoingListReturnSchema = z.object({

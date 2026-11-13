@@ -13,6 +13,7 @@ export type ActionDialogProps = {
 }
 
 export type HeaderProps = {
+  variant?: "default" | "customer"
   navItems?: HeaderNavItem[]
   logoSrc?: string
   logoAlt?: string
@@ -41,15 +42,21 @@ export type SidebarContextProps = {
 
 export type PageHeaderProps = {
   title: string
+  size?: "default" | "compact"
   backHref: string
+  backState?: unknown
   backLabel?: string
+  onBack?: () => boolean | void
   showBack?: boolean
   className?: string
   /** Rendered on the same row as the title, at the end (e.g. a "New" button on mobile). */
   action?: ReactNode
+  /** Rendered right after the title text (e.g. a status badge), so it stays next to the title whatever the back link's width. */
+  titleAddon?: ReactNode
 }
 
 export type FieldProps = {
+  reserveErrorSpace?: boolean
   label: string
   value?: string | number | null
   className?: string
@@ -72,6 +79,8 @@ export type ImageViewerImage = string | {
 
 export type ImageViewerProps = {
   images: ImageViewerImage[]
+  /** Maximum allowed source size. Defaults to the shared 5 MB viewer limit. */
+  maxFileSizeBytes?: number
   index?: number
   open?: boolean
   onClose?: () => void

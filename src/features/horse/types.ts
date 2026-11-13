@@ -15,6 +15,7 @@ export type Horse = {
   passportNumber: string | null
   microchipNumber: string | null
   identificationNotes?: string | null
+  avatarUrl: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -31,6 +32,7 @@ export type CreateHorseRequest = {
   passportNumber: string
   microchipNumber: string
   identificationNotes: string
+  avatar?: { publicId: string }
 }
 
 export type HorseFormValues = {

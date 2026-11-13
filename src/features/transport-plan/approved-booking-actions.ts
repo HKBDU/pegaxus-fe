@@ -59,12 +59,19 @@ export function getBookingTransportPlanAction(
 
 export function getManagePersonnelAction(
   principal: AuthPrincipal | null,
-  plan: Pick<TransportPlanDetail, "transportPlanId" | "status"> | null,
+  plan:
+    | (Pick<TransportPlanDetail, "transportPlanId" | "status"> & {
+        transport?: Pick<TransportPlanDetail["transport"], "status">;
+      })
+    | null,
 ): ApprovedBookingAction | undefined {
   if (
     !plan ||
     !actionEntityIdSchema.safeParse(plan.transportPlanId).success ||
     plan.status !== "APPROVED" ||
+    ["IN_TRANSIT", "COMPLETED", "CANCELLED"].includes(
+      plan.transport?.status ?? "",
+    ) ||
     !canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
   )
     return undefined;
@@ -100,7 +107,12 @@ export function getApprovedBookingActions(
     : [];
   if (canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })) {
     if (!plan) return [];
-    const personnelAction = getManagePersonnelAction(principal, plan);
+    const personnelAction = getManagePersonnelAction(principal, {
+      ...plan,
+      ...("transport" in booking && booking.transport
+        ? { transport: booking.transport }
+        : {}),
+    });
     const editPlan: ApprovedBookingAction[] =
       "transport" in booking &&
       booking.transport &&
@@ -179,7 +191,7 @@ export function getApprovedBookingActions(
     const dossierAction: ApprovedBookingAction | undefined = dossier
       ? {
           kind: "viewComplianceDossier",
-          label: "View Compliance Dossier",
+          label: "Open dossier",
           targetId: dossier.complianceDossierId,
           href: dossierDetail(
             dossier.complianceDossierId,
@@ -196,21 +208,10 @@ export function getApprovedBookingActions(
             href: `${ROLE_ROUTES.complianceDossiers}/new/${encodeURIComponent(booking.bookingId)}`,
           }
         : undefined;
-    const requirementsAction: ApprovedBookingAction[] = dossier
-      ? [
-          {
-            kind: "viewDossierRequirements",
-            label: "View Requirements",
-            targetId: dossier.complianceDossierId,
-            href: `${ROLE_ROUTES.complianceDossiers}/${encodeURIComponent(dossier.complianceDossierId)}/requirements`,
-          },
-        ]
-      : [];
     return [
       ...(dossierAction && (dossier || plan?.status === "APPROVED")
         ? [dossierAction]
         : []),
-      ...requirementsAction,
       ...viewRoute,
     ];
   }

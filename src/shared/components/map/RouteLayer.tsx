@@ -1,5 +1,6 @@
 import { Layer, Source } from "react-map-gl/maplibre";
 import { createRouteSourceData } from "@/shared/utils/map";
+import { ROUTE_LINE_COLORS } from "./route-colors";
 import type { MapRoute } from "./types";
 
 type RouteLayerProps = {
@@ -34,13 +35,18 @@ export function RouteLayer({ route, routes = [], geoJson }: RouteLayerProps) {
               type="line"
               layout={{ "line-cap": "round", "line-join": "round" }}
               paint={{
-                "line-color": item.readonly
-                  ? "#94a3b8"
-                  : index === 0 && route
-                    ? "#0f172a"
-                    : "#2563eb",
-                "line-width": item.readonly ? 3 : index === 0 && route ? 4 : 3,
-                "line-opacity": item.readonly ? 0.35 : 0.85,
+                // A blocked segment wins over every other state, so it stands out wherever it is drawn.
+                "line-color": item.blocked
+                  ? ROUTE_LINE_COLORS.blocked
+                  : item.sharedWithPrimary
+                    ? ROUTE_LINE_COLORS.sharedWithPrimary
+                    : item.readonly
+                      ? ROUTE_LINE_COLORS.readonly
+                      : index === 0 && route
+                        ? ROUTE_LINE_COLORS.focused
+                        : ROUTE_LINE_COLORS.default,
+                "line-width": item.blocked ? 3.5 : item.readonly ? 3 : index === 0 && route ? 4 : 3,
+                "line-opacity": item.blocked ? 0.9 : item.readonly ? 0.35 : 0.85,
               }}
             />
           </Source>

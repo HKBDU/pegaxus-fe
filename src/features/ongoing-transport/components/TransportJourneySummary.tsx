@@ -6,6 +6,7 @@ import {
   Route,
   Truck,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { Badge } from "@/shared/components/ui/badge";
 import { formatTransportDate, formatTransportLabel } from "../format";
 import { routeLabels, segmentLabels } from "../constants";
@@ -29,6 +30,46 @@ function ScheduleValue({
   );
 }
 
+/**
+ * Every summary cell follows the same rhythm (heading, one prominent value, a caption, then details pinned to the
+ * bottom) so the four cells line up row by row instead of each using its own layout.
+ */
+function SummaryCell({
+  icon: Icon,
+  title,
+  value,
+  caption,
+  footer,
+}: {
+  icon: typeof MapPin;
+  title: string;
+  value: ReactNode;
+  caption?: ReactNode;
+  footer?: ReactNode;
+}) {
+  return (
+    <div className="overview-cell flex flex-col">
+      <h2 className="overview-heading">
+        <Icon aria-hidden="true" />
+        {title}
+      </h2>
+      <div className="mt-2 text-base font-semibold leading-snug text-slate-900">
+        {value}
+      </div>
+      {caption ? (
+        <div className="mt-1 text-[11px] leading-relaxed text-slate-500">
+          {caption}
+        </div>
+      ) : null}
+      {footer ? (
+        <div className="mt-auto pt-3">
+          <div className="border-t border-slate-100 pt-2.5">{footer}</div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function TransportJourneySummary({
   overview,
 }: {
@@ -41,14 +82,12 @@ export function TransportJourneySummary({
       className="overview-panel"
     >
       <div className="grid divide-y divide-slate-100 md:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))] xl:divide-x xl:divide-y-0">
-        <div className="overview-cell">
-          <h2 className="overview-heading">
-            <MapPin aria-hidden="true" />
-            Current segment
-          </h2>
-          {segment ? (
-            <>
-              <div className="mt-2 flex items-center gap-2 text-base font-semibold leading-snug text-slate-900">
+        <SummaryCell
+          icon={MapPin}
+          title="Current segment"
+          value={
+            segment ? (
+              <span className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 break-words">
                   {segment.fromLocation.locationName}
                 </span>
@@ -60,104 +99,112 @@ export function TransportJourneySummary({
                 <span className="min-w-0 flex-1 break-words">
                   {segment.toLocation.locationName}
                 </span>
-              </div>
-              <p className="mt-2 mb-0 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+              </span>
+            ) : (
+              <span className="text-sm font-normal text-slate-500">
+                No current segment
+              </span>
+            )
+          }
+          caption={
+            segment ? (
+              <span className="flex flex-wrap items-center gap-1.5">
                 <Route aria-hidden="true" className="size-3.5" />
                 Leg {segment.displayOrder} / {overview.totalSegments}
                 <span aria-hidden="true">·</span>
                 {segmentLabels[segment.status]}
-              </p>
-              <span className="mt-1 block text-[11px] text-slate-500">
+                <span aria-hidden="true">·</span>
                 {formatTransportLabel(segment.transportMode)}
               </span>
-            </>
-          ) : (
-            <p className="mt-3 mb-0 text-sm text-slate-500">
-              No current segment
+            ) : undefined
+          }
+          footer={
+            <p className="m-0 text-xs text-slate-600">
+              <span className="font-semibold tabular-nums text-slate-800">
+                {overview.completedSegments} / {overview.totalSegments}
+              </span>{" "}
+              legs completed
             </p>
-          )}
-          <p className="mt-2 mb-0 text-xs text-slate-500">
-            {overview.completedSegments} / {overview.totalSegments} legs
-            completed
-          </p>
-        </div>
-        <div className="overview-cell">
-          <h2 className="overview-heading">
-            <Truck aria-hidden="true" />
-            Transport / Route
-          </h2>
-          <dl className="mt-2 mb-0 space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <dt className="text-xs text-slate-500">Transport status</dt>
-              <dd className="m-0">
-                <OngoingTransportStatusBadge
-                  status={overview.transport.status}
-                />
-              </dd>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <dt className="text-xs text-slate-500">Route type</dt>
-              <dd className="m-0">
-                <Badge variant="secondary" className="rounded-xs text-[11px]">
-                  {overview.routeType
-                    ? routeLabels[overview.routeType]
-                    : "Not available"}
-                </Badge>
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[11px] text-slate-500">Route plan</dt>
-              <dd className="mt-1 ml-0 break-words text-xs font-medium text-slate-800">
-                {overview.routePlan?.routePlanCode ?? "Not available"}
-                {overview.routePlan ? (
-                  <span className="mt-1 block text-[11px] font-normal text-slate-500">
-                    {formatTransportLabel(overview.routePlan.status)}
-                  </span>
-                ) : null}
-              </dd>
-            </div>
-          </dl>
-        </div>
-        <div className="overview-cell">
-          <h2 className="overview-heading">
-            <CalendarDays aria-hidden="true" />
-            Journey schedule
-          </h2>
-          <dl className="mt-2 mb-0 space-y-2">
-            <ScheduleValue
-              label="Journey departure"
-              value={overview.departureAt}
-            />
-            <ScheduleValue
-              label="Actual departure"
-              value={overview.transport.actualDepartureAt}
-            />
-          </dl>
-        </div>
-        <div className="overview-cell">
-          <h2 className="overview-heading">
-            <Clock3 aria-hidden="true" />
-            Planned arrival
-          </h2>
-          <p className="mt-2 mb-0 text-base font-semibold tabular-nums text-slate-900">
-            {formatTransportDate(overview.etaAt)}
-          </p>
-          <p className="mt-1 mb-3 text-[11px] text-slate-500">
-            Overall journey plan · not GPS live ETA
-          </p>
-          <dl className="mb-0 space-y-2">
-            <ScheduleValue
-              label="Actual journey arrival"
-              value={overview.transport.actualArrivalAt}
-            />
-            {overview.transport.completedAt ? (
+          }
+        />
+        <SummaryCell
+          icon={Truck}
+          title="Transport / Route"
+          value={
+            <span className="break-words">
+              {overview.routePlan?.routePlanCode ?? "Not available"}
+            </span>
+          }
+          caption={
+            overview.routePlan
+              ? `Route plan · ${formatTransportLabel(overview.routePlan.status)}`
+              : "Route plan"
+          }
+          footer={
+            <dl className="m-0 space-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <dt className="text-[11px] text-slate-500">Transport status</dt>
+                <dd className="m-0">
+                  <OngoingTransportStatusBadge
+                    status={overview.transport.status}
+                  />
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <dt className="text-[11px] text-slate-500">Route type</dt>
+                <dd className="m-0">
+                  <Badge variant="secondary" className="rounded-xs text-[11px]">
+                    {overview.routeType
+                      ? routeLabels[overview.routeType]
+                      : "Not available"}
+                  </Badge>
+                </dd>
+              </div>
+            </dl>
+          }
+        />
+        <SummaryCell
+          icon={CalendarDays}
+          title="Journey departure"
+          value={
+            <span className="tabular-nums">
+              {formatTransportDate(overview.departureAt)}
+            </span>
+          }
+          caption="Planned departure of the journey"
+          footer={
+            <dl className="m-0">
               <ScheduleValue
-                label="Journey completed"
-                value={overview.transport.completedAt}
+                label="Actual departure"
+                value={overview.transport.actualDepartureAt}
               />
-            ) : null}
-          </dl>
-        </div>
+            </dl>
+          }
+        />
+        <SummaryCell
+          icon={Clock3}
+          title="Planned arrival"
+          value={
+            <span className="tabular-nums">
+              {formatTransportDate(overview.etaAt)}
+            </span>
+          }
+          caption="Overall journey plan · not GPS live ETA"
+          footer={
+            <dl className="m-0 space-y-1.5">
+              <ScheduleValue
+                label="Actual journey arrival"
+                value={overview.transport.actualArrivalAt}
+              />
+              {overview.transport.completedAt ? (
+                <ScheduleValue
+                  label="Journey completed"
+                  value={overview.transport.completedAt}
+                />
+              ) : null}
+            </dl>
+          }
+        />
       </div>
       {segment ? (
         <dl

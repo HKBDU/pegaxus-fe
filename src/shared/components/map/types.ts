@@ -41,7 +41,15 @@ export type MapRoute = {
   source?: "saved" | "preview";
   routePlanType?: "PRIMARY" | "BACKUP" | "RETURN";
   isOutsourced?: boolean;
+  vehicleIds?: string[];
+  dwellAfterMinutes?: number | null;
+  plannedDepartureAt?: string;
+  plannedArrivalAt?: string;
   readonly?: boolean;
+  /** A backup segment that reuses a primary route: drawn in its own colour so the overlap stays visible. */
+  sharedWithPrimary?: boolean;
+  /** A segment the Transport Specialist blocked in the legal review: drawn red above every other colour. */
+  blocked?: boolean;
 };
 
 export type MapPoint = { latitude: number; longitude: number };
@@ -106,6 +114,8 @@ export type MapViewerProps = {
   buildEndLocation?: MapLocation | null;
   /** Extra react-map-gl layers/markers drawn on top of the built-in ones (for example a moving vehicle). */
   children?: ReactNode;
+  /** Extra classes for the map frame, for example a height that fits a sticky column. */
+  className?: string;
 };
 
 export type ValidatedRouteGeometry = RouteGeometry | null;

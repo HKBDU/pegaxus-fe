@@ -1,13 +1,15 @@
 import { ArrowDownRight } from "lucide-react";
 import { TransportLink } from "./LandingActions";
+import type { ReactNode } from "react";
 
-export function HeroSection() {
+export function HeroSection({ children }: { children?: ReactNode }) {
   return (
     <section
       id="home"
       className="landing-chapter landing-hero"
       aria-labelledby="landing-hero-title"
     >
+      {children}
       <div className="landing-hero-atmosphere" aria-hidden="true">
         <svg
           className="landing-hero-routes"

@@ -60,12 +60,14 @@ export function useIncidentMutations() {
   const vehicle = useMutation({
     mutationFn: (input: VehicleIncidentRequest) =>
       createVehicleIncident(vehicleIncidentRequestSchema.parse(input)),
+    retry: false,
     onSuccess: invalidate,
     networkMode: "always",
   });
   const horseHealth = useMutation({
     mutationFn: (input: HorseHealthIncidentRequest) =>
       createHorseHealthIncident(horseHealthIncidentRequestSchema.parse(input)),
+    retry: false,
     onSuccess: invalidate,
     networkMode: "always",
   });
@@ -130,6 +132,7 @@ export function useIncidentMutations() {
         raiseSeverityRequestSchema.parse(input),
       ),
     onSuccess: invalidate,
+    retry: false,
     networkMode: "always",
   });
 

@@ -26,39 +26,48 @@ import {
   getRoutePlanError,
   updateSegmentOutsourcing,
 } from "../services";
-import type { Provider, RouteSegment, TransportMode } from "../types";
+import type { OutsourceSegmentResult, Provider, TransportMode } from "../types";
+import type { BuilderProvider } from "../builder-types";
 
 export type OutsourceSegmentSelection = {
-  provider: Provider;
+  provider: BuilderProvider;
   note: string;
 };
 
 type OutsourceSegmentDialogProps = {
   routePlanId?: string;
   routePlanRouteId: string;
+  lastUpdatedAt: string;
   transportMode: TransportMode;
   isOutsourced: boolean;
-  currentProvider?: Provider | null;
+  currentProvider?: BuilderProvider | null;
   currentNote?: string | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children?: ReactNode;
   onChanged?: (
     selection: OutsourceSegmentSelection | null,
-    segment?: RouteSegment,
+    segment?: OutsourceSegmentResult["segment"],
   ) => void;
 };
 
 export function OutsourceSegmentDialog({
   routePlanId,
   routePlanRouteId,
+  lastUpdatedAt,
   transportMode,
   isOutsourced,
   currentProvider,
   currentNote,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
   children,
   onChanged,
 }: OutsourceSegmentDialogProps) {
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = controlledOnOpenChange ?? setInternalOpen;
   const [providers, setProviders] = useState<Provider[]>([]);
   const [providerId, setProviderId] = useState(
     currentProvider?.transportProviderId ?? "",
@@ -69,7 +78,7 @@ export function OutsourceSegmentDialog({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || isOutsourced) return;
+    if (!open) return;
     let active = true;
     setIsLoading(true);
     void getTransportProviders({
@@ -90,7 +99,7 @@ export function OutsourceSegmentDialog({
     return () => {
       active = false;
     };
-  }, [isOutsourced, open, transportMode]);
+  }, [open, transportMode]);
 
   const selectedProvider =
     providers.find((provider) => provider.transportProviderId === providerId) ??
@@ -119,6 +128,7 @@ export function OutsourceSegmentDialog({
     try {
       const result = routePlanId
         ? await updateSegmentOutsourcing(routePlanId, routePlanRouteId, {
+            lastUpdatedAt,
             outsourced: true,
             transportProviderId: selectedProvider.transportProviderId,
             note: selection.note || undefined,
@@ -143,6 +153,7 @@ export function OutsourceSegmentDialog({
     try {
       const result = routePlanId
         ? await updateSegmentOutsourcing(routePlanId, routePlanRouteId, {
+            lastUpdatedAt,
             outsourced: false,
           })
         : undefined;

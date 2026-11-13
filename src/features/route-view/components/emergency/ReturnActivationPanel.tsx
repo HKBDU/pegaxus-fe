@@ -94,6 +94,7 @@ export function ReturnActivationPanel({
   const versionChanged = baseline !== plan.updatedAt && !mutation.data;
   // RP7 is authoritative through CONFIRMED. Display dossier readiness only when actually read.
   const dossierBlocked =
+    context.bookingRestricted ||
     context.workspace.dossierStatus !== "APPROVED" ||
     context.extraDossierStatus !== "APPROVED";
   const blocked =
@@ -191,8 +192,9 @@ export function ReturnActivationPanel({
           </dl>
           {dossierBlocked && (
             <p className="text-xs text-destructive">
-              MAIN and EXTRA must both be APPROVED before activation. Missing
-              EXTRA information is not treated as approval.
+              {context.bookingRestricted
+                ? "Booking details are restricted for this transport."
+                : "MAIN and EXTRA must both be APPROVED before activation. Missing EXTRA information is not treated as approval."}
             </p>
           )}
         </Section>
@@ -201,8 +203,8 @@ export function ReturnActivationPanel({
         <EmergencySegments segments={plan.segments} awaitingActivation />
         <p className="text-xs text-slate-500">
           Keep existing resources or stage overrides below. Changes are
-          submitted together only when you confirm activation. The backend
-          resolves Driver/Escort inheritance and checks resource eligibility.
+          submitted together only when you confirm activation. The system
+          applies Driver/Escort inheritance and checks resource eligibility.
         </p>
         {resources.isPending ||
         resources.isFetching ||
@@ -327,7 +329,7 @@ export function ReturnActivationPanel({
           role="status"
           className="rounded-[2px] border border-emerald-200 bg-emerald-50 p-4 text-sm"
         >
-          Return activated. Backend route status: {mutation.data.status}.
+          Return activated. Route status: {mutation.data.status}.
         </p>
       )}
       {versionChanged && !mutation.error && (
@@ -384,7 +386,7 @@ export function ReturnActivationPanel({
             <AlertDialogDescription>
               This applies the confirmed RETURN with {staged.length} segment
               resource override(s) and notifies Customer. Unchanged segments
-              keep their resources. The backend resolves final assignments.
+              keep their resources. Final assignments are applied automatically.
               Remaining untraveled PRIMARY legs are no longer part of the
               effective journey.
             </AlertDialogDescription>

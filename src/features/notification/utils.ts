@@ -1,5 +1,6 @@
 import { Bell, ClipboardList, CreditCard, FileText, Settings2, TriangleAlert, Truck, type LucideIcon } from "lucide-react"
 import type { AppNotification, NotificationPriority } from "@/shared/realtime"
+import { formatUtcDate, formatUtcTime } from "@/shared/utils/datetime"
 
 export const NOTIFICATION_TYPES = ["BOOKING", "TRANSPORT", "COMPLIANCE", "ROUTE", "PAYMENT", "SYSTEM"] as const
 
@@ -52,13 +53,13 @@ export function getRelatedLabel(notification: AppNotification): string | null {
 
 export const isUnread = (notification: AppNotification) => notification.status !== "READ"
 
-/** 10:24 today, "Yesterday", otherwise "22 Apr 2024". */
+/** "10:24 UTC" today, "Yesterday", otherwise "22 Apr 2024"; "today" is the UTC day. The local time goes in the `title` of the caller. */
 export function formatNotificationTime(iso: string, now = new Date()) {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ""
-  const startOfDay = (value: Date) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime()
-  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000)
-  if (days === 0) return date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+  const startOfUtcDay = (value: Date) => Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate())
+  const days = Math.round((startOfUtcDay(now) - startOfUtcDay(date)) / 86_400_000)
+  if (days === 0) return formatUtcTime(date)
   if (days === 1) return "Yesterday"
-  return date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+  return formatUtcDate(date)
 }

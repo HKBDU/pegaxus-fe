@@ -2,6 +2,7 @@ import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, KeyboardEvent } from 'react'
 import { AlertCircle, CheckCircle2, FileIcon, RotateCw, UploadCloud, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { UPLOAD_MAX_BYTES } from '@/shared/constants/upload'
 import { Button } from '@/shared/components/ui/button'
 import { Progress } from '@/shared/components/ui/progress'
 import { UPLOAD_STAGE_LABELS } from './file-uploader/constants'
@@ -15,7 +16,7 @@ export default function FileUploader({
   ref,
   entity = 'attachment',
   accept,
-  maxSize,
+  maxSize = UPLOAD_MAX_BYTES,
   maxFiles,
   multiple = true,
   disabled = false,

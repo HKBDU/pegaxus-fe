@@ -42,6 +42,13 @@ export interface RealtimeEventMap {
   ReceiveNotification: AppNotification
   BookingEditingStarted: { bookingId: string; accountId: string; timestamp: string }
   BookingEditingStopped: { bookingId: string; accountId: string; timestamp: string }
+  /** A route plan was cancelled (RP5). Sent only to the Transport Specialists assigned to its transport plan. */
+  RoutePlanCancelled: {
+    routePlanId: string
+    transportPlanId: string
+    routeType: "PRIMARY" | "BACKUP" | "RETURN"
+    cancelledAt: string
+  }
 }
 
 export type RealtimeEventName = keyof RealtimeEventMap

@@ -1,10 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
 import { useDebounce } from "@/shared/hooks/useDebounce";
 import type { MapLocation, RouteFormValues } from "./types";
 
@@ -79,13 +86,13 @@ function LocationPicker({
         }}
       />
       {query.trim() && !selectedLocation && (
-        <div className="absolute top-full z-10 mt-1 max-h-44 w-full overflow-y-auto rounded border bg-white p-1 shadow-md">
+        <div className="absolute top-full z-10 mt-1 max-h-44 w-full overflow-y-auto overscroll-contain rounded-[2px] border bg-white p-1 shadow-md">
           {options.length ? (
             options.map((location) => (
               <button
                 key={location.id}
                 type="button"
-                className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-amber-50"
+                className="block w-full rounded-[2px] px-2 py-1.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50"
                 onClick={() => {
                   onChange(String(location.id));
                   setQuery(location.name);
@@ -156,14 +163,31 @@ export function RouteForm({
       </label>
       <label className="grid gap-1 text-sm">
         Transport mode
-        <select
-          className="h-9 rounded border px-3 text-sm"
-          {...form.register("transportMode")}
-        >
-          <option value="ROAD">ROAD</option>
-          <option value="SEA">SEA</option>
-          <option value="AIR">AIR</option>
-        </select>
+        <Controller
+          control={form.control}
+          name="transportMode"
+          render={({ field }) => (
+            <Select
+              name={field.name}
+              value={field.value}
+              onValueChange={field.onChange}
+            >
+              <SelectTrigger
+                ref={field.ref}
+                onBlur={field.onBlur}
+                aria-label="Transport mode"
+                className="w-full"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ROAD">ROAD</SelectItem>
+                <SelectItem value="SEA">SEA</SelectItem>
+                <SelectItem value="AIR">AIR</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
       </label>
       <label className="grid gap-1 text-sm">
         Note

@@ -5,6 +5,7 @@ import {
   SRGBColorSpace,
   type MeshPhysicalMaterialParameters,
 } from "three";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
 const EXTENSION = "KHR_materials_pbrSpecularGlossiness";
 type TextureInfo = { index: number; texCoord?: number };
@@ -123,6 +124,8 @@ export function createHorseMaterialPlugin(parser: HorseParser) {
 
 export function extendHorseLoader(loader: {
   register: (factory: typeof createHorseMaterialPlugin) => unknown;
+  setMeshoptDecoder: (decoder: typeof MeshoptDecoder) => unknown;
 }) {
+  loader.setMeshoptDecoder(MeshoptDecoder);
   loader.register(createHorseMaterialPlugin);
 }

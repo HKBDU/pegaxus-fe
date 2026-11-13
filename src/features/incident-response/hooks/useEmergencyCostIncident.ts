@@ -1,16 +1,26 @@
 import { useQuery } from "@tanstack/react-query";
+import { canAccess } from "@/features/auth/access-control";
 import { emergencyCostIdSchema } from "../schemas";
 import {
   canCreateEmergencyCosts,
+  canReadEmergencyCosts,
   emergencyCostService,
   getEmergencyCostError,
 } from "../services";
 import { useEmergencyCostScope } from "./useEmergencyCostScope";
 
-export function useEmergencyCostIncident(id: string | null) {
+export function useEmergencyCostIncident(
+  id: string | null,
+  purpose: "create" | "decision" = "create",
+) {
   const { principal, signedIn, scope, key } = useEmergencyCostScope();
   const validId = emergencyCostIdSchema.safeParse(id);
-  const allowed = signedIn && canCreateEmergencyCosts(principal);
+  const allowed =
+    signedIn &&
+    (purpose === "decision"
+      ? canReadEmergencyCosts(principal) &&
+        canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })
+      : canCreateEmergencyCosts(principal));
   const query = useQuery({
     queryKey: [...key, "incident-context", id],
     queryFn: ({ signal }) =>

@@ -21,6 +21,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { DatePicker } from "@/shared/components/ui/date-picker";
+import { formatUtcDateTime, todayUtc } from "@/shared/utils/datetime";
 import {
   Dialog,
   DialogContent,
@@ -41,13 +42,19 @@ import {
 import { formatFileSize, matchesAcceptedType } from "@/shared/components/file-uploader/utils";
 import { cn } from "@/lib/utils";
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits";
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { presignedUpload } from "@/shared/utils/presigned";
 import { useAuthoritySubmissionDetail, useUpdateAuthorityReview } from "../hooks";
 import type { AuthorityDecision } from "../types";
 import { AuthorityEvidencePreview } from "./AuthorityEvidencePreview";
 
 const ACCEPTED_FILE_TYPES = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+function getDecisionFileError(file: File): string | null {
+  if (!matchesAcceptedType(file, ACCEPTED_FILE_TYPES) || !["application/pdf", "image/jpeg", "image/png"].includes(file.type)) return "Only PDF, JPG, JPEG and PNG files are accepted.";
+  if (file.size === 0) return "Decision document must not be empty.";
+  if (file.size > UPLOAD_MAX_BYTES) return `Decision document must be ${UPLOAD_MAX_MB} MiB or smaller.`;
+  return null;
+}
 
 type Errors = Partial<
   Record<
@@ -65,12 +72,14 @@ type Errors = Partial<
 
 interface Props {
   submissionId: string;
+  dossierId: string;
   onUpdated?: () => void;
   defaultOpen?: boolean;
 }
 
 export function UpdateAuthorityReviewDialog({
   submissionId,
+  dossierId,
   onUpdated,
   defaultOpen = false,
 }: Props) {
@@ -80,7 +89,7 @@ export function UpdateAuthorityReviewDialog({
     (role) => normalizeRole(role) === "TRANSPORT_SPECIALIST",
   );
 
-  const { data: submissionDetail, isPending: isDetailPending, isError: isDetailError, refetch: refetchDetail } = useAuthoritySubmissionDetail(submissionId);
+  const { data: submissionDetail, isPending: isDetailPending, isError: isDetailError, refetch: refetchDetail } = useAuthoritySubmissionDetail(dossierId, submissionId);
   const mutation = useUpdateAuthorityReview(submissionId);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -120,17 +129,11 @@ export function UpdateAuthorityReviewDialog({
 
   const handleFile = (file: File) => {
     clearError("decisionFile");
-    if (!matchesAcceptedType(file, ACCEPTED_FILE_TYPES)) {
+    const fileError = getDecisionFileError(file);
+    if (fileError) {
       setErrors((prev) => ({
         ...prev,
-        decisionFile: "Invalid format. Accepted: PDF, JPG, JPEG, PNG (Max 10MB).",
-      }));
-      return;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      setErrors((prev) => ({
-        ...prev,
-        decisionFile: "File size exceeds the 10MB limit. Please upload a smaller file.",
+        decisionFile: fileError,
       }));
       return;
     }
@@ -159,8 +162,9 @@ export function UpdateAuthorityReviewDialog({
 
     if (!decisionFile) {
       next.decisionFile = "Official authority decision document is required.";
-    } else if (decisionFile.size > MAX_FILE_SIZE) {
-      next.decisionFile = "File size exceeds the 10MB limit.";
+    } else {
+      const fileError = getDecisionFileError(decisionFile);
+      if (fileError) next.decisionFile = fileError;
     }
 
     if (decision === "APPROVED") {
@@ -172,8 +176,7 @@ export function UpdateAuthorityReviewDialog({
 
       if (permitIssuedDate) {
         const issued = new Date(permitIssuedDate);
-        const now = new Date();
-        const diffYears = Math.abs(issued.getFullYear() - now.getFullYear());
+        const diffYears = Math.abs(issued.getUTCFullYear() - Number(todayUtc().slice(0, 4)));
         if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
           next.permitIssuedDate = `Issue date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
         }
@@ -181,8 +184,7 @@ export function UpdateAuthorityReviewDialog({
 
       if (permitExpiryDate) {
         const expiry = new Date(permitExpiryDate);
-        const now = new Date();
-        const diffYears = Math.abs(expiry.getFullYear() - now.getFullYear());
+        const diffYears = Math.abs(expiry.getUTCFullYear() - Number(todayUtc().slice(0, 4)));
         if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
           next.permitExpiryDate = `Expiry date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
         } else if (permitIssuedDate && permitExpiryDate < permitIssuedDate) {
@@ -205,8 +207,7 @@ export function UpdateAuthorityReviewDialog({
         next.revisionDueDate = "Revision Due Date is required.";
       } else {
         const revision = new Date(revisionDueDate);
-        const now = new Date();
-        const diffYears = Math.abs(revision.getFullYear() - now.getFullYear());
+        const diffYears = Math.abs(revision.getUTCFullYear() - Number(todayUtc().slice(0, 4)));
         if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
           next.revisionDueDate = `Revision due date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
         }
@@ -284,7 +285,7 @@ export function UpdateAuthorityReviewDialog({
           Update Authority Review Result
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[92vh] max-w-6xl w-full overflow-y-auto rounded-[2px] border-[#e5e2d9] p-6 sm:max-w-6xl">
+      <DialogContent className="min-w-0 overflow-y-auto rounded-[2px] border-[#e5e2d9] p-4 sm:max-w-6xl sm:p-6">
         <DialogHeader className="gap-1 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <FileCheck2 className="size-5 shrink-0 text-[#f39200]" />
@@ -463,6 +464,13 @@ export function UpdateAuthorityReviewDialog({
                 )}
 
                 {decision === "REJECTED" && (
+                  <p className="m-0 border border-amber-300 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                    A rejection from a required authority sends the dossier back to preparation. Fix the requirements or ask the
+                    customer for new documents, mark it ready for submission and submit it to this authority again.
+                  </p>
+                )}
+
+                {decision === "REJECTED" && (
                   <Field
                     label="OFFICIAL REJECTION REASON *"
                     error={errors.rejectionReason}
@@ -589,7 +597,7 @@ export function UpdateAuthorityReviewDialog({
                       Or drag and drop file here
                     </p>
                     <p className="mt-1 text-[11px] text-slate-400">
-                Accepted format: PDF, JPG, JPEG, PNG (Max 10MB)
+                Accepted format: PDF, JPG, JPEG, PNG (Max {UPLOAD_MAX_MB} MiB)
                     </p>
                     <input
                       ref={fileInputRef}
@@ -709,7 +717,7 @@ export function UpdateAuthorityReviewDialog({
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium text-slate-500">Transport Date</span>
                   <span className="col-span-2 text-slate-800">
-                    {submissionDetail?.dossierSummary?.departureDate || "05 Oct 2026"}
+                    {submissionDetail?.dossierSummary?.departureDate || "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -764,7 +772,7 @@ export function UpdateAuthorityReviewDialog({
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium text-slate-500">Submitted At</span>
                   <span className="col-span-2 text-slate-800">
-                    {submissionDetail?.submittedAt || "05 Oct 2026 14:30 (UTC+7)"}
+                    {submissionDetail?.submittedAt ? formatUtcDateTime(submissionDetail.submittedAt) : "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 items-start gap-2">
@@ -813,7 +821,7 @@ export function UpdateAuthorityReviewDialog({
                         Dossier Submitted to Authority
                       </p>
                       <p className="mt-0.5 text-[10px] text-slate-500">
-                        {submissionDetail?.submittedAt || "05 Oct 2026 14:30 (UTC+7)"} by{" "}
+                        {submissionDetail?.submittedAt ? formatUtcDateTime(submissionDetail.submittedAt) : "—"} by{" "}
                         {submissionDetail?.submittedBy || "Nguyen Van A (TS)"}
                       </p>
                       <p className="mt-1 text-[11px] text-slate-600">

@@ -5,7 +5,8 @@ import {
 import type { HorseIncidentType } from "@/shared/types/incident";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { DatePicker } from "@/shared/components/ui/date-picker";
-import { TimePicker } from "@/shared/components/ui/time-picker";
+import { TimePicker } from "@/shared/components/shadcn-studio/date-picker/date-picker-09";
+import { formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime";
 import {
   Select,
   SelectContent,
@@ -14,6 +15,8 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { VitalSignsFields, type VitalSignsValue } from "./VitalSignsFields";
+import { IncidentFieldError } from "../IncidentFieldError";
+import type { IncidentFieldErrors } from "../../validation";
 
 export interface HorseHealthFieldsValue extends VitalSignsValue {
   incidentType: HorseIncidentType;
@@ -35,6 +38,7 @@ export interface HorseHealthFieldsProps {
   microchipNumber?: string | null;
   warnings?: string[];
   disabled?: boolean;
+  errors?: IncidentFieldErrors;
 }
 
 export function HorseHealthFields({
@@ -45,6 +49,7 @@ export function HorseHealthFields({
   microchipNumber,
   warnings = [],
   disabled = false,
+  errors = {},
 }: HorseHealthFieldsProps) {
   const update = <K extends keyof HorseHealthFieldsValue>(
     field: K,
@@ -56,6 +61,9 @@ export function HorseHealthFields({
   const contactedSeconds = value.veterinarianContactedAt
     .split("T")[1]
     ?.split(":")[2];
+  const contactedUtc = value.veterinarianContactedAt
+    ? toUtcIso(value.veterinarianContactedAt)
+    : undefined;
   const updateContactedDate = (date: string) =>
     update(
       "veterinarianContactedAt",
@@ -96,7 +104,8 @@ export function HorseHealthFields({
           </span>
         </div>
       </header>
-      <label className="grid gap-2 text-sm font-bold">
+      <IncidentFieldError message={errors.horseId} />
+      <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold">
         Incident type
         <Select
           value={value.incidentType}
@@ -116,35 +125,43 @@ export function HorseHealthFields({
             ))}
           </SelectContent>
         </Select>
+        <IncidentFieldError message={errors.incidentType} />
       </label>
-      <label className="grid gap-2 text-sm font-bold">
+      <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold">
         Condition description{" "}
         <span className="font-normal text-slate-500">
           Minimum 10 characters
         </span>
         <textarea
           value={value.conditionDescription}
+          aria-invalid={Boolean(errors.conditionDescription)}
+          maxLength={2000}
           disabled={disabled}
           onChange={(event) =>
             update("conditionDescription", event.target.value)
           }
-          className="min-h-28 rounded-[2px] border border-slate-300 p-3 text-base"
+          className="w-full min-w-0 max-w-full resize-y outline-none focus:border-[#f39200] min-h-28 rounded-[2px] border border-slate-300 p-3 text-base"
         />
+        <IncidentFieldError message={errors.conditionDescription} />
       </label>
-      <label className="grid gap-2 text-sm font-bold">
+      <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold">
         Symptoms
         <textarea
           value={value.symptoms}
+          aria-invalid={Boolean(errors.symptoms)}
+          maxLength={2000}
           disabled={disabled}
           onChange={(event) => update("symptoms", event.target.value)}
-          className="min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
+          className="w-full min-w-0 max-w-full resize-y outline-none focus:border-[#f39200] min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
         />
+        <IncidentFieldError message={errors.symptoms} />
       </label>
       <VitalSignsFields
         value={value}
         onChange={(next) => onChange({ ...value, ...next })}
         warnings={warnings}
         disabled={disabled}
+        errors={errors}
       />
       <div className="grid gap-3 sm:grid-cols-2">
         {(
@@ -167,19 +184,29 @@ export function HorseHealthFields({
           </label>
         ))}
       </div>
-      <label className="grid gap-2 text-sm font-bold">
+      <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold">
         First aid provided
         <textarea
           value={value.firstAidProvided}
+          aria-invalid={Boolean(errors.firstAidProvided)}
+          maxLength={2000}
           disabled={disabled}
           onChange={(event) => update("firstAidProvided", event.target.value)}
-          className="min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
+          className="w-full min-w-0 max-w-full resize-y outline-none focus:border-[#f39200] min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
         />
+        <IncidentFieldError message={errors.firstAidProvided} />
       </label>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm font-bold">
-          Veterinarian contacted at
-          <div className="@container grid min-w-0 gap-2 @min-[20rem]:grid-cols-[minmax(0,1fr)_9rem]">
+      <div className="space-y-4">
+        <div
+          className="grid min-w-0 content-start gap-2 text-sm font-bold"
+          data-incident-field
+        >
+          <span>Veterinarian contacted at</span>
+          <span className="text-xs font-normal text-slate-500">
+            Your local time. Sent as{" "}
+            {contactedUtc ? formatUtcDateTime(contactedUtc) : "UTC"}.
+          </span>
+          <div className="@container grid min-w-0 items-start gap-2 @min-[20rem]:grid-cols-[minmax(0,1fr)_9rem]">
             <DatePicker
               value={contactedDate}
               onChange={updateContactedDate}
@@ -196,30 +223,37 @@ export function HorseHealthFields({
               className="h-9 rounded-[2px] text-sm"
             />
           </div>
-        </label>
-        <label className="grid gap-2 text-sm font-bold">
+          <IncidentFieldError message={errors.veterinarianContactedAt} />
+        </div>
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold">
           Veterinarian instruction
           <textarea
             value={value.veterinarianInstruction}
+            aria-invalid={Boolean(errors.veterinarianInstruction)}
+            maxLength={2000}
             disabled={disabled}
             onChange={(event) =>
               update("veterinarianInstruction", event.target.value)
             }
-            className="min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
+            className="w-full min-w-0 max-w-full resize-y outline-none focus:border-[#f39200] min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
           />
+          <IncidentFieldError message={errors.veterinarianInstruction} />
         </label>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm font-bold">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold">
           Medication given
           <textarea
             value={value.medicationGiven}
+            aria-invalid={Boolean(errors.medicationGiven)}
+            maxLength={2000}
             disabled={disabled}
             onChange={(event) => update("medicationGiven", event.target.value)}
-            className="min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
+            className="w-full min-w-0 max-w-full resize-y outline-none focus:border-[#f39200] min-h-24 rounded-[2px] border border-slate-300 p-3 text-base"
           />
+          <IncidentFieldError message={errors.medicationGiven} />
         </label>
-        <label className="grid gap-2 text-sm font-bold">
+        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold">
           Horse transportable
           <Select
             value={
@@ -244,6 +278,7 @@ export function HorseHealthFields({
               <SelectItem value="false">No</SelectItem>
             </SelectContent>
           </Select>
+          <IncidentFieldError message={errors.horseTransportable} />
         </label>
       </div>
     </section>

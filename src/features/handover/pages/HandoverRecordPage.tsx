@@ -1,4 +1,4 @@
-import { Ban, PlayCircle } from "lucide-react"
+import { ArrowLeft, Ban, PlayCircle } from "lucide-react"
 import { useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -13,11 +13,12 @@ import { ReadOnlyRecord } from "../components/ReadOnlyRecord"
 import { RecordSummary } from "../components/RecordSummary"
 import { ReloadDialog } from "../components/ReloadDialog"
 import { StatusBadge } from "../components/StatusBadge"
+import { routePlanLinkFor, VehicleOnAnotherTripNotice } from "../components/VehicleOnAnotherTripNotice"
 import { handoverPaths, HANDOVER_GEOFENCE_ENFORCED, HANDOVER_GEOFENCE_METERS, type HandoverAudience } from "../constants"
 import { useCancelHandover, useCompleteHandover, useHandoverRecord, useReloadHandover, useStartHandover, useTransportSegments } from "../hooks/useHandovers"
 import { HandoverApiError } from "../services"
 import type { CompleteInput, HandoverRecord } from "../types"
-import { describeError, hasAction } from "../utils"
+import { describeError, hasAction, isVehicleOnAnotherTrip } from "../utils"
 
 const isModified = (error: unknown) => error instanceof HandoverApiError && error.errorCode === "HANDOVER_MODIFIED"
 
@@ -41,7 +42,10 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
   const record = recordQuery.data
   const canComplete = Boolean(record && hasAction(record, "COMPLETE"))
 
-  const segments = useTransportSegments(transportId, canComplete && audience !== "customer")
+  const canStart = Boolean(record && hasAction(record, "START"))
+
+  // Also needed when the start fails with VEHICLE_STILL_ON_ANOTHER_TRIP: the notice links to the route plan of the leg.
+  const segments = useTransportSegments(transportId, (canComplete || canStart) && audience !== "customer")
   const start = useStartHandover(transportId)
   const complete = useCompleteHandover(transportId, handoverId ?? "")
   const cancel = useCancelHandover(transportId, handoverId ?? "")
@@ -91,8 +95,20 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
 
   const status = record ? <StatusBadge status={record.status} /> : null
   const shown = record && completed && completed.handoverRecordId === record.handoverRecordId ? { ...record, effects: completed.effects ?? record.effects } : record
+  const simulatorSegment = shown && segments.data
+    ? (shown.toSegment
+        ? segments.data.segments.find((segment) => segment.routePlanRouteId === shown.toSegment?.routePlanRouteId)
+        : shown.fromSegment
+          ? segments.data.segments.find((segment) => segment.routePlanRouteId === shown.fromSegment?.routePlanRouteId)
+          : undefined)
+    : undefined
 
-  const barClass = cn("flex gap-2", mobile ? "fixed inset-x-0 bottom-0 z-20 border-t border-slate-300 bg-white px-3 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] [&>button]:min-h-15 [&>button]:flex-1 [&>button]:text-base" : "flex-col-reverse sm:flex-row sm:justify-end [&>button]:min-h-11 sm:[&>button]:min-h-10")
+  const barClass = cn(
+    "flex gap-3",
+    mobile
+      ? "fixed bottom-0 right-0 z-20 left-0 md:left-[var(--sidebar-width,13rem)] border-t border-[#e5e2d9] bg-white px-3 sm:px-4 pt-2.5 pb-[calc(env(safe-area-inset-bottom)+0.65rem)] shadow-[0_-4px_12px_rgba(0,0,0,0.05)] [&>button]:flex-1 [&>button]:min-h-11 sm:[&>button]:min-h-11"
+      : "flex-col-reverse sm:flex-row sm:justify-end gap-3 [&>button]:min-h-10",
+  )
 
   return (
     <PageFrame audience={audience} title="Handover record" backHref={back} backLabel="Return to handover records" action={status}>
@@ -114,6 +130,7 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
               onSubmit={submitComplete}
               onBack={() => navigate(back)}
               submitError={complete.error}
+              routePlanHref={routePlanLinkFor(audience, simulatorSegment)}
               onClearSubmitError={() => complete.reset()}
             />
           ) : shown.status === "PLANNED" ? (
@@ -132,14 +149,39 @@ export default function HandoverRecordPage({ audience }: { audience: HandoverAud
             />
           )}
 
-          {start.error && !modified ? <p role="alert" className="rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{describeError(start.error)}</p> : null}
+          {isVehicleOnAnotherTrip(start.error) ? <VehicleOnAnotherTripNotice routePlanHref={routePlanLinkFor(audience, simulatorSegment)} /> : null}
+
+          {start.error && !modified && !isVehicleOnAnotherTrip(start.error) ? <p role="alert" className="rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{describeError(start.error)}</p> : null}
 
           {hasAction(shown, "START") ? (
             <div className={barClass}>
-              <Button type="button" variant="outline" onClick={() => navigate(back)} disabled={start.isPending} className="rounded-[2px]">Back</Button>
-              <Button type="button" onClick={() => void doStart()} disabled={start.isPending} className="gap-2 rounded-[2px] font-heading font-semibold tracking-[0.06em] uppercase shadow-[0.125rem_0.125rem_0_0_rgb(0_0_0/0.85)]">
-                <PlayCircle aria-hidden="true" className="size-4" />
-                {start.isPending ? "Starting…" : "Start handover"}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate(back)}
+                disabled={start.isPending}
+                className="rounded-[2px] border-[#e5e2d9] text-xs sm:text-sm font-medium hover:bg-slate-50 text-slate-700 gap-1.5 min-w-0 px-2 sm:px-4"
+              >
+                <ArrowLeft className="size-4 shrink-0" />
+                <span className="truncate">Back</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void doStart()}
+                disabled={start.isPending}
+                className="rounded-[2px] font-heading font-semibold text-xs sm:text-sm tracking-[0.03em] sm:tracking-[0.06em] uppercase bg-[#f39200] text-[#181818] hover:bg-[#dc8400] shadow-sm gap-1.5 sm:gap-2 px-2 sm:px-4 disabled:opacity-50 min-w-0"
+              >
+                <PlayCircle aria-hidden="true" className="size-4 shrink-0" />
+                <span className="truncate">
+                  {start.isPending ? (
+                    "Starting…"
+                  ) : (
+                    <>
+                      <span>Start</span>
+                      <span className="hidden min-[400px]:inline">&nbsp;handover</span>
+                    </>
+                  )}
+                </span>
               </Button>
             </div>
           ) : null}

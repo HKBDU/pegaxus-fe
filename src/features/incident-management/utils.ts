@@ -1,12 +1,12 @@
-const dateTime = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })
-const dateOnly = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" })
-const timeOnly = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false })
+import { formatUtcDate, formatUtcDateTime, formatUtcTime } from "@/shared/utils/datetime"
 
 export const EMPTY = "—"
 
-export const formatDateTime = (iso: string | null | undefined) => (iso ? dateTime.format(new Date(iso)) : EMPTY)
-export const formatDate = (iso: string) => dateOnly.format(new Date(iso))
-export const formatTime = (iso: string) => timeOnly.format(new Date(iso))
+/** Every incident instant is read in UTC and labelled, so the reporter, the coordinator and the manager see the same time. */
+export const formatDateTime = (iso: string | null | undefined) => (iso ? formatUtcDateTime(iso) : EMPTY)
+export const formatDate = (iso: string) => formatUtcDate(iso)
+/** "08:00 UTC": the label stays because the table and the card show the date and the time apart. */
+export const formatTime = (iso: string) => formatUtcTime(iso)
 
 /** "8 min ago" style label; `now` comes from the BE `serverTime` when the caller has it. */
 export function timeAgo(iso: string, now = Date.now()) {

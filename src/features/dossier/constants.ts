@@ -6,15 +6,13 @@ import type {
   DossierRequirementsParams,
 } from "./types";
 
-// Flow 2 BR-039 allows up to 10 MB per compliance document file.
-export const UPLOAD_MAX_FILE_BYTES = 10 * 1024 * 1024;
+export { UPLOAD_MAX_BYTES as UPLOAD_MAX_FILE_BYTES } from "@/shared/constants/upload";
 export const UPLOAD_ACCEPTED_MIME_TYPES = [
   "application/pdf",
   "image/jpeg",
   "image/png",
 ] as const;
-export const DOSSIER_UPLOAD_ACCEPT =
-  ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+export const DOSSIER_UPLOAD_ACCEPT = UPLOAD_ACCEPTED_MIME_TYPES.join(",");
 export const DOCUMENT_REQUEST_TYPES = [
   "MISSING_DOCUMENT",
   "REVISION",
@@ -83,7 +81,7 @@ export function getCustomerDocumentActions(
   const document = requirement.document;
   if (!document) {
     return canUploadInitialDocument("CUSTOMER", dossier, requirement)
-      ? ["Upload Document"]
+      ? ["Upload Document", "View Requirement"]
       : ["View Requirement"];
   }
   const actions = ["View Document"];
@@ -123,7 +121,7 @@ export function getDossierRequirementActionLabels(
   if (role === "CUSTOMER") {
     if (!hasDocument)
       return status === "PENDING" || status === "REQUESTED"
-        ? ["Upload Document"]
+        ? ["Upload Document", "View Requirement"]
         : ["View Requirement"];
     if (status === "PROVIDED")
       return ["View Document", "Edit Document", "View Version History"];
@@ -164,7 +162,7 @@ export function getDossierRequirementActionLabels(
 export const initialDossierRequirementsParams: DossierRequirementsParams = {
   pageIndex: 1,
   pageSize: 20,
-  sortBy: "createdAt:asc",
+  sortBy: "createdAt:desc",
 };
 
 export function getDossierHorseFilterOptions(
@@ -252,6 +250,7 @@ export const dossierRequirementStatusOptions = [
 
 export const dossierRequirementSortOptions = [
   { value: "createdAt:asc", label: "Default requirement order" },
+  { value: "createdAt:desc", label: "Newest created" },
   { value: "dueDate:asc", label: "Due date ascending" },
   { value: "dueDate:desc", label: "Due date descending" },
   { value: "status:asc", label: "Status ascending" },

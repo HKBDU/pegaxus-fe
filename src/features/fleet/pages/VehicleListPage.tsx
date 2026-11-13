@@ -42,7 +42,7 @@ export default function VehicleListPage() {
     <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         <div className="mb-6">
-          <PageHeader title="SPECIALIZED VEHICLES" backHref={isManager ? "/admin" : "/"} backLabel="RETURN TO FLEET OVERVIEW" />
+          <PageHeader title="SPECIALIZED VEHICLES" backHref={isManager ? "/admin" : "/"} showBack={false} />
         </div>
 
         {vehiclesQuery.isLoading && !vehiclesQuery.data ? <FleetListSkeleton columns={9} /> : null}

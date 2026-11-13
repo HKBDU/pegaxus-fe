@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
-import { useFrame } from "@react-three/fiber";
+import { addAfterEffect, useFrame, useThree } from "@react-three/fiber";
 import { useAnimations, useGLTF } from "@react-three/drei";
 import {
   AnimationMixer,
@@ -14,8 +14,9 @@ import {
   type AnimationAction,
   type SkinnedMesh,
   type Mesh,
+  type Object3D,
 } from "three";
-import horseUrl from "../../assets/horse-lite.glb?url&no-inline";
+import horseUrl from "../../assets/horse-meshopt.glb?url&no-inline";
 import {
   assertHorseAnimations,
   JOURNEY_STOP_CLIP,
@@ -36,6 +37,8 @@ import {
   HOOF_NAMES,
   measureGait,
   sampleJourneyStaging,
+  type GaitMotion,
+  type JourneyStaging,
 } from "../../lib/horse-motion";
 
 useGLTF.preload(horseUrl, false, false, extendHorseLoader);
@@ -45,6 +48,20 @@ const heroExperience = { completed: false };
 const HERO_IDLE = `${HERO_CALM_CLIP}_Hero`;
 const JOURNEY_IDLE = `${HERO_CALM_CLIP}_Journey`;
 const JOURNEY_RUN = `${HORSE_CLIPS.run}_Journey`;
+type PreparedHorse = {
+  scale: number;
+  offset: [number, number, number];
+  walk: GaitMotion;
+  run: GaitMotion;
+  stop: GaitMotion;
+  staging: JourneyStaging;
+};
+// Cache only asset-derived data; actions, blends and snapshots remain instance-local.
+const frameCache = new WeakMap<
+  Object3D,
+  { clips: readonly AnimationClip[]; data: PreparedHorse }
+>();
+const calmCache = new WeakMap<AnimationClip, AnimationClip>();
 type Owner = "hero" | "journey" | "map" | "none";
 type Blend = {
   previous: AnimationAction;
@@ -56,6 +73,7 @@ type PlaybackSnapshot = {
   current: AnimationAction | null;
   settle: number;
   blend: Blend | null;
+  outgoing: AnimationAction | null;
   actions: {
     action: AnimationAction;
     time: number;
@@ -67,9 +85,11 @@ type PlaybackSnapshot = {
 export function HorseModel({
   story,
   onReady,
+  onPrepared,
 }: {
   story: RefObject<LandingSceneState>;
   onReady: () => void;
+  onPrepared: () => void;
 }) {
   const { scene, animations } = useGLTF(
     horseUrl,
@@ -81,6 +101,14 @@ export function HorseModel({
     assertHorseAnimations(animations);
     // useGLTF caches the scene across route remounts, including our primitive offset.
     scene.position.set(0, 0, 0);
+    const feet = HOOF_NAMES.map((name) => scene.getObjectByName(name)!);
+    const cached = frameCache.get(scene);
+    if (
+      cached &&
+      cached.clips.length === animations.length &&
+      cached.clips.every((clip, index) => clip === animations[index])
+    )
+      return { ...cached.data, feet };
     const walk = measureGait(
       scene,
       animations.find((clip) => clip.name === HORSE_CLIPS.walk)!,
@@ -130,24 +158,48 @@ export function HorseModel({
     sampler.uncacheRoot(scene);
     if (!Number.isFinite(size.y) || size.y <= 0)
       throw new Error("Invalid horse model bounds");
-    return {
+    const data: PreparedHorse = {
       scale: 2.4 / size.y,
       offset: [-center.x, -box.min.y, -center.z] as [number, number, number],
       walk,
       run,
       stop,
       staging: buildJourneyStaging(run, stop),
-      feet: HOOF_NAMES.map((name) => scene.getObjectByName(name)!),
     };
+    for (const motion of [walk, run, stop]) {
+      Object.freeze(motion.travel);
+      Object.freeze(motion.floor);
+      Object.freeze(motion);
+    }
+    for (const points of [data.staging.run, data.staging.stop]) {
+      points.forEach(Object.freeze);
+      Object.freeze(points);
+    }
+    Object.freeze(data.staging);
+    Object.freeze(data.offset);
+    Object.freeze(data);
+    frameCache.set(scene, { clips: [...animations], data });
+    return { ...data, feet };
   }, [scene, animations]);
   const presentationClips = useMemo(() => {
     const source = animations.find((clip) => clip.name === HORSE_CLIPS.idle)!;
     // Only the verified calm 0–2.5s; the original clip later rears.
-    const calm = AnimationUtils.subclip(source, HERO_CALM_CLIP, 0, 75, 30);
+    let calm = calmCache.get(source);
+    if (!calm) {
+      calm = AnimationUtils.subclip(source, HERO_CALM_CLIP, 0, 75, 30);
+      calmCache.set(source, calm);
+    }
     const run = animations.find((clip) => clip.name === HORSE_CLIPS.run)!;
     // Independent action identities share immutable tracks, not another model/rig.
     return [
-      ...animations,
+      ...animations.filter((clip) =>
+        [
+          HORSE_CLIPS.walk,
+          HORSE_CLIPS.run,
+          JOURNEY_STOP_CLIP,
+          HERO_SCRAPE_CLIP,
+        ].includes(clip.name),
+      ),
       calm,
       new AnimationClip(HERO_IDLE, calm.duration, calm.tracks, calm.blendMode),
       new AnimationClip(
@@ -160,6 +212,55 @@ export function HorseModel({
     ];
   }, [animations]);
   const { actions, mixer } = useAnimations(presentationClips, scene);
+  const gl = useThree((state) => state.gl);
+  const invalidate = useThree((state) => state.invalidate);
+  useLayoutEffect(() => {
+    let drawn = false;
+    let presentedFrames = 0;
+    const callbacks: {
+      mesh: SkinnedMesh;
+      previous: SkinnedMesh["onAfterRender"];
+      observe: SkinnedMesh["onAfterRender"];
+    }[] = [];
+    scene.traverse((node) => {
+      const mesh = node as SkinnedMesh;
+      if (!mesh.isSkinnedMesh) return;
+      const previous = mesh.onAfterRender;
+      const observe: SkinnedMesh["onAfterRender"] = function (
+        this: SkinnedMesh,
+        ...args
+      ) {
+        previous.apply(this, args);
+        if (args[0] === gl) drawn = true;
+      };
+      callbacks.push({ mesh, previous, observe });
+      mesh.onAfterRender = observe;
+    });
+    const restore = () => {
+      for (const { mesh, previous, observe } of callbacks)
+        if (mesh.onAfterRender === observe) mesh.onAfterRender = previous;
+    };
+    const stop = addAfterEffect(() => {
+      // A prepared scene or ground draw alone is not proof that the horse rendered.
+      if (!drawn || gl.getContext().isContextLost()) return;
+      drawn = false;
+      // The first world transform precedes the hoof camera's fresh anchor.
+      // Keep the intro paused through its next rendered pose, including demand mode.
+      if (++presentedFrames < 2) {
+        invalidate();
+        return;
+      }
+      stop();
+      restore();
+      onReady();
+    });
+    onPrepared();
+    invalidate();
+    return () => {
+      stop();
+      restore();
+    };
+  }, [scene, gl, invalidate, onReady, onPrepared]);
   const current = useRef<AnimationAction | null>(null);
   const controller = useRef<{
     settleMap: () => void;
@@ -171,11 +272,13 @@ export function HorseModel({
   const owner = useRef<Owner>("none");
   const ownerChanged = useRef(false);
   const blend = useRef<Blend | null>(null);
+  const outgoing = useRef<AnimationAction | null>(null);
   const snapshots = useRef<
     Partial<Record<"hero" | "journey", PlaybackSnapshot>>
   >({});
-  const readyFrame = useRef(false);
   const journeyPose = useRef({ x: 0, z: 0, yaw: 0 });
+  const journeyPlaying = useRef(false);
+  const journeyDelta = useRef(0);
   const hoofTracking = useMemo(
     () =>
       HOOF_NAMES.map(() => ({
@@ -205,6 +308,7 @@ export function HorseModel({
         if (action?.enabled && action !== previous && action !== next)
           action.stop();
       }
+      outgoing.current = previous && previous !== next ? previous : null;
       next
         .stopFading()
         .reset()
@@ -242,6 +346,7 @@ export function HorseModel({
           if (action?.enabled) action.stop();
         current.current = null;
         blend.current = null;
+        outgoing.current = null;
       }
       Object.assign(heroExperience, { completed: true });
       Object.assign(state, {
@@ -251,6 +356,7 @@ export function HorseModel({
         introX: 0,
         introZ: 0,
         heroCameraReady: true,
+        heroCalmReady: immediate || state.reducedMotion,
         heroRevealTime: HERO_REVEAL_DURATION,
       });
       play(HERO_CALM_CLIP, false, state.reducedMotion);
@@ -428,6 +534,7 @@ export function HorseModel({
             current: current.current,
             settle: settle.current,
             blend: blend.current,
+            outgoing: outgoing.current,
             actions: Object.values(actions).flatMap((action) =>
               action?.enabled && action.isScheduled()
                 ? [
@@ -451,6 +558,7 @@ export function HorseModel({
         }
         current.current = null;
         blend.current = null;
+        outgoing.current = null;
         settle.current = 0;
         owner.current = next;
         const saved =
@@ -461,6 +569,7 @@ export function HorseModel({
           current.current = saved.current;
           settle.current = saved.settle;
           blend.current = saved.blend;
+          outgoing.current = saved.outgoing;
           for (const { action, time, weight, paused } of saved.actions) {
             Object.assign(action, { enabled: true, time, paused });
             action.setEffectiveWeight(weight);
@@ -477,6 +586,11 @@ export function HorseModel({
         state.visible &&
         state.heroIntroReady &&
         (next === "hero" ? state.heroReady : state.journeyReady);
+      const resumeJourneyFrame =
+        next === "journey" &&
+        (ownerChanged.current ||
+          state.journeyLifecycle === "SUSPENDED" ||
+          !journeyPlaying.current);
       if (cinematic) {
         const lifecycle =
           next === "hero" ? "heroLifecycle" : "journeyLifecycle";
@@ -503,24 +617,32 @@ export function HorseModel({
         } else if (state[lifecycle] === "PLAYING")
           Object.assign(state, { [lifecycle]: "SUSPENDED" });
       }
+      const journeyActive =
+        next === "journey" &&
+        ready &&
+        !state.reducedMotion &&
+        !state.journeyTextReady;
+      // Discard the resume frame so hidden/offscreen time cannot fast-forward a snapshot.
+      journeyDelta.current = journeyActive && !resumeJourneyFrame ? elapsed : 0;
+      journeyPlaying.current = journeyActive;
       // Runs before Drei's mixer callback: an inactive owner never gets a stray frame.
       // oxlint-disable-next-line react/immutability -- external Three.js mixer clock.
-      mixer.timeScale = cinematic
-        ? ready && !state.reducedMotion
-          ? Math.min(1, 0.05 / Math.max(elapsed, 0.001))
-          : 0
-        : next === "map" && state.visible
-          ? 1
-          : 0;
+      mixer.timeScale =
+        next === "journey"
+          ? journeyDelta.current > 0
+            ? 1
+            : 0
+          : cinematic
+            ? ready && !state.reducedMotion
+              ? Math.min(1, 0.05 / Math.max(elapsed, 0.001))
+              : 0
+            : next === "map" && state.visible
+              ? 1
+              : 0;
     };
     controller.current = { settleMap, synchronize };
     previousShot.current = "";
     synchronize(0);
-    // A deep link outside Hero may intentionally have no running Canvas frames.
-    if (!state.inHero && !readyFrame.current) {
-      readyFrame.current = true;
-      onReady();
-    }
     // Drei advances its mixer before our frame callback, including the first one.
     if ((state.inHero || state.inJourney) && !state.heroIntroReady) {
       // oxlint-disable-next-line react/immutability -- external Three.js mixer.
@@ -533,19 +655,18 @@ export function HorseModel({
       mixer.stopAllAction();
       current.current = null;
       controller.current = null;
+      outgoing.current = null;
     };
-  }, [actions, mixer, onReady, story, frame]);
+  }, [actions, mixer, story, frame]);
 
   useFrame((_frame, elapsed) => controller.current?.synchronize(elapsed), -1);
 
   useFrame((_frame, elapsed) => {
     const state = story.current;
-    const delta = Math.min(elapsed, 0.05);
+    const delta = state.inJourney
+      ? journeyDelta.current
+      : Math.min(elapsed, 0.05);
     Object.assign(state, { horseFrameAt: performance.now() });
-    if (!readyFrame.current) {
-      readyFrame.current = true;
-      onReady();
-    }
     if ((state.inHero || state.inJourney) && !state.heroIntroReady) {
       if (state.inHero) {
         scene.updateWorldMatrix(true, true);
@@ -568,6 +689,10 @@ export function HorseModel({
       Object.assign(state, {
         heroEffectTime: state.heroEffectTime + delta * 1000,
       });
+    if (cinematicPlaying && state.inJourney)
+      Object.assign(state, {
+        journeyEffectTime: state.journeyEffectTime + delta * 1000,
+      });
     if (cinematicPlaying && blend.current) {
       const transition = blend.current;
       transition.elapsed = Math.min(
@@ -579,6 +704,7 @@ export function HorseModel({
       transition.next.setEffectiveWeight(progress);
       if (progress >= 1) {
         transition.previous.stop();
+        if (outgoing.current === transition.previous) outgoing.current = null;
         blend.current = null;
       }
     }
@@ -660,15 +786,23 @@ export function HorseModel({
         Object.assign(state, {
           journeyPhase: "POSE_READY",
           journeyCompleted: true,
-          journeyLifecycle: "COMPLETED",
+          journeyLifecycle: "PLAYING",
         });
     }
-    if (
-      state.inHero &&
-      state.heroPhase === "APPROACH" &&
-      cinematicPlaying &&
-      !ownerChanged.current
-    ) {
+    const contactMotion =
+      state.inHero && state.heroPhase === "APPROACH"
+        ? frame.walk
+        : state.inJourney && state.journeyPhase === "RUNNING"
+          ? frame.run
+          : state.inJourney && state.journeyPhase === "STOPPING"
+            ? frame.stop
+            : null;
+    if (ownerChanged.current || !cinematicPlaying || delta <= 0) {
+      hoofTracking.forEach((track) => {
+        track.previous = NaN;
+        track.armed = false;
+      });
+    } else if (contactMotion && !state.reducedMotion) {
       scene.updateWorldMatrix(true, true);
       frame.feet.forEach((foot, index) => {
         const track = hoofTracking[index];
@@ -677,27 +811,38 @@ export function HorseModel({
           (track.point.y - state.horseY) / (state.horseScale * frame.scale) -
           frame.offset[1];
         const velocity = (height - track.previous) / Math.max(delta, 0.001);
-        if (height > frame.walk.floor[index] + 0.025) track.armed = true;
+        if (height > contactMotion.floor[index] + 0.025) track.armed = true;
         if (
           track.armed &&
-          height <= frame.walk.floor[index] + 0.012 &&
+          height <= contactMotion.floor[index] + 0.012 &&
           velocity <= 0.04 &&
           performance.now() - track.last > 180
         ) {
           track.armed = false;
           track.last = performance.now();
-          const pulse =
-            state.hoofPulses[state.heroContacts % state.hoofPulses.length];
+          const pulses = state.inJourney
+            ? state.journeyHoofPulses
+            : state.hoofPulses;
+          const contacts = state.inJourney
+            ? state.journeyContacts
+            : state.heroContacts;
+          const pulse = pulses[contacts % pulses.length];
           Object.assign(pulse, {
             x: track.point.x,
             y: state.horseY + 0.012,
             z: track.point.z,
-            born: state.heroEffectTime,
+            born: state.inJourney
+              ? state.journeyEffectTime
+              : state.heroEffectTime,
           });
-          Object.assign(state, { heroContacts: state.heroContacts + 1 });
+          if (state.inJourney)
+            Object.assign(state, {
+              journeyContacts: state.journeyContacts + 1,
+            });
+          else Object.assign(state, { heroContacts: state.heroContacts + 1 });
         }
         track.previous = height;
-        if (index === 2)
+        if (state.inHero && index === 2)
           Object.assign(state.heroHoof, {
             x: track.point.x,
             y: state.horseY + 0.06,
@@ -727,15 +872,27 @@ export function HorseModel({
     // At most one outgoing action during the short blend; no hidden loops.
     if (state.visible && (state.inMap || cinematicPlaying))
       settle.current += delta;
-    if (settle.current >= (state.inJourney ? 0.52 : 0.24)) {
-      for (const action of Object.values(actions))
-        if (
-          action?.enabled &&
-          action !== current.current &&
-          action.isScheduled()
-        )
-          action.stop();
+    if (
+      outgoing.current &&
+      !blend.current &&
+      settle.current >= (state.inJourney ? 0.52 : 0.24)
+    ) {
+      if (
+        outgoing.current.enabled &&
+        outgoing.current !== current.current &&
+        outgoing.current.isScheduled()
+      )
+        outgoing.current.stop();
+      outgoing.current = null;
     }
+    if (
+      state.inHero &&
+      state.heroPhase === "FINAL_POSE" &&
+      !state.heroCalmReady &&
+      !blend.current &&
+      settle.current >= 0.24
+    )
+      Object.assign(state, { heroCalmReady: true });
     if (state.reducedMotion) mixer.update(0);
   });
   return (

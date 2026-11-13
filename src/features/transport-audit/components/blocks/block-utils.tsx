@@ -10,6 +10,16 @@ import {
 } from "@/shared/components/ui/card";
 import { EmptyState } from "@/shared/components/common";
 
+/** Normalizes BE enums to UPPER_SNAKE: most are ROUTINE_CHECK already, the proof statuses come as PendingVerification. */
+export const toEnumKey = (value: string) =>
+  value.replace(/([a-z0-9])([A-Z])/g, "$1_$2").toUpperCase();
+
+/** Turns a BE enum such as ROUTINE_CHECK or PendingVerification into "Routine check" / "Pending verification". */
+export const humanize = (value: string) => {
+  const words = toEnumKey(value).toLowerCase().replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
 export function CopyValue({
   value,
   label = "Copy identifier",

@@ -28,13 +28,16 @@ export type HorseShot = {
   rimLight: number;
   motion: HorseMotion;
 };
+type HoofPulse = { x: number; y: number; z: number; born: number };
 export type LandingSceneState = HorseShot & {
   profile: StoryProfile;
   pointerX: number;
   pointerY: number;
+  pointerActive: boolean;
   reducedMotion: boolean;
   lowPower: boolean;
   visible: boolean;
+  sceneStatus: "loading" | "ready" | "unavailable";
   inHero: boolean;
   inJourney: boolean;
   inMap: boolean;
@@ -47,14 +50,20 @@ export type LandingSceneState = HorseShot & {
   heroContacts: number;
   heroWalkLoops: number;
   heroCameraReady: boolean;
+  heroCalmReady: boolean;
   heroHoof: { x: number; y: number; z: number };
-  hoofPulses: { x: number; y: number; z: number; born: number }[];
+  hoofPulses: HoofPulse[];
+  journeyEffectTime: number;
+  journeyContacts: number;
+  journeyHoofPulses: HoofPulse[];
   horseFrameAt: number;
   journeyPhase: "WAITING" | "RUNNING" | "STOPPING" | "SETTLING" | "POSE_READY";
   journeyCompleted: boolean;
   journeyLifecycle: SectionLifecycle;
   journeyStopProgress: number;
   journeyTextTime: number;
+  journeyPinned: boolean;
+  journeyTextReady: boolean;
   journeyTravel: number;
   journeyDistance: number;
   journeyReady: boolean;
@@ -142,8 +151,10 @@ export function createLandingStory(
     reducedMotion,
     pointerX: 0,
     pointerY: 0,
+    pointerActive: false,
     lowPower: profile !== "desktop",
     visible: true,
+    sceneStatus: "loading",
     inHero: true,
     inJourney: false,
     inMap: false,
@@ -156,8 +167,17 @@ export function createLandingStory(
     heroContacts: 0,
     heroWalkLoops: 0,
     heroCameraReady: false,
+    heroCalmReady: false,
     heroHoof: { x: home.horseX, y: home.horseY + 0.1, z: home.horseZ },
     hoofPulses: Array.from({ length: 6 }, () => ({
+      x: 0,
+      y: 0,
+      z: 0,
+      born: -Infinity,
+    })),
+    journeyEffectTime: 0,
+    journeyContacts: 0,
+    journeyHoofPulses: Array.from({ length: 6 }, () => ({
       x: 0,
       y: 0,
       z: 0,
@@ -169,6 +189,8 @@ export function createLandingStory(
     journeyLifecycle: "NOT_STARTED",
     journeyStopProgress: 0,
     journeyTextTime: 0,
+    journeyPinned: false,
+    journeyTextReady: false,
     journeyTravel: 0,
     journeyDistance: 0,
     journeyReady: false,

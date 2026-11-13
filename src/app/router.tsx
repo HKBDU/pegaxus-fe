@@ -15,7 +15,8 @@ import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { handoverTabRoutes } from "@/features/handover";
-import { claimRoutes } from "@/features/claim";
+import { claimRoutes } from "@/features/claim/routes";
+import { priceListRoutes } from "@/features/price-list/routes";
 import { incidentManagementRoutes } from "@/features/incident-management";
 import {
   APPROVED_BOOKINGS_ACCESS,
@@ -23,15 +24,8 @@ import {
   ROLE_ROUTES,
   routePlanDetail,
 } from "./route-config";
-import BookingListPage from "@/features/booking/pages/BookingListPage";
-import BookingDetailsPage from "@/features/booking/pages/BookingDetailsPage";
-import BookingFormPage from "@/features/booking/pages/BookingFormPage";
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { liveTrackingTabRoutes } from "@/features/live-tracking";
-import BcpQuarantineProofPage from "@/features/quarantine/pages/BcpQuarantineProofPage";
-import QuarantineReviewPage from "@/features/quarantine/pages/QuarantineReviewPage";
-import CustomsClearanceProofPage from "@/features/clearance/pages/CustomsClearanceProofPage";
-import CustomsClearanceReviewPage from "@/features/clearance/pages/CustomsClearanceReviewPage";
 import {
   horseHealthCrewFormRoutes,
   horseHealthRoutes,
@@ -48,9 +42,32 @@ import {
 } from "@/features/incident-response";
 import TestPage from "../Test";
 
-import LogoutPage from "@/features/auth/pages/LogoutPage";
-
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const BookingListPage = lazy(
+  () => import("@/features/booking/pages/BookingListPage"),
+);
+const BookingDetailsPage = lazy(
+  () => import("@/features/booking/pages/BookingDetailsPage"),
+);
+const BookingFormPage = lazy(
+  () => import("@/features/booking/pages/BookingFormPage"),
+);
+const ReturnBookingPage = lazy(
+  () => import("@/features/booking/pages/ReturnBookingPage"),
+);
+const BcpQuarantineProofPage = lazy(
+  () => import("@/features/quarantine/pages/BcpQuarantineProofPage"),
+);
+const QuarantineReviewPage = lazy(
+  () => import("@/features/quarantine/pages/QuarantineReviewPage"),
+);
+const CustomsClearanceProofPage = lazy(
+  () => import("@/features/clearance/pages/CustomsClearanceProofPage"),
+);
+const CustomsClearanceReviewPage = lazy(
+  () => import("@/features/clearance/pages/CustomsClearanceReviewPage"),
+);
+const LogoutPage = lazy(() => import("@/features/auth/pages/LogoutPage"));
 const ManageUserAccountsPage = lazy(
   () => import("@/features/accounts/pages/ManageUserAccountsPage"),
 );
@@ -194,6 +211,7 @@ export const router = createBrowserRouter([
   ...emergencyRerouteRoutes,
   ...financialReportRoutes,
   ...claimRoutes,
+  ...priceListRoutes,
   ...managementReportRoutes,
   {
     element: (
@@ -212,7 +230,11 @@ export const router = createBrowserRouter([
           ...liveTrackingTabRoutes("admin"),
           ...handoverTabRoutes("admin"),
         ],
-        crew: [...horseHealthTabRoutes, ...handoverTabRoutes("crew")],
+        crew: [
+          ...horseHealthTabRoutes,
+          ...liveTrackingTabRoutes("crew"),
+          ...handoverTabRoutes("crew"),
+        ],
         customer: [
           ...horseHealthTabRoutes,
           ...liveTrackingTabRoutes("customer"),
@@ -365,7 +387,19 @@ export const router = createBrowserRouter([
             path: "bookings",
             element: (
               <ProtectedRoute allowedRoles={["CUSTOMER"]}>
-                <BookingListPage />
+                <Suspense fallback={<LoadingState />}>
+                  <BookingListPage />
+                </Suspense>
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: "bookings/return",
+            element: (
+              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+                <Suspense fallback={<LoadingState />}>
+                  <ReturnBookingPage />
+                </Suspense>
               </ProtectedRoute>
             ),
           },
@@ -373,7 +407,9 @@ export const router = createBrowserRouter([
             path: "bookings/new",
             element: (
               <ProtectedRoute allowedRoles={["CUSTOMER"]}>
-                <BookingFormPage mode="create" />
+                <Suspense fallback={<LoadingState />}>
+                  <BookingFormPage mode="create" />
+                </Suspense>
               </ProtectedRoute>
             ),
           },
@@ -381,7 +417,9 @@ export const router = createBrowserRouter([
             path: "bookings/:bookingId",
             element: (
               <ProtectedRoute allowedRoles={["CUSTOMER"]}>
-                <BookingDetailsPage />
+                <Suspense fallback={<LoadingState />}>
+                  <BookingDetailsPage />
+                </Suspense>
               </ProtectedRoute>
             ),
           },
@@ -410,7 +448,9 @@ export const router = createBrowserRouter([
             path: "bookings/:bookingId/edit",
             element: (
               <ProtectedRoute allowedRoles={["CUSTOMER"]}>
-                <BookingFormPage mode="edit" />
+                <Suspense fallback={<LoadingState />}>
+                  <BookingFormPage mode="edit" />
+                </Suspense>
               </ProtectedRoute>
             ),
           },
@@ -453,7 +493,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "transport-requests",
-        element: <BookingListPage audience="manager" />,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <BookingListPage audience="manager" />
+          </Suspense>
+        ),
       },
       {
         path: ROLE_ROUTES.managerUsers,
@@ -489,7 +533,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "transport-requests/:bookingId",
-        element: <BookingDetailsPage audience="manager" />,
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <BookingDetailsPage audience="manager" />
+          </Suspense>
+        ),
       },
       // Flow 6 invoices (Logistics Manager).
       {
@@ -884,7 +932,9 @@ export const router = createBrowserRouter([
     path: "/logout",
     element: (
       <ProtectedRoute>
-        <LogoutPage />
+        <Suspense fallback={<LoadingState />}>
+          <LogoutPage />
+        </Suspense>
       </ProtectedRoute>
     ),
   },
@@ -961,13 +1011,11 @@ export const router = createBrowserRouter([
             path: "/compliance-dossiers/:dossierId/bcp-quarantine-proof",
             element: (
               <ProtectedRoute
-                allowedRoles={[
-                  "ESCORT",
-                  "TRANSPORT_SPECIALIST",
-                  "LOGISTICS_MANAGER",
-                ]}
+                allowedRoles={["ESCORT"]}
               >
-                <BcpQuarantineProofPage />
+                <Suspense fallback={<LoadingState />}>
+                  <BcpQuarantineProofPage />
+                </Suspense>
               </ProtectedRoute>
             ),
           },
@@ -975,13 +1023,11 @@ export const router = createBrowserRouter([
             path: "/compliance-dossiers/:dossierId/quarantine-proof",
             element: (
               <ProtectedRoute
-                allowedRoles={[
-                  "ESCORT",
-                  "TRANSPORT_SPECIALIST",
-                  "LOGISTICS_MANAGER",
-                ]}
+                allowedRoles={["ESCORT"]}
               >
-                <BcpQuarantineProofPage />
+                <Suspense fallback={<LoadingState />}>
+                  <BcpQuarantineProofPage />
+                </Suspense>
               </ProtectedRoute>
             ),
           },
@@ -989,13 +1035,11 @@ export const router = createBrowserRouter([
             path: "/compliance-dossiers/:dossierId/customs-clearance-proof",
             element: (
               <ProtectedRoute
-                allowedRoles={[
-                  "DRIVER",
-                  "TRANSPORT_SPECIALIST",
-                  "LOGISTICS_MANAGER",
-                ]}
+                allowedRoles={["DRIVER"]}
               >
-                <CustomsClearanceProofPage />
+                <Suspense fallback={<LoadingState />}>
+                  <CustomsClearanceProofPage />
+                </Suspense>
               </ProtectedRoute>
             ),
           },
@@ -1012,11 +1056,19 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "/quarantine-proofs/:proofId/verify",
-            element: <QuarantineReviewPage />,
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <QuarantineReviewPage />
+              </Suspense>
+            ),
           },
           {
             path: "/customs-clearance-proofs/:proofId/verify",
-            element: <CustomsClearanceReviewPage />,
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <CustomsClearanceReviewPage />
+              </Suspense>
+            ),
           },
         ],
       },
@@ -1066,6 +1118,7 @@ export const router = createBrowserRouter([
         },
       ]
     : []),
+
   {
     path: "/unauthorized",
     element: <UnauthorizedPage />,

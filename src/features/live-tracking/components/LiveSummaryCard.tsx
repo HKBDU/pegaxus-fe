@@ -28,15 +28,16 @@ interface LiveSummaryCardProps {
 
 function Tile({ icon, label, value, sub }: { icon: ReactNode; label: string; value: ReactNode; sub?: ReactNode }) {
   return (
-    <div className="min-w-0 rounded-lg border border-[#e5e2d9] bg-white px-3 py-2.5">
-      <dt className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.08em] text-gray-500">
-        <span aria-hidden="true" className="text-gray-400 [&>svg]:size-3.5">
+    // Compact (px-2.5 py-2, 13px value) so the eight tiles fit the panel's minimum height without scrolling.
+    <div className="min-w-0 rounded-lg border border-[#e5e2d9] bg-white px-2.5 py-2">
+      <dt className="flex items-center gap-1.5 text-[10px] leading-[14px] font-medium uppercase tracking-[0.06em] text-gray-500">
+        <span aria-hidden="true" className="text-gray-400 [&>svg]:size-3">
           {icon}
         </span>
-        {label}
+        <span className="truncate">{label}</span>
       </dt>
-      <dd className="mt-1 text-sm leading-5 font-semibold break-words text-gray-900">{value}</dd>
-      {sub ? <dd className="mt-0.5 text-[11px] leading-4 text-gray-500">{sub}</dd> : null}
+      <dd className="mt-0.5 text-[13px] leading-[18px] font-semibold break-words text-gray-900">{value}</dd>
+      {sub ? <dd className="mt-0.5 text-[11px] leading-[15px] text-gray-500">{sub}</dd> : null}
     </div>
   )
 }
@@ -53,8 +54,10 @@ export function LiveSummaryCard({ overview, segments, snapshot, truck, signal, e
   const heading = truck?.headingDegrees
 
   return (
-    <section aria-label="Live tracking summary" className="flex h-full flex-col rounded-lg border border-[#e5e2d9] bg-[#faf9f5] p-4 shadow-sm">
-      <header className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+    // min-h-full, not h-full: the card fills the map's height when there is room, and grows with its content when there is
+    // not. With h-full it stayed as tall as the scroll box while the tiles ran past its background on small desktops.
+    <section aria-label="Live tracking summary" className="flex min-h-full flex-col rounded-lg border border-[#e5e2d9] bg-[#faf9f5] p-3 shadow-sm">
+      <header className="mb-2 flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <h2 className="font-heading text-sm! leading-5! font-medium uppercase tracking-[0.06em]">Live Tracking Summary</h2>
         <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold", SIGNAL_PILL[signal])}>
           <span aria-hidden="true" className={cn("size-2 rounded-full", SIGNAL_DOT[signal], signal === "LIVE" && "animate-pulse motion-reduce:animate-none")} />
@@ -69,12 +72,12 @@ export function LiveSummaryCard({ overview, segments, snapshot, truck, signal, e
       </header>
 
       {current ? (
-        <div className="mb-3 rounded-lg border border-[#e5e2d9] bg-white px-3 py-2.5">
+        <div className="mb-2 rounded-lg border border-[#e5e2d9] bg-white px-2.5 py-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-gray-500">Current segment</p>
             {progress !== null ? <p className="text-xs font-semibold text-orange-700">{progress}% completed</p> : null}
           </div>
-          <p className="mt-0.5 text-sm font-semibold text-gray-900">
+          <p className="mt-0.5 text-[13px] leading-[18px] font-semibold text-gray-900">
             {current.fromLocation.locationName} → {current.toLocation.locationName}
           </p>
           {progress !== null ? (
@@ -84,7 +87,7 @@ export function LiveSummaryCard({ overview, segments, snapshot, truck, signal, e
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={progress}
-              className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200"
+              className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200"
             >
               <div className="h-full rounded-full bg-primary transition-[width] duration-500 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
             </div>
@@ -92,7 +95,7 @@ export function LiveSummaryCard({ overview, segments, snapshot, truck, signal, e
         </div>
       ) : null}
 
-      <dl className="grid flex-1 auto-rows-fr grid-cols-2 gap-2">
+      <dl className="grid flex-1 auto-rows-fr grid-cols-2 gap-1.5">
         <Tile icon={<Clock />} label="Last updated" value={truck ? formatDateTime(truck.recordedAt) : "No position yet"} />
         <Tile icon={<MapPin />} label="Coordinates" value={truck ? formatCoordinates(truck.latitude, truck.longitude) : "-"} />
         <Tile icon={<Gauge />} label="Speed" value={formatSpeed(truck?.speedKmh)} />

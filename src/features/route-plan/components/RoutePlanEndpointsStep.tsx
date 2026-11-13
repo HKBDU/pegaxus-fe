@@ -137,7 +137,7 @@ function EndpointCard({
           </div>
         </div>
 
-        {!locked && !isResolved && (
+        {!isResolved && (
           <div className="rounded-[2px] border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
             <div className="flex items-center gap-1.5 font-semibold">
               <AlertCircle className="size-4 text-amber-600" />
@@ -148,7 +148,12 @@ function EndpointCard({
                 Original text: <span className="font-medium text-slate-800">{unresolvedAddress}</span>
               </p>
             )}
-            <label className="mt-2 block">
+            {locked ? (
+              <p className="mt-2 font-semibold text-red-700">
+                Resolve this endpoint in the PRIMARY Transport Plan before continuing.
+              </p>
+            ) : null}
+            {!locked && <label className="mt-2 block">
               <span className="font-semibold text-slate-800">Select matching system location:</span>
               <Select
                 value={location?.id ? String(location.id) : ""}
@@ -168,7 +173,7 @@ function EndpointCard({
                   ))}
                 </SelectContent>
               </Select>
-            </label>
+            </label>}
           </div>
         )}
         {locked && (

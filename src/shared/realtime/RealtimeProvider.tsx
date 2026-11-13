@@ -5,8 +5,11 @@ import { queryClient } from "@/lib/queryClient"
 import { notificationHub } from "./hub"
 import { notificationApi } from "./notification-api"
 import { resolveNotificationPath } from "./notification-routes"
+import { isNotificationVisibleToPrincipal } from "./notification-policy"
 import { useNotificationStore } from "./notification-store"
 import type { AppNotification } from "./types"
+import { refreshRouteSubmissionQueries } from "@/features/route-view/hooks/useRoutePlanDetail"
+import { captureNotificationSession, isNotificationSessionCurrent } from "./session"
 
 interface RealtimeProviderProps {
   children: ReactNode
@@ -33,19 +36,50 @@ const REFRESH_ON_NOTIFICATION = new Set([
   "horse-health",
 ])
 
+/**
+ * The push can reach the browser before the server has finished writing the change it announces (a payment is recorded,
+ * the notification goes out, the invoice row is still UNPAID), so the first re-read may return the old status. Payment
+ * pushes are re-read once more after this delay.
+ */
+const PAYMENT_REREAD_DELAY_MS = 2_000
+/** Keeps the bell correct when a hub is temporarily unavailable. This is deliberately low-frequency. */
+const UNREAD_FALLBACK_SYNC_INTERVAL_MS = 30_000
+
+function isPaymentNotification(notification: AppNotification) {
+  return notification.type === "PAYMENT" || notification.referenceType?.toUpperCase() === "INVOICE"
+}
+
+function isRoutePlanNotification(notification: AppNotification) {
+  return notification.referenceType?.toUpperCase() === "ROUTEPLAN" && Boolean(notification.referenceId)
+}
+
+function refreshScreensOfServerState() {
+  return queryClient.invalidateQueries({ predicate: (query) => REFRESH_ON_NOTIFICATION.has(String(query.queryKey[0])) })
+}
+
 /** Re-read what SignalR could not deliver (offline, reconnect): unread count + latest unread rows. */
 async function syncFromRest() {
+  const owner = captureNotificationSession()
+  if (!isNotificationSessionCurrent(owner)) return
   const store = useNotificationStore.getState()
   try {
-    const [count, page] = await Promise.all([notificationApi.unreadCount(), notificationApi.list({ pageSize: 20, unreadOnly: true })])
-    store.setUnreadCount(count)
-    store.upsert(page.items)
+    const principal = owner.principal
+    const pageSize = principal?.roles.includes("CUSTOMER") ? 100 : 20
+    const [count, page] = await Promise.all([
+      principal?.roles.includes("CUSTOMER") ? Promise.resolve(null) : notificationApi.unreadCount(),
+      notificationApi.list({ pageSize, unreadOnly: true }),
+    ])
+    if (!isNotificationSessionCurrent(owner)) return
+    const visible = page.items.filter((item) => isNotificationVisibleToPrincipal(item, principal))
+    store.setUnreadCount(count ?? visible.length)
+    store.upsert(visible)
   } catch (error) {
     console.warn("[realtime] could not sync notifications", error)
   }
 }
 
 function showToast(notification: AppNotification, onNavigate?: (path: string) => void) {
+  if (window.location.pathname === "/") return
   // LOW / NORMAL: bell + inbox only. HIGH: toast. URGENT: toast that stays until dismissed.
   if (notification.priority !== "HIGH" && notification.priority !== "URGENT") return
   const principal = useAuthStore.getState().principal
@@ -71,34 +105,81 @@ export function RealtimeProvider({ children, onNavigate }: RealtimeProviderProps
   const sessionVersion = useAuthStore((state) => state.sessionVersion)
 
   useEffect(() => {
+    const owner = captureNotificationSession()
     const store = useNotificationStore.getState()
     const offState = notificationHub.onStateChange(store.setConnection)
-    const offConnected = notificationHub.onConnected(() => void syncFromRest())
+    // A push sent while the connection was down (sleep, network drop, reconnect) is never replayed, so besides the
+    // notifications every open screen of server state (route plan status included) is re-read once it is back.
+    const offConnected = notificationHub.onConnected(() => {
+      if (!isNotificationSessionCurrent(owner)) return
+      void syncFromRest()
+      void refreshScreensOfServerState()
+    })
+    const rereadTimers = new Set<ReturnType<typeof setTimeout>>()
     const offPush = notificationHub.on("ReceiveNotification", (notification) => {
+      if (!isNotificationSessionCurrent(owner)) return
+      const principal = useAuthStore.getState().principal
+      if (!isNotificationVisibleToPrincipal(notification, principal)) {
+        void notificationHub.acknowledgeDelivered(notification.id)
+        return
+      }
       const isNew = useNotificationStore.getState().upsert([notification])
       if (isNew && notification.status !== "READ") {
         useNotificationStore.setState((state) => ({ unreadCount: state.unreadCount + 1 }))
         showToast(notification, onNavigate)
       }
       void queryClient.invalidateQueries({ queryKey: ["notifications"] })
-      void queryClient.invalidateQueries({ predicate: (query) => REFRESH_ON_NOTIFICATION.has(String(query.queryKey[0])) })
+      void refreshScreensOfServerState()
+      if (isRoutePlanNotification(notification)) {
+        const routePlanId = notification.referenceId!
+        void refreshRouteSubmissionQueries(queryClient, routePlanId)
+      }
+      if (isPaymentNotification(notification)) {
+        const timer = setTimeout(() => {
+          rereadTimers.delete(timer)
+          if (isNotificationSessionCurrent(owner)) void refreshScreensOfServerState()
+        }, PAYMENT_REREAD_DELAY_MS)
+        rereadTimers.add(timer)
+      }
       void notificationHub.acknowledgeDelivered(notification.id)
+    })
+    const offRoutePlanCancelled = notificationHub.on("RoutePlanCancelled", (event) => {
+      if (!isNotificationSessionCurrent(owner)) return
+      void queryClient.invalidateQueries({
+        queryKey: ["route-view", "list", event.transportPlanId],
+      })
+      void queryClient.invalidateQueries({
+        queryKey: ["route-view", "detail", event.routePlanId],
+      })
     })
     return () => {
       offState()
       offConnected()
       offPush()
+      offRoutePlanCancelled()
+      rereadTimers.forEach(clearTimeout)
+      rereadTimers.clear()
     }
-  }, [onNavigate])
+  }, [onNavigate, signedIn, sessionVersion])
 
   useEffect(() => {
-    if (!signedIn) {
+    const token = useAuthStore.getState().accessToken
+    if (!signedIn || !token || token.startsWith("demo-")) {
       void notificationHub.stop()
       useNotificationStore.getState().reset()
       return
     }
-    void notificationHub.start(() => useAuthStore.getState().accessToken)
+    const owner = captureNotificationSession()
+    // The REST sync makes the current badge correct even before SignalR is connected. It is also a safe fallback for
+    // transient SignalR outages; the hub still provides immediate updates whenever it is available.
+    void syncFromRest()
+    const fallbackSync = setInterval(() => {
+      if (isNotificationSessionCurrent(owner)) void syncFromRest()
+    }, UNREAD_FALLBACK_SYNC_INTERVAL_MS)
+    // Initial connection retries are owned by the hub; keep a single retry scheduler.
+    void notificationHub.start(() => isNotificationSessionCurrent(owner) ? useAuthStore.getState().accessToken : null)
     return () => {
+      clearInterval(fallbackSync)
       void notificationHub.stop()
       useNotificationStore.getState().reset()
     }

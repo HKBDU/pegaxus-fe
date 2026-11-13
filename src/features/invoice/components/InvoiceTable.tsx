@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, MoreHorizontal } from "lucide-react";
 import {
@@ -28,9 +29,6 @@ import { InvoiceStatusBadge } from "@/features/invoice/components/InvoiceStatusB
 import { InvoiceTypeBadge } from "@/features/invoice/components/InvoiceTypeBadge";
 import { MoneyText } from "@/features/invoice/components/MoneyText";
 import { invoiceDate } from "@/features/invoice/utils";
-
-/** Booking Details shows invoices as pills, like the other badges of that page. */
-const PILL = "h-5 rounded-full px-2 py-0 text-[0.65rem] leading-none";
 
 export function InvoiceTable({
   items,
@@ -129,7 +127,7 @@ export function InvoiceTable({
                     <Link
                       to={href(item)}
                       state={state}
-                      className="whitespace-nowrap font-semibold text-primary underline-offset-2 hover:underline"
+                      className={codeLinkClassName}
                     >
                       {item.invoiceNumber}
                     </Link>
@@ -140,14 +138,17 @@ export function InvoiceTable({
                         {item.bookingCode}
                       </TableCell>
                       <TableCell className="text-left">
-                        <span className="block min-w-32 max-w-48 break-words whitespace-normal">
+                        <span
+                          className="block max-w-44 truncate"
+                          title={item.customerName}
+                        >
                           {item.customerName}
                         </span>
                       </TableCell>
                     </>
                   ) : null}
                   <TableCell className="text-left">
-                    <InvoiceTypeBadge type={item.type} className={embedded ? PILL : undefined} />
+                    <InvoiceTypeBadge type={item.type} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-right tabular-nums">
                     <MoneyText
@@ -156,7 +157,7 @@ export function InvoiceTable({
                     />
                   </TableCell>
                   <TableCell className="text-left">
-                    <InvoiceStatusBadge status={item.status} className={embedded ? PILL : undefined} />
+                    <InvoiceStatusBadge status={item.status} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap text-left">
                     {invoiceDate(item.dueDate)}

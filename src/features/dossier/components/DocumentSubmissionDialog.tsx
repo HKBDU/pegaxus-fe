@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { FileText, History, Info, Upload } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -518,7 +519,7 @@ export function DocumentSubmissionDialog({
               {mode === "edit" ? (
                 <p className="rounded-[2px] bg-sky-50 p-3 text-xs text-sky-800">
                   Files replace the current version only when it has never been
-                  reviewed. Otherwise, the backend creates a new version. Saving
+                  reviewed. Otherwise, a new version is created. Saving
                   metadata only does not replace files.
                 </p>
               ) : null}
@@ -592,7 +593,7 @@ export function DocumentSubmissionDialog({
                         disabled={pending || noRetry || !eligible}
                         onStateChange={changeUploadState}
                         title="Upload document files"
-                        hint="PDF, JPG, JPEG, PNG · Max 10 MB per file"
+                        hint={`PDF, JPG, JPEG, PNG · Max ${UPLOAD_MAX_MB} MiB per file`}
                         onReject={() => {
                           if (
                             activeUploadScope.current !== uploadScope ||
@@ -600,7 +601,7 @@ export function DocumentSubmissionDialog({
                           )
                             return;
                           setFileError(
-                            "Some files were rejected. Use PDF, JPG, JPEG, or PNG files of 10 MB or smaller.",
+                            `Some files were rejected. Use PDF, JPG, JPEG, or PNG files of ${UPLOAD_MAX_MB} MiB or smaller.`,
                           );
                         }}
                       />
@@ -681,7 +682,7 @@ export function DocumentSubmissionDialog({
                     <Info className="mt-0.5 size-3.5 shrink-0 text-sky-700" />
                     {mode === "initial"
                       ? "All selected files will be grouped into one DocumentVersion v1."
-                      : "The backend decides whether this updates the current version or creates a new one."}
+                      : "The system will update the current version or create a new one based on its review status."}
                   </p>
                 </section>
                 <section

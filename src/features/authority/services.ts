@@ -7,6 +7,7 @@ import type {
   UpdateAuthorityReviewInput,
   UpdateAuthorityReviewResult,
   AuthoritySubmissionSummary,
+  RouteAuthorities,
 } from './types'
 
 export async function listAuthoritySubmissions(dossierId: string): Promise<AuthoritySubmissionSummary[]> {
@@ -15,6 +16,15 @@ export async function listAuthoritySubmissions(dossierId: string): Promise<Autho
   )
   if (!response.isSuccess) throw new Error(response.message)
   return response.value?.items ?? []
+}
+
+/** The countries on the dossier's route and the authorities a new submission may go to. */
+export async function getRouteAuthorities(dossierId: string): Promise<RouteAuthorities> {
+  const response = await apiClient.get<unknown, ApiEnvelope<{ routeAuthorities?: RouteAuthorities }>>(
+    `/compliance-dossiers/${encodeURIComponent(dossierId)}/authority-submissions`,
+  )
+  if (!response.isSuccess) throw new Error(response.message)
+  return response.value?.routeAuthorities ?? { routeCountries: [], allowedAuthorities: [] }
 }
 
 export async function recordAuthoritySubmission(
@@ -37,13 +47,33 @@ export async function recordAuthoritySubmission(
 }
 
 export async function getAuthoritySubmissionDetail(
+  dossierId: string,
   submissionId: string,
 ): Promise<AuthoritySubmissionDetail> {
-  const response = await apiClient.get<unknown, ApiEnvelope<AuthoritySubmissionDetail>>(
-    `/authority-submissions/${encodeURIComponent(submissionId)}`,
+  const submissions = await listAuthoritySubmissions(dossierId)
+  const summary = submissions.find(
+    (item) => String(item.authoritySubmissionId) === String(submissionId),
   )
-  if (!response.isSuccess || !response.value) throw new Error(response.message)
-  return response.value
+  if (!summary) throw new Error("AUTHORITY_SUBMISSION_NOT_FOUND")
+  const evidence = summary.evidenceFiles?.[0]
+  return {
+    authoritySubmissionId: summary.authoritySubmissionId,
+    submissionNo: String(summary.submissionNo),
+    dossierId,
+    authorityName: summary.authorityName,
+    submissionReference: summary.submissionReference,
+    submittedAt: summary.submittedAt,
+    status: summary.status,
+    dossierStatus: "",
+    isRequired: summary.isRequired,
+    evidenceFile: evidence
+      ? {
+          fileName: evidence.fileName,
+          fileUrl: evidence.fileUrl ?? "",
+          fileSize: evidence.fileSizeBytes ?? 0,
+        }
+      : undefined,
+  }
 }
 
 export async function updateAuthorityReview(

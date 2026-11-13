@@ -11,6 +11,7 @@ import {
 } from "@/features/fleet/constants/fleet.constants"
 import { VEHICLE_STATUSES, type VehicleListParams, type VehicleSort, type VehicleStatus } from "@/features/fleet/types"
 import { DataTableRadioFilter, type DataTableRadioOption } from "@/shared/components/ui/data-table-radio-filter"
+import { FilterToolbar } from "@/shared/components/ui/filter-toolbar"
 import { Input } from "@/shared/components/ui/input"
 import { useDebounce } from "@/shared/hooks"
 
@@ -39,8 +40,10 @@ export function VehicleFilters({ filters, onSearchChange, onPatch, trailing }: V
   useEffect(() => onSearchChange(debouncedSearch), [debouncedSearch, onSearchChange])
 
   return (
-    <div role="toolbar" aria-label="Vehicle filters" className="grid grid-cols-2 gap-2 lg:grid-cols-[minmax(14rem,1fr)_9rem_8.5rem_8.5rem_8.5rem_auto]">
-      <div className="relative col-span-2 lg:col-span-1">
+    <FilterToolbar label="Vehicle filters"
+      activeCount={[Boolean(localSearch), filters.status !== "ALL", filters.vehicleType !== "ALL", filters.minCapacity !== "ALL", Boolean(filters.country), filters.sortBy !== DEFAULT_VEHICLE_SORT].filter(Boolean).length}
+      onClear={() => { setLocalSearch(""); onPatch({ search: "", status: "ALL", vehicleType: "ALL", minCapacity: "ALL", country: undefined, sortBy: DEFAULT_VEHICLE_SORT }) }}
+      search={<div className="relative min-w-0">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
         <Input
           value={localSearch}
@@ -55,8 +58,10 @@ export function VehicleFilters({ filters, onSearchChange, onPatch, trailing }: V
             <X className="size-3.5" />
           </button>
         ) : null}
-      </div>
-
+      </div>}
+      sort={<DataTableRadioFilter title="Sort" value={filters.sortBy} defaultValue={DEFAULT_VEHICLE_SORT} options={SORT_OPTIONS} onValueChange={(value) => onPatch({ sortBy: value as VehicleSort })} />}
+      actions={trailing}
+    >
       <DataTableRadioFilter title="Status" value={filters.status} options={STATUS_OPTIONS} onValueChange={(value) => onPatch({ status: value as VehicleStatus | "ALL" })} />
       <DataTableRadioFilter title="Type" value={filters.vehicleType} options={TYPE_OPTIONS} onValueChange={(value) => onPatch({ vehicleType: value })} />
       <DataTableRadioFilter
@@ -65,10 +70,8 @@ export function VehicleFilters({ filters, onSearchChange, onPatch, trailing }: V
         options={CAPACITY_OPTIONS}
         onValueChange={(value) => onPatch({ minCapacity: value === "ALL" ? "ALL" : Number(value) })}
       />
-      <DataTableRadioFilter title="Sort" value={filters.sortBy} defaultValue={DEFAULT_VEHICLE_SORT} options={SORT_OPTIONS} onValueChange={(value) => onPatch({ sortBy: value as VehicleSort })} />
-      <DataTableRadioFilter title="Country" value={filters.country ?? "ALL"} options={COUNTRY_OPTIONS} onValueChange={(value) => onPatch({ country: value === "ALL" ? undefined : value })} />
 
-      <div className="col-span-2 flex items-center justify-end gap-1.5 max-lg:[&_button]:w-full lg:col-span-1">{trailing}</div>
-    </div>
+      <DataTableRadioFilter title="Country" value={filters.country ?? "ALL"} options={COUNTRY_OPTIONS} onValueChange={(value) => onPatch({ country: value === "ALL" ? undefined : value })} />
+    </FilterToolbar>
   )
 }

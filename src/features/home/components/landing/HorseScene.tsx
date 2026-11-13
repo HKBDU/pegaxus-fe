@@ -52,6 +52,7 @@ export function HorseScene({
   const fill = useRef<DirectionalLight>(null);
   const hoofLight = useRef<PointLight>(null);
   const revision = useRef(-1);
+  const canvasLayout = useRef({ shotVersion: -1, width: 0, height: 0 });
   const heroAnchorReady = useRef(false);
   const previousPresentation = useRef<"hero" | "journey" | null>(null);
   const presentations = useRef<
@@ -59,6 +60,7 @@ export function HorseScene({
   >({});
   const invalidate = useThree((state) => state.invalidate);
   const canvas = useThree((state) => state.gl.domElement);
+  const groundUniforms = useMemo(() => ({ response: { value: 0 } }), []);
   useEffect(() => {
     canvas.addEventListener("webglcontextlost", onContextLost, { once: true });
     return () => canvas.removeEventListener("webglcontextlost", onContextLost);
@@ -110,6 +112,28 @@ export function HorseScene({
     }),
     [],
   );
+  // Resolve CSS stage resizing before the mixer (-1), snapshots and camera (0).
+  useFrame((root) => {
+    const state = story.current;
+    if (!state.inHero && !state.inJourney) return;
+    const previous = canvasLayout.current;
+    if (
+      previous.shotVersion === state.shotVersion &&
+      previous.width === root.size.width &&
+      previous.height === root.size.height
+    )
+      return;
+    const bounds = root.gl.domElement.parentElement?.getBoundingClientRect();
+    if (!bounds || bounds.width <= 0 || bounds.height <= 0) return;
+    if (root.size.width !== bounds.width || root.size.height !== bounds.height)
+      root.setSize(bounds.width, bounds.height, bounds.top, bounds.left);
+    canvasLayout.current = {
+      shotVersion: state.shotVersion,
+      width: bounds.width,
+      height: bounds.height,
+    };
+  }, -2);
+
   useFrame(({ camera, size }, elapsed) => {
     if (!world.current) return;
     const state = story.current;
@@ -158,6 +182,38 @@ export function HorseScene({
       }
       previousPresentation.current = presentation;
     }
+    if (camera instanceof PerspectiveCamera) {
+      if (presentation === "journey") {
+        // RunToStop's rise needs headroom without changing magnification or camera motion.
+        const offsetY =
+          -size.height * (state.profile === "desktop" ? 0.125 : 0.1);
+        const view = camera.view;
+        if (
+          !view?.enabled ||
+          view.fullWidth !== size.width ||
+          view.fullHeight !== size.height ||
+          view.offsetY !== offsetY
+        )
+          camera.setViewOffset(
+            size.width,
+            size.height,
+            0,
+            offsetY,
+            size.width,
+            size.height,
+          );
+      } else if (camera.view?.enabled) camera.clearViewOffset();
+    }
+    const interactiveHero =
+      state.inHero &&
+      state.visible &&
+      state.heroReady &&
+      state.heroCalmReady &&
+      state.heroPhase === "FINAL_POSE" &&
+      !state.reducedMotion &&
+      !state.lowPower &&
+      state.profile === "desktop";
+    if (!interactiveHero) Object.assign(groundUniforms.response, { value: 0 });
     if (
       (!presentation && !state.inMap) ||
       !state.visible ||
@@ -173,26 +229,21 @@ export function HorseScene({
         ? 1
         : 1 - Math.exp(-(state.inHero ? 7 : 10) * delta);
     if (!state.inHero) heroAnchorReady.current = false;
-    const parallax =
-      state.inHero &&
-      state.heroPhase === "FINAL_POSE" &&
-      !state.reducedMotion &&
-      !state.lowPower &&
-      state.profile === "desktop"
-        ? 1
-        : 0;
+    const parallax = interactiveHero ? 1 : 0;
+    const pointerWeight = state.pointerActive ? parallax : 0;
     const damp = 1 - Math.exp(-4 * delta);
     scratch.pointer.lerp(
       scratch.target.set(
-        state.pointerX * parallax,
-        state.pointerY * parallax,
-        0,
+        state.pointerX * pointerWeight,
+        state.pointerY * pointerWeight,
+        pointerWeight,
       ),
       damp,
     );
     if (snap || !parallax) scratch.pointer.set(0, 0, 0);
-    const tiltX = scratch.pointer.x * 0.12;
-    const tiltY = scratch.pointer.y * 0.07;
+    Object.assign(groundUniforms.response, { value: scratch.pointer.z });
+    const tiltX = scratch.pointer.x * 0.06;
+    const tiltY = scratch.pointer.y * 0.035;
     const reveal =
       state.inHero && !state.reducedMotion
         ? getHeroRevealProgress(state.heroRevealTime)
@@ -407,7 +458,11 @@ export function HorseScene({
     camera.position.x += (state.cameraX + tiltX - camera.position.x) * alpha;
     camera.position.y += (state.cameraY + tiltY - camera.position.y) * alpha;
     camera.position.z += (state.cameraZ - camera.position.z) * alpha;
-    scratch.target.set(state.targetX, state.targetY, state.targetZ);
+    scratch.target.set(
+      state.targetX + scratch.pointer.x * 0.035,
+      state.targetY + scratch.pointer.y * 0.02,
+      state.targetZ,
+    );
     scratch.look.lerp(scratch.target, alpha);
     camera.lookAt(scratch.look);
   });
@@ -459,8 +514,9 @@ export function HorseScene({
           <shaderMaterial
             transparent
             depthWrite={false}
+            uniforms={groundUniforms}
             vertexShader="varying vec2 shadowUv; void main() { shadowUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }"
-            fragmentShader="varying vec2 shadowUv; void main() { float shade = 1.0 - smoothstep(0.05, 0.5, length(shadowUv - 0.5)); gl_FragColor = vec4(0.025, 0.03, 0.02, shade * shade * 0.6); }"
+            fragmentShader="uniform float response; varying vec2 shadowUv; void main() { float shade = 1.0 - smoothstep(0.05, 0.5, length(shadowUv - 0.5)); vec3 ink = vec3(0.025, 0.03, 0.02); vec3 amber = vec3(243.0 / 255.0, 146.0 / 255.0, 0.0); gl_FragColor = vec4(mix(ink, amber, response * 0.14), shade * shade * (0.6 + response * 0.08)); }"
           />
         </mesh>
         {children}

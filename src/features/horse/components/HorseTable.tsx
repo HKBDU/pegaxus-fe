@@ -8,6 +8,7 @@ import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-opt
 import { Button } from "@/shared/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
 import { Input } from "@/shared/components/ui/input"
+import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar"
 import { HORSE_SEX_LABELS } from "../constants/horse.constants"
 import type { Horse, HorseTableProps } from "../types"
 
@@ -16,16 +17,30 @@ export function HorseTable({ horses, onAction, toolbar, addAction }: HorseTableP
 
   const columns = useMemo<ColumnDef<Horse>[]>(
     () => [
+      { id: "avatar", header: "AVATAR", enableSorting: false, enableHiding: false, cell: ({ row }) => <Avatar className="size-8 rounded-[2px]"><AvatarImage src={row.original.avatarUrl ?? undefined} alt={row.original.horseName} className="object-cover" /><AvatarFallback className="rounded-[2px] bg-[#f39200] text-[10px] font-bold text-[#181818]">{row.original.horseName.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar> },
       { accessorKey: "microchipNumber", header: "MICROCHIP NUMBER", enableSorting: false, enableHiding: false, cell: ({ row }) => <span className="font-mono text-xs text-slate-700">{row.original.microchipNumber ?? "—"}</span> },
       {
         accessorKey: "horseName",
         header: "HORSE NAME",
         enableSorting: false,
         filterFn: (row, _columnId, value) => [row.original.horseName, row.original.microchipNumber].some((field) => field?.toLowerCase().includes(String(value).toLowerCase())),
-        cell: ({ row }) => <span className="font-semibold text-slate-900">{row.original.horseName}</span>,
+        cell: ({ row }) => (
+          <span className="font-semibold text-slate-900" title={row.original.horseName}>
+            {row.original.horseName}
+          </span>
+        ),
       },
       { accessorKey: "sex", header: "SEX", enableSorting: false, cell: ({ row }) => row.original.sex ? HORSE_SEX_LABELS[row.original.sex] : "—" },
-      { accessorKey: "breed", header: "BREED", enableSorting: false, cell: ({ row }) => row.original.breed ?? "—" },
+      {
+        accessorKey: "breed",
+        header: "BREED",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span title={row.original.breed ?? undefined}>
+            {row.original.breed ?? "—"}
+          </span>
+        ),
+      },
       {
         id: "actions",
         header: () => <span className="block w-full text-center">ACTIONS</span>,

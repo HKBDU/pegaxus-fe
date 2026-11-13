@@ -204,6 +204,29 @@ const baseDetail = (item: IncidentSummary): IncidentDetail => ({
   createdAt: item.reportedAt,
 });
 export const incidentMockDetails = incidentMockSummaries.map(baseDetail);
+const severityDetail = incidentMockDetails[0];
+
+export const incidentSeverityMocks = {
+  lowerSeveritySuccess: {
+    ...severityDetail,
+    severity: INCIDENT_SEVERITY.MEDIUM,
+    availableActions: [INCIDENT_ACTION.RAISE_SEVERITY, INCIDENT_ACTION.LOWER_SEVERITY],
+    effects: {
+      customerNotified: true,
+      emailQueued: true,
+      vehicleStatusChanged: true,
+    },
+  },
+  regularUserView: {
+    ...severityDetail,
+    availableActions: [INCIDENT_ACTION.RAISE_SEVERITY],
+  },
+  lowerManagerView: {
+    ...severityDetail,
+    availableActions: [INCIDENT_ACTION.RAISE_SEVERITY, INCIDENT_ACTION.LOWER_SEVERITY],
+  },
+  unchanged: { ...severityDetail, severity: INCIDENT_SEVERITY.HIGH },
+};
 export const incidentMockCustomer: CustomerIncidentView = {
   id: "IN2",
   bookingId: "BK-IN2",
@@ -295,7 +318,16 @@ export const incidentResponseMocks = {
     isSuccess: true,
     code: 201,
     message: "Incident created successfully",
-    value: incidentMockDetails[0],
+    value: {
+      ...incidentMockDetails[0],
+      effects: { customerNotified: true, emailQueued: true, vehicleStatusChanged: true },
+    },
+  },
+  severityLowerSuccess: {
+    isSuccess: true,
+    code: 200,
+    message: "Incident severity updated successfully",
+    value: incidentSeverityMocks.lowerSeveritySuccess,
   },
   validationError: {
     isSuccess: false,
@@ -309,6 +341,34 @@ export const incidentResponseMocks = {
     code: 409,
     errorCode: "INCIDENT_MODIFIED",
     message: "The incident was just modified. Please reload the page",
+    errors: [],
+  },
+  incidentModified: {
+    isSuccess: false,
+    code: 409,
+    errorCode: "INCIDENT_MODIFIED",
+    message: "The incident was just modified. Please reload the page",
+    errors: [],
+  },
+  severityLowerManagerOnly: {
+    isSuccess: false,
+    code: 403,
+    errorCode: "SEVERITY_LOWER_MANAGER_ONLY",
+    message: "Only the Logistics Manager can lower incident severity.",
+    errors: [],
+  },
+  severityUnchanged: {
+    isSuccess: false,
+    code: 409,
+    errorCode: "SEVERITY_UNCHANGED",
+    message: "Choose a different severity before saving.",
+    errors: [],
+  },
+  invalidIncidentStatus: {
+    isSuccess: false,
+    code: 409,
+    errorCode: "INVALID_INCIDENT_STATUS",
+    message: "This incident can no longer be changed in its current status.",
     errors: [],
   },
   offlineError: {

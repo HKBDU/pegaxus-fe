@@ -8,6 +8,7 @@ import type { HandoverRecord } from "./types";
 import { canAccess } from "@/features/auth/access-control";
 import type { AuthPrincipal } from "@/features/auth/types";
 import type { HandoverBoundary, OverviewSegment } from "./types";
+import { formatUtcDateTime, formatUtcTime } from "@/shared/utils/datetime";
 
 export const canOperateHandover = (principal: AuthPrincipal | null) =>
   !canAccess(principal, { anyRole: ["TRANSPORT_SPECIALIST"] }) &&
@@ -69,31 +70,10 @@ export const typeLabel = (value: string) =>
 export const statusLabel = (value: string) =>
   STATUS_LABEL[value as HandoverStatus] ?? value;
 
-export function formatDateTime(value?: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(date);
-}
+/** Every handover instant is read in UTC and labelled, so the driver and the manager see the same time. */
+export const formatDateTime = (value?: string | null) => formatUtcDateTime(value);
 
-export function formatTime(value?: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? "—"
-    : new Intl.DateTimeFormat("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }).format(date);
-}
+export const formatTime = (value?: string | null) => formatUtcTime(value);
 
 /** The time that matters for a row: when it happened, else when it is planned. */
 export function handoverMoment(item: {
@@ -129,6 +109,13 @@ export function formatDistance(meters: number) {
     ? `${Math.round(meters)} m`
     : `${(meters / 1000).toFixed(1)} km`;
 }
+
+/** HO3, HO4, HO5 on a PICKUP: a vehicle of this transport is still on another unfinished trip. */
+export const VEHICLE_ON_ANOTHER_TRIP = "VEHICLE_STILL_ON_ANOTHER_TRIP";
+
+export const isVehicleOnAnotherTrip = (error: unknown) =>
+  (error as { errorCode?: unknown } | null)?.errorCode ===
+  VEHICLE_ON_ANOTHER_TRIP;
 
 /** Text to show for a failed call: the BE message (it already says what to fix), else a plain fallback. */
 export function describeError(

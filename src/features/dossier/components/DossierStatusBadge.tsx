@@ -1,8 +1,8 @@
-import { cn } from "@/lib/utils";
 import type {
   DossierRequirementStatus,
   DossierStatus,
 } from "@/features/dossier/types";
+import { StatusBadge } from "@/shared/components/ui/status-badge";
 import { dossierStatusLabels, dossierStatusStyles } from "../constants";
 
 type BadgeStatus = DossierStatus | DossierRequirementStatus | "EXPIRED";
@@ -15,14 +15,8 @@ export function DossierStatusBadge({
   className?: string;
 }) {
   return (
-    <span
-      className={cn(
-        "inline-flex w-fit items-center whitespace-nowrap rounded-[2px] px-2 py-1 font-heading text-[0.62rem] font-semibold uppercase leading-none tracking-[0.06em]",
-        dossierStatusStyles[status],
-        className,
-      )}
-    >
+    <StatusBadge className={`${dossierStatusStyles[status]} ${className ?? ""}`.trim()}>
       {dossierStatusLabels[status]}
-    </span>
+    </StatusBadge>
   );
 }

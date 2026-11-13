@@ -67,10 +67,14 @@ export function useInvoiceSuggestion(
     enabled: Boolean(bookingId && type),
     staleTime: 0,
     gcTime: 0,
+    // Reopening must read the applicable prices even if another consumer kept IV1 cached.
+    refetchOnMount: "always",
     retry: false,
     refetchOnWindowFocus: false,
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[3] === type ? previous : undefined,
+      previousQuery?.queryKey[2] === bookingId && previousQuery?.queryKey[3] === type
+        ? previous
+        : undefined,
   });
 }
 

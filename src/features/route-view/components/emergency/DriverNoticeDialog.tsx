@@ -61,7 +61,7 @@ export function DriverNoticeSuccess({
         </ul>
       ) : (
         <p className="text-xs text-slate-500">
-          The backend returned no notified drivers.
+          No drivers were notified.
         </p>
       )}
     </section>

@@ -8,12 +8,14 @@ import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
-import { releaseEditLock } from "@/features/booking/editLock"
+import { assertBookingEditSession, needsBookingSaveRecovery, releaseEditLock, type BookingEditSession } from "@/features/booking/editLock"
 import { AddHorseDialog } from "@/features/booking/components/AddHorseDialog"
 import { bookingKeys } from "@/features/booking/hooks/useBookings"
 import type { Horse } from "@/features/horse/types"
 import { useAvailableHorses, useBookingEditLock, useBookingRequestGuard, useCreateBooking, useUpdateBooking } from "@/features/booking/hooks"
-import { bookingFormSchema, getBookingDepartureDateRange, type BookingFormSchemaValues } from "@/features/booking/schemas"
+import { DepartureDateGuide } from "@/features/booking/components/DepartureDateGuide"
+import { getDepartureRule } from "@/features/booking/lib/departure-rule"
+import { addDays, bookingFormSchema, type BookingFormSchemaValues } from "@/features/booking/schemas"
 import type { AvailableHorse, Booking, BookingFormValues } from "@/features/booking/types"
 import { formatSex, getBookingErrorMessage } from "@/features/booking/utils"
 import { cn } from "@/lib/utils"
@@ -151,6 +153,7 @@ function BookingSteps({ step, onStepChange }: { step: 1 | 2; onStepChange: (step
   )
 }
 
+// The message row is reserved (content-start + min height) so an error under one field never stretches or shifts its neighbour.
 function BookingField({
   control,
   name,
@@ -173,7 +176,7 @@ function BookingField({
       control={control}
       name={name}
       render={({ field }) => (
-        <FormItem className="gap-1">
+        <FormItem className="content-start gap-1">
           <FormLabel className={fieldLabelClass}>{label}</FormLabel>
           <FormControl>
             {type === "date" ? (
@@ -195,7 +198,9 @@ function BookingField({
               />
             )}
           </FormControl>
-          <FormMessage className="text-xs" />
+          <div className="min-h-8">
+            <FormMessage className="text-xs leading-4" />
+          </div>
         </FormItem>
       )}
     />
@@ -275,8 +280,17 @@ function FilterSelect({
   )
 }
 
-function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit"; booking?: Booking; onSaveFailed?: (error: unknown) => void }) {
+function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseline }: { mode: "create" | "edit"; booking?: Booking; editSession?: BookingEditSession; onSaveFailed?: (error: unknown) => Promise<void>; onRefreshBaseline?: () => Promise<void> }) {
   const navigate = useNavigate()
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
+  const [needsRecovery, setNeedsRecovery] = useState(() => Boolean(booking && editSession && needsBookingSaveRecovery(booking.bookingId, editSession)))
+  const [saveFailure, setSaveFailure] = useState<string | null>(null)
+  const [refreshingBaseline, setRefreshingBaseline] = useState(false)
+  const [baselineReady, setBaselineReady] = useState(true)
   const [step, setStep] = useState<1 | 2>(1)
   const [pointSide, setPointSide] = useState<BookingPointSide>("origin")
   const [pointMessage, setPointMessage] = useState<string | null>(null)
@@ -291,7 +305,6 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
   const [horseSorting, setHorseSorting] = useState<SortingState>([])
   const [horseTableHeight, setHorseTableHeight] = useState(0)
   const sideColumnRef = useRef<HTMLDivElement>(null)
-  const departureDateRange = getBookingDepartureDateRange()
   const debouncedHorseSearch = useDebounce(horseSearch, 300)
   const [activeHorseId, setActiveHorseId] = useState<EntityId | null>(booking?.horses[0]?.horseId ?? null)
   const [selectedHorseDetails, setSelectedHorseDetails] = useState<AvailableHorse[]>(booking?.horses ?? [])
@@ -305,6 +318,13 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
     defaultValues: toDefaultValues(booking),
   })
 
+  const [originCountry, destinationCountry] = form.watch(["originCountry", "destinationCountry"])
+  const departureRule = getDepartureRule(originCountry, destinationCountry)
+  const hasDepartureDate = Boolean(form.watch("requestedDepartureDate"))
+  // The earliest date depends on the route: re-check a date that was picked before the route changed.
+  useEffect(() => {
+    if (hasDepartureDate) void form.trigger(["requestedDepartureDate", "destinationCountry"])
+  }, [form, hasDepartureDate, originCountry, destinationCountry])
   const originPoint = readPoint(form, "origin")
   const destinationPoint = readPoint(form, "destination")
   const pointErrors = form.formState.errors
@@ -349,7 +369,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
     setSelectedHorsePage(Math.floor(targetIndex / selectedHorsePageSize) + 1)
   }
   const isPending = createBooking.isPending || updateBooking.isPending
-  const isSavingDisabled = isPending || saveRequest.isBlocked
+  const isSavingDisabled = isPending || saveRequest.isBlocked || refreshingBaseline || !baselineReady
   const exitPath = booking ? `/bookings/${booking.bookingId}` : "/bookings"
 
   useEffect(() => {
@@ -379,14 +399,19 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
     setSelectedHorsePage((currentPage) => Math.min(currentPage, selectedHorsePageCount))
   }, [selectedHorsePageCount])
 
-  // Leaving without saving: an edited booking goes back to PENDING before we return to it.
+  // An incomplete save keeps DRAFT; leaving before any save write still releases the edit lock.
   const cancel = async () => {
     try {
       const guarded = await exitRequest.run(async () => {
-        if (mode === "edit" && booking) await releaseEditLock(booking.bookingId)
+        if (mode === "edit" && booking && editSession) {
+          assertBookingEditSession(editSession)
+          await releaseEditLock(booking.bookingId, editSession)
+          assertBookingEditSession(editSession)
+        }
       })
-      if (guarded.started) navigate(exitPath)
+      if (guarded.started && mounted.current) navigate(exitPath)
     } catch (error) {
+      if (!mounted.current || editSession?.controller.signal.aborted) return
       toast.error(getBookingErrorMessage(error, "Unable to leave this booking"))
     }
   }
@@ -483,9 +508,21 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
     {
       accessorKey: "horseName",
       header: "HORSE NAME",
-      cell: ({ row }) => <span className="font-semibold text-slate-900">{row.original.horseName}</span>,
+      cell: ({ row }) => (
+        <span className="block max-w-40 truncate font-semibold text-slate-900" title={row.original.horseName}>
+          {row.original.horseName}
+        </span>
+      ),
     },
-    { accessorKey: "breed", header: "BREED" },
+    {
+      accessorKey: "breed",
+      header: "BREED",
+      cell: ({ row }) => (
+        <span className="block max-w-36 truncate text-slate-700" title={row.original.breed ?? undefined}>
+          {row.original.breed ?? "—"}
+        </span>
+      ),
+    },
     {
       accessorKey: "sex",
       header: "SEX",
@@ -510,6 +547,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
   }
 
   const submit = form.handleSubmit(async (formValues) => {
+    if (refreshingBaseline || !baselineReady) return
     const values = formValues
     try {
       await saveRequest.run(async () => {
@@ -531,15 +569,33 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
           })
           toast.success(`Booking ${result.bookingCode} created`)
           navigate(`/bookings/${result.bookingId}`, { replace: true })
-        } else if (booking) {
-          await updateBooking.mutateAsync({ booking, values })
+        } else if (booking && editSession) {
+          await updateBooking.mutateAsync({ booking, values, session: editSession })
+          assertBookingEditSession(editSession)
+          if (!mounted.current) return
           toast.success("Booking updated")
           navigate(`/bookings/${booking.bookingId}`, { replace: true })
         }
       })
     } catch (error) {
+      if (!mounted.current || editSession?.controller.signal.aborted) return
       toast.error(getBookingErrorMessage(error, `Unable to ${mode === "create" ? "create" : "update"} this booking`))
-      onSaveFailed?.(error)
+      if (booking && editSession) {
+        setNeedsRecovery(needsBookingSaveRecovery(booking.bookingId, editSession))
+        setSaveFailure(getBookingErrorMessage(error, "The save could not be completed or confirmed."))
+        setBaselineReady(false)
+      }
+      if (onSaveFailed && !(error instanceof Error && error.message === "BOOKING_MODIFIED")) {
+        setRefreshingBaseline(true)
+        try {
+          await onSaveFailed(error)
+          if (mounted.current && !editSession?.controller.signal.aborted) setBaselineReady(true)
+        } catch {
+          if (mounted.current && !editSession?.controller.signal.aborted) setSaveFailure("Unable to refresh the server baseline. Refresh it before retrying; your form input is kept.")
+        } finally {
+          if (mounted.current) setRefreshingBaseline(false)
+        }
+      }
     }
   })
 
@@ -551,6 +607,23 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
     <Form {...form}>
       <form onSubmit={submit} className="min-h-[70dvh] bg-[#f4f2ed] px-5 pt-5 pb-8 sm:px-6 lg:px-10">
         <div className={cn("booking-page-enter mx-auto w-full", step === 2 ? "max-w-[1200px]" : "max-w-[1152px]")}>
+          {(needsRecovery || saveFailure) && <div role="alert" className="mb-4 border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950">
+            <p className="font-semibold">{needsRecovery ? "This booking has an incomplete or unconfirmed save." : "This booking could not be saved."}</p>
+            {needsRecovery && <p>Some changes may already be stored. Leaving will not submit or undo them. Unfinished changes remain in DRAFT unless the final submission already reached the server. Reopen the booking to check its status and finish saving. Unsaved form input is lost when you leave.</p>}
+            {saveFailure && <p className="mt-2">{saveFailure}</p>}
+            {onRefreshBaseline && <button type="button" disabled={isPending || refreshingBaseline} className="mt-2 font-semibold underline" onClick={async () => {
+              setRefreshingBaseline(true)
+              setBaselineReady(false)
+              try {
+                await onRefreshBaseline()
+                if (mounted.current && !editSession?.controller.signal.aborted) { setSaveFailure(null); setBaselineReady(true); saveRequest.reset() }
+              } catch {
+                if (mounted.current && !editSession?.controller.signal.aborted) setSaveFailure("Unable to refresh the server baseline. Your form input is kept; try refreshing again.")
+              } finally {
+                if (mounted.current) setRefreshingBaseline(false)
+              }
+            }}>{refreshingBaseline ? "Refreshing server baseline..." : "Refresh server baseline to retry (keep form input)"}</button>}
+          </div>}
           {step === 2 ? (
             <button type="button" onClick={() => setStep(1)} className="group mb-2 flex w-fit items-center gap-[6px] text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase transition-colors hover:text-primary-hover">
               <span aria-hidden="true" className="text-[14px] transition-transform group-hover:-translate-x-0.5">←</span>
@@ -611,16 +684,16 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
               </div>
 
               <FormSection stacked title="Schedule" className="lg:col-start-1 lg:row-start-2">
+                <DepartureDateGuide originCountry={originCountry} destinationCountry={destinationCountry} />
                 <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
                   <BookingField
                     control={form.control}
                     name="requestedDepartureDate"
                     label="Expected departure date *"
                     type="date"
-                    min={departureDateRange.minDate}
-                    max={departureDateRange.maxDate}
+                    min={departureRule.minDate}
                   />
-                  <BookingField control={form.control} name="requestedArrivalDate" label="Expected arrival date" type="date" min={form.watch("requestedDepartureDate")} />
+                  <BookingField control={form.control} name="requestedArrivalDate" label="Expected arrival date" type="date" min={form.watch("requestedDepartureDate") ? addDays(form.watch("requestedDepartureDate"), 1) : undefined} />
                 </div>
               </FormSection>
 
@@ -643,7 +716,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
 
               <div className="mt-3 flex justify-end gap-2 lg:col-span-2">
                 <button type="button" disabled={isPending || exitRequest.isBlocked} className={cn(largeButton, "border-[#4f4e4d] bg-transparent text-[#181818] hover:bg-black/5")} onClick={() => void cancel()}>
-                  {exitRequest.isBlocked ? "Please wait..." : "Cancel"}
+                  {exitRequest.isBlocked ? "Please wait..." : needsRecovery ? "Leave without submitting" : "Cancel"}
                 </button>
                 <button type="button" className={cn(largeButton, "border-primary bg-primary text-[#181818] hover:border-primary-hover hover:bg-primary-hover")} onClick={() => void continueToHorses()}>
                   Save &amp; continue
@@ -856,7 +929,7 @@ function BookingForm({ mode, booking, onSaveFailed }: { mode: "create" | "edit";
 
               <div className="flex flex-col-reverse justify-end gap-3 pt-1 sm:flex-row">
                 <button type="button" disabled={isPending || exitRequest.isBlocked} className={cn(compactButton, "border-gray-300 bg-white text-gray-900 hover:bg-gray-50")} onClick={() => void cancel()}>
-                  {exitRequest.isBlocked ? "Please wait..." : "Cancel"}
+                  {exitRequest.isBlocked ? "Please wait..." : needsRecovery ? "Leave without submitting" : "Cancel"}
                 </button>
                 <button type="submit" disabled={isSavingDisabled} className={cn(compactButton, "border-primary bg-primary text-white hover:border-primary-hover hover:bg-primary-hover")}>
                   {isPending ? "Saving..." : saveRequest.isBlocked ? "Please wait..." : "Save & continue"}
@@ -886,11 +959,13 @@ export default function BookingFormPage({ mode }: { mode: "create" | "edit" }) {
 
   return (
     <BookingForm
-      key={String(lock.booking.bookingId)}
+      key={`${lock.session.sessionVersion}:${lock.session.accountId}:${lock.booking.bookingId}`}
       mode="edit"
       booking={lock.booking}
-      // After a failed save the server copy is the new baseline, except on a conflict: then the customer must reload.
-      onSaveFailed={(error) => { if (!(error instanceof Error && error.message === "BOOKING_MODIFIED")) void lock.refresh() }}
+      editSession={lock.session}
+      // Preserve form input while refreshing the server baseline; conflicts require the explicit refresh action.
+      onSaveFailed={async () => { await lock.refresh() }}
+      onRefreshBaseline={lock.refresh}
     />
   )
 }

@@ -19,7 +19,7 @@ import { DataTable } from "@/shared/components/ui/data-table"
 import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-options"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
 import { Skeleton } from "@/shared/components/ui/skeleton"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog"
 
 type Row =
   | { key: string; kind: "template"; item: DossierTemplateItem }
@@ -221,7 +221,7 @@ export function CustomizeRequirementsStep({
           <p className="m-0 flex-1">
             {template
               ? "The original dossier template will not be modified. These customizations will only be applied to the new compliance dossier created for this booking."
-              : "No template is used: the dossier will only contain the custom requirements you add here."}
+              : "No template is used: the dossier will only contain the custom requirements you add here. The horse and the due date you choose are not saved without a template."}
           </p>
           <button type="button" aria-label="Dismiss" className="shrink-0 text-sky-700 hover:text-sky-950" onClick={() => setNoticeOpen(false)}>
             <X className="size-3.5" />
@@ -309,7 +309,6 @@ export function CustomizeRequirementsStep({
         <DialogContent className="max-h-[92dvh] gap-0 overflow-y-auto rounded-[2px] border-slate-200 bg-white p-0 sm:max-w-5xl">
           <DialogHeader className="border-b border-slate-200 px-6 py-4 text-left">
             <DialogTitle className="m-0! font-heading text-2xl! font-bold! uppercase tracking-[0.02em]! text-[#ef8f00]!">Add custom dossier requirement</DialogTitle>
-            <DialogDescription className="m-0! text-xs text-slate-500">As a Transport Specialist, you can add a custom DossierRequirement to this ComplianceDossier.</DialogDescription>
           </DialogHeader>
           <div className="px-6 py-5">
             <AddCustomRequirementPanel horses={booking.horses} requirements={requirements} requirementsLoading={requirementsLoading} onAdd={(draft) => {

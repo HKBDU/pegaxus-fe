@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Eye, MoreHorizontal } from "lucide-react";
@@ -27,6 +28,7 @@ import { DataTableViewOptions } from "@/shared/components/ui/data-table-view-opt
 import { formatPlanDate } from "../format";
 import { hasTransportPlanFilters } from "../constants";
 import { transportPlanSortSchema } from "../schemas";
+import { canCreateTransportPlanInvoice } from "../transport-plan.form";
 import type {
   TransportPlanListItem,
   TransportPlansQueryParams,
@@ -67,7 +69,7 @@ export function TransportPlansTable({
         cell: ({ row }) => (
           <Link
             to={transportPlanDetail(row.original.transportPlanId)}
-            className="font-semibold text-slate-900 underline decoration-primary/50 underline-offset-2 hover:decoration-primary"
+            className={codeLinkClassName}
           >
             {row.original.planCode}
           </Link>
@@ -78,7 +80,10 @@ export function TransportPlansTable({
         accessorKey: "customerName",
         header: "Customer",
         cell: ({ row }) => (
-          <span className="block min-w-32 max-w-48 whitespace-normal">
+          <span
+            className="block max-w-40 truncate"
+            title={row.original.customerName}
+          >
             {row.original.customerName}
           </span>
         ),
@@ -132,13 +137,15 @@ export function TransportPlansTable({
                     View Invoices
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() =>
-                    navigate(invoiceCreate(row.original.bookingId))
-                  }
-                >
-                  Create Invoice
-                </DropdownMenuItem>
+                {canCreateTransportPlanInvoice(principal, row.original) ? (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      navigate(invoiceCreate(row.original.bookingId))
+                    }
+                  >
+                    Create Invoice
+                  </DropdownMenuItem>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
@@ -158,7 +165,7 @@ export function TransportPlansTable({
           ),
       },
     ],
-    [manager, navigate],
+    [manager, navigate, principal],
   );
   const [sortId, direction] = params.sortBy.split(":");
   const sorting: SortingState = [{ id: sortId, desc: direction === "desc" }];

@@ -18,6 +18,9 @@ export const crewMemberSchema = z.object({
   phone: z.string().nullable().optional(),
 })
 
+// BE `CheckedBy` (log summary / detail) carries no role or phone, unlike the escort of the overview.
+export const checkedBySchema = crewMemberSchema.partial({ role: true })
+
 export const horseBriefSchema = z.object({
   horseId: id,
   horseName: z.string(),
@@ -40,12 +43,15 @@ export const healthLogSummarySchema = z.object({
   logType: logTypeSchema,
   healthStatus: healthStatusSchema,
   hydrationStatus: hydrationStatusSchema.nullable(),
-  checkedBy: crewMemberSchema,
+  checkedBy: checkedBySchema,
   veterinarianRequired: z.boolean(),
   hasPhoto: z.boolean(),
   latestNote: z.string().nullable().optional(),
   locationDescription: z.string().nullable().optional(),
 })
+
+// The overview's `latestLog` (BE `LatestLog`) is a trimmed summary: the horse is the row it sits in, and it has no `hasPhoto`.
+export const latestHealthLogSchema = healthLogSummarySchema.omit({ horse: true, hasPhoto: true })
 
 export const healthLogSchema = healthLogSummarySchema.extend({
   transportId: id,
@@ -71,8 +77,10 @@ export const healthLogSchema = healthLogSummarySchema.extend({
 export const horseHealthOverviewItemSchema = z.object({
   horse: horseBriefSchema,
   latestHealthStatus: healthStatusSchema.nullable(),
-  latestLog: healthLogSummarySchema.nullable(),
+  latestLog: latestHealthLogSchema.nullable(),
   logCount: z.number().int().nonnegative(),
+  /** Set when the horse was left behind mid-trip; it is no longer checked. */
+  detachedAt: timestamp.nullish(),
 })
 
 export const horseHealthOverviewSchema = z.object({
@@ -130,4 +138,25 @@ export const markAllNormalInputSchema = z.object({
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   files: z.array(z.instanceof(File)).max(1).optional(),
+})
+
+// "Mark all normal" returns one summary row per horse (BE `BatchResponse`), not a single log. A summary's `checkedBy`
+// has no `role`, so it does not reuse crewMemberSchema.
+export const markAllNormalResultSchema = z.object({
+  transportId: id,
+  logType: logTypeSchema,
+  createdCount: z.number().int().nonnegative(),
+  logs: z.array(
+    z.object({
+      horseHealthLogId: id,
+      horse: horseBriefSchema,
+      checkedAt: timestamp,
+      logType: logTypeSchema,
+      healthStatus: healthStatusSchema,
+      hydrationStatus: hydrationStatusSchema.nullable(),
+      checkedBy: checkedBySchema,
+      veterinarianRequired: z.boolean(),
+      hasPhoto: z.boolean(),
+    }),
+  ),
 })

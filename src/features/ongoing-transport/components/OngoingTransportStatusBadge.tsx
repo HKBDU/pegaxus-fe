@@ -22,14 +22,16 @@ const presentation = {
 
 export function OngoingTransportStatusBadge({
   status,
+  className: extraClassName,
 }: {
   status: OngoingTransportStatus;
+  className?: string;
 }) {
   const { label, icon: Icon, className } = presentation[status];
   return (
     <Badge
       variant="outline"
-      className={`rounded-xs px-1.5 py-0.5 text-[10px] font-medium motion-reduce:transition-none ${className}`}
+      className={`rounded-xs px-1.5 py-0.5 text-[10px] font-medium motion-reduce:transition-none ${className} ${extraClassName ?? ""}`}
     >
       <Icon aria-hidden="true" />
       {label}

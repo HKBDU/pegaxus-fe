@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { ROLE_ROUTES } from "@/app/route-config";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import { ChangePasswordForm } from "../components/ChangePasswordForm";
 
@@ -15,7 +16,11 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <AuthFlowLayout title="Change password" onBack={returnToPreviousPage}>
+    <AuthFlowLayout
+      title="Change password"
+      backTo={ROLE_ROUTES.customerProfile}
+      backLabel="Back to Profile"
+    >
       <div className="mt-5">
         <ChangePasswordForm onSuccess={returnToPreviousPage} />
       </div>

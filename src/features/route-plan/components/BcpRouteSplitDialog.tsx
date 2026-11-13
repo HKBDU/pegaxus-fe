@@ -47,13 +47,13 @@ export function BcpRouteSplitDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-[2px] p-5 sm:max-w-lg">
+      <DialogContent className="min-w-0 max-w-md rounded-[2px] p-4 sm:max-w-lg sm:p-5">
         <DialogHeader className="text-left">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-start gap-2">
             <div className="grid size-8 shrink-0 place-items-center rounded-[2px] bg-amber-100 text-amber-800">
               <Split className="size-4" />
             </div>
-            <div>
+            <div className="min-w-0">
               <DialogTitle className="text-base font-bold text-slate-900">
                 Cross-Border Route Detected
               </DialogTitle>
@@ -76,11 +76,11 @@ export function BcpRouteSplitDialog({
               </span>
             </div>
             <div className="mt-1 flex items-center gap-2 font-medium text-slate-900">
-              <span className="truncate">
+              <span className="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere]">
                 {originName} {originCountry ? `(${originCountry})` : ""}
               </span>
               <ArrowRight className="size-3.5 shrink-0 text-slate-400" />
-              <span className="truncate">
+              <span className="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere]">
                 {destName} {destCountry ? `(${destCountry})` : ""}
               </span>
             </div>
@@ -89,9 +89,9 @@ export function BcpRouteSplitDialog({
           {/* Detected BCP Card */}
           <div className="rounded-[2px] border border-amber-300 bg-amber-50/70 p-3">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-start gap-2">
+              <div className="flex min-w-0 items-start gap-2">
                 <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
-                <div>
+                <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="font-bold text-slate-900">
                       {detectedBcp.name}
@@ -126,7 +126,7 @@ export function BcpRouteSplitDialog({
             </p>
             <div className="space-y-2 border-l-2 border-amber-400 pl-3">
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   <span className="font-bold text-amber-800">Segment 1:</span>
                   <span className="font-medium text-slate-900">
                     {originName} → {detectedBcp.name}
@@ -141,7 +141,7 @@ export function BcpRouteSplitDialog({
               </div>
 
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                   <span className="font-bold text-blue-800">Segment 2:</span>
                   <span className="font-medium text-slate-900">
                     {detectedBcp.name} → {destName}

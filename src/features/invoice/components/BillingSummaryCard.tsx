@@ -13,14 +13,16 @@ interface BillingSummaryCardProps {
   lines: BillingSummaryLine[]
   summary: InvoiceSummary
   currency: InvoiceCurrency
+  taxRateEstimated?: boolean
 }
 
 /**
  * "Billing summary" panel of the create/edit dialog. `lines` are the fee lines the manager typed; the deposit deduction
- * of a FINAL is its own row. The numbers are a client estimate (contract R8: 20% tax, deposit deduction after tax); the
+ * of a FINAL is its own row. The numbers are a client estimate (VAT from the active price list or saved snapshot,
+ * with an explicitly estimated fallback; deposit deduction after tax); the
  * server recalculates them when the draft is saved.
  */
-export function BillingSummaryCard({ lines, summary, currency }: BillingSummaryCardProps) {
+export function BillingSummaryCard({ lines, summary, currency, taxRateEstimated = false }: BillingSummaryCardProps) {
   return (
     <section className="flex h-full flex-col border border-[#e5e2d9] bg-white" aria-label="Billing summary">
       <h3 className="m-0! flex items-center gap-2 border-b border-[#e5e2d9] bg-[#f7f6f3] px-4 py-2.5 font-heading text-[13px]! font-bold! uppercase tracking-[0.04em]! text-gray-900!">
@@ -29,7 +31,7 @@ export function BillingSummaryCard({ lines, summary, currency }: BillingSummaryC
       </h3>
 
       <div className="flex min-h-0 flex-1 flex-col p-4 text-xs text-gray-700">
-        <div className="h-28 shrink-0 overflow-y-auto">
+        <div className="-mr-4 h-28 shrink-0 overflow-y-auto pr-4">
           {lines.length ? (
             <ul className="space-y-1.5">
               {lines.map((line) => (
@@ -46,7 +48,7 @@ export function BillingSummaryCard({ lines, summary, currency }: BillingSummaryC
 
         <dl className="mt-3 space-y-1.5 border-t border-[#e5e2d9] pt-3">
           <SummaryRow label="Subtotal" value={formatMoney(summary.subtotal, currency)} />
-          <SummaryRow label={`Tax (${summary.taxRatePercent}%)`} value={formatMoney(summary.tax, currency)} />
+          <SummaryRow label={`${taxRateEstimated ? "Estimated tax" : "Tax"} (${summary.taxRatePercent}%)`} value={formatMoney(summary.tax, currency)} />
           {summary.depositDeduction !== 0 ? <SummaryRow label="Deposit deduction" value={formatMoney(summary.depositDeduction, currency)} /> : null}
         </dl>
 
@@ -54,7 +56,11 @@ export function BillingSummaryCard({ lines, summary, currency }: BillingSummaryC
           <span className="font-heading text-xs font-semibold uppercase tracking-[0.05em]">Total amount</span>
           <span className="whitespace-nowrap text-base font-bold tabular-nums">{formatMoney(summary.grandTotal, currency)}</span>
         </div>
-        <p className="mt-2 text-[11px] leading-4 text-gray-500">Estimate. The server recalculates the amounts when the draft is saved.</p>
+        <p className="mt-2 text-[11px] leading-4 text-gray-500">
+          {taxRateEstimated
+            ? "Estimate only. The suggestion does not supply a VAT rate; the server applies the active price list VAT when the draft is saved."
+            : "Estimate. The server recalculates the amounts when the draft is saved."}
+        </p>
       </div>
     </section>
   )

@@ -44,7 +44,9 @@ export function routeGeometryKey(route: MapRoute): string | null {
   const points = coordinates(route);
   if (!points) return null;
   const round = (value: number) => value.toFixed(4);
-  return `drive|${round(points.from.latitude)},${round(points.from.longitude)}|${round(points.to.latitude)},${round(points.to.longitude)}`;
+  // Bump the namespace so routes cached by the old straight-line fallback
+  // can never be reused as real road geometry.
+  return `v2|drive|${round(points.from.latitude)},${round(points.from.longitude)}|${round(points.to.latitude)},${round(points.to.longitude)}`;
 }
 
 function straightLine(route: MapRoute): RouteGeometry | null {
@@ -57,6 +59,11 @@ function straightLine(route: MapRoute): RouteGeometry | null {
       [points.to.longitude, points.to.latitude],
     ],
   };
+}
+
+/** Immediate render fallback while a road geometry is being resolved. */
+export function estimateRouteGeometry(route: MapRoute): RouteGeometry | null {
+  return straightLine(route);
 }
 
 function openDatabase(): Promise<IDBDatabase | null> {
@@ -127,8 +134,12 @@ export async function resolveRouteGeometry(
   const promise = (async () => {
     const persistent = await readPersistent(key);
     if (persistent) {
-      memoryCache.set(key, persistent);
-      return { line: persistent.line, key, estimated: false, error: null };
+      const cachedLine = normalizeRouteGeoJson(persistent.line);
+      if (cachedLine) {
+        const normalized = { ...persistent, line: cachedLine };
+        memoryCache.set(key, normalized);
+        return { line: cachedLine, key, estimated: false, error: null };
+      }
     }
     const points = coordinates(route);
     if (!points)
@@ -139,6 +150,16 @@ export async function resolveRouteGeometry(
         points.to,
         signal,
       );
+      if (preview.estimated) {
+        return {
+          // Geoapify already provides a usable straight-line fallback.
+          // Keep it visible instead of turning a recoverable error into a blank map.
+          line: preview.geometry,
+          key,
+          estimated: true,
+          error: "Geoapify did not return a drivable route.",
+        };
+      }
       const record = { key, line: preview.geometry, savedAt: Date.now() };
       memoryCache.set(key, record);
       await writePersistent(record);

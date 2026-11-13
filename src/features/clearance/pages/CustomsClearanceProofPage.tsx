@@ -1,3 +1,4 @@
+import { NOT_CURRENT_SEGMENT_CREW, NOT_CURRENT_SEGMENT_CREW_MESSAGE } from '@/shared/constants/crew-turn'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
@@ -8,12 +9,14 @@ import { Navigation } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useClearanceDossierContext, useSubmitCustomsClearanceProof } from '../hooks'
 import { CustomsEntrySection } from '../components/CustomsEntrySection'
+import { ErrorState } from '@/shared/components/common'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Form } from '@/shared/components/ui/form'
 import { QuickNotesSection } from '@/features/quarantine/components'
 import { PhotoCaptureSection } from '@/shared/components/PhotoCaptureSection'
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from '@/shared/constants/upload'
 
 const schema = z.object({
   customsPortName: z.string().min(1, 'Customs office / border post is required'),
@@ -45,7 +48,7 @@ function routeLabel(dossier?: ReturnType<typeof useClearanceDossierContext>['dat
 export default function CustomsClearanceProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
   const dossierId = dossierIdParam ?? null
-  const { data: dossier, isLoading } = useClearanceDossierContext(dossierId)
+  const { data: dossier, isLoading, isError: dossierFailed, refetch: reloadDossier } = useClearanceDossierContext(dossierId)
   const { mutateAsync: submitProof, isPending } = useSubmitCustomsClearanceProof(dossierId ?? '')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null)
@@ -57,7 +60,7 @@ export default function CustomsClearanceProofPage() {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      customsPortName: 'Dover Western Docks Customs Point (GB DOV)',
+      customsPortName: '',
       mrnNumber: '',
       customsLane: undefined,
       isHeld: false,
@@ -66,7 +69,7 @@ export default function CustomsClearanceProofPage() {
   })
 
   useEffect(() => {
-    if (dossier?.bookingSummary?.destinationPort) form.setValue('customsPortName', dossier.bookingSummary.destinationPort)
+    if (dossier?.bookingSummary?.destinationPort && !form.getFieldState('customsPortName').isDirty) form.setValue('customsPortName', dossier.bookingSummary.destinationPort)
   }, [dossier, form])
 
   const isHeld = form.watch('isHeld')
@@ -81,15 +84,17 @@ export default function CustomsClearanceProofPage() {
   }, [dossier?.bookingSummary?.destinationCountry, dossier?.bookingSummary?.originCountry])
 
   const onSubmit = async (values: FormValues) => {
-    if (isMandatoryRoute && !photoFile) return setPhotoError('Please attach a customs release note / SAD document image.')
+    if (photoFile && (photoFile.size === 0 || photoFile.size > UPLOAD_MAX_BYTES || !['image/jpeg', 'image/jpg', 'image/png'].includes(photoFile.type)))
+      return setPhotoError(`Use a non-empty JPEG or PNG image of at most ${UPLOAD_MAX_MB} MiB.`)
+    if (!photoFile) return setPhotoError('Please attach a customs release note / SAD document image.')
     if (uploadState === 'uploading') {
       toast.info('Photo is still uploading. Please wait a moment...')
       return
     }
-    if (isMandatoryRoute && uploadedPublicIds.length === 0) {
+    if (uploadedPublicIds.length === 0) {
       return setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
     }
-    if (dossierId == null) return
+    if (dossierId == null || !dossier || dossierFailed) return
     try {
       await submitProof({
         ...values,
@@ -105,16 +110,19 @@ export default function CustomsClearanceProofPage() {
       const code = error instanceof Error ? error.message : 'UNKNOWN'
       const messages: Record<string, string> = {
         NOT_ASSIGNED_TO_TRIP: 'You are not assigned to this transport.',
+        [NOT_CURRENT_SEGMENT_CREW]: NOT_CURRENT_SEGMENT_CREW_MESSAGE,
         QUARANTINE_NOT_PASSED: 'Quarantine must be passed before customs submission.',
         DOSSIER_NOT_APPROVED: 'The dossier must be APPROVED before submitting customs proof.',
         QUICK_NOTE_REQUIRED: 'Quick note is required when held.',
-        FILE_TOO_LARGE: 'One or more files exceed the 5 MB limit.',
+        FILE_TOO_LARGE: `One or more files exceed the ${UPLOAD_MAX_MB} MiB limit.`,
         INVALID_FILE_TYPE: 'Invalid file type. Only images are accepted.',
         EVIDENCE_UNCLEAR: 'Image unclear or missing customs stamp. Please retake photo.',
       }
       toast.error(messages[code] ?? 'Failed to submit customs proof. Please try again.')
     }
   }
+
+  if (dossierFailed || (!isLoading && !dossier)) return <ErrorState message="Unable to load the transport dossier. Retry before submitting proof." onRetry={() => void reloadDossier()} />
 
   if (isLoading) {
     return (
@@ -201,7 +209,7 @@ export default function CustomsClearanceProofPage() {
                   files={photoFile ? [photoFile] : []}
                   capturedAt={photoTakenAt ? [photoTakenAt] : []}
                   coordinates={photoCoordinates}
-                  documentLabel="Customs Release Note / SAD Document Image"
+                  documentLabel="Customs Release Note / SAD Document Image *"
                   statusLabel="Pending Verification"
                   error={photoError}
                   presignedEntity="attachment"

@@ -1,3 +1,4 @@
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type RowSelectionState, type SortingState } from "@tanstack/react-table"
@@ -6,6 +7,7 @@ import { ArrowRight, MoreVertical } from "lucide-react"
 import { DashboardFilters } from "@/features/dossier/components/DashboardFilters"
 import { DossierProgressBar } from "@/features/dossier/components/DossierProgressBar"
 import { DossierStatusBadge } from "@/features/dossier/components/DossierStatusBadge"
+import { StatusBadge } from "@/shared/components/ui/status-badge"
 import type { DashboardItem, DashboardParams, DashboardSort, DossierRisk, DossierRouteType, DossierStatus } from "@/features/dossier/types"
 import { formatDossierDate } from "@/features/dossier/utils"
 import { TablePagination } from "@/shared/components/common/TablePagination"
@@ -43,9 +45,9 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         header: "DOSSIER CODE",
         enableHiding: false,
         cell: ({ row }) => (
-          <span className="inline-block whitespace-nowrap rounded-[2px] border border-slate-300 bg-white px-1.5 py-0.5 font-mono text-[0.7rem] font-semibold text-slate-900">
+          <button type="button" className={codeLinkClassName} onClick={() => navigate(`/compliance-dossiers/${row.original.complianceDossierId}`)}>
             {row.original.dossierCode || "—"}
-          </span>
+          </button>
         ),
       },
       {
@@ -53,24 +55,34 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         header: "TYPE",
         enableSorting: false,
         cell: ({ row }) => (
-          <span
-            className={`inline-block whitespace-nowrap rounded-[2px] border px-1.5 py-0.5 font-heading text-[0.6rem] font-semibold uppercase leading-none tracking-[0.06em] ${row.original.dossierType === "EXTRA" ? "border-violet-300 bg-violet-50 text-violet-700" : "border-slate-300 bg-white text-slate-700"}`}
-          >
+          <StatusBadge tone={row.original.dossierType === "EXTRA" ? "violet" : "slate"} dot={false}>
             {row.original.dossierType === "EXTRA" ? "Extra" : "Main"}
-          </span>
+          </StatusBadge>
         ),
       },
       { accessorKey: "bookingCode", header: "BOOKING REF", cell: ({ row }) => <span className="whitespace-nowrap text-slate-600">{row.original.bookingCode}</span> },
-      { accessorKey: "customerName", header: "CLIENT", cell: ({ row }) => <span className="block min-w-32 max-w-48 whitespace-normal font-semibold leading-snug text-slate-900">{row.original.customerName}</span> },
+      {
+        accessorKey: "customerName",
+        header: "CLIENT",
+        cell: ({ row }) => (
+          <span
+            className="block max-w-44 truncate font-semibold text-slate-900"
+            title={row.original.customerName}
+          >
+            {row.original.customerName}
+          </span>
+        ),
+      },
       {
         id: "route",
         header: "ROUTE",
         enableSorting: false,
         cell: ({ row }) => (
-          <div className="flex items-center gap-1.5 whitespace-nowrap text-slate-800">
-            <span className="rounded-[2px] bg-slate-900 px-1 py-0.5 text-[0.65rem] font-bold leading-none text-white">{row.original.originCountry}</span>
-            <ArrowRight className="size-3 text-amber-500" aria-hidden="true" />
-            <span className="rounded-[2px] bg-slate-900 px-1 py-0.5 text-[0.65rem] font-bold leading-none text-white">{row.original.destinationCountry}</span>
+          // Same three-column grid as the transport request table: both countries get equal room, the arrow sits in the middle.
+          <div className="grid min-w-36 grid-cols-[minmax(3.5rem,1fr)_1.25rem_minmax(3.5rem,1fr)] items-center text-slate-700">
+            <span className="truncate" title={row.original.originCountry}>{row.original.originCountry}</span>
+            <ArrowRight className="mx-auto size-3 shrink-0 text-amber-500" aria-hidden="true" />
+            <span className="truncate pl-1.5" title={row.original.destinationCountry}>{row.original.destinationCountry}</span>
           </div>
         ),
       },
@@ -87,7 +99,7 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         cell: ({ row }) => (
           <div className="flex flex-wrap items-center gap-1">
             <DossierStatusBadge status={row.original.status} />
-            {row.original.isUrgentRisk ? <span className="rounded-[2px] border border-red-300 bg-red-50 px-1.5 py-1 font-heading text-[0.6rem] font-semibold uppercase leading-none tracking-[0.06em] text-red-700">Urgent</span> : null}
+            {row.original.isUrgentRisk ? <StatusBadge tone="red" dot={false}>Urgent</StatusBadge> : null}
           </div>
         ),
       },

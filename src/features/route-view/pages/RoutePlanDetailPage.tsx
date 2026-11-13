@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ComponentType } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useIsMutating } from "@tanstack/react-query";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
@@ -28,6 +29,7 @@ import {
   RouteManagementActions,
   RouteSegmentOutsourceAction,
 } from "../components/RouteManagementActions";
+import { VehicleChangeContextPanel } from "../components/VehicleChangeContextPanel";
 
 export default function RoutePlanDetailPage({
   mapViewer,
@@ -40,27 +42,51 @@ export default function RoutePlanDetailPage({
 } = {}) {
   const { routePlanId = "" } = useParams<{ routePlanId: string }>();
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const navigateToBase = () => {
+    if (routeDetailPath) {
+      navigate(routeDetailPath(routePlanId));
+    } else {
+      navigate(`/admin/route-plans/${encodeURIComponent(routePlanId)}`);
+    }
+  };
   const principal = useAuthStore((state) => state.principal);
   const allowed =
     canViewRoute(principal) &&
     (!emergencyView || getWorkspaceRole(principal) === "manager");
   const valid = actionEntityIdSchema.safeParse(routePlanId).success;
   const query = useRoutePlanDetail(routePlanId, allowed);
-  const error = query.isError ? getRouteViewError(query.error) : null;
+  const readFailure = query.isError ? getEmergencyError(query.error) : null;
+  const error = query.isError && (!query.data || readFailure?.denied || readFailure?.unauthorized)
+    ? getRouteViewError(query.error) : null;
   const context = useEmergencyContext(query.data, allowed && !error);
-  // Current scoped reads gate the page; historical action failures stay in their own dialogs.
+  // Only route plan query errors gate the page; secondary emergency context errors should not crash the route plan page.
   const accessFailure =
-    context.error &&
-    (getEmergencyError(context.error).denied ||
-      getEmergencyError(context.error).unauthorized)
-      ? context.error
+    readFailure &&
+    (readFailure.denied || readFailure.unauthorized)
+      ? query.error
       : null;
   const mode = params.get("emergency") ?? emergencyView;
   const actions =
-    query.data && context.data
+    query.data && context.data && !readFailure && !context.error
       ? getEmergencyActions(query.data, context.data.workspace)
       : [];
-  const activeMode = actions.find((action) => action === mode);
+  const fullPageAction =
+    mode === "decision" || mode === "activation" ? mode : undefined;
+  // A decision or activation refreshes the route before its request settles, and the new status (for example ACTIVE)
+  // drops the action from `actions`. Unmounting the panel then made the request fail its "still mounted" check, so it
+  // never returned to the route and the page showed "already decided". Keep the panel while its own request runs.
+  const panelRequestRunning =
+    useIsMutating({
+      mutationKey: ["route-view", "emergency"],
+      predicate: (mutation) =>
+        String(mutation.options.mutationKey?.[2] ?? "").endsWith(
+          `:${routePlanId}:${fullPageAction}`,
+        ),
+    }) > 0;
+  const activeMode =
+    actions.find((action) => action === mode) ??
+    (fullPageAction && panelRequestRunning ? fullPageAction : undefined);
   const changeMode = (action?: EmergencyAction) =>
     setParams((current) => {
       const next = new URLSearchParams(current);
@@ -82,6 +108,7 @@ export default function RoutePlanDetailPage({
     if (!hasPlan || waitingForAction || mode === "request" || mode === "notice")
       return;
     const heading = pageRef.current?.querySelector<HTMLElement>("h1");
+    heading?.setAttribute("tabindex", "-1");
     heading?.focus({ preventScroll: true });
     pageRef.current?.scrollIntoView({ block: "start" });
   }, [routePlanId, mode, hasPlan, waitingForAction]);
@@ -92,7 +119,7 @@ export default function RoutePlanDetailPage({
         <RouteChangeDecisionPanel
           plan={plan}
           context={context.data}
-          onBack={() => changeMode()}
+          onBack={navigateToBase}
         />
       );
     if (activeMode === "activation")
@@ -100,22 +127,32 @@ export default function RoutePlanDetailPage({
         <ReturnActivationPanel
           plan={plan}
           context={context.data}
-          onBack={() => changeMode()}
+          onBack={navigateToBase}
         />
       );
-    if (mode && mode !== "overview" && !activeMode)
+    if (mode && mode !== "overview" && !activeMode) {
+      const isAlreadyDecided =
+        mode === "decision" &&
+        ["ACTIVE", "REJECTED_BY_MANAGER", "CANCELLED", "COMPLETED"].includes(
+          plan.status,
+        );
+      const unavailableMessage = isAlreadyDecided || mode === "decision"
+        ? "This route change has already been decided."
+        : "This emergency action is unavailable for your role or the current route and transport state.";
+
       workspace = (
         <div className="space-y-3">
-          <ErrorState message="This emergency action is unavailable for your role or the current route and transport state." />
+          <ErrorState message={unavailableMessage} />
           <Button
             className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
             variant="outline"
-            onClick={() => changeMode()}
+            onClick={navigateToBase}
           >
             Back to Route Plan
           </Button>
         </div>
       );
+    }
   }
   return (
     <div
@@ -131,7 +168,7 @@ export default function RoutePlanDetailPage({
                 aria-label="Loading authorized route workspace"
                 className="h-80 w-full"
               />
-            ) : context.error && (staff || (mode && mode !== "overview")) ? (
+            ) : context.error && !context.data && (staff || (mode && mode !== "overview")) ? (
               <div className="space-y-3">
                 <ErrorState
                   message={getEmergencyError(context.error).message}
@@ -139,7 +176,7 @@ export default function RoutePlanDetailPage({
                 <Button
                   className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
                   variant="outline"
-                  onClick={() => changeMode()}
+                  onClick={navigateToBase}
                 >
                   Back to Route Plan
                 </Button>
@@ -148,9 +185,27 @@ export default function RoutePlanDetailPage({
               <div key={`${routePlanId}-${mode}`}>{workspace}</div>
             ) : !fullPageMode ? (
               <>
+                {readFailure && <ErrorState message={`Showing the last authorized route. ${readFailure.message}`} onRetry={() => void query.refetch()} />}
                 {context.error && (
                   <ErrorState
                     message={getEmergencyError(context.error).message}
+                  />
+                )}
+                {params.has("changeVehicle") && context.data && (
+                  <VehicleChangeContextPanel
+                    plan={plan}
+                    context={context.data}
+                    readOnly={Boolean(readFailure || context.error)}
+                    onReloadWorkspace={() => Promise.all([
+                      query.refetch({ throwOnError: true }),
+                      context.reload(),
+                    ])}
+                    incidentReportId={params.get("changeVehicle") ?? ""}
+                    onDismiss={() => setParams((current) => {
+                      const next = new URLSearchParams(current);
+                      next.delete("changeVehicle");
+                      return next;
+                    })}
                   />
                 )}
                 <RoutePlanDetails
@@ -163,11 +218,12 @@ export default function RoutePlanDetailPage({
                       <RouteManagementActions
                         plan={plan}
                         context={context.data}
+                        readOnly={Boolean(readFailure || context.error)}
                       />
                     ) : undefined
                   }
                   segmentActions={
-                    context.data
+                    context.data && !readFailure && !context.error
                       ? (segment) => (
                           <RouteSegmentOutsourceAction
                             plan={plan}
@@ -178,7 +234,7 @@ export default function RoutePlanDetailPage({
                       : undefined
                   }
                   emergencyArea={
-                    context.data ? (
+                    context.data && !readFailure && !context.error ? (
                       <EmergencyActionBar
                         plan={plan}
                         context={context.data}

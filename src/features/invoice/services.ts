@@ -4,7 +4,7 @@ import apiClient from "@/lib/axios"
 import type { PaginationMeta } from "@/shared/types"
 import { invoiceEnvelopeSchema, invoiceIdSchema, invoicePageSchema, invoiceDetailSchema, invoiceQuerySchema, bookingInvoiceQuerySchema, invoiceStatusHistorySchema } from "@/features/invoice/schemas"
 import { isInvoiceMockMode } from "@/features/invoice/utils"
-import type { InvoicePage, InvoiceQueryParams, BookingInvoiceQueryParams, ApiEnvelope, ApiFieldError, CreateInvoicePayload, Invoice, InvoiceBookingContext, InvoiceSuggestion, InvoiceType, IssuedInvoice, UpdateInvoicePayload, CancelInvoicePayload, CancelInvoiceResponse, OnlinePaymentResponse, RecordPaymentPayload, RecordPaymentResponse } from "@/features/invoice/types"
+import type { InvoicePage, InvoiceQueryParams, BookingInvoiceQueryParams, ApiEnvelope, ApiFieldError, CreateInvoicePayload, Invoice, InvoiceDetail, InvoiceBookingContext, InvoiceSuggestion, InvoiceType, IssuedInvoice, UpdateInvoicePayload, CancelInvoicePayload, CancelInvoiceResponse, OnlinePaymentResponse, RecordPaymentPayload, RecordPaymentResponse } from "@/features/invoice/types"
 import { InvoiceApiError } from "@/features/invoice/errors"
 import { mockCreateInvoice, mockGetBookingContext, mockGetInvoice, mockGetSuggestion, mockIssueInvoice, mockUpdateInvoice } from "@/features/invoice/mocks/compose.mock"
 import type { AxiosError } from "axios"
@@ -68,7 +68,7 @@ export const invoiceViewService = {
           );
     return invoicePageSchema.parse(readEnvelope(response));
   },
-  async detail(invoiceId: string, signal?: AbortSignal) {
+  async detail(invoiceId: string, signal?: AbortSignal): Promise<InvoiceDetail> {
     const id = invoiceIdSchema.parse(invoiceId);
     signal?.throwIfAborted();
     const response =
@@ -78,7 +78,12 @@ export const invoiceViewService = {
             `/invoices/${encodeURIComponent(id)}`,
             { signal },
           );
-    return invoiceDetailSchema.parse(readEnvelope(response));
+    const invoice = invoiceDetailSchema.parse(readEnvelope(response));
+    return {
+      ...invoice,
+      note: invoice.note ?? null,
+      cancellationReason: invoice.cancellationReason ?? null,
+    };
   },
   async statusHistory(invoiceId: string, signal?: AbortSignal) {
     const id = invoiceIdSchema.parse(invoiceId);
@@ -164,11 +169,6 @@ async function call<T>(request: Promise<unknown>): Promise<T> {
 
 const enc = encodeURIComponent
 
-/** The BE answers `dueDate` as a UTC datetime; the UI works with the calendar day (same rule as the zod read schemas). */
-function withDueDay(invoice: Invoice): Invoice {
-  return invoice.dueDate ? { ...invoice, dueDate: invoice.dueDate.slice(0, 10) } : invoice
-}
-
 interface BookingDetailResponse {
   bookingId: string
   bookingCode: string
@@ -200,19 +200,19 @@ export const invoiceService = {
   /** IV6: loads a draft for editing. */
   async getInvoice(invoiceId: string): Promise<Invoice> {
     if (useInvoiceMocks) return mockGetInvoice(invoiceId)
-    return withDueDay(await call<Invoice>(apiClient.get(`invoices/${enc(invoiceId)}`)))
+    return call<Invoice>(apiClient.get(`invoices/${enc(invoiceId)}`))
   },
 
   /** IV2: QUOTATION, DEPOSIT and FINAL send no `items`; the answer carries the lines the server built. */
   async createInvoice(bookingId: string, payload: CreateInvoicePayload): Promise<Invoice> {
     if (useInvoiceMocks) return mockCreateInvoice(bookingId, payload)
-    return withDueDay(await call<Invoice>(apiClient.post(`bookings/${enc(bookingId)}/invoices`, payload)))
+    return call<Invoice>(apiClient.post(`bookings/${enc(bookingId)}/invoices`, payload))
   },
 
   /** IV3: `lastUpdatedAt` is the `updatedAt` of the last read. For generated types the server rebuilds the lines. */
   async updateInvoice(invoiceId: string, payload: UpdateInvoicePayload): Promise<Invoice> {
     if (useInvoiceMocks) return mockUpdateInvoice(invoiceId, payload)
-    return withDueDay(await call<Invoice>(apiClient.put(`invoices/${enc(invoiceId)}`, payload)))
+    return call<Invoice>(apiClient.put(`invoices/${enc(invoiceId)}`, payload))
   },
 
   /** IV7 */

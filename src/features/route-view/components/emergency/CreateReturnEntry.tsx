@@ -43,9 +43,11 @@ export function CreateReturnEntry({
     ? "A non-cancelled RETURN already exists."
     : context.workspace.planStatus !== "APPROVED" || plan.status !== "ACTIVE"
       ? "An approved transport plan and active PRIMARY are required."
-      : context.workspace.dossierStatus !== "APPROVED"
-        ? "An approved compliance dossier is required."
-        : undefined;
+      : context.bookingRestricted
+        ? "Booking details are restricted for this transport."
+        : context.workspace.dossierStatus !== "APPROVED"
+          ? "An approved compliance dossier is required."
+          : undefined;
   if (!inScope) return null;
   return (
     <>
@@ -68,7 +70,7 @@ export function CreateReturnEntry({
             <DialogTitle>Create Return Route</DialogTitle>
             <DialogDescription>
               Continue to the existing Return Builder for this transport plan.
-              The backend validates journey, Location and route rules when
+              Journey, location, and route rules are checked when
               saving.
             </DialogDescription>
           </DialogHeader>

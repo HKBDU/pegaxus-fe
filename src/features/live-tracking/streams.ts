@@ -4,7 +4,7 @@ import { isDemoMode } from "./constants"
 
 /** The real tracking hub, or (dev only, `?demo=1`) the demo vehicle. Returns the cleanup function. */
 export function openTrackingStream(transportId: string, handlers: Omit<TransportTrackingHandlers, "getAccessToken">) {
-  if (import.meta.env.DEV && isDemoMode()) {
+  if (import.meta.env.DEV && isDemoMode(transportId)) {
     let cancelled = false
     let cleanup: (() => void) | undefined
     void import("./mock/stream").then((demo) => {

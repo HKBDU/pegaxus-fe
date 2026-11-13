@@ -16,6 +16,8 @@ type Handler<K extends RealtimeEventName> = (payload: RealtimeEventMap[K]) => vo
 
 /** Keep retrying forever (0s, 2s, 5s, 10s, then every 30s): the default policy gives up after four attempts. */
 const RETRY_DELAYS_MS = [0, 2_000, 5_000, 10_000]
+/** `withAutomaticReconnect` only starts after a successful connection, so retry failed initial starts ourselves. */
+const INITIAL_CONNECT_RETRY_DELAY_MS = 30_000
 const retryPolicy = {
   nextRetryDelayInMilliseconds: ({ previousRetryCount }: { previousRetryCount: number }) =>
     RETRY_DELAYS_MS[previousRetryCount] ?? 30_000,
@@ -29,6 +31,7 @@ class NotificationHub {
   private readonly reconnectListeners = new Set<() => void>()
   /** start/stop calls are queued so React StrictMode's double mount cannot overlap them. */
   private queue: Promise<void> = Promise.resolve()
+  private initialConnectRetry: ReturnType<typeof setTimeout> | null = null
 
   getState() {
     return this.state
@@ -58,13 +61,14 @@ class NotificationHub {
   start(getAccessToken: () => string | null | undefined) {
     return this.enqueue(async () => {
       if (this.connection) return
+      this.clearInitialConnectRetry()
       const connection = new HubConnectionBuilder()
         .withUrl(HUB_URL, { accessTokenFactory: () => getAccessToken() ?? "" })
         .withAutomaticReconnect(retryPolicy)
         .configureLogging(import.meta.env.DEV ? LogLevel.Warning : LogLevel.Error)
         .build()
 
-      for (const event of ["ReceiveNotification", "BookingEditingStarted", "BookingEditingStopped"] as const) {
+      for (const event of ["ReceiveNotification", "RoutePlanCancelled", "BookingEditingStarted", "BookingEditingStopped"] as const) {
         connection.on(event, (payload) => this.handlers.get(event)?.forEach((handler) => handler(payload)))
       }
       connection.onreconnecting(() => this.setState("reconnecting"))
@@ -81,10 +85,15 @@ class NotificationHub {
         this.setState("connected")
         this.reconnectListeners.forEach((listener) => listener())
       } catch (error) {
-        // e.g. BE down or 401: leave the app usable; REST still works. The next login / token change starts again.
+        // Automatic reconnect only applies after a connection has started once. Retry an initial failure too: Render can
+        // briefly reject a hub negotiation while waking up, and a refreshed access token is read on the next attempt.
         console.warn("[realtime] could not connect to the notification hub", error)
         this.connection = null
         this.setState("disconnected")
+        this.initialConnectRetry = setTimeout(() => {
+          this.initialConnectRetry = null
+          void this.start(getAccessToken)
+        }, INITIAL_CONNECT_RETRY_DELAY_MS)
       }
     })
   }
@@ -92,6 +101,7 @@ class NotificationHub {
   /** Close the connection (logout, account switch). */
   stop() {
     return this.enqueue(async () => {
+      this.clearInitialConnectRetry()
       const connection = this.connection
       this.connection = null
       if (connection && connection.state !== HubConnectionState.Disconnected) await connection.stop()
@@ -115,6 +125,11 @@ class NotificationHub {
   private enqueue(task: () => Promise<void>) {
     this.queue = this.queue.then(task, task)
     return this.queue
+  }
+
+  private clearInitialConnectRetry() {
+    if (this.initialConnectRetry) clearTimeout(this.initialConnectRetry)
+    this.initialConnectRetry = null
   }
 
   private setState(state: RealtimeConnectionState) {

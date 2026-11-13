@@ -10,6 +10,7 @@ import type { ProfileFormErrors, ProfileFormProps } from "../types"
 import { ACCOUNT_TYPE_LABELS } from "../constants/profile.constants"
 import { ProfileAvatarPreview } from "./ProfileAvatarPreview"
 import { ProfileVerificationField } from "./ProfileVerificationField"
+import { getAvatarFileError } from "../avatar"
 
 function getInitials(name: string | null) {
   return (name ?? "").split(" ").filter(Boolean).map((part) => part[0]).join("").slice(0, 3).toUpperCase()
@@ -42,6 +43,10 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (avatar) {
+      const avatarError = getAvatarFileError(avatar)
+      if (avatarError) { toast.error(avatarError); return }
+    }
     const formData = new FormData(event.currentTarget)
     const email = String(formData.get("email") ?? profile.email)
     const phone = String(formData.get("phone") ?? profile.phone ?? "")
@@ -65,7 +70,11 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
       <div className="relative min-w-0">
         <ProfileAvatarPreview className="h-full min-h-0" badge={<ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none shadow-sm" />} initials={getInitials(profile.fullName)} avatarUrl={avatarPreviewUrl ?? profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
         <Input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" id="profile-avatar" type="file" accept="image/jpeg,image/png" aria-label="Upload profile avatar" onChange={(event) => {
-          const file = event.target.files?.[0]
+          const file = event.currentTarget.files?.[0]
+          event.currentTarget.value = ""
+          if (!file) return
+          const avatarError = getAvatarFileError(file)
+          if (avatarError) { toast.error(avatarError); return }
           setAvatar(file)
           setAvatarPreviewUrl(file ? URL.createObjectURL(file) : undefined)
         }} />

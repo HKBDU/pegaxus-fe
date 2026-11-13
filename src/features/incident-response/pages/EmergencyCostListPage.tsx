@@ -1,9 +1,10 @@
-import { useId, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Plus } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { ErrorState } from "@/shared/components/common";
+import { PageHeader } from "@/shared/components/PageHeader";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { Label } from "@/shared/components/ui/label";
+import { ROLE_ROUTES } from "@/app/route-config";
+import { incidentRoutes } from "@/features/incident-management/constants";
 import { EmergencyCostList } from "../components/EmergencyCostList";
 import { EmergencyCostModeNotice } from "../components/EmergencyCostModeNotice";
 import { useEmergencyCostScope } from "../hooks/useEmergencyCostScope";
@@ -14,6 +15,11 @@ import {
 import { emergencyCostIdSchema } from "../schemas";
 import { canCreateEmergencyCosts } from "../services";
 
+/**
+ * The emergency cost list, in the same frame as the web's other list pages: a compact page header with its back link and
+ * a "New request" action, then the list. The old "Create for incident" box asked people to type an incident UUID (and
+ * showed it raw when the page was opened from an incident); a request now starts from a known incident only.
+ */
 export default function EmergencyCostListPage({
   audience,
 }: {
@@ -22,7 +28,7 @@ export default function EmergencyCostListPage({
   const [search] = useSearchParams();
   const incidentReportId = search.get("incidentReportId") ?? undefined;
   const transportId = search.get("transportId") ?? undefined;
-  const { principal, scope } = useEmergencyCostScope();
+  const { principal } = useEmergencyCostScope();
   if (
     [incidentReportId, transportId].some(
       (id) => id !== undefined && !emergencyCostIdSchema.safeParse(id).success,
@@ -31,63 +37,49 @@ export default function EmergencyCostListPage({
     return (
       <ErrorState message="The incident or transport scope must be a valid UUID. No request is sent." />
     );
+  // Back to the incident the list was opened from, otherwise to the audience's home for incidents.
+  const back = incidentReportId
+    ? {
+        href:
+          audience === "crew"
+            ? incidentRoutes.crewDetail(incidentReportId)
+            : incidentRoutes.adminDetail(incidentReportId),
+        label: "Incident",
+      }
+    : audience === "crew"
+      ? { href: "/crew/transports", label: "Assigned transports" }
+      : { href: ROLE_ROUTES.incidents, label: "Incidents" };
+  const canCreate = Boolean(incidentReportId) && canCreateEmergencyCosts(principal);
   return (
     <main className="mx-auto w-full min-w-0 max-w-7xl space-y-4 p-4 font-sans sm:p-6">
-      <EmergencyCostModeNotice />
-      {canCreateEmergencyCosts(principal) ? (
-        <CreateEntry
-          key={`${scope}:${incidentReportId ?? ""}`}
-          audience={audience}
-          incidentReportId={incidentReportId}
+      <div>
+        <PageHeader
+          title="Emergency costs"
+          size="compact"
+          backHref={back.href}
+          backLabel={back.label}
+          action={
+            canCreate ? (
+              <Button asChild size="sm" className="rounded-xs">
+                <Link to={emergencyCostCreatePath(audience, incidentReportId!)}>
+                  <Plus aria-hidden="true" />
+                  New request
+                </Link>
+              </Button>
+            ) : undefined
+          }
         />
-      ) : null}
+        <p className="mt-1 mb-0 text-xs text-slate-500 sm:text-sm">
+          View and monitor emergency expenses. Dates use your local timezone.
+        </p>
+      </div>
+      <EmergencyCostModeNotice />
       <EmergencyCostList
         routeAudience={audience}
         incidentReportId={incidentReportId}
         transportId={transportId}
+        hideHeading
       />
     </main>
-  );
-}
-
-function CreateEntry({
-  audience,
-  incidentReportId,
-}: {
-  audience: EmergencyCostAudience;
-  incidentReportId?: string;
-}) {
-  const id = useId();
-  const navigate = useNavigate();
-  const [incident, setIncident] = useState(incidentReportId ?? "");
-  const valid = emergencyCostIdSchema.safeParse(incident.trim()).success;
-  return (
-    <form
-      className="flex min-w-0 flex-wrap items-end gap-2 rounded-xs border border-border bg-card p-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (valid) navigate(emergencyCostCreatePath(audience, incident.trim()));
-      }}
-    >
-      <div className="min-w-0 flex-[1_1_18rem] space-y-1">
-        <Label htmlFor={id}>Create for incident</Label>
-        <Input
-          id={id}
-          value={incident}
-          readOnly={Boolean(incidentReportId)}
-          onChange={(event) => setIncident(event.target.value)}
-          placeholder="Incident UUID"
-          className="min-h-11 rounded-xs"
-          aria-describedby={`${id}-hint`}
-        />
-        <p id={`${id}-hint`} className="m-0 text-xs text-muted-foreground">
-          Use an existing incident ID. Assignment and eligibility are checked on
-          the next page.
-        </p>
-      </div>
-      <Button type="submit" disabled={!valid} className="min-h-11 rounded-xs">
-        New request
-      </Button>
-    </form>
   );
 }

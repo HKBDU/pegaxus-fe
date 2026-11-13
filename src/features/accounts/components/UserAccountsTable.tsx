@@ -9,7 +9,8 @@ import {
 } from "@tanstack/react-table";
 import { Circle, Eye, MoreVertical, Pencil, Trash2 } from "lucide-react";
 
-import { formatBookingDate, formatBookingTime } from "@/features/booking/utils";
+import { formatBookingDate } from "@/features/booking/utils";
+import { formatUtcTime } from "@/shared/utils/datetime";
 import { accountDetail, accountEdit } from "@/app/route-config";
 import type { PaginationMeta } from "@/shared/types";
 import { EmptyState, TablePagination } from "@/shared/components/common";
@@ -197,7 +198,7 @@ export function UserAccountsTable({
               {formatBookingDate(row.original.createdAt)}
             </span>
             <span className="mt-1 block text-[0.68rem] text-slate-400">
-              {formatBookingTime(row.original.createdAt)}
+              {formatUtcTime(row.original.createdAt)}
             </span>
           </div>
         ),

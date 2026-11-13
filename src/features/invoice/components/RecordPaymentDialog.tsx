@@ -5,11 +5,20 @@ import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
 import { Textarea } from "@/shared/components/ui/textarea"
-import { TimePicker } from "@/shared/components/ui/time-picker"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
+import { TimePicker } from "@/shared/components/shadcn-studio/date-picker/date-picker-09"
 import { INVOICE_ACTION, INVOICE_TYPE, PAYMENT_METHOD } from "@/features/invoice/constants"
 import type { RecordPaymentDialogProps } from "@/features/invoice/types"
 import { useRecordPayment } from "@/features/invoice/hooks/useRecordPayment"
-import { mapPaymentError, formatPaymentAmount, toPaymentTimestamp, validateRecordPayment } from "@/features/invoice/utils"
+import { mapPaymentError, formatPaymentAmount, formatPaymentDate, toPaymentTimestamp, validateRecordPayment } from "@/features/invoice/utils"
+
+const RECORDABLE_PAYMENT_METHODS = [
+  { value: PAYMENT_METHOD.CASH, label: "Cash" },
+  { value: PAYMENT_METHOD.BANK_TRANSFER, label: "Bank transfer" },
+  { value: PAYMENT_METHOD.OTHER, label: "Other" },
+] as const
+
+type RecordablePaymentMethod = (typeof RECORDABLE_PAYMENT_METHODS)[number]["value"]
 
 /** Local "yyyy-MM-dd" and "HH:mm" of now, the values of the date and time pickers. */
 function localDateAndTime() {
@@ -24,15 +33,18 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
   const isQuotation = invoice.type === INVOICE_TYPE.QUOTATION
   const mutation = useRecordPayment()
   const [open, setOpen] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<RecordablePaymentMethod>(PAYMENT_METHOD.CASH)
   const [transactionReference, setTransactionReference] = useState('')
   const [paidDay, setPaidDay] = useState(() => localDateAndTime().day)
   const [paidTime, setPaidTime] = useState(() => localDateAndTime().time)
   const [note, setNote] = useState('')
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
+  const paidAtPreview = paidDay ? toPaymentTimestamp(`${paidDay}T${paidTime || '00:00'}`) : undefined
 
   if (!canRecord || isQuotation) return null
 
   function resetForm() {
+    setPaymentMethod(PAYMENT_METHOD.CASH)
     setTransactionReference('')
     setPaidDay(localDateAndTime().day)
     setPaidTime(localDateAndTime().time)
@@ -50,8 +62,7 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
     event.preventDefault()
     const payload = {
       amount: invoice.summary.grandTotal,
-      // The Logistics Manager only records cash received in person; other methods come in through online payment.
-      paymentMethod: PAYMENT_METHOD.CASH,
+      paymentMethod,
       paidAt: paidDay ? toPaymentTimestamp(`${paidDay}T${paidTime || '00:00'}`) : undefined,
       transactionReference: transactionReference || undefined,
       note: note || undefined,
@@ -82,13 +93,17 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
       <DialogTrigger asChild>
         <Button type="button">Record payment</Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto rounded-[2px] sm:max-w-lg">
+      <DialogContent
+        className="max-h-[90dvh] overflow-y-auto rounded-[2px] sm:max-w-lg"
+        // Radix would focus and select the read-only amount on open, painting it with the primary selection color.
+        onOpenAutoFocus={(event) => event.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>
             {invoice.type === INVOICE_TYPE.CREDIT_NOTE ? 'Confirm compensation payment' : 'Record payment'}
           </DialogTitle>
           <DialogDescription>
-            Confirm the full payment for {invoice.invoiceNumber}. The invoice status will use the server response.
+            Confirm the full payment for {invoice.invoiceNumber}.
           </DialogDescription>
         </DialogHeader>
         <form className="grid gap-4" onSubmit={handleSubmit}>
@@ -98,7 +113,18 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
           </div>
           <div className="grid gap-2">
             <Label htmlFor="record-payment-method">Payment method</Label>
-            <Input id="record-payment-method" value="Cash" readOnly />
+            <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as RecordablePaymentMethod)}>
+              <SelectTrigger id="record-payment-method" className="w-full rounded-[2px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RECORDABLE_PAYMENT_METHODS.map((method) => (
+                  <SelectItem key={method.value} value={method.value}>
+                    {method.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="record-payment-reference">Transaction reference</Label>
@@ -112,6 +138,7 @@ export function RecordPaymentDialog({ invoice, onRecorded }: RecordPaymentDialog
           </div>
           <div className="grid gap-2">
             <Label htmlFor="record-payment-paid-at">Paid at</Label>
+            <p className="text-xs text-slate-500">Your local time. Sent as {formatPaymentDate(paidAtPreview)}.</p>
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,9rem)] gap-2">
               <DatePicker
                 id="record-payment-paid-at"

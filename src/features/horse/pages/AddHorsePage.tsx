@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react"
 import { useForm, type SubmitHandler } from "react-hook-form"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -11,16 +12,20 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/shared/co
 import { Input } from "@/shared/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
+import FileUploader from "@/shared/components/FileUploader"
+import ImageViewer from "@/shared/components/file-viewer/ImageViewer"
 import { HORSE_BREED_OPTIONS, HORSE_SEX_OPTIONS } from "../constants/horse.constants"
 import { horseApi } from "../services"
 import { getHorseApiErrorMessage } from "../utils/horse-api-error"
 import { toHorseDateInput } from "../utils/format-horse-date"
+import { todayUtc } from "@/shared/utils/datetime"
 import type { CreateHorseRequest, Horse, HorseFormValues, HorseSex } from "../types"
 
 import {
   VALIDATION_LIMITS,
   countDecimalPlaces,
 } from "@/shared/constants/validation-limits"
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload"
 
 const inputClass = "profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1"
 const selectOptions = HORSE_SEX_OPTIONS.filter((option) => option.value !== "ALL")
@@ -40,13 +45,11 @@ const dateOfBirthRules = {
     if (!value || !value.trim()) return "Date of birth is required."
     const date = new Date(value)
     if (Number.isNaN(date.getTime())) return "Invalid date of birth."
-    const today = new Date()
-    today.setHours(23, 59, 59, 999)
-    if (date > today) return "Date of birth cannot be in the future."
-    const minDate = new Date()
-    minDate.setFullYear(minDate.getFullYear() - VALIDATION_LIMITS.horseMaxAgeYears)
-    minDate.setHours(0, 0, 0, 0)
-    if (date < minDate) return `Date of birth cannot be more than ${VALIDATION_LIMITS.horseMaxAgeYears} years ago.`
+    const today = todayUtc()
+    const birthDate = value.slice(0, 10)
+    if (birthDate > today) return "Date of birth cannot be in the future."
+    const minYear = Number(today.slice(0, 4)) - VALIDATION_LIMITS.horseMaxAgeYears
+    if (Number(birthDate.slice(0, 4)) < minYear) return `Date of birth cannot be more than ${VALIDATION_LIMITS.horseMaxAgeYears} years ago.`
     return true
   },
 }
@@ -144,12 +147,20 @@ type HorseFormProps = {
 /** The horse form on its own, so it can live on a page or inside a dialog. */
 export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = false }: HorseFormProps) {
   const form = useForm<HorseFormValues>({ defaultValues: toFormValues(initialHorse) })
+  const [avatarPublicId, setAvatarPublicId] = useState<string>()
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string>()
+  const [avatarPreviewSize, setAvatarPreviewSize] = useState<number>()
   const isEdit = mode === "edit"
   const showValidationSummary = form.formState.submitCount > 0 && Object.keys(form.formState.errors).length > 0
+
+  useEffect(() => () => {
+    if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl)
+  }, [avatarPreviewUrl])
 
   const onSubmit: SubmitHandler<HorseFormValues> = async (values) => {
     try {
       const input = toCreateRequest(values)
+      if (avatarPublicId) input.avatar = { publicId: avatarPublicId }
       let saved: Horse | undefined
       if (isEdit && initialHorse) await horseApi.updateHorse(initialHorse.horseId, input)
       else saved = await horseApi.createHorse(input)
@@ -428,6 +439,47 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
               />
             </div>
 
+            <div className="mb-4 border border-slate-200 bg-white p-3">
+              <p className="mb-2 text-sm font-bold text-slate-900">HORSE AVATAR</p>
+              <FileUploader
+                entity="avatar"
+                accept="image/jpeg,image/png"
+                maxSize={UPLOAD_MAX_BYTES}
+                maxFiles={1}
+                multiple={false}
+                title="Upload avatar"
+                hint={`One Image Only · JPG or PNG, up to ${UPLOAD_MAX_MB} MiB`}
+                className="[&>[role=button]]:min-h-[72px] [&>[role=button]]:gap-1 [&>[role=button]]:py-3"
+                onUploaded={({ publicId, file }) => {
+                  setAvatarPublicId(publicId)
+                  setAvatarPreviewSize(file.size)
+                  setAvatarPreviewUrl((current) => {
+                    if (current) URL.revokeObjectURL(current)
+                    return URL.createObjectURL(file)
+                  })
+                }}
+              />
+              {(avatarPreviewUrl || initialHorse?.avatarUrl) && (
+                <div className="mt-3 border-t border-slate-200 pt-3">
+                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Preview</p>
+                  <div className="h-64 w-full overflow-hidden rounded-[2px] border border-slate-300 bg-slate-900">
+                    <ImageViewer
+                      images={[{
+                        src: avatarPreviewUrl ?? initialHorse?.avatarUrl ?? "",
+                        size: avatarPreviewSize,
+                        alt: "Horse avatar preview",
+                        title: "Horse avatar preview",
+                      }]}
+                      maxFileSizeBytes={UPLOAD_MAX_BYTES}
+                      width="100%"
+                      height="100%"
+                      ariaLabel="Horse avatar preview"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {showValidationSummary && (
               <p className="pb-2 text-right text-xs text-red-600" role="alert">
                 Please complete all required fields before submitting.
@@ -448,7 +500,7 @@ export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
   return (
     <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
       <div className="mx-auto flex w-full max-w-[1152px] flex-col">
-        <PageHeader title={mode === "edit" ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" />
+        <PageHeader title={mode === "edit" ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" backLabel="Back to My Horses" />
         <HorseForm mode={mode} initialHorse={initialHorse} onSaved={() => navigate("/my-horses")} onCancel={() => navigate("/my-horses")} />
       </div>
     </section>

@@ -1,18 +1,23 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Route } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { AuthPrincipal } from "@/features/auth/types";
 import { transportPlanDetail } from "@/app/route-config";
 import { Button } from "@/shared/components/ui/button";
 import { ErrorState } from "@/shared/components/common";
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import { Section } from "@/features/transport-plan/components/ApprovedBookingDetails";
-import { useRoutePlanAlternatives } from "../hooks/useRoutePlanDetail";
+import { refreshRouteAfterSubmit, useRoutePlanAlternatives } from "../hooks/useRoutePlanDetail";
 import { canViewRoute, getRouteViewError } from "../services";
 import { routePlanIdSchema } from "../schemas";
 import { getRouteDetailPath } from "../navigation";
 import type { RouteDetailPath } from "../types";
-import { beforeDeparture, getPendingRouteCreation } from "../workspace-actions";
+import { beforeDeparture, getPendingRouteCreation, hasActivePrimary } from "../route-policy";
 import { RoutePlansTable } from "./RoutePlansTable";
+import { getRoutePlan, getRoutePlanError, updateRoutePlan } from "@/features/route-plan/services";
+import type { RoutePlanSummary } from "../types";
 
 function UnavailableAction({
   label,
@@ -64,17 +69,19 @@ export function RoutePlansWorkspace({
   routeDetailPath?: RouteDetailPath;
   dossierStatus?: string | null;
 }) {
+  const queryClient = useQueryClient();
+  const [submittingRoutePlanId, setSubmittingRoutePlanId] = useState<string | null>(null);
   const allowed = canViewRoute(principal);
   const validId = routePlanIdSchema.safeParse(transportPlanId).success;
+  const role = getWorkspaceRole(principal);
+  const manager = role === "manager",
+    coordinator = role === "coordinator",
+    specialist = role === "specialist";
   const query = useRoutePlanAlternatives(
     transportPlanId,
     {},
     allowed && validId,
   );
-  const role = getWorkspaceRole(principal);
-  const manager = role === "manager",
-    coordinator = role === "coordinator",
-    specialist = role === "specialist";
   const unlocked = beforeDeparture(transportStatus);
   const items = query.data?.items ?? [];
   const context = {
@@ -82,9 +89,8 @@ export function RoutePlansWorkspace({
     planStatus,
     transportStatus,
     dossierStatus,
-    hasActivePrimary: items.some(
-      (route) => route.routeType === "PRIMARY" && route.status === "ACTIVE",
-    ),
+    hasActivePrimary: hasActivePrimary(items),
+    routeDetailPath,
   };
   const primary = items.find(
     (item) => item.routeType === "PRIMARY" && item.status !== "CANCELLED",
@@ -95,6 +101,55 @@ export function RoutePlansWorkspace({
       ? "Route Monitoring"
       : "Route Plans";
   const creation = getPendingRouteCreation(items, context, transportPlanId);
+  async function submitForLegalReview(route: RoutePlanSummary) {
+    if (submittingRoutePlanId || route.routeType === "RETURN" || route.legalReviewRequested) return;
+    setSubmittingRoutePlanId(route.routePlanId);
+    try {
+      const detail = await getRoutePlan(route.routePlanId);
+      await updateRoutePlan(route.routePlanId, {
+        lastUpdatedAt: detail.updatedAt,
+        updateReason: "Submitted for legal review.",
+        action: "SUBMIT_FOR_LEGAL_REVIEW",
+        routeNote: detail.routeNote ?? undefined,
+        segments: detail.segments.map((segment) => ({
+          sequenceNo: segment.sequenceNo,
+          ...(detail.routeType === "PRIMARY" ? {} : { routeType: segment.routeType }),
+          routeId: segment.route.routeId,
+          plannedDepartureAt: segment.plannedDepartureAt || detail.plannedDepartureAt,
+          plannedArrivalAt: segment.plannedArrivalAt || detail.plannedArrivalAt,
+          dwellAfterMinutes: segment.dwellAfterMinutes ?? 0,
+          ...(!segment.isOutsourced
+            ? { vehicleIds: segment.vehicles.map((vehicle) => vehicle.vehicleId) }
+            : {}),
+          ...(segment.isOutsourced && segment.outsourcing
+            ? {
+                outsourcing: {
+                  transportProviderId: segment.outsourcing.provider.transportProviderId,
+                  note: segment.note ?? undefined,
+                },
+              }
+            : {}),
+          note: segment.note ?? undefined,
+        })),
+      });
+      toast.success("Submitted for legal review.");
+      try {
+        const refreshResult = await refreshRouteAfterSubmit(
+          queryClient,
+          route.routePlanId,
+        );
+        if (!refreshResult.synced) {
+          toast.warning("Submission succeeded, but the route view is still synchronizing.");
+        }
+      } catch {
+        toast.warning("Submission succeeded, but the route view could not be refreshed yet.");
+      }
+    } catch (error) {
+      toast.error(getRoutePlanError(error).message);
+    } finally {
+      setSubmittingRoutePlanId(null);
+    }
+  }
   const error = query.isError ? getRouteViewError(query.error) : null;
   return (
     <Section
@@ -135,6 +190,8 @@ export function RoutePlansWorkspace({
             routes={items}
             context={context}
             routeDetailPath={routeDetailPath}
+            onSubmitForLegalReview={submitForLegalReview}
+            submittingRoutePlanId={submittingRoutePlanId}
             isLoading={query.isPending}
           />
           {!routeDetailPath && (
@@ -142,10 +199,9 @@ export function RoutePlansWorkspace({
               Route detail navigation is not available in this environment yet.
             </p>
           )}
-          {specialist && dossierStatus !== "DRAFT" && (
+          {specialist && dossierStatus != null && dossierStatus !== "DRAFT" && (
             <p className="text-xs text-slate-500">
-              Legal review requires a draft dossier and a draft route. Existing
-              review results remain available in route details.
+              Legal review is unavailable until the dossier is in DRAFT.
             </p>
           )}
           {manager && (

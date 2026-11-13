@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { Link, useParams } from "react-router-dom";
 import { ClipboardCheck, MapPin } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
@@ -130,8 +131,8 @@ export function TransportHandoverBoundary({
           ) : null}
           {exempt ? (
             <p className="m-0 pt-1 text-xs text-slate-500">
-              Không cần biên bản giữa hai chặng cùng Driver. Giờ đến chỉ cập
-              nhật từ popup GPS.
+              No handover is needed between two legs with the same driver. Arrival
+              time is updated only from the GPS popup.
             </p>
           ) : unverifiedExemption ? (
             <p className="m-0 pt-1 text-xs text-amber-800">
@@ -141,20 +142,20 @@ export function TransportHandoverBoundary({
           ) : boundary.handoverRequired === undefined ||
             boundary.createModes === undefined ? (
             <p className="m-0 pt-1 text-xs text-slate-500">
-              Backend chưa trả đủ capability mới. Chỉ giữ thao tác legacy khi
-              canCreate và quyền hiện có cho phép.
+              Some new capabilities are not available yet. Keep the legacy
+              action only when canCreate and current permissions allow it.
             </p>
           ) : boundary.handoverRequired &&
             record &&
             record.status !== "COMPLETED" ? (
             <p className="m-0 pt-1 text-xs text-amber-800">
-              Chờ hoàn tất biên bản; mốc thời gian chính thức do máy chủ xác
-              nhận.
+              Waiting for handover completion; the official timestamp is confirmed
+              by the server.
             </p>
           ) : null}
           {boundary.arrivalAt ? (
             <p className="m-0 text-xs text-slate-500">
-              Arrival: {new Date(boundary.arrivalAt).toLocaleString()}
+              Arrival: <DateTimeUtc value={boundary.arrivalAt} compact />
             </p>
           ) : null}
           {boundary.createModes &&

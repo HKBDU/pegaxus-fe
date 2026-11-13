@@ -105,6 +105,8 @@ export function InvoiceActions({
               />
             );
           case "CREATE_ANOTHER":
+            // The transport was cancelled together with its booking: the BE would refuse a new invoice.
+            if (invoice.transport?.status === "CANCELLED") return null;
             return (
               <Button
                 key={action}

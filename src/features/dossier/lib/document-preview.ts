@@ -40,7 +40,7 @@ export function getDossierFilePreview(
           kind: "fallback",
           href,
           reason:
-            "This image exceeds the shared viewer's 5 MiB preview limit. Use Open File to inspect it.",
+            `Inline preview is limited to ${MAX_IMAGE_FILE_SIZE / (1024 * 1024)} MiB. Use Open File to inspect this uploaded image.`,
         };
   }
   return {

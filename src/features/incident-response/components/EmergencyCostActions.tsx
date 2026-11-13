@@ -22,12 +22,15 @@ export function EmergencyCostActions({
   onReload,
   onChanged,
   decisionAllowed = true,
+  stacked = false,
 }: {
   request: EmergencyCostDetail;
   refreshing: boolean;
   onReload: () => void;
   onChanged?: () => void | Promise<void>;
   decisionAllowed?: boolean;
+  /** Full-width stacked buttons for a side column; inline right-aligned by default. */
+  stacked?: boolean;
 }) {
   const { principal, scope } = useEmergencyCostScope();
   const mutation = useEmergencyCostAction();
@@ -168,7 +171,14 @@ export function EmergencyCostActions({
   }
   return (
     <section aria-label="Emergency cost actions" className="space-y-2">
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      {/* Stacked: full-width buttons, main action first, for the detail page's side column. */}
+      <div
+        className={
+          stacked
+            ? "flex flex-col-reverse gap-2 empty:hidden [&>button]:min-h-0 [&>button]:h-9 [&>button]:w-full"
+            : "flex flex-wrap items-center justify-end gap-2"
+        }
+      >
         {cancel ? (
           <Button
             type="button"

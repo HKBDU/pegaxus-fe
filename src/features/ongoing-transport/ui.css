@@ -13,6 +13,35 @@
   padding: 0.75rem;
 }
 
+.transport-overview .overview-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.transport-overview .overview-summary > .overview-cell {
+  padding: 1rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.transport-overview .overview-summary > .overview-cell + .overview-cell {
+  border-top: 1px solid #e2e8f0;
+}
+
+@media (min-width: 1024px) {
+  .transport-overview .overview-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .transport-overview .overview-summary > .overview-cell + .overview-cell {
+    border-top: 0;
+    border-left: 1px solid #e2e8f0;
+  }
+}
+
 .route-tracking .route-timeline {
   position: relative;
   margin-left: 0.75rem;
@@ -85,11 +114,13 @@
 .route-tracking .route-boundary .route-timeline-marker {
   top: 0.6rem;
 }
-.transport-overview[data-audience="crew"] summary {
-  min-height: 60px;
-}
-.transport-overview[data-audience="crew"] h3 {
-  font-size: 1rem;
+@media (max-width: 1023.98px) {
+  .transport-overview[data-audience="crew"] summary {
+    min-height: 60px;
+  }
+  .transport-overview[data-audience="crew"] h3 {
+    font-size: 1rem;
+  }
 }
 .transport-overview .overview-heading {
   display: flex;
@@ -118,13 +149,15 @@
 .transport-overview table td {
   padding: 0.75rem 1rem;
 }
-.transport-overview[data-audience="crew"] :is(a, button) {
-  min-height: 48px;
-  min-width: 48px;
-}
-.transport-overview[data-audience="crew"]
-  :is(h2, p, dt, dd, span, a, button, th, td) {
-  font-size: max(1rem, 1em);
+@media (max-width: 1023.98px) {
+  .transport-overview[data-audience="crew"] :is(a, button) {
+    min-height: 48px;
+    min-width: 48px;
+  }
+  .transport-overview[data-audience="crew"]
+    :is(h2, p, dt, dd, span, a, button, th, td) {
+    font-size: max(1rem, 1em);
+  }
 }
 .transport-overview[data-audience="crew"] *,
 .transport-overview[data-audience="crew"] *::before,

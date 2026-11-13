@@ -21,6 +21,23 @@ export const HORSE_CHAPTERS = [
 ] as const;
 export type LandingChapter = (typeof HORSE_CHAPTERS)[number];
 
+export function scrollToLandingSection(
+  section: HTMLElement,
+  behavior?: ScrollBehavior,
+) {
+  section.tabIndex = -1;
+  section.focus({ preventScroll: true });
+  section.scrollIntoView({
+    behavior:
+      behavior ??
+      (matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth"),
+    block: "start",
+  });
+  history.replaceState(history.state, "", `#${section.id}`);
+}
+
 export function getTransportCta(
   authenticated: boolean,
   roles: readonly string[],

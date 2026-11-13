@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { MapRoute } from "./types";
 import {
+  estimateRouteGeometry,
   resolveRouteGeometry,
   type ResolvedRouteGeometry,
 } from "./route-geometry-cache";
@@ -32,14 +33,21 @@ export function useResolvedRouteGeometries(routes: MapRoute[]) {
 
   return routes.map((route) => {
     const item = resolved.get(route.id);
-    return item
-      ? {
-          ...route,
-          geometry: item.line,
-          source: item.estimated
-            ? ("preview" as const)
-            : (route.source ?? ("saved" as const)),
-        }
+    if (item) {
+      return {
+        ...route,
+        geometry: item.line,
+        source: item.estimated
+          ? ("preview" as const)
+          : (route.source ?? ("saved" as const)),
+      };
+    }
+
+    // Render immediately while IndexedDB/Geoapify is still pending.
+    // The resolved road geometry replaces this line when available.
+    const estimate = estimateRouteGeometry(route);
+    return estimate
+      ? { ...route, geometry: estimate, source: "preview" as const }
       : route;
   });
 }

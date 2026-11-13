@@ -1,4 +1,5 @@
 import { CostStatusBadge, VndText } from "@/shared/components/incident";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { EmptyState } from "@/shared/components/common";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import {
@@ -21,12 +22,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-
-const dates = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-const formatDate = (value: string) => dates.format(new Date(value));
 
 function RequestActions({
   item,
@@ -214,12 +209,15 @@ export function EmergencyCostResults({
                 <TableCell>
                   <CostStatusBadge status={item.status} />
                 </TableCell>
-                <TableCell className="max-w-40 whitespace-normal break-words">
+                <TableCell
+                  className="max-w-40 truncate"
+                  title={item.requestedBy?.fullName ?? undefined}
+                >
                   {item.requestedBy?.fullName ?? "—"}
                 </TableCell>
                 <TableCell>
                   <time dateTime={item.requestedAt}>
-                    {formatDate(item.requestedAt)}
+                    <DateTimeUtc value={item.requestedAt} compact />
                   </time>
                 </TableCell>
                 {detailPath ? (
@@ -294,7 +292,7 @@ export function EmergencyCostResults({
               <dt>Requested at</dt>
               <dd>
                 <time dateTime={item.requestedAt}>
-                  {formatDate(item.requestedAt)}
+                  <DateTimeUtc value={item.requestedAt} compact />
                 </time>
               </dd>
               <dt>Requested by</dt>

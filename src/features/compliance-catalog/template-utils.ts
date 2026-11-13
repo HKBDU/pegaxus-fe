@@ -1,4 +1,4 @@
-import type { TemplateStatus } from "@/features/compliance-catalog/template-types"
+import type { DossierTemplateSummary, TemplateStatus } from "@/features/compliance-catalog/template-types"
 import { getBackendErrorMessage } from "@/features/compliance-catalog/utils"
 
 const templateStatusLabels: Record<TemplateStatus, string> = {
@@ -18,9 +18,21 @@ const templateErrorMessages: Record<string, string> = {
   TEMPLATE_NOT_ACTIVATABLE: "A template needs at least 1 item and valid effective dates before it can be activated.",
   VALIDATION_ERROR: "Some fields are invalid. Check the form and try again.",
   NOT_FOUND: "This DossierTemplate no longer exists.",
+  BOOKING_NOT_FOUND: "This booking no longer exists.",
+  BOOKING_NOT_APPROVED: "Dossier templates can only be applied to APPROVED bookings.",
   FORBIDDEN: "Access denied. Only Transport Specialists can modify DossierTemplates.",
   UNAUTHORIZED: "Your session has expired. Please sign in again.",
 }
+
+/** T1 with bookingId answers these when the booking is gone or no longer APPROVED: the wizard has nothing left to do. */
+export const isBookingGoneError = (error: unknown) => error instanceof Error && ["BOOKING_NOT_FOUND", "BOOKING_NOT_APPROVED"].includes(error.message)
+
+/**
+ * Group 4 of the ranking (UC-18): the template requires a country that is not on the booking route, or matches no country.
+ * It is never recommended but stays in the list. The BE sends no group field, so it is told apart by its reason text.
+ */
+export const isOffRouteTemplate = (template: Pick<DossierTemplateSummary, "recommendationReason">) =>
+  /^(this template also requires|active template without a country match)/i.test(template.recommendationReason ?? "")
 
 export const getTemplateStatusLabel = (status: TemplateStatus) => templateStatusLabels[status]
 

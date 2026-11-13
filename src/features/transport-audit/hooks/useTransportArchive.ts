@@ -8,6 +8,6 @@ export function useTransportArchive(params: TransportArchiveQuery) {
     queryKey: ["transport-audit", "archive", { ...params, search }],
     queryFn: ({ signal }) =>
       transportAuditService.archive({ ...params, search }, signal),
-    enabled: params.search === search,
+    enabled: (params.search ?? "") === search,
   });
 }

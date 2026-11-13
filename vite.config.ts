@@ -89,7 +89,11 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    plugins: [react(), tailwindcss(), flow2MockPlugin],
+    plugins: [
+      react(),
+      tailwindcss(),
+      ...(merged.VITE_FLOW2_HTTP_MOCKS === 'true' ? [flow2MockPlugin] : []),
+    ],
     server: {
       host: true,
       port: 5173,
@@ -100,6 +104,11 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: defines,
+    build: {
+      // MapLibre, PDF.js, and the WebGL landing experience are intentionally
+      // lazy-loaded but remain large when their route chunks are built.
+      chunkSizeWarningLimit: 1200,
+    },
   }
 })
 

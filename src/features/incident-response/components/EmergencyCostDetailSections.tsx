@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { Link } from "react-router-dom";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   CategoryBadge,
   CostStatusBadge,
@@ -16,18 +18,28 @@ import { emergencyCostIdSchema, type EmergencyCostDetail } from "../schemas";
 import type { CostEvidencePreview } from "../mocks/repository";
 import { CostEvidenceGallery } from "./EmergencyCostEvidence";
 
-const dateFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
+const vehicleStatusLabels = new Map([
+  ["AVAILABLE", "Available"],
+  ["ASSIGNED", "Assigned"],
+  ["IN_USE", "In use"],
+  ["MAINTENANCE", "Maintenance"],
+  ["INACTIVE", "Inactive"],
+  ["SUSPENDED", "Suspended"],
+  ["OUT_OF_SERVICE", "Out of service"],
+]);
+
 const date = (value: string) => (
-  <time dateTime={value}>{dateFormat.format(new Date(value))}</time>
+  <time dateTime={value}>
+    <DateTimeUtc value={value} compact />
+  </time>
 );
 
+// The web's panel: warm border, white, 14px semibold heading over a hairline (the 20px upper-case title read like a phone).
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="min-w-0 space-y-3 rounded-xs border border-border bg-card p-4 sm:p-5">
-      <h2 className="m-0 font-heading text-xl uppercase tracking-wide">
+    <section className="min-w-0 space-y-3 rounded-xs border border-[#e5e2d9] bg-white p-4">
+      {/* `!`: index.css sets bare h2 to 24px heading font outside any layer, which beats plain utilities. */}
+      <h2 className="m-0! border-b border-[#eceae3] pb-2 font-sans! text-sm! leading-5! font-semibold! tracking-normal! text-slate-800!">
         {title}
       </h2>
       {children}
@@ -53,11 +65,14 @@ export function EmergencyCostDetailSections({
   evidence,
   audience,
   mock,
+  showAmounts = true,
 }: {
   request: EmergencyCostDetail;
   evidence: readonly CostEvidencePreview[];
   audience: EmergencyCostAudience;
   mock: boolean;
+  /** The detail page shows the amounts in its summary card instead. */
+  showAmounts?: boolean;
 }) {
   const incident = request.incidentSummary;
   const health = request.horseHealthSummary;
@@ -65,6 +80,7 @@ export function EmergencyCostDetailSections({
   const decision = request.decision;
   return (
     <>
+      {showAmounts ? (
       <section
         className="grid min-w-0 gap-3 rounded-xs border border-primary/25 bg-primary/5 p-4 sm:grid-cols-2 sm:p-5"
         aria-label="Request amounts"
@@ -90,7 +106,10 @@ export function EmergencyCostDetailSections({
           </p>
         </div>
       </section>
-      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
+      ) : null}
+      {/* Container query: the sections may sit in a narrow column (page side layout or the incident page). */}
+      <div className="@container min-w-0">
+      <div className="grid min-w-0 items-start gap-4 @3xl:grid-cols-2">
         <Section title="Request information">
           <Details
             rows={[
@@ -112,7 +131,7 @@ export function EmergencyCostDetailSections({
               [
                 "VAT invoice",
                 request.invoiceRequired == null
-                  ? "Not supplied by the backend"
+                  ? "Not available"
                   : request.invoiceRequired
                     ? "Required"
                     : "Not required",
@@ -165,7 +184,23 @@ export function EmergencyCostDetailSections({
                       ? `${incident.vehicle.vehicleCode} · ${incident.vehicle.licensePlate}`
                       : null,
                   ],
-                  ["Vehicle status", incident.vehicle?.status],
+                  [
+                    "Vehicle status",
+                    incident.vehicle?.status ? (
+                      <Badge
+                        key="vehicle-status"
+                        variant={
+                          incident.vehicle.status === "OUT_OF_SERVICE"
+                            ? "destructive"
+                            : "outline"
+                        }
+                        className="rounded-xs whitespace-normal break-words"
+                      >
+                        {vehicleStatusLabels.get(incident.vehicle.status) ??
+                          incident.vehicle.status}
+                      </Badge>
+                    ) : null,
+                  ],
                 ]}
               />
             </>
@@ -210,6 +245,7 @@ export function EmergencyCostDetailSections({
             </p>
           ) : null}
         </Section>
+      </div>
       </div>
       <Section title="Other cost requests for this incident">
         {request.otherRequests.length ? (

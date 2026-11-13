@@ -66,12 +66,15 @@ export function AuditTimeline({
   return (
     <div className="relative pl-6 before:absolute before:bottom-3 before:left-[11px] before:top-3 before:w-[2px] before:bg-slate-200">
       <ol aria-label="Audit timeline" className="space-y-3">
-        {visible.map((item) => {
+        {visible.map((item, index) => {
           const meta = getTimelineMeta(item.type);
           const Icon = meta.icon;
 
+          // The BE gives every transport milestone the transport id as refId, so the id alone is not unique.
+          const key = `${item.id}-${item.occurredAt}-${index}`;
+
           return (
-            <li key={item.id} className="relative group">
+            <li key={key} className="relative group">
               {/* Timeline marker */}
               <span
                 className={`absolute -left-[23px] top-1.5 flex size-5 items-center justify-center rounded-full border shadow-xs ${meta.nodeBg}`}

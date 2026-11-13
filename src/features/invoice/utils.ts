@@ -1,8 +1,9 @@
 import { format, parseISO, isValid } from "date-fns"
-import { INVOICE_TAX_RATE_PERCENT, TRANSIT_DAYS_RANGE, PAYMENT_ERROR_CODES, CANCELLATION_REASON_MIN_LENGTH, PAYMENT_METHOD_VALUES, PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH } from "@/features/invoice/constants"
-import type { InvoiceItem, InvoiceSummary, PaymentErrorCode, PaymentErrorState, Invoice, RecordPaymentPayload } from "@/features/invoice/types"
+import { INVOICE_STATUS, INVOICE_TYPE, INVOICE_TAX_RATE_PERCENT, TRANSIT_DAYS_RANGE, PAYMENT_ERROR_CODES, CANCELLATION_REASON_MIN_LENGTH, PAYMENT_METHOD_VALUES, PAYMENT_TRANSACTION_REFERENCE_MAX_LENGTH } from "@/features/invoice/constants"
+import type { InvoiceItem, InvoiceSummary, PaymentErrorCode, PaymentErrorState, Invoice, InvoiceListItem, InvoiceType, RecordPaymentPayload } from "@/features/invoice/types"
 import type { InvoiceCurrency } from "@/features/invoice/constants"
 import { z } from "zod"
+import { formatUtcDateTime } from "@/shared/utils/datetime"
 
 // ---- from shared/mock-mode.ts ----
 type MockEnvironment = { PROD?: boolean; VITE_INVOICE_API_MOCKS?: string }
@@ -17,9 +18,10 @@ export function isInvoiceMockMode(env: MockEnvironment = import.meta.env) {
 
 export function invoiceDate(value?: string | null) {
   if (!value) return "—";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return formatUtcDateTime(value);
   const parsed = parseISO(value);
   return isValid(parsed)
-    ? format(parsed, value.length === 10 ? "dd MMM yyyy" : "dd MMM yyyy, HH:mm")
+    ? format(parsed, "dd MMM yyyy")
     : "—";
 }
 
@@ -45,17 +47,80 @@ export function formatMoney(amount: number, _currency?: InvoiceCurrency) {
 export function formatInvoiceDate(value: string | null | undefined) {
   if (!value) return EMPTY_VALUE
   const date = parseISO(value)
-  return isValid(date) ? format(date, "MMMM dd, yyyy") : EMPTY_VALUE
+  if (!isValid(date)) return EMPTY_VALUE
+  // A plain day is shown as it came; an instant is read as its UTC day.
+  if (value.length === 10) return format(date, "MMMM dd, yyyy")
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "2-digit", year: "numeric", timeZone: "UTC" }).format(date)
 }
 
+/** An instant as labelled UTC ("08:00 UTC, 27/10/2026"); the claim screens read it through this too. */
 export function formatInvoiceDateTime(value: string | null | undefined) {
-  if (!value) return EMPTY_VALUE
-  const date = parseISO(value)
-  return isValid(date) ? format(date, "dd/MM/yyyy HH:mm") : EMPTY_VALUE
+  const text = formatUtcDateTime(value)
+  return text === "—" ? EMPTY_VALUE : text
 }
 
 export function todayIsoDate() {
   return format(new Date(), "yyyy-MM-dd")
+}
+
+/** The time a due date gets when the person only picks a day (the old date-only behaviour: end of day). */
+export const DEFAULT_DUE_TIME = "23:59"
+
+/** The BE's due-date instant as the local day and clock time the form edits. A date-only legacy value keeps the end of that day. */
+export function splitDueDateTime(value: string | null | undefined) {
+  const parsed = value ? parseISO(value) : null
+  if (!value || !parsed || !isValid(parsed)) return { date: "", time: DEFAULT_DUE_TIME }
+  if (value.length === 10) return { date: value, time: DEFAULT_DUE_TIME }
+  return { date: format(parsed, "yyyy-MM-dd"), time: format(parsed, "HH:mm") }
+}
+
+/** UTC calendar day ("yyyy-MM-dd") of a BE due date: the BE compares due dates by this day (R30). */
+function utcDueDay(value: string) {
+  return value.length === 10 ? value : new Date(value).toISOString().slice(0, 10)
+}
+
+/**
+ * R30: a due date must come after the due date of the invoice before it in the chain QUOTATION < DEPOSIT < FINAL
+ * (SUPPLEMENTARY after the later of QUOTATION and DEPOSIT, CREDIT_NOTE after FINAL), strictly and by UTC day; and the
+ * chain invoices must stay before the ones that follow. Cancelled invoices and invoices without a due date are ignored.
+ *
+ * Returns the first and last LOCAL day ("yyyy-MM-dd") the date picker may offer. The day itself can still be refused when the
+ * chosen time lands on the wrong UTC day; the BE message is shown under the field in that case.
+ */
+export function dueDateOrderBounds(type: InvoiceType, invoices: InvoiceListItem[]) {
+  const dueOf = (invoiceType: InvoiceType) => {
+    const found = invoices.find((invoice) => invoice.type === invoiceType && invoice.status !== INVOICE_STATUS.CANCELLED && invoice.dueDate)
+    return found?.dueDate ? utcDueDay(found.dueDate) : undefined
+  }
+  const quotation = dueOf(INVOICE_TYPE.QUOTATION)
+  const deposit = dueOf(INVOICE_TYPE.DEPOSIT)
+  const final = dueOf(INVOICE_TYPE.FINAL)
+  const latest = (...days: (string | undefined)[]) => days.filter((day): day is string => Boolean(day)).sort().at(-1)
+
+  let after: string | undefined
+  let before: string | undefined
+  const earliest = (...days: (string | undefined)[]) => days.filter((day): day is string => Boolean(day)).sort()[0]
+  if (type === INVOICE_TYPE.QUOTATION) before = earliest(deposit, final)
+  else if (type === INVOICE_TYPE.DEPOSIT) [after, before] = [quotation, final]
+  else if (type === INVOICE_TYPE.FINAL) after = latest(quotation, deposit)
+  else if (type === INVOICE_TYPE.SUPPLEMENTARY) after = latest(quotation, deposit)
+  else if (type === INVOICE_TYPE.CREDIT_NOTE) after = final
+
+  const toUtcDayStart = (day: string, offsetDays: number) => {
+    const [year, month, date] = day.split("-").map(Number)
+    return Date.UTC(year, month - 1, date + offsetDays)
+  }
+  return {
+    // First instant of the UTC day after `after`, as the local day it falls on.
+    minDay: after ? format(new Date(toUtcDayStart(after, 1)), "yyyy-MM-dd") : undefined,
+    // Last instant of the UTC day before `before`, as the local day it falls on.
+    maxDay: before ? format(new Date(toUtcDayStart(before, 0) - 1), "yyyy-MM-dd") : undefined,
+  }
+}
+
+/** A local day and time as the UTC instant the BE expects (R29: always sent with a zone). */
+export function dueDateTimeToIso(day: string, time: string) {
+  return new Date(`${day}T${time}:00`).toISOString()
 }
 
 /** Whole numbers only (no sign, no decimals): SePay does not accept fractional amounts. NaN when invalid. */
@@ -72,7 +137,8 @@ export function parseTransitDays(value: string) {
 }
 
 /**
- * Estimate shown while the draft is being edited (contract R8): subtotal of the manual lines, 20% tax,
+ * Estimate shown while the draft is being edited: subtotal of the lines, VAT from the active price list
+ * (or the saved invoice snapshot; the default rate is only a fallback),
  * deposit deduction added after tax. The server recomputes everything, this number is never sent. IV1 returns no totals,
  * so the form adds the lines it shows; a credit note carries no tax (`taxRatePercent` 0).
  */
@@ -154,13 +220,7 @@ export function isPayableAmount(amount: number) {
 }
 
 export function formatPaymentDate(value: string | null | undefined) {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+  return formatUtcDateTime(value)
 }
 
 export function toPaymentTimestamp(value: string) {

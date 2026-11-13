@@ -1,9 +1,4 @@
-import {
-  Link,
-  useLocation,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
+import { useLocation, useParams, useSearchParams } from "react-router-dom";
 import { Tabs } from "radix-ui";
 import { useQueryClient } from "@tanstack/react-query";
 import { canAccess } from "@/features/auth/access-control";
@@ -60,16 +55,6 @@ export default function InvoiceDetailPage() {
     <div className="booking-page-shell min-w-0 min-h-[calc(100svh-5rem)] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
       <div className="booking-page-enter mx-auto w-full min-w-0 max-w-[1152px] space-y-5">
         <InvoiceMockIndicator />
-        <nav
-          aria-label="Breadcrumb"
-          className="flex flex-wrap gap-2 text-xs text-slate-500"
-        >
-          <Link to={backHref} className="hover:text-primary">
-            {manager ? "Invoices" : "Booking"}
-          </Link>
-          <span aria-hidden="true">/</span>
-          <span>Invoice Detail</span>
-        </nav>
         <PageHeader
           title="Invoice Detail"
           backHref={backHref}
@@ -132,7 +117,7 @@ export default function InvoiceDetailPage() {
                 ))}
               </dl>
               <p className="text-xs text-slate-500">
-                Timestamps are shown in your local time zone.
+                Timestamps are shown in UTC.
               </p>
             </section>
             {invoice.type === "QUOTATION" ? <QuotationBanner /> : null}

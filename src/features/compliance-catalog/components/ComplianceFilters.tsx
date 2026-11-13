@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react"
-import { FilterX, Search, X } from "lucide-react"
+import { Search, X } from "lucide-react"
 
 import { COMPLIANCE_COUNTRIES } from "@/features/compliance-catalog/constants/countries"
 import { ComplianceStatusBadge } from "@/features/compliance-catalog/components/ComplianceStatusBadge"
@@ -13,7 +13,7 @@ import {
 } from "@/features/compliance-catalog/types"
 import { getComplianceCategoryLabel } from "@/features/compliance-catalog/utils"
 import { useDebounce } from "@/shared/hooks"
-import { Button } from "@/shared/components/ui/button"
+import { FilterToolbar } from "@/shared/components/ui/filter-toolbar"
 import { DataTableRadioFilter, type DataTableRadioOption } from "@/shared/components/ui/data-table-radio-filter"
 import { Input } from "@/shared/components/ui/input"
 
@@ -64,14 +64,16 @@ export function ComplianceFilters({
 }: ComplianceFiltersProps) {
   const [localSearch, setLocalSearch] = useState(filters.search)
   const debouncedSearch = useDebounce(localSearch, 300)
-  const hasActiveFilters =
-    Boolean(localSearch) || filters.country !== "ALL" || filters.category !== "ALL" || filters.status !== "ALL" || filters.sortBy !== DEFAULT_COMPLIANCE_SORT
+  const activeCount = [Boolean(localSearch), filters.country !== "ALL", filters.category !== "ALL", filters.status !== "ALL", filters.sortBy !== DEFAULT_COMPLIANCE_SORT].filter(Boolean).length
 
   useEffect(() => onSearchChange(debouncedSearch), [debouncedSearch, onSearchChange])
 
   return (
-    <div role="toolbar" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-[minmax(15rem,1fr)_9.5rem_9.5rem_9rem_9.5rem_auto]">
-      <div className="relative col-span-2 md:col-span-3 xl:col-span-1">
+    <FilterToolbar
+      label="Compliance requirement filters"
+      activeCount={activeCount}
+      onClear={() => { setLocalSearch(""); onReset() }}
+      search={<div className="relative min-w-0">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
         <Input
           value={localSearch}
@@ -91,8 +93,16 @@ export function ComplianceFilters({
             <X className="size-3.5" />
           </button>
         ) : null}
-      </div>
-
+      </div>}
+      sort={<DataTableRadioFilter
+        title="Sort"
+        value={filters.sortBy}
+        defaultValue={DEFAULT_COMPLIANCE_SORT}
+        options={SORT_OPTIONS}
+        onValueChange={(value) => onSortChange(value as ComplianceSort)}
+      />}
+      actions={viewOptions}
+    >
       <DataTableRadioFilter title="Country" value={filters.country} options={COUNTRY_OPTIONS} onValueChange={onCountryChange} />
 
       <DataTableRadioFilter
@@ -111,33 +121,6 @@ export function ComplianceFilters({
           ? <span>{option.label}</span>
           : <ComplianceStatusBadge status={option.value as ComplianceStatus} />}
       />
-
-      <DataTableRadioFilter
-        title="Sort"
-        value={filters.sortBy}
-        defaultValue={DEFAULT_COMPLIANCE_SORT}
-        options={SORT_OPTIONS}
-        onValueChange={(value) => onSortChange(value as ComplianceSort)}
-      />
-
-      <div className="flex items-center justify-end gap-1.5">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-label="Reset filters"
-          title="Reset filters"
-          disabled={!hasActiveFilters}
-          className="size-8 rounded-[2px] border-slate-300 bg-white p-0 shadow-none"
-          onClick={() => {
-            setLocalSearch("")
-            onReset()
-          }}
-        >
-          <FilterX className="size-3.5 text-slate-600" />
-        </Button>
-        {viewOptions}
-      </div>
-    </div>
+    </FilterToolbar>
   )
 }

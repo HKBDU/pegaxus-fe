@@ -43,7 +43,7 @@ function GpsTabContent({ audience, transportId }: GpsTabContentProps) {
   return (
     <section className="grid gap-4" aria-label="Live GPS tracking">
       {audience === "admin" ? <CollapseAdminSidebar /> : null}
-      {DemoPanel && isDemoMode() ? (
+      {DemoPanel && isDemoMode(transportId) ? (
         <Suspense fallback={null}>
           <DemoPanel />
         </Suspense>

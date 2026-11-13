@@ -19,8 +19,8 @@ import { formatPlanDate } from "@/features/transport-plan/format";
 import { distanceLabel, durationLabel, replacementLabel } from "../display";
 import {
   getPendingRouteActions,
-  type RouteWorkspaceContext,
-} from "../workspace-actions";
+} from "../route-policy";
+import type { RouteWorkspaceContext } from "../types";
 import type { RouteDetailPath, RoutePlanSummary } from "../types";
 import {
   emergencyActionLabels,
@@ -32,11 +32,15 @@ export function RoutePlansTable({
   routes,
   context,
   routeDetailPath,
+  onSubmitForLegalReview,
+  submittingRoutePlanId,
   isLoading = false,
 }: {
   routes: RoutePlanSummary[];
   context: RouteWorkspaceContext;
   routeDetailPath?: RouteDetailPath;
+  onSubmitForLegalReview?: (route: RoutePlanSummary) => void;
+  submittingRoutePlanId?: string | null;
   isLoading?: boolean;
 }) {
   const columns = useMemo<ColumnDef<RoutePlanSummary>[]>(
@@ -154,15 +158,25 @@ export function RoutePlansTable({
                 ) : (
                   <DropdownMenuItem
                     key={action.label}
-                    disabled
+                    disabled={
+                      action.label === "Submit for Legal Review" &&
+                      (submittingRoutePlanId === row.original.routePlanId ||
+                        !onSubmitForLegalReview)
+                    }
+                    onSelect={() => {
+                      if (action.label === "Submit for Legal Review")
+                        onSubmitForLegalReview?.(row.original);
+                    }}
                     title={action.reason}
                     className="items-start"
                   >
                     <span>
                       {action.label}
-                      <span className="mt-1 block whitespace-normal text-[11px]">
-                        {action.reason}
-                      </span>
+                      {action.label !== "Submit for Legal Review" && (
+                        <span className="mt-1 block whitespace-normal text-[11px]">
+                          {action.reason}
+                        </span>
+                      )}
                     </span>
                   </DropdownMenuItem>
                 ),
@@ -194,7 +208,7 @@ export function RoutePlansTable({
         ),
       },
     ],
-    [context, routeDetailPath],
+    [context, onSubmitForLegalReview, routeDetailPath, submittingRoutePlanId],
   );
   const table = createTable({
     data: routes,

@@ -7,6 +7,7 @@ export {
   useBookings,
   useCancelBooking,
   useCreateBooking,
+  useManagerCancelBooking,
   useRejectBooking,
   useUpdateBooking,
 } from "./useBookings"

@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod"
-import { addDays, format } from "date-fns"
 import { Lock, Minus, Plus } from "lucide-react"
-import { useEffect, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { useForm, type Control, type Path } from "react-hook-form"
 import { Link } from "react-router-dom"
 
@@ -10,6 +9,7 @@ import { VehicleStatusBadge } from "@/features/fleet/components/VehicleBadges"
 import { actionButtonClass, FormCard, formControlClass, formLabelClass, outlineButtonClass, primaryButtonClass } from "@/features/fleet/components/DetailParts"
 import { EQUIPMENT_PRESETS, ROAD_VEHICLE_TYPE_OPTIONS, VEHICLE_CAPACITY_MAX, VEHICLE_CAPACITY_MIN } from "@/features/fleet/constants/fleet.constants"
 import { toVehicleDefaults } from "@/features/fleet/vehicle-form"
+import { nextUtcDay } from "@/features/fleet/utils"
 import { vehicleFormSchema, type VehicleFormValues } from "@/features/fleet/schemas"
 import { type Vehicle } from "@/features/fleet/types"
 import { DatePicker } from "@/shared/components/ui/date-picker"
@@ -95,7 +95,7 @@ function VehicleTypeField({ control }: { control: Control<VehicleFormValues> }) 
 }
 
 function DateField({ control, name, label }: { control: Control<VehicleFormValues>; name: "registrationExpiryDate" | "insuranceExpiryDate"; label: string }) {
-  const tomorrow = format(addDays(new Date(), 1), "yyyy-MM-dd")
+  const tomorrow = nextUtcDay()
   return (
     <FormField
       control={control}
@@ -126,25 +126,23 @@ interface VehicleFormProps {
   vehicle?: Vehicle
   isSaving?: boolean
   cancelHref: string
-  onSubmit?: (values: VehicleFormValues) => void | Promise<void>
+  onSubmit?: (values: VehicleFormValues, baseline?: Vehicle) => void | Promise<void>
   /** Lets the page push server-side field errors into the form. */
   onFormReady?: (form: ReturnType<typeof useForm<VehicleFormValues>>) => void
 }
 
 /** SCR-F3-025 (add) and SCR-F3-026 (edit): booking-details style cards. The read-only view is VehicleDetailPage. */
 export function VehicleForm({ mode, vehicle, isSaving = false, cancelHref, onSubmit, onFormReady }: VehicleFormProps) {
+  // Defaults and the concurrency version stay together until an explicit reload remounts the form.
+  const [baseline] = useState(vehicle)
   const form = useForm<VehicleFormValues>({
     resolver: zodResolver(vehicleFormSchema),
-    defaultValues: toVehicleDefaults(vehicle),
+    defaultValues: toVehicleDefaults(baseline),
   })
   const isEdit = mode === "edit"
 
   useEffect(() => onFormReady?.(form), [form, onFormReady])
-  useEffect(() => {
-    if (vehicle) form.reset(toVehicleDefaults(vehicle))
-  }, [vehicle, form])
-
-  const submit = form.handleSubmit((values) => onSubmit?.(values))
+  const submit = form.handleSubmit((values) => onSubmit?.(values, baseline))
 
   return (
     <Form {...form}>

@@ -10,9 +10,27 @@
     "build": "tsc -b && vite build",
     "check:cycles": "node scripts/check-import-cycles.mjs",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "preview": "vite preview",
+    "test:e2e": "playwright test --project=mock",
+    "test:e2e:mock": "playwright test --project=mock",
+    "test:e2e:real": "playwright test --project=real-api",
+    "test:e2e:real:ui": "playwright test --project=real-api --ui",
+    "test:e2e:real:demo": "playwright test --project=real-api --config=playwright.demo.config.ts",
+    "test:e2e:ui": "playwright test --project=mock --ui",
+    "test:e2e:headed": "playwright test --project=mock --headed",
+    "test:e2e:demo": "playwright test --project=mock --config=playwright.demo.config.ts",
+    "test:e2e:debug": "playwright test --project=mock --debug",
+    "test:e2e:report": "playwright show-report e2e/.output/report",
+    "test:e2e:playground": "playwright test --project=playground",
+    "test:e2e:inspect": "playwright test --config=playwright.inspect.config.ts",
+    "test:e2e:route-plan": "playwright test --config=playwright.route-plan.config.ts",
+    "test:e2e:codegen": "playwright codegen http://localhost:5173",
+    "typecheck:e2e": "tsc -p e2e/tsconfig.json"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
     "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^5.9.1",
     "@microsoft/signalr": "^10.0.11",
@@ -54,19 +72,22 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@types/three": "0.186.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "^5.1.0",
     "msw": "^3.0.2",
     "oxlint": "^1.81.0",
     "prettier": "^3.9.9",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
-    "vite": "^8.3.0"
+    "vite": "^8.3.0",
+    "vitest": "^5.1.0"
   },
   "msw": {
     "workerDirectory": [

@@ -1,4 +1,8 @@
-import { Outlet, useLocation, useParams } from "react-router-dom";
+import { Link, Outlet, useLocation, useParams } from "react-router-dom";
+import { ChartNoAxesCombined } from "lucide-react";
+import { canAccess } from "@/features/auth/access-control";
+import { useAuthStore } from "@/features/auth/store";
+import { Button } from "@/shared/components/ui/button";
 import { useTransportOverview } from "../hooks/useTransportOverview";
 import { useTransportProgressRefresh } from "../hooks/useTransportProgressRefresh";
 import { transportViewFromPath } from "../navigation";
@@ -22,6 +26,7 @@ export function TransportDetailLayout({
     bookingId: string;
   }>();
   const { pathname } = useLocation();
+  const principal = useAuthStore((state) => state.principal);
   useTransportProgressRefresh(transportId);
   const view = transportViewFromPath(pathname);
   const metadata = useTransportOverview(
@@ -42,7 +47,7 @@ export function TransportDetailLayout({
       data-audience={audience}
     >
       <div
-        className={`mx-auto w-full min-w-0 ${view === "segments" && audience !== "crew" ? "space-y-4" : "space-y-3"} ${audience === "crew" ? "max-w-4xl" : "booking-page-enter max-w-[1440px]"}`}
+        className={`mx-auto w-full min-w-0 ${view === "segments" && audience !== "crew" ? "space-y-4" : "space-y-3"} ${audience === "crew" ? "max-w-4xl lg:max-w-[1440px]" : "booking-page-enter max-w-[1440px]"}`}
       >
         <TransportPageHeader
           audience={audience}
@@ -59,6 +64,28 @@ export function TransportDetailLayout({
             bookingId={bookingId}
             audience={audience}
             canViewGpsTab={overview?.canViewGpsTab ?? false}
+            action={
+              audience === "admin" &&
+              overview &&
+              canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) ? (
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xs"
+                >
+                  <Link
+                    to={`/admin/transports/${encodeURIComponent(overview.transport.transportId)}/financial-summary`}
+                  >
+                    <ChartNoAxesCombined
+                      aria-hidden="true"
+                      className="size-4"
+                    />
+                    Financial summary
+                  </Link>
+                </Button>
+              ) : undefined
+            }
           />
         ) : null}
         <Outlet />

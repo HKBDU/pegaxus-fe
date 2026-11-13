@@ -1,7 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Loader2, ShieldAlert, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Loader2,
+  ShieldAlert,
+  ShieldCheck,
+} from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent } from "@/shared/components/ui/card";
@@ -14,7 +20,9 @@ import {
 } from "@/shared/components/ui/select";
 import {
   MapViewer,
+  ROUTE_LINE_COLORS,
   type MapLocation,
+  type MapPoint,
   type MapMode,
   type MapRoute,
 } from "@/shared/components/map";
@@ -23,6 +31,7 @@ import { ROLE_ROUTES } from "@/app/route-config";
 import {
   previewGeoapifyRoute,
   snapToFeasibleRoadPoint,
+  getRouteCorridorMetrics,
 } from "@/shared/utils/map/routing";
 import {
   createRoutePlan,
@@ -38,9 +47,9 @@ import {
   validateRoutePlanRoute,
 } from "../route-continuity";
 import { calculateRouteTimeline } from "../timeline-calculator";
+import { initializeBackupVehicles, resolveBackupItinerary, serializeBuilderSegment } from "../builder-segments";
 import type {
   CreateRoutePlanRequest,
-  RouteSegmentInput,
   RoutePlanStatus,
   RouteType,
   Vehicle,
@@ -57,9 +66,12 @@ import {
 import { RoutePlanEndpointsStep } from "./RoutePlanEndpointsStep";
 import { RoutePlanStatusBadge } from "./RoutePlanStatusBadge";
 import { BcpRouteSplitDialog } from "./BcpRouteSplitDialog";
+import { validateArrivalDate } from "@/features/transport-plan/schedule-validation";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 import {
   findBestBcpAlongRoute,
-  isCrossBorder as checkIsCrossBorder,
+  haversineDistanceKm,
+  isMandatoryBcpCrossing,
   isBcpLocation,
 } from "../bcp-detector";
 
@@ -73,6 +85,11 @@ export type BcpSplitProposal = {
   isMandatory: boolean;
 };
 
+type SplitStopKind = "BCP" | "REST_STOP";
+
+const MAX_SPLIT_CORRIDOR_DISTANCE_KM = 10;
+const EXISTING_BCP_MATCH_RADIUS_KM = 1;
+
 type TransportPlanSummary = {
   transportPlanId: string;
   planCode: string;
@@ -82,6 +99,7 @@ type TransportPlanSummary = {
   scope: "International" | "Domestic";
   departureAt: string;
   arrivalAt: string;
+  requestedArrivalAt?: string | null;
   from: MapLocation;
   to: MapLocation;
 };
@@ -98,12 +116,45 @@ export type RoutePlanBuilderProps = {
   primaryError?: string;
   metadata?: RoutePlanBuilderMetadata;
   initialRoutes?: MapRoute[];
+  initialSegments?: DraftSegment[];
+  savedSegments?: DraftSegment[];
+  primarySegments?: DraftSegment[];
   initialRouteNote?: string;
+  /** Segments the legal review blocked (saved ids) and the reviewer's note, highlighted for the coordinator. */
+  legalBlock?: { routePlanRouteIds: string[]; note?: string | null };
   locations: MapLocation[];
   routes: MapRoute[];
   vehicles?: Vehicle[];
-  edit?: { routePlanId: string; lastUpdatedAt: string };
+  edit?: {
+    routePlanId: string;
+    lastUpdatedAt: string;
+    legalReviewRequested: boolean;
+    legalReviewRequestedAt: string | null;
+  };
 };
+
+/** Explains the three line colours drawn while building a backup route. */
+function BackupRouteLegend() {
+  const items = [
+    { label: "Backup segment", color: ROUTE_LINE_COLORS.default },
+    { label: "Shared with primary", color: ROUTE_LINE_COLORS.sharedWithPrimary },
+    { label: "Primary only", color: ROUTE_LINE_COLORS.readonly },
+  ];
+  return (
+    <ul className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">
+      {items.map((item) => (
+        <li key={item.label} className="inline-flex items-center gap-1.5">
+          <span
+            className="h-[3px] w-4 rounded-full"
+            style={{ backgroundColor: item.color }}
+            aria-hidden="true"
+          />
+          {item.label}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function RoutePlanBuilder({
   transportPlanId,
@@ -115,7 +166,11 @@ export function RoutePlanBuilder({
   primaryError,
   metadata,
   initialRoutes = [],
+  initialSegments,
+  savedSegments = [],
+  primarySegments = [],
   initialRouteNote = "",
+  legalBlock,
   locations: initialLocations,
   routes,
   vehicles: initialVehicles,
@@ -123,7 +178,7 @@ export function RoutePlanBuilder({
 }: RoutePlanBuilderProps) {
   const navigate = useNavigate();
   const [step, setStep] = useState<WizardStep>(0);
-  const [, setMode] = useState<MapMode>("buildPlan");
+  const [mode, setMode] = useState<MapMode>("buildPlan");
   const [locations, setLocations] = useState<MapLocation[]>(initialLocations);
 
   useEffect(() => {
@@ -140,7 +195,8 @@ export function RoutePlanBuilder({
   ) {
     try {
       const locId = String(loc.id);
-      if (!locId || locId.startsWith("unknown") || locId.startsWith("dynamic")) return;
+      if (!locId || locId.startsWith("unknown") || locId.startsWith("dynamic"))
+        return;
       const current = await getLocation(locId);
       if (!current) return;
       const latDiff = Math.abs((current.latitude ?? 0) - snapped.latitude);
@@ -151,6 +207,7 @@ export function RoutePlanBuilder({
         locationName: current.locationName,
         locationType: current.locationType,
         address: current.address,
+
         city: current.city,
         stateProvince: current.stateProvince,
         country: current.country,
@@ -163,7 +220,11 @@ export function RoutePlanBuilder({
       setLocations((currentLocations) =>
         currentLocations.map((item) =>
           String(item.id) === locId
-            ? { ...item, latitude: snapped.latitude, longitude: snapped.longitude }
+            ? {
+                ...item,
+                latitude: snapped.latitude,
+                longitude: snapped.longitude,
+              }
             : item,
         ),
       );
@@ -211,8 +272,12 @@ export function RoutePlanBuilder({
     initialRoutes.at(-1)?.toLocation ??
     metadata?.to ??
     fallbackFrom;
-  const planFrom = (isReturn ? fallbackFrom : (metadata?.from ?? fallbackFrom))!;
-  const planTo = (isReturn ? (metadata?.from ?? fallbackTo) : (metadata?.to ?? fallbackTo))!;
+  const planFrom = (
+    isReturn ? fallbackFrom : (metadata?.from ?? fallbackFrom)
+  )!;
+  const planTo = (
+    isReturn ? (metadata?.from ?? fallbackTo) : (metadata?.to ?? fallbackTo)
+  )!;
 
   const plan: TransportPlanSummary = useMemo(
     () => ({
@@ -235,16 +300,37 @@ export function RoutePlanBuilder({
   function formatDraftSegments(
     rawSegments: DraftSegment[],
     baseStart?: string,
+    recalculateSavedTimes = false,
+    initializeAssignments = true,
   ): DraftSegment[] {
-    const startTime = baseStart || plan.departureAt || new Date().toISOString();
+    const mapping = isBackup ? resolveBackupItinerary(primarySegments, rawSegments) : null;
+    const branch = mapping?.replaced[0];
+    const startTime = branch?.plannedDepartureAt || baseStart || plan.departureAt;
     let timedSegments: DraftSegment[];
     try {
-      timedSegments = calculateRouteTimeline(startTime, rawSegments);
+      let cursor = startTime;
+      timedSegments = rawSegments.map((segment) => {
+        const duration = segment.plannedDepartureAt && segment.plannedArrivalAt
+          ? (Date.parse(segment.plannedArrivalAt) - Date.parse(segment.plannedDepartureAt)) / 60000
+          : segment.route.durationMinutes;
+        // A saved segment keeps its times unless an earlier change (e.g. a longer replacement route) makes it depart
+        // before the previous segment arrives; then it shifts after that arrival with the same duration.
+        const keepsSavedTimes =
+          segment.preserveTiming &&
+          !recalculateSavedTimes &&
+          (!segment.plannedDepartureAt || !cursor || Date.parse(segment.plannedDepartureAt) >= Date.parse(cursor));
+        const timed = keepsSavedTimes
+          ? segment
+          : calculateRouteTimeline(cursor, [{ ...segment, durationMinutes: duration }])[0];
+        if (timed.plannedArrivalAt) cursor = new Date(Date.parse(timed.plannedArrivalAt) + (timed.dwellAfterMinutes ?? 0) * 60000).toISOString();
+        return timed;
+      });
     } catch {
       timedSegments = rawSegments;
     }
-
-    return timedSegments.map((seg, index) => {
+    // Inheritance is tied to a user topology edit; it never runs in a state effect.
+    const initialized = isBackup && initializeAssignments ? initializeBackupVehicles(primarySegments, timedSegments, availableVehicles) : timedSegments;
+    return initialized.map((seg, index) => {
       const isDisconnected =
         index > 0 &&
         String(seg.route.fromLocation?.id) !==
@@ -258,7 +344,7 @@ export function RoutePlanBuilder({
   }
 
   const [segments, setSegments] = useState<DraftSegment[]>(() =>
-    formatDraftSegments(
+    initialSegments ?? formatDraftSegments(
       initialRoutes.map((route, index) => ({
         id: `${route.id}-${index}`,
         route,
@@ -281,13 +367,49 @@ export function RoutePlanBuilder({
   const [isSaving, setIsSaving] = useState(false);
   const [routeNote, setRouteNote] = useState(initialRouteNote);
   const [updateReason, setUpdateReason] = useState("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [locationSearch, setLocationSearch] = useState("");
   const [routeSearch, setRouteSearch] = useState("");
   const [routePlanTypeFilter, setRoutePlanTypeFilter] =
     useState<RoutePlanRouteFilter>("ALL");
   const [showRouteSearch, setShowRouteSearch] = useState(false);
-  const [sourceLocation, setSourceLocation] = useState<MapLocation | null>(null);
-  const [insertTargetIndex, setInsertTargetIndex] = useState<number | null>(null);
+  const [sourceLocation, setSourceLocation] = useState<MapLocation | null>(
+    null,
+  );
+  const [insertTargetIndex, setInsertTargetIndex] = useState<number | null>(
+    null,
+  );
+
+  const draftSignature = useMemo(
+    () =>
+      JSON.stringify({
+        segments,
+        routeNote,
+        updateReason,
+        customFrom,
+        customTo,
+      }),
+    [segments, routeNote, updateReason, customFrom, customTo],
+  );
+  const initialDraftSignature = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (initialDraftSignature.current === null) {
+      initialDraftSignature.current = draftSignature;
+      return;
+    }
+    setHasUnsavedChanges(initialDraftSignature.current !== draftSignature);
+  }, [draftSignature]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   // Load available vehicles if not passed from props
   useEffect(() => {
@@ -295,15 +417,17 @@ export function RoutePlanBuilder({
       setAvailableVehicles(initialVehicles);
       return;
     }
+    // GET /vehicles filters by calendar day (yyyy-MM-dd) and rejects a full timestamp with 400.
+    const availableFrom = plan.departureAt?.slice(0, 10);
+    const availableTo = plan.arrivalAt?.slice(0, 10);
     void loadAllVehicles({
-      availableFrom: plan.departureAt,
-      availableTo: plan.arrivalAt,
+      ...(availableFrom && availableTo ? { availableFrom, availableTo } : {}),
       transportPlanId,
     })
       .then((items) => {
-        setAvailableVehicles(items.filter((v) => v.status === "AVAILABLE"));
+        setAvailableVehicles(items);
       })
-      .catch(() => {});
+      .catch((error) => toast.error(getRoutePlanError(error).message));
   }, [initialVehicles, plan.departureAt, plan.arrivalAt, transportPlanId]);
 
   const routeCatalog = useMemo(
@@ -346,19 +470,62 @@ export function RoutePlanBuilder({
     );
   }, [locationSearch, locations]);
 
-  const selectedRoutes = useMemo(
-    () =>
-      isBackup
-        ? [
-            ...readonlyPrimaryRoutes.map((route) => ({
-              ...route,
-              readonly: true,
-            })),
-            ...segments.map((segment) => segment.route),
-          ]
-        : segments.map((segment) => segment.route),
-    [isBackup, readonlyPrimaryRoutes, segments],
+  // Saved segments the legal review blocked; a segment whose route was replaced no longer carries the saved id, so its
+  // red mark goes away once the coordinator fixes it.
+  const blockedRouteIds = useMemo(
+    () => new Set(legalBlock?.routePlanRouteIds ?? []),
+    [legalBlock],
   );
+  const isBlockedSegment = useCallback(
+    (segment: DraftSegment) =>
+      Boolean(segment.route.routePlanRouteId) && blockedRouteIds.has(String(segment.route.routePlanRouteId)),
+    [blockedRouteIds],
+  );
+  const blockedCount = segments.filter(isBlockedSegment).length;
+  // The Transport Specialist would only block the same segments again, so they must be changed before a new submit.
+  const blockedSubmitMessage = blockedCount
+    ? `Change the ${blockedCount === 1 ? "segment" : `${blockedCount} segments`} blocked by the Transport Specialist before submitting for legal review.`
+    : null;
+
+  const selectedRoutes = useMemo(() => {
+    const withBlock = (segment: DraftSegment) =>
+      isBlockedSegment(segment) ? { ...segment.route, blocked: true } : segment.route;
+    if (!isBackup) return segments.map(withBlock);
+    // A backup segment that reuses a primary route has the same id. Drawing both gave two map layers with one id, and
+    // the grey primary one won, so the backup leg looked uncoloured: draw it once, in the shared colour.
+    const primaryIds = new Set(
+      readonlyPrimaryRoutes.map((route) => String(route.id)),
+    );
+    const backupIds = new Set(
+      segments.map((segment) => String(segment.route.id)),
+    );
+    return [
+      ...readonlyPrimaryRoutes
+        .filter((route) => !backupIds.has(String(route.id)))
+        .map((route) => ({ ...route, readonly: true })),
+      ...segments.map((segment) =>
+        primaryIds.has(String(segment.route.id))
+          ? { ...withBlock(segment), sharedWithPrimary: true }
+          : withBlock(segment),
+      ),
+    ];
+  }, [isBackup, isBlockedSegment, readonlyPrimaryRoutes, segments]);
+
+  const builtRouteLocations = useMemo(() => {
+    const selectedLocationIds = new Set(
+      selectedRoutes.flatMap((route) =>
+        [route.fromLocation?.id, route.toLocation?.id]
+          .filter(
+            (id): id is string | number => id !== undefined && id !== null,
+          )
+          .map((id) => String(id)),
+      ),
+    );
+
+    return locations.filter((location) =>
+      selectedLocationIds.has(String(location.id)),
+    );
+  }, [locations, selectedRoutes]);
 
   const continuity = useMemo(() => {
     const fromId = plan.from?.id ?? "";
@@ -366,7 +533,8 @@ export function RoutePlanBuilder({
     if (!fromId || !toId) {
       return {
         valid: false,
-        message: "Transport Plan origin or destination location is not resolved.",
+        message:
+          "Transport Plan origin or destination location is not resolved.",
         effectiveRoutes: [],
       };
     }
@@ -390,16 +558,24 @@ export function RoutePlanBuilder({
     const toCountry = plan.to?.country?.trim().toLowerCase();
     if (fromCountry && toCountry && fromCountry !== toCountry) return true;
     const routesToCheck = isBackup
-      ? (continuity.effectiveRoutes.length > 0
-          ? continuity.effectiveRoutes
-          : [...readonlyPrimaryRoutes, ...segments.map((s) => s.route)])
+      ? continuity.effectiveRoutes.length > 0
+        ? continuity.effectiveRoutes
+        : [...readonlyPrimaryRoutes, ...segments.map((s) => s.route)]
       : segments.map((s) => s.route);
     return routesToCheck.some((s) => {
       const fc = s.fromLocation?.country?.trim().toLowerCase();
       const tc = s.toLocation?.country?.trim().toLowerCase();
       return fc && tc && fc !== tc;
     });
-  }, [plan.scope, plan.from?.country, plan.to?.country, isBackup, continuity.effectiveRoutes, readonlyPrimaryRoutes, segments]);
+  }, [
+    plan.scope,
+    plan.from?.country,
+    plan.to?.country,
+    isBackup,
+    continuity.effectiveRoutes,
+    readonlyPrimaryRoutes,
+    segments,
+  ]);
 
   const hasBcp = useMemo(() => {
     const hasInSegments = segments.some(
@@ -426,6 +602,65 @@ export function RoutePlanBuilder({
     return locations.filter(isBcpLocation);
   }, [locations]);
 
+  const bcpRequirement = useMemo(() => {
+    const routesToCheck =
+      continuity.effectiveRoutes.length > 0
+        ? continuity.effectiveRoutes
+        : isBackup
+          ? [
+              ...readonlyPrimaryRoutes,
+              ...segments.map((segment) => segment.route),
+            ]
+          : segments.map((segment) => segment.route);
+    const required =
+      isMandatoryBcpCrossing(plan.from?.country, plan.to?.country) ||
+      routesToCheck.some((route) =>
+        isMandatoryBcpCrossing(
+          route.fromLocation?.country,
+          route.toLocation?.country,
+        ),
+      );
+    if (!required || hasBcp) return null;
+
+    const affectedSegments = segments
+      .map((segment, index) =>
+        isMandatoryBcpCrossing(
+          segment.route.fromLocation?.country,
+          segment.route.toLocation?.country,
+        )
+          ? index + 1
+          : null,
+      )
+      .filter((index): index is number => index !== null);
+    const segmentText = affectedSegments.length
+      ? ` Review segment${affectedSegments.length > 1 ? "s" : ""} ${affectedSegments.join(", ")}.`
+      : " Review the effective PRIMARY/BACKUP route segments.";
+    return `A BORDER_GATE BCP is required for this UK/Ireland cross-border route, but none is present.${segmentText}`;
+  }, [
+    continuity.effectiveRoutes,
+    hasBcp,
+    isBackup,
+    plan.from?.country,
+    plan.to?.country,
+    readonlyPrimaryRoutes,
+    segments,
+  ]);
+
+  function findExistingBcpByCoordinates(latitude: number, longitude: number) {
+    return bcpLocations
+      .map((location) => ({
+        location,
+        distanceKm: haversineDistanceKm(
+          latitude,
+          longitude,
+          location.latitude,
+          location.longitude,
+        ),
+      }))
+      .filter(({ distanceKm }) => distanceKm <= EXISTING_BCP_MATCH_RADIUS_KM)
+      .sort((left, right) => left.distanceKm - right.distanceKm)[0]?.location;
+  }
+
   const [isBcpDismissed, setIsBcpDismissed] = useState(false);
   const [showNewBcpForm, setShowNewBcpForm] = useState(false);
   const [selectedBcpId, setSelectedBcpId] = useState("");
@@ -440,16 +675,183 @@ export function RoutePlanBuilder({
   const [newBcpLon, setNewBcpLon] = useState("");
   const [creatingBcp, setCreatingBcp] = useState(false);
 
-  const [bcpSplitProposal, setBcpSplitProposal] = useState<BcpSplitProposal | null>(null);
+  const [bcpSplitProposal, setBcpSplitProposal] =
+    useState<BcpSplitProposal | null>(null);
   const [isSplitting, setIsSplitting] = useState(false);
 
   const reversedSegments = useMemo(() => {
-    return segments
-      .map((segment, index) => ({ segment, index }))
-      .reverse();
+    return segments.map((segment, index) => ({ segment, index })).reverse();
   }, [segments]);
 
+  async function splitRouteAtLocation(
+    stopLoc: MapLocation,
+    kind: SplitStopKind,
+    routeToSplit: MapRoute,
+    targetSegIndex?: number,
+  ) {
+    const currentSegment =
+      targetSegIndex == null ? undefined : segments[targetSegIndex];
+    const originLoc =
+      currentSegment?.route.fromLocation ??
+      routeToSplit.fromLocation ??
+      plan.from;
+    const destLoc =
+      currentSegment?.route.toLocation ?? routeToSplit.toLocation ?? plan.to;
+    if (!originLoc || !destLoc)
+      throw new Error("Split route endpoints are not resolved.");
+
+    let sourceRoute = routeToSplit;
+    if (!sourceRoute.geometry && !sourceRoute.geoJson) {
+      const originalPreview = await previewGeoapifyRoute(
+        { latitude: originLoc.latitude, longitude: originLoc.longitude },
+        { latitude: destLoc.latitude, longitude: destLoc.longitude },
+      );
+      if (originalPreview.estimated)
+        throw new Error("The original road route could not be verified.");
+      sourceRoute = { ...sourceRoute, geometry: originalPreview.geometry };
+    }
+
+    const corridor = getRouteCorridorMetrics(
+      sourceRoute.geometry ?? sourceRoute.geoJson,
+      {
+        latitude: stopLoc.latitude,
+        longitude: stopLoc.longitude,
+      },
+    );
+    if (!corridor)
+      throw new Error("The original route has no usable road geometry.");
+    if (corridor.distanceKm > MAX_SPLIT_CORRIDOR_DISTANCE_KM) {
+      throw new Error(
+        `${kind === "BCP" ? "BCP" : "Rest stop"} is ${Math.round(corridor.distanceKm * 10) / 10} km from the original route. Choose a location within ${MAX_SPLIT_CORRIDOR_DISTANCE_KM} km of the route.`,
+      );
+    }
+
+    const preview1 = await previewGeoapifyRoute(
+      { latitude: originLoc.latitude, longitude: originLoc.longitude },
+      { latitude: stopLoc.latitude, longitude: stopLoc.longitude },
+    );
+    const actualOrigin = preview1.snappedStart
+      ? { ...originLoc, ...preview1.snappedStart }
+      : originLoc;
+    const actualStop = preview1.snappedEnd
+      ? { ...stopLoc, ...preview1.snappedEnd }
+      : stopLoc;
+    const preview2 = await previewGeoapifyRoute(
+      { latitude: actualStop.latitude, longitude: actualStop.longitude },
+      { latitude: destLoc.latitude, longitude: destLoc.longitude },
+    );
+    if (preview1.estimated || preview2.estimated) {
+      throw new Error(
+        "The split could not be verified on the road network. No changes were made.",
+      );
+    }
+
+    const actualDest = preview2.snappedEnd
+      ? { ...destLoc, ...preview2.snappedEnd }
+      : destLoc;
+    if (preview1.snappedStart)
+      void persistFeasibleLocation(originLoc, preview1.snappedStart);
+    if (preview1.snappedEnd)
+      void persistFeasibleLocation(stopLoc, preview1.snappedEnd);
+    if (preview2.snappedEnd)
+      void persistFeasibleLocation(destLoc, preview2.snappedEnd);
+
+    const now = Date.now();
+    const route1: MapRoute = {
+      id: `dynamic-${originLoc.id}-${stopLoc.id}-${now}`,
+      name: `${originLoc.name} → ${stopLoc.name} (${kind})`,
+      fromLocation: actualOrigin,
+      toLocation: actualStop,
+      distanceKm: Math.round(preview1.distanceKm * 10) / 10,
+      durationMinutes: Math.round(preview1.durationMinutes),
+      transportMode: "ROAD",
+      geometry: preview1.geometry,
+    };
+    const route2: MapRoute = {
+      id: `dynamic-${stopLoc.id}-${destLoc.id}-${now + 1}`,
+      name: `${stopLoc.name} → ${destLoc.name}`,
+      fromLocation: actualStop,
+      toLocation: actualDest,
+      distanceKm: Math.round(preview2.distanceKm * 10) / 10,
+      durationMinutes: Math.round(preview2.durationMinutes),
+      transportMode: "ROAD",
+      geometry: preview2.geometry,
+    };
+
+    const arrangement =
+      currentSegment?.arrangement ?? arrangementForRoute(routeToSplit);
+    const sharedSegmentData = currentSegment
+      ? { arrangement, provider: currentSegment.provider, note: currentSegment.note, vehicleIds: currentSegment.vehicleIds, vehicleDetails: currentSegment.vehicleDetails, assignmentOrigin: currentSegment.assignmentOrigin === "saved" ? "manual" as const : currentSegment.assignmentOrigin }
+      : { arrangement };
+    const seg1: DraftSegment = {
+      id: `seg-${now}-1`,
+      route: route1,
+      ...sharedSegmentData,
+      stopType: kind,
+      dwellAfterMinutes: 30,
+    };
+    const seg2: DraftSegment = {
+      id: `seg-${now}-2`,
+      route: route2,
+      ...sharedSegmentData,
+      stopType:
+        currentSegment?.stopType === "BCP"
+          ? "REST_STOP"
+          : (currentSegment?.stopType ?? "DESTINATION"),
+      dwellAfterMinutes: currentSegment?.dwellAfterMinutes ?? 0,
+    };
+
+    setSegments((current) => {
+      const updated = [...current];
+      if (targetSegIndex == null) updated.push(seg1, seg2);
+      else updated.splice(targetSegIndex, 1, seg1, seg2);
+      return formatDraftSegments(updated, plan.departureAt);
+    });
+
+    return {
+      corridorDistanceKm: corridor.distanceKm,
+      splitDistanceKm:
+        Math.round((preview1.distanceKm + preview2.distanceKm) * 10) / 10,
+      splitDurationMinutes: Math.round(
+        preview1.durationMinutes + preview2.durationMinutes,
+      ),
+    };
+  }
+
   async function insertBcpIntoRoute(bcpLoc: MapLocation, targetSegIndex = 0) {
+    const routeToSplit =
+      segments[targetSegIndex]?.route ??
+      ({
+        id: `dynamic-${plan.from.id}-${plan.to.id}`,
+        name: `${plan.from.name} → ${plan.to.name}`,
+        fromLocation: plan.from,
+        toLocation: plan.to,
+        transportMode: "ROAD",
+      } satisfies MapRoute);
+    const splitToastId = toast.loading(
+      `Routing through BCP: ${bcpLoc.name}...`,
+    );
+    try {
+      const result = await splitRouteAtLocation(
+        bcpLoc,
+        "BCP",
+        routeToSplit,
+        segments.length ? targetSegIndex : undefined,
+      );
+      toast.success(`BCP "${bcpLoc.name}" inserted into the route.`, {
+        id: splitToastId,
+        description: `${result.splitDistanceKm} km total after split; corridor offset ${Math.round(result.corridorDistanceKm * 10) / 10} km.`,
+      });
+    } catch (err) {
+      toast.error("BCP split was not applied", {
+        id: splitToastId,
+        description:
+          err instanceof Error ? err.message : "Route calculation error",
+      });
+    }
+    return;
+
+    /* Legacy split implementation replaced by splitRouteAtLocation.
     if (!segments.length) {
       const fromLoc = plan.from;
       if (!fromLoc) return;
@@ -577,6 +979,7 @@ export function RoutePlanBuilder({
         description: err instanceof Error ? err.message : "Route calculation error",
       });
     }
+    */
   }
 
   async function handleConfirmSplitBcp() {
@@ -586,26 +989,48 @@ export function RoutePlanBuilder({
     try {
       let effectiveBcp = detectedBcp;
       if (String(detectedBcp.id).startsWith("preset-")) {
-        try {
-          const res = await createLocation({
-            locationName: detectedBcp.name,
-            locationType: "BORDER_GATE",
-            address: detectedBcp.address || detectedBcp.name,
-            city: detectedBcp.city || "Border",
-            country: detectedBcp.country || undefined,
-            latitude: detectedBcp.latitude,
-            longitude: detectedBcp.longitude,
-          });
-          const createdId = (res as { locationId?: string | number })?.locationId;
-          if (createdId) {
-            effectiveBcp = { ...detectedBcp, id: String(createdId) };
-            setLocations((prev) => [...prev, effectiveBcp]);
+        const existingBcp = findExistingBcpByCoordinates(
+          detectedBcp.latitude,
+          detectedBcp.longitude,
+        );
+        if (existingBcp) {
+          effectiveBcp = existingBcp;
+        } else {
+          try {
+            const res = await createLocation({
+              locationName: detectedBcp.name,
+              locationType: "BORDER_GATE",
+              address: detectedBcp.address || detectedBcp.name,
+              city: detectedBcp.city || "Border",
+              country: detectedBcp.country || undefined,
+              latitude: detectedBcp.latitude,
+              longitude: detectedBcp.longitude,
+            });
+            const createdId = (res as { locationId?: string | number })
+              ?.locationId;
+            if (createdId) {
+              effectiveBcp = { ...detectedBcp, id: String(createdId) };
+              setLocations((prev) => [...prev, effectiveBcp]);
+            }
+          } catch {
+            // The split may still use the preset when Master Data creation fails.
           }
-        } catch {
-          // ignore error if master creation fails, use preset directly
         }
       }
 
+      const result = await splitRouteAtLocation(
+        effectiveBcp,
+        "BCP",
+        routeToSplit,
+        targetSegmentIndex,
+      );
+      toast.success(`BCP "${effectiveBcp.name}" inserted into the route.`, {
+        description: `${result.splitDistanceKm} km total after split; corridor offset ${Math.round(result.corridorDistanceKm * 10) / 10} km.`,
+      });
+      setBcpSplitProposal(null);
+      return;
+
+      /* Legacy split implementation replaced by splitRouteAtLocation.
       if (targetSegmentIndex !== undefined && targetSegmentIndex >= 0 && targetSegmentIndex < segments.length) {
         await insertBcpIntoRoute(effectiveBcp, targetSegmentIndex);
       } else {
@@ -681,9 +1106,11 @@ export function RoutePlanBuilder({
         toast.success(`BCP "${effectiveBcp.name}" inserted into route.`, { id: toastId });
       }
       setBcpSplitProposal(null);
+      */
     } catch (err) {
       toast.error("Failed to split route through BCP", {
-        description: err instanceof Error ? err.message : "Route calculation error",
+        description:
+          err instanceof Error ? err.message : "Route calculation error",
       });
     } finally {
       setIsSplitting(false);
@@ -713,39 +1140,50 @@ export function RoutePlanBuilder({
 
     setCreatingBcp(true);
     try {
-      const snapResult = await snapToFeasibleRoadPoint({ latitude: lat, longitude: lon });
+      const snapResult = await snapToFeasibleRoadPoint({
+        latitude: lat,
+        longitude: lon,
+      });
       const finalLat = snapResult.isSnapped ? snapResult.latitude : lat;
       const finalLon = snapResult.isSnapped ? snapResult.longitude : lon;
 
-      const created = await createLocation({
-        locationName: newBcpName.trim(),
-        locationType: "BORDER_GATE",
-        country: newBcpCountry.trim().toUpperCase() || undefined,
-        city: newBcpCity.trim() || undefined,
-        address: newBcpAddress.trim() || undefined,
-        latitude: finalLat,
-        longitude: finalLon,
-        locationNote: "Created via Route Plan Builder",
-      });
+      const existingBcp = findExistingBcpByCoordinates(finalLat, finalLon);
+      let effectiveBcp = existingBcp;
+      if (!effectiveBcp) {
+        const created = await createLocation({
+          locationName: newBcpName.trim(),
+          locationType: "BORDER_GATE",
+          country: newBcpCountry.trim().toUpperCase() || undefined,
+          city: newBcpCity.trim() || undefined,
+          address: newBcpAddress.trim() || undefined,
+          latitude: finalLat,
+          longitude: finalLon,
+          locationNote: "Created via Route Plan Builder",
+        });
 
-      const newId =
-        (created as { locationId?: string | number })?.locationId ??
-        (created as { value?: { locationId?: string | number } })?.value?.locationId ??
-        `bcp-${Date.now()}`;
+        const newId =
+          (created as { locationId?: string | number })?.locationId ??
+          (created as { value?: { locationId?: string | number } })?.value
+            ?.locationId ??
+          `bcp-${Date.now()}`;
 
-      const newMapLoc: MapLocation = {
-        id: String(newId),
-        name: newBcpName.trim(),
-        type: "BORDER_GATE",
-        country: newBcpCountry.trim().toUpperCase() || undefined,
-        city: newBcpCity.trim() || undefined,
-        address: newBcpAddress.trim() || undefined,
-        latitude: finalLat,
-        longitude: finalLon,
-      };
-
-      setLocations((prev) => [newMapLoc, ...prev]);
-      toast.success(`BCP "${newBcpName}" added to Master Data.`);
+        effectiveBcp = {
+          id: String(newId),
+          name: newBcpName.trim(),
+          type: "BORDER_GATE",
+          country: newBcpCountry.trim().toUpperCase() || undefined,
+          city: newBcpCity.trim() || undefined,
+          address: newBcpAddress.trim() || undefined,
+          latitude: finalLat,
+          longitude: finalLon,
+        };
+        setLocations((prev) => [effectiveBcp!, ...prev]);
+        toast.success(`BCP "${newBcpName}" added to Master Data.`);
+      } else {
+        toast.info(
+          `Existing BCP "${effectiveBcp.name}" found nearby. Reusing it.`,
+        );
+      }
       setShowNewBcpForm(false);
       setNewBcpName("");
       setNewBcpCountry("");
@@ -754,7 +1192,7 @@ export function RoutePlanBuilder({
       setNewBcpLat("");
       setNewBcpLon("");
 
-      await insertBcpIntoRoute(newMapLoc, splitSegmentIndex);
+      await insertBcpIntoRoute(effectiveBcp, splitSegmentIndex);
     } catch (err) {
       toast.error("Failed to create BCP in Master Data", {
         description: err instanceof Error ? err.message : "API error",
@@ -764,9 +1202,66 @@ export function RoutePlanBuilder({
     }
   }
 
+  function joins(before?: MapRoute, after?: MapRoute) {
+    const end = before?.toLocation?.id;
+    const start = after?.fromLocation?.id;
+    return end != null && start != null && String(end) === String(start);
+  }
+
+  // Joints between consecutive segments that do not meet. A deleted segment leaves one, and save stays blocked until it is filled.
+  function countBrokenJoints(routeList: MapRoute[]) {
+    return routeList.filter((route, index) => index > 0 && !joins(routeList[index - 1], route)).length;
+  }
+
+  /**
+   * Where a new route goes. A route that starts where a segment ends (or ends where one starts) is placed at that open
+   * joint, so the coordinator can delete a blocked segment in the middle and draw its replacement in the same place.
+   */
+  function findInsertionPoint(route: MapRoute, routeList: MapRoute[]): number | null {
+    if (!routeList.length) return 0;
+    const last = routeList.length;
+    const isOpenAt = (point: number) =>
+      point === 0
+        ? String(routeList[0].fromLocation?.id) !== String(plan.from?.id)
+        : point === last
+          ? String(routeList[last - 1].toLocation?.id) !== String(plan.to?.id)
+          : !joins(routeList[point - 1], routeList[point]);
+    const startsAfter = (point: number) =>
+      point === 0 ? String(route.fromLocation?.id) === String(plan.from?.id) : joins(routeList[point - 1], route);
+    const endsBefore = (point: number) =>
+      point === last ? String(route.toLocation?.id) === String(plan.to?.id) : joins(route, routeList[point]);
+    const openPoints = Array.from({ length: last + 1 }, (_, point) => point).filter(isOpenAt);
+    return (
+      openPoints.find((point) => startsAfter(point) && endsBefore(point)) ??
+      openPoints.find(startsAfter) ??
+      openPoints.find(endsBefore) ??
+      null
+    );
+  }
+
   function addSegment(route: MapRoute, insertIndex?: number) {
     if (route.readonly) {
-      setBuildMessage("Primary segments are view-only. Select a backup route to add it.");
+      setBuildMessage(
+        "Primary segments are view-only. Select a backup route to add it.",
+      );
+      return;
+    }
+    if (!route.fromLocation?.id || !route.toLocation?.id) {
+      const message = "This route has an unresolved origin or destination.";
+      setBuildMessage(message);
+      toast.error("Route was not added", { description: message });
+      return;
+    }
+    const currentRoutes = segments.map((segment) => segment.route);
+    const insertionPoint =
+      insertIndex !== undefined && insertIndex >= 0 && insertIndex < segments.length
+        ? insertIndex + 1
+        : findInsertionPoint(route, currentRoutes);
+    if (insertionPoint === null) {
+      const message =
+        "This route does not connect to any open point. Start it where a segment ends, or end it where the next segment starts.";
+      setBuildMessage(message);
+      toast.error("Route was not added", { description: message });
       return;
     }
     setBuildMessage(null);
@@ -785,17 +1280,24 @@ export function RoutePlanBuilder({
 
     setSegments((current) => {
       const updated = [...current];
-      if (insertIndex !== undefined && insertIndex >= 0 && insertIndex < updated.length) {
-        updated.splice(insertIndex + 1, 0, newSegment);
-      } else {
-        updated.push(newSegment);
-      }
+      updated.splice(Math.min(insertionPoint, updated.length), 0, newSegment);
       return formatDraftSegments(updated, plan.departureAt);
     });
   }
 
   function moveSegment(fromIndex: number, toIndex: number) {
     if (toIndex < 0 || toIndex >= segments.length) return;
+    const updatedRoutes = segments.map((segment) => segment.route);
+    const [movedRoute] = updatedRoutes.splice(fromIndex, 1);
+    updatedRoutes.splice(toIndex, 0, movedRoute);
+    // An existing gap does not block a move; only a move that breaks another joint does.
+    if (countBrokenJoints(updatedRoutes) > countBrokenJoints(segments.map((segment) => segment.route))) {
+      const message = "Moving this segment would disconnect it from its neighbours.";
+      setBuildMessage(message);
+      toast.error("Segment was not moved", { description: message });
+      return;
+    }
+    setBuildMessage(null);
     setSegments((current) => {
       const updated = [...current];
       const [moved] = updated.splice(fromIndex, 1);
@@ -816,20 +1318,153 @@ export function RoutePlanBuilder({
       const updated = current.map((seg, idx) =>
         idx === index ? { ...seg, dwellAfterMinutes: minutes } : seg,
       );
-      return formatDraftSegments(updated, plan.departureAt);
+      return formatDraftSegments(updated, plan.departureAt, true, false);
     });
   }
 
   function handleVehicleChange(index: number, vehicleIds: string[]) {
     setSegments((current) =>
-      current.map((seg, idx) => (idx === index ? { ...seg, vehicleIds } : seg)),
+      current.map((seg, idx) => (idx === index ? { ...seg, vehicleIds: [...vehicleIds], assignmentOrigin: "manual", inheritanceSource: undefined, assignmentReason: undefined, vehicleDetails: vehicleIds.flatMap((id) => {
+        const vehicle = availableVehicles.find((v) => v.vehicleId === id) ?? seg.vehicleDetails?.find((v) => v.vehicleId === id);
+        return vehicle ? [vehicle] : [];
+      }) } : seg)),
     );
+  }
+
+  async function insertRestStopAtMapPoint(point: MapPoint) {
+    if (insertTargetIndex === null) return;
+    const currentSegment = segments[insertTargetIndex];
+    if (!currentSegment) return;
+
+    const loadingToast = toast.loading("Preparing rest stop from map point...");
+    try {
+      const snapped = await snapToFeasibleRoadPoint(point);
+      const latitude = Number(
+        (snapped.isSnapped ? snapped.latitude : point.latitude).toFixed(4),
+      );
+      const longitude = Number(
+        (snapped.isSnapped ? snapped.longitude : point.longitude).toFixed(4),
+      );
+      const name = `Rest Stop (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`;
+      const country =
+        currentSegment.route.fromLocation?.country ??
+        currentSegment.route.toLocation?.country ??
+        undefined;
+      const created = await createLocation({
+        locationName: name,
+        locationType: "REST_STOP",
+        address: "Selected on route map",
+        city: "Map-selected",
+        country,
+        latitude,
+        longitude,
+        locationNote: "Created via Route Plan Builder",
+      });
+      const locationId =
+        (created as { locationId?: string | number })?.locationId ??
+        (created as { value?: { locationId?: string | number } })?.value
+          ?.locationId;
+      if (locationId == null)
+        throw new Error("Rest stop could not be saved to Master Data.");
+
+      const stopLoc: MapLocation = {
+        id: String(locationId),
+        name,
+        type: "REST_STOP",
+        address: "Selected on route map",
+        city: "Map-selected",
+        latitude,
+        longitude,
+      };
+      setLocations((current) => [...current, stopLoc]);
+      const result = await splitRouteAtLocation(
+        stopLoc,
+        "REST_STOP",
+        currentSegment.route,
+        insertTargetIndex,
+      );
+      toast.success("New rest stop inserted into the route.", {
+        id: loadingToast,
+        description: `${result.splitDistanceKm} km total after split; corridor offset ${Math.round(result.corridorDistanceKm * 10) / 10} km.`,
+      });
+      setInsertTargetIndex(null);
+      setMode("buildPlan");
+    } catch (error) {
+      toast.error("Rest stop split was not applied", {
+        id: loadingToast,
+        description:
+          error instanceof Error
+            ? error.message
+            : "Unable to create the map-selected rest stop.",
+      });
+    }
+  }
+
+  async function resolveBcpCandidate(route: MapRoute) {
+    if (route.geometry || route.geoJson) {
+      return { route, match: findBestBcpAlongRoute(route, locations) };
+    }
+
+    const from = route.fromLocation;
+    const to = route.toLocation;
+    if (!from || !to) {
+      throw new Error("This route has no resolved origin or destination.");
+    }
+
+    const preview = await previewGeoapifyRoute(
+      { latitude: from.latitude, longitude: from.longitude },
+      { latitude: to.latitude, longitude: to.longitude },
+    );
+    if (preview.estimated) {
+      throw new Error(
+        "The road geometry could not be verified for this route.",
+      );
+    }
+
+    const routeWithGeometry = { ...route, geometry: preview.geometry };
+    return {
+      route: routeWithGeometry,
+      match: findBestBcpAlongRoute(routeWithGeometry, locations),
+    };
+  }
+
+  async function openBcpSplit(route: MapRoute, targetSegmentIndex?: number) {
+    const loadingToast = toast.loading(
+      "Checking eligible BCP locations along the route...",
+    );
+    try {
+      const resolved = await resolveBcpCandidate(route);
+      toast.dismiss(loadingToast);
+      if (!resolved.match) {
+        toast.info(
+          "No eligible UK/Ireland BORDER_GATE was found within 10 km of this route.",
+        );
+        return;
+      }
+      setBcpSplitProposal({
+        routeToSplit: resolved.route,
+        targetSegmentIndex,
+        detectedBcp: resolved.match.bcp,
+        distanceKmToRoute: resolved.match.distanceKmToRoute,
+        isMandatory: resolved.match.isMandatory,
+      });
+    } catch (error) {
+      toast.error("Unable to prepare BCP split", {
+        id: loadingToast,
+        description:
+          error instanceof Error
+            ? error.message
+            : "Route geometry could not be verified.",
+      });
+    }
   }
 
   async function selectMapLocation(location: MapLocation) {
     if (!sourceLocation) {
       setSourceLocation(location);
-      setBuildMessage(`Source selected: ${location.name}. Please choose a destination.`);
+      setBuildMessage(
+        `Source selected: ${location.name}. Please choose a destination.`,
+      );
       return;
     }
     if (String(sourceLocation.id) === String(location.id)) {
@@ -844,18 +1479,27 @@ export function RoutePlanBuilder({
     );
 
     if (found) {
-      const match = findBestBcpAlongRoute(found, locations);
-      if (match && !hasBcp) {
-        setBcpSplitProposal({
-          routeToSplit: found,
-          detectedBcp: match.bcp,
-          distanceKmToRoute: match.distanceKmToRoute,
-          isMandatory: match.isMandatory,
-        });
-      } else {
-        addSegment(found);
-        toast.success(`${sourceLocation.name} → ${location.name}`, {
-          description: "Saved route added.",
+      try {
+        const resolved = await resolveBcpCandidate(found);
+        if (resolved.match && !hasBcp) {
+          setBcpSplitProposal({
+            routeToSplit: resolved.route,
+            detectedBcp: resolved.match.bcp,
+            distanceKmToRoute: resolved.match.distanceKmToRoute,
+            isMandatory: resolved.match.isMandatory,
+          });
+        } else {
+          addSegment(resolved.route);
+          toast.success(`${sourceLocation.name} → ${location.name}`, {
+            description: "Saved route added.",
+          });
+        }
+      } catch (error) {
+        toast.error("Unable to prepare saved route", {
+          description:
+            error instanceof Error
+              ? error.message
+              : "Route geometry could not be verified.",
         });
       }
     } else {
@@ -865,7 +1509,10 @@ export function RoutePlanBuilder({
       );
       try {
         const preview = await previewGeoapifyRoute(
-          { latitude: sourceLocation.latitude, longitude: sourceLocation.longitude },
+          {
+            latitude: sourceLocation.latitude,
+            longitude: sourceLocation.longitude,
+          },
           { latitude: location.latitude, longitude: location.longitude },
         );
         let actualFrom = sourceLocation;
@@ -906,10 +1553,14 @@ export function RoutePlanBuilder({
           });
         }
       } catch (err) {
-        toast.error(`Unable to calculate route: ${sourceLocation.name} → ${location.name}`, {
-          id: loadingToast,
-          description: err instanceof Error ? err.message : "Route calculation failed.",
-        });
+        toast.error(
+          `Unable to calculate route: ${sourceLocation.name} → ${location.name}`,
+          {
+            id: loadingToast,
+            description:
+              err instanceof Error ? err.message : "Route calculation failed.",
+          },
+        );
       }
     }
     setSourceLocation(null);
@@ -918,79 +1569,17 @@ export function RoutePlanBuilder({
   function toPayload(
     action: CreateRoutePlanRequest["action"],
   ): CreateRoutePlanRequest {
-    const payloadRoutes = isBackup
-      ? continuity.effectiveRoutes.map((route) => {
-          const backupSegment = segments.find((segment) => segment.route === route);
-          return backupSegment
-            ? {
-                route,
-                routeType: "BACKUP" as const,
-                plannedDepartureAt:
-                  backupSegment.plannedDepartureAt || plan.departureAt,
-                plannedArrivalAt:
-                  backupSegment.plannedArrivalAt || plan.arrivalAt,
-                vehicleIds: backupSegment.vehicleIds,
-                outsourcing:
-                  backupSegment.arrangement === "OUTSOURCED" &&
-                  backupSegment.provider
-                    ? {
-                        transportProviderId:
-                          backupSegment.provider.transportProviderId,
-                        note: backupSegment.note,
-                      }
-                    : undefined,
-              }
-            : {
-                route,
-                routeType: "PRIMARY" as const,
-                plannedDepartureAt: plan.departureAt,
-                plannedArrivalAt: plan.arrivalAt,
-                vehicleIds: undefined,
-                outsourcing: undefined,
-              };
-        })
-      : segments.map((segment) => ({
-          route: segment.route,
-          routeType,
-          plannedDepartureAt: segment.plannedDepartureAt || plan.departureAt,
-          plannedArrivalAt: segment.plannedArrivalAt || plan.arrivalAt,
-          vehicleIds: segment.vehicleIds,
-          outsourcing:
-            segment.arrangement === "OUTSOURCED" && segment.provider
-              ? {
-                  transportProviderId: segment.provider.transportProviderId,
-                  note: segment.note,
-                }
-              : undefined,
-        }));
-
+    const itinerary = isBackup
+      ? resolveBackupItinerary(primarySegments, segments, savedSegments)?.segments
+      : segments;
+    if (!itinerary) throw new Error("The PRIMARY replacement region cannot be verified. Reload the PRIMARY route before saving.");
     return {
       routeType: plan.routeType,
       action,
-      ...(isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
-      segments: payloadRoutes.map(
-        ({ route, routeType: segmentRouteType, plannedDepartureAt, plannedArrivalAt, vehicleIds, outsourcing }, index): RouteSegmentInput => {
-          const isCatalogRoute = Boolean(route.id && !String(route.id).startsWith("dynamic-"));
-          return {
-            sequenceNo: index + 1,
-            ...(isBackup || isReturn ? { routeType: segmentRouteType } : {}),
-            ...(isCatalogRoute
-              ? { routeId: String(route.id) }
-              : {
-                  fromLocationId: String(route.fromLocation?.id ?? ""),
-                  toLocationId: String(route.toLocation?.id ?? ""),
-                  transportMode: route.transportMode ?? "ROAD",
-                }),
-            plannedDepartureAt,
-            plannedArrivalAt,
-            ...(outsourcing
-              ? { outsourcing }
-              : vehicleIds?.length
-                ? { vehicleIds }
-                : {}),
-          };
-        },
-      ),
+      ...(initialRouteNote || isBackup || isReturn ? { routeNote: routeNote.trim() } : {}),
+      segments: itinerary.map((segment, index) => serializeBuilderSegment(
+        segment, index, isBackup ? (segments.includes(segment) ? "BACKUP" : "PRIMARY") : routeType,
+      )),
     };
   }
 
@@ -1002,15 +1591,69 @@ export function RoutePlanBuilder({
       setSaveError("Add at least one segment before saving.");
       return;
     }
+    const invalidCoordinateSegment = segments.findIndex((segment) => {
+      const locations = [segment.route.fromLocation, segment.route.toLocation];
+      return locations.some(
+        (location) =>
+          !location ||
+          !Number.isFinite(location?.latitude) ||
+          !Number.isFinite(location?.longitude) ||
+          Math.abs(location.latitude) > 90 ||
+          Math.abs(location.longitude) > 180,
+      );
+    });
+    if (invalidCoordinateSegment >= 0) {
+      const segment = segments[invalidCoordinateSegment];
+      const location = [segment.route.fromLocation, segment.route.toLocation].find(
+        (item) =>
+          !item ||
+          !Number.isFinite(item?.latitude) ||
+          !Number.isFinite(item?.longitude) ||
+          Math.abs(item.latitude) > 90 ||
+          Math.abs(item.longitude) > 180,
+      );
+      setSaveError(
+        `Segment ${invalidCoordinateSegment + 1} has invalid coordinates for ${location?.name ?? "a location"}. Select or update the location before saving.`,
+      );
+      setStep(0);
+      return;
+    }
     if (!continuity.valid) {
       setSaveError(continuity.message ?? "Route segments are not continuous.");
+      return;
+    }
+    if (action === "SUBMIT_FOR_LEGAL_REVIEW" && blockedSubmitMessage) {
+      setSaveError(blockedSubmitMessage);
+      setStep(0);
+      return;
+    }
+    if (action === "SUBMIT_FOR_LEGAL_REVIEW" && bcpRequirement) {
+      setSaveError(bcpRequirement);
+      setStep(2);
+      return;
+    }
+    const lateSegment = segments.find((segment) =>
+      validateArrivalDate(segment.plannedArrivalAt, plan.requestedArrivalAt),
+    );
+    if (lateSegment) {
+      setSaveError(
+        validateArrivalDate(
+          lateSegment.plannedArrivalAt,
+          plan.requestedArrivalAt,
+        ) ?? "A segment arrives after the booking requested arrival date.",
+      );
+      return;
+    }
+    if (validateArrivalDate(plan.arrivalAt, plan.requestedArrivalAt)) {
+      setSaveError(
+        "The transport plan arrives after the booking requested arrival date.",
+      );
       return;
     }
     if (action === "SUBMIT_FOR_LEGAL_REVIEW") {
       const internalSegmentsWithoutVehicles = segments.filter(
         (segment) =>
-          segment.arrangement === "INTERNAL" &&
-          !segment.vehicleIds?.length,
+          segment.arrangement === "INTERNAL" && !segment.vehicleIds?.length,
       );
       if (internalSegmentsWithoutVehicles.length > 0) {
         setSaveError(
@@ -1035,6 +1678,13 @@ export function RoutePlanBuilder({
       setSaveError("Update reason is required.");
       return;
     }
+    let payload: CreateRoutePlanRequest;
+    try {
+      payload = toPayload(action);
+    } catch (validationError) {
+      setSaveError(validationError instanceof Error ? validationError.message : "Check the route segment data before saving.");
+      return;
+    }
     setIsSaving(true);
     try {
       // Pre-save check: ensure all locations in segments have feasible road coordinates in the backend
@@ -1051,31 +1701,43 @@ export function RoutePlanBuilder({
         await updateRoutePlan(edit.routePlanId, {
           lastUpdatedAt: edit.lastUpdatedAt,
           updateReason: updateReason.trim(),
-          routeNote: routeNote.trim() || undefined,
+          routeNote: routeNote,
           action,
-          segments: toPayload(action).segments,
+          segments: payload.segments,
         });
       } else {
-        await createRoutePlan(transportPlanId, toPayload(action));
+        await createRoutePlan(transportPlanId, payload);
       }
       const successMessage =
         action === "SAVE_DRAFT"
           ? "Draft saved successfully."
           : "Submitted for legal review.";
       toast.success(successMessage);
+      setHasUnsavedChanges(false);
       navigate(ROLE_ROUTES.routePlans);
     } catch (error) {
       const mapped = getRoutePlanError(error);
-      setSaveError(mapped.code === "VEHICLE_SCHEDULE_CONFLICT"
-        ? "This vehicle is already assigned to another Transport during this time slot. Choose another vehicle or adjust the route time."
-        : mapped.message);
+      setSaveError(
+        mapped.code === "VEHICLE_SCHEDULE_CONFLICT"
+          ? "This vehicle is already assigned to another Transport during this time slot. Choose another vehicle or adjust the route time."
+          : mapped.message,
+      );
     } finally {
       setIsSaving(false);
     }
   }
 
+  function confirmLeaveBuilder() {
+    if (!hasUnsavedChanges) return true;
+    return window.confirm(
+      "You have unsaved route changes. Leave the builder and discard them?",
+    );
+  }
+
   return (
-    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-slate-50 p-3 md:p-4">
+    // `clip` rather than `hidden` here and on the section: a hidden overflow makes a scroll container, which stops the
+    // sticky route map.
+    <main className="min-h-screen w-full max-w-full overflow-x-clip bg-slate-50 p-3 md:p-4">
       <div className="mx-auto grid w-full max-w-[1440px] min-w-0 gap-3">
         <PageHeader
           title={
@@ -1089,11 +1751,12 @@ export function RoutePlanBuilder({
           }
           backHref={ROLE_ROUTES.routePlans}
           backLabel="BACK TO ROUTE PLANS"
+          onBack={confirmLeaveBuilder}
           action={<RoutePlanStatusBadge status={plan.status} />}
         />
         <BuilderMetadata plan={plan} />
         <BuilderProgress step={step} onChange={setStep} />
-        <section className="w-full min-w-0 overflow-hidden rounded-b-[2px] bg-white p-3 md:p-4">
+        <section className="w-full min-w-0 overflow-clip rounded-b-[2px] bg-white p-3 md:p-4">
           {step === 0 && (
             <RoutePlanEndpointsStep
               from={plan.from}
@@ -1113,16 +1776,21 @@ export function RoutePlanBuilder({
               isFromResolved={metadata?.isFromResolved ?? true}
               isToResolved={metadata?.isToResolved ?? true}
               unresolvedOriginAddress={metadata?.unresolvedOriginAddress}
-              unresolvedDestinationAddress={metadata?.unresolvedDestinationAddress}
+              unresolvedDestinationAddress={
+                metadata?.unresolvedDestinationAddress
+              }
             />
           )}
 
           {step === 1 && (
             <div className="grid w-full min-w-0 gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,1fr)]">
-              <div className="w-full min-w-0 min-h-[560px]">
+              {/* Side by side (xl), the map stays below the sticky admin header while a long segment list scrolls. */}
+              <div className="w-full min-w-0 min-h-[560px] xl:sticky xl:top-16 xl:min-h-0 xl:self-start">
                 <div className="mb-2 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold text-slate-900">Route Map</h2>
+                    <h2 className="text-lg font-semibold text-slate-900">
+                      Route Map
+                    </h2>
                     {sourceLocation && (
                       <Badge className="rounded-[2px] bg-amber-500 text-white">
                         From: {sourceLocation.name}
@@ -1144,23 +1812,33 @@ export function RoutePlanBuilder({
                   </div>
                 )}
                 <MapViewer
+                  // The backup legend sits under the map, so the sticky map is shorter to keep it on screen.
+                  className={isBackup ? "xl:h-[calc(100svh-10rem)]" : "xl:h-[calc(100svh-8.5rem)]"}
                   locations={locations}
                   routes={selectedRoutes}
-                  mode="buildPlan"
+                  mode={mode}
                   onModeChange={setMode}
                   showSearch
                   searchOptions={locationOptions}
                   onSearchChange={setLocationSearch}
                   onMarkerSelect={selectMapLocation}
+                  onMapClick={(point) => {
+                    if (mode === "pickPoint" && insertTargetIndex !== null) {
+                      void insertRestStopAtMapPoint(point);
+                    }
+                  }}
                   onRouteSelect={() => undefined}
                   buildStartLocation={plan.from}
                   buildEndLocation={plan.to}
                 />
+                {isBackup && <BackupRouteLegend />}
               </div>
 
               <div className="w-full min-w-0">
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="font-semibold text-slate-900">Route Segments Builder</h2>
+                  <h2 className="font-semibold text-slate-900">
+                    Route Segments Builder
+                  </h2>
                   <span className="text-sm text-muted-foreground">
                     {segments.length}{" "}
                     {isReturn ? "return " : isBackup ? "backup " : ""}segment(s)
@@ -1168,250 +1846,401 @@ export function RoutePlanBuilder({
                 </div>
 
                 <div className="grid gap-2 min-w-0">
+                  {/* Points the coordinator at the segments the legal review blocked; they are outlined red below and
+                      drawn red on the map, and the mark goes once their route is replaced. */}
+                  {blockedCount > 0 && (
+                    <div role="status" className="flex items-start gap-2 rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
+                      <ShieldAlert className="mt-0.5 size-4 shrink-0 text-red-500" aria-hidden="true" />
+                      <span>
+                        <strong className="font-semibold">
+                          {blockedCount} {blockedCount === 1 ? "segment was" : "segments were"} blocked by the Transport Specialist.
+                        </strong>{" "}
+                        Change {blockedCount === 1 ? "it" : "them"} before submitting for legal review again.
+                        {legalBlock?.note ? <span className="mt-1 block text-red-800">Review note: {legalBlock.note}</span> : null}
+                      </span>
+                    </div>
+                  )}
+                  {bcpRequirement && (
+                    <div className="flex items-start gap-2 rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
+                      <ShieldAlert className="mt-0.5 size-4 shrink-0 text-red-600" />
+                      <span>{bcpRequirement}</span>
+                    </div>
+                  )}
                   {/* BCP Guidance / Proposal */}
                   {isCrossBorder && hasBcp && (
                     <div className="flex items-center gap-2 rounded-[2px] border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-900">
                       <ShieldCheck className="size-4 shrink-0 text-emerald-600" />
-                      <span>Border Control Point (BCP) added for this cross-border route.</span>
+                      <span>
+                        Border Control Point (BCP) added for this cross-border
+                        route.
+                      </span>
                     </div>
                   )}
 
-                  {bcpSplitProposal !== null && isCrossBorder && !hasBcp && isBcpDismissed && (
-                    <div className="flex items-center justify-between rounded-[2px] border border-amber-200 bg-amber-50/60 px-3 py-1.5 text-xs text-amber-900">
-                      <div className="flex items-center gap-1.5">
-                        <ShieldAlert className="size-3.5 shrink-0 text-amber-600" />
-                        <span>Cross-border route: No Border Control Point (BCP) added yet.</span>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 rounded-[2px]"
-                        onClick={() => setIsBcpDismissed(false)}
-                      >
-                        Add BCP
-                      </Button>
-                    </div>
-                  )}
-
-                  {bcpSplitProposal !== null && isCrossBorder && !hasBcp && !isBcpDismissed && (
-                    <div className="w-full min-w-0 max-w-full overflow-hidden rounded-[2px] border border-amber-300 bg-amber-50/70 p-3 text-xs text-amber-950 shadow-sm">
-                      <div className="flex flex-wrap items-start justify-between gap-2 min-w-0">
-                        <div className="flex items-start gap-2 min-w-0 flex-1">
-                          <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
-                          <div className="min-w-0 flex-1 overflow-hidden">
-                            <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-                              <span className="font-bold text-amber-950 text-xs">Cross-Border Route</span>
-                              <Badge
-                                variant="outline"
-                                className="border-amber-300 bg-amber-100/60 text-amber-900 px-1 py-0 text-[10px] font-semibold shrink-0"
-                              >
-                                BCP Required
-                              </Badge>
-                            </div>
-                            <p className="mt-1 text-slate-700 break-words text-xs leading-relaxed">
-                              This route crosses an international border. Please add a Border Control Point (BCP).
-                            </p>
-                          </div>
+                  {bcpSplitProposal !== null &&
+                    isCrossBorder &&
+                    !hasBcp &&
+                    isBcpDismissed && (
+                      <div className="flex items-center justify-between rounded-[2px] border border-amber-200 bg-amber-50/60 px-3 py-1.5 text-xs text-amber-900">
+                        <div className="flex items-center gap-1.5">
+                          <ShieldAlert className="size-3.5 shrink-0 text-amber-600" />
+                          <span>
+                            Cross-border route: No Border Control Point (BCP)
+                            added yet.
+                          </span>
                         </div>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-6 px-1.5 text-xs text-muted-foreground hover:bg-amber-100 rounded-[2px] shrink-0"
-                          onClick={() => setIsBcpDismissed(true)}
-                          title="Dismiss proposal"
+                          className="h-6 px-2 text-xs font-semibold text-amber-900 hover:bg-amber-100 rounded-[2px]"
+                          onClick={() => setIsBcpDismissed(false)}
                         >
-                          Dismiss
+                          Add BCP
                         </Button>
                       </div>
+                    )}
 
-                      {!showNewBcpForm ? (
-                        <div className="mt-3 grid gap-2.5 border-t border-amber-200/80 pt-2.5 min-w-0 w-full overflow-hidden">
-                          <div className="grid gap-1 min-w-0 w-full">
-                            <label className="text-[11px] font-semibold text-slate-700">Select Existing BCP Stop</label>
-                            <Select value={selectedBcpId} onValueChange={setSelectedBcpId}>
-                              <SelectTrigger className="h-8 w-full min-w-0 bg-white text-xs rounded-[2px] border-amber-300 *:data-[slot=select-value]:truncate">
-                                <SelectValue placeholder={`Choose existing BCP (${bcpLocations.length} available)...`} />
-                              </SelectTrigger>
-                              <SelectContent className="max-w-[380px] max-h-60 text-xs">
-                                {bcpLocations.map((bcp) => (
-                                  <SelectItem key={bcp.id} value={String(bcp.id)} className="text-xs">
-                                    {bcp.name} {bcp.country ? `(${bcp.country})` : ""} {bcp.city ? `• ${bcp.city}` : ""}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                  {bcpSplitProposal !== null &&
+                    isCrossBorder &&
+                    !hasBcp &&
+                    !isBcpDismissed && (
+                      <div className="w-full min-w-0 max-w-full overflow-hidden rounded-[2px] border border-amber-300 bg-amber-50/70 p-3 text-xs text-amber-950 shadow-sm">
+                        <div className="flex flex-wrap items-start justify-between gap-2 min-w-0">
+                          <div className="flex items-start gap-2 min-w-0 flex-1">
+                            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                            <div className="min-w-0 flex-1 overflow-hidden">
+                              <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                                <span className="font-bold text-amber-950 text-xs">
+                                  Cross-Border Route
+                                </span>
+                                <Badge
+                                  variant="outline"
+                                  className="border-amber-300 bg-amber-100/60 text-amber-900 px-1 py-0 text-[10px] font-semibold shrink-0"
+                                >
+                                  BCP Required
+                                </Badge>
+                              </div>
+                              <p className="mt-1 text-slate-700 break-words text-xs leading-relaxed">
+                                This route crosses an international border.
+                                Please add a Border Control Point (BCP).
+                              </p>
+                            </div>
                           </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-1.5 text-xs text-muted-foreground hover:bg-amber-100 rounded-[2px] shrink-0"
+                            onClick={() => setIsBcpDismissed(true)}
+                            title="Dismiss proposal"
+                          >
+                            Dismiss
+                          </Button>
+                        </div>
 
-                          {segments.length > 1 && (
+                        {!showNewBcpForm ? (
+                          <div className="mt-3 grid gap-2.5 border-t border-amber-200/80 pt-2.5 min-w-0 w-full overflow-hidden">
                             <div className="grid gap-1 min-w-0 w-full">
-                              <label className="text-[11px] font-semibold text-slate-700">Insert After Segment</label>
+                              <label className="text-[11px] font-semibold text-slate-700">
+                                Select Existing BCP Stop
+                              </label>
                               <Select
-                                value={String(splitSegmentIndex)}
-                                onValueChange={(val) => setSplitSegmentIndex(parseInt(val, 10) || 0)}
+                                value={selectedBcpId}
+                                onValueChange={setSelectedBcpId}
                               >
                                 <SelectTrigger className="h-8 w-full min-w-0 bg-white text-xs rounded-[2px] border-amber-300 *:data-[slot=select-value]:truncate">
-                                  <SelectValue placeholder="Select segment..." />
+                                  <SelectValue
+                                    placeholder={`Choose existing BCP (${bcpLocations.length} available)...`}
+                                  />
                                 </SelectTrigger>
                                 <SelectContent className="max-w-[380px] max-h-60 text-xs">
-                                  {segments.map((seg, idx) => (
-                                    <SelectItem key={seg.id} value={String(idx)} className="text-xs">
-                                      Seg {idx + 1}: {seg.route.fromLocation?.name?.slice(0, 18)}… → {seg.route.toLocation?.name?.slice(0, 18)}…
+                                  {bcpLocations.map((bcp) => (
+                                    <SelectItem
+                                      key={bcp.id}
+                                      value={String(bcp.id)}
+                                      className="text-xs"
+                                    >
+                                      {bcp.name}{" "}
+                                      {bcp.country ? `(${bcp.country})` : ""}{" "}
+                                      {bcp.city ? `• ${bcp.city}` : ""}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
                               </Select>
                             </div>
-                          )}
 
-                          <div className="flex flex-wrap items-center gap-2 pt-1 min-w-0">
-                            <Button
-                              type="button"
-                              size="sm"
-                              disabled={!selectedBcpId}
-                              className="h-8 rounded-[2px] bg-amber-600 px-3 text-xs text-white hover:bg-amber-700 shrink-0 disabled:opacity-50"
-                              onClick={async () => {
-                                const bcp = bcpLocations.find((l) => String(l.id) === selectedBcpId);
-                                if (bcp) {
-                                  await insertBcpIntoRoute(bcp, splitSegmentIndex);
-                                  setSelectedBcpId("");
-                                }
-                              }}
-                            >
-                              Insert BCP
-                            </Button>
+                            {segments.length > 1 && (
+                              <div className="grid gap-1 min-w-0 w-full">
+                                <label className="text-[11px] font-semibold text-slate-700">
+                                  Insert After Segment
+                                </label>
+                                <Select
+                                  value={String(splitSegmentIndex)}
+                                  onValueChange={(val) =>
+                                    setSplitSegmentIndex(parseInt(val, 10) || 0)
+                                  }
+                                >
+                                  <SelectTrigger className="h-8 w-full min-w-0 bg-white text-xs rounded-[2px] border-amber-300 *:data-[slot=select-value]:truncate">
+                                    <SelectValue placeholder="Select segment..." />
+                                  </SelectTrigger>
+                                  <SelectContent className="max-w-[380px] max-h-60 text-xs">
+                                    {segments.map((seg, idx) => (
+                                      <SelectItem
+                                        key={seg.id}
+                                        value={String(idx)}
+                                        className="text-xs"
+                                      >
+                                        Seg {idx + 1}:{" "}
+                                        {seg.route.fromLocation?.name?.slice(
+                                          0,
+                                          18,
+                                        )}
+                                        … →{" "}
+                                        {seg.route.toLocation?.name?.slice(
+                                          0,
+                                          18,
+                                        )}
+                                        …
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
 
-                            <span className="text-[11px] text-slate-500">
-                              If no matching BCP exists, the detected BCP will be
-                              created automatically after RC confirmation.
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="mt-3 rounded-[2px] border border-amber-200 bg-white p-3">
-                          <div className="mb-2 flex items-center justify-between">
-                            <span className="font-bold text-slate-900">Add New Border Control Point to Master Data</span>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-1.5 text-xs text-muted-foreground hover:bg-slate-100 rounded-[2px]"
-                              onClick={() => setShowNewBcpForm(false)}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
+                            <div className="flex flex-wrap items-center gap-2 pt-1 min-w-0">
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={!selectedBcpId}
+                                className="h-8 rounded-[2px] bg-amber-600 px-3 text-xs text-white hover:bg-amber-700 shrink-0 disabled:opacity-50"
+                                onClick={async () => {
+                                  const bcp = bcpLocations.find(
+                                    (l) => String(l.id) === selectedBcpId,
+                                  );
+                                  if (bcp) {
+                                    await insertBcpIntoRoute(
+                                      bcp,
+                                      splitSegmentIndex,
+                                    );
+                                    setSelectedBcpId("");
+                                  }
+                                }}
+                              >
+                                Insert BCP
+                              </Button>
 
-                          <div className="grid gap-2 sm:grid-cols-2">
-                            <div>
-                              <label className="text-[11px] font-semibold text-slate-700">BCP Name *</label>
-                              <input
-                                value={newBcpName}
-                                onChange={(e) => setNewBcpName(e.target.value)}
-                                placeholder="e.g. Eurotunnel Coquelles BCP"
-                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-semibold text-slate-700">Country Code *</label>
-                              <input
-                                value={newBcpCountry}
-                                onChange={(e) => setNewBcpCountry(e.target.value.toUpperCase())}
-                                maxLength={2}
-                                placeholder="e.g. FR, DE, BE, NL, GB"
-                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-semibold text-slate-700">City</label>
-                              <input
-                                value={newBcpCity}
-                                onChange={(e) => setNewBcpCity(e.target.value)}
-                                placeholder="e.g. Coquelles"
-                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-semibold text-slate-700">Address</label>
-                              <input
-                                value={newBcpAddress}
-                                onChange={(e) => setNewBcpAddress(e.target.value)}
-                                placeholder="e.g. Boulevard de l'Europe"
-                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-semibold text-slate-700">Latitude *</label>
-                              <input
-                                type="number"
-                                step="0.0001"
-                                value={newBcpLat}
-                                onChange={(e) => setNewBcpLat(e.target.value)}
-                                placeholder="1,000.01"
-                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-semibold text-slate-700">Longitude *</label>
-                              <input
-                                type="number"
-                                step="0.0001"
-                                value={newBcpLon}
-                                onChange={(e) => setNewBcpLon(e.target.value)}
-                                placeholder="1,000.01"
-                                className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
-                              />
+                              <span className="text-[11px] text-slate-500">
+                                If no matching BCP exists, the detected BCP will
+                                be created automatically after RC confirmation.
+                              </span>
                             </div>
                           </div>
+                        ) : (
+                          <div className="mt-3 rounded-[2px] border border-amber-200 bg-white p-3">
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="font-bold text-slate-900">
+                                Add New Border Control Point to Master Data
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1.5 text-xs text-muted-foreground hover:bg-slate-100 rounded-[2px]"
+                                onClick={() => setShowNewBcpForm(false)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
 
-                          <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-8 rounded-[2px] text-xs"
-                              onClick={() => setShowNewBcpForm(false)}
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              disabled={creatingBcp}
-                              className="h-8 rounded-[2px] bg-amber-600 px-3 text-xs text-white hover:bg-amber-700"
-                              onClick={() => void handleCreateNewBcp()}
-                            >
-                              {creatingBcp ? "Creating BCP..." : "Save to Master & Insert"}
-                            </Button>
+                            <div className="grid gap-2 sm:grid-cols-2">
+                              <div>
+                                <label className="text-[11px] font-semibold text-slate-700">
+                                  BCP Name *
+                                </label>
+                                <input
+                                  value={newBcpName}
+                                  onChange={(e) =>
+                                    setNewBcpName(e.target.value)
+                                  }
+                                  placeholder="e.g. Eurotunnel Coquelles BCP"
+                                  className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-semibold text-slate-700">
+                                  Country Code *
+                                </label>
+                                <input
+                                  value={newBcpCountry}
+                                  onChange={(e) =>
+                                    setNewBcpCountry(
+                                      e.target.value.toUpperCase(),
+                                    )
+                                  }
+                                  maxLength={2}
+                                  placeholder="e.g. FR, DE, BE, NL, GB"
+                                  className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-semibold text-slate-700">
+                                  City
+                                </label>
+                                <input
+                                  value={newBcpCity}
+                                  onChange={(e) =>
+                                    setNewBcpCity(e.target.value)
+                                  }
+                                  placeholder="e.g. Coquelles"
+                                  className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-semibold text-slate-700">
+                                  Address
+                                </label>
+                                <input
+                                  value={newBcpAddress}
+                                  onChange={(e) =>
+                                    setNewBcpAddress(e.target.value)
+                                  }
+                                  placeholder="e.g. Boulevard de l'Europe"
+                                  className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-semibold text-slate-700">
+                                  Latitude *
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.0001"
+                                  value={newBcpLat}
+                                  onChange={(e) => setNewBcpLat(e.target.value)}
+                                  placeholder="1,000.01"
+                                  className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-semibold text-slate-700">
+                                  Longitude *
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.0001"
+                                  value={newBcpLon}
+                                  onChange={(e) => setNewBcpLon(e.target.value)}
+                                  placeholder="1,000.01"
+                                  className="mt-0.5 h-8 w-full rounded-[2px] border border-slate-200 px-2 text-xs focus:border-amber-500 focus:outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 rounded-[2px] text-xs"
+                                onClick={() => setShowNewBcpForm(false)}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={creatingBcp}
+                                className="h-8 rounded-[2px] bg-amber-600 px-3 text-xs text-white hover:bg-amber-700"
+                                onClick={() => void handleCreateNewBcp()}
+                              >
+                                {creatingBcp
+                                  ? "Creating BCP..."
+                                  : "Save to Master & Insert"}
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    )}
                   {/* Inline Insert Destination Helper Modal/Dropdown */}
                   {insertTargetIndex !== null && (
                     <div className="rounded-[2px] border border-amber-200 bg-amber-50/70 p-2.5 text-xs text-amber-900">
                       <div className="flex items-center justify-between font-semibold">
-                        <span>Insert Intermediate Stop after Segment {insertTargetIndex + 1}:</span>
+                        <span>
+                          Insert Intermediate Stop after Segment{" "}
+                          {insertTargetIndex + 1}:
+                        </span>
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           className="h-6 px-1.5 text-xs text-muted-foreground hover:bg-amber-100/60 rounded-[2px]"
-                          onClick={() => setInsertTargetIndex(null)}
+                          onClick={() => {
+                            setInsertTargetIndex(null);
+                            setMode("buildPlan");
+                          }}
                         >
                           Cancel
                         </Button>
                       </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 rounded-[2px] bg-amber-600 px-3 text-xs text-white hover:bg-amber-700"
+                          onClick={() => setMode("pickPoint")}
+                        >
+                          Pick new stop on map
+                        </Button>
+                        {mode === "pickPoint" && (
+                          <span className="text-[11px] font-medium text-amber-800">
+                            Click a point on the route map.
+                          </span>
+                        )}
+                      </div>
                       <Select
                         onValueChange={async (val) => {
-                          const stopLoc = locations.find((l) => String(l.id) === val);
+                          const stopLoc = locations.find(
+                            (l) => String(l.id) === val,
+                          );
                           if (!stopLoc || insertTargetIndex === null) return;
                           const currentSeg = segments[insertTargetIndex];
                           if (!currentSeg) return;
 
-                          const fromLoc = currentSeg.route.fromLocation;
+                          const splitToastId = toast.loading(
+                            `Routing through rest stop: ${stopLoc.name}...`,
+                          );
+                          try {
+                            const result = await splitRouteAtLocation(
+                              stopLoc,
+                              "REST_STOP",
+                              currentSeg.route,
+                              insertTargetIndex,
+                            );
+                            toast.success(
+                              `Rest stop "${stopLoc.name}" inserted into the route.`,
+                              {
+                                id: splitToastId,
+                                description: `${result.splitDistanceKm} km total after split; corridor offset ${Math.round(result.corridorDistanceKm * 10) / 10} km.`,
+                              },
+                            );
+                            setInsertTargetIndex(null);
+                            setMode("buildPlan");
+                          } catch (err) {
+                            toast.error("Rest stop split was not applied", {
+                              id: splitToastId,
+                              description:
+                                err instanceof Error
+                                  ? err.message
+                                  : "Route calculation error",
+                            });
+                          }
+                          return;
+
+                          /* Legacy insertion implementation replaced by splitRouteAtLocation.
+                           const fromLoc = currentSeg.route.fromLocation;
                           if (!fromLoc) return;
                           try {
                             const preview = await previewGeoapifyRoute(
@@ -1440,9 +2269,10 @@ export function RoutePlanBuilder({
                             };
                             addSegment(newRoute, insertTargetIndex);
                             setInsertTargetIndex(null);
-                          } catch {
+                           } catch {
                             toast.error("Unable to calculate route for inserted stop.");
                           }
+                           */
                         }}
                       >
                         <SelectTrigger className="mt-1.5 h-8 w-full min-w-0 rounded-[2px] border-slate-200 bg-white text-xs *:data-[slot=select-value]:truncate">
@@ -1450,7 +2280,11 @@ export function RoutePlanBuilder({
                         </SelectTrigger>
                         <SelectContent className="max-w-[380px] max-h-60 text-xs">
                           {locations.map((loc) => (
-                            <SelectItem key={loc.id} value={String(loc.id)} className="text-xs">
+                            <SelectItem
+                              key={loc.id}
+                              value={String(loc.id)}
+                              className="text-xs"
+                            >
                               {loc.name} — {loc.city}, {loc.country}
                             </SelectItem>
                           ))}
@@ -1460,34 +2294,52 @@ export function RoutePlanBuilder({
                   )}
 
                   {/* Continuation bar for next segment */}
-                  {segments.length > 0 && segments[segments.length - 1]?.route?.toLocation && (
-                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-[2px] border border-blue-200 bg-blue-50/70 p-2.5 text-xs text-blue-950">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="shrink-0 font-bold uppercase text-[10px] text-blue-700">Next segment starts from:</span>
-                        <span className="truncate font-semibold text-blue-900">
-                          {segments[segments.length - 1].route.toLocation?.name}
-                        </span>
-                        <span className="text-[11px] text-blue-700">
-                          ({segments[segments.length - 1].route.toLocation?.city ? `${segments[segments.length - 1].route.toLocation?.city}, ` : ""}{segments[segments.length - 1].route.toLocation?.country})
-                        </span>
+                  {segments.length > 0 &&
+                    segments[segments.length - 1]?.route?.toLocation && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-[2px] border border-blue-200 bg-blue-50/70 p-2.5 text-xs text-blue-950">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="shrink-0 font-bold uppercase text-[10px] text-blue-700">
+                            Next segment starts from:
+                          </span>
+                          <span className="truncate font-semibold text-blue-900">
+                            {
+                              segments[segments.length - 1].route.toLocation
+                                ?.name
+                            }
+                          </span>
+                          <span className="text-[11px] text-blue-700">
+                            (
+                            {segments[segments.length - 1].route.toLocation
+                              ?.city
+                              ? `${segments[segments.length - 1].route.toLocation?.city}, `
+                              : ""}
+                            {
+                              segments[segments.length - 1].route.toLocation
+                                ?.country
+                            }
+                            )
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-6 rounded-[2px] border-blue-300 bg-white px-2 text-[11px] font-semibold text-blue-900 hover:bg-blue-100 shrink-0"
+                          onClick={() => {
+                            const lastLoc =
+                              segments[segments.length - 1].route.toLocation;
+                            if (lastLoc) {
+                              setSourceLocation(lastLoc);
+                              setBuildMessage(
+                                `Source selected: ${lastLoc.name}. Choose destination on map.`,
+                              );
+                            }
+                          }}
+                        >
+                          Continue from here →
+                        </Button>
                       </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-6 rounded-[2px] border-blue-300 bg-white px-2 text-[11px] font-semibold text-blue-900 hover:bg-blue-100 shrink-0"
-                        onClick={() => {
-                          const lastLoc = segments[segments.length - 1].route.toLocation;
-                          if (lastLoc) {
-                            setSourceLocation(lastLoc);
-                            setBuildMessage(`Source selected: ${lastLoc.name}. Choose destination on map.`);
-                          }
-                        }}
-                      >
-                        Continue from here →
-                      </Button>
-                    </div>
-                  )}
+                    )}
 
                   <div className="flex items-center justify-between">
                     <Button
@@ -1509,25 +2361,17 @@ export function RoutePlanBuilder({
                     <BuilderSegmentCard
                       key={segment.id}
                       segment={segment}
+                      blocked={isBlockedSegment(segment)}
                       index={index}
                       totalSegments={segments.length}
                       isLatest={index === segments.length - 1}
                       isReversedOrder={true}
                       onSplitAtBcp={
-                        checkIsCrossBorder(segment.route.fromLocation?.country, segment.route.toLocation?.country) &&
-                        segment.stopType !== "BCP"
-                          ? () => {
-                              const match = findBestBcpAlongRoute(segment.route, locations);
-                              if (match) {
-                                setBcpSplitProposal({
-                                  routeToSplit: segment.route,
-                                  targetSegmentIndex: index,
-                                  detectedBcp: match.bcp,
-                                  distanceKmToRoute: match.distanceKmToRoute,
-                                  isMandatory: match.isMandatory,
-                                });
-                              }
-                            }
+                        isMandatoryBcpCrossing(
+                          segment.route.fromLocation?.country,
+                          segment.route.toLocation?.country,
+                        ) && segment.stopType !== "BCP"
+                          ? () => void openBcpSplit(segment.route, index)
                           : undefined
                       }
                       onDelete={() => deleteSegment(index)}
@@ -1535,18 +2379,24 @@ export function RoutePlanBuilder({
                       onMoveDown={() => moveSegment(index, index - 1)}
                       onInsertStop={() => setInsertTargetIndex(index)}
                       onDwellChange={(mins) => handleDwellChange(index, mins)}
-                      onVehicleChange={(vIds) => handleVehicleChange(index, vIds)}
+                      onVehicleChange={(vIds) =>
+                        handleVehicleChange(index, vIds)
+                      }
                       availableVehicles={availableVehicles}
-                      routePlanId={edit?.routePlanId}
                       onOutsource={(selection) =>
                         setSegments((items) =>
                           items.map((item) =>
                             item.id === segment.id
                               ? {
                                   ...item,
-                                  arrangement: selection ? "OUTSOURCED" : "INTERNAL",
+                                  arrangement: selection
+                                    ? "OUTSOURCED"
+                                    : "INTERNAL",
                                   provider: selection?.provider,
-                                  note: selection?.note,
+                                  note: selection ? selection.note : item.note,
+                                  assignmentOrigin: "manual",
+                                  assignmentReason: undefined,
+                                  inheritanceSource: undefined,
                                   vehicleIds: selection ? undefined : item.vehicleIds,
                                 }
                               : item,
@@ -1572,7 +2422,9 @@ export function RoutePlanBuilder({
                       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
                         <input
                           value={routeSearch}
-                          onChange={(event) => setRouteSearch(event.target.value)}
+                          onChange={(event) =>
+                            setRouteSearch(event.target.value)
+                          }
                           placeholder="Search saved route or location..."
                           className="h-9 w-full rounded-[2px] border border-slate-200 bg-white px-3 text-xs font-normal"
                         />
@@ -1582,11 +2434,16 @@ export function RoutePlanBuilder({
                             setRoutePlanTypeFilter(val as RoutePlanRouteFilter)
                           }
                         >
-                          <SelectTrigger className="h-9 w-full sm:w-[180px] min-w-0 rounded-[2px] border-slate-200 bg-white text-xs *:data-[slot=select-value]:truncate" aria-label="Filter route plan type">
+                          <SelectTrigger
+                            className="h-9 w-full sm:w-[180px] min-w-0 rounded-[2px] border-slate-200 bg-white text-xs *:data-[slot=select-value]:truncate"
+                            aria-label="Filter route plan type"
+                          >
                             <SelectValue placeholder="Filter route plan type" />
                           </SelectTrigger>
                           <SelectContent className="text-xs">
-                            <SelectItem value="ALL">All Route Plan Types</SelectItem>
+                            <SelectItem value="ALL">
+                              All Route Plan Types
+                            </SelectItem>
                             <SelectItem value="PRIMARY">PRIMARY</SelectItem>
                             <SelectItem value="BACKUP">BACKUP</SelectItem>
                             <SelectItem value="RETURN">RETURN</SelectItem>
@@ -1601,32 +2458,48 @@ export function RoutePlanBuilder({
                             type="button"
                             className="rounded-[2px] border border-slate-200 bg-white px-3 py-2 text-left text-xs hover:border-amber-500 hover:bg-amber-50/50"
                             onClick={() => {
-                              const match = findBestBcpAlongRoute(route, locations);
-                              if (match && !hasBcp) {
-                                setBcpSplitProposal({
-                                  routeToSplit: route,
-                                  detectedBcp: match.bcp,
-                                  distanceKmToRoute: match.distanceKmToRoute,
-                                  isMandatory: match.isMandatory,
-                                });
-                              } else {
-                                addSegment(route);
-                              }
-                              setShowRouteSearch(false);
+                              void (async () => {
+                                try {
+                                  const resolved =
+                                    await resolveBcpCandidate(route);
+                                  if (resolved.match && !hasBcp) {
+                                    setBcpSplitProposal({
+                                      routeToSplit: resolved.route,
+                                      detectedBcp: resolved.match.bcp,
+                                      distanceKmToRoute:
+                                        resolved.match.distanceKmToRoute,
+                                      isMandatory: resolved.match.isMandatory,
+                                    });
+                                  } else {
+                                    addSegment(resolved.route);
+                                  }
+                                } catch (error) {
+                                  toast.error("Unable to prepare saved route", {
+                                    description:
+                                      error instanceof Error
+                                        ? error.message
+                                        : "Route geometry could not be verified.",
+                                  });
+                                } finally {
+                                  setShowRouteSearch(false);
+                                }
+                              })();
                             }}
                           >
                             <span className="block font-semibold text-slate-900">
                               {route.name ?? "Unnamed Route"}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {route.fromLocation?.name} → {route.toLocation?.name} ·{" "}
+                              {route.fromLocation?.name} →{" "}
+                              {route.toLocation?.name} ·{" "}
                               {route.transportMode ?? "ROAD"}
                             </span>
                           </button>
                         ))}
                         {!filteredRoutes.length && (
                           <p className="text-xs text-muted-foreground">
-                            No saved route found. You can also click 2 locations directly on the map.
+                            No saved route found. You can also click 2 locations
+                            directly on the map.
                           </p>
                         )}
                       </div>
@@ -1634,7 +2507,9 @@ export function RoutePlanBuilder({
                   )}
 
                   {buildMessage && (
-                    <p className="text-xs text-amber-700 font-medium">{buildMessage}</p>
+                    <p className="text-xs text-amber-700 font-medium">
+                      {buildMessage}
+                    </p>
                   )}
                 </div>
               </div>
@@ -1645,18 +2520,32 @@ export function RoutePlanBuilder({
             <div className="grid w-full min-w-0 gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,1fr)]">
               <div className="w-full min-w-0 min-h-[560px]">
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-slate-900">Route Map</h2>
-                  <Badge variant="outline" className="rounded-[2px]">View mode</Badge>
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    Route Map
+                  </h2>
+                  <Badge variant="outline" className="rounded-[2px]">
+                    View mode
+                  </Badge>
                 </div>
                 <MapViewer
-                  locations={locations}
+                  locations={builtRouteLocations}
                   routes={selectedRoutes}
                   mode="view"
                 />
+                {isBackup && <BackupRouteLegend />}
               </div>
 
               <div className="w-full min-w-0 grid content-start gap-3">
                 <h2 className="text-lg font-semibold text-slate-900">Review</h2>
+                {bcpRequirement && (
+                  <div className="rounded-[2px] border border-red-200 bg-red-50 p-2.5 text-xs text-red-900">
+                    <div className="flex items-center gap-2 font-semibold">
+                      <ShieldAlert className="size-4 shrink-0 text-red-600" />
+                      <span>BCP required before legal review</span>
+                    </div>
+                    <p className="mt-1">{bcpRequirement}</p>
+                  </div>
+                )}
                 {bcpSplitProposal !== null && isCrossBorder && !hasBcp && (
                   <div className="rounded-[2px] border border-amber-300 bg-amber-50 p-2.5 text-xs text-amber-950">
                     <div className="flex items-center gap-2 font-semibold">
@@ -1664,14 +2553,18 @@ export function RoutePlanBuilder({
                       <span>Cross-Border Route</span>
                     </div>
                     <p className="mt-1 text-slate-700">
-                      This route crosses an international border. A Border Control Point (BCP) is required. You can return to Step 1 to add a BCP.
+                      This route crosses an international border. A Border
+                      Control Point (BCP) is required. You can return to Step 1
+                      to add a BCP.
                     </p>
                   </div>
                 )}
                 <Card className="rounded-[2px]">
                   <CardContent className="grid gap-3 py-3 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total segments</span>
+                      <span className="text-muted-foreground">
+                        Total segments
+                      </span>
                       <b>{segments.length}</b>
                     </div>
                     <div className="flex justify-between">
@@ -1701,11 +2594,16 @@ export function RoutePlanBuilder({
                 {(isBackup || isReturn) && (
                   <label className="grid gap-2 text-sm font-medium text-slate-900">
                     {isReturn ? "Return reason" : "Backup reason"}
-                    <span className="font-normal text-muted-foreground text-xs">
-                      Minimum 10 characters
+                    <span
+                      className={`font-normal text-xs ${routeNote.length > 0 && routeNote.trim().length < 10 ? "text-red-600" : "text-muted-foreground"}`}
+                    >
+                      Minimum 10 characters ({routeNote.trim().length}/10)
                     </span>
                     <textarea
-                      className="min-h-20 rounded-[2px] border border-slate-200 p-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
+                      aria-invalid={
+                        routeNote.length > 0 && routeNote.trim().length < 10
+                      }
+                      className={`min-h-20 rounded-[2px] border p-2 text-xs font-normal text-slate-900 focus:outline-none ${routeNote.length > 0 && routeNote.trim().length < 10 ? "border-red-500 focus:border-red-500" : "border-slate-200 focus:border-amber-500"}`}
                       value={routeNote}
                       onChange={(event) => setRouteNote(event.target.value)}
                       placeholder="Why is this route needed?"
@@ -1714,6 +2612,12 @@ export function RoutePlanBuilder({
                 )}
 
                 {edit && (
+                  <>
+                    <p className="text-xs text-slate-600">
+                      {edit.legalReviewRequested
+                        ? `Submitted for legal review at ${formatUtcDateTime(edit.legalReviewRequestedAt)}`
+                        : "This route plan has not been submitted for legal review."}
+                    </p>
                   <label className="grid gap-2 text-sm font-medium text-slate-900">
                     Update reason
                     <textarea
@@ -1724,6 +2628,7 @@ export function RoutePlanBuilder({
                       placeholder="Why is this route plan being updated?"
                     />
                   </label>
+                  </>
                 )}
 
                 {saveError && (
@@ -1744,22 +2649,35 @@ export function RoutePlanBuilder({
                     onClick={() => void save("SAVE_DRAFT")}
                   >
                     {isSaving ? (
-                      <><Loader2 className="size-4 animate-spin" /> Saving...</>
-                    ) : "Save Draft"}
+                      <>
+                        <Loader2 className="size-4 animate-spin" /> Saving...
+                      </>
+                    ) : (
+                      "Save Draft"
+                    )}
                   </Button>
                   {!isReturn && (
                     <Button
                       variant="outline"
                       className="rounded-[2px]"
-                      disabled={isSaving}
+                      disabled={isSaving || Boolean(blockedSubmitMessage)}
+                      title={blockedSubmitMessage ?? undefined}
                       onClick={() => void save("SUBMIT_FOR_LEGAL_REVIEW")}
                     >
                       {isSaving ? (
-                        <><Loader2 className="size-4 animate-spin" /> Submitting...</>
-                      ) : "Submit for legal review"}
+                        <>
+                          <Loader2 className="size-4 animate-spin" />{" "}
+                          Submitting...
+                        </>
+                      ) : (
+                        "Submit for legal review"
+                      )}
                     </Button>
                   )}
                 </div>
+                {!isReturn && blockedSubmitMessage ? (
+                  <p className="m-0 text-xs text-red-700">{blockedSubmitMessage} Save Draft is still available.</p>
+                ) : null}
               </div>
             </div>
           )}
@@ -1774,7 +2692,7 @@ export function RoutePlanBuilder({
               setStep((value) => Math.max(0, value - 1) as WizardStep)
             }
           >
-            <ArrowLeft className="mr-1 size-4" /> Back
+            <ArrowLeft className="mr-1 size-4" /> Previous step
           </Button>
           <Button
             className="rounded-[2px]"
@@ -1807,7 +2725,8 @@ export function RoutePlanBuilder({
         isFinalDestination={
           bcpSplitProposal
             ? bcpSplitProposal.targetSegmentIndex !== undefined
-              ? segments[bcpSplitProposal.targetSegmentIndex]?.stopType === "DESTINATION" ||
+              ? segments[bcpSplitProposal.targetSegmentIndex]?.stopType ===
+                  "DESTINATION" ||
                 bcpSplitProposal.routeToSplit.toLocation?.id === plan.to?.id
               : bcpSplitProposal.routeToSplit.toLocation?.id === plan.to?.id
             : false

@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/shared/components/ui/select";
 import { EMERGENCY_COST_CATEGORY_LABELS } from "@/shared/constants/incident";
+import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from "@/shared/constants/upload";
 import { useCreateEmergencyCost } from "../hooks/useCreateEmergencyCost";
 import { useEmergencyCostScope } from "../hooks/useEmergencyCostScope";
 import {
@@ -41,12 +42,15 @@ import { isEmergencyCostMockMode } from "../source";
 import type { MockCostEvidence } from "../mocks/repository";
 import { MockCostPhotoPicker } from "./EmergencyCostEvidence";
 
+const humanize = (value: string) =>
+  value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ");
+
 type Values = z.input<typeof emergencyCostFormSchema>;
 type ParsedValues = z.output<typeof emergencyCostFormSchema>;
 const validPhoto = (file: File) =>
   ["image/jpeg", "image/png"].includes(file.type) &&
   file.size > 0 &&
-  file.size <= 5 * 1024 * 1024;
+  file.size <= UPLOAD_MAX_BYTES;
 
 function completedPhotos(snapshot: FileUploaderSnapshot | null) {
   if (!snapshot) return [];
@@ -171,7 +175,7 @@ export function EmergencyCostForm({
   const message = (field: keyof Values) => (
     <p
       id={`${id}-${field}-error`}
-      className="m-0 min-h-5 text-xs text-destructive"
+      className="m-0 min-h-4 text-[11px] text-red-600"
       aria-live="polite"
     >
       {form.formState.errors[field]?.message}
@@ -181,16 +185,30 @@ export function EmergencyCostForm({
     <form
       noValidate
       onSubmit={(event) => void submit(event)}
-      className="space-y-4 rounded-xs border border-border bg-card p-4 sm:p-5"
+      className="overflow-hidden rounded-xs border border-[#e5e2d9] bg-white shadow-[0_1px_2px_rgb(23_25_28/0.035),0_5px_18px_rgb(63_49_27/0.025)]"
     >
+      {/* The incident this request is for, as the panel's header strip (it used to be a separate sticky card). */}
+      <header className="border-b border-[#eceae3] bg-[#faf9f5] px-4 py-3.5 sm:px-5 [overflow-wrap:anywhere]">
+        <p className="m-0 text-xs text-slate-500">Request for incident</p>
+        <p className="m-0 mt-0.5 font-heading text-base font-semibold text-slate-900">{incident.incidentCode}</p>
+        <p className="m-0 mt-0.5 text-sm text-slate-700">{incident.title}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-medium">
+          <span className="rounded-xs border border-[#e5e2d9] bg-white px-1.5 py-0.5 text-slate-700">{incident.transport.transportCode}</span>
+          <span className="rounded-xs border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-blue-700">{humanize(incident.transport.status)}</span>
+          <span className="rounded-xs border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-800">Incident {humanize(incident.status).toLowerCase()}</span>
+        </div>
+      </header>
+      <div className="space-y-4 px-4 py-4 sm:px-5">
       <fieldset
         disabled={busy || !allowed || uncertainResult}
-        className="m-0 min-w-0 space-y-4 border-0 p-0"
+        className="m-0 min-w-0 space-y-5 border-0 p-0"
       >
         <legend className="sr-only">New emergency cost request</legend>
+        <div className="space-y-2.5">
+        <h2 className="m-0! font-sans! text-sm! leading-5! font-semibold! tracking-normal! text-slate-800!">Expense</h2>
         <div className="grid min-w-0 gap-3 sm:grid-cols-2">
           <div className="min-w-0 space-y-1">
-            <Label htmlFor={`${id}-category`}>Expense category *</Label>
+            <Label htmlFor={`${id}-category`} className="text-xs font-medium text-slate-600">Expense category <span className="text-red-600">*</span></Label>
             <Controller
               control={form.control}
               name="category"
@@ -204,7 +222,7 @@ export function EmergencyCostForm({
                     id={`${id}-category`}
                     ref={field.ref}
                     onBlur={field.onBlur}
-                    className="min-h-11 w-full rounded-xs"
+                    className="h-10 w-full rounded-xs bg-white text-sm sm:h-9"
                     aria-invalid={Boolean(form.formState.errors.category)}
                     aria-describedby={`${id}-category-error`}
                   >
@@ -223,13 +241,13 @@ export function EmergencyCostForm({
             {message("category")}
           </div>
           <div className="min-w-0 space-y-1">
-            <Label htmlFor={`${id}-amount`}>Requested amount (VND) *</Label>
+            <Label htmlFor={`${id}-amount`} className="text-xs font-medium text-slate-600">Requested amount (VND) <span className="text-red-600">*</span></Label>
             <Input
               {...form.register("requestedAmount")}
               id={`${id}-amount`}
               inputMode="numeric"
               placeholder="15,000,000"
-              className="min-h-11 rounded-xs tabular-nums"
+              className="h-10 rounded-xs bg-white text-sm tabular-nums sm:h-9"
               aria-invalid={Boolean(form.formState.errors.requestedAmount)}
               aria-describedby={`${id}-requestedAmount-error`}
               onBlur={(event) => {
@@ -249,32 +267,40 @@ export function EmergencyCostForm({
             {message("requestedAmount")}
           </div>
         </div>
+        </div>
+        <div className="space-y-2.5">
+        <h2 className="m-0! font-sans! text-sm! leading-5! font-semibold! tracking-normal! text-slate-800!">Details</h2>
+        {/* Side by side from sm, so the form does not run long. */}
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         {(["description", "justification"] as const).map((field) => (
           <div key={field} className="space-y-1">
-            <Label htmlFor={`${id}-${field}`}>
+            <Label htmlFor={`${id}-${field}`} className="text-xs font-medium text-slate-600">
               {field === "description"
                 ? "Expense description and supplier"
-                : "Justification and urgency"}{" "}
-              *
+                : "Justification and urgency"} <span className="text-red-600">*</span>
             </Label>
             <Textarea
               {...form.register(field)}
               id={`${id}-${field}`}
               rows={3}
               maxLength={2000}
-              className="min-h-24 rounded-xs text-base sm:text-sm"
+              // The shared textarea grows with its content: cap it and scroll inside instead.
+              className="max-h-32 min-h-20 resize-none overflow-y-auto rounded-xs bg-white text-sm"
               aria-invalid={Boolean(form.formState.errors[field])}
               aria-describedby={`${id}-${field}-error`}
             />
             {message(field)}
           </div>
         ))}
-        <div className="space-y-1">
+        </div>
+        </div>
+        {/* The VAT option as a bordered choice row, its hint inside. */}
+        <div className="rounded-xs border border-[#eceae3] bg-[#fcfbf9] px-3 py-2.5">
           <Controller
             control={form.control}
             name="invoiceRequired"
             render={({ field }) => (
-              <div className="flex min-h-11 items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Checkbox
                   id={`${id}-vat`}
                   checked={field.value ?? false}
@@ -283,25 +309,25 @@ export function EmergencyCostForm({
                   }
                   disabled={busy || !allowed || uncertainResult}
                 />
-                <Label htmlFor={`${id}-vat`}>VAT invoice required</Label>
+                <Label htmlFor={`${id}-vat`} className="text-sm font-medium text-slate-800">VAT invoice required</Label>
               </div>
             )}
           />
-          <p className="m-0 text-xs text-muted-foreground">
+          <p className="m-0 mt-1 pl-6 text-xs text-slate-500">
             Request a VAT invoice for this expense. This does not create or pay
             an invoice.
           </p>
         </div>
         <section
           aria-label="Supporting evidence"
-          className="space-y-2 border-t border-border pt-4"
+          className="space-y-2"
         >
-          <h2 className="m-0 text-base font-semibold">
-            Supporting evidence{" "}
-            <span className="text-sm font-normal text-muted-foreground">
-              Optional · up to 5 JPG/PNG · 5 MB each
-            </span>
-          </h2>
+          <div>
+            <h2 className="m-0! font-sans! text-sm! leading-5! font-semibold! tracking-normal! text-slate-800!">Supporting evidence</h2>
+            <p className="m-0 mt-0.5 text-xs text-slate-500">
+              Optional. Up to 5 JPG or PNG images, {UPLOAD_MAX_MB} MiB each.
+            </p>
+          </div>
           {mock ? (
             <MockCostPhotoPicker
               photos={mockPhotos}
@@ -310,7 +336,7 @@ export function EmergencyCostForm({
             />
           ) : (
             <>
-              <p className="text-xs text-muted-foreground">
+              <p className="m-0 text-xs text-slate-500">
                 Uploads use real storage. Only upload supporting images in an
                 approved environment.
               </p>
@@ -318,7 +344,7 @@ export function EmergencyCostForm({
                 ref={uploader}
                 entity="attachment"
                 accept="image/jpeg,image/png"
-                maxSize={5 * 1024 * 1024}
+                maxSize={UPLOAD_MAX_BYTES}
                 maxFiles={5}
                 disabled={busy || !allowed || uncertainResult}
                 onStateChange={setSnapshot}
@@ -359,13 +385,14 @@ export function EmergencyCostForm({
           with fresh incident context before submitting again.
         </p>
       ) : null}
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#eceae3] bg-[#faf9f5] px-4 py-3 sm:px-5">
         <Button
           type="button"
           variant="outline"
           asChild
           disabled={busy}
-          className="min-h-11 rounded-xs"
+          className="h-10 rounded-xs sm:h-9"
         >
           <Link
             to={back}
@@ -389,7 +416,7 @@ export function EmergencyCostForm({
             uncertainResult ||
             submissionBlocked
           }
-          className="min-h-11 rounded-xs"
+          className="h-10 rounded-xs sm:h-9"
         >
           {busy
             ? "Submitting..."

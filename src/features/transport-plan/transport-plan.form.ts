@@ -110,3 +110,16 @@ export function canEditTransportPlan(
     !["IN_TRANSIT", "COMPLETED", "CANCELLED"].includes(plan.transport.status)
   );
 }
+
+export function canCreateTransportPlanInvoice(
+  principal: AuthPrincipal | null,
+  plan: Pick<TransportPlanDetail, "status"> & {
+    transport?: Pick<TransportPlanDetail["transport"], "status">;
+  },
+) {
+  return (
+    canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] }) &&
+    plan.status !== "CANCELLED" &&
+    plan.transport?.status !== "CANCELLED"
+  );
+}

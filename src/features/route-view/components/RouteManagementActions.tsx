@@ -1,22 +1,44 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { FileText, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
 import { dossierDetail, ROLE_ROUTES, routePlanEdit } from "@/app/route-config";
 import {
   LegalFeasibilityPanel,
   type LegalFeasibilityPanelProps,
 } from "@/features/route-plan/components/LegalFeasibilityPanel";
 import { CancelRoutePlanDialog } from "@/features/route-plan/components/CancelRoutePlanDialog";
+import { SubmitForLegalReviewButton } from "@/features/route-plan/components/SubmitForLegalReviewButton";
+import {
+  ChangeVehiclesDialog,
+  type ChangeVehiclesSnapshot,
+} from "@/features/route-plan/components/ChangeVehiclesDialog";
 import { OutsourceSegmentDialog } from "@/features/route-plan/components/OutsourceSegmentDialog";
+import { currentBlockedSegments } from "@/features/route-plan/legal-blocks";
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import { isFlow3MockMode } from "@/features/transport-plan/source";
+import {
+  getRoutePlanError,
+  updateSegmentOutsourcing,
+} from "@/features/route-plan/services";
 import { Button } from "@/shared/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/components/ui/select";
+import {
   refreshEmergencyQueries,
+  captureVehicleChangeRefresh,
   type EmergencyContext,
 } from "../hooks/useEmergencyRoute";
+import { formatUtcDateTime } from "@/shared/utils/datetime";
 import type { RoutePlanDetail, RouteSegment } from "../types";
+import { canChangeVehiclesBeforeDeparture } from "../vehicle-change";
+import { canSpecialistReviewRoute, isDossierReady } from "../route-policy";
 
 const legalActionClass =
   "min-h-11 gap-1.5 rounded-[2px] border px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.05em] transition-colors duration-200 focus-visible:ring-primary/30 motion-reduce:transition-none sm:min-h-8";
@@ -24,7 +46,7 @@ const legalActionClass =
 // The provider currently requires measured numeric fields even though it only displays routeName.
 // Do not turn absent measurements into zero to satisfy that public interface.
 function legalSegments(
-  plan: RoutePlanDetail,
+  plan: Pick<RoutePlanDetail, "segments">,
 ): LegalFeasibilityPanelProps["segments"] | null {
   const result: LegalFeasibilityPanelProps["segments"] = [];
   for (const segment of plan.segments) {
@@ -46,9 +68,11 @@ function legalSegments(
 export function RouteManagementActions({
   plan,
   context,
+  readOnly = false,
 }: {
   plan: RoutePlanDetail;
   context: EmergencyContext;
+  readOnly?: boolean;
 }) {
   const client = useQueryClient();
   const role = getWorkspaceRole(context.workspace.principal);
@@ -59,7 +83,9 @@ export function RouteManagementActions({
   const [cancelVersion, setCancelVersion] = useState(plan.updatedAt);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
-  async function refresh() {
+  const [changeVehiclesOpen, setChangeVehiclesOpen] = useState(false);
+  const vehicleRefresh = useRef<((result: unknown) => void) | null>(null);
+  async function refresh(throwOnError = false) {
     setRefreshing(true);
     setRefreshFailed(false);
     try {
@@ -71,21 +97,62 @@ export function RouteManagementActions({
         [],
         context.transportId,
       );
-    } catch {
+    } catch (error) {
       setRefreshFailed(true);
+      if (throwOnError) throw error;
     } finally {
       setRefreshing(false);
     }
   }
-  const dossierReady =
-    plan.routeType === "BACKUP" ||
-    (legalDossier?.status === "DRAFT" &&
-      (plan.routeType !== "RETURN" ||
-        context.workspace.transportStatus === "IN_TRANSIT"));
-  const canReview =
-    role === "specialist" && plan.status === "DRAFT" && dossierReady;
-  const canCancel = role === "coordinator" && plan.status === "DRAFT";
+  const dossierReady = isDossierReady(legalDossier?.status);
+  // A PRIMARY or BACKUP plan must be submitted before RP7 review; RETURN reaches the specialist via LM approval when transport is in transit.
+  const submittedForReview = plan.legalReviewRequested === true;
+  const canReview = canSpecialistReviewRoute(plan, context.workspace) && !readOnly;
+  const canCancel = role === "coordinator" && plan.status === "DRAFT" && !readOnly;
+  const canChangeVehicles = canChangeVehiclesBeforeDeparture(
+    plan,
+    context.workspace,
+  );
+  const changeableSegments = plan.segments.filter(
+    (segment) =>
+      !segment.isOutsourced &&
+      segment.plannedDepartureAt &&
+      segment.plannedArrivalAt &&
+      ["ROAD", "SEA", "AIR"].includes(segment.route.transportMode),
+  );
+  const prepareVehicleRefresh = (snapshot: ChangeVehiclesSnapshot) => {
+    if (
+      readOnly || !canChangeVehicles ||
+      mockMode ||
+      !context.transportId ||
+      snapshot.routePlan.routePlanId !== plan.routePlanId ||
+      snapshot.routePlan.transportPlanId !== plan.transportPlanId
+    )
+      throw new Error("Reload the authorized route before changing vehicles.");
+    vehicleRefresh.current = captureVehicleChangeRefresh(
+      client,
+      {
+        ...snapshot.routePlan,
+        bookingId: plan.bookingId,
+        segments: snapshot.segments,
+      },
+      context,
+      { genericInvalidationHandled: true },
+      (message, kind) => toast[kind](message),
+    );
+  };
   const segments = legalSegments(review ?? plan);
+  // The backups submitted with this primary are reviewed in the same decision; one without measured legs cannot be shown yet.
+  const backupSegments = (review ?? plan).submittedBackups.map((backup) => ({
+    routePlanId: backup.routePlanId,
+    routePlanCode: backup.routePlanCode,
+    segments: legalSegments(backup),
+    // A backup listed here was submitted again after its last review, so that review's blocked segments are outdated.
+    blockedSegments: [],
+  }));
+  const reviewBackups = backupSegments.every((backup) => backup.segments)
+    ? backupSegments.map((backup) => ({ ...backup, segments: backup.segments ?? [] }))
+    : null;
   return (
     <>
       {canViewDossier && legalDossier ? (
@@ -114,7 +181,7 @@ export function RouteManagementActions({
           </Button>
         </>
       ) : null}
-      {role === "specialist" && plan.status === "DRAFT" && !dossierReady ? (
+      {role === "specialist" && plan.status === "DRAFT" && plan.routeType !== "BACKUP" && !dossierReady ? (
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-slate-600">
           <span>
             {plan.routeType === "RETURN"
@@ -130,6 +197,16 @@ export function RouteManagementActions({
               >
                 Apply Dossier Template
               </Link>
+            </Button>
+          ) : null}
+          {!legalDossier ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => toast.info("Create a compliance dossier before reviewing legal feasibility.")}
+            >
+              Review Legal Feasibility
             </Button>
           ) : null}
         </div>
@@ -154,6 +231,40 @@ export function RouteManagementActions({
       {canCancel ? (
         <Button asChild size="sm" variant="outline">
           <Link to={routePlanEdit(plan.routePlanId)}>Edit</Link>
+        </Button>
+      ) : null}
+      {canCancel && plan.routeType !== "RETURN" ? (
+        submittedForReview ? (
+          <span className="text-xs text-slate-500">
+            Submitted for legal review at{" "}
+            {formatUtcDateTime(plan.legalReviewRequestedAt)}
+          </span>
+        ) : (
+          <SubmitForLegalReviewButton
+            plan={plan}
+            disabled={mockMode || refreshing}
+            onSubmitted={() => void refresh()}
+          />
+        )
+      ) : null}
+      {canChangeVehicles ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={
+            readOnly || mockMode || !context.transportId || changeableSegments.length === 0
+          }
+          title={
+            mockMode
+              ? "Vehicle changes require live route data."
+              : changeableSegments.length === 0
+                ? "No internal segments have verified planned times and transport mode."
+                : undefined
+          }
+          onClick={() => setChangeVehiclesOpen(true)}
+        >
+          Change vehicles
         </Button>
       ) : null}
       {canCancel && plan.routeType !== "RETURN" ? (
@@ -192,17 +303,31 @@ export function RouteManagementActions({
           Flow 3 mock mode.
         </p>
       ) : null}
-      {review && segments && canReview && !mockMode ? (
+      {canChangeVehicles ? (
+        <ChangeVehiclesDialog
+          open={changeVehiclesOpen}
+          onOpenChange={setChangeVehiclesOpen}
+          mode="before-departure"
+          routePlan={plan}
+          segments={changeableSegments}
+          onBeforeSubmit={prepareVehicleRefresh}
+          onChanged={(result) => vehicleRefresh.current?.(result)}
+          onReload={() => refresh(true)}
+        />
+      ) : null}
+      {review && segments && reviewBackups && canReview && !mockMode ? (
         <LegalFeasibilityPanel
           routePlanId={review.routePlanId}
           lastUpdatedAt={review.updatedAt}
           segments={segments}
+          backups={reviewBackups}
           legalReview={
             review.legalReview
               ? {
                   ...review.legalReview,
                   note: review.legalReview.note ?? null,
-                  blockedSegments: review.legalReview.blockedSegments ?? [],
+                  // The specialist starts from the segments still blocked; a resubmitted plan starts clean.
+                  blockedSegments: currentBlockedSegments(review),
                   reviewedAt: review.legalReview.reviewedAt ?? null,
                   reviewedBy: review.legalReview.reviewedBy
                     ? {
@@ -222,6 +347,10 @@ export function RouteManagementActions({
             setReview(null);
             void refresh();
           }}
+          onNotSubmitted={() => {
+            setReview(null);
+            void refresh();
+          }}
         />
       ) : null}
     </>
@@ -238,20 +367,67 @@ export function RouteSegmentOutsourceAction({
   context: EmergencyContext;
 }) {
   const client = useQueryClient();
-  if (
-    getWorkspaceRole(context.workspace.principal) !== "manager" ||
-    plan.status !== "DRAFT"
-  )
-    return null;
-  // This provider has no lastUpdatedAt prop and cannot safely submit the current UC42 contract.
-  // Keep the consumer/IDs/success callback mounted, but prevent an invalid business mutation.
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [savingInternal, setSavingInternal] = useState(false);
+  const role = getWorkspaceRole(context.workspace.principal);
+  // OS1 (PUT …/segments/{id}/outsourcing) is Logistics Manager only: the BE policy and service both reject anyone else
+  // with 403, so a Route Coordinator got "You do not have permission". The coordinator sets providers while building or
+  // editing the route plan, which saves through the route plan itself; here they only see the arrangement badge.
+  if (plan.status !== "DRAFT" || role !== "manager") return null;
+  async function switchToInternal() {
+    setSavingInternal(true);
+    try {
+      await updateSegmentOutsourcing(
+        plan.routePlanId,
+        segment.routePlanRouteId,
+        {
+          lastUpdatedAt: plan.updatedAt,
+          outsourced: false,
+        },
+      );
+      await refreshEmergencyQueries(
+        client,
+        plan,
+        "management",
+        context.dossierId,
+      );
+      // The LM switches the arrangement only; vehicles of a PRIMARY plan are assigned by the Route Coordinator.
+      toast.success("Segment switched to internal fleet.", {
+        description: "The Route Coordinator assigns its vehicles.",
+      });
+    } catch (requestError) {
+      toast.error(getRoutePlanError(requestError).message);
+    } finally {
+      setSavingInternal(false);
+    }
+  }
+
   return (
     <div className="max-w-72 space-y-1 text-right">
+      <Select
+        value={segment.isOutsourced ? "OUTSOURCED" : "INTERNAL"}
+        disabled={savingInternal}
+        onValueChange={(value) => {
+          if (value === "OUTSOURCED") setDialogOpen(true);
+          else void switchToInternal();
+        }}
+      >
+        <SelectTrigger className="h-9 w-full rounded border bg-background text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="INTERNAL">Internal</SelectItem>
+          <SelectItem value="OUTSOURCED">Outsource</SelectItem>
+        </SelectContent>
+      </Select>
       <OutsourceSegmentDialog
         routePlanId={plan.routePlanId}
         routePlanRouteId={segment.routePlanRouteId}
+        lastUpdatedAt={plan.updatedAt}
         transportMode={segment.route.transportMode}
         isOutsourced={segment.isOutsourced}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
         currentNote={segment.note}
         onChanged={() =>
           void refreshEmergencyQueries(
@@ -262,21 +438,8 @@ export function RouteSegmentOutsourceAction({
           )
         }
       >
-        <Button
-          size="sm"
-          variant="outline"
-          disabled
-          aria-describedby={`outsource-blocked-${segment.routePlanRouteId}`}
-        >
-          {segment.isOutsourced ? "Manage Outsource" : "Outsource Segment"}
-        </Button>
+        <span className="sr-only">Configure outsourced segment</span>
       </OutsourceSegmentDialog>
-      <p
-        id={`outsource-blocked-${segment.routePlanRouteId}`}
-        className="text-[11px] text-slate-500"
-      >
-        Provider update awaits lastUpdatedAt support in the shared dialog.
-      </p>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useAuthStore } from "@/features/auth/store"
 
 import { OPEN_STATUSES } from "../constants"
 import { incidentService } from "../services"
-import type { CancelInput, Incident, IncidentListParams, ResolveInput, SelfResolveInput } from "../types"
+import type { CancelInput, DetachHorseInput, Incident, IncidentListParams, ResolveInput, SelfResolveInput } from "../types"
 
 /** Last part of every key: a new sign-in never reads the cache of the previous account. Prefix invalidation still matches. */
 const useSession = () => useAuthStore((state) => state.sessionVersion)
@@ -41,7 +41,7 @@ const KPI_BASE: IncidentListParams = {
   search: "",
   pageIndex: 1,
   pageSize: 1,
-  sortBy: "severity:desc,occurredAt:desc",
+  sortBy: "occurredAt:desc",
 }
 
 /**
@@ -116,4 +116,17 @@ export function useCancelIncident(incidentReportId: string) {
 export function useSelfResolveIncident(incidentReportId: string) {
   const after = useAfterWrite()
   return useMutation({ mutationFn: (input: SelfResolveInput) => incidentService.selfResolve(incidentReportId, input), onSuccess: after })
+}
+
+/** Leave a horse behind. The horse lists of the transport, health log and booking change with it. */
+export function useDetachHorse(incidentReportId: string) {
+  const after = useAfterWrite()
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: ({ horseId, ...input }: DetachHorseInput & { horseId: string }) => incidentService.detachHorse(incidentReportId, horseId, input),
+    onSuccess: (incident) => {
+      after(incident)
+      void client.invalidateQueries()
+    },
+  })
 }

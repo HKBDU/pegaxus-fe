@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -65,6 +66,7 @@ export function RouteChangeDecisionPanel({
   const [baseline, setBaseline] = useState(plan.updatedAt);
   const [approveOpen, setApproveOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const navigate = useNavigate();
   const form = useForm({
     resolver: zodResolver(rejectionSchema),
     mode: "onTouched",
@@ -84,7 +86,7 @@ export function RouteChangeDecisionPanel({
   const primaryPlan = !comparisonError ? primary.data : undefined;
   const isReturn = plan.routeType === "RETURN";
   const rejectLabel = isReturn
-    ? "Không Duyệt RETURN & Chỉ Đạo Chờ Đợi"
+    ? "Keep holding"
     : "Reject Change";
   const busy = attempt.isRunning || mutation.isPending;
   const versionChanged = baseline !== plan.updatedAt && !mutation.data;
@@ -112,14 +114,15 @@ export function RouteChangeDecisionPanel({
       setRejectOpen(false);
       const outcome = result.value;
       toast.success(
-        `Route change ${outcome.decision.toLowerCase()}d. Route status: ${outcome.status === REJECTED_BY_MANAGER ? "LM đã từ chối" : outcome.status}.${outcome.complianceDossier ? ` Dossier: ${outcome.complianceDossier.status}.` : ""}`,
+        `Route change ${outcome.decision.toLowerCase()}d. Route status: ${outcome.status === REJECTED_BY_MANAGER ? "Rejected by LM" : outcome.status}.${outcome.complianceDossier ? ` Dossier: ${outcome.complianceDossier.status}.` : ""}`,
       );
       if (isReturn && outcome.decision === "REJECT")
         toast.info(
           outcome.status === "CANCELLED"
-            ? "Backend trả CANCELLED (legacy). Chưa xác nhận đã gửi LM Note cho Driver và Escort."
-            : "Quyết định đã được lưu. Việc gửi LM Note cho tổ lái do Backend xử lý; FE không có xác nhận giao thông báo.",
+            ? "This request was cancelled. We could not confirm that the LM note was sent to the driver and escort."
+            : "Decision approved",
         );
+      navigate(`/admin/route-plans/${encodeURIComponent(plan.routePlanId)}`, { replace: true });
       onBack();
     } catch {
       setApproveOpen(false);
@@ -191,7 +194,7 @@ export function RouteChangeDecisionPanel({
       >
         <p className="text-sm leading-6 text-slate-600">
           {isReturn
-            ? "Approve return for legal preparation, or reject with an operational instruction to hold and wait. The backend determines the recorded status."
+            ? "Approve the return for legal preparation, or reject it with an instruction to hold and wait. The final status is recorded automatically."
             : "Approve activation, or reject without cancelling the prepared backup."}
         </p>
         {!canApprove && (
@@ -226,7 +229,7 @@ export function RouteChangeDecisionPanel({
         >
           Decision: {mutation.data.decision} · Route status:{" "}
           {mutation.data.status === REJECTED_BY_MANAGER
-            ? "LM đã từ chối"
+            ? "Rejected by LM"
             : mutation.data.status}
           {mutation.data.complianceDossier
             ? ` · Dossier: ${mutation.data.complianceDossier.status}`
@@ -277,7 +280,7 @@ export function RouteChangeDecisionPanel({
             <AlertDialogDescription>
               {isReturn
                 ? "Create a new EXTRA dossier in DRAFT; MAIN stays APPROVED. RETURN remains DRAFT until RP7 legal review, then awaits approved EXTRA documents and a separate EC3 activation."
-                : "BACKUP becomes ACTIVE. Only the indicated PRIMARY segments are replaced; the backend sends the required notifications."}
+                : "BACKUP becomes ACTIVE. Only the indicated PRIMARY segments are replaced; required notifications are sent automatically."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -323,7 +326,7 @@ export function RouteChangeDecisionPanel({
             </DialogTitle>
             <DialogDescription>
               {isReturn
-                ? "LM Note là chỉ đạo trực tiếp cho Driver và Escort theo D6. Backend legacy có thể vẫn trả CANCELLED và chưa gửi chỉ đạo; không xác nhận thông báo đã được giao."
+                ? "The LM note is a direct instruction to the driver and escort under D6. Delivery is not confirmed if this request is cancelled."
                 : "BACKUP remains CONFIRMED."}{" "}
               Explain why this proposal cannot be accepted.
             </DialogDescription>
@@ -343,7 +346,7 @@ export function RouteChangeDecisionPanel({
                   <FormItem className="min-w-0 content-start gap-1.5">
                     <FormLabel className="leading-4">
                       {isReturn
-                        ? "LM Note (gửi thẳng cho Driver và Escort) *"
+                        ? "LM Note (sent directly to driver and escort) *"
                         : "Rejection Reason *"}
                     </FormLabel>
                     <FormControl>

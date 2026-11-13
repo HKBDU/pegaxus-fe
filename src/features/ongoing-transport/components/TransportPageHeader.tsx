@@ -1,7 +1,7 @@
-import { Link, useLocation } from "react-router-dom";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
+import { useIsDesktop } from "@/shared/hooks";
 import {
   readOngoingListReturn,
   transportOverviewPath,
@@ -46,14 +46,16 @@ export function TransportPageHeader({
   view: TransportView;
 }) {
   const location = useLocation();
-  const isCrew = audience === "crew";
+  const isDesktop = useIsDesktop();
+  // Crew phones retain the overview metadata across operational tabs.
+  const isCrew = audience === "crew" && !isDesktop;
   const returnState = readOngoingListReturn(location.state);
   const backPath =
     audience === "admin"
       ? ROLE_ROUTES.ongoingTransports
       : audience === "customer" && bookingId
         ? `/bookings/${encodeURIComponent(bookingId)}`
-        : isCrew
+        : audience === "crew"
           ? "/crew/transports"
           : ROLE_ROUTES.home;
   const backLabel =
@@ -61,65 +63,51 @@ export function TransportPageHeader({
       ? "Ongoing Transports"
       : audience === "customer"
         ? "Booking"
-        : "Home";
+        : "Assigned Transports";
   const missingContext =
     transportId === undefined ||
     (audience === "customer" && bookingId === undefined);
+  const backToOverview = !isCrew && view !== "overview" && !missingContext;
   const title = transportCode ?? viewLabel[isCrew ? "overview" : view];
   return (
     <>
-      {!isCrew ? (
-        <nav
-          aria-label="Breadcrumb"
-          className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-slate-500"
-        >
-          <Link
-            to={backPath}
-            state={
-              audience === "admin" && returnState
-                ? { ongoingTransportList: returnState }
-                : undefined
-            }
-            className="inline-flex items-center gap-1 rounded-xs hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-          >
-            <ArrowLeft aria-hidden="true" className="size-3.5" />
-            {backLabel}
-          </Link>
-          <ChevronRight aria-hidden="true" className="size-3" />
-          {view !== "overview" && !missingContext ? (
-            <>
-              <Link
-                to={transportOverviewPath(transportId!, audience, bookingId)}
-                state={location.state}
-                className="rounded-xs hover:text-primary focus-visible:outline-2 focus-visible:outline-primary"
-              >
-                {transportCode ?? "Transport Overview"}
-              </Link>
-              <ChevronRight aria-hidden="true" className="size-3" />
-            </>
-          ) : null}
-          <span aria-current="page" className="font-medium text-slate-700">
-            {view === "overview" ? title : viewLabel[view]}
-          </span>
-        </nav>
-      ) : null}
-      <header className="flex flex-wrap items-start justify-between gap-3">
+      <header className="min-w-0">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <div>
             <PageHeader
               title={title}
-              backHref={backPath}
-              showBack={isCrew}
+              backHref={
+                backToOverview
+                  ? transportOverviewPath(transportId!, audience, bookingId)
+                  : backPath
+              }
+              backLabel={
+                backToOverview
+                  ? `Back to ${transportCode ?? "Transport overview"}`
+                  : `Back to ${backLabel}`
+              }
+              backState={
+                backToOverview
+                  ? location.state
+                  : audience === "admin" && returnState
+                    ? { ongoingTransportList: returnState }
+                    : undefined
+              }
+              size="compact"
               action={
                 isCrew && status ? (
                   <OngoingTransportStatusBadge status={status} />
                 ) : undefined
               }
-              className={`w-auto [&_h1]:!my-0 [&_h1]:!text-slate-900 ${isCrew ? "gap-1 [&_h1]:!text-2xl [&_h1]:!leading-tight sm:[&_h1]:!text-3xl" : "[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl"}`}
+              // Right after the title text: placed after the whole PageHeader, it drifted away on Overview, whose back
+              // link ("Back to Ongoing Transports") is wider than the transport code.
+              titleAddon={
+                !isCrew && status ? (
+                  <OngoingTransportStatusBadge status={status} />
+                ) : undefined
+              }
+              className="w-auto gap-1"
             />
-            {!isCrew && status ? (
-              <OngoingTransportStatusBadge status={status} />
-            ) : null}
           </div>
           <p className="mt-2 mb-0 text-xs text-slate-500 sm:text-sm">
             {viewDescription[isCrew ? "overview" : view]}

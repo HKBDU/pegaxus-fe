@@ -194,6 +194,14 @@ export function CreateTransportPlanContent({
       </Section>
       <TransportPlanMetadataForm
         bookingId={booking.bookingId}
+        bookingCreatedAt={booking.createdAt}
+        requestedArrivalDate={booking.requestedArrivalDate}
+        originCountry={booking.originCountry}
+        destinationCountry={booking.destinationCountry}
+        originLatitude={booking.originLatitude}
+        originLongitude={booking.originLongitude}
+        destinationLatitude={booking.destinationLatitude}
+        destinationLongitude={booking.destinationLongitude}
         cancelHref={managerBookingDetailPath(booking.bookingId)}
         onCancel={onCancel}
         onCreated={onCreated}

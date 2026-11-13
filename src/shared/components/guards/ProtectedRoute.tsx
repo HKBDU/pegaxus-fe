@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth/store'
 import type { Permission, Role } from '@/features/auth/types'
@@ -16,9 +16,17 @@ export function ProtectedRoute({
   allowedPermissions,
 }: ProtectedRouteProps) {
   const location = useLocation()
-  const { accessToken, principal } = useAuthStore()
+  const accessToken = useAuthStore((state) => state.accessToken)
+  const principal = useAuthStore((state) => state.principal)
 
-  if (!accessToken) {
+  const legacyDemoSession = accessToken === "demo-jwt-token"
+  useEffect(() => {
+    if (legacyDemoSession && useAuthStore.getState().accessToken === accessToken) {
+      useAuthStore.getState().clearAuth()
+    }
+  }, [accessToken, legacyDemoSession])
+
+  if (!accessToken || legacyDemoSession) {
     const state = /^\/logout\/?$/i.test(location.pathname) ? null : { from: location }
     return <Navigate to="/login" state={state} replace />
   }

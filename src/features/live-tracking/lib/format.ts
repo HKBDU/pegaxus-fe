@@ -1,12 +1,13 @@
-const clock = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" })
-const clockWithSeconds = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+import { formatUtcDateTime, formatUtcTime } from "@/shared/utils/datetime"
 
-/** "14:05" from an ISO string or a millisecond timestamp; "-" when it is not a valid time. */
+const clockWithSeconds = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: "UTC" })
+
+/** "14:05 UTC" from an ISO string or a millisecond timestamp (GPS times come from the server, so UTC is the reference); "-" when it is not a valid time. */
 export function formatClock(value: string | number | null | undefined, withSeconds = false) {
   if (value === null || value === undefined) return "-"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "-"
-  return (withSeconds ? clockWithSeconds : clock).format(date)
+  return withSeconds ? `${clockWithSeconds.format(date)} UTC` : formatUtcTime(date)
 }
 
 export function formatKm(value: number | null | undefined) {
@@ -17,13 +18,11 @@ export function formatSpeed(value: number | null | undefined) {
   return value === null || value === undefined || !Number.isFinite(value) ? "-" : `${Math.round(value)} km/h`
 }
 
-const dateTime = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-
-/** "14 Oct 2026, 13:42" (the viewer's time zone); "-" when empty or invalid. */
+/** "13:42 UTC, 14/10/2026"; "-" when empty or invalid. */
 export function formatDateTime(value: string | number | null | undefined) {
   if (value === null || value === undefined) return "-"
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? "-" : dateTime.format(date)
+  return Number.isNaN(date.getTime()) ? "-" : formatUtcDateTime(date)
 }
 
 /** 183 -> "3h 03m", 45 -> "45m". */
