@@ -5,9 +5,12 @@
 export const healthPanel =
   "rounded-xs border border-[rgb(203_196_184/0.65)] bg-white shadow-[0_1px_2px_rgb(23_25_28/0.035),0_5px_18px_rgb(63_49_27/0.025)]";
 
-/** Section heading: 14px semibold slate text with a primary-coloured icon, like `.overview-heading`. */
+/**
+ * Section heading: 14px semibold slate text with a primary-coloured icon, like `.overview-heading`. The `!`s matter:
+ * index.css styles bare `h2` (24px heading font, 8px margin) outside any layer, which beats plain Tailwind utilities.
+ */
 export const healthHeading =
-  "m-0 flex items-center gap-2 text-sm leading-snug font-semibold text-slate-800 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-primary";
+  "m-0! flex items-center gap-2 font-sans! text-sm! leading-snug! font-semibold! tracking-normal! text-slate-800! [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-primary";
 
 export const fieldLabel = "block text-xs font-medium text-slate-600";
 

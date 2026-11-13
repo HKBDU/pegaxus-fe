@@ -38,7 +38,8 @@ const date = (value: string) => (
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="min-w-0 space-y-3 rounded-xs border border-[#e5e2d9] bg-white p-4">
-      <h2 className="m-0 border-b border-[#eceae3] pb-2 text-sm font-semibold text-slate-800">
+      {/* `!`: index.css sets bare h2 to 24px heading font outside any layer, which beats plain utilities. */}
+      <h2 className="m-0! border-b border-[#eceae3] pb-2 font-sans! text-sm! leading-5! font-semibold! tracking-normal! text-slate-800!">
         {title}
       </h2>
       {children}

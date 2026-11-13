@@ -42,6 +42,9 @@ import { isEmergencyCostMockMode } from "../source";
 import type { MockCostEvidence } from "../mocks/repository";
 import { MockCostPhotoPicker } from "./EmergencyCostEvidence";
 
+const humanize = (value: string) =>
+  value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ");
+
 type Values = z.input<typeof emergencyCostFormSchema>;
 type ParsedValues = z.output<typeof emergencyCostFormSchema>;
 const validPhoto = (file: File) =>
@@ -182,14 +185,27 @@ export function EmergencyCostForm({
     <form
       noValidate
       onSubmit={(event) => void submit(event)}
-      className="space-y-4 rounded-xs border border-[#e5e2d9] bg-white p-4 shadow-[0_1px_2px_rgb(23_25_28/0.035),0_5px_18px_rgb(63_49_27/0.025)]"
+      className="overflow-hidden rounded-xs border border-[#e5e2d9] bg-white shadow-[0_1px_2px_rgb(23_25_28/0.035),0_5px_18px_rgb(63_49_27/0.025)]"
     >
+      {/* The incident this request is for, as the panel's header strip (it used to be a separate sticky card). */}
+      <header className="border-b border-[#eceae3] bg-[#faf9f5] px-4 py-3.5 sm:px-5 [overflow-wrap:anywhere]">
+        <p className="m-0 text-xs text-slate-500">Request for incident</p>
+        <p className="m-0 mt-0.5 font-heading text-base font-semibold text-slate-900">{incident.incidentCode}</p>
+        <p className="m-0 mt-0.5 text-sm text-slate-700">{incident.title}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-medium">
+          <span className="rounded-xs border border-[#e5e2d9] bg-white px-1.5 py-0.5 text-slate-700">{incident.transport.transportCode}</span>
+          <span className="rounded-xs border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-blue-700">{humanize(incident.transport.status)}</span>
+          <span className="rounded-xs border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-800">Incident {humanize(incident.status).toLowerCase()}</span>
+        </div>
+      </header>
+      <div className="space-y-4 px-4 py-4 sm:px-5">
       <fieldset
         disabled={busy || !allowed || uncertainResult}
-        className="m-0 min-w-0 space-y-4 border-0 p-0"
+        className="m-0 min-w-0 space-y-5 border-0 p-0"
       >
         <legend className="sr-only">New emergency cost request</legend>
-        <h2 className="m-0 border-b border-[#eceae3] pb-2 text-sm font-semibold text-slate-800">Expense</h2>
+        <div className="space-y-2.5">
+        <h2 className="m-0! font-sans! text-sm! leading-5! font-semibold! tracking-normal! text-slate-800!">Expense</h2>
         <div className="grid min-w-0 gap-3 sm:grid-cols-2">
           <div className="min-w-0 space-y-1">
             <Label htmlFor={`${id}-category`} className="text-xs font-medium text-slate-600">Expense category <span className="text-red-600">*</span></Label>
@@ -251,7 +267,11 @@ export function EmergencyCostForm({
             {message("requestedAmount")}
           </div>
         </div>
-        <h2 className="m-0 border-b border-[#eceae3] pb-2 pt-1 text-sm font-semibold text-slate-800">Details</h2>
+        </div>
+        <div className="space-y-2.5">
+        <h2 className="m-0! font-sans! text-sm! leading-5! font-semibold! tracking-normal! text-slate-800!">Details</h2>
+        {/* Side by side from sm, so the form does not run long. */}
+        <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         {(["description", "justification"] as const).map((field) => (
           <div key={field} className="space-y-1">
             <Label htmlFor={`${id}-${field}`} className="text-xs font-medium text-slate-600">
@@ -272,12 +292,15 @@ export function EmergencyCostForm({
             {message(field)}
           </div>
         ))}
-        <div className="space-y-1">
+        </div>
+        </div>
+        {/* The VAT option as a bordered choice row, its hint inside. */}
+        <div className="rounded-xs border border-[#eceae3] bg-[#fcfbf9] px-3 py-2.5">
           <Controller
             control={form.control}
             name="invoiceRequired"
             render={({ field }) => (
-              <div className="flex min-h-9 items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Checkbox
                   id={`${id}-vat`}
                   checked={field.value ?? false}
@@ -290,7 +313,7 @@ export function EmergencyCostForm({
               </div>
             )}
           />
-          <p className="m-0 text-xs text-muted-foreground">
+          <p className="m-0 mt-1 pl-6 text-xs text-slate-500">
             Request a VAT invoice for this expense. This does not create or pay
             an invoice.
           </p>
@@ -299,12 +322,12 @@ export function EmergencyCostForm({
           aria-label="Supporting evidence"
           className="space-y-2"
         >
-          <h2 className="m-0 border-b border-[#eceae3] pb-2 pt-1 text-sm font-semibold text-slate-800">
-            Supporting evidence{" "}
-            <span className="text-xs font-normal text-slate-500">
-              Optional · up to 5 JPG/PNG · {UPLOAD_MAX_MB} MiB each
-            </span>
-          </h2>
+          <div>
+            <h2 className="m-0! font-sans! text-sm! leading-5! font-semibold! tracking-normal! text-slate-800!">Supporting evidence</h2>
+            <p className="m-0 mt-0.5 text-xs text-slate-500">
+              Optional. Up to 5 JPG or PNG images, {UPLOAD_MAX_MB} MiB each.
+            </p>
+          </div>
           {mock ? (
             <MockCostPhotoPicker
               photos={mockPhotos}
@@ -313,7 +336,7 @@ export function EmergencyCostForm({
             />
           ) : (
             <>
-              <p className="text-xs text-muted-foreground">
+              <p className="m-0 text-xs text-slate-500">
                 Uploads use real storage. Only upload supporting images in an
                 approved environment.
               </p>
@@ -362,7 +385,8 @@ export function EmergencyCostForm({
           with fresh incident context before submitting again.
         </p>
       ) : null}
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#eceae3] pt-4">
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#eceae3] bg-[#faf9f5] px-4 py-3 sm:px-5">
         <Button
           type="button"
           variant="outline"
