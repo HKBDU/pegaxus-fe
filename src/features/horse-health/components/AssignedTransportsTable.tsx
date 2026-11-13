@@ -196,7 +196,7 @@ export function AssignedTransportsTable({ transports }: { transports: AssignedTr
         enableSorting: false,
         cell: ({ row }) => (
           <div className="flex justify-center" onClick={(event) => event.stopPropagation()}>
-            <RowActions transport={row.original} onView={() => navigate(HORSE_HEALTH_ROUTES.transportDetail(row.original.transportId))} />
+            <RowActions transport={row.original} onView={() => navigate(HORSE_HEALTH_ROUTES.transportDetail(row.original.transportId), { state: { from: "/crew/transports" } })} />
           </div>
         ),
       },
@@ -228,7 +228,7 @@ export function AssignedTransportsTable({ transports }: { transports: AssignedTr
         rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60"
         cellClassName="h-11 px-2.5 py-1.5 text-xs"
         emptyMessage="No assigned transports match the current filters."
-        onRowClick={(row) => navigate(HORSE_HEALTH_ROUTES.transportDetail(row.original.transportId))}
+        onRowClick={(row) => navigate(HORSE_HEALTH_ROUTES.transportDetail(row.original.transportId), { state: { from: "/crew/transports" } })}
         footer={<TablePagination meta={meta} onPageChange={setPageIndex} onPageSizeChange={(size) => { setPageSize(size); setPageIndex(1) }} />}
       >
         <AssignedTransportFilters

@@ -263,9 +263,9 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         {isCrew ? (
           <div className={cn("mb-3", !crewDesktop && "mx-auto max-w-3xl")}>
-            <Link to="/crew/transports" className="mb-2.5 inline-flex items-center gap-1.5 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-amber-700">
+            <Link to="/crew" className="mb-2.5 inline-flex items-center gap-1.5 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-amber-700">
               <ArrowLeft className="size-3.5" aria-hidden="true" />
-              Assigned transports
+              Ongoing transport
             </Link>
             {incident && !crewDesktop ? (
               // The same white summary as the desktop side column (the dark hero card looked out of place).
