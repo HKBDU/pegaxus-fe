@@ -7,6 +7,7 @@ import {
   FileClock,
   HeartPulse,
   Image as ImageIcon,
+  ListFilter,
   MapPin,
   NotebookPen,
   Stethoscope,
@@ -30,13 +31,15 @@ import { UPLOAD_MAX_BYTES } from "@/shared/constants/upload"
 import { formatUtcDateTime } from "@/shared/utils/datetime"
 
 import { HealthStatusBadge } from "../components/HealthStatusBadge"
-import { fieldControl, fieldLabel, healthHeading, healthPanel, noticeError } from "../components/health-ui"
+import { healthHeading, healthPanel, noticeError } from "../components/health-ui"
 import { HEALTH_STATUS_LABELS, HEALTH_STATUSES, HORSE_HEALTH_ROUTES, LOG_TYPES } from "../constants"
 import { healthErrorMessage } from "../errors"
 import { useAddHealthLogPhotos, useHealthLogDetail, useHealthLogHistory, useHorseHealthOverview } from "../hooks/useHorseHealth"
 import type { LogType } from "../types"
 
-const selectClass = `${fieldControl} justify-between`
+// Compact filter chips: 32px, xs text, as wide as their value instead of a full-width labelled field.
+const filterTrigger =
+  "w-auto min-w-36 gap-1.5 rounded-xs border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-700 shadow-xs"
 const humanize = (value: string | null | undefined) =>
   value ? value.charAt(0) + value.slice(1).toLowerCase().replaceAll("_", " ") : "—"
 
@@ -127,46 +130,44 @@ export default function HealthHistoryPage() {
     <div className="space-y-3">
       <PageHeader title="Check history" size="compact" backHref={healthHref} backLabel="Health overview" />
 
-      {/* Horse and filters share one panel, like the web's list headers. */}
-      <section className={`${healthPanel} space-y-3 p-4`}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h2 className={healthHeading}>
-              <HeartPulse aria-hidden="true" />
-              {horse?.horseName ?? "Horse"}
-            </h2>
-            <p className="m-0 mt-0.5 text-[11px] text-slate-500">
-              Microchip {horse?.microchipNumber ?? "—"}
-            </p>
-          </div>
+      {/* One row: the horse on the left, compact filters and the count on the right (wraps on phones). */}
+      <section className={`${healthPanel} flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 px-4 py-3`}>
+        <div className="min-w-0">
+          <h2 className={healthHeading}>
+            <HeartPulse aria-hidden="true" />
+            {horse?.horseName ?? "Horse"}
+          </h2>
+          <p className="m-0 mt-0.5 text-[11px] text-slate-500">
+            Microchip {horse?.microchipNumber ?? "—"}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={logType || "ALL"} onValueChange={(value) => { setLogType(value === "ALL" ? "" : value); setPageIndex(0) }}>
+            <SelectTrigger size="sm" aria-label="Filter by log type" className={filterTrigger}>
+              <ListFilter aria-hidden="true" className="size-3.5 text-slate-400" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All log types</SelectItem>
+              {LOG_TYPES.map((value) => <SelectItem key={value} value={value}>{humanize(value)}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={healthStatus || "ALL"} onValueChange={(value) => { setHealthStatus(value === "ALL" ? "" : value); setPageIndex(0) }}>
+            <SelectTrigger size="sm" aria-label="Filter by health status" className={filterTrigger}>
+              <HeartPulse aria-hidden="true" className="size-3.5 text-slate-400" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All statuses</SelectItem>
+              <SelectItem value="ABNORMAL">Only abnormal</SelectItem>
+              {HEALTH_STATUSES.map((value) => <SelectItem key={value} value={value}>{HEALTH_STATUS_LABELS[value]}</SelectItem>)}
+            </SelectContent>
+          </Select>
           {history.data ? (
-            <span className="rounded-xs border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+            <span className="rounded-xs border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600 tabular-nums">
               {history.data.totalItems} {history.data.totalItems === 1 ? "check" : "checks"}
             </span>
           ) : null}
-        </div>
-        <div className="grid gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2">
-          <label className={fieldLabel}>
-            Log type
-            <Select value={logType || "ALL"} onValueChange={(value) => { setLogType(value === "ALL" ? "" : value); setPageIndex(0) }}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All log types</SelectItem>
-                {LOG_TYPES.map((value) => <SelectItem key={value} value={value}>{humanize(value)}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </label>
-          <label className={fieldLabel}>
-            Health status
-            <Select value={healthStatus || "ALL"} onValueChange={(value) => { setHealthStatus(value === "ALL" ? "" : value); setPageIndex(0) }}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All statuses</SelectItem>
-                <SelectItem value="ABNORMAL">Only abnormal</SelectItem>
-                {HEALTH_STATUSES.map((value) => <SelectItem key={value} value={value}>{HEALTH_STATUS_LABELS[value]}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </label>
         </div>
       </section>
 
