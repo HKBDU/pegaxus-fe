@@ -10,6 +10,7 @@ import { ErrorState, NotFoundPage } from "@/shared/components/common"
 import { RaiseSeverityButton } from "@/features/incident-report"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Skeleton } from "@/shared/components/ui/skeleton"
+import { useIsDesktop } from "@/shared/hooks"
 
 import { CancelIncidentDialog } from "../components/CancelIncidentDialog"
 import { DetachHorseDialog } from "../components/DetachHorseDialog"
@@ -68,6 +69,19 @@ function CrewHero({ incident }: { incident: Incident }) {
   )
 }
 
+/**
+ * Crew actions on a desktop: a panel under the summary in the sticky side column, instead of the phone's bottom bar,
+ * which stretched across the whole screen. Hides itself when every action renders nothing.
+ */
+function CrewDesktopActions({ children }: { children: ReactNode }) {
+  return (
+    <section aria-label="Incident actions" className="rounded-[2px] border border-[rgb(203_196_184/0.65)] bg-white p-3 shadow-[0_1px_2px_rgb(23_25_28/0.035),0_5px_18px_rgb(63_49_27/0.025)] has-[>div:empty]:hidden">
+      <p className="m-0 mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">Actions</p>
+      <div className="flex flex-col gap-2 [&>*]:h-10 [&>*]:w-full [&>*]:justify-center [&>*]:text-xs">{children}</div>
+    </section>
+  )
+}
+
 /** The crew's actions stay in reach of a thumb: pinned to the bottom of the screen, full-size buttons. */
 function CrewActionBar({ children }: { children: ReactNode }) {
   return (
@@ -90,10 +104,14 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   const [cancelOpen, setCancelOpen] = useState(false)
   const [detachHorse, setDetachHorse] = useState<{ horseId: string; horseName: string } | null>(null)
   const { isCoordinator } = useIncidentViewer()
+  const isDesktop = useIsDesktop()
 
   if (query.isError && isNotFound(query.error)) return <NotFoundPage />
 
   const isCrew = audience === "crew"
+  // The crew page was built for a phone (one 768px column and a bottom action bar), which left a narrow strip in the middle
+  // of a desktop screen. From 1024px it uses two columns: the sections, and a sticky summary with the actions.
+  const crewDesktop = isCrew && isDesktop
   const actions = incident?.availableActions ?? []
   const can = (action: string) => actions.includes(action)
   const resolveMode = can(INCIDENT_ACTION.RESOLVE) ? "manager" : "self"
@@ -143,15 +161,15 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   ) : null
 
   return (
-    <div className={cn("booking-page-shell min-h-[70dvh] bg-[#f4f2ed] font-sans", isCrew ? cn("px-3 pt-3", hasButtons ? "pb-28" : "pb-6") : "px-4 pt-5 pb-8 sm:px-6 lg:px-10")}>
+    <div className={cn("booking-page-shell min-h-[70dvh] bg-[#f4f2ed] font-sans", isCrew ? cn("px-3 pt-3 lg:px-10 lg:pt-5", hasButtons && !crewDesktop ? "pb-28" : "pb-8") : "px-4 pt-5 pb-8 sm:px-6 lg:px-10")}>
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         {isCrew ? (
-          <div className="mx-auto mb-3 max-w-3xl">
+          <div className={cn("mb-3", !crewDesktop && "mx-auto max-w-3xl")}>
             <Link to="/crew/transports" className="mb-2.5 inline-flex items-center gap-1.5 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-amber-700">
               <ArrowLeft className="size-3.5" aria-hidden="true" />
               Assigned transports
             </Link>
-            {incident ? <CrewHero incident={incident} /> : null}
+            {incident && !crewDesktop ? <CrewHero incident={incident} /> : null}
           </div>
         ) : (
           <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
@@ -175,26 +193,36 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
           </div>
         )}
 
-        <div className={cn(isCrew && "mx-auto max-w-3xl")}>
-          {query.isLoading ? <DetailSkeleton /> : null}
-          {query.isError && !isNotFound(query.error) ? <ErrorState message="Unable to load this incident." onRetry={() => void query.refetch()} /> : null}
+        <div className={cn(isCrew && !crewDesktop && "mx-auto max-w-3xl", crewDesktop && "grid grid-cols-[minmax(0,1fr)_340px] items-start gap-4")}>
+          <div className="min-w-0">
+            {query.isLoading ? <DetailSkeleton /> : null}
+            {query.isError && !isNotFound(query.error) ? <ErrorState message="Unable to load this incident." onRetry={() => void query.refetch()} /> : null}
 
-          {incident ? (
-            <div className="booking-stagger space-y-2.5">
-              {incident.hold ? <IncidentHoldNotice hold={incident.hold} /> : null}
-              <IncidentOutcome incident={incident} />
-              <IncidentOverview incident={incident} transportHref={!isCrew && incident.transport ? incidentRoutes.transport(incident.transport.transportId) : undefined} compact={isCrew} />
-              <IncidentLocation incident={incident} />
-              {showVehicle ? <VehicleDetailSection incident={incident} /> : null}
-              {showHorse ? <HorseDetailsSection incident={incident} onDetach={can(INCIDENT_ACTION.DETACH_HORSE) ? setDetachHorse : undefined} /> : null}
-              <EmergencyCostSection incident={incident} onChanged={refetch} />
-              <IncidentTimeline incident={incident} />
-            </div>
+            {incident ? (
+              <div className="booking-stagger space-y-2.5">
+                {incident.hold ? <IncidentHoldNotice hold={incident.hold} /> : null}
+                <IncidentOutcome incident={incident} />
+                {/* Compact for the crew on every screen: the summary card already shows the code and the time. */}
+                <IncidentOverview incident={incident} transportHref={!isCrew && incident.transport ? incidentRoutes.transport(incident.transport.transportId) : undefined} compact={isCrew} />
+                <IncidentLocation incident={incident} />
+                {showVehicle ? <VehicleDetailSection incident={incident} /> : null}
+                {showHorse ? <HorseDetailsSection incident={incident} onDetach={can(INCIDENT_ACTION.DETACH_HORSE) ? setDetachHorse : undefined} /> : null}
+                <EmergencyCostSection incident={incident} onChanged={refetch} />
+                <IncidentTimeline incident={incident} />
+              </div>
+            ) : null}
+          </div>
+
+          {crewDesktop && incident ? (
+            <aside className="sticky top-16 space-y-3">
+              <CrewHero incident={incident} />
+              {hasButtons ? <CrewDesktopActions>{buttons}</CrewDesktopActions> : null}
+            </aside>
           ) : null}
         </div>
       </div>
 
-      {incident && isCrew && hasButtons ? <CrewActionBar>{buttons}</CrewActionBar> : null}
+      {incident && isCrew && !crewDesktop && hasButtons ? <CrewActionBar>{buttons}</CrewActionBar> : null}
 
       {incident ? (
         <>
