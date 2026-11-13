@@ -4,6 +4,7 @@ import { AlertCircle, CheckCircle2, FileIcon, RotateCw, UploadCloud, X } from 'l
 import { cn } from '@/lib/utils'
 import { UPLOAD_MAX_BYTES } from '@/shared/constants/upload'
 import { Button } from '@/shared/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/shared/components/ui/dialog'
 import { Progress } from '@/shared/components/ui/progress'
 import { UPLOAD_STAGE_LABELS } from './file-uploader/constants'
 import { useFileUploader } from './file-uploader/useFileUploader'
@@ -24,11 +25,20 @@ function ImageThumb({ file }: { file: File }) {
     return () => URL.revokeObjectURL(next)
   }, [file])
   if (!url) return <span className="size-24 shrink-0 rounded-sm border bg-muted" aria-hidden />
-  // Opens the full image in a new tab for a closer look.
+  // Clicking the thumbnail opens the full image in a popup on the same page.
   return (
-    <a href={url} target="_blank" rel="noreferrer" aria-label={`Open ${file.name}`} className="shrink-0 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-      <img src={url} alt={file.name} className="size-24 rounded-sm border object-cover transition-opacity hover:opacity-90" />
-    </a>
+    <Dialog>
+      <DialogTrigger asChild>
+        <button type="button" aria-label={`View ${file.name}`} className="shrink-0 cursor-zoom-in rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          <img src={url} alt={file.name} className="size-24 rounded-sm border object-cover transition-opacity hover:opacity-90" />
+        </button>
+      </DialogTrigger>
+      <DialogContent className="gap-3 p-3 sm:max-w-4xl sm:p-4">
+        <DialogTitle className="m-0! truncate pr-8 text-sm! font-medium!">{file.name}</DialogTitle>
+        <DialogDescription className="sr-only">Full-size preview of the selected image.</DialogDescription>
+        <img src={url} alt={file.name} className="max-h-[75dvh] w-full rounded-sm bg-muted/40 object-contain" />
+      </DialogContent>
+    </Dialog>
   )
 }
 
