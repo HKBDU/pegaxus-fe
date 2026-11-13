@@ -1,6 +1,7 @@
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 import type { RouteGeometry } from "@/shared/utils/map/geojson";
 import type { RouteLocation, RoutePlanDetail } from "../types";
+import { currentBlockedSegments } from "@/features/route-plan/legal-blocks";
 
 function coordinate(value: unknown, limit: number) {
   if (typeof value !== "number" && (typeof value !== "string" || !value.trim()))
@@ -75,14 +76,9 @@ export function verifiedRouteGeometry(input: unknown): RouteGeometry | null {
   return null;
 }
 
-/**
- * Sequence numbers of the segments the Transport Specialist blocked in the legal review. The list only means something
- * on a review that found the plan not feasible.
- */
-export function blockedSegmentNumbers(plan: Pick<RoutePlanDetail, "legalReview">): Set<number> {
-  return new Set(
-    plan.legalReview?.isFeasible === false ? (plan.legalReview.blockedSegments ?? []) : [],
-  );
+/** Segments the latest legal review blocked, until the coordinator saves new segments over them. */
+export function blockedSegmentNumbers(plan: Pick<RoutePlanDetail, "legalReview" | "updatedAt">): Set<number> {
+  return new Set(currentBlockedSegments(plan));
 }
 
 export function toRouteMapData(

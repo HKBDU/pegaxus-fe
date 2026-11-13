@@ -14,6 +14,7 @@ import { RoutePlanOverview } from "./RoutePlanOverview";
 import { RoutePlanMapPanel } from "./RoutePlanMapPanel";
 import { RouteSegmentList } from "./RouteSegmentList";
 import { blockedSegmentNumbers } from "../adapters/route-plan-map.adapter";
+import { isLegalReviewOutdated } from "@/features/route-plan/legal-blocks";
 import { RouteContingencyTab } from "./RouteContingencyTab";
 import { RouteLegalReview } from "./RouteLegalReview";
 
@@ -92,7 +93,7 @@ export function RoutePlanDetails({
           <RouteContingencyTab plan={plan} routeDetailPath={routeDetailPath} />
         </Tabs.Content>
       </Tabs.Root>
-      <RouteLegalReview review={plan.legalReview} />
+      <RouteLegalReview review={plan.legalReview} outdated={isLegalReviewOutdated(plan)} />
     </div>
   );
 }

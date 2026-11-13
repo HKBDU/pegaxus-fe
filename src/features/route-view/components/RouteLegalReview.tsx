@@ -10,9 +10,12 @@ import type { RouteLegalReviewData } from "../types";
 export function RouteLegalReview({
   review,
   embedded = false,
+  outdated = false,
 }: {
   review: RouteLegalReviewData | null;
   embedded?: boolean;
+  /** The plan was saved after this review, so its blocked segments refer to segments that were replaced. */
+  outdated?: boolean;
 }) {
   return (
     <Section
@@ -51,6 +54,11 @@ export function RouteLegalReview({
                   : "None"}
             </Field>
           </dl>
+          {outdated && !review.isFeasible ? (
+            <p className="text-xs text-slate-500">
+              The route plan was changed after this review. Its segments have not been reviewed yet.
+            </p>
+          ) : null}
           {review.note && (
             <div>
               <p className="mb-1 text-xs text-slate-500">Notes</p>

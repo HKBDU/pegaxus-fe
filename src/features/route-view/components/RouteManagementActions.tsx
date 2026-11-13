@@ -15,6 +15,7 @@ import {
   type ChangeVehiclesSnapshot,
 } from "@/features/route-plan/components/ChangeVehiclesDialog";
 import { OutsourceSegmentDialog } from "@/features/route-plan/components/OutsourceSegmentDialog";
+import { currentBlockedSegments } from "@/features/route-plan/legal-blocks";
 import { getWorkspaceRole } from "@/features/transport-plan/workspace-role";
 import { isFlow3MockMode } from "@/features/transport-plan/source";
 import {
@@ -146,7 +147,8 @@ export function RouteManagementActions({
     routePlanId: backup.routePlanId,
     routePlanCode: backup.routePlanCode,
     segments: legalSegments(backup),
-    blockedSegments: backup.legalReview?.isFeasible === false ? (backup.legalReview.blockedSegments ?? []) : [],
+    // A backup listed here was submitted again after its last review, so that review's blocked segments are outdated.
+    blockedSegments: [],
   }));
   const reviewBackups = backupSegments.every((backup) => backup.segments)
     ? backupSegments.map((backup) => ({ ...backup, segments: backup.segments ?? [] }))
@@ -324,7 +326,8 @@ export function RouteManagementActions({
               ? {
                   ...review.legalReview,
                   note: review.legalReview.note ?? null,
-                  blockedSegments: review.legalReview.blockedSegments ?? [],
+                  // The specialist starts from the segments still blocked; a resubmitted plan starts clean.
+                  blockedSegments: currentBlockedSegments(review),
                   reviewedAt: review.legalReview.reviewedAt ?? null,
                   reviewedBy: review.legalReview.reviewedBy
                     ? {
