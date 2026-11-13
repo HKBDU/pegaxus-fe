@@ -19,7 +19,7 @@ import { IncidentLocation, IncidentOutcome, IncidentOverview } from "../componen
 import { IncidentTimeline } from "../components/IncidentTimeline"
 import { ResolveIncidentDialog } from "../components/ResolveIncidentDialog"
 import { EmergencyCostSection, HorseDetailsSection, IncidentResponseActions, VehicleDetailSection } from "../components/slots"
-import { actionButtonClass, dangerButtonClass, outlineButtonClass, primaryButtonClass } from "../components/ui"
+import { actionButtonClass, dangerButtonClass, outlineButtonClass, panelClass, primaryButtonClass } from "../components/ui"
 import { incidentRoutes, severityEdge } from "../constants"
 import { isNotFound } from "../errors"
 import { useIncident } from "../hooks/useIncidents"
@@ -69,15 +69,57 @@ function CrewHero({ incident }: { incident: Incident }) {
   )
 }
 
+/** Desktop summary: the page's white panel with the severity on its left edge, instead of the phone's dark hero card. */
+function CrewSummaryCard({ incident }: { incident: Incident }) {
+  return (
+    <section aria-label="Incident summary" className={cn(panelClass, "border-l-4 p-4", severityEdge[incident.severity] ?? "border-l-slate-400")}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="m-0 text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">Incident</p>
+          <h1 className="m-0! mt-0.5 font-heading text-lg! leading-6! font-semibold! tracking-normal! text-slate-900!">{incident.incidentCode}</h1>
+        </div>
+        <SeverityBadge severity={incident.severity} />
+      </div>
+      <p className="m-0 mt-2 text-sm font-medium leading-5 text-slate-800">{incident.title}</p>
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <CategoryBadge category={incident.category} />
+        <StatusBadge status={incident.status} />
+      </div>
+      <dl className="m-0 mt-3 grid gap-1.5 border-t border-[#eceae3] pt-3 text-xs text-slate-600">
+        <div className="flex items-center gap-2">
+          <Clock className="size-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+          <dd className="m-0">{formatDateTime(incident.occurredAt)} <span className="text-slate-400">· {timeAgo(incident.occurredAt, new Date(incident.serverTime).getTime())}</span></dd>
+        </div>
+        {incident.transport ? (
+          <div className="flex items-center gap-2">
+            <Truck className="size-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+            <dd className="m-0">{incident.transport.transportCode}</dd>
+          </div>
+        ) : null}
+      </dl>
+    </section>
+  )
+}
+
+/** Desktop crew buttons: the web's sentence-case 36px buttons, full width in the side column. */
+const deskButtonClass =
+  "inline-flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-[2px] border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:pointer-events-none disabled:opacity-50"
+const deskPrimaryClass = "border-primary bg-primary text-gray-900 hover:border-primary-hover hover:bg-primary-hover"
+const deskOutlineClass = "border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+const deskDangerClass = "border-red-200 bg-white text-red-700 hover:bg-red-50"
+
 /**
  * Crew actions on a desktop: a panel under the summary in the sticky side column, instead of the phone's bottom bar,
- * which stretched across the whole screen. Hides itself when every action renders nothing.
+ * which stretched across the whole screen. Only buttons are sized here (via data-slot), so the response actions' own
+ * group keeps working. Hides itself when every action renders nothing.
  */
 function CrewDesktopActions({ children }: { children: ReactNode }) {
   return (
-    <section aria-label="Incident actions" className="rounded-[2px] border border-[rgb(203_196_184/0.65)] bg-white p-3 shadow-[0_1px_2px_rgb(23_25_28/0.035),0_5px_18px_rgb(63_49_27/0.025)] has-[>div:empty]:hidden">
-      <p className="m-0 mb-2 text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">Actions</p>
-      <div className="flex flex-col gap-2 [&>*]:h-10 [&>*]:w-full [&>*]:justify-center [&>*]:text-xs">{children}</div>
+    <section aria-label="Incident actions" className={cn(panelClass, "p-3 has-[>div:empty]:hidden")}>
+      <p className="m-0 mb-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-slate-500">Actions</p>
+      <div className="flex flex-col gap-2 [&>div]:flex [&>div]:w-full [&>div]:flex-col [&>div]:gap-2 [&_[data-slot=button]]:h-9 [&_[data-slot=button]]:min-h-0 [&_[data-slot=button]]:w-full [&_[data-slot=button]]:text-sm [&_[data-slot=button]]:font-medium">
+        {children}
+      </div>
     </section>
   )
 }
@@ -134,8 +176,23 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
     (incident?.status === "REPORTED" || incident?.status === "PENDING") &&
     Boolean(incident?.costRequests.some((request) => request.category === EMERGENCY_COST_CATEGORY.REPLACEMENT_VEHICLE && request.status === EMERGENCY_COST_STATUS.APPROVED))
 
+  // Desktop crew buttons use the web's button style; the phone bar and the staff header keep the compact upper-case one.
+  const resolveButton = canResolve ? (
+    <button type="button" className={crewDesktop ? cn(deskButtonClass, deskPrimaryClass) : cn(actionButtonClass, primaryButtonClass)} onClick={() => setResolveOpen(true)}>
+      <CheckCircle2 className="size-4" aria-hidden="true" />
+      {resolveMode === "manager" ? "Resolve incident" : "Mark as resolved"}
+    </button>
+  ) : null
+  const cancelButton = canCancel ? (
+    <button type="button" className={crewDesktop ? cn(deskButtonClass, deskDangerClass) : cn(actionButtonClass, dangerButtonClass)} onClick={() => setCancelOpen(true)}>
+      <XCircle className="size-4" aria-hidden="true" />
+      {isCrew ? "Cancel report" : "Cancel incident"}
+    </button>
+  ) : null
   const buttons = incident ? (
     <>
+      {/* On desktop the main action leads and the destructive one closes the list. */}
+      {crewDesktop ? resolveButton : null}
       <IncidentResponseActions incident={incident} />
       <RaiseSeverityButton
         incidentReportId={incident.incidentReportId}
@@ -143,20 +200,10 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
         lastUpdatedAt={incident.updatedAt}
         availableActions={incident.availableActions as IncidentAction[]}
         onChanged={refetch}
-        className={cn(actionButtonClass, outlineButtonClass, "min-h-0")}
+        className={crewDesktop ? cn(deskButtonClass, deskOutlineClass, "min-h-0") : cn(actionButtonClass, outlineButtonClass, "min-h-0")}
       />
-      {canResolve ? (
-        <button type="button" className={cn(actionButtonClass, primaryButtonClass)} onClick={() => setResolveOpen(true)}>
-          <CheckCircle2 className="size-4" aria-hidden="true" />
-          {resolveMode === "manager" ? "Resolve incident" : "Mark as resolved"}
-        </button>
-      ) : null}
-      {canCancel ? (
-        <button type="button" className={cn(actionButtonClass, dangerButtonClass)} onClick={() => setCancelOpen(true)}>
-          <XCircle className="size-4" aria-hidden="true" />
-          {isCrew ? "Cancel report" : "Cancel incident"}
-        </button>
-      ) : null}
+      {crewDesktop ? null : resolveButton}
+      {cancelButton}
     </>
   ) : null
 
@@ -215,7 +262,7 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
 
           {crewDesktop && incident ? (
             <aside className="sticky top-16 space-y-3">
-              <CrewHero incident={incident} />
+              <CrewSummaryCard incident={incident} />
               {hasButtons ? <CrewDesktopActions>{buttons}</CrewDesktopActions> : null}
             </aside>
           ) : null}
