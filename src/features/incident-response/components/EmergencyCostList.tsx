@@ -171,8 +171,7 @@ function EmergencyCostListContent({
           </dl>
         </div>
       ) : null}
-      <div className="min-w-0 overflow-hidden rounded-xs border border-[#e5e2d9] bg-white shadow-[0_1px_2px_rgb(23_25_28/0.035),0_5px_18px_rgb(63_49_27/0.025)]">
-      <div className="p-3">
+      <div>
       <EmergencyCostFilters
         params={params}
         dateError={
@@ -184,7 +183,7 @@ function EmergencyCostListContent({
       <div
         role="status"
         aria-live="polite"
-        className="mt-2 min-h-4 px-1 text-[11px] text-slate-500"
+        className="mt-1.5 min-h-4 px-1 text-[11px] text-slate-500"
       >
         {validation
           ? "Review the filters before loading requests."
@@ -200,19 +199,19 @@ function EmergencyCostListContent({
       {validation ? (
         <p
           role="alert"
-          className="mx-3 mb-3 rounded-xs border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+          className="m-0 rounded-xs border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
         >
           {validation.issues[0]?.message}
         </p>
       ) : error && !searchPending ? (
-        <div className="border-t border-[#eceae3] [&>div]:rounded-none [&>div]:p-4">
+        <div className="[&>div]:rounded-xs [&>div]:p-4">
           <ErrorState
             message={error.message}
             onRetry={error.retryable ? () => void query.refetch() : undefined}
           />
         </div>
       ) : (
-        <div className="min-w-0 border-t border-[#eceae3]">
+        <div className="min-w-0 overflow-hidden rounded-xs border border-[#e5e2d9] bg-white shadow-[0_1px_2px_rgb(23_25_28/0.035),0_5px_18px_rgb(63_49_27/0.025)]">
           <EmergencyCostResults
             items={page?.items ?? []}
             loading={!page}
@@ -235,7 +234,7 @@ function EmergencyCostListContent({
         <fieldset
           disabled={busy}
           aria-label="Emergency cost pagination"
-          className="m-0 min-w-0 border-0 border-t border-solid border-[#eceae3] px-3 py-2 [&_button]:min-h-11 sm:[&_button]:min-h-7"
+          className="m-0 min-w-0 border-0 p-1 [&_button]:min-h-11 sm:[&_button]:min-h-7"
         >
           <TablePagination
             meta={meta}
@@ -255,7 +254,6 @@ function EmergencyCostListContent({
           />
         </fieldset>
       ) : null}
-      </div>
     </section>
   );
 }
