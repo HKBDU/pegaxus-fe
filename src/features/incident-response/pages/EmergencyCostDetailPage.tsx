@@ -3,7 +3,6 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ErrorState } from "@/shared/components/common";
 import { CostStatusBadge, VndText } from "@/shared/components/incident";
 import { EMERGENCY_COST_CATEGORY_LABELS } from "@/shared/constants/incident";
-import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { EmergencyCostDetailSections } from "../components/EmergencyCostDetailSections";
 import { EmergencyCostModeNotice } from "../components/EmergencyCostModeNotice";
@@ -44,12 +43,14 @@ export default function EmergencyCostDetailPage({
   );
   return (
     <main className="mx-auto w-full min-w-0 max-w-6xl space-y-4 p-4 font-sans sm:p-6">
-      <Button variant="ghost" asChild className="min-h-11 rounded-xs">
-        <Link to={emergencyCostScopedListPath(audience, safeScope)}>
-          <ArrowLeft aria-hidden className="size-4" />
-          Emergency costs
-        </Link>
-      </Button>
+      {/* The web's small back link (the page title lives in the summary card), not a large ghost button. */}
+      <Link
+        to={emergencyCostScopedListPath(audience, safeScope)}
+        className="inline-flex items-center gap-1.5 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-amber-700 hover:underline"
+      >
+        <ArrowLeft aria-hidden className="size-3.5" />
+        Emergency costs
+      </Link>
       <EmergencyCostModeNotice />
       {!query.allowed ? (
         <ErrorState message="You do not have permission to view this emergency cost request." />

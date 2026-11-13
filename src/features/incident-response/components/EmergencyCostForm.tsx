@@ -172,7 +172,7 @@ export function EmergencyCostForm({
   const message = (field: keyof Values) => (
     <p
       id={`${id}-${field}-error`}
-      className="m-0 min-h-5 text-xs text-destructive"
+      className="m-0 min-h-4 text-[11px] text-red-600"
       aria-live="polite"
     >
       {form.formState.errors[field]?.message}
@@ -182,16 +182,17 @@ export function EmergencyCostForm({
     <form
       noValidate
       onSubmit={(event) => void submit(event)}
-      className="space-y-4 rounded-xs border border-border bg-card p-4 sm:p-5"
+      className="space-y-4 rounded-xs border border-[#e5e2d9] bg-white p-4 shadow-[0_1px_2px_rgb(23_25_28/0.035),0_5px_18px_rgb(63_49_27/0.025)]"
     >
       <fieldset
         disabled={busy || !allowed || uncertainResult}
         className="m-0 min-w-0 space-y-4 border-0 p-0"
       >
         <legend className="sr-only">New emergency cost request</legend>
+        <h2 className="m-0 border-b border-[#eceae3] pb-2 text-sm font-semibold text-slate-800">Expense</h2>
         <div className="grid min-w-0 gap-3 sm:grid-cols-2">
           <div className="min-w-0 space-y-1">
-            <Label htmlFor={`${id}-category`}>Expense category *</Label>
+            <Label htmlFor={`${id}-category`} className="text-xs font-medium text-slate-600">Expense category <span className="text-red-600">*</span></Label>
             <Controller
               control={form.control}
               name="category"
@@ -205,7 +206,7 @@ export function EmergencyCostForm({
                     id={`${id}-category`}
                     ref={field.ref}
                     onBlur={field.onBlur}
-                    className="min-h-11 w-full rounded-xs"
+                    className="h-10 w-full rounded-xs bg-white text-sm sm:h-9"
                     aria-invalid={Boolean(form.formState.errors.category)}
                     aria-describedby={`${id}-category-error`}
                   >
@@ -224,13 +225,13 @@ export function EmergencyCostForm({
             {message("category")}
           </div>
           <div className="min-w-0 space-y-1">
-            <Label htmlFor={`${id}-amount`}>Requested amount (VND) *</Label>
+            <Label htmlFor={`${id}-amount`} className="text-xs font-medium text-slate-600">Requested amount (VND) <span className="text-red-600">*</span></Label>
             <Input
               {...form.register("requestedAmount")}
               id={`${id}-amount`}
               inputMode="numeric"
               placeholder="15,000,000"
-              className="min-h-11 rounded-xs tabular-nums"
+              className="h-10 rounded-xs bg-white text-sm tabular-nums sm:h-9"
               aria-invalid={Boolean(form.formState.errors.requestedAmount)}
               aria-describedby={`${id}-requestedAmount-error`}
               onBlur={(event) => {
@@ -250,20 +251,21 @@ export function EmergencyCostForm({
             {message("requestedAmount")}
           </div>
         </div>
+        <h2 className="m-0 border-b border-[#eceae3] pb-2 pt-1 text-sm font-semibold text-slate-800">Details</h2>
         {(["description", "justification"] as const).map((field) => (
           <div key={field} className="space-y-1">
-            <Label htmlFor={`${id}-${field}`}>
+            <Label htmlFor={`${id}-${field}`} className="text-xs font-medium text-slate-600">
               {field === "description"
                 ? "Expense description and supplier"
-                : "Justification and urgency"}{" "}
-              *
+                : "Justification and urgency"} <span className="text-red-600">*</span>
             </Label>
             <Textarea
               {...form.register(field)}
               id={`${id}-${field}`}
               rows={3}
               maxLength={2000}
-              className="min-h-24 rounded-xs text-base sm:text-sm"
+              // The shared textarea grows with its content: cap it and scroll inside instead.
+              className="max-h-32 min-h-20 resize-none overflow-y-auto rounded-xs bg-white text-sm"
               aria-invalid={Boolean(form.formState.errors[field])}
               aria-describedby={`${id}-${field}-error`}
             />
@@ -275,7 +277,7 @@ export function EmergencyCostForm({
             control={form.control}
             name="invoiceRequired"
             render={({ field }) => (
-              <div className="flex min-h-11 items-center gap-2">
+              <div className="flex min-h-9 items-center gap-2">
                 <Checkbox
                   id={`${id}-vat`}
                   checked={field.value ?? false}
@@ -284,7 +286,7 @@ export function EmergencyCostForm({
                   }
                   disabled={busy || !allowed || uncertainResult}
                 />
-                <Label htmlFor={`${id}-vat`}>VAT invoice required</Label>
+                <Label htmlFor={`${id}-vat`} className="text-sm font-medium text-slate-800">VAT invoice required</Label>
               </div>
             )}
           />
@@ -295,11 +297,11 @@ export function EmergencyCostForm({
         </div>
         <section
           aria-label="Supporting evidence"
-          className="space-y-2 border-t border-border pt-4"
+          className="space-y-2"
         >
-          <h2 className="m-0 text-base font-semibold">
+          <h2 className="m-0 border-b border-[#eceae3] pb-2 pt-1 text-sm font-semibold text-slate-800">
             Supporting evidence{" "}
-            <span className="text-sm font-normal text-muted-foreground">
+            <span className="text-xs font-normal text-slate-500">
               Optional · up to 5 JPG/PNG · {UPLOAD_MAX_MB} MiB each
             </span>
           </h2>
@@ -360,13 +362,13 @@ export function EmergencyCostForm({
           with fresh incident context before submitting again.
         </p>
       ) : null}
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#eceae3] pt-4">
         <Button
           type="button"
           variant="outline"
           asChild
           disabled={busy}
-          className="min-h-11 rounded-xs"
+          className="h-10 rounded-xs sm:h-9"
         >
           <Link
             to={back}
@@ -390,7 +392,7 @@ export function EmergencyCostForm({
             uncertainResult ||
             submissionBlocked
           }
-          className="min-h-11 rounded-xs"
+          className="h-10 rounded-xs sm:h-9"
         >
           {busy
             ? "Submitting..."
