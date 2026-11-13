@@ -7,10 +7,10 @@ import {
   outsourceSegmentResultSchema,
   routePlanMutationResultSchema,
 } from "./schemas";
+import type { CancelRoutePlanResult } from "./schemas";
 import type {
   ApiEnvelope,
   CancelRoutePlanRequest,
-  CancelRoutePlanResult,
   ChangeRoutePlanVehiclesRequest,
   ChangeRoutePlanVehiclesResult,
   CreateRoutePlanRequest,
