@@ -4,9 +4,9 @@ import { useLocation } from "react-router-dom"
 import { useAuthStore } from "@/features/auth/store"
 import { canAccess } from "@/features/auth/access-control"
 import { useUser } from "@/features/auth/hooks/useAuth"
+import { AssistantChatWidget } from "@/features/assistant/components/AssistantChatWidget"
 import type { AuthAccount } from "@/features/auth/types"
 import { IncidentAlertHost } from "@/features/incident-management/components/alerts/IncidentAlertHost"
-import { AssistantChatWidget } from "@/features/assistant/components/AssistantChatWidget"
 import { ProfileCompletionDialog } from "@/features/profile"
 import { Footer } from "@/shared/components/Footer"
 import { Header } from "@/shared/components/Header"
@@ -58,7 +58,7 @@ export function MainLayout() {
 
   const baseNavItems = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] }) ? customerNavItems : isCrewRoute ? crewNavItems : []
   const isCustomer = Boolean(accessToken && canAccess(principal, { anyRole: ["CUSTOMER"] }))
-  const navItems = isCustomer ? [...baseNavItems, { label: "AI Assistant", href: "/assistant" }] : baseNavItems
+  const navItems = baseNavItems
   const customerChrome = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] })
   const user: ProfileDropdownUser | null = accessToken && account
     ? toHeaderUser(account)
