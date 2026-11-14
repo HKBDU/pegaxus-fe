@@ -165,7 +165,6 @@ export function EmergencyCostDetailSections({
               <Details
                 rows={[
                   ["Occurred at", date(incident.occurredAt)],
-                  ["Transport ID", request.incident.transportId],
                   [
                     "Incident location",
                     incident.location
