@@ -51,10 +51,11 @@ export function VehicleChangeContextPanel({
   // Set once a change was saved, so closing the dialog afterwards also closes the replacement context.
   const changed = useRef(false);
   const key = `${plan.routePlanId}:${incidentReportId}`;
-  // The list mixes the ACTIVE route's remaining segments with the tails of CONFIRMED BACKUP / RETURN plans, and each plan
-  // numbers its segments from 1. Each card names its plan, and the cards are grouped by plan (ACTIVE route first).
+  // The candidates mix the ACTIVE route's remaining segments with the tails of CONFIRMED BACKUP / RETURN plans, and each
+  // plan numbers its segments from 1. They are ordered by plan (ACTIVE route first), then by segment number.
   const activeRouteId = state.kind === "ready" ? state.data.route.routePlanId.toLowerCase() : "";
-  const eligibleSegments =
+  const reportedVehicle = state.kind === "ready" ? state.data.incident.vehicleDetail?.vehicle : undefined;
+  const orderedSegments =
     state.kind === "ready"
       ? state.data.selection.eligibleForSubmission
           .filter(({ segment }) =>
@@ -75,6 +76,20 @@ export function VehicleChangeContextPanel({
           )
           .map(({ segment }) => segment)
       : [];
+  // The BE replaces only the vehicle the incident reports, and then gives the same replacement to every later segment of
+  // the active route and of the confirmed backup that still uses it. So the dialog offers just the first segment that
+  // carries the reported vehicle (the one on the road), instead of every vehicle of every segment.
+  const incidentSegment = reportedVehicle
+    ? orderedSegments.find((segment) =>
+        segment.vehicles.some(
+          (vehicle) => vehicle.vehicleId.toLowerCase() === reportedVehicle.vehicleId.toLowerCase(),
+        ),
+      )
+    : undefined;
+  const eligibleSegments = incidentSegment ? [incidentSegment] : [];
+  const reportedVehicleName = reportedVehicle
+    ? reportedVehicle.licensePlate ?? reportedVehicle.vehicleCode
+    : null;
   const canOpen =
     !readOnly && state.kind === "ready" && !state.refreshing && eligibleSegments.length > 0;
   const openDialog = () => {
@@ -159,6 +174,13 @@ export function VehicleChangeContextPanel({
             {state.data.incident.incidentCode} · Replacement vehicle cost
             approved
           </p>
+          {reportedVehicleName ? (
+            <p className="m-0 text-xs text-muted-foreground">
+              {incidentSegment
+                ? `Only ${reportedVehicleName}, reported in this incident, can be replaced on segment ${incidentSegment.sequenceNo}. Later segments of the active route and of the backup that use it get the same replacement automatically.`
+                : `No remaining segment uses ${reportedVehicleName}, the vehicle reported in this incident.`}
+            </p>
+          ) : null}
           {state.data.selection.blocker && (
             <p role="status" className="m-0 text-muted-foreground">
               {state.data.selection.blocker}
