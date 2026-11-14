@@ -62,8 +62,9 @@ export function TimePickerWithIcon({
           disabled={disabled}
           aria-label={ariaLabel}
           className={cn(
-            "peer appearance-none bg-background pl-9 [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none",
-            className,
+            "peer appearance-none bg-background [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none",
+            className,            
+            "pl-9",
           )}
           {...props}
         />
