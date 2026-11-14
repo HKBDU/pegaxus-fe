@@ -193,11 +193,26 @@ export const backupChangeRequestSchema = z.object({
   estimatedExtraCost: extraCost.optional(),
   note: optionalNote,
 });
+export const crewOverrideSchema = z.object({
+  routePlanRouteId: z.string().min(1),
+  driverEmployeeId: z.string().min(1).optional(),
+  escortEmployeeId: z.string().min(1).optional(),
+  vehicleIds: z
+    .array(z.string().min(1))
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "Submit each vehicle only once.",
+    })
+    .optional(),
+});
 export const routeChangeDecisionSchema = z
   .object({
     lastUpdatedAt: timestamp,
     decision: z.enum(["APPROVE", "REJECT"]),
     note: optionalNote,
+    // BACKUP approval only: when the backup really starts, and the crew/vehicles picked by the LM.
+    startAt: timestamp.optional(),
+    segments: z.array(crewOverrideSchema).max(100).optional(),
   })
   .refine(
     (input) => input.decision !== "REJECT" || (input.note?.length ?? 0) >= 10,
@@ -222,6 +237,9 @@ export const returnSegmentOverrideSchema = z
         note: optionalNote,
       })
       .optional(),
+    // Replaces the suggested crew of an internal segment.
+    driverEmployeeId: z.string().min(1).optional(),
+    escortEmployeeId: z.string().min(1).optional(),
   })
   .refine(
     (input) =>
@@ -236,6 +254,8 @@ export const returnActivationSchema = z
     lastUpdatedAt: timestamp,
     segments: z.array(returnSegmentOverrideSchema).max(100).optional(),
     note: optionalNote,
+    // When the return really starts: every return segment moves by the same amount.
+    startAt: timestamp.optional(),
   })
   .refine(
     (input) =>
@@ -271,6 +291,41 @@ export const routeChangeDecisionResultSchema = z.object({
     .nullable(),
   branchSequenceNo: z.number().int().positive().nullish(),
   branchLocation: routeLocationSchema.nullish(),
+});
+// GET /route-plans/{id}/change-crew: backup segments from the branch point with the suggested crew.
+export const crewPlanSchema = z.object({
+  routePlanId: z.union([entityIdSchema, z.number()]).transform(String),
+  lastUpdatedAt: timestamp,
+  suggestedStartAt: timestamp,
+  segments: z.array(
+    z.object({
+      segment: z.object({
+        routePlanRouteId: z.string().min(1),
+        sequenceNo: z.number().int().positive(),
+        route: z.object({ transportMode: transportModeSchema }),
+        fromLocation: routeLocationSchema,
+        toLocation: routeLocationSchema,
+        plannedDepartureAt: timestamp,
+        plannedArrivalAt: timestamp,
+        executionType: z.enum(["INTERNAL", "OUTSOURCED"]),
+        vehicles: z.array(
+          z.object({
+            vehicleId: z.union([entityIdSchema, z.number()]).transform(String),
+            vehicleCode: z.string(),
+            licensePlate: text,
+            capacityHorses: z.number().nullish(),
+          }),
+        ),
+        outsourcing: z
+          .object({ provider: z.object({ providerName: z.string() }) })
+          .nullish(),
+        driver: employeeBriefSchema.nullish(),
+        escort: employeeBriefSchema.nullish(),
+      }),
+      suggestedFromRoutePlanRouteId: z.string().nullish(),
+      needsCrew: z.boolean(),
+    }),
+  ),
 });
 export const returnActivationResultSchema = z.object({
   routePlanId: z.union([entityIdSchema, z.number()]).transform(String),
