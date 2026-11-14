@@ -2,6 +2,7 @@ import { useEffect, useRef, type ComponentType } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ROLE_ROUTES } from "@/app/route-config";
+import { incidentPaths } from "@/shared/constants/incident";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -51,6 +52,12 @@ export default function RoutePlanDetailPage({
     }
   };
   const principal = useAuthStore((state) => state.principal);
+  // The Transport Plans list answers 403 to a Route Coordinator, so the page goes back to the incident it was opened from
+  // (vehicle replacement), or else to the Route Plans list every route role can read.
+  const changeVehicleIncident = params.get("changeVehicle")?.trim();
+  const back = changeVehicleIncident
+    ? { href: incidentPaths.detail("RC", changeVehicleIncident), label: "Back to Incident" }
+    : { href: ROLE_ROUTES.routePlans, label: "Back to Route Plans" };
   const allowed =
     canViewRoute(principal) &&
     (!emergencyView || getWorkspaceRole(principal) === "manager");
@@ -267,8 +274,8 @@ export default function RoutePlanDetailPage({
             <PageHeader
               className="[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl"
               title="Route Plan Details"
-              backHref={ROLE_ROUTES.transportPlans}
-              backLabel="Back to Transport Plans"
+              backHref={back.href}
+              backLabel={back.label}
             />
             {!allowed ? (
               <ErrorState message="You do not have permission to view route plans." />
