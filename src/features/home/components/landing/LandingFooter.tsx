@@ -1,5 +1,6 @@
 import { GuestLinks, TransportLink } from "./LandingActions";
 import { BrandLogo } from "@/shared/components/BrandNavigation";
+import { Link } from "react-router-dom";
 
 export function LandingFooter() {
   return (
@@ -27,6 +28,7 @@ export function LandingFooter() {
         </div>
       </div>
       <div className="landing-footer-bottom">
+        <Link to="/terms">View policies and terms</Link>
         <span>© {new Date().getFullYear()} PEGAXUS. All rights reserved.</span>
         <a href="#home">Back to the beginning ↑</a>
       </div>
