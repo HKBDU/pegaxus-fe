@@ -24,7 +24,7 @@ export function HorseIncidentSelectionStep({
   return (
     <section
       className="space-y-4 pb-28"
-      aria-labelledby="horse-selection-title"
+      aria-label="Select horses"
     >
       <PageHeader
         title="Select horses"
