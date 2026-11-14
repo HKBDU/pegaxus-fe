@@ -24,6 +24,7 @@ const customerNavItems: HeaderNavItem[] = [
 ]
 
 const crewNavItems: HeaderNavItem[] = [
+  { label: "ONGOING TRANSPORT", href: "/crew" },
   { label: "ASSIGNED TRANSPORTS", href: "/crew/transports" },
 ]
 

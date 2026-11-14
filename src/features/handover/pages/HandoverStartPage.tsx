@@ -19,7 +19,7 @@ export default function HandoverStartPage({ audience }: { audience: HandoverAudi
   const create = useCreateHandover(transportId)
 
   const legs = useMemo(() => new Map((segments.data?.segments ?? []).map((segment) => [segment.routePlanRouteId, segment])), [segments.data])
-  const back = handoverPaths.list(audience, transportId, bookingId)
+  const back = audience === "crew" ? "/crew" : handoverPaths.list(audience, transportId, bookingId)
   const recordHref = (id: string) => handoverPaths.record(audience, transportId, id, bookingId)
 
   const submit = async (input: CreateHandoverInput) => {
@@ -46,7 +46,12 @@ export default function HandoverStartPage({ audience }: { audience: HandoverAudi
   const boundaries = segments.data?.handoverBoundaries ?? []
 
   return (
-    <PageFrame audience={audience} title="Start handover" backHref={back} backLabel="Return to handover records">
+    <PageFrame
+      audience={audience}
+      title="Start handover"
+      backHref={back}
+      backLabel={audience === "crew" ? "Back to Ongoing Transport" : "Return to handover records"}
+    >
       {segments.isPending ? (
         <LoadingState />
       ) : segments.isError ? (

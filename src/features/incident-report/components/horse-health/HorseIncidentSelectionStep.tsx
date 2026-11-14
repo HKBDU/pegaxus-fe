@@ -1,5 +1,6 @@
 import type { HorseHealthOverviewItem } from "@/features/horse-health/types";
 import { Checkbox } from "@/shared/components/ui/checkbox";
+import { PageHeader } from "@/shared/components/PageHeader";
 
 interface HorseIncidentSelectionStepProps {
   horses: HorseHealthOverviewItem[];
@@ -23,18 +24,17 @@ export function HorseIncidentSelectionStep({
   return (
     <section
       className="min-w-0 space-y-5 pb-24 sm:pb-0"
-      aria-labelledby="horse-selection-title"
+      aria-label="Select horses"
     >
+      <PageHeader
+        title="Select horses"
+        backHref="/crew"
+        backLabel="Back to Ongoing Transport"
+      />
       <div>
         <p className="text-xs font-bold uppercase tracking-wider text-[#f39200]">
           Report horse incident
         </p>
-        <h1
-          id="horse-selection-title"
-          className="mt-1 font-heading text-xl font-bold text-[#181818]"
-        >
-          Select horses
-        </h1>
         <p className="mt-1 text-sm text-slate-600">
           Select one or more horses from this transport.
         </p>

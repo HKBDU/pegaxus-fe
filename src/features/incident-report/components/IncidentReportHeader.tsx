@@ -14,8 +14,8 @@ export function IncidentReportHeader({
   longitude,
   latitude,
   locationDescription,
-  backHref = "/crew/transports",
-  backLabel = "Back to Assigned Transports",
+  backHref = "/crew",
+  backLabel = "Back to Ongoing Transport",
 }: IncidentReportHeaderProps) {
   return (
     <header className="space-y-4">
