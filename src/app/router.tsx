@@ -185,11 +185,7 @@ const routes: RouteObject[] = [
   ...priceListRoutes,
   ...managementReportRoutes,
   {
-    element: (
-      <DriverLocationSession>
-        <Outlet />
-      </DriverLocationSession>
-    ),
+    element: <Outlet />,
     children: [
       ...horseHealthRoutes,
       ...incidentManagementRoutes,
@@ -965,6 +961,11 @@ const routes: RouteObject[] = [
 export const router = createBrowserRouter([
   {
     errorElement: <RouteErrorBoundary />,
+    element: (
+      <DriverLocationSession>
+        <Outlet />
+      </DriverLocationSession>
+    ),
     children: routes,
   },
 ]);
