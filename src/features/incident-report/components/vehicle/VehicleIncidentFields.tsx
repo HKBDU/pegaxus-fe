@@ -63,9 +63,12 @@ export function VehicleIncidentFields({
     });
   return (
     <section
-      className="space-y-4 border border-slate-200 bg-white p-4 sm:p-5"
+      className="min-w-0 space-y-4 border border-slate-200 bg-white p-4 sm:p-5"
       aria-label="Vehicle incident details"
     >
+      <h2 className="font-heading text-lg font-bold text-[#181818]">
+        Vehicle details
+      </h2>
       <div className="grid grid-cols-2 gap-2">
         {([INCIDENT_CATEGORY.VEHICLE, INCIDENT_CATEGORY.BOTH] as const).map(
           (category) => (
@@ -155,7 +158,7 @@ export function VehicleIncidentFields({
               checked={value[field]}
               disabled={disabled}
               onChange={(event) => update(field, event.target.checked)}
-              className="size-5 accent-[#f39200]"
+              className="size-5 shrink-0 accent-[#f39200]"
             />
             {label}
           </label>

@@ -11,6 +11,7 @@ import {
 import type { HorseHealthIncidentRequest } from "@/shared/types/incident";
 import { toUtcIso } from "@/shared/utils/datetime";
 
+import { PageHeader } from "@/shared/components/PageHeader";
 import { IncidentReportHeader } from "../components/IncidentReportHeader";
 import type { IncidentPhotoFieldValue } from "../components/IncidentPhotoField";
 import { areIncidentPhotosReady } from "../validation";
@@ -278,26 +279,47 @@ export default function HorseHealthIncidentPage() {
 
   if (step === "selection") {
     return (
-      <main className="mx-auto max-w-3xl p-4 sm:p-6">
+      <main className="mx-auto w-full min-w-0 max-w-7xl p-4 sm:p-6 lg:p-8">
         {!transportId ? (
-          <p className="border border-red-600 bg-red-50 p-4 text-sm text-red-700">
-            No active transport was provided. Open this report from the
-            transport home screen.
-          </p>
+          <div className="space-y-4">
+            <PageHeader
+              title="Report horse incident"
+              backHref="/crew"
+              backLabel="Back to Ongoing Transport"
+            />
+            <p className="border border-red-600 bg-red-50 p-4 text-sm text-red-700">
+              No active transport was provided. Open this report from the
+              transport home screen.
+            </p>
+          </div>
         ) : overview.isPending ? (
-          <p className="border border-slate-300 bg-white p-4 text-sm text-slate-600">
-            Loading horses in this transport…
-          </p>
+          <div className="space-y-4">
+            <PageHeader
+              title="Report horse incident"
+              backHref="/crew"
+              backLabel="Back to Ongoing Transport"
+            />
+            <p className="border border-slate-300 bg-white p-4 text-sm text-slate-600">
+              Loading horses in this transport…
+            </p>
+          </div>
         ) : overview.error ? (
-          <div className="border border-red-600 bg-red-50 p-4 text-sm text-red-700">
-            <p>Unable to load the horses in this transport.</p>
-            <button
-              type="button"
-              onClick={() => void overview.refetch()}
-              className="mt-3 min-h-12 border border-red-600 px-4 font-bold"
-            >
-              Retry
-            </button>
+          <div className="space-y-4">
+            <PageHeader
+              title="Report horse incident"
+              backHref="/crew"
+              backLabel="Back to Ongoing Transport"
+            />
+            <div className="border border-red-600 bg-red-50 p-4 text-sm text-red-700">
+              <p>Unable to load the horses in this transport.</p>
+              <button
+                type="button"
+                onClick={() => void overview.refetch()}
+                className="mt-3 min-h-12 border border-red-600 px-4 font-bold"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         ) : (
           <HorseIncidentSelectionStep
@@ -327,7 +349,7 @@ export default function HorseHealthIncidentPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-5 p-4 pb-28 sm:p-6">
+    <main className="mx-auto w-full min-w-0 max-w-7xl space-y-6 p-4 pb-24 sm:p-6 lg:p-8">
       <IncidentReportHeader
         longitude={incidentCoordinates?.longitude ?? "Unavailable"}
         latitude={incidentCoordinates?.latitude ?? "Unavailable"}

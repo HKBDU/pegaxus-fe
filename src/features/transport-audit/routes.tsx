@@ -1,7 +1,8 @@
-import { lazy } from "react";
+import { lazy, Suspense, type ReactNode } from "react";
 import { ProtectedRoute } from "@/shared/components/guards";
 import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
+import { LoadingState } from "@/shared/components/common";
 const TransportArchivePage = lazy(() => import("./pages/TransportArchivePage"));
 const TransportAuditDetailPage = lazy(
   () => import("./pages/TransportAuditDetailPage"),
@@ -9,17 +10,20 @@ const TransportAuditDetailPage = lazy(
 const CustomerTransportHistoryPage = lazy(
   () => import("./pages/CustomerTransportHistoryPage"),
 );
+const page = (element: ReactNode) => (
+  <Suspense fallback={<LoadingState />}>{element}</Suspense>
+);
 export const transportAuditAdminRoutes = {
   path: "transport-archive",
-  element: <TransportArchivePage />,
+  element: page(<TransportArchivePage />),
 };
 export const transportAuditDetailRoute = {
   path: "transports/:transportId/audit",
-  element: <TransportAuditDetailPage />,
+  element: page(<TransportAuditDetailPage />),
 };
 export const transportAuditCustomerRoutes = {
   path: "bookings/:bookingId/transports/:transportId/history",
-  element: <CustomerTransportHistoryPage />,
+  element: page(<CustomerTransportHistoryPage />),
 };
 export const transportAuditRoutes = [
   {
@@ -29,7 +33,7 @@ export const transportAuditRoutes = [
         <AdminLayout />
       </ProtectedRoute>
     ),
-    children: [{ index: true, element: <TransportArchivePage /> }],
+    children: [{ index: true, element: page(<TransportArchivePage />) }],
   },
   {
     path: "/admin/transports/:transportId/audit",
@@ -38,7 +42,7 @@ export const transportAuditRoutes = [
         <AdminLayout />
       </ProtectedRoute>
     ),
-    children: [{ index: true, element: <TransportAuditDetailPage /> }],
+    children: [{ index: true, element: page(<TransportAuditDetailPage />) }],
   },
   {
     path: "/bookings/:bookingId/transports/:transportId/history",
@@ -47,6 +51,6 @@ export const transportAuditRoutes = [
         <MainLayout />
       </ProtectedRoute>
     ),
-    children: [{ index: true, element: <CustomerTransportHistoryPage /> }],
+    children: [{ index: true, element: page(<CustomerTransportHistoryPage />) }],
   },
 ];

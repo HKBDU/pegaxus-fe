@@ -109,7 +109,7 @@ export function CrewHomeActions({
           icon={CarFront}
           label="Report Transport Incident"
           to={incidentPaths.newVehicle()}
-          state={{ transportId: transport.transportId }}
+          state={{ transportId: transport.transportId, from: "/crew" }}
           disabled={transport.status !== "IN_TRANSIT"}
           disabledReason="Available after departure"
           tone="danger"
@@ -118,12 +118,13 @@ export function CrewHomeActions({
           icon={Truck}
           label={CREW_ACTION_LABELS.viewTransport}
           to={HORSE_HEALTH_ROUTES.transportDetail(transport.transportId)}
+          state={{ from: "/crew" }}
         />
         <ActionButton
           icon={HeartPulse}
           label="Report Horse Incident"
           to={incidentPaths.newHorseHealth()}
-          state={{ transportId: transport.transportId }}
+          state={{ transportId: transport.transportId, from: "/crew" }}
           disabled={transport.status !== "IN_TRANSIT"}
           disabledReason="Available after departure"
           tone="danger"
@@ -132,6 +133,7 @@ export function CrewHomeActions({
           icon={ArrowLeftRight}
           label={CREW_ACTION_LABELS.handover}
           to={HORSE_HEALTH_ROUTES.handovers(transport.transportId)}
+          state={{ from: "/crew" }}
           disabled={locked}
           disabledReason={lockReason}
         />

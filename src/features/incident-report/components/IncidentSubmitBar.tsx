@@ -19,7 +19,7 @@ export function IncidentSubmitBar({
   uploadState,
 }: IncidentSubmitBarProps) {
   return (
-    <div className="sticky bottom-0 z-30 border-t border-slate-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur sm:z-10 sm:p-4 sm:shadow-none">
+    <div className="sticky bottom-0 z-30 border-t border-slate-200 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur sm:static sm:z-10 sm:p-4 sm:shadow-none">
       {uploadState === "uploading" && (
         <p className="mb-2 text-xs text-slate-600" role="status">
           Preparing or uploading photos. Submit becomes available when every
@@ -36,7 +36,7 @@ export function IncidentSubmitBar({
           {error}
         </p>
       )}
-      <div className="mx-auto flex max-w-3xl flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <div className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {onCancel && (
           <Button
             type="button"
