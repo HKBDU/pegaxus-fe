@@ -146,6 +146,7 @@ export function getOnTimeDemo(input: ReportFilters): OnTimeReport {
       meetsSla: currentRate !== null && currentRate >= 92,
     },
     distribution: {
+      EARLY: 0,
       ON_TIME: current.rows.filter((row) => row.bucket === "ON_TIME").length,
       MINOR_DELAY: current.rows.filter((row) => row.bucket === "MINOR_DELAY")
         .length,

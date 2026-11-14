@@ -31,6 +31,7 @@ const series = {
   count: { label: "Transports", color: "#475569" },
 } satisfies ChartConfig;
 const distributionConfig = {
+  EARLY: { label: "Early", color: "#0284c7" },
   ON_TIME: { label: "On time", color: "#059669" },
   MINOR_DELAY: { label: "Minor delay", color: "hsl(var(--primary))" },
   MAJOR_DELAY: { label: "Major delay", color: "#b91c1c" },

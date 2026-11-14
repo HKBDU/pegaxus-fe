@@ -9,10 +9,18 @@ import {
 } from "@/shared/components/ui/select";
 import type { MapLocation } from "@/shared/components/map";
 
+/** Where a RETURN may start: BE accepts an open incident on the running segment or the end of that segment. */
+export type ReturnStartOption = {
+  kind: "INCIDENT_LOCATION" | "NEXT_STOP";
+  label: string;
+  location: MapLocation;
+};
+
 type RoutePlanEndpointsStepProps = {
   from: MapLocation;
   to: MapLocation;
   returnMode?: boolean;
+  startOptions?: ReturnStartOption[];
   lockEndpoints?: boolean;
   locations?: MapLocation[];
   onFromChange?: (location: MapLocation) => void;
@@ -27,6 +35,7 @@ export function RoutePlanEndpointsStep({
   from,
   to,
   returnMode = false,
+  startOptions = [],
   lockEndpoints = false,
   locations = [],
   onFromChange,
@@ -41,28 +50,28 @@ export function RoutePlanEndpointsStep({
       {returnMode ? (
         <div className="rounded-[2px] border bg-card p-4">
           <label className="grid gap-2 text-sm font-semibold">
-            Current location / return origin
+            Return starts at
             <Select
-              disabled={returnMode}
               value={String(from.id) === "unknown-location" ? "" : String(from.id)}
               onValueChange={(val) => {
-                const location = locations.find((item) => String(item.id) === val);
-                if (location) onFromChange?.(location);
+                const option = startOptions.find((item) => String(item.location.id) === val);
+                if (option) onFromChange?.(option.location);
               }}
             >
               <SelectTrigger className="h-10 w-full rounded-[2px] border bg-white px-3 font-normal *:data-[slot=select-value]:truncate">
-                <SelectValue placeholder="Select current location" />
+                <SelectValue placeholder="Select where the return starts" />
               </SelectTrigger>
               <SelectContent className="max-w-[420px] max-h-60 text-sm">
-                {locations.map((location) => (
-                  <SelectItem key={location.id} value={String(location.id)}>
-                    {location.name} — {location.city}, {location.country}
+                {startOptions.map((option) => (
+                  <SelectItem key={option.location.id} value={String(option.location.id)}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <span className="font-normal text-muted-foreground">
-              Current location is created from live GPS coordinates and cannot be changed manually.
+              At the incident, the running segment stops there and the convoy turns back at once. At the end of the
+              running segment, the convoy finishes that segment first.
             </span>
           </label>
         </div>

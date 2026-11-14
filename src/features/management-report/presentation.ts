@@ -56,7 +56,31 @@ export function reportTime(value: string) {
       }).format(date) + " UTC"
     : "—";
 }
+/**
+ * A deviation from the committed arrival in words, in the one unit that reads best:
+ * "50.9 days early", "3.3 h late", "45 min late", "On schedule".
+ */
+export function deviationText(minutes: number | null | undefined) {
+  if (minutes === null || minutes === undefined) return "—";
+  if (Math.round(minutes) === 0) return "On schedule";
+  return `${durationText(Math.abs(minutes))} ${minutes < 0 ? "early" : "late"}`;
+}
+
+/** The change of a deviation between two periods: "2.1 h later", "3 min earlier", "No change". */
+export function deviationChangeText(minutes: number | null | undefined) {
+  if (minutes === null || minutes === undefined) return "—";
+  if (Math.round(minutes) === 0) return "No change";
+  return `${durationText(Math.abs(minutes))} ${minutes < 0 ? "earlier" : "later"}`;
+}
+
+function durationText(minutes: number) {
+  if (minutes >= 1440) return `${reportNumber(Math.round((minutes / 1440) * 10) / 10)} days`;
+  if (minutes >= 60) return `${reportNumber(Math.round((minutes / 60) * 10) / 10)} h`;
+  return `${reportNumber(Math.round(minutes))} min`;
+}
+
 export const bucketLabels = {
+  EARLY: "Early",
   ON_TIME: "On time",
   MINOR_DELAY: "Minor delay",
   MAJOR_DELAY: "Major delay",

@@ -4,11 +4,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
-import { reportNumber, reportRate, signedNumber } from "../presentation";
+import { deviationChangeText, deviationText, reportNumber, reportRate, signedNumber } from "../presentation";
 import type { OnTimeReport } from "../schemas";
 
 export function PerformanceOverview({ report }: { report: OnTimeReport }) {
   const { kpi } = report;
+  // The median is not dragged by a few trips far off the plan; older payloads only carry the average.
+  const deviation = kpi.medianDeviationMinutes ?? kpi.avgDelayMinutes;
   const metrics = [
     {
       label: "Measured transports",
@@ -31,21 +33,21 @@ export function PerformanceOverview({ report }: { report: OnTimeReport }) {
           : kpi.onTimeRate.change > 0
             ? "text-emerald-700"
             : "text-amber-800",
-      help: "On time includes arrivals up to 60 minutes after the planned end.",
+      help: "On time means arriving within 60 minutes either side of the committed arrival (the end of the confirmed primary route). Arriving earlier counts as early, not on time.",
     },
     {
-      label: "Avg delivery deviation",
+      label: "Typical delivery deviation",
       icon: Clock3,
-      value: `${signedNumber(kpi.avgDelayMinutes.value)}${kpi.avgDelayMinutes.value === null ? "" : " min"}`,
-      previous: `${signedNumber(kpi.avgDelayMinutes.previous)}${kpi.avgDelayMinutes.previous === null ? "" : " min"}`,
-      change: `${signedNumber(kpi.avgDelayMinutes.change)}${kpi.avgDelayMinutes.change === null ? "" : " min"}`,
+      value: deviationText(deviation.value),
+      previous: deviationText(deviation.previous),
+      change: deviationChangeText(deviation.change),
       tone:
-        kpi.avgDelayMinutes.change === null || kpi.avgDelayMinutes.change === 0
+        deviation.change === null || deviation.change === 0
           ? "text-slate-500"
-          : kpi.avgDelayMinutes.change > 0
+          : deviation.change > 0
             ? "text-amber-800"
             : "text-emerald-700",
-      help: "Average signed delivery deviation across all measured transports, including early and on-time arrivals. Negative means early.",
+      help: "The middle arrival against the committed arrival across measured transports: half arrived earlier than this, half later. A few trips far off the plan do not move it.",
     },
   ];
   return (

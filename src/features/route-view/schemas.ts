@@ -59,6 +59,8 @@ export const routeSegmentSchema = z.object({
     }),
   fromLocation: routeLocationSchema,
   toLocation: routeLocationSchema,
+  // Set when the segment stopped early at an incident (the convoy turned back for a BACKUP or RETURN).
+  endedAtLocation: routeLocationSchema.nullish().transform((v) => v ?? null),
   plannedDepartureAt: responseTimestamp.nullable(),
   plannedArrivalAt: responseTimestamp.nullable(),
   actualDepartureAt: timestamp.nullable().optional().transform((v) => v ?? null),
@@ -326,6 +328,12 @@ export const crewPlanSchema = z.object({
       needsCrew: z.boolean(),
     }),
   ),
+  // INCIDENT_LOCATION: the running segment stops at the incident; NEXT_STOP: the convoy goes on to startLocation;
+  // AT_STOP: the convoy waits at startLocation. turnsBack: the convoy drives back to startLocation.
+  anchorMode: z.enum(["INCIDENT_LOCATION", "NEXT_STOP", "AT_STOP"]).optional(),
+  startLocation: routeLocationSchema.optional(),
+  turnsBack: z.boolean().optional(),
+  endedAtLocation: routeLocationSchema.nullish(),
 });
 export const returnActivationResultSchema = z.object({
   routePlanId: z.union([entityIdSchema, z.number()]).transform(String),
