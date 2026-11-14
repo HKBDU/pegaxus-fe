@@ -49,7 +49,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 function Details({ rows }: { rows: [string, ReactNode][] }) {
   return (
-    <dl className="m-0 grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-x-3 gap-y-2 text-sm [overflow-wrap:anywhere]">
+    // From 640px the label column has a fixed width, so a value stays next to its label on a wide page.
+    <dl className="m-0 grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-x-3 gap-y-2 text-sm [overflow-wrap:anywhere] sm:grid-cols-[10rem_minmax(0,1fr)]">
       {rows.map(([label, value]) => (
         <div key={label} className="contents">
           <dt className="text-muted-foreground">{label}</dt>
@@ -107,9 +108,8 @@ export function EmergencyCostDetailSections({
         </div>
       </section>
       ) : null}
-      {/* Container query: the sections may sit in a narrow column (page side layout or the incident page). */}
-      <div className="@container min-w-0">
-      <div className="grid min-w-0 items-start gap-4 @3xl:grid-cols-2">
+      {/* One column on every screen, like the web's other detail pages: two columns of boxes left uneven gaps on a desktop. */}
+      <div className="min-w-0 space-y-4">
         <Section title="Request information">
           <Details
             rows={[
@@ -245,7 +245,6 @@ export function EmergencyCostDetailSections({
             </p>
           ) : null}
         </Section>
-      </div>
       </div>
       <Section title="Other cost requests for this incident">
         {request.otherRequests.length ? (
