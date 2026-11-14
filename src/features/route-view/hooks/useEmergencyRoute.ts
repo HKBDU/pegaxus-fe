@@ -121,6 +121,7 @@ export function useEmergencyContext(plan?: RoutePlanDetail, enabled = true) {
         // RETURN legal review uses the EXTRA dossier; PRIMARY/BACKUP use MAIN.
         // Keep the workspace status aligned with the dossier selected below.
         dossierStatus: legalDossier?.status,
+        mainDossierStatus: booking.data?.complianceDossier?.status,
         hasActivePrimary: hasActivePrimary(routes.data.items),
         hasOpenReturn: hasOpenReturn(routes.data.items),
       },

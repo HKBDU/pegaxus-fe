@@ -31,6 +31,8 @@ export type RouteWorkspaceContext = {
   planStatus: string;
   transportStatus?: string | null;
   dossierStatus?: string | null;
+  /** MAIN dossier status. The LM's RETURN decision and RETURN activation depend on it, whichever route is open. */
+  mainDossierStatus?: string | null;
   hasActivePrimary?: boolean;
   hasOpenReturn?: boolean;
   hasOpenBackup?: boolean;

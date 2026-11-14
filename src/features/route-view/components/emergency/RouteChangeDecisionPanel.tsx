@@ -112,7 +112,7 @@ export function RouteChangeDecisionPanel({
     Boolean(mutation.data) ||
     !primaryPlan;
   const canApprove = isReturn
-    ? context.workspace.dossierStatus === "APPROVED"
+    ? context.workspace.mainDossierStatus === "APPROVED"
     : !crewBlocked;
   const reviewLatest = () => {
     setBaseline(plan.updatedAt);
@@ -208,8 +208,8 @@ export function RouteChangeDecisionPanel({
         </p>
         {isReturn && (
           <p className="text-xs text-slate-500">
-            Compliance dossier:{" "}
-            {context.workspace.dossierStatus?.replaceAll("_", " ") ??
+            MAIN dossier:{" "}
+            {context.workspace.mainDossierStatus?.replaceAll("_", " ") ??
               "Not available"}
             .
           </p>
@@ -262,7 +262,7 @@ export function RouteChangeDecisionPanel({
         {!canApprove && (
           <p className="text-xs text-destructive">
             {isReturn
-              ? "RETURN approval requires an APPROVED dossier."
+              ? "RETURN approval requires an APPROVED MAIN dossier."
               : "Complete the crew and vehicles of every internal backup segment first."}
           </p>
         )}

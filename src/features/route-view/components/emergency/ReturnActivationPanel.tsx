@@ -148,7 +148,7 @@ export function ReturnActivationPanel({
   // RP7 is authoritative through CONFIRMED. Display dossier readiness only when actually read.
   const dossierBlocked =
     context.bookingRestricted ||
-    context.workspace.dossierStatus !== "APPROVED" ||
+    context.workspace.mainDossierStatus !== "APPROVED" ||
     context.extraDossierStatus !== "APPROVED";
   const blocked =
     busy ||
@@ -227,7 +227,7 @@ export function ReturnActivationPanel({
               { label: "Legal confirmation", value: plan.status },
               {
                 label: "MAIN dossier",
-                value: context.workspace.dossierStatus,
+                value: context.workspace.mainDossierStatus,
               },
               { label: "EXTRA dossier", value: context.extraDossierStatus },
               { label: "Transport", value: context.workspace.transportStatus },
