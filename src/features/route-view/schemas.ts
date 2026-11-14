@@ -193,7 +193,7 @@ export const backupChangeRequestSchema = z.object({
   estimatedExtraCost: extraCost.optional(),
   note: optionalNote,
 });
-export const backupCrewOverrideSchema = z.object({
+export const crewOverrideSchema = z.object({
   routePlanRouteId: z.string().min(1),
   driverEmployeeId: z.string().min(1).optional(),
   escortEmployeeId: z.string().min(1).optional(),
@@ -212,7 +212,7 @@ export const routeChangeDecisionSchema = z
     note: optionalNote,
     // BACKUP approval only: when the backup really starts, and the crew/vehicles picked by the LM.
     startAt: timestamp.optional(),
-    segments: z.array(backupCrewOverrideSchema).max(100).optional(),
+    segments: z.array(crewOverrideSchema).max(100).optional(),
   })
   .refine(
     (input) => input.decision !== "REJECT" || (input.note?.length ?? 0) >= 10,
@@ -237,6 +237,9 @@ export const returnSegmentOverrideSchema = z
         note: optionalNote,
       })
       .optional(),
+    // Replaces the suggested crew of an internal segment.
+    driverEmployeeId: z.string().min(1).optional(),
+    escortEmployeeId: z.string().min(1).optional(),
   })
   .refine(
     (input) =>
@@ -251,6 +254,8 @@ export const returnActivationSchema = z
     lastUpdatedAt: timestamp,
     segments: z.array(returnSegmentOverrideSchema).max(100).optional(),
     note: optionalNote,
+    // When the return really starts: every return segment moves by the same amount.
+    startAt: timestamp.optional(),
   })
   .refine(
     (input) =>
@@ -288,7 +293,7 @@ export const routeChangeDecisionResultSchema = z.object({
   branchLocation: routeLocationSchema.nullish(),
 });
 // GET /route-plans/{id}/change-crew: backup segments from the branch point with the suggested crew.
-export const backupCrewPlanSchema = z.object({
+export const crewPlanSchema = z.object({
   routePlanId: z.union([entityIdSchema, z.number()]).transform(String),
   lastUpdatedAt: timestamp,
   suggestedStartAt: timestamp,

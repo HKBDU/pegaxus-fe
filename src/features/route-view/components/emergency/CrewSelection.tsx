@@ -14,11 +14,11 @@ import { toUtcIso } from "@/shared/utils/datetime";
 import { personnelService } from "@/features/personnel/services";
 import { getVehicles } from "@/features/route-plan/services";
 import type {
-  BackupCrewOverride,
-  BackupCrewPlan,
-  BackupCrewSegment,
+  CrewOverride,
+  CrewPlan,
+  CrewSegment,
 } from "../../types";
-import { effectiveCrew } from "../../backup-crew";
+import { effectiveCrew } from "../../crew-selection";
 
 type Person = { employeeId: string; employeeCode?: string | null; fullName: string };
 type VehicleOption = {
@@ -39,9 +39,12 @@ function toLocalInput(iso: string) {
 const shiftIso = (iso: string, deltaMs: number) =>
   new Date(new Date(iso).getTime() + deltaMs).toISOString();
 
-export function BackupCrewSelection({
+export function CrewSelection({
   plan,
   transportPlanId,
+  routeLabel = "backup",
+  showVehicles = true,
+  outsourcedIds,
   startAt,
   overrides,
   errors,
@@ -49,14 +52,20 @@ export function BackupCrewSelection({
   onStartAtChange,
   onChange,
 }: {
-  plan: BackupCrewPlan;
+  plan: CrewPlan;
   transportPlanId: string;
+  /** Wording only: which route takes over. */
+  routeLabel?: "backup" | "return";
+  /** RETURN picks vehicles in its own resource panel. */
+  showVehicles?: boolean;
+  /** Segments the LM switched to a transport provider elsewhere on the page: no crew. */
+  outsourcedIds?: ReadonlySet<string>;
   startAt: string;
-  overrides: Record<string, BackupCrewOverride>;
+  overrides: Record<string, CrewOverride>;
   errors: Record<string, string>;
   disabled: boolean;
   onStartAtChange: (value: string) => void;
-  onChange: (routePlanRouteId: string, value: BackupCrewOverride) => void;
+  onChange: (routePlanRouteId: string, value: CrewOverride) => void;
 }) {
   const first = plan.segments[0]?.segment.plannedDepartureAt;
   const delta = first ? new Date(startAt).getTime() - new Date(first).getTime() : 0;
@@ -64,9 +73,11 @@ export function BackupCrewSelection({
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
-        <Label htmlFor="backup-start-at">Backup start time *</Label>
+        <Label htmlFor={`${routeLabel}-start-at`}>
+          {routeLabel === "backup" ? "Backup" : "Return"} start time *
+        </Label>
         <Input
-          id="backup-start-at"
+          id={`${routeLabel}-start-at`}
           type="datetime-local"
           disabled={disabled}
           value={toLocalInput(startAt)}
@@ -79,8 +90,8 @@ export function BackupCrewSelection({
         <p className="text-xs text-slate-500">
           UTC: <DateTimeUtc value={startAt} compact />.{" "}
           {deltaMinutes === 0
-            ? "Backup segments keep their planned times."
-            : `Every backup segment moves ${deltaMinutes > 0 ? "later" : "earlier"} by ${Math.floor(Math.abs(deltaMinutes) / 60)} h ${Math.abs(deltaMinutes) % 60} min. The committed arrival of the transport plan does not change.`}
+            ? `${routeLabel === "backup" ? "Backup" : "Return"} segments keep their planned times.`
+            : `Every ${routeLabel} segment moves ${deltaMinutes > 0 ? "later" : "earlier"} by ${Math.floor(Math.abs(deltaMinutes) / 60)} h ${Math.abs(deltaMinutes) % 60} min. The committed arrival of the transport plan does not change.`}
         </p>
       </div>
       {plan.segments.map((item) => (
@@ -89,6 +100,8 @@ export function BackupCrewSelection({
           item={item}
           transportPlanId={transportPlanId}
           deltaMs={delta}
+          showVehicles={showVehicles}
+          outsourced={outsourcedIds?.has(item.segment.routePlanRouteId) ?? false}
           override={overrides[item.segment.routePlanRouteId]}
           error={errors[item.segment.routePlanRouteId]}
           disabled={disabled}
@@ -103,22 +116,26 @@ function SegmentCrew({
   item,
   transportPlanId,
   deltaMs,
+  showVehicles,
+  outsourced,
   override,
   error,
   disabled,
   onChange,
 }: {
-  item: BackupCrewSegment;
+  item: CrewSegment;
   transportPlanId: string;
   deltaMs: number;
-  override?: BackupCrewOverride;
+  showVehicles: boolean;
+  outsourced: boolean;
+  override?: CrewOverride;
   error?: string;
   disabled: boolean;
-  onChange: (value: BackupCrewOverride) => void;
+  onChange: (value: CrewOverride) => void;
 }) {
   const { segment } = item;
-  const id = `backup-crew-${segment.routePlanRouteId}`;
-  const internal = segment.executionType === "INTERNAL";
+  const id = `crew-${segment.routePlanRouteId}`;
+  const internal = segment.executionType === "INTERNAL" && !outsourced;
   const from = shiftIso(segment.plannedDepartureAt, deltaMs);
   const to = shiftIso(segment.plannedArrivalAt, deltaMs);
   const crew = effectiveCrew(item, override);
@@ -126,7 +143,7 @@ function SegmentCrew({
   const drivers = useAssignablePeople("DRIVER", segment.driver, slot);
   const escorts = useAssignablePeople("ESCORT", segment.escort, slot);
   const vehicles = useQuery({
-    queryKey: ["route-view", "backup-vehicles", segment.routePlanRouteId, from, to],
+    queryKey: ["route-view", "crew-vehicles", segment.routePlanRouteId, from, to],
     queryFn: async () => {
       const page = await getVehicles({
         pageIndex: 1, pageSize: 100, transportMode: segment.route.transportMode,
@@ -138,10 +155,10 @@ function SegmentCrew({
       for (const vehicle of page.items) list.set(vehicle.vehicleId, vehicle);
       return [...list.values()];
     },
-    enabled: internal,
+    enabled: internal && showVehicles,
     retry: false,
   });
-  const update = (patch: Partial<BackupCrewOverride>) =>
+  const update = (patch: Partial<CrewOverride>) =>
     onChange({ ...override, routePlanRouteId: segment.routePlanRouteId, ...patch });
   return (
     <fieldset
@@ -157,9 +174,11 @@ function SegmentCrew({
         <DateTimeUtc value={to} compact /> ·{" "}
         {internal
           ? item.suggestedFromRoutePlanRouteId
-            ? "Crew suggested from the PRIMARY route"
-            : "No PRIMARY crew to take over"
-          : `Outsourced to ${segment.outsourcing?.provider.providerName ?? "the provider"}: book it with them, no crew needed`}
+            ? "Crew suggested from the current journey"
+            : "No crew to take over: pick one"
+          : outsourced
+            ? "Switched to a transport provider: no crew needed"
+            : `Outsourced to ${segment.outsourcing?.provider.providerName ?? "the provider"}: book it with them, no crew needed`}
       </p>
       {internal && (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -183,7 +202,7 @@ function SegmentCrew({
             disabled={disabled}
             onChange={(escortEmployeeId) => update({ escortEmployeeId })}
           />
-          <div
+          {showVehicles && <div
             className="max-h-40 space-y-2 overflow-y-auto rounded-[2px] border p-3 sm:col-span-2"
             role="group"
             aria-label={`Vehicles for segment ${segment.sequenceNo}`}
@@ -210,7 +229,7 @@ function SegmentCrew({
                 {vehicle.capacityHorses == null ? "Capacity unavailable" : `${vehicle.capacityHorses} horses`}
               </label>
             ))}
-          </div>
+          </div>}
         </div>
       )}
       {error && (
@@ -229,7 +248,7 @@ function useAssignablePeople(
   slot: { segmentId: string; from: string; to: string; transportPlanId: string; enabled: boolean },
 ) {
   return useQuery({
-    queryKey: ["route-view", "backup-crew", role, slot.segmentId, slot.from, slot.to],
+    queryKey: ["route-view", "crew-people", role, slot.segmentId, slot.from, slot.to],
     queryFn: async () => {
       const page = await personnelService.assignable({
         role,

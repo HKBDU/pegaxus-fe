@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { crewSelectionErrors, effectiveCrew } from "@/features/route-view/backup-crew";
-import type { BackupCrewPlan } from "@/features/route-view/types";
+import { crewSelectionErrors, effectiveCrew } from "@/features/route-view/crew-selection";
+import type { CrewPlan } from "@/features/route-view/types";
 
 const location = (name: string) => ({
   locationId: name, locationName: name, locationType: null, city: null, country: "FR", latitude: null, longitude: null,
@@ -17,7 +17,7 @@ const segment = (id: string, executionType: "INTERNAL" | "OUTSOURCED", crew: boo
   suggestedFromRoutePlanRouteId: crew ? "P2" : null,
   needsCrew: executionType === "INTERNAL" && !crew,
 });
-const plan = (segments: BackupCrewPlan["segments"]): BackupCrewPlan => ({
+const plan = (segments: CrewPlan["segments"]): CrewPlan => ({
   routePlanId: "B", lastUpdatedAt: "2030-01-02T09:00:00Z", suggestedStartAt: "2030-01-02T10:00:00Z", segments,
 });
 

@@ -41,6 +41,11 @@ export function employeeLabel(employee: Pick<EmployeeBrief, "employeeCode" | "fu
 /** Row state shown in the phase 2 table. Derived from the PS2 fields; it is not a BE status. */
 export type SegmentAssignmentState = "PROVIDER" | "ASSIGNED" | "INCOMPLETE" | "NOT_ASSIGNED"
 
+/** Only live PRIMARY segments can be assigned or changed on this page. */
+export function isEditableSegment(segment: Pick<Phase2Segment, "routeType" | "isSuperseded">) {
+  return !segment.isSuperseded && (segment.routeType ?? "PRIMARY") === "PRIMARY"
+}
+
 export function segmentAssignmentState(segment: Phase2Segment): SegmentAssignmentState {
   if (segment.isOutsourced) return "PROVIDER"
   if (segment.driver && segment.escort) return "ASSIGNED"
@@ -139,18 +144,22 @@ export interface SegmentRow extends Phase2Segment {
   vehicles: SegmentVehicle[]
 }
 
-/** Merges PS2 segments with RP3 segments by `routePlanRouteId`. RP3 can be missing, the rows then fall back to "Segment N". */
+/**
+ * Merges PS2 segments with RP3 segments by `routePlanRouteId`. Keeps the BE order: PRIMARY segments, then the BACKUP / RETURN
+ * segments that took over. Segments outside RP3 use the location names sent by PS2, else fall back to "Segment N".
+ */
 export function buildSegmentRows(phase2Segments: Phase2Segment[], routeSegments: RouteSegmentInfo[] | undefined): SegmentRow[] {
   const byId = new Map((routeSegments ?? []).map((segment) => [segment.routePlanRouteId, segment]))
   return [...phase2Segments]
-    .sort((left, right) => left.sequenceNo - right.sequenceNo)
     .map((segment) => {
       const info = byId.get(segment.routePlanRouteId)
       return {
         ...segment,
-        fromCountry: info?.fromLocation.country ?? null,
-        fromName: info ? [info.fromLocation.locationName, info.fromLocation.country].filter(Boolean).join(", ") : `Segment ${segment.sequenceNo}`,
-        toName: info ? [info.toLocation.locationName, info.toLocation.country].filter(Boolean).join(", ") : "—",
+        fromCountry: info?.fromLocation.country ?? segment.fromCountry ?? null,
+        fromName: info
+          ? [info.fromLocation.locationName, info.fromLocation.country].filter(Boolean).join(", ")
+          : segment.fromLocationName ?? `Segment ${segment.sequenceNo}`,
+        toName: info ? [info.toLocation.locationName, info.toLocation.country].filter(Boolean).join(", ") : segment.toLocationName ?? "—",
         distanceKm: info?.route?.distanceKm ?? null,
         durationMinutes: info?.route?.estimatedDurationMinutes ?? null,
         status: info?.status ?? null,

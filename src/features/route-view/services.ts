@@ -28,7 +28,7 @@ import {
   returnActivationResultSchema,
   driverNoticeSchema,
   driverNoticeResultSchema,
-  backupCrewPlanSchema,
+  crewPlanSchema,
 } from "./schemas";
 import { canUseEmergencyAction } from "./emergency-policy";
 import type {
@@ -186,13 +186,22 @@ async function parseErrorBlob(blob: Blob) {
 
 export const routeViewService = {
   /** Backup segments with the crew suggested from the untravelled PRIMARY segments (LM fills or replaces it). */
-  async getBackupCrewPlan(routePlanId: string, signal?: AbortSignal) {
+  async getCrewPlan(routePlanId: string, signal?: AbortSignal) {
     const response = await apiClient.get<unknown, unknown>(
       `${routePath(routePlanId)}/change-crew`,
       { signal },
     );
     signal?.throwIfAborted();
-    return backupCrewPlanSchema.parse(readEnvelope(response));
+    return crewPlanSchema.parse(readEnvelope(response));
+  },
+  /** Return segments with the crew at the current stop suggested; fails while the horse is between two stops. */
+  async getReturnCrewPlan(routePlanId: string, signal?: AbortSignal) {
+    const response = await apiClient.get<unknown, unknown>(
+      `${routePath(routePlanId)}/return-crew`,
+      { signal },
+    );
+    signal?.throwIfAborted();
+    return crewPlanSchema.parse(readEnvelope(response));
   },
   async getEmergencyTransportPlan(id: string, signal?: AbortSignal) {
     const response = await apiClient.get<unknown, unknown>(

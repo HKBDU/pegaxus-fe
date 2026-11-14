@@ -41,9 +41,9 @@ import {
 } from "../../hooks/useEmergencyRoute";
 import { useRoutePlanDetail } from "../../hooks/useRoutePlanDetail";
 import { getRouteViewError, routeViewService } from "../../services";
-import type { BackupCrewOverride, RoutePlanDetail } from "../../types";
-import { BackupCrewSelection } from "./BackupCrewSelection";
-import { crewSelectionErrors } from "../../backup-crew";
+import type { CrewOverride, RoutePlanDetail } from "../../types";
+import { CrewSelection } from "./CrewSelection";
+import { crewSelectionErrors } from "../../crew-selection";
 import { isRelatedPrimary } from "../../route-comparison";
 import { RouteChangeComparison } from "./RouteChangeComparison";
 import { EmergencyFeedback } from "./EmergencyFeedback";
@@ -91,11 +91,11 @@ export function RouteChangeDecisionPanel({
   // BACKUP: the LM confirms the crew, vehicles and start time while approving.
   const crewPlan = useQuery({
     queryKey: ["route-view", "backup-crew-plan", plan.routePlanId, plan.updatedAt],
-    queryFn: ({ signal }) => routeViewService.getBackupCrewPlan(plan.routePlanId, signal),
+    queryFn: ({ signal }) => routeViewService.getCrewPlan(plan.routePlanId, signal),
     enabled: !isReturn,
     retry: false,
   });
-  const [crew, setCrew] = useState<Record<string, BackupCrewOverride>>({});
+  const [crew, setCrew] = useState<Record<string, CrewOverride>>({});
   const [startAt, setStartAt] = useState<string>();
   const crewErrors = crewPlan.data ? crewSelectionErrors(crewPlan.data, crew) : {};
   const crewBlocked =
@@ -236,7 +236,7 @@ export function RouteChangeDecisionPanel({
             </p>
           )}
           {crewPlan.data && (
-            <BackupCrewSelection
+            <CrewSelection
               plan={crewPlan.data}
               transportPlanId={plan.transportPlanId}
               startAt={startAt ?? crewPlan.data.suggestedStartAt}
