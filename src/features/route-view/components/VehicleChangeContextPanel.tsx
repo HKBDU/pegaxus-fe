@@ -48,19 +48,30 @@ export function VehicleChangeContextPanel({
     route: RoutePlanDetail;
     segments: RoutePlanDetail["segments"];
   } | null>(null);
+  // Set once a change was saved, so closing the dialog afterwards also closes the replacement context.
+  const changed = useRef(false);
   const key = `${plan.routePlanId}:${incidentReportId}`;
+  const eligibleSegments =
+    state.kind === "ready"
+      ? state.data.selection.eligibleForSubmission
+          .map(({ segment }) => segment)
+          .filter((segment) =>
+            ["ROAD", "SEA", "AIR"].includes(segment.route.transportMode),
+          )
+      : [];
+  const canOpen =
+    !readOnly && state.kind === "ready" && !state.refreshing && eligibleSegments.length > 0;
+  const openDialog = () => {
+    if (!canOpen || state.kind !== "ready") return;
+    setDialog({ route: state.data.route, segments: eligibleSegments });
+  };
   useEffect(() => {
-    if (readOnly || state.kind !== "ready" || state.refreshing || opened.current === key)
-      return;
-    const segments = state.data.selection.eligibleForSubmission
-      .map(({ segment }) => segment)
-      .filter((segment) =>
-        ["ROAD", "SEA", "AIR"].includes(segment.route.transportMode),
-      );
-    if (segments.length === 0) return;
+    if (!canOpen || opened.current === key) return;
     opened.current = key;
-    setDialog({ route: state.data.route, segments });
-  }, [state, key, readOnly]);
+    openDialog();
+    // Opens once per incident and route; the button below reopens it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canOpen, key]);
   const prepareRefresh = (snapshot: ChangeVehiclesSnapshot) => {
     if (readOnly || state.kind !== "ready" || state.refreshing)
       throw new Error(
@@ -107,9 +118,16 @@ export function VehicleChangeContextPanel({
         <h2 className="m-0 font-heading text-base uppercase">
           {stateLabels[state.kind]}
         </h2>
-        <Button type="button" variant="ghost" size="sm" onClick={onDismiss}>
-          Close replacement context
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {canOpen && !dialog ? (
+            <Button type="button" size="sm" onClick={openDialog}>
+              Change vehicles
+            </Button>
+          ) : null}
+          <Button type="button" variant="ghost" size="sm" onClick={onDismiss}>
+            Close replacement context
+          </Button>
+        </div>
       </div>
       {state.kind !== "ready" && state.kind !== "idle" && (
         <p
@@ -160,26 +178,20 @@ export function VehicleChangeContextPanel({
           open
           mode="mid-trip"
           routePlan={state.kind === "ready" ? state.data.route : dialog.route}
-          segments={
-            state.kind === "ready"
-              ? state.data.selection.eligibleForSubmission
-                  .map(({ segment }) => segment)
-                  .filter((segment) =>
-                    ["ROAD", "SEA", "AIR"].includes(
-                      segment.route.transportMode,
-                    ),
-                  )
-              : dialog.segments
-          }
+          segments={state.kind === "ready" ? eligibleSegments : dialog.segments}
           incidentReportId={incidentReportId}
           onOpenChange={(open) => {
             if (!open) {
+              // Closing without saving keeps the context, so "Change vehicles" can reopen the dialog.
               setDialog(null);
-              onDismiss();
+              if (changed.current) onDismiss();
             }
           }}
           onBeforeSubmit={prepareRefresh}
-          onChanged={(result) => refresh.current?.(result)}
+          onChanged={(result) => {
+            changed.current = true;
+            return refresh.current?.(result);
+          }}
           onReload={async () => {
             await onReloadWorkspace();
             if (state.kind === "ready") return state.reload();
