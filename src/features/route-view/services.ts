@@ -28,6 +28,7 @@ import {
   returnActivationResultSchema,
   driverNoticeSchema,
   driverNoticeResultSchema,
+  backupCrewPlanSchema,
 } from "./schemas";
 import { canUseEmergencyAction } from "./emergency-policy";
 import type {
@@ -139,6 +140,17 @@ export function getEmergencyError(error: unknown) {
       "Vehicle capacity is insufficient for this segment.",
     PROVIDER_MODE_MISMATCH:
       "The provider does not support this segment's transport mode.",
+    INVALID_START_TIME: "The backup route cannot start in the past.",
+    BRANCH_POINT_PASSED:
+      "The horse has already passed the branch point of this backup. Hold or create a RETURN route instead.",
+    BRANCH_POINT_NOT_ON_ROUTE:
+      "The branch point of this backup is not on the PRIMARY route.",
+    RESOURCES_NOT_ASSIGNED:
+      "Every internal backup segment needs a driver, an escort and vehicles.",
+    PERSONNEL_UNAVAILABLE:
+      "A selected driver or escort is inactive or has the wrong role.",
+    EMPLOYEE_NOT_FOUND: "A selected driver or escort no longer exists.",
+    VEHICLE_NOT_FOUND: "A selected vehicle no longer exists.",
   };
   const denied = info.status === 403 || info.code === "FORBIDDEN";
   const unauthorized = info.status === 401 || info.code === "UNAUTHORIZED";
@@ -173,6 +185,15 @@ async function parseErrorBlob(blob: Blob) {
 }
 
 export const routeViewService = {
+  /** Backup segments with the crew suggested from the untravelled PRIMARY segments (LM fills or replaces it). */
+  async getBackupCrewPlan(routePlanId: string, signal?: AbortSignal) {
+    const response = await apiClient.get<unknown, unknown>(
+      `${routePath(routePlanId)}/change-crew`,
+      { signal },
+    );
+    signal?.throwIfAborted();
+    return backupCrewPlanSchema.parse(readEnvelope(response));
+  },
   async getEmergencyTransportPlan(id: string, signal?: AbortSignal) {
     const response = await apiClient.get<unknown, unknown>(
       `/transport-plans/${encodeURIComponent(actionEntityIdSchema.parse(id))}`,
