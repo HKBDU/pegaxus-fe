@@ -51,13 +51,29 @@ export function VehicleChangeContextPanel({
   // Set once a change was saved, so closing the dialog afterwards also closes the replacement context.
   const changed = useRef(false);
   const key = `${plan.routePlanId}:${incidentReportId}`;
+  // The list mixes the ACTIVE route's remaining segments with the tails of CONFIRMED BACKUP / RETURN plans, and each plan
+  // numbers its segments from 1. Each card names its plan, and the cards are grouped by plan (ACTIVE route first).
+  const activeRouteId = state.kind === "ready" ? state.data.route.routePlanId.toLowerCase() : "";
   const eligibleSegments =
     state.kind === "ready"
       ? state.data.selection.eligibleForSubmission
-          .map(({ segment }) => segment)
-          .filter((segment) =>
+          .filter(({ segment }) =>
             ["ROAD", "SEA", "AIR"].includes(segment.route.transportMode),
           )
+          .map(({ segment, sourceRoutePlanId, sourceRoutePlanCode, sourceRouteType }) => ({
+            segment: {
+              ...segment,
+              sourceLabel: `${sourceRouteType} · ${sourceRoutePlanCode}${sourceRoutePlanId.toLowerCase() === activeRouteId ? " · Active route" : ""}`,
+            },
+            order: sourceRoutePlanId.toLowerCase() === activeRouteId ? 0 : sourceRouteType === "BACKUP" ? 1 : 2,
+            plan: sourceRoutePlanCode,
+          }))
+          .sort((left, right) =>
+            left.order - right.order ||
+            left.plan.localeCompare(right.plan) ||
+            left.segment.sequenceNo - right.segment.sequenceNo,
+          )
+          .map(({ segment }) => segment)
       : [];
   const canOpen =
     !readOnly && state.kind === "ready" && !state.refreshing && eligibleSegments.length > 0;
