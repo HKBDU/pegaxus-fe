@@ -23,7 +23,7 @@ export function HorseIncidentSelectionStep({
 
   return (
     <section
-      className="space-y-4 pb-28"
+      className="min-w-0 space-y-5 pb-24 sm:pb-0"
       aria-label="Select horses"
     >
       <PageHeader
@@ -49,13 +49,13 @@ export function HorseIncidentSelectionStep({
         </p>
       )}
 
-      <div className="space-y-2">
+      <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
         {horses.map((item) => {
           const isSelected = selected.has(item.horse.horseId);
           return (
             <label
               key={item.horse.horseId}
-              className={`block cursor-pointer border-l-4 bg-white p-3 shadow-sm transition-colors ${
+              className={`block min-w-0 cursor-pointer border border-l-4 bg-white p-4 transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#f39200] ${
                 isSelected
                   ? "border-[#f39200] ring-1 ring-[#f39200]"
                   : "border-slate-200"
@@ -80,10 +80,10 @@ export function HorseIncidentSelectionStep({
                   {isSelected ? "✓" : ""}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-heading text-base font-bold uppercase text-[#181818]">
+                  <span className="block break-words font-heading text-base font-bold uppercase text-[#181818] [overflow-wrap:anywhere]">
                     {item.horse.horseName}
                   </span>
-                  <span className="mt-2 grid gap-1 text-[11px] uppercase tracking-wide text-slate-600">
+                  <span className="mt-2 grid gap-1 break-words text-xs uppercase tracking-wide text-slate-600 [overflow-wrap:anywhere]">
                     <span>
                       <strong className="mr-2 text-[10px] text-[#181818]">
                         Passport ID:
@@ -104,8 +104,8 @@ export function HorseIncidentSelectionStep({
         })}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-300 bg-white/95 p-3 shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur sm:static sm:border sm:shadow-none">
-        <div className="mx-auto flex max-w-3xl items-center gap-3">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-300 bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.08)] backdrop-blur sm:static sm:border sm:p-4 sm:shadow-none">
+        <div className="flex min-w-0 items-center gap-3">
           <span className="min-w-0 flex-1 text-sm font-semibold text-slate-700">
             {selectedHorseIds.length} selected
           </span>

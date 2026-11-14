@@ -53,7 +53,10 @@ export function IncidentCommonForm({
   onPhotoError,
 }: IncidentCommonFormProps) {
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5 border border-slate-200 bg-white p-4 sm:p-5">
+      <h2 className="font-heading text-lg font-bold text-[#181818]">
+        Report information
+      </h2>
       <IncidentReportDetailsForm
         value={value}
         onChange={(next) => onChange({ ...value, ...next })}

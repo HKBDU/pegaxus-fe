@@ -279,7 +279,7 @@ export default function HorseHealthIncidentPage() {
 
   if (step === "selection") {
     return (
-      <main className="mx-auto max-w-3xl p-4 sm:p-6">
+      <main className="mx-auto w-full min-w-0 max-w-7xl p-4 sm:p-6 lg:p-8">
         {!transportId ? (
           <div className="space-y-4">
             <PageHeader
@@ -349,7 +349,7 @@ export default function HorseHealthIncidentPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-5 p-4 pb-28 sm:p-6">
+    <main className="mx-auto w-full min-w-0 max-w-7xl space-y-6 p-4 pb-24 sm:p-6 lg:p-8">
       <IncidentReportHeader
         longitude={incidentCoordinates?.longitude ?? "Unavailable"}
         latitude={incidentCoordinates?.latitude ?? "Unavailable"}

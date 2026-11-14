@@ -74,72 +74,76 @@ export function HorseHealthIncidentForm({
         message={errors.transportId && `Transport: ${errors.transportId}`}
       />
       <IncidentFieldError message={errors.horses} />
-      <IncidentCommonForm
-        value={value}
-        photos={photos}
-        onChange={(next) => onChange({ ...value, ...next })}
-        onPhotosChange={onPhotosChange}
-        disabled={disabled}
-        errors={errors}
-        locationStatus={locationStatus}
-        locationError={locationError}
-        gpsCoordinates={gpsCoordinates}
-        showPhotos={false}
-        showDescription={false}
-      />
-      <section
-        className="space-y-4"
-        aria-label="Selected horses incident details"
-      >
-        <div>
-          <h2 className="font-heading text-lg font-bold text-[#181818]">
-            Horse details
-          </h2>
-          <p className="text-sm text-slate-600">
-            Complete the incident information for each selected horse.
-          </p>
-        </div>
-        {horses.map((horse) => (
-          <HorseHealthFields
-            key={horse.horse.horseId}
-            value={value.horses[horse.horse.horseId]}
-            onChange={(next) =>
-              onChange({
-                ...value,
-                horses: {
-                  ...value.horses,
-                  [horse.horse.horseId]: next,
-                },
-              })
-            }
-            horseName={horse.horse.horseName}
-            passportNumber={horse.horse.passportNumber}
-            microchipNumber={horse.horse.microchipNumber}
-            warnings={warnings}
+      <div className="grid min-w-0 items-start gap-5 xl:grid-cols-2 xl:grid-rows-[auto_1fr]">
+        <IncidentCommonForm
+          value={value}
+          photos={photos}
+          onChange={(next) => onChange({ ...value, ...next })}
+          onPhotosChange={onPhotosChange}
+          disabled={disabled}
+          errors={errors}
+          locationStatus={locationStatus}
+          locationError={locationError}
+          gpsCoordinates={gpsCoordinates}
+          showPhotos={false}
+          showDescription={false}
+        />
+        <section
+          className="min-w-0 space-y-4 xl:col-start-2 xl:row-span-2 xl:row-start-1"
+          aria-label="Selected horses incident details"
+        >
+          <div>
+            <h2 className="font-heading text-lg font-bold text-[#181818]">
+              Horse details
+            </h2>
+            <p className="text-sm text-slate-600">
+              Complete the incident information for each selected horse.
+            </p>
+          </div>
+          {horses.map((horse) => (
+            <HorseHealthFields
+              key={horse.horse.horseId}
+              value={value.horses[horse.horse.horseId]}
+              onChange={(next) =>
+                onChange({
+                  ...value,
+                  horses: {
+                    ...value.horses,
+                    [horse.horse.horseId]: next,
+                  },
+                })
+              }
+              horseName={horse.horse.horseName}
+              passportNumber={horse.horse.passportNumber}
+              microchipNumber={horse.horse.microchipNumber}
+              warnings={warnings}
+              disabled={disabled}
+              errors={Object.fromEntries(
+                Object.entries(errors)
+                  .filter(([key]) =>
+                    key.startsWith(`horses.${horse.horse.horseId}.`),
+                  )
+                  .map(([key, message]) => [
+                    key.slice(`horses.${horse.horse.horseId}.`.length),
+                    message,
+                  ]),
+              )}
+            />
+          ))}
+        </section>
+        <div className="min-w-0 xl:col-start-1 xl:row-start-2">
+          <IncidentPhotoField
+            value={photos}
+            gpsCoordinates={gpsCoordinates}
+            onChange={onPhotosChange}
             disabled={disabled}
-            errors={Object.fromEntries(
-              Object.entries(errors)
-                .filter(([key]) =>
-                  key.startsWith(`horses.${horse.horse.horseId}.`),
-                )
-                .map(([key, message]) => [
-                  key.slice(`horses.${horse.horse.horseId}.`.length),
-                  message,
-                ]),
-            )}
+            maxFiles={5}
+            error={errors.photoFiles}
+            onUploadStateChange={onPhotoUploadStateChange}
+            onError={onPhotoError}
           />
-        ))}
-      </section>
-      <IncidentPhotoField
-        value={photos}
-        gpsCoordinates={gpsCoordinates}
-        onChange={onPhotosChange}
-        disabled={disabled}
-        maxFiles={5}
-        error={errors.photoFiles}
-        onUploadStateChange={onPhotoUploadStateChange}
-        onError={onPhotoError}
-      />
+        </div>
+      </div>
       <IncidentSubmitBar
         isSubmitting={submitting}
         disabled={disabled || !areIncidentPhotosReady(photos)}
