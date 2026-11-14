@@ -6,7 +6,8 @@ const integer = z.number().finite().refine(Number.isSafeInteger);
 const count = integer.refine((value) => value >= 0);
 const rate = z.number().finite().min(0).max(100);
 const signed = z.number().finite();
-export const bucketSchema = z.enum(["ON_TIME", "MINOR_DELAY", "MAJOR_DELAY"]);
+// EARLY: more than 60 minutes before the committed arrival; ON_TIME: within 60 minutes either side.
+export const bucketSchema = z.enum(["EARLY", "ON_TIME", "MINOR_DELAY", "MAJOR_DELAY"]);
 export const causeSchema = z.enum([
   "VEHICLE_INCIDENT",
   "HORSE_HEALTH_INCIDENT",
@@ -89,8 +90,11 @@ export const onTimeReportSchema = z.object({
     avgDelayMinutes: metric(signed),
     slaTargetRate: rate,
     meetsSla: z.boolean(),
+    // Middle signed deviation from the committed arrival, in minutes (negative is early).
+    medianDeviationMinutes: metric(signed).optional(),
   }),
   distribution: z.object({
+    EARLY: count.default(0),
     ON_TIME: count,
     MINOR_DELAY: count,
     MAJOR_DELAY: count,
