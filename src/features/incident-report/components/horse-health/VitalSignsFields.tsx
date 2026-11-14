@@ -37,7 +37,7 @@ export function VitalSignsFields({
       </legend>
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="grid min-w-0 content-start self-start gap-2 text-sm font-semibold">
-          Temperature °C
+          <span className="sm:min-h-10">Temperature °C</span>
           <Input
             type="number"
             step="0.1"
@@ -51,7 +51,7 @@ export function VitalSignsFields({
           <IncidentFieldError message={errors.bodyTemperatureCelsius} />
         </label>
         <label className="grid min-w-0 content-start self-start gap-2 text-sm font-semibold">
-          Heart rate bpm
+          <span className="sm:min-h-10">Heart rate bpm</span>
           <Input
             type="number"
             min="0"
@@ -63,7 +63,7 @@ export function VitalSignsFields({
           <IncidentFieldError message={errors.heartRateBpm} />
         </label>
         <label className="grid min-w-0 content-start self-start gap-2 text-sm font-semibold">
-          Respiratory rate bpm
+          <span className="sm:min-h-10">Respiratory rate bpm</span>
           <Input
             type="number"
             min="0"
