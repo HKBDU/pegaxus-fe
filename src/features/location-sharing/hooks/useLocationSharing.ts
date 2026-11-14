@@ -25,7 +25,8 @@ export function useLocationSharing(
       props.context.kind === "available" &&
       props.context.transport.transportId === props.transportId &&
       props.context.transport.status === "IN_TRANSIT" &&
-      isMine !== false);
+      Boolean(segmentId) &&
+      isMine === true);
   const revision =
     props.context.kind === "available"
       ? props.context.transport.serverTime

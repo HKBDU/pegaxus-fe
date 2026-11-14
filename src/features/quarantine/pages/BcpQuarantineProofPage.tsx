@@ -1,6 +1,6 @@
 import { NOT_CURRENT_SEGMENT_CREW, NOT_CURRENT_SEGMENT_CREW_MESSAGE } from '@/shared/constants/crew-turn'
 import { useState, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -8,10 +8,8 @@ import { toast } from 'sonner'
 import { Navigation } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useDossierContext, useSubmitQuarantineProof } from '../hooks'
-import { ErrorState } from '@/shared/components/common'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
-import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Form } from '@/shared/components/ui/form'
 import { formatUtcTime } from '@/shared/utils/datetime'
 import { PhotoCaptureSection } from '@/shared/components/PhotoCaptureSection'
@@ -58,7 +56,8 @@ export default function BcpQuarantineProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
   const dossierId = dossierIdParam ?? null
 
-  const { data: dossier, isLoading: dossierLoading, isError: dossierFailed, refetch: reloadDossier } = useDossierContext(dossierId)
+  const state = useLocation().state as { bookingCode?: string; route?: string; originCountry?: string; destinationCountry?: string } | null
+  const dossier = useDossierContext(dossierId)
   const { mutateAsync: submitProof, isPending } = useSubmitQuarantineProof(dossierId ?? '')
 
   // ─── Photo state ──────────────────────────────────────────────────────────
@@ -85,12 +84,12 @@ export default function BcpQuarantineProofPage() {
   const isHoldback = form.watch('isHoldback')
 
   const isMandatoryRoute = useMemo(() => {
-    const origin = dossier?.bookingSummary?.originCountry?.trim().toLowerCase()
-    const destination = dossier?.bookingSummary?.destinationCountry?.trim().toLowerCase()
-    if (!origin || !destination) return true
+    const origin = dossier.data?.bookingSummary?.originCountry?.trim().toLowerCase()
+    const destination = dossier.data?.bookingSummary?.destinationCountry?.trim().toLowerCase()
+    if (!origin || !destination) return null
     const ukIe = new Set(["united kingdom", "uk", "gb", "great britain", "ireland", "ie"])
     return ukIe.has(origin) || ukIe.has(destination)
-  }, [dossier?.bookingSummary?.destinationCountry, dossier?.bookingSummary?.originCountry])
+  }, [dossier.data?.bookingSummary?.destinationCountry, dossier.data?.bookingSummary?.originCountry])
 
   // ─── Submit Handler ────────────────────────────────────────────────────────
   const onSubmit = async (values: FormValues) => {
@@ -108,7 +107,7 @@ export default function BcpQuarantineProofPage() {
       setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
       return
     }
-    if (dossierId == null || !dossier || dossierFailed) return
+    if (dossierId == null) return
 
     try {
       await submitProof({
@@ -141,28 +140,8 @@ export default function BcpQuarantineProofPage() {
   }
 
   // ─── Loading Skeleton ─────────────────────────────────────────────────────
-  if (dossierFailed || (!dossierLoading && !dossier)) return <ErrorState message="Unable to load the transport dossier. Retry before submitting proof." onRetry={() => void reloadDossier()} />
-
-  if (dossierLoading) {
-    return (
-      <div className="mx-auto max-w-6xl space-y-5 p-6">
-        <Skeleton className="h-10 w-64 rounded-[2px]" />
-        <Skeleton className="h-20 w-full rounded-[2px]" />
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 space-y-4">
-            <Skeleton className="h-44 w-full rounded-[2px]" />
-            <Skeleton className="h-44 w-full rounded-[2px]" />
-          </div>
-          <div className="lg:col-span-5 space-y-4">
-            <Skeleton className="h-64 w-full rounded-[2px]" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const tripCode = dossier?.bookingCode ?? ''
-  const routeLabel = formatRoute(dossier)
+  const tripCode = dossier.data?.bookingCode ?? state?.bookingCode ?? (dossier.isPending ? 'Loading…' : 'Unavailable')
+  const routeLabel = dossier.data ? formatRoute(dossier.data) : state?.route ?? 'Route unavailable'
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
@@ -171,8 +150,8 @@ export default function BcpQuarantineProofPage() {
         {/* Page Header Component from shared/components/PageHeader */}
         <PageHeader
           title="BCP QUARANTINE PROOF"
-          backHref="/compliance-dossiers"
-          backLabel="Compliance Dossiers"
+          backHref="/crew"
+          backLabel="Ongoing Transport"
         />
 
         {/* Trip Code & Navigation Route Subtitle */}
@@ -190,12 +169,14 @@ export default function BcpQuarantineProofPage() {
             <span
               className={cn(
                 "inline-flex items-center px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider",
-                isMandatoryRoute
+                isMandatoryRoute === null
+                  ? "bg-slate-100 text-slate-700"
+                  : isMandatoryRoute
                   ? "bg-red-100 text-red-800"
                   : "bg-blue-100 text-blue-800",
               )}
             >
-              {isMandatoryRoute ? "Mandatory: EU ↔ UK/Ireland" : "Optional: Intra-EU Route"}
+              {isMandatoryRoute === null ? "Route requirement unavailable" : isMandatoryRoute ? "Mandatory: EU ↔ UK/Ireland" : "Optional: Intra-EU Route"}
             </span>
             <span className="inline-flex items-center rounded-none bg-orange-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-orange-800">
               BCP Quarantine Flow
@@ -203,7 +184,8 @@ export default function BcpQuarantineProofPage() {
           </div>
         </div>
 
-        {!isMandatoryRoute && (
+        {dossier.isError && <p role="alert" className="text-sm text-destructive">Could not load dossier route information. Please retry.</p>}
+        {isMandatoryRoute === false && (
           <div className="border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-950 flex items-start gap-2">
             <Navigation className="mt-0.5 size-4 shrink-0 text-blue-600" />
             <div>

@@ -2,8 +2,8 @@ import { useState, useRef, useEffect, type ChangeEvent } from "react";
 import {
   Play,
   Pause,
-  RotateCcw,
   Radio,
+  RotateCcw,
   Wifi,
   WifiOff,
   Navigation,
@@ -13,9 +13,7 @@ import {
   SlidersHorizontal,
   FileCode,
   Sparkles,
-  GripVertical,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { Switch } from "@/shared/components/ui/switch";
@@ -38,11 +36,12 @@ export interface GpsSimulatorDrawerProps {
     routePlanRouteId?: string;
   } | null;
   sharingActive?: boolean;
+  sharingAcceptance?: "unknown" | "legacy" | "accepted" | "rejected";
+  sharingMessage?: string | null;
   onStartSharing?: () => void;
   onMockGpsEnabled?: () => void;
   onMockGpsDisabled?: () => void;
-  /** Custom trigger element if the caller wants to provide their own */
-  trigger?: React.ReactNode;
+  canStartSharing?: boolean;
 }
 
 const SPEED_PRESETS = [
@@ -55,19 +54,34 @@ const SPEED_PRESETS = [
 export function GpsSimulatorDrawer({
   currentSegment,
   sharingActive,
+  sharingAcceptance,
+  sharingMessage,
   onStartSharing,
   onMockGpsEnabled,
   onMockGpsDisabled,
-  trigger,
+  canStartSharing,
 }: GpsSimulatorDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [simulatorActivated, setSimulatorActivated] = useState(false);
   const [showGeoJsonSection, setShowGeoJsonSection] = useState(false);
   const [customJsonText, setCustomJsonText] = useState("");
   const [jsonError, setJsonError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.code === "KeyG" && !event.altKey && !event.repeat) {
+        event.preventDefault();
+        setSimulatorActivated(true);
+        setIsOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const simulator = useGpsSimulator(
-    currentSegment
+    simulatorActivated && currentSegment
       ? {
           fromLocation: currentSegment.fromLocation,
           toLocation: currentSegment.toLocation,
@@ -130,152 +144,15 @@ export function GpsSimulatorDrawer({
   const fromName = currentSegment?.fromLocation?.locationName ?? "Origin";
   const toName = currentSegment?.toLocation?.locationName ?? "Destination";
 
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef<{ startX: number; startY: number; initX: number; initY: number }>({
-    startX: 0,
-    startY: 0,
-    initX: 0,
-    initY: 0,
-  });
-  const hasMovedRef = useRef(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!position) return;
-    const handleResize = () => {
-      const elWidth = btnRef.current?.offsetWidth ?? 160;
-      const elHeight = btnRef.current?.offsetHeight ?? 40;
-      const maxX = Math.max(0, window.innerWidth - elWidth - 8);
-      const maxY = Math.max(0, window.innerHeight - elHeight - 8);
-      setPosition((prev) => {
-        if (!prev) return null;
-        return {
-          x: Math.min(Math.max(8, prev.x), maxX),
-          y: Math.min(Math.max(8, prev.y), maxY),
-        };
-      });
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [position]);
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (e.button !== 0) return;
-    const rect = btnRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    isDraggingRef.current = true;
-    hasMovedRef.current = false;
-    dragStartRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      initX: position ? position.x : rect.left,
-      initY: position ? position.y : rect.top,
-    };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (!isDraggingRef.current) return;
-    const dx = e.clientX - dragStartRef.current.startX;
-    const dy = e.clientY - dragStartRef.current.startY;
-
-    if (Math.hypot(dx, dy) > 5) {
-      hasMovedRef.current = true;
-    }
-
-    if (hasMovedRef.current) {
-      const elWidth = btnRef.current?.offsetWidth ?? 160;
-      const elHeight = btnRef.current?.offsetHeight ?? 40;
-      const maxX = Math.max(0, window.innerWidth - elWidth - 8);
-      const maxY = Math.max(0, window.innerHeight - elHeight - 8);
-      const newX = Math.min(Math.max(8, dragStartRef.current.initX + dx), maxX);
-      const newY = Math.min(Math.max(8, dragStartRef.current.initY + dy), maxY);
-      setPosition({ x: newX, y: newY });
-    }
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-    try {
-      e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch {
-      // Ignored
-    }
-  };
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (hasMovedRef.current) {
-      e.preventDefault();
-      e.stopPropagation();
-      hasMovedRef.current = false;
-      return;
-    }
-    setIsOpen(true);
+  const startTrip = () => {
+    if (!sharingActive && !canStartSharing) return;
+    simulator.start();
+    if (!sharingActive) onStartSharing?.();
   };
 
   return (
     <>
-      {/* 1. Unobtrusive Trigger Button (Floating or custom) */}
-      {trigger ? (
-        <div onClick={() => setIsOpen(true)}>{trigger}</div>
-      ) : (
-        <Button
-          ref={btnRef}
-          type="button"
-          variant="outline"
-          size="sm"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          onClick={handleClick}
-          style={
-            position
-              ? {
-                  position: "fixed",
-                  left: `${position.x}px`,
-                  top: `${position.y}px`,
-                  bottom: "auto",
-                  right: "auto",
-                  zIndex: 50,
-                }
-              : undefined
-          }
-          className={cn(
-            "z-50 print:hidden select-none touch-none cursor-grab active:cursor-grabbing",
-            "flex items-center gap-1.5 rounded-full border border-indigo-500/40 bg-background/95 px-3 py-1.5 text-xs font-medium shadow-lg backdrop-blur-md transition-shadow hover:border-indigo-500 hover:bg-background",
-            !position && "fixed bottom-18 sm:bottom-4 right-4"
-          )}
-          aria-label="Open GPS Simulator Controls (Drag to move)"
-        >
-          <GripVertical className="size-3 text-slate-400 shrink-0" />
-          <Radio className="size-3.5 animate-pulse text-indigo-500 shrink-0" />
-          <span className="font-semibold">GPS Simulator</span>
-          {simulator.isEnabled ? (
-            <Badge
-              variant="default"
-              className={`h-4.5 px-1.5 text-[9px] font-semibold text-white ${
-                simulator.isSignalLoss
-                  ? "bg-amber-600"
-                  : simulator.status === "running"
-                    ? "bg-emerald-600"
-                    : "bg-indigo-600"
-              }`}
-            >
-              {simulator.isSignalLoss
-                ? `CUT (${simulator.signalLossSec}s)`
-                : simulator.status === "running"
-                  ? `${simulator.speedKmh} km/h`
-                  : "ARMED"}
-            </Badge>
-          ) : null}
-        </Button>
-      )}
-
-      {/* 2. Slide-over Sheet Drawer */}
+      {/* Hidden until the Driver presses Ctrl+Shift+G. */}
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetContent
           side="right"
@@ -336,14 +213,29 @@ export function GpsSimulatorDrawer({
                   size="sm"
                   className="h-7 bg-emerald-600 px-2.5 text-xs text-white hover:bg-emerald-700"
                   onClick={onStartSharing}
+                  disabled={!canStartSharing}
                 >
                   Start Sharing
                 </Button>
               </div>
             ) : null}
+            {sharingActive || sharingAcceptance === "rejected" ? (
+              <p role="status" className="text-xs text-muted-foreground">
+                {sharingAcceptance === "accepted"
+                  ? "GPS accepted by the server."
+                  : sharingAcceptance === "rejected"
+                    ? sharingMessage ?? "GPS rejected by the server."
+                    : "Sharing started; waiting for the first accepted GPS point."}
+              </p>
+            ) : null}
 
             {simulator.isEnabled ? (
               <>
+                {simulator.totalDistance <= 0 && !simulator.isLoadingRoute ? (
+                  <p role="status" className="text-xs text-amber-700">
+                    Road route unavailable. Load a GeoJSON route before starting the trip.
+                  </p>
+                ) : null}
                 {/* Progress Scrubber */}
                 <div className="space-y-1.5 rounded-xs border border-border p-3 bg-card">
                   <div className="flex justify-between text-[11px] font-medium text-muted-foreground">
@@ -390,7 +282,8 @@ export function GpsSimulatorDrawer({
                       type="button"
                       size="sm"
                       className="bg-indigo-600 text-white hover:bg-indigo-700"
-                      onClick={simulator.start}
+                      onClick={startTrip}
+                      disabled={(!sharingActive && !canStartSharing) || simulator.isLoadingRoute || simulator.totalDistance <= 0}
                     >
                       <Play className="mr-1.5 size-3.5" />
                       {simulator.status === "paused"
