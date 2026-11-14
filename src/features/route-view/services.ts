@@ -141,8 +141,10 @@ export function getEmergencyError(error: unknown) {
     PROVIDER_MODE_MISMATCH:
       "The provider does not support this segment's transport mode.",
     INVALID_START_TIME: "The backup route cannot start in the past.",
-    BRANCH_POINT_PASSED:
-      "The horse has already passed the branch point of this backup. Hold or create a RETURN route instead.",
+    INCIDENT_LOCATION_REQUIRED:
+      "The convoy has passed every branch point of this backup. Link the open incident so the running segment can stop there.",
+    RETURN_NOT_ANCHORED:
+      "A return must start at an open incident on the running segment or at the end of that segment, and end at the origin.",
     BRANCH_POINT_NOT_ON_ROUTE:
       "The branch point of this backup is not on the PRIMARY route.",
     RESOURCES_NOT_ASSIGNED:

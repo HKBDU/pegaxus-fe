@@ -2,16 +2,17 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { RoutePlanBuilder, type RoutePlanBuilderMetadata } from "../components/RoutePlanBuilder";
 import { Button } from "@/shared/components/ui/button";
-import { createLocation, getRoutePlan, getRoutePlans, getTransportPlan } from "../services";
+import { getRoutePlan, getRoutePlans, getTransportPlan } from "../services";
 import { adaptTransportPlan, loadAllLocations, loadAllRoutes, toMapLocation, toMapRoute, type TransportPlanApiValue } from "../api-adapters";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 import type { RoutePlan, RouteSegment } from "../types";
-import { ongoingTransportService } from "@/features/ongoing-transport/services";
+import { incidentService } from "@/features/incident-management/services";
+import type { ReturnStartOption } from "../components/RoutePlanEndpointsStep";
 
 export default function CreateReturnRoutePage() {
   const { transportPlanId } = useParams<{ transportPlanId: string }>();
   const [retryKey, setRetryKey] = useState(0);
-  const [data, setData] = useState<{ metadata: RoutePlanBuilderMetadata; locations: MapLocation[]; routes: MapRoute[]; routePlanRoutes: MapRoute[] } | null>(null);
+  const [data, setData] = useState<{ metadata: RoutePlanBuilderMetadata; locations: MapLocation[]; routes: MapRoute[]; routePlanRoutes: MapRoute[]; startOptions: ReturnStartOption[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,33 +61,9 @@ export default function CreateReturnRoutePage() {
           return location ? [location] : [];
         });
         const metadata = adaptTransportPlan(plan, locations);
-        let currentLocation: MapLocation | undefined;
         const transportId = plan.transportId ?? plan.transport?.transportId;
         if (transportId == null) {
-          throw new Error("Transport identity is missing; unable to resolve the current GPS location.");
-        }
-        try {
-          const tracking = await ongoingTransportService.tracking(String(transportId));
-          if (!tracking.truck) throw new Error("GPS position is unavailable for this transport.");
-          const createdLocation = await createLocation({
-            locationName: `RETURN GPS origin ${new Date().toISOString()}`,
-            locationType: "OTHER",
-            locationNote: `Created from live GPS coordinates for RETURN route of transport ${transportId}.`,
-            latitude: tracking.truck.latitude,
-            longitude: tracking.truck.longitude,
-          });
-          if (createdLocation?.locationId == null) {
-            throw new Error("The GPS location was created without a locationId.");
-          }
-          currentLocation = toMapLocation(createdLocation) ?? undefined;
-          if (!currentLocation) throw new Error("The GPS location could not be created.");
-          locations = [currentLocation, ...locations];
-        } catch (trackingErr) {
-          throw new Error(
-            trackingErr instanceof Error
-              ? trackingErr.message
-              : "Unable to create the current GPS location for the return route.",
-          );
+          throw new Error("Transport identity is missing; unable to find where the return can start.");
         }
 
         const fullRoutePlans: RoutePlan[] = await Promise.all(
@@ -103,6 +80,31 @@ export default function CreateReturnRoutePage() {
             }
           }),
         );
+
+        // BE accepts a return from an open incident on the running segment, or from the end of that segment.
+        const running = fullRoutePlans
+          .filter((routePlan) => routePlan.status === "ACTIVE" && routePlan.routeType !== "RETURN")
+          .flatMap((routePlan) => routePlan.segments ?? [])
+          .find((segment) => segment.actualDepartureAt && !segment.actualArrivalAt);
+        const incidents = await incidentService.list({
+          status: "REPORTED,PENDING", category: "", severity: "", transportId: String(transportId),
+          occurredFrom: "", occurredTo: "", search: "", pageIndex: 1, pageSize: 50, sortBy: "occurredAt:desc",
+        });
+        const startOptions: ReturnStartOption[] = [
+          ...incidents.items.flatMap((incident) => {
+            const location = toMapLocation(incident.location);
+            return location ? [{ kind: "INCIDENT_LOCATION" as const, label: `At incident ${incident.incidentCode}: ${location.name}`, location }] : [];
+          }),
+          ...(running && toMapLocation(running.toLocation)
+            ? [{ kind: "NEXT_STOP" as const, label: `End of the running segment: ${running.toLocation.locationName}`, location: toMapLocation(running.toLocation)! }]
+            : []),
+        ];
+        if (startOptions.length === 0) {
+          throw new Error("A return starts at an open incident on the running segment or at the end of that segment, and neither was found.");
+        }
+        for (const option of startOptions)
+          if (!locations.some((location) => location.id === option.location.id)) locations = [option.location, ...locations];
+        const currentLocation = startOptions[0].location;
 
         const routePlanRoutes = fullRoutePlans.flatMap((routePlan: RoutePlan) =>
           (routePlan.segments ?? []).flatMap((segment: RouteSegment) => {
@@ -131,6 +133,7 @@ export default function CreateReturnRoutePage() {
             return route ? [route] : [];
           }),
           routePlanRoutes,
+          startOptions,
           metadata: {
             ...metadata,
             ...(currentLocation
@@ -165,6 +168,7 @@ export default function CreateReturnRoutePage() {
       locations={data.locations}
       routes={data.routes}
       routePlanRoutes={data.routePlanRoutes}
+      returnStartOptions={data.startOptions}
     />
   );
 }
