@@ -748,7 +748,9 @@ export function DocumentSubmissionDialog({
                                 {name === "issuedDate"
                                   ? "Issued Date"
                                   : "Expiry Date"}
-                                {name === "expiryDate" && expiryRequired
+                                {(name === "issuedDate"
+                                  ? mode === "initial"
+                                  : expiryRequired)
                                   ? " *"
                                   : ""}
                               </FormLabel>
