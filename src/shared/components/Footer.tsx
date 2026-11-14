@@ -52,7 +52,7 @@ const columns: FooterColumnProps[] = [
       { label: "Contact Us", href: "/contact" },
       { label: "About PEGAXUS", href: "/about" },
       { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Service", href: "/terms" },
+      { label: "View policies and terms", href: "/terms" },
     ],
   },
 ]

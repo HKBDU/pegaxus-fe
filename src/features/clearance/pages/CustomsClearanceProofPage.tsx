@@ -1,18 +1,16 @@
 import { NOT_CURRENT_SEGMENT_CREW, NOT_CURRENT_SEGMENT_CREW_MESSAGE } from '@/shared/constants/crew-turn'
-import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useLocation, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { Navigation } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useClearanceDossierContext, useSubmitCustomsClearanceProof } from '../hooks'
+import { useSubmitCustomsClearanceProof } from '../hooks'
 import { CustomsEntrySection } from '../components/CustomsEntrySection'
-import { ErrorState } from '@/shared/components/common'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
-import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Form } from '@/shared/components/ui/form'
 import { QuickNotesSection } from '@/features/quarantine/components'
 import { PhotoCaptureSection } from '@/shared/components/PhotoCaptureSection'
@@ -37,18 +35,10 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-function routeLabel(dossier?: ReturnType<typeof useClearanceDossierContext>['data']) {
-  const summary = dossier?.bookingSummary
-  if (!summary) return '—'
-  const origin = summary.originPort || (summary.originCountry ? `${summary.originCountry.toUpperCase()} PORT` : 'ORIGIN PORT')
-  const destination = summary.destinationPort || (summary.destinationCountry ? `${summary.destinationCountry.toUpperCase()} TERMINAL` : 'DESTINATION TERMINAL')
-  return `${origin} → ${destination}`
-}
-
 export default function CustomsClearanceProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
   const dossierId = dossierIdParam ?? null
-  const { data: dossier, isLoading, isError: dossierFailed, refetch: reloadDossier } = useClearanceDossierContext(dossierId)
+  const state = useLocation().state as { bookingCode?: string; route?: string; originCountry?: string; destinationCountry?: string } | null
   const { mutateAsync: submitProof, isPending } = useSubmitCustomsClearanceProof(dossierId ?? '')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null)
@@ -68,20 +58,16 @@ export default function CustomsClearanceProofPage() {
     },
   })
 
-  useEffect(() => {
-    if (dossier?.bookingSummary?.destinationPort && !form.getFieldState('customsPortName').isDirty) form.setValue('customsPortName', dossier.bookingSummary.destinationPort)
-  }, [dossier, form])
-
   const isHeld = form.watch('isHeld')
   const selectedLane = form.watch('customsLane')
 
   const isMandatoryRoute = useMemo(() => {
-    const origin = dossier?.bookingSummary?.originCountry?.trim().toLowerCase()
-    const destination = dossier?.bookingSummary?.destinationCountry?.trim().toLowerCase()
+    const origin = state?.originCountry?.trim().toLowerCase()
+    const destination = state?.destinationCountry?.trim().toLowerCase()
     if (!origin || !destination) return true
     const ukIe = new Set(["united kingdom", "uk", "gb", "great britain", "ireland", "ie"])
     return ukIe.has(origin) || ukIe.has(destination)
-  }, [dossier?.bookingSummary?.destinationCountry, dossier?.bookingSummary?.originCountry])
+  }, [state?.destinationCountry, state?.originCountry])
 
   const onSubmit = async (values: FormValues) => {
     if (photoFile && (photoFile.size === 0 || photoFile.size > UPLOAD_MAX_BYTES || !['image/jpeg', 'image/jpg', 'image/png'].includes(photoFile.type)))
@@ -94,7 +80,7 @@ export default function CustomsClearanceProofPage() {
     if (uploadedPublicIds.length === 0) {
       return setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
     }
-    if (dossierId == null || !dossier || dossierFailed) return
+    if (dossierId == null) return
     try {
       await submitProof({
         ...values,
@@ -122,32 +108,13 @@ export default function CustomsClearanceProofPage() {
     }
   }
 
-  if (dossierFailed || (!isLoading && !dossier)) return <ErrorState message="Unable to load the transport dossier. Retry before submitting proof." onRetry={() => void reloadDossier()} />
-
-  if (isLoading) {
-    return (
-      <div className="mx-auto max-w-6xl space-y-5 p-6">
-        <Skeleton className="h-10 w-64 rounded-[2px]" />
-        <Skeleton className="h-20 w-full rounded-[2px]" />
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 space-y-4">
-            <Skeleton className="h-72 w-full rounded-[2px]" />
-            <Skeleton className="h-44 w-full rounded-[2px]" />
-          </div>
-          <div className="lg:col-span-5 space-y-4">
-            <Skeleton className="h-64 w-full rounded-[2px]" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const tripCode = dossier?.bookingCode ?? ''
+  const tripCode = state?.bookingCode ?? dossierId ?? ''
+  const routeLabel = state?.route ?? 'Route unavailable'
 
   return (
     <div className="min-h-screen bg-[#faf9f7] p-4 pb-32 sm:p-6 lg:pb-16">
       <div className="mx-auto max-w-2xl lg:max-w-6xl xl:max-w-7xl space-y-4">
-        <PageHeader title="CUSTOMS CLEARANCE PROOF" backHref="/compliance-dossiers" backLabel="Compliance Dossiers" />
+        <PageHeader title="CUSTOMS CLEARANCE PROOF" backHref="/crew" backLabel="Ongoing Transport" />
 
         {/* Trip Code & Route Card */}
         <div className="border border-[#e5e2d9] bg-white p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -157,7 +124,7 @@ export default function CustomsClearanceProofPage() {
             </p>
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#181818]">
               <Navigation className="size-3.5 rotate-45 fill-[#f39200] text-[#f39200]" aria-hidden />
-              <span className="truncate">{routeLabel(dossier)}</span>
+              <span className="truncate">{routeLabel}</span>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

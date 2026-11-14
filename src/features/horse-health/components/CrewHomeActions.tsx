@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { useDriverLocationSession } from "@/features/location-sharing/hooks/useDriverLocationSession";
 import { driverLocationSharingPath } from "@/features/location-sharing/navigation";
 import { incidentPaths } from "@/shared/constants/incident";
+import { useTransportOverview } from "@/features/ongoing-transport/hooks/useTransportOverview";
 
 import { CREW_ACTION_LABELS, HORSE_HEALTH_ROUTES } from "../constants";
 import type { AssignedTransport } from "../types";
@@ -50,7 +51,7 @@ function ActionButton({
         <span className="block leading-tight">{label}</span>
         {disabled && (
           <span className="mt-1 block text-xs font-normal opacity-70">
-            {disabledReason ?? "Coming soon"}
+            {disabledReason ?? "Unavailable"}
           </span>
         )}
       </span>
@@ -75,6 +76,18 @@ export function CrewHomeActions({
   transport: AssignedTransport;
 }) {
   const { gate } = useDriverLocationSession();
+  const dossierQuery = useTransportOverview(
+    transport.transportId,
+    undefined,
+    "crew",
+    "data",
+    false,
+  );
+  const dossierId =
+    transport.complianceDossierId ??
+    dossierQuery.data?.complianceDossiers.find((dossier) => dossier.dossierType === "MAIN")
+      ?.complianceDossierId ??
+    dossierQuery.data?.complianceDossiers[0]?.complianceDossierId;
   const locked = transport.myRole === "DRIVER" && gate.locked;
   const lockReason = gate.ownershipKnown
     ? "Enable location sharing first"
@@ -87,22 +100,26 @@ export function CrewHomeActions({
             icon={FileText}
             label={CREW_ACTION_LABELS.clearance}
             to={
-              transport.complianceDossierId
-                ? HORSE_HEALTH_ROUTES.clearance(transport.complianceDossierId)
+              dossierId
+                ? HORSE_HEALTH_ROUTES.clearance(dossierId)
                 : undefined
             }
-            disabled={!transport.complianceDossierId}
+            state={{ bookingCode: transport.bookingCode, route: transport.currentSegment ? `${transport.currentSegment.fromLocationName} → ${transport.currentSegment.toLocationName}` : undefined }}
+            disabled={!dossierId}
+            disabledReason="Dossier unavailable"
           />
         ) : (
           <ActionButton
             icon={FileText}
             label={CREW_ACTION_LABELS.quarantine}
             to={
-              transport.complianceDossierId
-                ? HORSE_HEALTH_ROUTES.quarantine(transport.complianceDossierId)
+              dossierId
+                ? HORSE_HEALTH_ROUTES.quarantine(dossierId)
                 : undefined
             }
-            disabled={!transport.complianceDossierId}
+            state={{ bookingCode: transport.bookingCode, route: transport.currentSegment ? `${transport.currentSegment.fromLocationName} → ${transport.currentSegment.toLocationName}` : undefined }}
+            disabled={!dossierId}
+            disabledReason="Dossier unavailable"
           />
         )}
         <ActionButton
