@@ -346,6 +346,7 @@ export function EmergencyCostForm({
                 accept="image/jpeg,image/png"
                 maxSize={UPLOAD_MAX_BYTES}
                 maxFiles={5}
+                keepUploaded
                 disabled={busy || !allowed || uncertainResult}
                 onStateChange={setSnapshot}
                 title="Add receipt or quotation images"

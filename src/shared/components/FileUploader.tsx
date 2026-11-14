@@ -4,6 +4,7 @@ import { AlertCircle, CheckCircle2, FileIcon, RotateCw, UploadCloud, X } from 'l
 import { cn } from '@/lib/utils'
 import { UPLOAD_MAX_BYTES } from '@/shared/constants/upload'
 import { Button } from '@/shared/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/shared/components/ui/dialog'
 import { Progress } from '@/shared/components/ui/progress'
 import { UPLOAD_STAGE_LABELS } from './file-uploader/constants'
 import { useFileUploader } from './file-uploader/useFileUploader'
@@ -11,6 +12,35 @@ import { formatFileSize } from './file-uploader/utils'
 import type { FileUploaderProps } from './file-uploader/types'
 
 export type { FileUploaderHandle, FileUploaderSnapshot, FileUploaderProps, UploadItem, UploadStatus } from './file-uploader/types'
+
+/**
+ * Small preview of a selected image. The object URL is created and released in the same effect: a URL kept in useMemo
+ * was revoked by StrictMode's extra cleanup and the image showed only its alt text.
+ */
+function ImageThumb({ file }: { file: File }) {
+  const [url, setUrl] = useState<string | null>(null)
+  useEffect(() => {
+    const next = URL.createObjectURL(file)
+    setUrl(next)
+    return () => URL.revokeObjectURL(next)
+  }, [file])
+  if (!url) return <span className="size-24 shrink-0 rounded-sm border bg-muted" aria-hidden />
+  // Clicking the thumbnail opens the full image in a popup on the same page.
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <button type="button" aria-label={`View ${file.name}`} className="shrink-0 cursor-zoom-in rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          <img src={url} alt={file.name} className="size-24 rounded-sm border object-cover transition-opacity hover:opacity-90" />
+        </button>
+      </DialogTrigger>
+      <DialogContent className="gap-3 p-3 sm:max-w-4xl sm:p-4">
+        <DialogTitle className="m-0! truncate pr-8 text-sm! font-medium!">{file.name}</DialogTitle>
+        <DialogDescription className="sr-only">Full-size preview of the selected image.</DialogDescription>
+        <img src={url} alt={file.name} className="max-h-[75dvh] w-full rounded-sm bg-muted/40 object-contain" />
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 export default function FileUploader({
   ref,
@@ -30,6 +60,7 @@ export default function FileUploader({
   hint,
   errorMessages,
   className,
+  keepUploaded = false,
 }: FileUploaderProps) {
   const { items, rejections, addFiles, remove, retry, getSnapshot, lockCompletedSelection } = useFileUploader({
     entity, accept, maxSize, maxFiles, multiple, disabled, concurrency,
@@ -45,6 +76,7 @@ export default function FileUploader({
   const dragDepth = useRef(0)
 
   useEffect(() => {
+    if (keepUploaded) return
     items.filter((item) => item.status === 'success').forEach((item) => {
       if (hiddenProgressIds.has(item.id) || collapsingIds.has(item.id) || hideTimers.current.has(item.id)) return
       hideTimers.current.set(item.id, setTimeout(() => {
@@ -62,7 +94,7 @@ export default function FileUploader({
         collapseTimers.current.set(item.id, collapseTimer)
       }, 5000))
     })
-  }, [collapsingIds, hiddenProgressIds, items])
+  }, [collapsingIds, hiddenProgressIds, items, keepUploaded])
 
   useEffect(() => () => {
     hideTimers.current.forEach((timer) => clearTimeout(timer))
@@ -146,6 +178,7 @@ export default function FileUploader({
             return (
                   <li key={item.id} className={cn('min-w-0 max-w-full overflow-hidden rounded-md border bg-card px-3 py-2 transition-[max-height,opacity,transform,padding] duration-300 ease-out', collapsingIds.has(item.id) ? 'max-h-0 -translate-y-1 border-transparent px-0 py-0 opacity-0' : 'max-h-40')}>
                 <div className="flex items-center gap-3">
+                  {keepUploaded && item.file.type.startsWith('image/') && <ImageThumb file={item.file} />}
                   {item.status === 'success' ? <CheckCircle2 className="size-4 shrink-0 text-green-600" aria-hidden /> : item.status === 'error' ? <AlertCircle className="size-4 shrink-0 text-destructive" aria-hidden /> : <FileIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
                   <div className="w-0 min-w-0 max-w-full flex-1 overflow-hidden">
                     {!(item.status === 'success' && hiddenProgressIds.has(item.id)) && <p className="max-w-full truncate text-sm" title={item.file.name}>{item.file.name}</p>}
