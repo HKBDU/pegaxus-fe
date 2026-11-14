@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, ClipboardCheck, Play, Truck } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, Play, Truck, Users } from "lucide-react";
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
@@ -21,8 +21,10 @@ import {
   useEmergencyMutation,
   type EmergencyContext,
 } from "../../hooks/useEmergencyRoute";
-import { getEmergencyError } from "../../services";
-import type { RoutePlanDetail } from "../../types";
+import { getEmergencyError, routeViewService } from "../../services";
+import type { CrewOverride, RoutePlanDetail } from "../../types";
+import { crewSelectionErrors } from "../../crew-selection";
+import { CrewSelection } from "./CrewSelection";
 import {
   EmergencyChangeSummary,
   EmergencySegments,
@@ -56,6 +58,34 @@ export function ReturnActivationPanel({
     context.primaryRoute?.routePlanId ?? "",
     Boolean(context.primaryRoute),
   );
+  // The LM confirms the crew and the real start time while activating; the BE suggests the crew at the current stop.
+  const crewPlan = useQuery({
+    queryKey: ["route-view", "return-crew-plan", plan.routePlanId, plan.updatedAt],
+    queryFn: ({ signal }) => routeViewService.getReturnCrewPlan(plan.routePlanId, signal),
+    retry: false,
+  });
+  const [crew, setCrew] = useState<Record<string, CrewOverride>>({});
+  const [startAt, setStartAt] = useState<string>();
+  const firstDeparture = crewPlan.data?.segments[0]?.segment.plannedDepartureAt;
+  const chosenStart = startAt ?? crewPlan.data?.suggestedStartAt;
+  const shiftMs =
+    chosenStart && firstDeparture
+      ? new Date(chosenStart).getTime() - new Date(firstDeparture).getTime()
+      : 0;
+  // Untouched, the suggested start is the planned departure or "now" when that passed; never send a time already gone.
+  function startToSend() {
+    if (!chosenStart) return undefined;
+    return startAt || new Date(chosenStart).getTime() > Date.now()
+      ? chosenStart
+      : new Date().toISOString();
+  }
+  const crewError = crewPlan.error ? getEmergencyError(crewPlan.error) : undefined;
+  const crewErrorMessage =
+    crewError?.code === "SEGMENT_LOCKED"
+      ? "The horse is between two stops. Activate the return once it reaches the next stop, then reload this page."
+      : crewError?.code === "RETURN_NOT_ANCHORED"
+        ? "The return no longer leaves from where the horse is, so it cannot be activated as planned."
+        : crewError?.message;
   const resources = useQuery({
     queryKey: [
       "route-view",
@@ -63,12 +93,34 @@ export function ReturnActivationPanel({
       plan.routePlanId,
       plan.updatedAt,
       primary.data?.updatedAt,
+      shiftMs,
     ],
-    queryFn: () => loadActivationResources(plan, primary.data),
+    queryFn: () => loadActivationResources(plan, primary.data, shiftMs),
     enabled: !context.primaryRoute || !primary.isPending,
     retry: false,
   });
   const staged = Object.values(overrides);
+  const outsourcedIds = new Set(
+    staged.filter((item) => item.outsourcing).map((item) => item.routePlanRouteId),
+  );
+  const crewErrors = crewPlan.data
+    ? crewSelectionErrors(crewPlan.data, crew, { checkVehicles: false, outsourcedIds })
+    : {};
+  // One entry per segment: vehicles or provider from the resource panel, driver and escort from the crew panel.
+  const merged = new Map(staged.map((item) => [item.routePlanRouteId, { ...item }]));
+  for (const pick of Object.values(crew)) {
+    if (outsourcedIds.has(pick.routePlanRouteId)) continue;
+    const people = {
+      ...(pick.driverEmployeeId ? { driverEmployeeId: pick.driverEmployeeId } : {}),
+      ...(pick.escortEmployeeId ? { escortEmployeeId: pick.escortEmployeeId } : {}),
+    };
+    if (!Object.keys(people).length) continue;
+    merged.set(pick.routePlanRouteId, {
+      ...(merged.get(pick.routePlanRouteId) ?? { routePlanRouteId: pick.routePlanRouteId }),
+      ...people,
+    });
+  }
+  const segmentsToSend = [...merged.values()];
   const selectionErrors = validateActivationSelections(
     plan,
     staged,
@@ -78,7 +130,8 @@ export function ReturnActivationPanel({
   const request = returnActivationSchema.safeParse({
     lastUpdatedAt: baseline,
     note: note.trim() || undefined,
-    ...(staged.length ? { segments: staged } : {}),
+    ...(segmentsToSend.length ? { segments: segmentsToSend } : {}),
+    ...(chosenStart ? { startAt: chosenStart } : {}),
   });
   const mutation = useEmergencyMutation("activation", plan, context);
   const serverErrors = mutation.error
@@ -104,11 +157,15 @@ export function ReturnActivationPanel({
     dossierBlocked ||
     Boolean(mutation.data) ||
     !request.success ||
+    !crewPlan.data ||
+    Boolean(Object.keys(crewErrors).length) ||
     Boolean(Object.keys(selectionErrors).length) ||
     (staged.length > 0 && (resources.isFetching || resources.isError));
   const reviewLatest = () => {
     setBaseline(plan.updatedAt);
     setOverrides({});
+    setCrew({});
+    setStartAt(undefined);
     mutation.reset();
     attempt.reset();
   };
@@ -116,7 +173,7 @@ export function ReturnActivationPanel({
     if (blocked || !request.success) return;
     try {
       const result = await attempt.run(() =>
-        mutation.mutateAsync(request.data),
+        mutation.mutateAsync({ ...request.data, startAt: startToSend() }),
       );
       if (!result.started) return;
       setConfirm(false);
@@ -203,8 +260,8 @@ export function ReturnActivationPanel({
         <EmergencySegments segments={plan.segments} awaitingActivation />
         <p className="text-xs text-slate-500">
           Keep existing resources or stage overrides below. Changes are
-          submitted together only when you confirm activation. The system
-          applies Driver/Escort inheritance and checks resource eligibility.
+          submitted together only when you confirm activation. Pick the crew
+          and start time below; the system re-checks every resource then.
         </p>
         {resources.isPending ||
         resources.isFetching ||
@@ -286,6 +343,46 @@ export function ReturnActivationPanel({
             ].join(" ")}
           </p>
         ) : null}
+      </Section>
+      <Section title="Crew & Start Time" icon={Users}>
+        <p className="text-sm leading-6 text-slate-600">
+          The crew already at the current stop is suggested. Fill any gap,
+          change people, and set when the return really starts.
+        </p>
+        {crewPlan.isPending && (
+          <p role="status" className="text-xs text-slate-500">
+            Loading the suggested crew...
+          </p>
+        )}
+        {crewErrorMessage && (
+          <div role="alert" className="space-y-2 text-xs text-destructive">
+            <p>{crewErrorMessage}</p>
+            <Button size="sm" variant="outline" onClick={() => void crewPlan.refetch()}>
+              Reload
+            </Button>
+          </div>
+        )}
+        {crewPlan.data && chosenStart && (
+          <CrewSelection
+            plan={crewPlan.data}
+            transportPlanId={plan.transportPlanId}
+            routeLabel="return"
+            showVehicles={false}
+            outsourcedIds={outsourcedIds}
+            startAt={chosenStart}
+            overrides={crew}
+            errors={crewErrors}
+            disabled={busy || versionChanged || Boolean(mutation.data)}
+            onStartAtChange={(value) => {
+              setStartAt(value);
+              attempt.reset();
+            }}
+            onChange={(id, value) => {
+              setCrew((current) => ({ ...current, [id]: value }));
+              attempt.reset();
+            }}
+          />
+        )}
       </Section>
       <Section title="Activation Details">
         <p className="text-sm leading-6 text-slate-600">
@@ -384,9 +481,10 @@ export function ReturnActivationPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>Activate Emergency Return?</AlertDialogTitle>
             <AlertDialogDescription>
-              This applies the confirmed RETURN with {staged.length} segment
-              resource override(s) and notifies Customer. Unchanged segments
-              keep their resources. Final assignments are applied automatically.
+              This applies the confirmed RETURN with the crew, start time and{" "}
+              {staged.length} segment resource override(s). The customer, the
+              new crew and the released crew are notified. Unchanged segments
+              keep their resources.
               Remaining untraveled PRIMARY legs are no longer part of the
               effective journey.
             </AlertDialogDescription>

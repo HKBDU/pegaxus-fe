@@ -7,7 +7,7 @@ import { useAuthStore } from "@/features/auth/store"
 import { PLAN_LOCKED_STATUSES } from "@/features/personnel/constants"
 import { useAssignments, usePrimaryRoutePlan, useRoutePlanSummary, useTransportPlanSummary } from "@/features/personnel/hooks"
 import type { EmployeeBrief, Phase1Person } from "@/features/personnel/types"
-import { buildSegmentRows, formatDate, formatDateTime, getPersonnelErrorCode, segmentAssignmentState, type SegmentRow } from "@/features/personnel/utils"
+import { buildSegmentRows, formatDate, formatDateTime, getPersonnelErrorCode, isEditableSegment, segmentAssignmentState, type SegmentRow } from "@/features/personnel/utils"
 import { InfoNote } from "@/features/personnel/components/PersonnelDialog"
 import { Phase1AssignDialog } from "@/features/personnel/components/Phase1AssignDialog"
 import { Phase2AssignDialog } from "@/features/personnel/components/Phase2AssignDialog"
@@ -109,6 +109,7 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
   const [replaceRowId, setReplaceRowId] = useState<string | null>(null)
 
   const rows = useMemo(() => buildSegmentRows(phase2?.segments ?? [], routePlanQuery.data?.segments), [phase2?.segments, routePlanQuery.data?.segments])
+  const editableRows = useMemo(() => rows.filter(isEditableSegment), [rows])
   const replaceRow: SegmentRow | null = rows.find((row) => row.routePlanRouteId === replaceRowId) ?? null
 
   if ((planQuery.isLoading || assignmentsQuery.isLoading) && !assignments) return <PersonnelSkeleton />
@@ -142,7 +143,8 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
   const routeCancelled = routeStatus === "CANCELLED"
   const closed = planCancelled || routeCancelled
   const phase2Locked = planLocked || routeCancelled
-  const pendingInternal = rows.filter((row) => !row.isOutsourced && !row.driver && !row.escort).length
+  const takenOver = rows.find((row) => row.isSuperseded) ? rows.find((row) => !isEditableSegment(row) && !row.isSuperseded)?.routeType : undefined
+  const pendingInternal = editableRows.filter((row) => !row.isOutsourced && !row.driver && !row.escort).length
   const phase1Ready = phase1.isAssigned
 
   let phase1Hint: string | null = null
@@ -280,15 +282,24 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
                   <TableBody>
                     {rows.map((row, index) => {
                       const locked = row.status === "IN_PROGRESS" || row.status === "COMPLETED"
-                      const canChange = isManager && !row.isOutsourced && Boolean(row.driver || row.escort) && !phase2Locked
+                      const canChange = isManager && isEditableSegment(row) && !row.isOutsourced && Boolean(row.driver || row.escort) && !phase2Locked
+                      const replacedBy = row.isSuperseded ? (takenOver ?? "BACKUP") : null
                       return (
-                        <TableRow key={row.routePlanRouteId} className={cn("border-slate-200 align-top hover:bg-amber-50/60 [&>td]:px-3 [&>td]:py-2.5", index % 2 === 0 ? "bg-white" : "bg-[#f7f6f3]")}>
+                        <TableRow
+                          key={row.routePlanRouteId}
+                          aria-disabled={row.isSuperseded || undefined}
+                          title={replacedBy ? `Replaced by the ${replacedBy.toLowerCase()} route: nobody runs this segment.` : undefined}
+                          className={cn("border-slate-200 align-top hover:bg-amber-50/60 [&>td]:px-3 [&>td]:py-2.5", index % 2 === 0 ? "bg-white" : "bg-[#f7f6f3]", row.isSuperseded && "opacity-50 [&>td]:line-through [&>td:last-child]:no-underline")}
+                        >
                           <TableCell className="font-medium text-slate-500">{row.sequenceNo}</TableCell>
                           <TableCell className="whitespace-normal font-medium text-slate-800">{row.fromName}</TableCell>
                           <TableCell className="whitespace-normal font-medium text-slate-800">{row.toName}</TableCell>
                           <TableCell className="whitespace-nowrap text-slate-600">{formatDateTime(row.plannedDepartureAt)}</TableCell>
                           <TableCell>
                             <SegmentTypeChip outsourced={row.isOutsourced} />
+                            {row.routeType && row.routeType !== "PRIMARY" ? (
+                              <span className="mt-1 block text-[11px] font-semibold uppercase text-amber-700">{row.routeType}</span>
+                            ) : null}
                           </TableCell>
                           {row.isOutsourced ? (
                             <TableCell colSpan={2} className="whitespace-normal text-slate-500">
@@ -305,7 +316,11 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
                             </>
                           )}
                           <TableCell>
-                            <AssignmentStateChip state={segmentAssignmentState(row)} />
+                            {replacedBy ? (
+                              <span className="text-xs font-semibold text-slate-500 no-underline">Replaced by {replacedBy.toLowerCase()}</span>
+                            ) : (
+                              <AssignmentStateChip state={segmentAssignmentState(row)} />
+                            )}
                           </TableCell>
                           <TableCell className="text-right">
                             {canChange ? (
@@ -347,7 +362,7 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
             plan={plan}
             routePlan={routePlanQuery.data}
             dossier={assignments.complianceDossier ?? null}
-            rows={rows}
+            rows={editableRows}
           />
           <ReplaceSegmentDialog row={replaceRow} onOpenChange={(open) => !open && setReplaceRowId(null)} plan={plan} routePlan={routePlanQuery.data} />
         </>

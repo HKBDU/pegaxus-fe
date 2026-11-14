@@ -17,9 +17,14 @@ import type {
   routeChangeDecisionResultSchema,
   returnActivationResultSchema,
   driverNoticeResultSchema,
+  crewPlanSchema,
+  crewOverrideSchema,
 } from "./schemas";
 
 export type RoutePlanDetail = z.infer<typeof routePlanDetailSchema>;
+export type CrewPlan = z.infer<typeof crewPlanSchema>;
+export type CrewSegment = CrewPlan["segments"][number];
+export type CrewOverride = z.infer<typeof crewOverrideSchema>;
 export type RoutePlanSummary = z.infer<typeof routePlanSummarySchema>;
 export type RouteWorkspaceContext = {
   principal: AuthPrincipal | null;
