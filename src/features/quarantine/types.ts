@@ -105,7 +105,7 @@ export interface FinalizeQuarantineProofResponse {
 // ─── Booking Summary (for dossier trip context) ────────────────────────────────
 
 export interface BookingTripSummary {
-  bookingId: number
+  bookingId: string
   bookingCode: string
   tripCode?: string
   originPort?: string
@@ -123,7 +123,7 @@ export interface ComplianceDossierContext {
   complianceDossierId: string
   dossierCode: string
   status: string
-  bookingId: number
+  bookingId: string
   bookingCode: string
   bookingSummary: BookingTripSummary
 }

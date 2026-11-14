@@ -47,6 +47,7 @@ export default function CustomsClearanceProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
   const dossierId = dossierIdParam ?? null
   const state = useLocation().state as { bookingCode?: string; route?: string; originCountry?: string; destinationCountry?: string } | null
+  const dossier = useClearanceDossierContext(dossierId)
   const { mutateAsync: submitProof, isPending } = useSubmitCustomsClearanceProof(dossierId ?? '')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [photoTakenAt, setPhotoTakenAt] = useState<Date | null>(null)
@@ -70,12 +71,12 @@ export default function CustomsClearanceProofPage() {
   const selectedLane = form.watch('customsLane')
 
   const isMandatoryRoute = useMemo(() => {
-    const origin = state?.originCountry?.trim().toLowerCase()
-    const destination = state?.destinationCountry?.trim().toLowerCase()
-    if (!origin || !destination) return true
+    const origin = dossier.data?.bookingSummary?.originCountry?.trim().toLowerCase()
+    const destination = dossier.data?.bookingSummary?.destinationCountry?.trim().toLowerCase()
+    if (!origin || !destination) return null
     const ukIe = new Set(["united kingdom", "uk", "gb", "great britain", "ireland", "ie"])
     return ukIe.has(origin) || ukIe.has(destination)
-  }, [state?.destinationCountry, state?.originCountry])
+  }, [dossier.data?.bookingSummary?.destinationCountry, dossier.data?.bookingSummary?.originCountry])
 
   const onSubmit = async (values: FormValues) => {
     if (photoFile && (photoFile.size === 0 || photoFile.size > UPLOAD_MAX_BYTES || !['image/jpeg', 'image/jpg', 'image/png'].includes(photoFile.type)))
@@ -116,8 +117,8 @@ export default function CustomsClearanceProofPage() {
     }
   }
 
-  const tripCode = state?.bookingCode ?? dossierId ?? ''
-  const routeLabel = state?.route ?? 'Route unavailable'
+  const tripCode = dossier.data?.bookingCode ?? state?.bookingCode ?? (dossier.isPending ? 'Loading…' : 'Unavailable')
+  const displayedRoute = dossier.data ? routeLabel(dossier.data) : state?.route ?? 'Route unavailable'
 
   return (
     <div className="min-h-screen bg-[#faf9f7] p-4 pb-32 sm:p-6 lg:pb-16">
@@ -132,19 +133,21 @@ export default function CustomsClearanceProofPage() {
             </p>
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#181818]">
               <Navigation className="size-3.5 rotate-45 fill-[#f39200] text-[#f39200]" aria-hidden />
-              <span className="truncate">{routeLabel}</span>
+              <span className="truncate">{displayedRoute}</span>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span
               className={cn(
                 "inline-flex items-center px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider",
-                isMandatoryRoute
+                isMandatoryRoute === null
+                  ? "bg-slate-100 text-slate-700"
+                  : isMandatoryRoute
                   ? "bg-red-100 text-red-800"
                   : "bg-blue-100 text-blue-800",
               )}
             >
-              {isMandatoryRoute ? "Mandatory: EU ↔ UK/Ireland" : "Optional: Intra-EU Route"}
+              {isMandatoryRoute === null ? "Route requirement unavailable" : isMandatoryRoute ? "Mandatory: EU ↔ UK/Ireland" : "Optional: Intra-EU Route"}
             </span>
             <span className="inline-flex items-center rounded-none bg-blue-100 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-blue-800">
               Customs Clearance Flow
@@ -152,7 +155,8 @@ export default function CustomsClearanceProofPage() {
           </div>
         </div>
 
-        {!isMandatoryRoute && (
+        {dossier.isError && <p role="alert" className="text-sm text-destructive">Could not load dossier route information. Please retry.</p>}
+        {isMandatoryRoute === false && (
           <div className="border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-950 flex items-start gap-2">
             <Navigation className="mt-0.5 size-4 shrink-0 text-blue-600" />
             <div>
