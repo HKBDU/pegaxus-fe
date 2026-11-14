@@ -145,7 +145,7 @@ export const assignedLocationContextSchema = z.object({
           fromLocationName: z.string(),
           toLocationName: z.string(),
           status: z.enum(["PLANNED", "IN_TRANSIT", "COMPLETED"]),
-          isMine: z.boolean().optional(),
+          isMine: z.boolean(),
         })
         .nullable(),
     }),
