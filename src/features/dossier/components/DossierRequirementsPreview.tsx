@@ -63,7 +63,8 @@ import { DocumentSubmissionDialog } from "./DocumentSubmissionDialog";
 import { DocumentDetailsDialog } from "./DocumentVersionHistory";
 import { UploadComplianceDocumentDialog } from "./UploadComplianceDocumentDialog";
 import { DocumentReviewDialog } from "./DocumentReviewDialog";
-import { canOpenDocumentReview } from "../lib/document-review";
+import { canOpenDocumentReview, canRequestReupload } from "../lib/document-review";
+import { RequestReuploadDialog } from "./RequestReuploadDialog";
 import { useMissingDossierRequirements } from "../hooks/useMissingDocumentReminder";
 import { RequestMissingDocumentsDialog } from "./RequestMissingDocumentsDialog";
 import { DossierRequirementDetailsDialog } from "./DossierRequirementDetailsDialog";
@@ -94,11 +95,15 @@ function RequirementRowActions({
           role,
           item.status,
           Boolean(item.document),
-        ).filter(
-          (label) =>
-            label !== "Review Document" ||
-            canOpenDocumentReview(role, dossier, item),
-        );
+        )
+          .filter(
+            (label) =>
+              label !== "Review Document" ||
+              canOpenDocumentReview(role, dossier, item),
+          )
+          .concat(
+            canRequestReupload(role, dossier, item) ? ["Request Re-upload"] : [],
+          );
 
   return (
     <DropdownMenu>
@@ -149,6 +154,8 @@ function RequirementRowActions({
                 canUploadInitialDocument(role, dossier, item)) ||
               (label === "Review Document" &&
                 canOpenDocumentReview(role, dossier, item)) ||
+              (label === "Request Re-upload" &&
+                canRequestReupload(role, dossier, item)) ||
               (Boolean(item.document) &&
                 (label === "View Document" ||
                   label === "View Version History" ||
@@ -451,6 +458,8 @@ export function DossierRequirementsPreview({
     useState<DossierRequirement | null>(null);
   const [detailsRequirement, setDetailsRequirement] =
     useState<DossierRequirement | null>(null);
+  const [reuploadRequirement, setReuploadRequirement] =
+    useState<DossierRequirement | null>(null);
   const [reminder, setReminder] = useState<{
     requirementId?: string | number;
   } | null>(null);
@@ -458,6 +467,10 @@ export function DossierRequirementsPreview({
     "details" | "request" | "history"
   >("details");
   const onAction = (item: DossierRequirement, label: string) => {
+    if (label === "Request Re-upload") {
+      if (canRequestReupload(role, dossier, item)) setReuploadRequirement(item);
+      return;
+    }
     if (label === "View Requirement") {
       setDetailsRequirement(item);
       return;
@@ -742,6 +755,13 @@ export function DossierRequirementsPreview({
             : undefined
         }
       />
+      {reuploadRequirement ? (
+        <RequestReuploadDialog
+          dossier={dossier}
+          requirement={reuploadRequirement}
+          onClose={() => setReuploadRequirement(null)}
+        />
+      ) : null}
       {reviewRequirement ? (
         <DocumentReviewDialog
           dossier={dossier}

@@ -50,6 +50,8 @@ export type MapRoute = {
   sharedWithPrimary?: boolean;
   /** A segment the Transport Specialist blocked in the legal review: drawn red above every other colour. */
   blocked?: boolean;
+  /** A primary segment a backup replaced before it was driven: drawn grey and dashed under the route now in use. */
+  replaced?: boolean;
 };
 
 export type MapPoint = { latitude: number; longitude: number };

@@ -85,6 +85,15 @@ export function RoutePlanDetails({
             segmentActions={segmentActions}
             blockedSegments={blockedSegmentNumbers(plan)}
           />
+          {plan.replacedSegments.length ? (
+            <div className="mt-8 opacity-75">
+              <RouteSegmentList
+                segments={plan.replacedSegments}
+                title={`Replaced by backup${plan.replacedByRoutePlanCode ? ` ${plan.replacedByRoutePlanCode}` : ""}`}
+                description="The original primary segments the backup took over. They were not driven and are kept for reference."
+              />
+            </div>
+          ) : null}
         </Tabs.Content>
         <Tabs.Content
           value="contingency"

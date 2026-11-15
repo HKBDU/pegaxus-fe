@@ -122,6 +122,9 @@ export const routePlanDetailSchema = z.object({
   plannedDepartureAt: timestamp.nullish(),
   plannedArrivalAt: timestamp.nullish(),
   segments: z.array(routeSegmentSchema),
+  /** On an active PRIMARY: its segments a backup replaced before they were driven (not part of `segments`). */
+  replacedSegments: z.array(routeSegmentSchema).nullish().transform((v) => v ?? []),
+  replacedByRoutePlanCode: z.string().nullish().transform((v) => v ?? null),
   isPersonnelComplete: z.boolean(),
   branchSequenceNo: z.number().int().positive().nullish(),
   legalReview: routeLegalReviewSchema.nullable().optional().transform((v) => v ?? null),

@@ -181,6 +181,10 @@ export const dossierOverviewSchema = z.object({
   mandatoryTotal: z.number().int().nonnegative(),
   mandatorySatisfiedOrWaived: z.number().int().nonnegative(),
   bookingSummary: bookingSummarySchema,
+  /** Set while an authority's rejection or request for information waits for the specialist: the dossier cannot be marked ready. */
+  pendingAuthorityRevision: z
+    .object({ authorityName: z.string(), decision: z.string(), sentBackAt: z.string() })
+    .nullish(),
   requirementSummary: requirementSummarySchema,
   quarantineStatus: proofStatus([
     "PENDING_VERIFICATION",

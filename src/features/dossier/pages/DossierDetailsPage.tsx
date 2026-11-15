@@ -61,6 +61,8 @@ export default function DossierDetailsPage() {
   const requestedTab = sections.find(
     ({ id }) => id === searchParams.get("tab"),
   )?.id;
+  // Bumped by the "Add requirement" shortcut: remounts the requirements tab with its Add dialog open.
+  const [addRequest, setAddRequest] = useState(0);
   const [selectedSection, setActiveSection] = useState<SectionId>(
     requestedTab ?? "requirements",
   );
@@ -138,6 +140,11 @@ export default function DossierDetailsPage() {
             <DossierReadinessAction
               dossier={query.data}
               onCompleted={() => setActiveSection("authority")}
+              onAddRequirement={() => {
+                setAddRequest((count) => count + 1);
+                setActiveSection("requirements");
+              }}
+              onRequestReupload={() => setActiveSection("documents")}
             />
             <div className="border-b border-gray-200">
               <div
@@ -168,7 +175,10 @@ export default function DossierDetailsPage() {
               aria-labelledby={`dossier-tab-${activeSection}`}
             >
               {activeSection === "requirements" && role !== "CUSTOMER" ? (
-                <DossierRequirementsPanel />
+                <DossierRequirementsPanel
+                  key={addRequest}
+                  openAdd={addRequest > 0}
+                />
               ) : activeSection === "requirements" ||
                 activeSection === "documents" ? (
                 <DossierRequirementsPreview
