@@ -89,6 +89,7 @@ export function RoutePlansWorkspace({
     planStatus,
     transportStatus,
     dossierStatus,
+    mainDossierStatus: dossierStatus,
     hasActivePrimary: hasActivePrimary(items),
     routeDetailPath,
   };
