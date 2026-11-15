@@ -287,10 +287,11 @@ export function useLandingStory(
                   (journeyVisibleHeight === heroVisibleHeight &&
                     currentShot === "journey")));
             const inHero = !inJourney && heroVisibleHeight > 0;
+            // Movement lands on the sticky globe; the horse joins once it is in place.
             const inMap =
               !inHero &&
               !inJourney &&
-              mapRect.top < innerHeight &&
+              mapRect.top <= 2 &&
               mapRect.bottom > 0;
             const nextShot = inHero
               ? "home"
@@ -474,21 +475,10 @@ export function useLandingStory(
                 },
               });
             }
-            if (section.id === "compliance")
-              gsap.from(section.querySelector(".landing-document-sheet"), {
-                x: 25,
-                rotation: 0,
-                duration: 1.1,
-                ease: "power2.out",
-                scrollTrigger: {
-                  trigger: section,
-                  start: "top 75%",
-                  once: true,
-                },
-              });
             const copy = section.querySelector("[data-reveal]");
             if (copy && section.id !== "journey")
-              gsap.from(copy.children, {
+              // Split headings animate word by word in useLandingMotion.
+              gsap.from(copy.querySelectorAll(":scope > :not([data-split])"), {
                 opacity: 0,
                 y: 24,
                 duration: 0.75,
@@ -513,7 +503,9 @@ export function useLandingStory(
                   profile === "desktop" &&
                   matchMedia("(hover: hover) and (pointer: fine)").matches
                 ) {
-                  const image = media.querySelector("img");
+                  const image =
+                    media.querySelector("[data-parallax]") ??
+                    media.querySelector("img");
                   if (image)
                     gsap.fromTo(
                       image,
@@ -531,23 +523,26 @@ export function useLandingStory(
                     );
                 }
               });
-            section.querySelectorAll("[data-interface]").forEach((preview) => {
-              gsap.fromTo(
-                preview,
-                { scale: 0.97, clipPath: "inset(8% 0 0 0)" },
-                {
-                  scale: 1,
-                  clipPath: "inset(0% 0 0 0)",
-                  ease: "none",
-                  scrollTrigger: {
-                    trigger: preview,
-                    start: "top 90%",
-                    end: "center 55%",
-                    scrub: 0.5,
+            // 3D compositions own their transforms; a clip would cut their depth.
+            section
+              .querySelectorAll("[data-interface]:not([data-depth])")
+              .forEach((preview) => {
+                gsap.fromTo(
+                  preview,
+                  { scale: 0.97, clipPath: "inset(8% 0 0 0)" },
+                  {
+                    scale: 1,
+                    clipPath: "inset(0% 0 0 0)",
+                    ease: "none",
+                    scrollTrigger: {
+                      trigger: preview,
+                      start: "top 90%",
+                      end: "center 55%",
+                      scrub: 0.5,
+                    },
                   },
-                },
-              );
-            });
+                );
+              });
           });
           const clearPointer = () =>
             Object.assign(state, {
