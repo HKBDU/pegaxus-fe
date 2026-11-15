@@ -34,16 +34,20 @@ export default function DriverLocationSharingPage() {
           ? "Journey unavailable"
           : context.transport.status !== "IN_TRANSIT"
             ? "Journey not in transit"
-            : environment.network === "offline"
-              ? "Offline"
-              : environment.capability === "insecure"
-                ? "HTTPS required"
-                : environment.capability === "unsupported"
-                  ? "GPS unsupported"
-                  : environment.network === "unknown" ||
-                      environment.capability === "unknown"
-                    ? "Checking GPS"
-                    : undefined;
+            : gate.status === "waiting_current_segment"
+              ? "Checking current segment ownership"
+              : gate.status === "not_applicable"
+                ? "Another Driver owns the current segment"
+                : environment.network === "offline"
+                  ? "Offline"
+                  : environment.capability === "insecure"
+                    ? "HTTPS required"
+                    : environment.capability === "unsupported"
+                      ? "GPS unsupported"
+                      : environment.network === "unknown" ||
+                          environment.capability === "unknown"
+                        ? "Checking GPS"
+                        : undefined;
 
   return (
     <main className="location-sharing-ui px-4 py-4 sm:px-6 sm:py-6">

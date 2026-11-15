@@ -44,11 +44,6 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
     ["Closed", dossier.closedAt],
   ] as const;
   const meaningfulMilestones = milestones.filter(([, value]) => value != null);
-  const proofs = [
-    ["Quarantine proof", dossier.quarantineStatus],
-    ["Customs clearance proof", dossier.customsClearanceStatus],
-  ] as const;
-  const hasProof = proofs.some(([, proof]) => proof != null);
   const progress = Math.max(0, Math.min(100, dossier.progressPercent));
   const siblings = dossier.complianceDossiers ?? [];
   const extraDossier = siblings.find((item) => item.dossierType === "EXTRA");
@@ -293,8 +288,7 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
       </Card>
       {meaningfulMilestones.length ||
       dossier.rejectionReason ||
-      dossier.note ||
-      hasProof ? (
+      dossier.note ? (
         <Card className="booking-panel gap-0 rounded-[2px] border bg-white py-0">
           <CardContent className="p-4 sm:p-5">
             <h2 className="m-0! font-heading text-base! font-bold! uppercase text-gray-900!">
@@ -314,21 +308,6 @@ export function DossierOverview({ dossier }: { dossier: DossierOverviewData }) {
               {dossier.note ? (
                 <Detail label="Note">{dossier.note}</Detail>
               ) : null}
-              {proofs.map(([label, proof]) =>
-                proof ? (
-                  <Detail key={label} label={label}>
-                    {proof.status
-                      .toLowerCase()
-                      .replaceAll("_", " ")
-                      .replace(/^./, (letter) => letter.toUpperCase())}
-                    {proof.verifiedAt ? (
-                      <span className="block text-gray-500">
-                        Verified <DateTimeUtc value={proof.verifiedAt} compact />
-                      </span>
-                    ) : null}
-                  </Detail>
-                ) : null,
-              )}
             </dl>
           </CardContent>
         </Card>
