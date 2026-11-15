@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
+import { usePageTitle } from "@/shared/hooks";
 
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
@@ -47,6 +48,7 @@ const inputClass =
   "h-8 rounded-[2px] border-slate-300 bg-white text-xs shadow-none focus-visible:border-primary focus-visible:ring-primary/20";
 
 export default function CreateEmployeeAccountPage() {
+  usePageTitle("Create Employee");
   const navigate = useNavigate();
   const mutation = useCreateEmployee();
   const form = useForm<CreateEmployee>({

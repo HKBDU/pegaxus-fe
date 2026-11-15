@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
-import { useDebounce } from "@/shared/hooks";
+import { useDebounce, usePageTitle } from "@/shared/hooks";
 import { TransportPlanFilters } from "../components/TransportPlanFilters";
 import { TransportPlansTable } from "../components/TransportPlansTable";
 import {
@@ -15,6 +15,7 @@ import type { TransportPlansQueryParams } from "../types";
 import { Flow3MockIndicator } from "../components/Flow3MockIndicator";
 
 export default function TransportPlansPage() {
+  usePageTitle("Transport Plans");
   const [params, setParams] = useState(initialTransportPlanParams);
   const search = useDebounce(params.search, 300);
   const isSearchPending = search !== params.search;

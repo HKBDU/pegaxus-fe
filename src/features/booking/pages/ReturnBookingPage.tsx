@@ -11,6 +11,7 @@ import { ErrorState, LoadingState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Textarea } from "@/shared/components/ui/textarea"
+import { usePageTitle } from "@/shared/hooks"
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -19,6 +20,7 @@ const today = () => new Date().toISOString().slice(0, 10)
  * horse come from the original trip and are fixed; the customer only picks the dates. The usual lead time does not apply.
  */
 export default function ReturnBookingPage() {
+  usePageTitle("Return Booking")
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()

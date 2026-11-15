@@ -24,6 +24,7 @@ import { formatUtcDateTime, todayUtc } from "@/shared/utils/datetime"
 import { useProfile } from "../hooks/useProfile"
 import { ProfileIdentityPanel, ProfileInfoCard, ProfileInlineField } from "../components"
 import type { EmailVerificationStatus, Profile, ProfilePageStateProps, UpdateProfileRequest } from "../types"
+import { usePageTitle } from "@/shared/hooks"
 
 type ProfileDraft = {
   fullName: string
@@ -97,6 +98,7 @@ function ProfileInfoGroup({ title, description, children }: { title: string; des
 }
 
 export function ProfileSettingsPage() {
+  usePageTitle("Profile")
   const { customerId } = useParams()
   const location = useLocation()
   const principal = useAuthStore((state) => state.principal)

@@ -15,6 +15,7 @@ import { horseApi } from "../services"
 import type { Horse } from "../types"
 import { getHorseApiErrorMessage } from "../utils/horse-api-error"
 import { formatHorseDate } from "../utils/format-horse-date"
+import { usePageTitle } from "@/shared/hooks"
 
 function DetailItem({ label, value, wide = false }: { label: string; value?: ReactNode; wide?: boolean }) {
   return (
@@ -58,6 +59,8 @@ export function HorseDetailPage() {
   const { horseId } = useParams()
   const navigate = useNavigate()
   const [horse, setHorse] = useState<Horse>()
+  const horseTitle = horse?.horseName ? `Horse ${horse.horseName}` : "Horse Details"
+  usePageTitle(horseTitle)
   const [error, setError] = useState<string>()
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isMinimumLoadingComplete, setIsMinimumLoadingComplete] = useState(false)

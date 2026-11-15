@@ -24,6 +24,7 @@ import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard";
+import { usePageTitle } from "@/shared/hooks";
 
 const verificationErrors: Record<string, string> = {
   OTP_INVALID: "The verification code is invalid.",
@@ -34,6 +35,7 @@ const verificationErrors: Record<string, string> = {
 };
 
 export default function VerifyEmailPage() {
+  usePageTitle("Verify Email");
   const location = useLocation();
   const result = emailRouteStateSchema.safeParse(location.state);
 

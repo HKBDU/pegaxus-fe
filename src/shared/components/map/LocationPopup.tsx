@@ -74,7 +74,7 @@ export function LocationPopup({
           {canEdit && (
             <Button
               size="sm"
-              className="h-7 rounded-none bg-amber-500 px-3 text-[10px] font-bold uppercase text-white hover:bg-amber-600"
+              className="h-7 rounded-none bg-amber-500 px-3 text-[10px] font-bold uppercase text-[#181818] hover:bg-amber-600"
               onClick={() => onAction?.("EDIT", location)}
             >
               Edit

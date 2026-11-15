@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useDebounce } from "@/shared/hooks";
+import { useDebounce, usePageTitle } from "@/shared/hooks";
 
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
@@ -15,6 +15,7 @@ import { getAccountError } from "../services";
 import type { EmployeeAccount } from "../types";
 
 export default function ManageUserAccountsPage() {
+  usePageTitle("Manage Users");
   const [params, setParams] = useState(initialEmployeeParams);
   const [deleteAccount, setDeleteAccount] = useState<EmployeeAccount | null>(
     null,

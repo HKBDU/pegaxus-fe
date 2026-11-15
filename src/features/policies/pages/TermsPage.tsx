@@ -1,6 +1,7 @@
 import { ArrowUpRight, BookOpenText } from "lucide-react"
 import { Link } from "react-router-dom"
 import type { ReactNode } from "react"
+import { usePageTitle } from "@/shared/hooks"
 
 import termsSource from "../data/terms.md?raw"
 
@@ -76,6 +77,7 @@ function inline(text: string): ReactNode[] {
 }
 
 export default function TermsPage() {
+  usePageTitle("Policies & Terms")
   return (
     <div className="terms-page">
       <div className="terms-hero">

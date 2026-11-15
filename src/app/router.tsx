@@ -265,6 +265,14 @@ const routes: RouteObject[] = [
         ),
       },
       {
+        path: "policy",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TermsPage />
+          </Suspense>
+        ),
+      },
+      {
         index: true,
         element: (
           <Suspense fallback={<LoadingState />}>
@@ -810,42 +818,42 @@ const routes: RouteObject[] = [
   },
   ...(import.meta.env.DEV
     ? [
-        {
-          path: "/__dev/flow3/route-plans/:routePlanId",
-          element: (
-            <ProtectedRoute
-              allowedRoles={[
-                "LOGISTICS_MANAGER",
-                "FLEET_ROUTE_COORDINATOR",
-                "TRANSPORT_SPECIALIST",
-              ]}
-            >
-              <AdminLayout />
-            </ProtectedRoute>
-          ),
-          children: [
-            {
-              index: true,
-              element: (
-                <Suspense fallback={<LoadingState />}>
-                  <RoutePlanDetailPage routeDetailPath={routePlanDetail} />
-                </Suspense>
-              ),
-            },
-          ],
-        },
-        // END TEMP UC-38 LOCAL PREVIEW
-        {
-          path: "/__dev/customer/bookings/:bookingId/history",
-          element: <MainLayout />,
-          children: [{ index: true, element: bookingHistoryPage }],
-        },
-        {
-          path: "/__dev/admin/bookings/:bookingId/history",
-          element: <AdminLayout />,
-          children: [{ index: true, element: bookingHistoryPage }],
-        },
-      ]
+      {
+        path: "/__dev/flow3/route-plans/:routePlanId",
+        element: (
+          <ProtectedRoute
+            allowedRoles={[
+              "LOGISTICS_MANAGER",
+              "FLEET_ROUTE_COORDINATOR",
+              "TRANSPORT_SPECIALIST",
+            ]}
+          >
+            <AdminLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <RoutePlanDetailPage routeDetailPath={routePlanDetail} />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+      // END TEMP UC-38 LOCAL PREVIEW
+      {
+        path: "/__dev/customer/bookings/:bookingId/history",
+        element: <MainLayout />,
+        children: [{ index: true, element: bookingHistoryPage }],
+      },
+      {
+        path: "/__dev/admin/bookings/:bookingId/history",
+        element: <AdminLayout />,
+        children: [{ index: true, element: bookingHistoryPage }],
+      },
+    ]
     : []),
 
   {

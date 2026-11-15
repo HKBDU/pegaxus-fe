@@ -2,8 +2,10 @@ import { useNavigate } from "react-router-dom";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { AuthFlowLayout } from "@/features/auth/components/AuthFlowLayout";
 import { ChangePasswordForm } from "../components/ChangePasswordForm";
+import { usePageTitle } from "@/shared/hooks";
 
 export default function ChangePasswordPage() {
+  usePageTitle("Change Password");
   const navigate = useNavigate();
   function returnToPreviousPage() {
     const historyIndex = window.history.state?.idx;

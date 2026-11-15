@@ -51,7 +51,7 @@ export function IncidentSubmitBar({
         <Button
           type="submit"
           disabled={disabled || isSubmitting}
-          className="min-h-12 rounded-[2px] bg-[#f39200] px-6 text-white hover:bg-[#d97f00]"
+          className="min-h-12 rounded-[2px] bg-[#f39200] px-6 text-[#181818] hover:bg-[#d97f00]"
         >
           {isSubmitting ? "Submitting…" : submitLabel}
         </Button>
