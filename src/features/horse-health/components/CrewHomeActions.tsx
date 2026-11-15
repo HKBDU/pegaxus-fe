@@ -9,7 +9,6 @@ import {
 import { Link, type To } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
-import { useDriverLocationSession } from "@/features/location-sharing/hooks/useDriverLocationSession";
 import { driverLocationSharingPath } from "@/features/location-sharing/navigation";
 import { incidentPaths } from "@/shared/constants/incident";
 
@@ -74,11 +73,6 @@ export function CrewHomeActions({
 }: {
   transport: AssignedTransport;
 }) {
-  const { gate } = useDriverLocationSession();
-  const locked = transport.myRole === "DRIVER" && gate.locked;
-  const lockReason = gate.ownershipKnown
-    ? "Enable location sharing first"
-    : "Waiting for current Driver confirmation";
   return (
     <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
@@ -111,8 +105,6 @@ export function CrewHomeActions({
           label={CREW_ACTION_LABELS.handover}
           to={HORSE_HEALTH_ROUTES.handovers(transport.transportId)}
           state={{ from: "/crew" }}
-          disabled={locked}
-          disabledReason={lockReason}
         />
         {transport.myRole === "DRIVER" && (
           <ActionButton
@@ -122,13 +114,6 @@ export function CrewHomeActions({
           />
         )}
       </div>
-      {locked && (
-        <p role="status" className="mt-3 text-sm text-amber-800">
-          {gate.ownershipKnown
-            ? "Enable location sharing to unlock current-segment actions. You can still open the trip, location sharing and notifications."
-            : "The server has not confirmed current-segment ownership. Actions stay locked; you can still open the trip and location sharing."}
-        </p>
-      )}
     </>
   );
 }
