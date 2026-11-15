@@ -7,6 +7,7 @@ import { ChangePasswordDialog } from "@/features/auth/components/ChangePasswordD
 import { useAuthStore } from "@/features/auth/store"
 import { Button } from "@/shared/components/ui/button"
 import { CountrySelect } from "@/shared/components/ui/country-select"
+import { countryCodeFromName, countryNameFromCode } from "../country"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Input } from "@/shared/components/ui/input"
 import { PageHeader } from "@/shared/components/PageHeader"
@@ -51,7 +52,8 @@ function profileToDraft(profile: Profile): ProfileDraft {
     email: profile.email,
     phone: profile.phone ?? "",
     address: profile.address ?? "",
-    country: profile.country ?? "",
+    // Employees store an ISO code; the country picker shows names.
+    country: profile.employee ? countryNameFromCode(profile.country) : (profile.country ?? ""),
     dob: profile.dob ?? "",
     role: profile.role,
     status: profile.status,
@@ -154,6 +156,18 @@ export function ProfileSettingsPage() {
   }, [profileScope])
   // oxlint-enable react-hooks/exhaustive-deps
 
+  // After a save the profile is reloaded: show the values the server stored, not the ones that were typed.
+  // oxlint-disable react-hooks/exhaustive-deps -- resync only when the stored profile changes
+  useEffect(() => {
+    if (!profile) return
+    const storedDraft = profileToDraft(profile)
+    // oxlint-disable-next-line react/set-state-in-effect
+    setDraft(storedDraft)
+    // oxlint-disable-next-line react/set-state-in-effect
+    setSavedDraft(storedDraft)
+  }, [profile?.updatedAt])
+  // oxlint-enable react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!draft?.avatar) {
       // oxlint-disable-next-line react/set-state-in-effect
@@ -221,12 +235,6 @@ export function ProfileSettingsPage() {
         return
       }
 
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentDraft.email.trim())) {
-        toast.error("Enter a valid email address.")
-        setEditingField("email")
-        return
-      }
-
       if (phoneResult.error || !isPhoneValid(phoneResult.value)) {
         toast.error(phoneResult.error ?? PHONE_MESSAGE)
         setEditingField("phone")
@@ -286,10 +294,11 @@ export function ProfileSettingsPage() {
 
       const input: UpdateProfileRequest = {
         fullName: currentDraft.fullName.trim(),
-        email: currentDraft.email.trim(),
         phone: phoneResult.value || undefined,
         address: currentDraft.address.trim() || undefined,
-        country: currentDraft.country.trim() || undefined,
+        country: profile?.employee
+          ? countryCodeFromName(currentDraft.country)
+          : currentDraft.country.trim() || undefined,
         dob: currentDraft.dob || undefined,
         avatar,
       }
@@ -300,9 +309,7 @@ export function ProfileSettingsPage() {
       }
       const saved = await updateProfile(input)
       if (saved && isCurrentAttempt()) {
-        const nextSavedDraft: ProfileDraft = { ...currentDraft, phone: phoneResult.value, avatar: null }
-        setDraft(nextSavedDraft)
-        setSavedDraft(nextSavedDraft)
+        // The draft is refreshed from the reloaded profile (see the effect on profile.updatedAt), so it shows what was stored.
         setEditingField(null)
         setCallingCountry("")
       }
@@ -384,7 +391,8 @@ export function ProfileSettingsPage() {
 
           <div className="flex min-w-0 flex-col gap-5">
             <ProfileInfoGroup title="CONTACT INFORMATION" description="How this account can be contacted">
-              {inlineField("email", "EMAIL ADDRESS", draft.email, Mail)}
+              {/* The e-mail is the sign-in identity: it is not changed from this page. */}
+              <ProfileInfoCard icon={Mail} label="EMAIL ADDRESS" value={profile.email} />
               <div className="min-w-0">
                 {inlineField("phone", "PHONE NUMBER", draft.phone, Phone,
                   <ProfilePhoneEditor value={draft.phone} callingCountry={callingCountry} disabled={isBusy} onChange={(value) => updateDraft("phone", value)} onCountryChange={(value) => { if (!saveAttemptRef.current && !isSubmitting) setCallingCountry(value) }} />)}

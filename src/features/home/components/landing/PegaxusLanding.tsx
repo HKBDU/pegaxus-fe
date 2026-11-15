@@ -3,6 +3,7 @@ import {
   lazy,
   Suspense,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -27,6 +28,7 @@ import { LandingCursor } from "./LandingCursor";
 import { HorseWipe } from "./HorseWipe";
 import { RouteGlobe } from "./RouteGlobe";
 import { preload } from "react-dom";
+import { useLocation } from "react-router-dom";
 import horseUrl from "../../assets/horse-meshopt.glb?url&no-inline";
 
 import { MarqueeBand } from "./MarqueeBand";
@@ -92,6 +94,22 @@ export function PegaxusLanding() {
     updateSceneStatus("unavailable");
     setSceneStatus("unavailable");
   }, [updateSceneStatus]);
+  // A link from another page (the shared footer, "/#compliance") lands on its chapter instead of the top.
+  const { hash } = useLocation();
+  useEffect(() => {
+    const id = decodeURIComponent(hash.slice(1));
+    // The Movement chapter positions itself (useLandingStory).
+    if (!id || id === "movement") return;
+    const section = root.current?.querySelector<HTMLElement>(
+      `:is(section, footer)[id="${CSS.escape(id)}"]`,
+    );
+    if (!section) return;
+    const frame = requestAnimationFrame(() =>
+      scrollToLandingSection(section, "instant"),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [hash]);
+
   const navigateSection = (event: MouseEvent<HTMLDivElement>) => {
     if (
       event.defaultPrevented ||
@@ -107,7 +125,9 @@ export function PegaxusLanding() {
     );
     const id = link?.getAttribute("href")?.slice(1);
     const section = id
-      ? root.current?.querySelector<HTMLElement>(`section[id="${id}"]`)
+      ? root.current?.querySelector<HTMLElement>(
+          `:is(section, footer)[id="${CSS.escape(id)}"]`,
+        )
       : null;
     if (!section) return;
     event.preventDefault();
