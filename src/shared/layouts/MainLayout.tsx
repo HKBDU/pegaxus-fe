@@ -88,7 +88,8 @@ export function MainLayout() {
 
   const baseNavItems = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] }) ? customerNavItems : isCrewRoute ? crewNavItems : []
   const isCustomer = Boolean(accessToken && canAccess(principal, { anyRole: ["CUSTOMER"] }))
-  const showPolicyBar = isCustomer || (isLanding && !accessToken)
+  // The landing footer already links to policies; keep the fixed bar off the home page.
+  const showPolicyBar = isCustomer && !isLanding
   const navItems = baseNavItems
   const customerChrome = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] })
   const user: ProfileDropdownUser | null = accessToken && account
