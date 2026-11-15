@@ -155,6 +155,18 @@ export function ProfileSettingsPage() {
   }, [profileScope])
   // oxlint-enable react-hooks/exhaustive-deps
 
+  // After a save the profile is reloaded: show the values the server stored, not the ones that were typed.
+  // oxlint-disable react-hooks/exhaustive-deps -- resync only when the stored profile changes
+  useEffect(() => {
+    if (!profile) return
+    const storedDraft = profileToDraft(profile)
+    // oxlint-disable-next-line react/set-state-in-effect
+    setDraft(storedDraft)
+    // oxlint-disable-next-line react/set-state-in-effect
+    setSavedDraft(storedDraft)
+  }, [profile?.updatedAt])
+  // oxlint-enable react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!draft?.avatar) {
       // oxlint-disable-next-line react/set-state-in-effect
@@ -432,7 +444,8 @@ export function ProfileSettingsPage() {
 
           <div className="flex min-w-0 flex-col gap-5">
             <ProfileInfoGroup title="CONTACT INFORMATION" description="How this account can be contacted">
-              {inlineField("email", "EMAIL ADDRESS", draft.email, Mail)}
+              {/* The e-mail is the sign-in identity: it is not changed from this page. */}
+              <ProfileInfoCard icon={Mail} label="EMAIL ADDRESS" value={profile.email} />
               <div className="min-w-0">
                 {inlineField("phone", "PHONE NUMBER", draft.phone, Phone,
                   <ProfilePhoneEditor value={draft.phone} callingCountry={callingCountry} disabled={isBusy} onChange={(value) => updateDraft("phone", value)} onCountryChange={(value) => { if (!saveAttemptRef.current && !isSubmitting) setCallingCountry(value) }} />)}

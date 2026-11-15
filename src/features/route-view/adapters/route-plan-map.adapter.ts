@@ -91,12 +91,18 @@ export function toRouteMapData(
   const geometry = verifiedRouteGeometry(suppliedGeometry);
   const geometryStatus =
     suppliedGeometry == null ? "missing" : geometry ? "available" : "invalid";
-  const locations = toRouteMapLocations(plan);
+  // The replaced primary segments stay on the map, dashed, so the change of route is visible.
+  const replaced = plan.replacedSegments ?? [];
+  const locations = toRouteMapLocations({ segments: [...plan.segments, ...replaced] });
   const locationById = new Map(locations.map((location) => [location.id, location]));
-  const routes: MapRoute[] = plan.segments
-    .slice()
-    .sort((a, b) => a.sequenceNo - b.sequenceNo)
-    .flatMap((segment) => {
+  const routes: MapRoute[] = [
+    ...replaced.map((segment) => ({ segment, isReplaced: true })),
+    ...plan.segments
+      .slice()
+      .sort((a, b) => a.sequenceNo - b.sequenceNo)
+      .map((segment) => ({ segment, isReplaced: false })),
+  ]
+    .flatMap(({ segment, isReplaced }) => {
       const fromLocation = locationById.get(segment.fromLocation.locationId);
       const toLocation = locationById.get(segment.toLocation.locationId);
       if (!fromLocation || !toLocation) return [];
@@ -113,7 +119,9 @@ export function toRouteMapData(
           routePlanType: segment.routeType,
           isOutsourced: segment.isOutsourced,
           // Drawn red on the map so the coordinator finds the segment the legal review blocked.
-          blocked: blocked.has(segment.sequenceNo),
+          blocked: !isReplaced && blocked.has(segment.sequenceNo),
+          replaced: isReplaced,
+          readonly: isReplaced || undefined,
         },
       ];
     });

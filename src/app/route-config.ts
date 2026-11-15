@@ -201,3 +201,9 @@ export const INCIDENT_ADMIN_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAGE
 export const LOGISTICS_MANAGER_READ: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER"] }
 export const priceListDetail = (priceListId: string) => `${ROLE_ROUTES.priceLists}/${encodeURIComponent(priceListId)}`
 export const PROFILE_ROLES: AccessPolicy = { anyRole: ["CUSTOMER", "LOGISTICS_MANAGER", "TRANSPORT_SPECIALIST", "FLEET_ROUTE_COORDINATOR", "DRIVER", "ESCORT"] }
+
+/** The page a guarded route sent the visitor from (ProtectedRoute state.from), with its query and hash. */
+export function requestedPath(state: unknown) {
+  const from = (state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from
+  return from?.pathname ? `${from.pathname}${from.search ?? ""}${from.hash ?? ""}` : undefined
+}

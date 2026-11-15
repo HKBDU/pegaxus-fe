@@ -137,6 +137,25 @@ export function isMandatoryDossierComplete(dossier: DossierOverview) {
   return dossier.mandatorySatisfiedOrWaived === dossier.mandatoryTotal;
 }
 
+/**
+ * The specialist may ask the customer to upload an approved document again while the dossier is being prepared, typically
+ * after an authority rejected it or asked for more information. The approval is revoked and a re-upload request is sent.
+ */
+export function canRequestReupload(
+  role: string | undefined,
+  dossier: DossierOverview,
+  requirement: { status: string; document?: unknown },
+) {
+  return Boolean(
+    role &&
+    normalizeRole(role) === "TRANSPORT_SPECIALIST" &&
+    ["IN_PREPARATION", "REJECTED"].includes(dossier.status) &&
+    !dossier.writeLocked &&
+    requirement.status === "SATISFIED" &&
+    requirement.document,
+  );
+}
+
 export function canMarkReadyForSubmission(
   role: string | undefined,
   dossier: DossierOverview,
@@ -146,6 +165,7 @@ export function canMarkReadyForSubmission(
     normalizeRole(role) === "TRANSPORT_SPECIALIST" &&
     ["IN_PREPARATION", "REJECTED"].includes(dossier.status) &&
     !dossier.writeLocked &&
+    !dossier.pendingAuthorityRevision &&
     isMandatoryDossierComplete(dossier),
   );
 }

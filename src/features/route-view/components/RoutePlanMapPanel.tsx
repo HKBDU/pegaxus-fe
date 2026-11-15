@@ -39,6 +39,27 @@ export function RoutePlanMapPanel({
               ))}
           </ol>
         )}
+        {plan.replacedSegments.length ? (
+          <>
+            <h3 className="mt-4 mb-2 font-heading text-sm uppercase text-slate-500">
+              Replaced by backup{plan.replacedByRoutePlanCode ? ` ${plan.replacedByRoutePlanCode}` : ""}
+              <span className="ml-2 font-sans text-xs normal-case text-slate-400">dashed grey on the map</span>
+            </h3>
+            <ol className="flex flex-wrap gap-2 text-xs">
+              {[...plan.replacedSegments]
+                .sort((a, b) => a.sequenceNo - b.sequenceNo)
+                .map((segment) => (
+                  <li
+                    key={segment.routePlanRouteId}
+                    className="min-w-0 break-words rounded border border-dashed bg-white px-3 py-2 text-slate-500 line-through decoration-slate-300"
+                  >
+                    <span className="mr-2 font-semibold">{segment.sequenceNo}</span>
+                    {segment.fromLocation.locationName} → {segment.toLocation.locationName}
+                  </li>
+                ))}
+            </ol>
+          </>
+        ) : null}
       </div>
     </Section>
   );

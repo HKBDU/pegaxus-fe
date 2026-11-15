@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import apiClient from '@/lib/axios'
 import type {
   ApiEnvelope,
@@ -46,17 +47,66 @@ export async function recordAuthoritySubmission(
   return response.value
 }
 
+/** The dossier facts the review dialog shows next to the form (D7 overview). */
+const dossierFactsSchema = z
+  .object({
+    dossierCode: z.string().nullish(),
+    bookingCode: z.string().nullish(),
+    status: z.string().nullish(),
+    bookingSummary: z
+      .object({
+        originCountry: z.string().nullish(),
+        destinationCountry: z.string().nullish(),
+        requestedDepartureDate: z.string().nullish(),
+        customerName: z.string().nullish(),
+        horseCount: z.number().nullish(),
+      })
+      .nullish(),
+  })
+  .passthrough()
+
+async function getDossierFacts(dossierId: string) {
+  const response = await apiClient.get<unknown, ApiEnvelope<unknown>>(
+    `/compliance-dossiers/${encodeURIComponent(dossierId)}`,
+  )
+  if (!response.isSuccess) return undefined
+  const parsed = dossierFactsSchema.safeParse(response.value)
+  return parsed.success ? parsed.data : undefined
+}
+
 export async function getAuthoritySubmissionDetail(
   dossierId: string,
   submissionId: string,
 ): Promise<AuthoritySubmissionDetail> {
-  const submissions = await listAuthoritySubmissions(dossierId)
-  const summary = submissions.find(
+  const [response, facts] = await Promise.all([
+    apiClient.get<
+      unknown,
+      ApiEnvelope<{ items: AuthoritySubmissionSummary[]; tripStartDate?: string; tripEndDate?: string }>
+    >(`/compliance-dossiers/${encodeURIComponent(dossierId)}/authority-submissions`),
+    getDossierFacts(dossierId).catch(() => undefined),
+  ])
+  if (!response.isSuccess) throw new Error(response.message)
+  const summary = response.value?.items?.find(
     (item) => String(item.authoritySubmissionId) === String(submissionId),
   )
   if (!summary) throw new Error("AUTHORITY_SUBMISSION_NOT_FOUND")
   const evidence = summary.evidenceFiles?.[0]
+  const booking = facts?.bookingSummary
   return {
+    tripStartDate: response.value?.tripStartDate,
+    tripEndDate: response.value?.tripEndDate,
+    dossierSummary: facts
+      ? {
+          cdosCode: facts.dossierCode ?? "",
+          bookingNo: facts.bookingCode ?? "",
+          originCountry: booking?.originCountry ?? "",
+          destinationCountry: booking?.destinationCountry ?? "",
+          departureDate: booking?.requestedDepartureDate ?? "",
+          horsesCount: booking?.horseCount ?? 0,
+          customerName: booking?.customerName ?? "",
+          status: facts.status ?? "",
+        }
+      : undefined,
     authoritySubmissionId: summary.authoritySubmissionId,
     submissionNo: String(summary.submissionNo),
     dossierId,

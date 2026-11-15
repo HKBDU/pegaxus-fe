@@ -35,12 +35,13 @@ const initialParams: DossierRequirementParams = { pageIndex: 1, pageSize: 10, st
 const ALL_LINES: DossierRequirementParams = { pageIndex: 1, pageSize: 100, status: "ALL", horseId: "ALL" }
 
 /** "Dossier Requirements" tab of the dossier page: the list (D8) plus Add (SCR-F2-009), Edit/Waive and Remove (SCR-F2-010) for the TS. */
-export function DossierRequirementsPanel() {
+export function DossierRequirementsPanel({ openAdd = false }: { openAdd?: boolean } = {}) {
   const { dossierId } = useParams()
   const principal = useAuthStore((state) => state.principal)
   const canManage = canAccess(principal, { anyRole: ["TRANSPORT_SPECIALIST"] })
   const [params, setParams] = useState(initialParams)
-  const [addOpen, setAddOpen] = useState(false)
+  // Opened straight away when the dossier page asks for it (the "Add requirement" shortcut after an authority sent it back).
+  const [addOpen, setAddOpen] = useState(openAdd)
   const [removeTarget, setRemoveTarget] = useState<DossierRequirementItem | null>(null)
   const [action, setAction] = useState<DossierRequirementAction>(null)
 

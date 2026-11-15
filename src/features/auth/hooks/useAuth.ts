@@ -14,7 +14,7 @@ import type {
   VerifyEmailRequest,
 } from "@/features/auth/types";
 import { queryClient } from "@/lib/queryClient";
-import { getPostLoginPath } from "@/app/route-config";
+import { getPostLoginPath, requestedPath } from "@/app/route-config";
 
 export function useRegisterMutation() {
   const navigate = useNavigate();
@@ -42,10 +42,9 @@ export function useLoginMutation() {
   const location = useLocation();
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const requestedPath =
-    (location.state as { from?: { pathname?: string } } | null)?.from
-      ?.pathname ?? "/";
-  const from = /^\/logout\/?$/i.test(requestedPath) ? "/" : requestedPath;
+  // Same target as GuestRoute, which also redirects once the session is stored.
+  const requested = requestedPath(location.state) ?? "/";
+  const from = /^\/logout\/?(?:[?#]|$)/i.test(requested) ? "/" : requested;
 
   return useMutation<AuthResponse, Error, LoginRequest>({
     mutationFn: (data) => authApi.login(data),

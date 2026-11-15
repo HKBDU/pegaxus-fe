@@ -8,6 +8,8 @@ export const ROUTE_LINE_COLORS = {
   readonly: "#94a3b8",
   /** A backup segment that reuses a primary route: distinct from the blue backup legs and the grey primary. */
   sharedWithPrimary: "#8b5cf6",
+  /** A primary segment a backup replaced: the old way, kept for reference. */
+  replaced: "#64748b",
   /** A segment blocked by the Transport Specialist's legal review, so the coordinator finds it at once. */
   blocked: "#c8414b",
 } as const;
