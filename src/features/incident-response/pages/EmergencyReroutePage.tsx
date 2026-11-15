@@ -1,5 +1,5 @@
-import { ArrowLeft } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { BackButton } from "@/shared/components/BackButton";
 import { getPostLoginPath } from "@/app/route-config";
 import { canAccess } from "@/features/auth/access-control";
 import { Field } from "@/features/transport-plan/components/ApprovedBookingDetails";
@@ -11,7 +11,6 @@ import {
   StatusBadge,
 } from "@/shared/components/incident";
 import { Badge } from "@/shared/components/ui/badge";
-import { Button } from "@/shared/components/ui/button";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { RerouteComparison } from "../components/RerouteComparison";
 import {
@@ -35,20 +34,13 @@ export default function EmergencyReroutePage() {
   return (
     <main className="mx-auto w-full min-w-0 max-w-7xl space-y-3 p-3 font-sans sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Button
-          variant="ghost"
-          asChild
-          className="min-h-11 rounded-[2px] px-2 text-sm"
+        <BackButton
+          to={getPostLoginPath(
+            manager ? "LOGISTICS_MANAGER" : "FLEET_ROUTE_COORDINATOR",
+          )}
         >
-          <Link
-            to={getPostLoginPath(
-              manager ? "LOGISTICS_MANAGER" : "FLEET_ROUTE_COORDINATOR",
-            )}
-          >
-            <ArrowLeft aria-hidden="true" className="size-4" />
-            Workspace
-          </Link>
-        </Button>
+          Workspace
+        </BackButton>
       </div>
       <header className="min-w-0 space-y-3 rounded-[2px] border border-slate-200 border-l-2 border-l-primary bg-white p-3 sm:p-4">
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">

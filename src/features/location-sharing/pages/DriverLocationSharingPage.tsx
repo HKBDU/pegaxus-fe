@@ -1,5 +1,6 @@
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { MapPin } from "lucide-react";
+import { BackButton } from "@/shared/components/BackButton";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { LocationSharingControl } from "../components/LocationSharingControl";
@@ -53,16 +54,12 @@ export default function DriverLocationSharingPage() {
     <main className="location-sharing-ui px-4 py-4 sm:px-6 sm:py-6">
       <div className="mx-auto grid w-full min-w-0 max-w-6xl gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] lg:items-start">
         {transportId !== undefined ? (
-          <Button
-            asChild
-            variant="ghost"
-            className="-ml-2 min-h-12 rounded-xs px-2 text-base lg:col-span-2 lg:row-start-1 lg:w-fit"
+          <BackButton
+            to={driverTransportOverviewPath(transportId)}
+            className="lg:col-span-2 lg:row-start-1"
           >
-            <Link to={driverTransportOverviewPath(transportId)}>
-              <ArrowLeft aria-hidden="true" className="size-4" />
-              Back to overview
-            </Link>
-          </Button>
+            Back to overview
+          </BackButton>
         ) : null}
         <Card className="location-sharing-panel gap-5 rounded-xs border-border bg-card p-4 shadow-none sm:p-5 lg:col-start-1 lg:row-start-2">
           <header className="flex min-w-0 items-start gap-3">

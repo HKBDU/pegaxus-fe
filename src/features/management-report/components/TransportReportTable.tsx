@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { REPORT_MOCK_MODE } from "@/lib/report-mode";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { TablePagination } from "@/shared/components/common/TablePagination";
@@ -224,7 +225,10 @@ export function TransportReportTable({
             </TableHeader>
             <TableBody>
               {report.items.map((item) => (
-                <TableRow key={item.transportId} className="even:bg-stone-50">
+                <TableRow
+                  key={item.transportId}
+                  className="booking-table-row transition-colors duration-200 hover:bg-primary/5 motion-reduce:transition-none even:bg-stone-50"
+                >
                   <TableCell className="px-3 py-3 font-medium">
                     {REPORT_MOCK_MODE ? (
                       <span>{item.transportCode}</span>
@@ -232,7 +236,7 @@ export function TransportReportTable({
                       <Link
                         to={`${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(item.transportId)}`}
                         state={{ from: returnUrl }}
-                        className="text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+                        className={codeLinkClassName}
                       >
                         {item.transportCode}
                       </Link>
