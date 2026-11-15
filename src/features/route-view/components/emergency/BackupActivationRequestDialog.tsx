@@ -1,6 +1,7 @@
+import { useEffect, useMemo, useRef } from "react";
 import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { toUtcIso } from "@/shared/utils/datetime";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -36,6 +37,17 @@ import {
   useEmergencyMutation,
   type EmergencyContext,
 } from "../../hooks/useEmergencyRoute";
+import { useBackupRequestDraft } from "../../hooks/useBackupRequestDraft";
+import { useRoutePlanDetail } from "../../hooks/useRoutePlanDetail";
+import {
+  BACKUP_DELAY_THRESHOLD_MINUTES,
+  delayMinutes,
+  formatDelay,
+  suggestBackupArrival,
+  toLocalInputValue,
+  type BackupEtaSuggestion,
+} from "../../backup-eta";
+import { isRelatedPrimary } from "../../route-comparison";
 import { getEmergencyError } from "../../services";
 import type { RoutePlanDetail } from "../../types";
 import { EmergencyChangeSummary } from "./EmergencyChangeSummary";
@@ -71,11 +83,47 @@ export function BackupActivationRequestDialog({
   context: EmergencyContext;
   onClose: () => void;
 }) {
+  const draft = useBackupRequestDraft(plan.routePlanId);
   const form = useForm<BackupRequestValues>({
     resolver: zodResolver(backupRequestFormSchema),
     mode: "onTouched",
-    defaultValues: backupRequestDefaults,
+    defaultValues: draft.initial ?? backupRequestDefaults,
   });
+  const { save: saveDraft } = draft;
+  useEffect(() => {
+    const subscription = form.watch(() => saveDraft(form.getValues()));
+    return () => subscription.unsubscribe();
+  }, [form, saveDraft]);
+
+  const primary = useRoutePlanDetail(
+    context.primaryRoute?.routePlanId ?? "",
+    Boolean(context.primaryRoute),
+  );
+  const primaryPlan =
+    primary.data && isRelatedPrimary(primary.data, plan)
+      ? primary.data
+      : undefined;
+  const suggestion = useMemo(
+    () => (primaryPlan ? suggestBackupArrival(primaryPlan, plan) : null),
+    [primaryPlan, plan],
+  );
+  const suggestedValue = suggestion
+    ? toLocalInputValue(suggestion.suggestedEta)
+    : "";
+  // Prefill once, and only when the RC has not typed an arrival yet (a saved draft wins).
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !suggestedValue) return;
+    prefilled.current = true;
+    if (!form.getValues("newEstimatedArrivalAt"))
+      form.setValue("newEstimatedArrivalAt", suggestedValue, {
+        shouldDirty: true,
+      });
+  }, [form, suggestedValue]);
+  const arrival = useWatch({ control: form.control, name: "newEstimatedArrivalAt" });
+  const delay =
+    suggestion && arrival ? delayMinutes(arrival, suggestion.primaryEta) : null;
+
   const attempt = useFormRequestAttemptGuard(form);
   const mutation = useEmergencyMutation("request", plan, context);
   const busy =
@@ -86,6 +134,7 @@ export function BackupActivationRequestDialog({
         mutation.mutateAsync(buildBackupRequest(values)),
       );
       if (!result.started) return;
+      draft.clear();
       toast.success(
         "Request sent to Logistics Manager. Backup remains CONFIRMED until approved.",
       );
@@ -194,6 +243,23 @@ export function BackupActivationRequestDialog({
                             UTC preview: <DateTimeUtc value={toUtcIso(field.value)} compact />
                           </p>
                         )}
+                        {control.name === "newEstimatedArrivalAt" && (
+                          <ArrivalHint
+                            loading={Boolean(context.primaryRoute) && primary.isPending}
+                            suggestion={suggestion}
+                            delay={delay}
+                            onUseSuggestion={
+                              suggestedValue && field.value !== suggestedValue
+                                ? () =>
+                                    form.setValue(
+                                      "newEstimatedArrivalAt",
+                                      suggestedValue,
+                                      { shouldDirty: true, shouldValidate: true },
+                                    )
+                                : undefined
+                            }
+                          />
+                        )}
                         <div className="min-h-5">
                           <FormMessage
                             role="alert"
@@ -245,5 +311,74 @@ export function BackupActivationRequestDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ArrivalHint({
+  loading,
+  suggestion,
+  delay,
+  onUseSuggestion,
+}: {
+  loading: boolean;
+  suggestion: BackupEtaSuggestion | null;
+  delay: number | null;
+  onUseSuggestion?: () => void;
+}) {
+  if (loading)
+    return (
+      <p className="text-xs text-slate-500" aria-live="polite">
+        Checking the PRIMARY arrival…
+      </p>
+    );
+  if (!suggestion) return null;
+  const overThreshold =
+    delay !== null && delay >= BACKUP_DELAY_THRESHOLD_MINUTES;
+  return (
+    <div
+      className="space-y-1 rounded-[2px] border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600"
+      aria-live="polite"
+    >
+      <p>
+        PRIMARY arrival:{" "}
+        <DateTimeUtc
+          value={suggestion.primaryEta.toISOString()}
+          compact
+          className="font-semibold text-slate-800"
+        />
+      </p>
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span>
+          Suggested:{" "}
+          <DateTimeUtc
+            value={suggestion.suggestedEta.toISOString()}
+            compact
+            className="font-semibold text-slate-800"
+          />{" "}
+          ({suggestion.mode === "AHEAD" ? "drive on to" : "turn back to"}{" "}
+          {suggestion.branchName}, then follow the backup)
+        </span>
+        {onUseSuggestion && (
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-xs"
+            onClick={onUseSuggestion}
+          >
+            Use suggestion
+          </Button>
+        )}
+      </p>
+      {delay !== null && (
+        <p className={overThreshold ? "text-amber-700" : "text-slate-600"}>
+          <span className="font-semibold">{formatDelay(delay)}</span> against
+          the PRIMARY arrival.{" "}
+          {overThreshold
+            ? "Over 1h, so the Logistics Manager must approve it."
+            : "Under 1h: the request is accepted only if the backup changes a BCP, adds a 24h rest or detours by 50 km or more."}
+        </p>
+      )}
+    </div>
   );
 }
