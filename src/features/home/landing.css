@@ -1021,7 +1021,9 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
 .landing-closing-panel {
   padding: 3rem 3.2rem 2.2rem;
   text-align: center;
-  background: #16120e;
+  /* Solid ivory card, echoing Reliability, stands out on photo and dark alike. */
+  color: #272522;
+  background: var(--landing-ivory);
   border-top: 3px solid var(--landing-orange);
   box-shadow: 0 40px 90px #00000080;
 }
@@ -1031,6 +1033,20 @@ html[data-pegaxus-scrollbar="hidden"] .landing-scroll-progress {
 }
 .landing-closing-brand img {
   width: 180px;
+  mix-blend-mode: multiply;
+}
+.pegaxus-landing .landing-closing-panel h2 {
+  color: #272522;
+}
+.pegaxus-landing .landing-closing-panel .landing-lead {
+  color: #6c655c;
+}
+.landing-closing-panel .landing-text-link {
+  border-bottom-color: #27252240;
+}
+.landing-closing-panel .landing-closing-note {
+  color: #8b8378;
+  border-top-color: #ddd5c8;
 }
 .pegaxus-landing .landing-closing h2 {
   margin: 1.8rem 0 1rem;

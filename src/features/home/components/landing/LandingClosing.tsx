@@ -2,6 +2,7 @@ import { ArrowUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BrandLogo } from "@/shared/components/BrandNavigation";
 import footerPhoto from "@/assets/footer.jpg";
+import logoBlack from "@/assets/Logo-black.png";
 import { GuestLinks, TransportLink } from "./LandingActions";
 
 /**
@@ -35,7 +36,7 @@ export function LandingClosing() {
           </p>
         </div>
         <div className="landing-closing-panel" data-closing-panel>
-          <BrandLogo className="landing-closing-brand" />
+          <BrandLogo src={logoBlack} className="landing-closing-brand" />
           <h2 id="final-title" data-split>
             Their next chapter
             <br />
