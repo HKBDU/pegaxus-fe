@@ -1,0 +1,99 @@
+.booking-summary-bar {
+  display: grid;
+  width: 100%;
+  border: 1px solid #e5e2d9;
+  background-color: #ffffff;
+}
+
+.booking-summary-cell {
+  position: relative;
+  min-width: 0;
+  padding: 0.625rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .booking-summary-cell {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+/* VERY NARROW (< 350px, e.g. 320px): stack all 3 fields vertically with horizontal dividers only */
+@media (max-width: 349px) {
+  .booking-summary-bar {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-summary-route {
+    order: 1;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .booking-summary-code {
+    order: 2;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .booking-summary-horses {
+    order: 3;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+  }
+}
+
+/* MOBILE (350px - 767px, e.g. 360px+): Route row 1 (full width), Booking Code & Selected Racehorses row 2 */
+@media (min-width: 350px) and (max-width: 767px) {
+  .booking-summary-bar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .booking-summary-route {
+    grid-column: 1 / -1;
+    order: 1;
+    border-bottom: 1px solid #e5e7eb;
+    border-left: none;
+    border-right: none;
+  }
+
+  .booking-summary-code {
+    grid-column: 1 / 2;
+    order: 2;
+    border-right: 1px solid #e5e7eb;
+    border-bottom: none;
+    border-left: none;
+  }
+
+  .booking-summary-horses {
+    grid-column: 2 / 3;
+    order: 3;
+    border: none;
+  }
+}
+
+/* DESKTOP (768px and up): 3 evenly spaced columns with subtle vertical dividers */
+@media (min-width: 768px) {
+  .booking-summary-bar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .booking-summary-code {
+    order: 1;
+    border: none;
+  }
+
+  .booking-summary-route {
+    order: 2;
+    border-left: 1px solid #e5e7eb;
+    border-bottom: none;
+    border-right: none;
+  }
+
+  .booking-summary-horses {
+    order: 3;
+    border-left: 1px solid #e5e7eb;
+    border-bottom: none;
+    border-right: none;
+  }
+}
+

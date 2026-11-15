@@ -19,6 +19,7 @@ import { getAccountError } from "../services";
 import { formatAccountLabel } from "../constants";
 import { DeleteAccountDialog } from "../components/DeleteAccountDialog";
 import { EmployeeSummaryCard } from "../components/EmployeeSummaryCard";
+import { usePageTitle } from "@/shared/hooks";
 
 export default function ViewUserAccountPage() {
   const { employeeId = "" } = useParams();
@@ -26,6 +27,8 @@ export default function ViewUserAccountPage() {
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
   const employee = query.data;
+  const viewTitle = employee?.fullName ? `User ${employee.fullName}` : "View User";
+  usePageTitle(viewTitle);
   const date = (value: string | null, time = true) =>
     value ? (time ? formatUtcDateTime(value) : formatBookingDate(value)) : "—";
   const sections = employee

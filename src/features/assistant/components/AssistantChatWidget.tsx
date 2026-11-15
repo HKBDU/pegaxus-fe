@@ -280,7 +280,7 @@ export function AssistantChatWidget() {
                   type="submit"
                   disabled={loading || !draft.trim() || draft.length > 1000}
                   aria-label="Send message"
-                  className="flex size-11 items-center justify-center rounded-lg bg-[#f39200] text-white disabled:opacity-50"
+                  className="flex size-11 items-center justify-center rounded-lg bg-[#f39200] text-[#181818] hover:text-[#181818] disabled:opacity-50"
                 >
                   {loading ? <LoaderCircle className="size-4 animate-spin" /> : <Send className="size-4" />}
                 </button>

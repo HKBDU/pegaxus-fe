@@ -1,5 +1,6 @@
 import { ArrowRight, House, LogIn, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { usePageTitle } from '@/shared/hooks'
 
 type StatusPageProps = {
   image: string
@@ -24,6 +25,7 @@ export function StatusPage({
   primaryAction = 'home',
   onRetry,
 }: StatusPageProps) {
+  usePageTitle(title)
   const primaryContent = (
     <>
       {primaryAction === 'retry' ? <RefreshCw className="size-4" /> : primaryAction === 'login' ? <LogIn className="size-4" /> : <House className="size-4" />}

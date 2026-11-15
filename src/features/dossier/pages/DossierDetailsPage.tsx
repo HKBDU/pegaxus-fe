@@ -20,6 +20,7 @@ import { useDossierOverview } from "../hooks/useDossier";
 import { useDossierRole } from "../hooks/useDossierRole";
 import { ReturnTripPanel } from "../components/ReturnTripPanel";
 import { getDossierLoadErrorKind } from "../source";
+import { usePageTitle } from "@/shared/hooks";
 
 const sections = [
   { id: "requirements", label: "Dossier Requirements", icon: ClipboardList },
@@ -71,6 +72,13 @@ export default function DossierDetailsPage() {
       : sections;
   const activeSection = visibleSections.some(({ id }) => id === selectedSection) ? selectedSection : "requirements";
   const query = useDossierOverview(dossierId);
+  const revisionCount = query.data?.requirementSummary?.rejected ?? 0;
+  const dossierTitle = revisionCount > 0
+    ? "Revision requested"
+    : query.data?.dossierCode
+      ? `Dossier ${query.data.dossierCode}`
+      : "Dossier Details";
+  usePageTitle(dossierTitle, revisionCount);
   return (
     <div className="booking-page-shell min-w-0 px-5 py-6 font-sans sm:px-6 lg:px-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1440px] space-y-5">

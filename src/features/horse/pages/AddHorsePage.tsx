@@ -20,6 +20,7 @@ import { getHorseApiErrorMessage } from "../utils/horse-api-error"
 import { toHorseDateInput } from "../utils/format-horse-date"
 import { todayUtc } from "@/shared/utils/datetime"
 import type { CreateHorseRequest, Horse, HorseFormValues, HorseSex } from "../types"
+import { usePageTitle } from "@/shared/hooks"
 
 import {
   VALIDATION_LIMITS,
@@ -496,6 +497,7 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
 }
 
 export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
+  usePageTitle(mode === "edit" ? "Edit Horse" : "Add Horse")
   const navigate = useNavigate()
   return (
     <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">

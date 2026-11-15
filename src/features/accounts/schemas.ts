@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isPhoneValid, PHONE_MESSAGE, PHONE_ALLOWED_REGEX } from "@/shared/constants/validation-limits";
 
 export const employeeRoles = [
   "LOGISTICS_MANAGER",
@@ -11,11 +12,17 @@ const phoneSchema = z
   .string()
   .trim()
   .min(1, "Phone is required.")
-  .regex(/^\+?[0-9\s().-]+$/, "Please enter a valid phone number.")
-  .transform((value) => value.replace(/[\s().-]/g, ""))
+  .regex(PHONE_ALLOWED_REGEX, "Please enter a valid phone number.")
+  .transform((val) => {
+    const stripped = val.replace(/[\s().-]/g, "");
+    if (/^0[1-9]\d{7,10}$/.test(stripped)) {
+      return `+84${stripped.slice(1)}`;
+    }
+    return stripped;
+  })
   .refine(
-    (value) => /^\+?[1-9]\d{7,14}$/.test(value),
-    "Enter a valid phone number (8–15 digits, e.g. +33123456789).",
+    (value) => isPhoneValid(value),
+    PHONE_MESSAGE,
   );
 const entityId = z.string();
 export const employeeSchema = z.object({

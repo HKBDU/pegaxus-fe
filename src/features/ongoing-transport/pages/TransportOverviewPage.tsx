@@ -19,6 +19,7 @@ import { formatTransportDate, formatTransportTime } from "../format";
 import { getOngoingTransportError } from "../services";
 import type { TransportAudience } from "../types";
 import { incidentRoutes } from "@/features/incident-management/constants";
+import { usePageTitle } from "@/shared/hooks";
 
 export default function TransportOverviewPage({
   audience,
@@ -31,6 +32,8 @@ export default function TransportOverviewPage({
     bookingId: string;
   }>();
   const query = useTransportOverview(transportId, bookingId, audience, "data");
+  const transportTitle = query.data?.transport?.transportCode ? `Transport ${query.data.transport.transportCode}` : "Transport Overview";
+  usePageTitle(transportTitle);
   const error = query.isError
     ? getOngoingTransportError(query.error, "overview")
     : null;

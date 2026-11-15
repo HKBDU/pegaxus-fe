@@ -265,7 +265,7 @@ export default function BcpQuarantineProofPage() {
                     disabled={isPending || uploadState === 'uploading'}
                     className={cn(
                       'w-full rounded-[2px] py-3.5 font-heading text-sm font-black uppercase tracking-widest',
-                      'bg-[#f39200] text-white hover:bg-[#e08600] active:bg-[#c97800]',
+                      'bg-[#f39200] text-[#181818] hover:bg-[#e08600] active:bg-[#c97800]',
                       'transition-colors disabled:opacity-50 cursor-pointer',
                     )}
                   >
@@ -294,7 +294,7 @@ export default function BcpQuarantineProofPage() {
             onClick={form.handleSubmit(onSubmit)}
             className={cn(
               'w-full rounded-[2px] py-3.5 font-heading text-sm font-black uppercase tracking-widest',
-              'bg-[#f39200] text-white hover:bg-[#e08600] active:bg-[#c97800]',
+              'bg-[#f39200] text-[#181818] hover:bg-[#e08600] active:bg-[#c97800]',
               'transition-colors disabled:opacity-50',
             )}
           >
