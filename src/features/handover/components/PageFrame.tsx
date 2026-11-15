@@ -1,7 +1,6 @@
-import { ArrowLeft } from "lucide-react"
 import type { ReactNode } from "react"
-import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
+import { BackButton } from "@/shared/components/BackButton"
 import type { HandoverAudience } from "../constants"
 
 interface Props {
@@ -24,13 +23,9 @@ export function PageFrame({ audience, title, backHref, backLabel = "Back", actio
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           {backHref ? (
-            <Link
-              to={backHref}
-              aria-label={backLabel}
-              className="inline-flex size-11 shrink-0 items-center justify-center rounded-full text-primary outline-none hover:bg-primary/10 focus-visible:ring-2 focus-visible:ring-primary/40 sm:size-9"
-            >
-              <ArrowLeft aria-hidden="true" className="size-5" />
-            </Link>
+            <BackButton to={backHref} aria-label={backLabel}>
+              {backLabel}
+            </BackButton>
           ) : null}
           <h2 className="my-0! min-w-0 truncate font-heading text-base! leading-6! font-bold tracking-[0.06em]! text-gray-900! uppercase">{title}</h2>
         </div>

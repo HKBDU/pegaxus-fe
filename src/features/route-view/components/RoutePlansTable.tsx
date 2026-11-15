@@ -7,6 +7,7 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import { DataTable } from "@/shared/components/ui/data-table";
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { Button } from "@/shared/components/ui/button";
 import {
   DropdownMenu,
@@ -58,7 +59,7 @@ export function RoutePlansTable({
         cell: ({ row }) =>
           routeDetailPath ? (
             <Link
-              className="font-semibold text-slate-900 underline decoration-primary/50 underline-offset-2 hover:decoration-primary"
+              className={codeLinkClassName}
               to={routeDetailPath(row.original.routePlanId)}
             >
               {row.original.routePlanCode}

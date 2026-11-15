@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, ClipboardCheck, Play, Truck, Users } from "lucide-react";
+import { ClipboardCheck, Play, Truck, Users } from "lucide-react";
+import { BackButton } from "@/shared/components/BackButton";
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge";
 import { Button } from "@/shared/components/ui/button";
 import { Label } from "@/shared/components/ui/label";
@@ -187,16 +188,9 @@ export function ReturnActivationPanel({
   return (
     <section aria-label="Emergency return activation" className="space-y-3">
       <div className="space-y-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={busy}
-          onClick={onBack}
-          className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none -ml-3 text-slate-600"
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" />
+        <BackButton disabled={busy} onClick={onBack}>
           Back to Route Plan
-        </Button>
+        </BackButton>
         <div className="space-y-1.5">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">
             Emergency Operations · Logistics Manager

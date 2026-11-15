@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, Check, FileText, ShieldCheck, Users, X } from "lucide-react";
+import { Check, FileText, ShieldCheck, Users, X } from "lucide-react";
+import { BackButton } from "@/shared/components/BackButton";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
@@ -166,16 +167,9 @@ export function RouteChangeDecisionPanel({
   return (
     <section aria-label="Emergency route change decision" className="space-y-3">
       <div className="space-y-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={busy}
-          onClick={onBack}
-          className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none -ml-3 text-slate-600"
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" />
+        <BackButton disabled={busy} onClick={onBack}>
           Back to Route Plan
-        </Button>
+        </BackButton>
         <div className="space-y-1.5">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">
             Emergency Operations · Logistics Manager

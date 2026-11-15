@@ -151,7 +151,7 @@ export default function VehicleDetailPage() {
                     {vehicle.upcomingAssignments.length ? (
                       vehicle.upcomingAssignments.map((assignment, index) => (
                         <TableRow key={assignment.routePlanRouteId} className={cn("booking-table-row h-11 border-slate-200 hover:bg-amber-50/60", index % 2 === 0 ? "bg-white" : "bg-[#f7f6f3]")}>
-                          <TableCell className="px-2.5 py-1.5 text-xs font-semibold text-gray-900">{assignment.planCode}</TableCell>
+                          <TableCell className="px-2.5 py-1.5 text-xs text-gray-700">{assignment.planCode}</TableCell>
                           <TableCell className="px-2.5 py-1.5 text-xs text-gray-700">{assignment.routePlanCode}</TableCell>
                           <TableCell className="px-2.5 py-1.5 text-xs text-gray-700">{assignment.sequenceNo}</TableCell>
                           <TableCell className="px-2.5 py-1.5 text-xs text-gray-700">{assignment.fromLocationName}</TableCell>

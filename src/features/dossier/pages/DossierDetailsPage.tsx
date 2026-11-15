@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  ArrowLeft,
   ClipboardList,
   FileText,
   History,
@@ -9,6 +8,7 @@ import {
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ErrorState, LoadingState } from "@/shared/components/common";
 import { PageHeader } from "@/shared/components/PageHeader";
+import { BackButton } from "@/shared/components/BackButton";
 import { AuthorityInspectionTab } from "@/features/clearance/components/AuthorityInspectionTab";
 import { DossierRequirementsPanel } from "@/features/compliance-catalog/pages/DossierRequirementsPage";
 import { ROLE_ROUTES } from "@/app/route-config";
@@ -86,8 +86,7 @@ export default function DossierDetailsPage() {
       <div className="booking-page-enter mx-auto w-full max-w-[1440px] space-y-5">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <button
-              type="button"
+            <BackButton
               onClick={() =>
                 navigate(
                   role === "TRANSPORT_SPECIALIST"
@@ -99,11 +98,13 @@ export default function DossierDetailsPage() {
                         : "/bookings",
                 )
               }
-              className="group inline-flex items-center gap-[6px] pt-2 text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase focus-visible:outline-2 focus-visible:outline-ring"
             >
-              <ArrowLeft aria-hidden="true" className="size-3.5 shrink-0" />
-              <span className="underline-offset-4 group-hover:underline">{role === "TRANSPORT_SPECIALIST" ? "Back to Dossier Tracking" : query.data?.bookingId ? "Back to Booking" : "Back to Bookings"}</span>
-            </button>
+              {role === "TRANSPORT_SPECIALIST"
+                ? "Back to Dossier Tracking"
+                : query.data?.bookingId
+                  ? "Back to Booking"
+                  : "Back to Bookings"}
+            </BackButton>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <PageHeader
                 title="COMPLIANCE DOSSIER"

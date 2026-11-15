@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils"
 import { ErrorState } from "@/shared/components/common"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { PageHeader } from "@/shared/components/PageHeader"
+import { BackButton } from "@/shared/components/BackButton"
 import { Checkbox } from "@/shared/components/ui/checkbox"
 import { BookingPointCards } from "@/features/booking/components/BookingPointCards"
 import type { BookingPointSide, PickedPoint } from "@/features/booking/lib/place"
@@ -614,10 +615,9 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
               }}>{refreshingBaseline ? "Refreshing server baseline..." : "Refresh server baseline to retry (keep form input)"}</button>}
             </div>}
             {step === 2 ? (
-              <button type="button" onClick={() => setStep(1)} className="group mb-2 flex w-fit items-center gap-[6px] text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase transition-colors hover:text-primary-hover">
-                <span aria-hidden="true" className="text-[14px] transition-transform group-hover:-translate-x-0.5">←</span>
+              <BackButton onClick={() => setStep(1)} className="mb-2">
                 Return to transport details
-              </button>
+              </BackButton>
             ) : null}
 
             <div className="mb-3">
