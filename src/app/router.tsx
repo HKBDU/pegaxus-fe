@@ -19,10 +19,12 @@ import { authRoutes } from "@/features/auth/routes";
 import { claimRoutes } from "@/features/claim/routes";
 import { priceListRoutes } from "@/features/price-list/routes";
 import { incidentManagementRoutes } from "@/features/incident-management";
+import { useAuthStore } from "@/features/auth/store";
 import {
   APPROVED_BOOKINGS_ACCESS,
   TRANSPORT_PLANS_ACCESS,
   ROLE_ROUTES,
+  getPostLoginPath,
   routePlanDetail,
 } from "./route-config";
 import { liveTrackingTabRoutes } from "@/features/live-tracking";
@@ -161,6 +163,14 @@ const bookingHistoryPage = (
     <BookingStatusHistoryPage />
   </Suspense>
 );
+
+function AdminIndexRedirect() {
+  const principal = useAuthStore((state) => state.principal);
+  const user = useAuthStore((state) => state.user);
+  const role = user?.role || principal?.roles[0];
+  const target = role ? getPostLoginPath(role, "/admin") : "/login";
+  return <Navigate to={target} replace />;
+}
 
 const routes: RouteObject[] = [
   ...transportAuditRoutes,
@@ -432,116 +442,127 @@ const routes: RouteObject[] = [
   {
     path: "/admin",
     element: (
-      <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
+      <ProtectedRoute
+        allowedRoles={[
+          "LOGISTICS_MANAGER",
+          "TRANSPORT_SPECIALIST",
+          "FLEET_ROUTE_COORDINATOR",
+        ]}
+      >
         <AdminLayout />
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <Navigate to="transport-requests" replace /> },
+      { index: true, element: <AdminIndexRedirect /> },
       {
-        path: "compliance-dossiers/:dossierId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <DossierDetailsPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "booking",
-        element: <Navigate to="/admin/transport-requests" replace />,
-      },
-      {
-        path: "bookings",
-        element: <Navigate to="/admin/transport-requests" replace />,
-      },
-      {
-        path: "profile",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <ProfileSettingsPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "transport-requests",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <BookingListPage audience="manager" />
-          </Suspense>
-        ),
-      },
-      {
-        path: ROLE_ROUTES.managerUsers,
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <ManageUserAccountsPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: ROLE_ROUTES.managerCreateUser,
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <CreateEmployeeAccountPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "users/:employeeId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <ViewUserAccountPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "users/:employeeId/edit",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <EditUserAccountPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "transport-requests/:bookingId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <BookingDetailsPage audience="manager" />
-          </Suspense>
-        ),
-      },
-      // Flow 6 invoices (Logistics Manager).
-      {
-        path: "invoices",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <InvoiceListPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "invoices/new/:bookingId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <InvoiceFormPage mode="create" />
-          </Suspense>
-        ),
-      },
-      {
-        path: "invoices/:invoiceId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <InvoiceDetailPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "invoices/:invoiceId/edit",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <InvoiceFormPage mode="edit" />
-          </Suspense>
-        ),
+        element: <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]} />,
+        children: [
+          {
+            path: "compliance-dossiers/:dossierId",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <DossierDetailsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "booking",
+            element: <Navigate to="/admin/transport-requests" replace />,
+          },
+          {
+            path: "bookings",
+            element: <Navigate to="/admin/transport-requests" replace />,
+          },
+          {
+            path: "profile",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <ProfileSettingsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "transport-requests",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <BookingListPage audience="manager" />
+              </Suspense>
+            ),
+          },
+          {
+            path: ROLE_ROUTES.managerUsers,
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <ManageUserAccountsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: ROLE_ROUTES.managerCreateUser,
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <CreateEmployeeAccountPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "users/:employeeId",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <ViewUserAccountPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "users/:employeeId/edit",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <EditUserAccountPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "transport-requests/:bookingId",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <BookingDetailsPage audience="manager" />
+              </Suspense>
+            ),
+          },
+          // Flow 6 invoices (Logistics Manager).
+          {
+            path: "invoices",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <InvoiceListPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "invoices/new/:bookingId",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <InvoiceFormPage mode="create" />
+              </Suspense>
+            ),
+          },
+          {
+            path: "invoices/:invoiceId",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <InvoiceDetailPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "invoices/:invoiceId/edit",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <InvoiceFormPage mode="edit" />
+              </Suspense>
+            ),
+          },
+        ],
       },
       { path: "*", element: <NotFoundPage /> },
     ],
