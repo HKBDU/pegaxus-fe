@@ -27,7 +27,7 @@ import {
   causeLabels,
   reportMeta,
   reportTime,
-  signedNumber,
+  deviationText,
 } from "../presentation";
 import {
   bucketSchema,
@@ -104,7 +104,8 @@ export function TransportReportTable({
                 className="overflow-hidden"
                 viewportClassName="max-h-[min(20rem,calc(var(--radix-select-content-available-height)-3rem))]"
               >
-                <SelectItem value="DELAYED">Delayed (default)</SelectItem>
+                <SelectItem value="DELAYED">Not on time (default)</SelectItem>
+                <SelectItem value="EARLY">Early</SelectItem>
                 <SelectItem value="ON_TIME">On time</SelectItem>
                 <SelectItem value="MINOR_DELAY">Minor delay</SelectItem>
                 <SelectItem value="MAJOR_DELAY">Major delay</SelectItem>
@@ -248,7 +249,7 @@ export function TransportReportTable({
                     {reportTime(item.actualArrivalAt).replace(" UTC", "")}
                   </TableCell>
                   <TableCell className="px-3 text-right tabular-nums">
-                    {signedNumber(item.delayMinutes)}
+                    {deviationText(item.delayMinutes)}
                   </TableCell>
                   <TableCell className="px-3">
                     <Badge
@@ -256,7 +257,9 @@ export function TransportReportTable({
                       className={
                         item.bucket === "ON_TIME"
                           ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                          : item.bucket === "MAJOR_DELAY"
+                          : item.bucket === "EARLY"
+                            ? "border-sky-200 bg-sky-50 text-sky-800"
+                            : item.bucket === "MAJOR_DELAY"
                             ? "border-red-200 bg-red-50 text-red-800"
                             : "border-amber-200 bg-amber-50 text-amber-900"
                       }

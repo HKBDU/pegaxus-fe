@@ -43,6 +43,7 @@ import { useRoutePlanDetail } from "../../hooks/useRoutePlanDetail";
 import { getRouteViewError, routeViewService } from "../../services";
 import type { CrewOverride, RoutePlanDetail } from "../../types";
 import { CrewSelection } from "./CrewSelection";
+import { AnchorNote } from "./AnchorNote";
 import { crewSelectionErrors } from "../../crew-selection";
 import { isRelatedPrimary } from "../../route-comparison";
 import { RouteChangeComparison } from "./RouteChangeComparison";
@@ -223,9 +224,10 @@ export function RouteChangeDecisionPanel({
       {!isReturn && (
         <Section title="Crew, Vehicles & Start Time" icon={Users}>
           <p className="text-sm leading-6 text-slate-600">
-            The crew of the replaced PRIMARY segments is suggested. Fill any
-            gap, change people or vehicles, and set when the backup really
-            starts (for example after a hold or once tickets are booked).
+            The crew with the horse (when the convoy turns back) or of the
+            replaced PRIMARY segments is suggested. Fill any gap, change people
+            or vehicles, and set when the backup really starts (for example
+            after a hold or once tickets are booked).
           </p>
           {crewPlan.isPending && (
             <p className="text-xs text-slate-500">Loading the suggested crew…</p>
@@ -235,6 +237,7 @@ export function RouteChangeDecisionPanel({
               {getRouteViewError(crewPlan.error).message}
             </p>
           )}
+          {crewPlan.data && <AnchorNote plan={crewPlan.data} routeLabel="backup" />}
           {crewPlan.data && (
             <CrewSelection
               plan={crewPlan.data}

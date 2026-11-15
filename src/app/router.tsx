@@ -42,9 +42,9 @@ import {
   emergencyCostRoutes,
   emergencyRerouteRoutes,
 } from "@/features/incident-response";
-import TestPage from "../Test";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const TermsPage = lazy(() => import("@/features/policies/pages/TermsPage"));
 const BookingListPage = lazy(
   () => import("@/features/booking/pages/BookingListPage"),
 );
@@ -56,18 +56,6 @@ const BookingFormPage = lazy(
 );
 const ReturnBookingPage = lazy(
   () => import("@/features/booking/pages/ReturnBookingPage"),
-);
-const BcpQuarantineProofPage = lazy(
-  () => import("@/features/quarantine/pages/BcpQuarantineProofPage"),
-);
-const QuarantineReviewPage = lazy(
-  () => import("@/features/quarantine/pages/QuarantineReviewPage"),
-);
-const CustomsClearanceProofPage = lazy(
-  () => import("@/features/clearance/pages/CustomsClearanceProofPage"),
-);
-const CustomsClearanceReviewPage = lazy(
-  () => import("@/features/clearance/pages/CustomsClearanceReviewPage"),
 );
 const ManageUserAccountsPage = lazy(
   () => import("@/features/accounts/pages/ManageUserAccountsPage"),
@@ -185,11 +173,7 @@ const routes: RouteObject[] = [
   ...priceListRoutes,
   ...managementReportRoutes,
   {
-    element: (
-      <DriverLocationSession>
-        <Outlet />
-      </DriverLocationSession>
-    ),
+    element: <Outlet />,
     children: [
       ...horseHealthRoutes,
       ...incidentManagementRoutes,
@@ -272,6 +256,14 @@ const routes: RouteObject[] = [
     path: "/",
     element: <MainLayout />,
     children: [
+      {
+        path: "terms",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TermsPage />
+          </Suspense>
+        ),
+      },
       {
         index: true,
         element: (
@@ -814,94 +806,10 @@ const routes: RouteObject[] = [
           },
         ],
       },
-      {
-        element: (
-          <ProtectedRoute
-            allowedRoles={[
-              "DRIVER",
-              "ESCORT",
-              "TRANSPORT_SPECIALIST",
-              "LOGISTICS_MANAGER",
-            ]}
-          >
-            <AdminLayout />
-          </ProtectedRoute>
-        ),
-        children: [
-          {
-            path: "/compliance-dossiers/:dossierId/bcp-quarantine-proof",
-            element: (
-              <ProtectedRoute
-                allowedRoles={["ESCORT"]}
-              >
-                <Suspense fallback={<LoadingState />}>
-                  <BcpQuarantineProofPage />
-                </Suspense>
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: "/compliance-dossiers/:dossierId/quarantine-proof",
-            element: (
-              <ProtectedRoute
-                allowedRoles={["ESCORT"]}
-              >
-                <Suspense fallback={<LoadingState />}>
-                  <BcpQuarantineProofPage />
-                </Suspense>
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: "/compliance-dossiers/:dossierId/customs-clearance-proof",
-            element: (
-              <ProtectedRoute
-                allowedRoles={["DRIVER"]}
-              >
-                <Suspense fallback={<LoadingState />}>
-                  <CustomsClearanceProofPage />
-                </Suspense>
-              </ProtectedRoute>
-            ),
-          },
-        ],
-      },
-      {
-        element: (
-          <ProtectedRoute
-            allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}
-          >
-            <AdminLayout />
-          </ProtectedRoute>
-        ),
-        children: [
-          {
-            path: "/quarantine-proofs/:proofId/verify",
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <QuarantineReviewPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "/customs-clearance-proofs/:proofId/verify",
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <CustomsClearanceReviewPage />
-              </Suspense>
-            ),
-          },
-        ],
-      },
     ],
   },
   ...(import.meta.env.DEV
     ? [
-        // BEGIN TEMP UC-38 LOCAL PREVIEW — remove only this route object after testing.
-        {
-          path: "/__dev/transport-audit",
-          element: <TestPage />,
-        },
         {
           path: "/__dev/flow3/route-plans/:routePlanId",
           element: (
@@ -965,6 +873,11 @@ const routes: RouteObject[] = [
 export const router = createBrowserRouter([
   {
     errorElement: <RouteErrorBoundary />,
+    element: (
+      <DriverLocationSession>
+        <Outlet />
+      </DriverLocationSession>
+    ),
     children: routes,
   },
 ]);

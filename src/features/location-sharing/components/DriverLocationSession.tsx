@@ -97,31 +97,29 @@ export function DriverLocationSession({ children }: { children: ReactNode }) {
   const sessionVersion = useAuthStore((state) => state.sessionVersion);
   const [selectedTransport, setSelectedTransport] = useState<{ accountId?: string; sessionVersion: number; transportId: string }>();
   const driver = canAccess(principal, { anyRole: ["DRIVER"] });
-  const crewRoute = pathname === "/crew" || pathname.startsWith("/crew/");
   const routeTransportId = route?.params.transportId;
-  const isDemo = routeTransportId === "demo";
+  const isDemo = driver && routeTransportId === "demo";
   const source = "real";
-  const assigned = useAssignedDriverContext(crewRoute && !isDemo);
+  const assigned = useAssignedDriverContext(driver && !isDemo);
   const incidentTransportId = pathname.startsWith("/crew/incidents/") &&
     navigationState && typeof navigationState === "object" && "transportId" in navigationState &&
     typeof navigationState.transportId === "string" ? navigationState.transportId : undefined;
-  const retainedTransportId = crewRoute && driver && selectedTransport?.accountId === principal?.id &&
+  const retainedTransportId = driver && selectedTransport?.accountId === principal?.id &&
     selectedTransport?.sessionVersion === sessionVersion && assigned.data?.items.some((item) => item.transportId === selectedTransport.transportId && item.status === "IN_TRANSIT" && item.myRole === "DRIVER") ? selectedTransport.transportId : undefined;
-  const transportId =
+  const transportId = driver ? (
     routeTransportId ??
     incidentTransportId ??
     retainedTransportId ??
-    (pathname === "/crew"
-      ? assigned.data?.items.find(
+    assigned.data?.items.find(
           (item) => item.status === "IN_TRANSIT" && item.myRole === "DRIVER",
         )?.transportId
-      : undefined);
+  ) : undefined;
   useEffect(() => {
-    if (!driver || !crewRoute || !transportId || isDemo || !assigned.data?.items.some((item) => item.transportId === transportId && item.status === "IN_TRANSIT" && item.myRole === "DRIVER")) return;
+    if (!driver || !transportId || isDemo || !assigned.data?.items.some((item) => item.transportId === transportId && item.status === "IN_TRANSIT" && item.myRole === "DRIVER")) return;
     setSelectedTransport((current) => current && current.transportId === transportId && current.sessionVersion === sessionVersion && current.accountId === principal?.id
       ? current : { transportId, sessionVersion, accountId: principal?.id });
-  }, [driver, crewRoute, isDemo, transportId, sessionVersion, principal?.id, assigned.data]);
-  const effectiveDriver = isDemo ? true : driver;
+  }, [driver, isDemo, transportId, sessionVersion, principal?.id, assigned.data]);
+  const effectiveDriver = driver;
   const query = useTransportOverview(
     isDemo ? undefined : transportId,
     undefined,
@@ -245,6 +243,11 @@ export function DriverLocationSession({ children }: { children: ReactNode }) {
           }
           onMockGpsEnabled={sharing.restart}
           onMockGpsDisabled={sharing.restart}
+          sharingActive={sharing.state.active}
+          sharingAcceptance={sharing.state.acceptance}
+          sharingMessage={sharing.state.message}
+          canStartSharing={sharing.canStart}
+          onStartSharing={sharing.start}
         />
       ) : null}
       {driver && transportId ? (

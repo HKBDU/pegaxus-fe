@@ -178,6 +178,9 @@ export function RouteSegmentList({
                 <p className="break-words text-sm font-semibold">
                   {segment.fromLocation.locationName} →{" "}
                   {segment.toLocation.locationName}
+                  {segment.endedAtLocation ? (
+                    <span className="text-amber-700"> · stopped early at {segment.endedAtLocation.locationName}</span>
+                  ) : null}
                 </p>
                 {review ? (
                   <>

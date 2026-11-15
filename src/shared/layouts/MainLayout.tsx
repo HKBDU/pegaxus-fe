@@ -1,5 +1,5 @@
-import { Outlet } from "react-router-dom"
-import { useLocation } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { Link, Outlet, useLocation } from "react-router-dom"
 
 import { useAuthStore } from "@/features/auth/store"
 import { canAccess } from "@/features/auth/access-control"
@@ -14,6 +14,7 @@ import { useIsDesktop } from "@/shared/hooks"
 import { AdminLayout } from "@/shared/layouts/AdminLayout"
 import type { ProfileDropdownUser } from "@/shared/components/ProfileDropdown"
 import type { HeaderNavItem } from "@/shared/types/type"
+import "@/features/policies/terms.css"
 
 const customerNavItems: HeaderNavItem[] = [
   { label: "Home", href: "/" },
@@ -35,6 +36,34 @@ function toHeaderUser(profile: AuthAccount): ProfileDropdownUser {
     email: profile.email,
     avatarUrl: profile.avatarUrl ?? undefined,
   }
+}
+
+function CustomerPolicyBar() {
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    let previousY = window.scrollY
+    const onScroll = () => {
+      const currentY = window.scrollY
+      if (currentY <= 0) {
+        setVisible(false)
+        previousY = currentY
+        return
+      }
+      if (Math.abs(currentY - previousY) < 4) return
+      setVisible(currentY < previousY)
+      previousY = currentY
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
+  return (
+    <div className={`customer-policy-bar${visible ? "" : " customer-policy-bar--hidden"}`} aria-hidden={!visible}>
+      <Link to="/terms" tabIndex={visible ? 0 : -1}>View policies and terms</Link>
+    </div>
+  )
 }
 
 export function MainLayout() {
@@ -59,6 +88,7 @@ export function MainLayout() {
 
   const baseNavItems = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] }) ? customerNavItems : isCrewRoute ? crewNavItems : []
   const isCustomer = Boolean(accessToken && canAccess(principal, { anyRole: ["CUSTOMER"] }))
+  const showPolicyBar = isCustomer || (isLanding && !accessToken)
   const navItems = baseNavItems
   const customerChrome = !accessToken || canAccess(principal, { anyRole: ["CUSTOMER"] })
   const user: ProfileDropdownUser | null = accessToken && account
@@ -70,7 +100,7 @@ export function MainLayout() {
         : null
 
   return (
-    <div className={`flex min-h-screen flex-col${customerChrome && !isLanding ? " customer-workspace" : ""}`}>
+    <div className={`flex min-h-screen flex-col${customerChrome && (!isLanding || showPolicyBar) ? " customer-workspace" : ""}`}>
       <ProfileCompletionDialog />
       {!isLanding && <Header variant={customerChrome ? "customer" : "default"} navItems={navItems} isLoggedIn={Boolean(accessToken)} user={user} />}
       <IncidentAlertHost />
@@ -79,6 +109,7 @@ export function MainLayout() {
       </main>
       {!isLanding && !isCrewRoute && <Footer />}
       {isCustomer && <AssistantChatWidget />}
+      {showPolicyBar && <CustomerPolicyBar key={pathname} />}
     </div>
   )
 }
