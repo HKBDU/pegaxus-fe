@@ -3,8 +3,6 @@ export const HORSE_HEALTH_ROUTES = {
   transports: "/crew/transports",
   transportDetail: (transportId: string) => `/crew/transports/${encodeURIComponent(transportId)}`,
   handovers: (transportId: string) => `/crew/transports/${encodeURIComponent(transportId)}/handovers`,
-  quarantine: (dossierId: string) => `/compliance-dossiers/${encodeURIComponent(dossierId)}/bcp-quarantine-proof`,
-  clearance: (dossierId: string) => `/compliance-dossiers/${encodeURIComponent(dossierId)}/customs-clearance-proof`,
   health: (transportId: string) => `/crew/transports/${encodeURIComponent(transportId)}/health`,
   history: (transportId: string, horseId: string) => `/crew/transports/${encodeURIComponent(transportId)}/health/${encodeURIComponent(horseId)}`,
 } as const
@@ -30,8 +28,6 @@ export const HEALTH_STATUS_TONES = {
 } as const
 
 export const CREW_ACTION_LABELS = {
-  quarantine: "Quarantine Documents",
-  clearance: "Customs Clearance",
   handover: "Handover",
   incident: "Emergency Incident",
   notifications: "Notifications",

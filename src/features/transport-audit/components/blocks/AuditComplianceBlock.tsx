@@ -188,59 +188,6 @@ function RequirementsTable({ dossier }: { dossier: AuditComplianceDossier }) {
   );
 }
 
-function BorderProofs({ dossier }: { dossier: AuditComplianceDossier }) {
-  const quarantine = dossier.quarantineProof;
-  const customs = dossier.customsClearanceProof;
-  if (!quarantine && !customs) return null;
-
-  return (
-    <div className="grid gap-3 lg:grid-cols-2">
-      {quarantine ? (
-        <div className="rounded-[2px] border border-slate-200 bg-slate-50/60 p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-              BCP Quarantine Proof
-            </h4>
-            <Status value={quarantine.status} />
-          </div>
-          <ValueGrid
-            values={[
-              ["Border control post", quarantine.bcpName],
-              ["Inspection time", formatAuditDateTime(quarantine.inspectionAt)],
-              ["Official veterinarian", quarantine.officialVeterinarianName ?? "—"],
-              ["Verified at", formatAuditDateTime(quarantine.verifiedAt)],
-              ["Conditions", quarantine.conditions ?? "—"],
-              ["Verification note", quarantine.verificationNote ?? "—"],
-            ]}
-          />
-        </div>
-      ) : null}
-      {customs ? (
-        <div className="rounded-[2px] border border-slate-200 bg-slate-50/60 p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-              Customs Clearance Proof
-            </h4>
-            <Status value={customs.status} />
-          </div>
-          <ValueGrid
-            values={[
-              ["Customs port", customs.customsPortName],
-              [
-                "Movement Ref No. (MRN)",
-                customs.mrnNumber ? <CopyValue value={customs.mrnNumber} key="mrn" /> : "—",
-              ],
-              ["Cleared at", formatAuditDateTime(customs.clearanceAt)],
-              ["Verified at", formatAuditDateTime(customs.verifiedAt)],
-              ["Verification note", customs.verificationNote ?? "—"],
-            ]}
-          />
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 export function AuditComplianceBlock({ data }: { data?: AuditComplianceData }) {
   const dossiers = data?.dossiers ?? [];
 
@@ -275,7 +222,6 @@ export function AuditComplianceBlock({ data }: { data?: AuditComplianceData }) {
               ]}
             />
             <RequirementsTable dossier={dossier} />
-            <BorderProofs dossier={dossier} />
           </div>
         </BlockCard>
       ))}
