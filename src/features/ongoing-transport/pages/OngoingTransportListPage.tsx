@@ -20,8 +20,10 @@ import type {
 import "../ui.css";
 import { readOngoingListReturn } from "../navigation";
 import { ongoingListReturnSchema } from "../schemas";
+import { usePageTitle } from "@/shared/hooks";
 
 export default function OngoingTransportListPage() {
+  usePageTitle("Ongoing Transports");
   const location = useLocation();
   const navigate = useNavigate();
   const [params, setParams] = useState<OngoingTransportParams>(

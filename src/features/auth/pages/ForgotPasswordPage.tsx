@@ -12,8 +12,10 @@ import { useForgotPasswordMutation } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
+import { usePageTitle } from "@/shared/hooks";
 
 export default function ForgotPasswordPage() {
+  usePageTitle("Forgot Password");
   const mutation = useForgotPasswordMutation();
   const form = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),

@@ -302,7 +302,7 @@ export function UpdateAuthorityReviewDialog({
       <DialogTrigger asChild>
         <Button
           type="button"
-          className="rounded-[2px] bg-[#f39200] font-semibold text-white hover:bg-[#d97f00]"
+          className="rounded-[2px] bg-[#f39200] font-semibold text-[#181818] hover:bg-[#d97f00]"
         >
           Update Authority Review Result
         </Button>
@@ -962,7 +962,7 @@ export function UpdateAuthorityReviewDialog({
             <Button
               type="submit"
               form="update-authority-review"
-              className="rounded-[2px] bg-[#f39200] px-6 font-semibold text-white hover:bg-[#d97f00]"
+              className="rounded-[2px] bg-[#f39200] px-6 font-semibold text-[#181818] hover:bg-[#d97f00]"
               disabled={mutation.isPending}
             >
               {mutation.isPending && (

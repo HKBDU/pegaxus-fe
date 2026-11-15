@@ -28,6 +28,7 @@ import { BookingCardActions } from "@/features/booking/components/BookingCardAct
 import { BookingHistoryView } from "@/features/booking/components/history/BookingHistoryView"
 import { useDossierByBooking } from "@/features/dossier/hooks/useDossier"
 import type { BookingDossierLink } from "@/features/dossier/schemas"
+import { usePageTitle } from "@/shared/hooks"
 
 const EMPTY_VALUE = "—"
 
@@ -113,6 +114,8 @@ export default function BookingDetailsPage({ audience = "customer" }: { audience
   const invoicesSection = useRef<HTMLElement>(null)
   const claimsSection = useRef<HTMLElement>(null)
   const bookingQuery = useBooking(bookingId)
+  const bookingTitle = bookingQuery.data?.bookingCode ? `Booking ${bookingQuery.data.bookingCode}` : "Booking Details"
+  usePageTitle(bookingTitle)
   const booking = bookingQuery.data
 
   // Compliance dossiers for action check

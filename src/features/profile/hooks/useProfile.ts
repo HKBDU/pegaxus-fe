@@ -5,6 +5,7 @@ import { MOCK_CUSTOMER_PROFILE, MOCK_EMPLOYEE_PROFILE } from "@/features/profile
 import { profileApi } from "@/features/profile/services"
 import type { Profile, UpdateProfileRequest } from "@/features/profile/types"
 import { presignedUpload } from "@/shared/utils/presigned"
+import { normalizeCountryToIso2 } from "@/shared/components/ui/country-select"
 import { getAvatarFileError } from "../avatar"
 import { useAuthStore } from "@/features/auth/store"
 
@@ -106,17 +107,23 @@ export function useProfile(customerId?: string) {
         throw new Error("Customer profile updates are not available yet")
       }
 
-      const apiInput: UpdateProfileRequest = input.avatar instanceof File
+      const normalizedCountry = input.country !== undefined ? normalizeCountryToIso2(input.country) : undefined
+      const sanitizedInput: UpdateProfileRequest = {
+        ...input,
+        ...(input.country !== undefined ? { country: normalizedCountry } : {}),
+      }
+
+      const apiInput: UpdateProfileRequest = sanitizedInput.avatar instanceof File
         ? {
-            ...input,
+            ...sanitizedInput,
             avatar: {
               publicId: await presignedUpload.upload({
-                file: input.avatar,
+                file: sanitizedInput.avatar,
                 entity: "avatar",
               }),
             },
           }
-        : input
+        : sanitizedInput
       if (!isCurrentUpdate()) return false
       await profileApi.updateMe(apiInput)
       if (!isCurrentUpdate()) return false

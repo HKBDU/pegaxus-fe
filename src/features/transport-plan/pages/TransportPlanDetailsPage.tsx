@@ -33,6 +33,7 @@ import {
 import EditTransportPlanPage from "./EditTransportPlanPage";
 import { TransportPlanStatusBadge } from "../components/TransportPlanStatusBadge";
 import { TransportPlanGeneral } from "../components/TransportPlanGeneral";
+import { usePageTitle } from "@/shared/hooks";
 import { TransportPlanQuotation } from "../components/TransportPlanQuotation";
 import {
   TransportPlanPersonnel,
@@ -248,6 +249,7 @@ function TransportPlanReadPage() {
 
 export default function TransportPlanDetailsPage() {
   const [params] = useSearchParams();
+  usePageTitle(params.get("action") === "edit" ? "Edit Transport Plan" : "Transport Plan Details");
   return params.get("action") === "edit" ? (
     <EditTransportPlanPage />
   ) : (

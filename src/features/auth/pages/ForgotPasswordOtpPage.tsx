@@ -19,8 +19,10 @@ import { useResendOtpMutation } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard";
+import { usePageTitle } from "@/shared/hooks";
 
 export default function ForgotPasswordOtpPage() {
+  usePageTitle("Verify OTP");
   const location = useLocation();
   const result = emailRouteStateSchema.safeParse(location.state);
 

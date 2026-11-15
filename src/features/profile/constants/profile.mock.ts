@@ -9,7 +9,7 @@ export const MOCK_EMPLOYEE_PROFILE: Profile = {
   fullName: "Khang Nguyen",
   dob: "1988-07-21",
   phone: "0901234567",
-  country: "Thailand",
+  country: "TH",
   address: "ABC Ward",
   avatarUrl: null,
   customer: null,
@@ -32,7 +32,7 @@ export const MOCK_CUSTOMER_PROFILE: Profile = {
   fullName: "James Davidson",
   dob: "1982-09-18",
   phone: "0901234567",
-  country: "United Kingdom",
+  country: "GB",
   address: "London",
   avatarUrl: null,
   customer: {

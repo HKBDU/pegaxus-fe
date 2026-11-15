@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Checkbox } from "@/shared/components/ui/checkbox";
-import { Input } from "@/shared/components/ui/input";
+import { DateTimePicker } from "@/shared/components/ui/date-time-picker";
 import { Label } from "@/shared/components/ui/label";
 import {
   Select,
@@ -76,16 +76,15 @@ export function CrewSelection({
         <Label htmlFor={`${routeLabel}-start-at`}>
           {routeLabel === "backup" ? "Backup" : "Return"} start time *
         </Label>
-        <Input
+        <DateTimePicker
           id={`${routeLabel}-start-at`}
-          type="datetime-local"
           disabled={disabled}
           value={toLocalInput(startAt)}
-          onChange={(event) => {
-            const iso = toUtcIso(event.target.value);
+          onChange={(localValue) => {
+            const iso = toUtcIso(localValue);
             if (iso) onStartAtChange(iso);
           }}
-          className="h-9 max-w-xs rounded-[2px]"
+          className="max-w-md"
         />
         <p className="text-xs text-slate-500">
           UTC: <DateTimeUtc value={startAt} compact />.{" "}

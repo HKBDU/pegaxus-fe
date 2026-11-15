@@ -20,8 +20,10 @@ import { HORSE_BREED_OPTIONS, HORSE_SEX_OPTIONS, HORSE_SORT_OPTIONS } from "../c
 import { HorseTable } from "../components"
 import { useHorses } from "../hooks/useHorses"
 import type { Horse, HorseTableAction } from "../types"
+import { usePageTitle } from "@/shared/hooks"
 
 export function HorsesPage() {
+  usePageTitle("My Horses")
   const { horses, isLoading, error, retryHorses, removeHorse } = useHorses()
   const navigate = useNavigate()
   const [sex, setSex] = useState("ALL")

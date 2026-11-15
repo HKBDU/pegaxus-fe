@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/shared/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
 import { resolveNotificationPath, useUnreadCount, type AppNotification } from "@/shared/realtime"
+import { usePageTitle } from "@/shared/hooks"
 
 type Tab = "all" | "unread" | "read"
 const TABS: { value: Tab; label: string }[] = [
@@ -32,6 +33,7 @@ export default function NotificationsPage() {
   const navigate = useNavigate()
   const principal = useAuthStore((state) => state.principal)
   const unreadCount = useUnreadCount()
+  usePageTitle("Notifications", unreadCount)
   const [tab, setTab] = useState<Tab>("all")
   const [type, setType] = useState("ALL")
   const [search, setSearch] = useState("")

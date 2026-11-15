@@ -66,21 +66,42 @@ export function dossierDetail(id: string | number, role?: string) {
   return `${ROLE_ROUTES.complianceDossiers}/${encodedId}`
 }
 
-export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home as string) {
-  const safePath = requestedPath.startsWith("/") && !requestedPath.startsWith("//") && !/^\/logout\/?$/i.test(requestedPath) ? requestedPath : ROLE_ROUTES.home
-  if (normalizeRole(role) === "LOGISTICS_MANAGER") {
-    return /^\/admin(?:\/|$)/.test(safePath) ? safePath : ROLE_ROUTES.managerHome
+export function getRoleLandingPath(role?: string): string {
+  if (!role) return ROLE_ROUTES.home
+  const normalized = normalizeRole(role)
+  if (normalized === "LOGISTICS_MANAGER") {
+    return ROLE_ROUTES.dashboard
   }
-  if (normalizeRole(role) === "TRANSPORT_SPECIALIST" && safePath === ROLE_ROUTES.home) {
-    return ROLE_ROUTES.complianceRequirements
+  if (
+    normalized === "TRANSPORT_SPECIALIST" ||
+    normalized === "FLEET_ROUTE_COORDINATOR"
+  ) {
+    return ROLE_ROUTES.approvedBookings
   }
-  if (normalizeRole(role) === "FLEET_ROUTE_COORDINATOR" && safePath === ROLE_ROUTES.home) {
-    return ROLE_ROUTES.vehicles
-  }
-  if (["DRIVER", "ESCORT"].includes(normalizeRole(role)) && safePath === ROLE_ROUTES.home) {
+  if (normalized === "DRIVER" || normalized === "ESCORT") {
     return ROLE_ROUTES.crew
   }
-  return safePath
+  return ROLE_ROUTES.home
+}
+
+export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home as string) {
+  const safePath =
+    requestedPath.startsWith("/") &&
+    !requestedPath.startsWith("//") &&
+    !/^\/logout\/?$/i.test(requestedPath)
+      ? requestedPath
+      : ROLE_ROUTES.home
+
+  const isDefaultEntry =
+    safePath === ROLE_ROUTES.home ||
+    safePath === ROLE_ROUTES.managerHome ||
+    safePath === "/admin/"
+
+  if (!isDefaultEntry) {
+    return safePath
+  }
+
+  return getRoleLandingPath(role)
 }
 
 const adminHeaderRoutes = [

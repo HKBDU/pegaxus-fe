@@ -35,9 +35,9 @@ export function HeroSection({ children }: { children?: ReactNode }) {
           <span /> Cross-border racehorse transport
         </p>
         <h1 id="landing-hero-title">
-          Move champions
+          Relentless Pursuit
           <br />
-          <em>beyond borders.</em>
+          <em>Beyond Boundaries.</em>
         </h1>
         <p className="landing-lead">
           A single platform for planning, compliance and international

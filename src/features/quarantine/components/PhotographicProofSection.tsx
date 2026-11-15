@@ -81,7 +81,7 @@ export function PhotographicProofSection({
         <Button
           type="button"
           id="take-photo-btn"
-          className="flex items-center justify-center gap-2 bg-[#f39200] font-bold uppercase text-white hover:bg-[#e08600] active:bg-[#c97800]"
+          className="flex items-center justify-center gap-2 bg-[#f39200] font-bold uppercase text-[#181818] hover:bg-[#e08600] active:bg-[#c97800]"
           onClick={() => cameraInputRef.current?.click()}
         >
           <Camera className="size-4" aria-hidden />

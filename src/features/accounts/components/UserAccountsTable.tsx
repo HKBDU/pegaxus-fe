@@ -14,7 +14,6 @@ import { formatUtcTime } from "@/shared/utils/datetime";
 import { accountDetail, accountEdit } from "@/app/route-config";
 import type { PaginationMeta } from "@/shared/types";
 import { EmptyState, TablePagination } from "@/shared/components/common";
-import { Avatar, AvatarFallback } from "@/shared/components/ui/avatar";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
@@ -103,23 +102,12 @@ export function UserAccountsTable({
         accessorKey: "fullName",
         header: "EMPLOYEE",
         cell: ({ row }) => (
-          <div className="flex min-w-36 items-center gap-2">
-            <Avatar className="size-7 shrink-0 border border-slate-200">
-              <AvatarFallback className="bg-slate-100 text-[10px] font-semibold text-slate-600">
-                {(row.original.fullName ?? "?")
-                  .split(" ")
-                  .map((word) => word[0])
-                  .slice(0, 2)
-                  .join("")}
-              </AvatarFallback>
-            </Avatar>
-            <span
-              className="max-w-36 truncate font-semibold text-slate-900"
-              title={row.original.fullName ?? undefined}
-            >
-              {row.original.fullName ?? "—"}
-            </span>
-          </div>
+          <span
+            className="block max-w-48 truncate font-semibold text-slate-900"
+            title={row.original.fullName ?? undefined}
+          >
+            {row.original.fullName ?? "—"}
+          </span>
         ),
       },
       {

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { LoaderCircle, Send } from "lucide-react";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
+import { DateTimePicker } from "@/shared/components/ui/date-time-picker";
 import { MoneyInput } from "@/shared/components/ui/money-input";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
@@ -181,11 +181,13 @@ export function BackupActivationRequestDialog({
                               className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
                             />
                           ) : (
-                            <Input
-                              {...field}
-                              type={control.type}
-                              step="any"
-                              className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
+                            <DateTimePicker
+                              ref={field.ref}
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              disabled={busy}
+                              aria-label={control.label}
                             />
                           )}
                         </FormControl>

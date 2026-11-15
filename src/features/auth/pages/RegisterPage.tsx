@@ -18,6 +18,7 @@ import {
   PasswordRequirements,
 } from "../components/PasswordRequirements";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
+import { usePageTitle } from "@/shared/hooks";
 
 const fields = new Set<keyof RegisterFormValues>([
   "fullName",
@@ -26,6 +27,7 @@ const fields = new Set<keyof RegisterFormValues>([
   "confirmPassword",
 ]);
 export default function RegisterPage() {
+  usePageTitle("Register");
   const mutation = useRegisterMutation();
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
