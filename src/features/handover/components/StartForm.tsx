@@ -3,7 +3,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { Button } from "@/shared/components/ui/button"
-import { Input } from "@/shared/components/ui/input"
+import { DateTimePicker } from "@/shared/components/ui/date-time-picker"
 import { VALIDATION_LIMITS } from "@/shared/constants/validation-limits"
 import { formatUtcDateTime, toUtcIso } from "@/shared/utils/datetime"
 import { TYPE_LABEL, type HandoverAudience, type HandoverType } from "../constants"
@@ -192,7 +192,7 @@ export function StartForm({ audience, boundaries, legs, preset, pending, backHre
               {scheduled ? (
                 <div className="max-w-xs space-y-1">
                   <label htmlFor="planned-at" className="font-heading text-[0.6875rem] font-semibold tracking-[0.06em] text-gray-500 uppercase">Planned at <span className="text-red-600">*</span></label>
-                  <Input id="planned-at" type="datetime-local" value={plannedAt} onChange={(event) => setPlannedAt(event.target.value)} aria-describedby="planned-at-utc" className="h-11 rounded-[2px] border-slate-300 bg-white text-base shadow-none sm:h-9 sm:text-sm" />
+                  <DateTimePicker id="planned-at" value={plannedAt} onChange={setPlannedAt} aria-describedby="planned-at-utc" className="max-w-md" />
                   <p id="planned-at-utc" className="m-0 text-xs text-gray-500">
                     Your local time{utcPreview(plannedAt) ? <>. Sent as <span className="font-semibold text-gray-700">{utcPreview(plannedAt)}</span></> : null}
                   </p>

@@ -123,7 +123,9 @@ export default function CreateEmployeeAccountPage() {
                           placeholder="Enter full name"
                         />
                       </FormControl>
-                      <FormMessage className="text-xs" />
+                      <div className="min-h-5">
+                        <FormMessage className="text-xs" />
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -144,7 +146,9 @@ export default function CreateEmployeeAccountPage() {
                           placeholder="name@example.com"
                         />
                       </FormControl>
-                      <FormMessage className="text-xs" />
+                      <div className="min-h-5">
+                        <FormMessage className="text-xs" />
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -162,10 +166,12 @@ export default function CreateEmployeeAccountPage() {
                           type="tel"
                           className={inputClass}
                           autoComplete="tel"
-                          placeholder="Enter phone number"
+                          placeholder="e.g. 0912345678 or +33123456789"
                         />
                       </FormControl>
-                      <FormMessage className="text-xs" />
+                      <div className="min-h-5">
+                        <FormMessage className="text-xs" />
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -194,7 +200,9 @@ export default function CreateEmployeeAccountPage() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <FormMessage className="text-xs" />
+                      <div className="min-h-5">
+                        <FormMessage className="text-xs" />
+                      </div>
                     </FormItem>
                   )}
                 />
