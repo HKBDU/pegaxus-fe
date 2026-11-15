@@ -475,14 +475,17 @@ export class LocationSender {
     const sample = this.sample;
     this.sample = null; // Consume once even on failure: a failed point is never replayed.
     if (!sample || !isFreshObservation(sample.timestamp, Date.now())) {
+      const waitingMessage =
+        "No fresh GPS sample at this opportunity. Waiting for a new observation.";
       if (
         this.state.permissionStatus === "granted" &&
-        !this.hasObservationError()
+        !this.hasObservationError() &&
+        (this.state.sharingStatus !== "acquiring_location" ||
+          this.state.message !== waitingMessage)
       )
         this.publish({
           sharingStatus: "acquiring_location",
-          message:
-            "No fresh GPS sample at this opportunity. Waiting for a new observation.",
+          message: waitingMessage,
         });
       return;
     }

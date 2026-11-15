@@ -12,7 +12,6 @@ import type { ArrivalBoundaryEvent, DriverLocationRequest } from "../types";
 export function useSegmentArrival({
   transportId,
   arrival,
-  locked,
   active,
   freshPosition,
   dismiss,
@@ -20,7 +19,6 @@ export function useSegmentArrival({
 }: {
   transportId: string;
   arrival: ArrivalBoundaryEvent | null;
-  locked: boolean;
   active: boolean;
   freshPosition: () => DriverLocationRequest | null;
   dismiss: () => void;
@@ -71,7 +69,7 @@ export function useSegmentArrival({
       request.current?.abort();
       request.current = null;
     },
-    [key, locked],
+    [key],
   );
   useEffect(
     () =>
@@ -102,8 +100,7 @@ export function useSegmentArrival({
       !arrival.fromRoutePlanRouteId ||
       !arrival.toRoutePlanRouteId ||
       !FEATURES.segmentArrival ||
-      !active ||
-      locked
+      !active
     )
       return;
     const sample = freshPosition();

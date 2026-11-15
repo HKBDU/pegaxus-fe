@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { formatUtcDateTime } from "@/shared/utils/datetime";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -13,7 +13,6 @@ import { handoverPaths } from "@/features/handover/constants";
 import { useTransportSegments } from "@/features/ongoing-transport/hooks/useTransportSegments";
 import { isSameDriverBoundary } from "@/features/ongoing-transport/timeline";
 import { useDriverLocationSession } from "../hooks/useDriverLocationSession";
-import { driverLocationSharingPath } from "../navigation";
 import { FEATURES } from "../features";
 import { useSegmentArrival } from "../hooks/useSegmentArrival";
 
@@ -24,16 +23,11 @@ export function LocationWorkflowDialogs({
 }) {
   const {
     state,
-    gate,
-    canStart,
-    start,
-    stop,
     dismissArrival,
     freshPosition,
     reload,
     source,
   } = useDriverLocationSession();
-  const { pathname } = useLocation();
   const arrival = state.arrival;
   const {
     busy,
@@ -43,7 +37,6 @@ export function LocationWorkflowDialogs({
   } = useSegmentArrival({
     transportId,
     arrival,
-    locked: gate.locked,
     active: state.active,
     freshPosition,
     dismiss: dismissArrival,
@@ -83,71 +76,6 @@ export function LocationWorkflowDialogs({
               : undefined,
         })
         : null;
-  if (gate.applicable && gate.locked && pathname.startsWith("/crew/") && pathname !== "/crew")
-    return (
-      <Dialog open>
-        <DialogContent
-          showCloseButton={false}
-          onEscapeKeyDown={(event) => event.preventDefault()}
-          onInteractOutside={(event) => event.preventDefault()}
-          className="rounded-xs"
-        >
-          <DialogHeader>
-            <DialogTitle>
-              Enable location sharing to start the segment
-            </DialogTitle>
-            <DialogDescription>
-              The current segment requires your location. Unlock only after the
-              server returns accepted=true; GPS permission or the legacy ACK is
-              not sufficient.
-            </DialogDescription>
-          </DialogHeader>
-          <p
-            role={state.permissionStatus === "denied" ? "alert" : "status"}
-            className={
-              state.permissionStatus === "denied"
-                ? "text-sm text-destructive"
-                : "text-sm text-muted-foreground"
-            }
-          >
-            {state.message ??
-              "Enable location sharing after the vehicle has safely stopped."}
-          </p>
-          {state.notification !== "none" ? (
-            <p className="text-sm" role="status">
-              {state.notification === "notified"
-                ? "The server notified the dispatcher."
-                : state.notification === "sending"
-                  ? "Reporting the denied location permission…"
-                  : state.notification === "not_notified"
-                    ? "The server did not send a new notification."
-                    : "Unable to confirm notification to the dispatcher."}
-            </p>
-          ) : null}
-          <DialogFooter>
-            {!pathname.endsWith("/location") ? (
-              <Button asChild variant="outline">
-                <Link to={driverLocationSharingPath(transportId)}>
-                  Open location sharing
-                </Link>
-              </Button>
-            ) : null}
-            <Button onClick={reload} variant="outline">
-              Reload segment information
-            </Button>
-            {state.active ? (
-              <Button onClick={stop} variant="outline">
-                Stop sharing
-              </Button>
-            ) : (
-              <Button disabled={!canStart} onClick={start}>
-                Enable location sharing
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
   return (
     <>
       {state.acceptance === "rejected" ? (
