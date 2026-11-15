@@ -1,17 +1,15 @@
 import { NOT_CURRENT_SEGMENT_CREW, NOT_CURRENT_SEGMENT_CREW_MESSAGE } from '@/shared/constants/crew-turn'
 import { useState, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { Navigation } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useDossierContext, useSubmitQuarantineProof } from '../hooks'
-import { ErrorState } from '@/shared/components/common'
+import { useSubmitQuarantineProof } from '../hooks'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
-import { Skeleton } from '@/shared/components/ui/skeleton'
 import { Form } from '@/shared/components/ui/form'
 import { formatUtcTime } from '@/shared/utils/datetime'
 import { PhotoCaptureSection } from '@/shared/components/PhotoCaptureSection'
@@ -44,21 +42,13 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>
 
-function formatRoute(dossier?: ReturnType<typeof useDossierContext>['data']): string {
-  const summary = dossier?.bookingSummary
-  if (!summary) return '—'
-  const origin = summary.originPort || (summary.originCountry ? `${summary.originCountry.toUpperCase()} PORT` : 'DUBLIN PORT (IE DUB)')
-  const dest = summary.destinationPort || (summary.destinationCountry ? `${summary.destinationCountry.toUpperCase()} FERRY TERMINAL` : 'DOVER FERRY TERMINAL (GB)')
-  return `${origin} → ${dest}`
-}
-
 // ─── Main Page Component ──────────────────────────────────────────────────────
 
 export default function BcpQuarantineProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
   const dossierId = dossierIdParam ?? null
 
-  const { data: dossier, isLoading: dossierLoading, isError: dossierFailed, refetch: reloadDossier } = useDossierContext(dossierId)
+  const state = useLocation().state as { bookingCode?: string; route?: string; originCountry?: string; destinationCountry?: string } | null
   const { mutateAsync: submitProof, isPending } = useSubmitQuarantineProof(dossierId ?? '')
 
   // ─── Photo state ──────────────────────────────────────────────────────────
@@ -85,12 +75,12 @@ export default function BcpQuarantineProofPage() {
   const isHoldback = form.watch('isHoldback')
 
   const isMandatoryRoute = useMemo(() => {
-    const origin = dossier?.bookingSummary?.originCountry?.trim().toLowerCase()
-    const destination = dossier?.bookingSummary?.destinationCountry?.trim().toLowerCase()
+    const origin = state?.originCountry?.trim().toLowerCase()
+    const destination = state?.destinationCountry?.trim().toLowerCase()
     if (!origin || !destination) return true
     const ukIe = new Set(["united kingdom", "uk", "gb", "great britain", "ireland", "ie"])
     return ukIe.has(origin) || ukIe.has(destination)
-  }, [dossier?.bookingSummary?.destinationCountry, dossier?.bookingSummary?.originCountry])
+  }, [state?.destinationCountry, state?.originCountry])
 
   // ─── Submit Handler ────────────────────────────────────────────────────────
   const onSubmit = async (values: FormValues) => {
@@ -108,7 +98,7 @@ export default function BcpQuarantineProofPage() {
       setPhotoError('Photo upload failed or is not ready. Please try re-taking or selecting the photo.')
       return
     }
-    if (dossierId == null || !dossier || dossierFailed) return
+    if (dossierId == null) return
 
     try {
       await submitProof({
@@ -141,28 +131,8 @@ export default function BcpQuarantineProofPage() {
   }
 
   // ─── Loading Skeleton ─────────────────────────────────────────────────────
-  if (dossierFailed || (!dossierLoading && !dossier)) return <ErrorState message="Unable to load the transport dossier. Retry before submitting proof." onRetry={() => void reloadDossier()} />
-
-  if (dossierLoading) {
-    return (
-      <div className="mx-auto max-w-6xl space-y-5 p-6">
-        <Skeleton className="h-10 w-64 rounded-[2px]" />
-        <Skeleton className="h-20 w-full rounded-[2px]" />
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 space-y-4">
-            <Skeleton className="h-44 w-full rounded-[2px]" />
-            <Skeleton className="h-44 w-full rounded-[2px]" />
-          </div>
-          <div className="lg:col-span-5 space-y-4">
-            <Skeleton className="h-64 w-full rounded-[2px]" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const tripCode = dossier?.bookingCode ?? ''
-  const routeLabel = formatRoute(dossier)
+  const tripCode = state?.bookingCode ?? dossierId ?? ''
+  const routeLabel = state?.route ?? 'Route unavailable'
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
@@ -171,8 +141,8 @@ export default function BcpQuarantineProofPage() {
         {/* Page Header Component from shared/components/PageHeader */}
         <PageHeader
           title="BCP QUARANTINE PROOF"
-          backHref="/compliance-dossiers"
-          backLabel="Compliance Dossiers"
+          backHref="/crew"
+          backLabel="Ongoing Transport"
         />
 
         {/* Trip Code & Navigation Route Subtitle */}

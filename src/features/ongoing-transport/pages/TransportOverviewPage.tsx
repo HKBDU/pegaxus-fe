@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { Navigation, TriangleAlert } from "lucide-react";
+import { FileCheck2, Navigation, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store";
 import { canAccess } from "@/features/auth/access-control";
 import { driverLocationSharingPath } from "@/features/location-sharing/navigation";
@@ -19,6 +19,7 @@ import { formatTransportDate, formatTransportTime } from "../format";
 import { getOngoingTransportError } from "../services";
 import type { TransportAudience } from "../types";
 import { incidentRoutes } from "@/features/incident-management/constants";
+import { HORSE_HEALTH_ROUTES } from "@/features/horse-health/constants";
 
 export default function TransportOverviewPage({
   audience,
@@ -133,6 +134,39 @@ export default function TransportOverviewPage({
             <TransportStaff segment={overview.currentSegment} />
           </section>
           <TransportDossiers dossiers={overview.complianceDossiers} />
+          {audience === "crew" && overview.complianceDossiers.length > 0 &&
+          (canAccess(principal, { anyRole: ["DRIVER"] }) ||
+            canAccess(principal, { anyRole: ["ESCORT"] })) ? (
+            <section className="overview-panel" aria-labelledby="transport-declarations">
+              <div className="overview-cell">
+                <h2 id="transport-declarations" className="overview-heading">
+                  Declarations
+                </h2>
+                <ul className="mt-3 mb-0 grid list-none gap-2 p-0 sm:grid-cols-2">
+                  {overview.complianceDossiers.map((dossier) => (
+                    <li key={dossier.complianceDossierId} className="flex flex-wrap gap-2">
+                      {canAccess(principal, { anyRole: ["ESCORT"] }) ? (
+                        <Button asChild variant="outline" className="min-h-11 flex-1 justify-start rounded-xs">
+                          <Link to={HORSE_HEALTH_ROUTES.quarantine(dossier.complianceDossierId)} state={{ bookingCode: overview.booking.bookingCode, route: `${overview.booking.originCountry} → ${overview.booking.destinationCountry}`, originCountry: overview.booking.originCountry, destinationCountry: overview.booking.destinationCountry }}>
+                            <ShieldCheck aria-hidden="true" className="size-4 text-primary" />
+                            Declare quarantine
+                          </Link>
+                        </Button>
+                      ) : null}
+                      {canAccess(principal, { anyRole: ["DRIVER"] }) ? (
+                        <Button asChild variant="outline" className="min-h-11 flex-1 justify-start rounded-xs">
+                          <Link to={HORSE_HEALTH_ROUTES.clearance(dossier.complianceDossierId)} state={{ bookingCode: overview.booking.bookingCode, route: `${overview.booking.originCountry} → ${overview.booking.destinationCountry}`, originCountry: overview.booking.originCountry, destinationCountry: overview.booking.destinationCountry }}>
+                            <FileCheck2 aria-hidden="true" className="size-4 text-primary" />
+                            Declare customs clearance
+                          </Link>
+                        </Button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          ) : null}
           {audience !== "customer" &&
           !canAccess(principal, { anyRole: ["CUSTOMER"] }) ? (
             <TransportIncidents

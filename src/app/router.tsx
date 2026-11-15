@@ -45,6 +45,7 @@ import {
 import TestPage from "../Test";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const TermsPage = lazy(() => import("@/features/policies/pages/TermsPage"));
 const BookingListPage = lazy(
   () => import("@/features/booking/pages/BookingListPage"),
 );
@@ -272,6 +273,14 @@ const routes: RouteObject[] = [
     path: "/",
     element: <MainLayout />,
     children: [
+      {
+        path: "terms",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TermsPage />
+          </Suspense>
+        ),
+      },
       {
         index: true,
         element: (
