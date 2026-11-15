@@ -25,6 +25,7 @@ import { getEmergencyError, routeViewService } from "../../services";
 import type { CrewOverride, RoutePlanDetail } from "../../types";
 import { crewSelectionErrors } from "../../crew-selection";
 import { CrewSelection } from "./CrewSelection";
+import { AnchorNote } from "./AnchorNote";
 import {
   EmergencyChangeSummary,
   EmergencySegments,
@@ -81,11 +82,9 @@ export function ReturnActivationPanel({
   }
   const crewError = crewPlan.error ? getEmergencyError(crewPlan.error) : undefined;
   const crewErrorMessage =
-    crewError?.code === "SEGMENT_LOCKED"
-      ? "The horse is between two stops. Activate the return once it reaches the next stop, then reload this page."
-      : crewError?.code === "RETURN_NOT_ANCHORED"
-        ? "The return no longer leaves from where the horse is, so it cannot be activated as planned."
-        : crewError?.message;
+    crewError?.code === "RETURN_NOT_ANCHORED"
+      ? "This return does not start at an open incident on the running segment or at the end of that segment, so it cannot be activated as planned."
+      : crewError?.message;
   const resources = useQuery({
     queryKey: [
       "route-view",
@@ -346,8 +345,8 @@ export function ReturnActivationPanel({
       </Section>
       <Section title="Crew & Start Time" icon={Users}>
         <p className="text-sm leading-6 text-slate-600">
-          The crew already at the current stop is suggested. Fill any gap,
-          change people, and set when the return really starts.
+          The crew with the horse is suggested. Fill any gap, change people,
+          and set when the return really starts.
         </p>
         {crewPlan.isPending && (
           <p role="status" className="text-xs text-slate-500">
@@ -362,6 +361,7 @@ export function ReturnActivationPanel({
             </Button>
           </div>
         )}
+        {crewPlan.data && <AnchorNote plan={crewPlan.data} routeLabel="return" />}
         {crewPlan.data && chosenStart && (
           <CrewSelection
             plan={crewPlan.data}

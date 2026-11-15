@@ -135,6 +135,9 @@ export function EmergencySegments({
                 <p>
                   {segment.fromLocation.locationName} →{" "}
                   {segment.toLocation.locationName}
+                  {segment.endedAtLocation ? (
+                    <span className="text-amber-700"> · stopped early at {segment.endedAtLocation.locationName}</span>
+                  ) : null}
                 </p>
                 {errors
                   .filter(

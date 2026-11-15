@@ -63,7 +63,7 @@ import {
   type RoutePlanBuilderMetadata,
   type WizardStep,
 } from "./RoutePlanBuilderParts";
-import { RoutePlanEndpointsStep } from "./RoutePlanEndpointsStep";
+import { RoutePlanEndpointsStep, type ReturnStartOption } from "./RoutePlanEndpointsStep";
 import { RoutePlanStatusBadge } from "./RoutePlanStatusBadge";
 import { BcpRouteSplitDialog } from "./BcpRouteSplitDialog";
 import { validateArrivalDate } from "@/features/transport-plan/schedule-validation";
@@ -115,6 +115,8 @@ export type RoutePlanBuilderProps = {
   primaryAvailable?: boolean;
   primaryError?: string;
   metadata?: RoutePlanBuilderMetadata;
+  /** RETURN only: where the return may start (an open incident, or the end of the running segment). */
+  returnStartOptions?: ReturnStartOption[];
   initialRoutes?: MapRoute[];
   initialSegments?: DraftSegment[];
   savedSegments?: DraftSegment[];
@@ -165,6 +167,7 @@ export function RoutePlanBuilder({
   primaryAvailable = true,
   primaryError,
   metadata,
+  returnStartOptions,
   initialRoutes = [],
   initialSegments,
   savedSegments = [],
@@ -1762,6 +1765,7 @@ export function RoutePlanBuilder({
               from={plan.from}
               to={plan.to}
               returnMode={isReturn}
+              startOptions={returnStartOptions}
               lockEndpoints={isBackup}
               locations={locations}
               onFromChange={(loc) => {
