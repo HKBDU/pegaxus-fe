@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { Navigation } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useDossierContext, useSubmitQuarantineProof } from '../hooks'
+import { useSubmitQuarantineProof } from '../hooks'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
 import { Form } from '@/shared/components/ui/form'
@@ -41,14 +41,6 @@ const schema = z
   })
 
 type FormValues = z.infer<typeof schema>
-
-function formatRoute(dossier?: ReturnType<typeof useDossierContext>['data']): string {
-  const summary = dossier?.bookingSummary
-  if (!summary) return '—'
-  const origin = summary.originPort || (summary.originCountry ? `${summary.originCountry.toUpperCase()} PORT` : 'DUBLIN PORT (IE DUB)')
-  const dest = summary.destinationPort || (summary.destinationCountry ? `${summary.destinationCountry.toUpperCase()} FERRY TERMINAL` : 'DOVER FERRY TERMINAL (GB)')
-  return `${origin} → ${dest}`
-}
 
 // ─── Main Page Component ──────────────────────────────────────────────────────
 

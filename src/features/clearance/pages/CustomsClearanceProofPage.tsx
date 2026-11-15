@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { Navigation } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useClearanceDossierContext, useSubmitCustomsClearanceProof } from '../hooks'
+import { useSubmitCustomsClearanceProof } from '../hooks'
 import { CustomsEntrySection } from '../components/CustomsEntrySection'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
@@ -34,14 +34,6 @@ const schema = z.object({
   })
 
 type FormValues = z.infer<typeof schema>
-
-function routeLabel(dossier?: ReturnType<typeof useClearanceDossierContext>['data']) {
-  const summary = dossier?.bookingSummary
-  if (!summary) return '—'
-  const origin = summary.originPort || (summary.originCountry ? `${summary.originCountry.toUpperCase()} PORT` : 'ORIGIN PORT')
-  const destination = summary.destinationPort || (summary.destinationCountry ? `${summary.destinationCountry.toUpperCase()} TERMINAL` : 'DESTINATION TERMINAL')
-  return `${origin} → ${destination}`
-}
 
 export default function CustomsClearanceProofPage() {
   const { dossierId: dossierIdParam } = useParams<{ dossierId: string }>()
