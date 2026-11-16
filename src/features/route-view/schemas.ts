@@ -297,6 +297,21 @@ export const routeChangeDecisionResultSchema = z.object({
   branchSequenceNo: z.number().int().positive().nullish(),
   branchLocation: routeLocationSchema.nullish(),
 });
+// GET /route-plans/{id}/change-request: the Route Coordinator's latest backup request, or null when none was sent.
+export const changeRequestViewSchema = z
+  .object({
+    requestedAt: timestamp,
+    requestedBy: employeeBriefSchema.nullish(),
+    reason: z.string(),
+    newEstimatedArrivalAt: timestamp,
+    estimatedExtraCost: z.number().nullish(),
+    note: text,
+    incidentReportId: text,
+    incidentCode: text,
+    impacts: z.array(z.string()),
+    summary: z.string(),
+  })
+  .nullable();
 // GET /route-plans/{id}/change-crew: backup segments from the branch point with the suggested crew.
 export const crewPlanSchema = z.object({
   routePlanId: z.union([entityIdSchema, z.number()]).transform(String),
