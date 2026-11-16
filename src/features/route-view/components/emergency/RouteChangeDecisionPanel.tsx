@@ -47,6 +47,7 @@ import { AnchorNote } from "./AnchorNote";
 import { crewSelectionErrors } from "../../crew-selection";
 import { isRelatedPrimary } from "../../route-comparison";
 import { RouteChangeComparison } from "./RouteChangeComparison";
+import { ChangeRequestDetails } from "./ChangeRequestDetails";
 import { EmergencyFeedback } from "./EmergencyFeedback";
 import { REJECTED_BY_MANAGER } from "@/shared/constants/route-plan-status";
 
@@ -199,11 +200,13 @@ export function RouteChangeDecisionPanel({
         error={comparisonError}
       />
       <Section title="Change Details" icon={FileText}>
-        <p className="text-sm leading-6 text-slate-600">
-          {isReturn
-            ? plan.routeNote || "Return reason is not available."
-            : "Check the request notification for the reason, revised arrival time and estimated extra cost. These details are not included in the route summary."}
-        </p>
+        {isReturn ? (
+          <p className="text-sm leading-6 text-slate-600">
+            {plan.routeNote || "Return reason is not available."}
+          </p>
+        ) : (
+          <ChangeRequestDetails routePlanId={plan.routePlanId} />
+        )}
         <p className="text-xs text-slate-500">
           Transport: {context.transportCode} · Booking: {plan.bookingCode}
         </p>
