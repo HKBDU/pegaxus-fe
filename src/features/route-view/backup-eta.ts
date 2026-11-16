@@ -113,6 +113,38 @@ export function suggestBackupArrival(
   };
 }
 
+export type DriveBackEstimate = {
+  /** About as long as the convoy has driven since it left the stop. */
+  minutes: number;
+  /** When the convoy is back at the stop, rounded up to 5 minutes. */
+  backAt: Date;
+};
+
+/**
+ * When the convoy turns back to a stop it already passed, driving back takes about as long as it has driven since it left
+ * that stop. Null when the convoy has not left the stop.
+ */
+export function estimateDriveBack(
+  primary: RoutePlanDetail,
+  locationId: string,
+  now = new Date(),
+): DriveBackEstimate | null {
+  const left = bySequence(primary.segments)
+    .filter(
+      (segment) =>
+        segment.actualDepartureAt &&
+        segment.fromLocation.locationId.toLowerCase() === locationId.toLowerCase(),
+    )
+    .map((segment) => ms(segment.actualDepartureAt))
+    .filter((time): time is number => time !== null)
+    .at(-1);
+  if (left === undefined) return null;
+  const nowMs = now.getTime();
+  const minutes = Math.max(0, Math.round((nowMs - left) / 60_000));
+  const step = 5 * 60_000;
+  return { minutes, backAt: new Date(Math.ceil((nowMs + minutes * 60_000) / step) * step) };
+}
+
 /** Formats a date as a datetime-local value in the viewer's time zone. */
 export function toLocalInputValue(date: Date) {
   const pad = (value: number) => String(value).padStart(2, "0");

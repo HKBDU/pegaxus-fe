@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -47,6 +47,7 @@ import { CrewSelection } from "./CrewSelection";
 import { AnchorNote } from "./AnchorNote";
 import { crewSelectionErrors } from "../../crew-selection";
 import { isRelatedPrimary } from "../../route-comparison";
+import { estimateDriveBack } from "../../backup-eta";
 import { RouteChangeComparison } from "./RouteChangeComparison";
 import { ChangeRequestDetails } from "./ChangeRequestDetails";
 import { EmergencyFeedback } from "./EmergencyFeedback";
@@ -100,6 +101,19 @@ export function RouteChangeDecisionPanel({
   });
   const [crew, setCrew] = useState<Record<string, CrewOverride>>({});
   const [startAt, setStartAt] = useState<string>();
+  // A hint only: when the convoy turns back, the backup cannot start before it is back at the branch point.
+  const driveBack = useMemo(() => {
+    const anchor = crewPlan.data;
+    if (!anchor?.turnsBack || !anchor.startLocation || !primaryPlan) return undefined;
+    const estimate = estimateDriveBack(primaryPlan, anchor.startLocation.locationId);
+    return estimate
+      ? {
+          minutes: estimate.minutes,
+          backAt: estimate.backAt.toISOString(),
+          locationName: anchor.startLocation.locationName,
+        }
+      : undefined;
+  }, [crewPlan.data, primaryPlan]);
   const crewErrors = crewPlan.data ? crewSelectionErrors(crewPlan.data, crew) : {};
   const crewBlocked =
     !isReturn && (!crewPlan.data || Object.keys(crewErrors).length > 0);
@@ -240,6 +254,7 @@ export function RouteChangeDecisionPanel({
               plan={crewPlan.data}
               transportPlanId={plan.transportPlanId}
               startAt={startAt ?? crewPlan.data.suggestedStartAt}
+              driveBack={driveBack}
               overrides={crew}
               errors={crewErrors}
               disabled={locked}

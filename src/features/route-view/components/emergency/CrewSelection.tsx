@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { DateTimePicker } from "@/shared/components/ui/date-time-picker";
 import { Label } from "@/shared/components/ui/label";
@@ -19,6 +20,7 @@ import type {
   CrewSegment,
 } from "../../types";
 import { effectiveCrew } from "../../crew-selection";
+import { durationLabel } from "../../display";
 
 type Person = { employeeId: string; employeeCode?: string | null; fullName: string };
 type VehicleOption = {
@@ -46,6 +48,7 @@ export function CrewSelection({
   showVehicles = true,
   outsourcedIds,
   startAt,
+  driveBack,
   overrides,
   errors,
   disabled,
@@ -61,6 +64,8 @@ export function CrewSelection({
   /** Segments the LM switched to a transport provider elsewhere on the page: no crew. */
   outsourcedIds?: ReadonlySet<string>;
   startAt: string;
+  /** Turning back: how long the drive back to the branch point takes and when the convoy is there. A hint only. */
+  driveBack?: { minutes: number; backAt: string; locationName: string };
   overrides: Record<string, CrewOverride>;
   errors: Record<string, string>;
   disabled: boolean;
@@ -92,6 +97,14 @@ export function CrewSelection({
             ? `${routeLabel === "backup" ? "Backup" : "Return"} segments keep their planned times.`
             : `Every ${routeLabel} segment moves ${deltaMinutes > 0 ? "later" : "earlier"} by ${Math.floor(Math.abs(deltaMinutes) / 60)} h ${Math.abs(deltaMinutes) % 60} min. The committed arrival of the transport plan does not change.`}
         </p>
+        {driveBack && (
+          <DriveBackHint
+            {...driveBack}
+            startAt={startAt}
+            disabled={disabled}
+            onUse={() => onStartAtChange(driveBack.backAt)}
+          />
+        )}
       </div>
       {plan.segments.map((item) => (
         <SegmentCrew
@@ -107,6 +120,60 @@ export function CrewSelection({
           onChange={(value) => onChange(item.segment.routePlanRouteId, value)}
         />
       ))}
+    </div>
+  );
+}
+
+function DriveBackHint({
+  minutes,
+  backAt,
+  locationName,
+  startAt,
+  disabled,
+  onUse,
+}: {
+  minutes: number;
+  backAt: string;
+  locationName: string;
+  startAt: string;
+  disabled: boolean;
+  onUse: () => void;
+}) {
+  const chosen = new Date(startAt).getTime();
+  const ready = new Date(backAt).getTime();
+  return (
+    <div
+      className="max-w-md space-y-1 rounded-[2px] border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600"
+      aria-live="polite"
+    >
+      <p className="m-0">
+        Driving back from the incident to {locationName} takes about{" "}
+        <span className="font-semibold text-slate-800">{durationLabel(minutes)}</span>,
+        as long as the convoy has driven since it left.
+      </p>
+      <p className="m-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span>
+          Suggested start:{" "}
+          <DateTimeUtc value={backAt} compact className="font-semibold text-slate-800" />
+        </span>
+        {chosen !== ready && (
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-xs"
+            disabled={disabled}
+            onClick={onUse}
+          >
+            Use this time
+          </Button>
+        )}
+      </p>
+      {chosen < ready && (
+        <p className="m-0 text-amber-700">
+          The chosen start is before the convoy can be back at {locationName}.
+        </p>
+      )}
     </div>
   );
 }
