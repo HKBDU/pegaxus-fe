@@ -243,6 +243,7 @@ export function BackupActivationRequestDialog({
                               onBlur={field.onBlur}
                               disabled={busy}
                               aria-label={control.label}
+                              className="grid-cols-2 @min-[20rem]:grid-cols-2"
                             />
                           )}
                         </FormControl>
