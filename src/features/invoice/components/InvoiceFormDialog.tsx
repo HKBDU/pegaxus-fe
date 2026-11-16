@@ -318,9 +318,15 @@ export function InvoiceFormDialog({
     () => generatedItems.filter((item) => !item.isDepositDeduction),
     [generatedItems],
   );
+  // A blocked type still shows where the transport stands: the API sends the status with INVALID_TRANSPORT_STATUS.
+  const blockedStatus =
+    precheckError instanceof InvoiceApiError &&
+    typeof precheckError.value?.transportStatus === "string"
+      ? precheckError.value.transportStatus
+      : undefined;
   const transportStatus = isEdit
     ? invoice?.transport?.status
-    : suggestion?.transportStatus;
+    : (suggestion?.transportStatus ?? blockedStatus);
 
   const parsedLines = locked
     ? generatedLines.map((item) => ({
