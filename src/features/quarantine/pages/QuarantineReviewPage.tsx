@@ -5,6 +5,8 @@ import { toast } from 'sonner'
 import { Check, FileText, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '@/features/auth/store'
 import { normalizeRole } from '@/features/auth/access-control'
+import { ROLE_ROUTES } from '@/app/route-config'
+import { useBackTarget } from '@/shared/hooks/useBackTarget'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { Button } from '@/shared/components/ui/button'
 import { Skeleton } from '@/shared/components/ui/skeleton'
@@ -35,6 +37,30 @@ export default function QuarantineReviewPage() {
   const { mutateAsync: finalizeProof, isPending } = useFinalizeQuarantineProof(proofId ?? '')
   const roles = useAuthStore((state) => state.principal?.roles ?? [])
   const canFinalize = roles.some((role) => normalizeRole(role) === 'TRANSPORT_SPECIALIST')
+
+  const dossierId = proof?.complianceDossierId
+  const fallbackHref = dossierId
+    ? `${ROLE_ROUTES.complianceDossiers}/${encodeURIComponent(dossierId)}`
+    : ROLE_ROUTES.complianceDossiers
+  const fallbackLabel = dossierId ? 'Back to Dossier Details' : 'Compliance Dossiers'
+
+  const backTarget = useBackTarget({
+    fallback: fallbackHref,
+    fallbackLabel,
+    allowedOrigins: [
+      ROLE_ROUTES.complianceDossiers,
+      '/admin/compliance-dossiers',
+    ],
+    labels: {
+      [ROLE_ROUTES.complianceDossiers]: 'Compliance Dossiers',
+      ...(dossierId
+        ? {
+            [`${ROLE_ROUTES.complianceDossiers}/${dossierId}`]: 'Back to Dossier Details',
+            [`/admin/compliance-dossiers/${dossierId}`]: 'Back to Dossier Details',
+          }
+        : {}),
+    },
+  })
   const [action, setAction] = useState<'FINALIZE' | 'REJECT_PROOF'>('FINALIZE')
   const [officialVetName, setOfficialVetName] = useState('')
   const [bcpReceiptNo, setBcpReceiptNo] = useState('')
@@ -83,7 +109,7 @@ export default function QuarantineReviewPage() {
   }
 
   return <div className="min-h-screen bg-[#faf9f7] p-3 sm:p-6"><div className="mx-auto max-w-7xl space-y-4">
-    <PageHeader title="VERIFY & FINALIZE QUARANTINE RESULT" backHref="/compliance-dossiers" backLabel="Compliance Dossiers" />
+    <PageHeader title="VERIFY & FINALIZE QUARANTINE RESULT" backHref={backTarget.href} backLabel={backTarget.label} />
     <div className="border border-[#e5e2d9] bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-[#8c918a] sm:px-6">DOSSIER: {proof.complianceDossierId} <span className="mx-2">|</span> PROOF: #{proof.quarantineProofId} <span className="mx-2">|</span> SUBMITTED: {formatDate(proof.submittedAt)}</div>
     <div className="grid overflow-hidden border border-[#e5e2d9] bg-white lg:grid-cols-[1.25fr_0.95fr]">
       <section className="min-w-0 border-b border-[#e5e2d9] p-4 sm:p-6 lg:border-b-0 lg:border-r"><div className="mb-4 flex items-center justify-between gap-3"><h2 className="font-heading text-sm font-bold uppercase tracking-wider">BCP Clearance Proof</h2><span className="bg-[#f39200] px-2 py-1 text-[10px] font-bold uppercase text-white">{proof.status.replaceAll('_', ' ')}</span></div><div className="relative flex min-h-[18rem] items-center justify-center overflow-hidden bg-[#191c1d] sm:min-h-[28rem]">{firstFile ? <a href={firstFile.fileUrl} target="_blank" rel="noreferrer" className="block h-full w-full"><img src={firstFile.fileUrl} alt={firstFile.fileName} className="h-full max-h-[32rem] w-full object-contain" /></a> : <div className="flex flex-col items-center gap-2 text-slate-400"><FileText className="size-10" aria-hidden /><span>No evidence uploaded</span></div>}{firstFile && <div className="absolute bottom-3 right-3 flex items-center gap-2 bg-[#181818]/90 px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-white"><ShieldCheck className="size-3 text-[#f39200]" aria-hidden /> Evidence uploaded</div>}</div><dl className="mt-4 grid gap-3 border-t border-[#e5e2d9] pt-4 text-xs sm:grid-cols-2"><div><dt className="font-bold uppercase text-[#8c918a]">Submitted by</dt><dd className="mt-1 font-medium">{proof.submittedBy.fullName}</dd></div><div><dt className="font-bold uppercase text-[#8c918a]">Timestamp</dt><dd className="mt-1 font-medium">{formatDate(proof.submittedAt)}</dd></div><div className="sm:col-span-2"><dt className="font-bold uppercase text-[#8c918a]">BCP code</dt><dd className="mt-1 font-medium">{proof.bcpName}</dd></div></dl></section>

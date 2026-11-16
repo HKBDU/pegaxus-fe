@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { formatUtcDateTime } from "@/shared/utils/datetime"
 import { BadgeCheck, Building2, Calendar, CircleDot, Coins, FileText, Mail, Send, TriangleAlert } from "lucide-react"
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { invoiceEdit } from "@/app/route-config"
 import { ISSUE_CONFIRMATION_TEXT } from "@/features/invoice/constants"
@@ -44,6 +44,7 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
   const issueMutation = useIssueInvoice(invoice.invoiceId)
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const location = useLocation()
   const [errorCode, setErrorCode] = useState<string>()
   const [errorMessage, setErrorMessage] = useState<string>()
   const { summary, currency } = invoice
@@ -82,7 +83,7 @@ export function IssueInvoiceDialog({ invoice, open, onOpenChange, onIssued, onBa
   function backToEdit() {
     if (issueMutation.isPending) return
     if (onBackToEdit) return onBackToEdit()
-    navigate(invoiceEdit(invoice.invoiceId))
+    navigate(invoiceEdit(invoice.invoiceId), { state: { from: location.pathname + location.search } })
     onOpenChange(false)
   }
 

@@ -161,6 +161,7 @@ export function EmergencyCostForm({
             request.emergencyCostRequestId,
             incident.incidentReportId,
           ),
+          { replace: true },
         );
     } catch (caught) {
       if (mounted.current && emergencyCostAuthScope() === scope) {

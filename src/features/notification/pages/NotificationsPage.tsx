@@ -1,6 +1,6 @@
 import { CircleCheck, ChevronRight, Search } from "lucide-react"
 import { useMemo, useState, type KeyboardEvent } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 
 import { useAuthStore } from "@/features/auth/store"
 import { NotificationTypeIcon } from "@/features/notification/components/NotificationTypeIcon"
@@ -31,6 +31,7 @@ const ROW_HEIGHT = "h-14"
 /** Full notification list of the signed-in user (every role). The BE only filters `unreadOnly`; the rest is done here. */
 export default function NotificationsPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const principal = useAuthStore((state) => state.principal)
   const unreadCount = useUnreadCount()
   usePageTitle("Notifications", unreadCount)
@@ -60,7 +61,11 @@ export default function NotificationsPage() {
   function open(notification: AppNotification) {
     if (isUnread(notification)) markRead.mutate(notification.id)
     const path = resolveNotificationPath(notification, principal)
-    if (path) navigate(path)
+    if (path) {
+      navigate(path, {
+        state: { from: location.pathname + location.search },
+      })
+    }
   }
 
   function onRowKey(event: KeyboardEvent, notification: AppNotification) {

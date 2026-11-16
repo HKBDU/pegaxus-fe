@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { invoiceCreate, invoiceEdit } from "@/app/route-config";
 import { CancelInvoiceDialog } from "@/features/invoice/components/CancelInvoiceDialog";
@@ -59,6 +59,8 @@ export function InvoiceActions({
     ...invoice,
     dueDate: invoice.dueDate ?? "",
   };
+  const location = useLocation();
+  const returnState = { from: location.pathname + location.search };
   const actions = invoice.availableActions.filter((action: InvoiceAction) =>
     manager
       ? action !== "PAY_NOW"
@@ -77,7 +79,7 @@ export function InvoiceActions({
                 variant="outline"
                 className="rounded-[2px]"
               >
-                <Link to={invoiceEdit(invoice.invoiceId)}>Edit invoice</Link>
+                <Link to={invoiceEdit(invoice.invoiceId)} state={returnState}>Edit invoice</Link>
               </Button>
             );
           case "ISSUE":
@@ -114,7 +116,7 @@ export function InvoiceActions({
                 variant="outline"
                 className="rounded-[2px]"
               >
-                <Link to={invoiceCreate(invoice.booking.bookingId)}>
+                <Link to={invoiceCreate(invoice.booking.bookingId)} state={returnState}>
                   Create another invoice
                 </Link>
               </Button>

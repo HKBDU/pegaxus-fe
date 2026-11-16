@@ -227,7 +227,9 @@ export default function VehicleIncidentPage() {
     submitting.current = true;
     mutations.vehicle.mutate(parsed.data, {
       onSuccess: (result) =>
-        navigate(incidentPaths.detail("CREW", result.incidentReportId)),
+        navigate(incidentPaths.detail("CREW", result.incidentReportId), {
+          replace: true,
+        }),
       onError: focusFirstIncidentError,
       onSettled: () => {
         submitting.current = false;

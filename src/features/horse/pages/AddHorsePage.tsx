@@ -21,6 +21,7 @@ import { toHorseDateInput } from "../utils/format-horse-date"
 import { todayUtc } from "@/shared/utils/datetime"
 import type { CreateHorseRequest, Horse, HorseFormValues, HorseSex } from "../types"
 import { usePageTitle } from "@/shared/hooks"
+import { useBackTarget } from "@/shared/hooks/useBackTarget"
 
 import {
   VALIDATION_LIMITS,
@@ -499,11 +500,40 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
 export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
   usePageTitle(mode === "edit" ? "Edit Horse" : "Add Horse")
   const navigate = useNavigate()
+  const isEdit = mode === "edit" && Boolean(initialHorse?.horseId)
+  const horseDetailPath = initialHorse?.horseId
+    ? `/my-horses/${encodeURIComponent(initialHorse.horseId)}`
+    : "/my-horses"
+  const fallbackHref = isEdit ? horseDetailPath : "/my-horses"
+  const fallbackLabel = isEdit ? "Back to Horse Details" : "Back to My Horses"
+
+  const backTarget = useBackTarget({
+    fallback: fallbackHref,
+    fallbackLabel,
+    allowedOrigins: ["/my-horses", "/bookings"],
+    labels: {
+      "/my-horses": "Back to My Horses",
+      "/bookings": "Back to Booking",
+      ...(initialHorse?.horseId
+        ? { [horseDetailPath]: "Back to Horse Details" }
+        : {}),
+    },
+  })
+
   return (
     <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
       <div className="mx-auto flex w-full max-w-[1152px] flex-col">
-        <PageHeader title={mode === "edit" ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" backLabel="Back to My Horses" />
-        <HorseForm mode={mode} initialHorse={initialHorse} onSaved={() => navigate("/my-horses")} onCancel={() => navigate("/my-horses")} />
+        <PageHeader
+          title={mode === "edit" ? "EDIT HORSE" : "ADD HORSE"}
+          backHref={backTarget.href}
+          backLabel={backTarget.label}
+        />
+        <HorseForm
+          mode={mode}
+          initialHorse={initialHorse}
+          onSaved={() => navigate(fallbackHref, { replace: true })}
+          onCancel={() => navigate(backTarget.href)}
+        />
       </div>
     </section>
   )

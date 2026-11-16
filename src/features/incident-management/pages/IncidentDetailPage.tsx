@@ -12,6 +12,7 @@ import { PageHeader } from "@/shared/components/PageHeader"
 import { BackButton } from "@/shared/components/BackButton"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 import { useIsDesktop } from "@/shared/hooks"
+import { useBackTarget } from "@/shared/hooks/useBackTarget"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -180,10 +181,20 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
   const { isCoordinator } = useIncidentViewer()
   const isDesktop = useIsDesktop()
   const principal = useAuthStore((state) => state.principal)
+  const isCrew = audience === "crew"
+  const crewBackTarget = useBackTarget({
+    fallback: "/crew",
+    fallbackLabel: "Ongoing transport",
+    allowedOrigins: ["/crew", "/crew/transports", "/notifications"],
+    labels: {
+      "/crew/transports": "Back to Assigned Transports",
+      "/notifications": "Back to Notifications",
+      "/crew": "Ongoing transport",
+    },
+  })
 
   if (query.isError && isNotFound(query.error)) return <NotFoundPage />
 
-  const isCrew = audience === "crew"
   // The crew page was built for a phone (one 768px column and a bottom action bar), which left a narrow strip in the middle
   // of a desktop screen. From 1024px it uses two columns: the sections, and a sticky summary with the actions.
   const crewDesktop = isCrew && isDesktop
@@ -264,8 +275,8 @@ export default function IncidentDetailPage({ audience }: { audience: IncidentAud
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">
         {isCrew ? (
           <div className={cn("mb-3", !crewDesktop && "mx-auto max-w-3xl")}>
-            <BackButton to="/crew" className="mb-2.5">
-              Ongoing transport
+            <BackButton to={crewBackTarget.href} className="mb-2.5">
+              {crewBackTarget.label}
             </BackButton>
             {incident && !crewDesktop ? (
               // The same white summary as the desktop side column (the dark hero card looked out of place).

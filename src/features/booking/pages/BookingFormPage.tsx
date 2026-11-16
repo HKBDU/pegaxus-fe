@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Plus, Search, X } from "lucide-react"
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useForm, type UseFormReturn } from "react-hook-form"
 import { useQueryClient } from "@tanstack/react-query"
-import { Link, useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { BookingSummaryBar } from "@/features/booking/components/BookingSummaryBar"
@@ -36,6 +36,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton"
 import { Textarea } from "@/shared/components/ui/textarea"
 import { useDebounce } from "@/shared/hooks/useDebounce"
 import { usePageTitle } from "@/shared/hooks/usePageTitle"
+import { useUnsavedChanges } from "@/shared/hooks/useUnsavedChanges"
 import type { EntityId } from "@/shared/types"
 
 // maplibre-gl is heavy and the booking pages are imported eagerly by the router, so the map loads only on this step.
@@ -270,6 +271,7 @@ function FilterSelect({
 
 function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseline }: { mode: "create" | "edit"; booking?: Booking; editSession?: BookingEditSession; onSaveFailed?: (error: unknown) => Promise<void>; onRefreshBaseline?: () => Promise<void> }) {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const mounted = useRef(true)
   useEffect(() => {
     mounted.current = true
@@ -279,7 +281,48 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
   const [saveFailure, setSaveFailure] = useState<string | null>(null)
   const [refreshingBaseline, setRefreshingBaseline] = useState(false)
   const [baselineReady, setBaselineReady] = useState(true)
-  const [step, setStep] = useState<1 | 2>(1)
+
+  const createBooking = useCreateBooking()
+  const updateBooking = useUpdateBooking()
+  const saveRequest = useBookingRequestGuard()
+  const exitRequest = useBookingRequestGuard()
+  const form = useForm<BookingFormSchemaValues>({
+    resolver: zodResolver(bookingFormSchema),
+    defaultValues: toDefaultValues(booking),
+  })
+
+  const [step, setStep] = useState<1 | 2>(() => (searchParams.get("step") === "2" ? 2 : 1))
+
+  useEffect(() => {
+    const nextStep = searchParams.get("step") === "2" ? 2 : 1
+    if (nextStep === 2) {
+      const current = form.getValues()
+      const hasOrigin = Boolean(current.originAddress && current.originCountry)
+      const hasDest = Boolean(current.destinationAddress && current.destinationCountry)
+      const hasDate = Boolean(current.requestedDepartureDate)
+      if (mode === "edit" || (hasOrigin && hasDest && hasDate)) {
+        setStep(2)
+      } else {
+        setStep(1)
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev)
+          next.set("step", "1")
+          return next
+        }, { replace: true })
+      }
+    } else {
+      setStep(1)
+    }
+  }, [form, mode, searchParams, setSearchParams])
+
+  const setStepWithUrl = useCallback((nextStep: 1 | 2) => {
+    setStep(nextStep)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set("step", String(nextStep))
+      return next
+    })
+  }, [setSearchParams])
   const [pointSide, setPointSide] = useState<BookingPointSide>("origin")
   const [pointMessage, setPointMessage] = useState<string | null>(null)
   const queryClient = useQueryClient()
@@ -297,14 +340,6 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
   const [activeHorseId, setActiveHorseId] = useState<EntityId | null>(booking?.horses[0]?.horseId ?? null)
   const [selectedHorseDetails, setSelectedHorseDetails] = useState<AvailableHorse[]>(booking?.horses ?? [])
   const horsesQuery = useAvailableHorses({ pageIndex: horsePage, pageSize: horsePageSize, search: debouncedHorseSearch })
-  const createBooking = useCreateBooking()
-  const updateBooking = useUpdateBooking()
-  const saveRequest = useBookingRequestGuard()
-  const exitRequest = useBookingRequestGuard()
-  const form = useForm<BookingFormSchemaValues>({
-    resolver: zodResolver(bookingFormSchema),
-    defaultValues: toDefaultValues(booking),
-  })
 
   const [originCountry, destinationCountry] = form.watch(["originCountry", "destinationCountry"])
   const departureRule = getDepartureRule(originCountry, destinationCountry)
@@ -361,6 +396,26 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
   const isSavingDisabled = isPending || saveRequest.isBlocked || refreshingBaseline || !baselineReady
   const isSubmitDisabled = isSavingDisabled || (mode === "create" && !policyAccepted)
   const exitPath = booking ? `/bookings/${booking.bookingId}` : "/bookings"
+
+  const isDirty = form.formState.isDirty
+  const isSubmitting = isPending || saveRequest.isBlocked
+
+  const { dialogElement: unsavedChangesDialog, allowNextNavigation } = useUnsavedChanges({
+    isDirty,
+    isSubmitting,
+    onDiscard: async () => {
+      if (mode === "edit" && booking && editSession) {
+        try {
+          assertBookingEditSession(editSession)
+          await releaseEditLock(booking.bookingId, editSession)
+        } catch {
+          // ignore cleanup errors on discard
+        }
+      }
+    },
+    title: "Discard booking changes?",
+    description: "You have unsaved changes in this booking form. Leaving will discard your modifications.",
+  })
 
   useEffect(() => {
     const subscription = form.watch(() => {
@@ -533,7 +588,7 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
 
   const continueToHorses = async () => {
     const valid = await form.trigger(transportFields, { shouldFocus: true })
-    if (valid) setStep(2)
+    if (valid) setStepWithUrl(2)
   }
 
   const submit = form.handleSubmit(async (formValues) => {
@@ -558,12 +613,16 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
             customerNote: values.customerNote || undefined,
           })
           toast.success(`Booking ${result.bookingCode} created`)
+          form.reset(values)
+          allowNextNavigation()
           navigate(`/bookings/${result.bookingId}`, { replace: true })
         } else if (booking && editSession) {
           await updateBooking.mutateAsync({ booking, values, session: editSession })
           assertBookingEditSession(editSession)
           if (!mounted.current) return
           toast.success("Booking updated")
+          form.reset(values)
+          allowNextNavigation()
           navigate(`/bookings/${booking.bookingId}`, { replace: true })
         }
       })
@@ -615,7 +674,7 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
               }}>{refreshingBaseline ? "Refreshing server baseline..." : "Refresh server baseline to retry (keep form input)"}</button>}
             </div>}
             {step === 2 ? (
-              <BackButton onClick={() => setStep(1)} className="mb-2">
+              <BackButton onClick={() => setStepWithUrl(1)} className="mb-2">
                 Return to transport details
               </BackButton>
             ) : null}
@@ -965,6 +1024,7 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
         </form>
       </Form>
       <AddHorseDialog open={addHorseOpen} onOpenChange={setAddHorseOpen} onCreated={handleHorseCreated} />
+      {unsavedChangesDialog}
     </>
   )
 }

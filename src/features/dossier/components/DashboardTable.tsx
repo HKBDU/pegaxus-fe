@@ -1,6 +1,6 @@
 import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type RowSelectionState, type SortingState } from "@tanstack/react-table"
 import { ArrowRight, MoreVertical } from "lucide-react"
 
@@ -36,6 +36,7 @@ interface DashboardTableProps {
 
 export function DashboardTable({ items, filters, meta, isLoading, onSearchChange, onRouteChange, onStatusChange, onRiskChange, onSortChange, onReset, onPageChange, onPageSizeChange }: DashboardTableProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [sorting, setSorting] = useState<SortingState>([])
 
   const columns = useMemo<ColumnDef<DashboardItem>[]>(
@@ -45,7 +46,15 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         header: "DOSSIER CODE",
         enableHiding: false,
         cell: ({ row }) => (
-          <button type="button" className={codeLinkClassName} onClick={() => navigate(`/compliance-dossiers/${row.original.complianceDossierId}`)}>
+          <button
+            type="button"
+            className={codeLinkClassName}
+            onClick={() =>
+              navigate(`/compliance-dossiers/${row.original.complianceDossierId}`, {
+                state: { from: location.pathname + location.search },
+              })
+            }
+          >
             {row.original.dossierCode || "—"}
           </button>
         ),
@@ -117,7 +126,14 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={2} className="w-44 min-w-0 rounded-[2px] border-slate-200 p-0.5 shadow-md">
-                <DropdownMenuItem className={menuItemClass} onSelect={() => navigate(`/compliance-dossiers/${row.original.complianceDossierId}`)}>
+                <DropdownMenuItem
+                  className={menuItemClass}
+                  onSelect={() =>
+                    navigate(`/compliance-dossiers/${row.original.complianceDossierId}`, {
+                      state: { from: location.pathname + location.search },
+                    })
+                  }
+                >
                   <ArrowRight className="size-3.5 text-slate-700" />
                   View dossier
                 </DropdownMenuItem>
@@ -127,7 +143,7 @@ export function DashboardTable({ items, filters, meta, isLoading, onSearchChange
         ),
       },
     ],
-    [navigate],
+    [navigate, location],
   )
 
   // The shared table only styles a row through its "selected" state, so urgent-risk rows are flagged that way (red tint).

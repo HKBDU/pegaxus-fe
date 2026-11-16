@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { BackButton } from "@/shared/components/BackButton";
-import { getPostLoginPath } from "@/app/route-config";
+import { ROLE_ROUTES } from "@/app/route-config";
+import { useBackTarget } from "@/shared/hooks/useBackTarget";
 import { canAccess } from "@/features/auth/access-control";
 import { Field } from "@/features/transport-plan/components/ApprovedBookingDetails";
 import { formatPlanDate } from "@/features/transport-plan/format";
@@ -28,18 +29,31 @@ export default function EmergencyReroutePage() {
   const manager = canAccess(query.principal, {
     anyRole: ["LOGISTICS_MANAGER"],
   });
+  const fallbackHref = incidentReportId
+    ? `${ROLE_ROUTES.incidents}/${encodeURIComponent(incidentReportId)}`
+    : ROLE_ROUTES.incidents;
+  const backTarget = useBackTarget({
+    fallback: fallbackHref,
+    fallbackLabel: incidentReportId ? "Back to Incident Details" : "Back to Incidents",
+    allowedOrigins: [ROLE_ROUTES.incidents],
+    labels: {
+      [ROLE_ROUTES.incidents]: "Back to Incidents",
+      ...(incidentReportId
+        ? {
+            [`${ROLE_ROUTES.incidents}/${incidentReportId}`]:
+              "Back to Incident Details",
+          }
+        : {}),
+    },
+  });
   const error = query.isError ? getRerouteError(query.error) : null;
   const data =
     query.allowed && query.validId && !query.isError ? query.data : undefined;
   return (
     <main className="mx-auto w-full min-w-0 max-w-7xl space-y-3 p-3 font-sans sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <BackButton
-          to={getPostLoginPath(
-            manager ? "LOGISTICS_MANAGER" : "FLEET_ROUTE_COORDINATOR",
-          )}
-        >
-          Workspace
+        <BackButton to={backTarget.href}>
+          {backTarget.label}
         </BackButton>
       </div>
       <header className="min-w-0 space-y-3 rounded-[2px] border border-slate-200 border-l-2 border-l-primary bg-white p-3 sm:p-4">

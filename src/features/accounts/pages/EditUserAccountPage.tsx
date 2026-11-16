@@ -80,9 +80,9 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
       if (!result.started) return;
       toast.success("Employee account updated successfully.");
       if (changes.accountStatus === "SUSPENDED") {
-        navigate(ROLE_ROUTES.managerUsers);
+        navigate(ROLE_ROUTES.managerUsers, { replace: true });
       } else {
-        navigate(accountDetail(employee.employeeId));
+        navigate(accountDetail(employee.employeeId), { replace: true });
       }
     } catch (error) {
       toast.error(getAccountError(error));
