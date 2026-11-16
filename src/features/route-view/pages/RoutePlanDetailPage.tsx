@@ -94,13 +94,17 @@ export default function RoutePlanDetailPage({
   const activeMode =
     actions.find((action) => action === mode) ??
     (fullPageAction && panelRequestRunning ? fullPageAction : undefined);
+  // In-page state replaces the entry, so Back leaves the page instead of stepping through tabs and dialogs.
   const changeMode = (action?: EmergencyAction) =>
-    setParams((current) => {
-      const next = new URLSearchParams(current);
-      if (action) next.set("emergency", action);
-      else next.set("emergency", "overview");
-      return next;
-    });
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (action) next.set("emergency", action);
+        else next.set("emergency", "overview");
+        return next;
+      },
+      { replace: true },
+    );
   const plan = query.data;
   const hasPlan = Boolean(plan);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -212,7 +216,7 @@ export default function RoutePlanDetailPage({
                       const next = new URLSearchParams(current);
                       next.delete("changeVehicle");
                       return next;
-                    })}
+                    }, { replace: true })}
                   />
                 )}
                 <RoutePlanDetails
@@ -220,6 +224,7 @@ export default function RoutePlanDetailPage({
                   plan={plan}
                   mapViewer={mapViewer}
                   routeDetailPath={routeDetailPath}
+                  fallbackBack={getWorkspaceRole(principal) === "coordinator" ? back : undefined}
                   actions={
                     context.data ? (
                       <RouteManagementActions
