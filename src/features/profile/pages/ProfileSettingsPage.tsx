@@ -436,6 +436,9 @@ export function ProfileSettingsPage() {
             accept="image/jpeg,image/png"
             aria-label="Change profile avatar"
             onChange={(event) => {
+              if (event.currentTarget.files && event.currentTarget.files.length > 1) {
+                toast.error("Only one file allowed. Remove the current avatar to upload another.")
+              }
               const file = event.currentTarget.files?.[0]
               event.currentTarget.value = ""
               if (!file) return

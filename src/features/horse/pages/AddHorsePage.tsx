@@ -13,7 +13,7 @@ import { Input } from "@/shared/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
 import FileUploader from "@/shared/components/FileUploader"
-import ImageViewer from "@/shared/components/file-viewer/ImageViewer"
+import { UploadedProofPreview } from "@/shared/components/file-viewer/UploadedProofPreview"
 import { HORSE_BREED_OPTIONS, HORSE_SEX_OPTIONS } from "../constants/horse.constants"
 import { horseApi } from "../services"
 import { getHorseApiErrorMessage } from "../utils/horse-api-error"
@@ -462,23 +462,17 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
                 }}
               />
               {(avatarPreviewUrl || initialHorse?.avatarUrl) && (
-                <div className="mt-3 border-t border-slate-200 pt-3">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Preview</p>
-                  <div className="h-64 w-full overflow-hidden rounded-[2px] border border-slate-300 bg-slate-900">
-                    <ImageViewer
-                      images={[{
-                        src: avatarPreviewUrl ?? initialHorse?.avatarUrl ?? "",
-                        size: avatarPreviewSize,
-                        alt: "Horse avatar preview",
-                        title: "Horse avatar preview",
-                      }]}
-                      maxFileSizeBytes={UPLOAD_MAX_BYTES}
-                      width="100%"
-                      height="100%"
-                      ariaLabel="Horse avatar preview"
-                    />
-                  </div>
-                </div>
+                <UploadedProofPreview
+                  className="mt-3"
+                  files={[{
+                    name: "Horse avatar",
+                    url: avatarPreviewUrl ?? initialHorse?.avatarUrl ?? "",
+                    size: avatarPreviewSize,
+                    type: "image/jpeg",
+                  }]}
+                  label="Uploaded proof preview"
+                  height={256}
+                />
               )}
             </div>
 
