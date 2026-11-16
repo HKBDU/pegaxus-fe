@@ -8,12 +8,14 @@ import { useTransportOverview } from "../hooks/useTransportOverview";
 import { getOngoingTransportError } from "../services";
 import { formatTransportDate, formatTransportTime } from "../format";
 import type { TransportAudience } from "../types";
+import { usePageTitle } from "@/shared/hooks";
 
 export default function TransportRouteTrackingPage({
   audience,
 }: {
   audience: TransportAudience;
 }) {
+  usePageTitle("Route Tracking");
   const { transportId, bookingId } = useParams<{
     transportId: string;
     bookingId: string;

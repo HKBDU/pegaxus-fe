@@ -1,6 +1,7 @@
 import { ArrowUpRight, BookOpenText } from "lucide-react"
-import { Link } from "react-router-dom"
-import type { ReactNode } from "react"
+import { Link, useLocation } from "react-router-dom"
+import { useEffect, type ReactNode } from "react"
+import { usePageTitle } from "@/shared/hooks"
 
 import termsSource from "../data/terms.md?raw"
 
@@ -76,6 +77,16 @@ function inline(text: string): ReactNode[] {
 }
 
 export default function TermsPage() {
+  usePageTitle("Policies & Terms")
+  // A link such as the footer's Privacy Policy (/terms#section-13) opens its section, not the top of the page.
+  const { hash } = useLocation()
+  useEffect(() => {
+    const id = decodeURIComponent(hash.slice(1))
+    if (!id) return
+    const frame = requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }))
+    return () => cancelAnimationFrame(frame)
+  }, [hash])
+
   return (
     <div className="terms-page">
       <div className="terms-hero">

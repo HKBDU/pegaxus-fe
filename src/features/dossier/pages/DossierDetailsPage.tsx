@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-  ArrowLeft,
   ClipboardList,
   FileText,
   History,
@@ -9,6 +8,7 @@ import {
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ErrorState, LoadingState } from "@/shared/components/common";
 import { PageHeader } from "@/shared/components/PageHeader";
+import { BackButton } from "@/shared/components/BackButton";
 import { AuthorityInspectionTab } from "@/features/clearance/components/AuthorityInspectionTab";
 import { DossierRequirementsPanel } from "@/features/compliance-catalog/pages/DossierRequirementsPage";
 import { ROLE_ROUTES } from "@/app/route-config";
@@ -20,6 +20,7 @@ import { useDossierOverview } from "../hooks/useDossier";
 import { useDossierRole } from "../hooks/useDossierRole";
 import { ReturnTripPanel } from "../components/ReturnTripPanel";
 import { getDossierLoadErrorKind } from "../source";
+import { usePageTitle } from "@/shared/hooks";
 
 const sections = [
   { id: "requirements", label: "Dossier Requirements", icon: ClipboardList },
@@ -61,6 +62,8 @@ export default function DossierDetailsPage() {
   const requestedTab = sections.find(
     ({ id }) => id === searchParams.get("tab"),
   )?.id;
+  // Bumped by the "Add requirement" shortcut: remounts the requirements tab with its Add dialog open.
+  const [addRequest, setAddRequest] = useState(0);
   const [selectedSection, setActiveSection] = useState<SectionId>(
     requestedTab ?? "requirements",
   );
@@ -71,13 +74,19 @@ export default function DossierDetailsPage() {
       : sections;
   const activeSection = visibleSections.some(({ id }) => id === selectedSection) ? selectedSection : "requirements";
   const query = useDossierOverview(dossierId);
+  const revisionCount = query.data?.requirementSummary?.rejected ?? 0;
+  const dossierTitle = revisionCount > 0
+    ? "Revision requested"
+    : query.data?.dossierCode
+      ? `Dossier ${query.data.dossierCode}`
+      : "Dossier Details";
+  usePageTitle(dossierTitle, revisionCount);
   return (
     <div className="booking-page-shell min-w-0 px-5 py-6 font-sans sm:px-6 lg:px-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1440px] space-y-5">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <button
-              type="button"
+            <BackButton
               onClick={() =>
                 navigate(
                   role === "TRANSPORT_SPECIALIST"
@@ -89,11 +98,13 @@ export default function DossierDetailsPage() {
                         : "/bookings",
                 )
               }
-              className="group inline-flex items-center gap-[6px] pt-2 text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase focus-visible:outline-2 focus-visible:outline-ring"
             >
-              <ArrowLeft aria-hidden="true" className="size-3.5 shrink-0" />
-              <span className="underline-offset-4 group-hover:underline">{role === "TRANSPORT_SPECIALIST" ? "Back to Dossier Tracking" : query.data?.bookingId ? "Back to Booking" : "Back to Bookings"}</span>
-            </button>
+              {role === "TRANSPORT_SPECIALIST"
+                ? "Back to Dossier Tracking"
+                : query.data?.bookingId
+                  ? "Back to Booking"
+                  : "Back to Bookings"}
+            </BackButton>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <PageHeader
                 title="COMPLIANCE DOSSIER"
@@ -138,6 +149,11 @@ export default function DossierDetailsPage() {
             <DossierReadinessAction
               dossier={query.data}
               onCompleted={() => setActiveSection("authority")}
+              onAddRequirement={() => {
+                setAddRequest((count) => count + 1);
+                setActiveSection("requirements");
+              }}
+              onRequestReupload={() => setActiveSection("documents")}
             />
             <div className="border-b border-gray-200">
               <div
@@ -168,7 +184,10 @@ export default function DossierDetailsPage() {
               aria-labelledby={`dossier-tab-${activeSection}`}
             >
               {activeSection === "requirements" && role !== "CUSTOMER" ? (
-                <DossierRequirementsPanel />
+                <DossierRequirementsPanel
+                  key={addRequest}
+                  openAdd={addRequest > 0}
+                />
               ) : activeSection === "requirements" ||
                 activeSection === "documents" ? (
                 <DossierRequirementsPreview

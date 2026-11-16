@@ -49,7 +49,7 @@ export function ProfileIdentityPanel({
         <div className="absolute left-5 top-5 text-[10px] font-bold tracking-[0.18em] text-[#f39200] uppercase">Pegaxus profile</div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" disabled={disabled} aria-label="Open profile actions" className="absolute right-4 top-4 inline-flex size-9 items-center justify-center rounded-full border border-white/40 bg-black/30 text-white backdrop-blur-sm transition-colors hover:bg-[#f39200] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+            <button type="button" disabled={disabled} aria-label="Open profile actions" className="absolute right-4 top-4 inline-flex size-9 items-center justify-center rounded-full border border-white/40 bg-black/30 text-white backdrop-blur-sm transition-colors hover:border-[#f39200] hover:bg-[#f39200] hover:text-[#181818] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
               <MoreHorizontal className="size-5" aria-hidden="true" />
             </button>
           </DropdownMenuTrigger>

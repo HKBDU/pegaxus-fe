@@ -3,6 +3,7 @@ import {
   lazy,
   Suspense,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -10,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { useLandingStory } from "../../hooks/useLandingStory";
+import { useLandingMotion } from "../../hooks/useLandingMotion";
 import { LandingNavbar } from "./LandingNavbar";
 import { HeroSection } from "./HeroSection";
 import { JourneySection } from "./JourneySection";
@@ -18,11 +20,15 @@ import { PlatformSection } from "./PlatformSection";
 import { HorseCareSection } from "./HorseCareSection";
 import { GlobalMovementSection } from "./GlobalMovementSection";
 import { ReliabilitySection } from "./ReliabilitySection";
-import { FinalCtaSection } from "./FinalCtaSection";
-import { LandingFooter } from "./LandingFooter";
+import { LandingClosing } from "./LandingClosing";
 import { HorseLoader } from "./HorseLoader";
 import "../../landing.css";
+import "../../landing-motion.css";
+import { LandingCursor } from "./LandingCursor";
+import { HorseWipe } from "./HorseWipe";
+import { RouteGlobe } from "./RouteGlobe";
 import { preload } from "react-dom";
+import { useLocation } from "react-router-dom";
 import horseUrl from "../../assets/horse-meshopt.glb?url&no-inline";
 
 import { MarqueeBand } from "./MarqueeBand";
@@ -77,6 +83,7 @@ export function PegaxusLanding() {
     revealHero,
     updateSceneStatus,
   } = useLandingStory(root, canvasLayer);
+  useLandingMotion(root);
   const [sceneStatus, setSceneStatus] = useState<
     "loading" | "ready" | "unavailable"
   >("loading");
@@ -87,6 +94,22 @@ export function PegaxusLanding() {
     updateSceneStatus("unavailable");
     setSceneStatus("unavailable");
   }, [updateSceneStatus]);
+  // A link from another page (the shared footer, "/#compliance") lands on its chapter instead of the top.
+  const { hash } = useLocation();
+  useEffect(() => {
+    const id = decodeURIComponent(hash.slice(1));
+    // The Movement chapter positions itself (useLandingStory).
+    if (!id || id === "movement") return;
+    const section = root.current?.querySelector<HTMLElement>(
+      `:is(section, footer)[id="${CSS.escape(id)}"]`,
+    );
+    if (!section) return;
+    const frame = requestAnimationFrame(() =>
+      scrollToLandingSection(section, "instant"),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [hash]);
+
   const navigateSection = (event: MouseEvent<HTMLDivElement>) => {
     if (
       event.defaultPrevented ||
@@ -102,7 +125,9 @@ export function PegaxusLanding() {
     );
     const id = link?.getAttribute("href")?.slice(1);
     const section = id
-      ? root.current?.querySelector<HTMLElement>(`section[id="${id}"]`)
+      ? root.current?.querySelector<HTMLElement>(
+          `:is(section, footer)[id="${CSS.escape(id)}"]`,
+        )
       : null;
     if (!section) return;
     event.preventDefault();
@@ -124,6 +149,8 @@ export function PegaxusLanding() {
         Skip to content
       </a>
       <LandingNavbar active={active} scrolled={scrolled} />
+      <LandingCursor />
+      <HorseWipe />
       <HorseSceneBoundary onUnavailable={unavailable}>
         <Suspense fallback={null}>
           <HorseExperience
@@ -144,10 +171,11 @@ export function PegaxusLanding() {
         <ComplianceSection />
         <PlatformSection />
         <HorseCareSection />
-        <GlobalMovementSection />
+        <RouteGlobe>
+          <GlobalMovementSection />
+        </RouteGlobe>
         <ReliabilitySection />
-        <FinalCtaSection />
-        <LandingFooter />
+        <LandingClosing />
       </div>
     </div>
   );

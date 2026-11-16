@@ -22,6 +22,7 @@ import {
   PasswordRequirements,
 } from "../components/PasswordRequirements";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
+import { usePageTitle } from "@/shared/hooks";
 
 const otpErrors: Record<string, string> = {
   OTP_INVALID: "The verification code is invalid.",
@@ -31,6 +32,7 @@ const otpErrors: Record<string, string> = {
 };
 
 export default function ResetPasswordPage() {
+  usePageTitle("Reset Password");
   const location = useLocation();
   const result = resetPasswordRouteStateSchema.safeParse(location.state);
 

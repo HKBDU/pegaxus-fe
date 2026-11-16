@@ -11,11 +11,40 @@ import {
   PopoverTrigger,
 } from "@/shared/components/ui/popover";
 
-const countryOptions = getCountryDataList().sort((a, b) =>
+export const countryOptions = getCountryDataList().sort((a, b) =>
   a.name.localeCompare(b.name),
 );
 
-interface CountrySelectProps {
+export function normalizeCountryToIso2(value?: string | null): string | undefined {
+  if (!value || !value.trim()) return undefined;
+  const trimmed = value.trim();
+  if (trimmed.length === 2 && /^[A-Za-z]{2}$/.test(trimmed)) {
+    return trimmed.toUpperCase();
+  }
+  const lower = trimmed.toLowerCase();
+  const match = countryOptions.find(
+    (c) =>
+      c.name.toLowerCase() === lower ||
+      c.iso2.toLowerCase() === lower ||
+      (c.alias && c.alias.some((a) => a.toLowerCase() === lower)) ||
+      c.native.toLowerCase() === lower,
+  );
+  return match ? match.iso2 : undefined;
+}
+
+export function formatCountryDisplayName(value?: string | null): string {
+  if (!value || !value.trim()) return "";
+  const trimmed = value.trim();
+  const lower = trimmed.toLowerCase();
+  const match = countryOptions.find(
+    (c) =>
+      c.iso2.toLowerCase() === lower ||
+      c.name.toLowerCase() === lower,
+  );
+  return match ? match.name : value;
+}
+
+export interface CountrySelectProps {
   value: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
@@ -23,6 +52,7 @@ interface CountrySelectProps {
   id?: string;
   emptyLabel?: string;
   allowCustomValue?: boolean;
+  valueFormat?: "name" | "iso2";
   "aria-describedby"?: string;
   "aria-label"?: string;
   "data-slot"?: string;
@@ -37,6 +67,7 @@ export function CountrySelect({
   id,
   emptyLabel,
   allowCustomValue = false,
+  valueFormat = "name",
   "aria-describedby": ariaDescribedBy,
   "aria-label": ariaLabel,
   "data-slot": dataSlot,
@@ -44,8 +75,11 @@ export function CountrySelect({
 }: CountrySelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const normalizedValue = value ? value.trim().toLowerCase() : "";
   const selectedCountry = countryOptions.find(
-    (country) => country.name === value,
+    (country) =>
+      country.name.toLowerCase() === normalizedValue ||
+      country.iso2.toLowerCase() === normalizedValue,
   );
   const filteredCountries = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -57,8 +91,23 @@ export function CountrySelect({
     );
   }, [query]);
 
-  function selectCountry(countryName: string) {
-    onValueChange(countryName);
+  function selectCountry(country: (typeof countryOptions)[number]) {
+    onValueChange(valueFormat === "iso2" ? country.iso2 : country.name);
+    setQuery("");
+    setOpen(false);
+  }
+
+  function selectCustom(customValue: string) {
+    if (valueFormat === "iso2") {
+      const match = countryOptions.find(
+        (c) =>
+          c.name.toLowerCase() === customValue.trim().toLowerCase() ||
+          c.iso2.toLowerCase() === customValue.trim().toLowerCase(),
+      );
+      onValueChange(match ? match.iso2 : customValue.trim().slice(0, 2).toUpperCase());
+    } else {
+      onValueChange(customValue);
+    }
     setQuery("");
     setOpen(false);
   }
@@ -114,7 +163,7 @@ export function CountrySelect({
                 if (event.key === "Enter") {
                   event.preventDefault();
                   if (allowCustomValue && query.trim())
-                    selectCountry(query.trim());
+                    selectCustom(query.trim());
                 }
               }}
               maxLength={allowCustomValue ? 100 : undefined}
@@ -127,7 +176,11 @@ export function CountrySelect({
           {emptyLabel ? (
             <button
               type="button"
-              onClick={() => selectCountry("")}
+              onClick={() => {
+                onValueChange("");
+                setQuery("");
+                setOpen(false);
+              }}
               className="flex w-full items-center gap-2 rounded-[2px] px-2 py-1.5 text-left text-sm text-muted-foreground outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 aria-pressed:bg-accent"
             >
               {emptyLabel}
@@ -138,34 +191,37 @@ export function CountrySelect({
           !countryOptions.some((country) => country.name === query.trim()) ? (
             <button
               type="button"
-              onClick={() => selectCountry(query.trim())}
+              onClick={() => selectCustom(query.trim())}
               className="flex w-full items-center rounded-[2px] px-2 py-1.5 text-left text-sm outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 aria-pressed:bg-accent"
             >
               <span className="min-w-0 break-words">Use “{query.trim()}”</span>
             </button>
           ) : null}
           {filteredCountries.length ? (
-            filteredCountries.map((country) => (
-              <button
-                type="button"
-                key={country.iso2}
-                aria-pressed={country.name === value}
-                onClick={() => selectCountry(country.name)}
-                className="flex w-full items-center gap-2 rounded-[2px] px-2 py-1.5 text-left text-sm text-foreground outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 aria-pressed:bg-accent"
-              >
-                <span className="truncate">{country.name}</span>
-                <span className="ml-auto shrink-0 text-[10px] text-slate-400">
-                  {country.iso2}
-                </span>
-                <Check
-                  aria-hidden="true"
-                  className={cn(
-                    "size-3.5 shrink-0 text-selection-accent!",
-                    country.name === value ? "opacity-100" : "opacity-0",
-                  )}
-                />
-              </button>
-            ))
+            filteredCountries.map((country) => {
+              const isSelected = selectedCountry?.iso2 === country.iso2;
+              return (
+                <button
+                  type="button"
+                  key={country.iso2}
+                  aria-pressed={isSelected}
+                  onClick={() => selectCountry(country)}
+                  className="flex w-full items-center gap-2 rounded-[2px] px-2 py-1.5 text-left text-sm text-foreground outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/50 aria-pressed:bg-accent"
+                >
+                  <span className="truncate">{country.name}</span>
+                  <span className="ml-auto shrink-0 text-[10px] text-slate-400">
+                    {country.iso2}
+                  </span>
+                  <Check
+                    aria-hidden="true"
+                    className={cn(
+                      "size-3.5 shrink-0 text-selection-accent!",
+                      isSelected ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                </button>
+              );
+            })
           ) : (
             <p className="px-2 py-3 text-center text-xs text-slate-500">
               No country found.

@@ -77,6 +77,18 @@ interface Props {
   defaultOpen?: boolean;
 }
 
+/** A calendar day (YYYY-MM-DD) as "15 Nov 2026"; the value is a date, not a moment, so no time zone shift applies. */
+function formatDay(day: string) {
+  const [year, month, date] = day.slice(0, 10).split("-").map(Number);
+  if (!year || !month || !date) return day;
+  return new Date(Date.UTC(year, month - 1, date)).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 export function UpdateAuthorityReviewDialog({
   submissionId,
   dossierId,
@@ -107,6 +119,12 @@ export function UpdateAuthorityReviewDialog({
   const [isDragging, setIsDragging] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [serverError, setServerError] = useState("");
+
+  // Date bounds: a permit is issued between the submission and today and must cover the whole trip; a revision is due today or later.
+  const today = todayUtc();
+  const submittedDay = submissionDetail?.submittedAt?.slice(0, 10);
+  const tripEnd = submissionDetail?.tripEndDate;
+  const expiryFloor = [tripEnd, permitIssuedDate].filter(Boolean).sort().at(-1);
 
   const clearError = (key: keyof Errors) =>
     setErrors((current) => ({ ...current, [key]: undefined }));
@@ -175,10 +193,10 @@ export function UpdateAuthorityReviewDialog({
       }
 
       if (permitIssuedDate) {
-        const issued = new Date(permitIssuedDate);
-        const diffYears = Math.abs(issued.getUTCFullYear() - Number(todayUtc().slice(0, 4)));
-        if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
-          next.permitIssuedDate = `Issue date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
+        if (permitIssuedDate > today) {
+          next.permitIssuedDate = "Issue Date cannot be in the future.";
+        } else if (submittedDay && permitIssuedDate < submittedDay) {
+          next.permitIssuedDate = `Issue Date cannot be before the submission date (${formatDay(submittedDay)}).`;
         }
       }
 
@@ -189,6 +207,8 @@ export function UpdateAuthorityReviewDialog({
           next.permitExpiryDate = `Expiry date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
         } else if (permitIssuedDate && permitExpiryDate < permitIssuedDate) {
           next.permitExpiryDate = "Expiry Date must be on or after Issue Date.";
+        } else if (tripEnd && permitExpiryDate < tripEnd) {
+          next.permitExpiryDate = `The permit must stay valid for the whole trip, until ${formatDay(tripEnd)}.`;
         }
       }
     } else if (decision === "REJECTED") {
@@ -208,7 +228,9 @@ export function UpdateAuthorityReviewDialog({
       } else {
         const revision = new Date(revisionDueDate);
         const diffYears = Math.abs(revision.getUTCFullYear() - Number(todayUtc().slice(0, 4)));
-        if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
+        if (revisionDueDate < today) {
+          next.revisionDueDate = "Revision Due Date cannot be in the past.";
+        } else if (diffYears > VALIDATION_LIMITS.dateWindowYears) {
           next.revisionDueDate = `Revision due date must be within ${VALIDATION_LIMITS.dateWindowYears} years of today.`;
         }
       }
@@ -280,7 +302,7 @@ export function UpdateAuthorityReviewDialog({
       <DialogTrigger asChild>
         <Button
           type="button"
-          className="rounded-[2px] bg-[#f39200] font-semibold text-white hover:bg-[#d97f00]"
+          className="rounded-[2px] bg-[#f39200] font-semibold text-[#181818] hover:bg-[#d97f00]"
         >
           Update Authority Review Result
         </Button>
@@ -437,6 +459,8 @@ export function UpdateAuthorityReviewDialog({
                           )}
                           placeholder="Select issue date"
                           displayFormat="dd MMM yyyy"
+                          minDate={submittedDay}
+                          maxDate={today}
                           value={permitIssuedDate}
                           onChange={(value) => {
                             setPermitIssuedDate(value);
@@ -452,6 +476,7 @@ export function UpdateAuthorityReviewDialog({
                           )}
                           placeholder="Select expiry date"
                           displayFormat="dd MMM yyyy"
+                          minDate={expiryFloor}
                           value={permitExpiryDate}
                           onChange={(value) => {
                             setPermitExpiryDate(value);
@@ -460,6 +485,11 @@ export function UpdateAuthorityReviewDialog({
                         />
                       </Field>
                     </div>
+                    {tripEnd ? (
+                      <p className="m-0 text-xs leading-5 text-slate-500">
+                        The permit must stay valid until the trip ends on {formatDay(tripEnd)}.
+                      </p>
+                    ) : null}
                   </div>
                 )}
 
@@ -522,6 +552,7 @@ export function UpdateAuthorityReviewDialog({
                         )}
                         placeholder="Select revision due date"
                         displayFormat="dd MMM yyyy"
+                        minDate={today}
                         value={revisionDueDate}
                         onChange={(value) => {
                           setRevisionDueDate(value);
@@ -697,41 +728,45 @@ export function UpdateAuthorityReviewDialog({
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium text-slate-500">CDos Code</span>
                   <span className="col-span-2 font-mono font-semibold text-slate-900">
-                    {submissionDetail?.dossierSummary?.cdosCode || "CDOS-20260925-1002"}
+                    {submissionDetail?.dossierSummary?.cdosCode || "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium text-slate-500">Booking</span>
                   <span className="col-span-2 cursor-pointer font-medium text-[#f39200] hover:underline">
-                    {submissionDetail?.dossierSummary?.bookingNo || "REQ-20260925-1002"}
+                    {submissionDetail?.dossierSummary?.bookingNo || "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium text-slate-500">Route</span>
                   <span className="col-span-2 text-slate-800">
-                    {submissionDetail?.dossierSummary
+                    {submissionDetail?.dossierSummary?.originCountry
                       ? `${submissionDetail.dossierSummary.originCountry} → ${submissionDetail.dossierSummary.destinationCountry}`
-                      : "London (UK) → Paris (FR)"}
+                      : "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium text-slate-500">Transport Date</span>
                   <span className="col-span-2 text-slate-800">
-                    {submissionDetail?.dossierSummary?.departureDate || "—"}
+                    {submissionDetail?.tripStartDate
+                      ? submissionDetail.tripEndDate && submissionDetail.tripEndDate !== submissionDetail.tripStartDate
+                        ? `${formatDay(submissionDetail.tripStartDate)} → ${formatDay(submissionDetail.tripEndDate)}`
+                        : formatDay(submissionDetail.tripStartDate)
+                      : "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium text-slate-500">Horses</span>
                   <span className="col-span-2 text-slate-800">
                     {submissionDetail?.dossierSummary?.horsesCount
-                      ? `${submissionDetail.dossierSummary.horsesCount} horses`
-                      : "2 horses"}
+                      ? `${submissionDetail.dossierSummary.horsesCount} ${submissionDetail.dossierSummary.horsesCount === 1 ? "horse" : "horses"}`
+                      : "—"}
                   </span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium text-slate-500">Customer</span>
                   <span className="col-span-2 text-slate-800">
-                    {submissionDetail?.dossierSummary?.customerName || "Greenwood Racing Ltd"}
+                    {submissionDetail?.dossierSummary?.customerName || "—"}
                   </span>
                 </div>
               </div>
@@ -927,7 +962,7 @@ export function UpdateAuthorityReviewDialog({
             <Button
               type="submit"
               form="update-authority-review"
-              className="rounded-[2px] bg-[#f39200] px-6 font-semibold text-white hover:bg-[#d97f00]"
+              className="rounded-[2px] bg-[#f39200] px-6 font-semibold text-[#181818] hover:bg-[#d97f00]"
               disabled={mutation.isPending}
             >
               {mutation.isPending && (

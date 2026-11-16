@@ -196,7 +196,7 @@ export function RecordAuthoritySubmissionDialog({
       <DialogTrigger asChild>
         <Button
           type="button"
-          className="bg-[#f39200] text-white hover:bg-[#d97f00]"
+          className="bg-[#f39200] text-[#181818] hover:bg-[#d97f00]"
         >
           Record Authority Submission
         </Button>
@@ -343,7 +343,7 @@ export function RecordAuthoritySubmissionDialog({
           <Button
             type="submit"
             form="record-authority-submission"
-            className="bg-[#f39200] text-white hover:bg-[#d97f00]"
+            className="bg-[#f39200] text-[#181818] hover:bg-[#d97f00]"
             disabled={mutation.isPending || !canRecord}
           >
             {mutation.isPending && (

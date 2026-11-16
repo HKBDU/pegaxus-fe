@@ -12,6 +12,7 @@ import type { HorseHealthIncidentRequest } from "@/shared/types/incident";
 import { toUtcIso } from "@/shared/utils/datetime";
 
 import { PageHeader } from "@/shared/components/PageHeader";
+import { BackButton } from "@/shared/components/BackButton";
 import { IncidentReportHeader } from "../components/IncidentReportHeader";
 import type { IncidentPhotoFieldValue } from "../components/IncidentPhotoField";
 import { areIncidentPhotosReady } from "../validation";
@@ -355,14 +356,12 @@ export default function HorseHealthIncidentPage() {
         latitude={incidentCoordinates?.latitude ?? "Unavailable"}
         locationDescription={driverGps.coordinates ? "Driver shared GPS" : location.locationDescription || "Resolving location…"}
       />
-      <button
-        type="button"
+      <BackButton
         disabled={mutations.horseHealth.isPending || Boolean(createdIncidentId)}
         onClick={() => setStep("selection")}
-        className="text-left text-sm font-bold text-[#181818] underline disabled:no-underline disabled:opacity-50"
       >
-        ← Change selected horses ({selectedHorseIds.length})
-      </button>
+        Change selected horses ({selectedHorseIds.length})
+      </BackButton>
       <HorseHealthIncidentForm
         value={form.values}
         horses={selectedHorses}

@@ -3,6 +3,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { PageHeaderProps } from "@/shared/types/props";
+import { backButtonClassName } from "./BackButton";
 
 export function PageHeader({
   title,
@@ -36,7 +37,7 @@ export function PageHeader({
           onClick={(event) => {
             if (onBack?.() === false) event.preventDefault();
           }}
-          className="group relative z-10 inline-flex min-h-8 w-fit max-w-full items-center gap-1.5 rounded-[2px] px-1 text-xs leading-5 font-bold tracking-wide text-primary uppercase focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className={backButtonClassName}
         >
           <ArrowLeft aria-hidden="true" className="size-3.5 shrink-0" />
           <span className="underline-offset-4 group-hover:underline">

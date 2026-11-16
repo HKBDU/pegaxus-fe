@@ -38,7 +38,9 @@ function normalizeProfile(profile: Profile): Profile {
 }
 
 async function updateProfileRequest(url: string, input: UpdateProfileRequest) {
-    const { avatar, ...profileFields } = input
+    // The BE names the birth date `dateOfBirth` and does not change the e-mail through this endpoint.
+    const { avatar, dob, email: _email, ...rest } = input
+    const profileFields = { ...rest, ...(dob ? { dateOfBirth: dob.slice(0, 10) } : {}) }
     const payload = avatar && !(avatar instanceof File)
       ? { ...profileFields, avatar }
       : profileFields

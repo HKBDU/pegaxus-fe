@@ -29,6 +29,7 @@ import {
   driverNoticeSchema,
   driverNoticeResultSchema,
   crewPlanSchema,
+  changeRequestViewSchema,
 } from "./schemas";
 import { canUseEmergencyAction } from "./emergency-policy";
 import type {
@@ -106,8 +107,6 @@ export async function executeEmergencyAction<A extends EmergencyAction>(
 export function getEmergencyError(error: unknown) {
   const info = getApiErrorInfo(error);
   const messages: Record<string, string> = {
-    APPROVAL_NOT_REQUIRED:
-      "This change is below the approval threshold. No emergency approval request was sent.",
     ROUTE_PLAN_MODIFIED:
       "This route changed while you were working. Review the latest route before submitting again.",
     INVALID_ROUTE_PLAN_STATUS:
@@ -187,6 +186,15 @@ async function parseErrorBlob(blob: Blob) {
 }
 
 export const routeViewService = {
+  /** What the Route Coordinator sent with the backup request (reason, new ETA, cost, impact); null when nothing was sent. */
+  async getChangeRequest(routePlanId: string, signal?: AbortSignal) {
+    const response = await apiClient.get<unknown, unknown>(
+      `${routePath(routePlanId)}/change-request`,
+      { signal },
+    );
+    signal?.throwIfAborted();
+    return changeRequestViewSchema.parse(readEnvelope(response) ?? null);
+  },
   /** Backup segments with the crew suggested from the untravelled PRIMARY segments (LM fills or replaces it). */
   async getCrewPlan(routePlanId: string, signal?: AbortSignal) {
     const response = await apiClient.get<unknown, unknown>(

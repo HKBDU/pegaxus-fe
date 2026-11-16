@@ -1,5 +1,5 @@
-import { ArrowLeft } from "lucide-react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
+import { BackButton } from "@/shared/components/BackButton";
 import { ErrorState } from "@/shared/components/common";
 import { CostStatusBadge, VndText } from "@/shared/components/incident";
 import { EMERGENCY_COST_CATEGORY_LABELS } from "@/shared/constants/incident";
@@ -44,13 +44,9 @@ export default function EmergencyCostDetailPage({
   return (
     <main className="mx-auto w-full min-w-0 max-w-6xl space-y-4 p-4 font-sans sm:p-6">
       {/* The web's small back link (the page title lives in the summary card), not a large ghost button. */}
-      <Link
-        to={emergencyCostScopedListPath(audience, safeScope)}
-        className="inline-flex items-center gap-1.5 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-amber-700 hover:underline"
-      >
-        <ArrowLeft aria-hidden className="size-3.5" />
+      <BackButton to={emergencyCostScopedListPath(audience, safeScope)}>
         Emergency costs
-      </Link>
+      </BackButton>
       <EmergencyCostModeNotice />
       {!query.allowed ? (
         <ErrorState message="You do not have permission to view this emergency cost request." />

@@ -21,7 +21,7 @@ import { useDocumentReview } from "../hooks/useDocumentReview";
 import { mapDocumentReviewError } from "../lib/document-review";
 import type { ComplianceDocumentDetail } from "../types";
 
-/** INVALID / DISABLED: review results are immutable under Flow 2. Do not expose this dialog. */
+/** Revokes the current approval of a document with a reason; earlier reviews stay in the history. */
 export function RevokeDocumentReviewDialog({
   dossierId,
   requirementId,

@@ -1,13 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { getCoreRowModel, getSortedRowModel, useReactTable, type ColumnDef, type SortingState } from "@tanstack/react-table"
-import { ArrowRight, ChevronLeft, ChevronRight, Plus, Search, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Search, X } from "lucide-react"
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useForm, type UseFormReturn } from "react-hook-form"
 import { useQueryClient } from "@tanstack/react-query"
-import { useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
 
-import { BookingStatusBadge } from "@/features/booking/components/BookingStatusBadge"
+import { BookingSummaryBar } from "@/features/booking/components/BookingSummaryBar"
 import { assertBookingEditSession, needsBookingSaveRecovery, releaseEditLock, type BookingEditSession } from "@/features/booking/editLock"
 import { AddHorseDialog } from "@/features/booking/components/AddHorseDialog"
 import { bookingKeys } from "@/features/booking/hooks/useBookings"
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils"
 import { ErrorState } from "@/shared/components/common"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { PageHeader } from "@/shared/components/PageHeader"
+import { BackButton } from "@/shared/components/BackButton"
 import { Checkbox } from "@/shared/components/ui/checkbox"
 import { BookingPointCards } from "@/features/booking/components/BookingPointCards"
 import type { BookingPointSide, PickedPoint } from "@/features/booking/lib/place"
@@ -34,6 +35,7 @@ import { Input } from "@/shared/components/ui/input"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 import { Textarea } from "@/shared/components/ui/textarea"
 import { useDebounce } from "@/shared/hooks/useDebounce"
+import { usePageTitle } from "@/shared/hooks/usePageTitle"
 import type { EntityId } from "@/shared/types"
 
 // maplibre-gl is heavy and the booking pages are imported eagerly by the router, so the map loads only on this step.
@@ -245,20 +247,6 @@ function FormSection({ title, className, offsetTitle = false, stacked = false, c
   )
 }
 
-function SummaryCell({ label, first = false, children }: { label: string; first?: boolean; children: React.ReactNode }) {
-  return (
-    <div
-      className={cn(
-        "relative min-w-0 py-2.5",
-        !first && "lg:pl-4 lg:before:absolute lg:before:inset-y-2.5 lg:before:left-0 lg:before:w-px lg:before:bg-gray-200",
-      )}
-    >
-      <dt className="font-heading text-[10px] font-medium uppercase leading-4 tracking-[0.1em] text-gray-400">{label}</dt>
-      <dd className="mt-0.5 flex min-h-5 items-center text-sm leading-5 font-semibold text-gray-900">{children}</dd>
-    </div>
-  )
-}
-
 function FilterSelect({
   value,
   onValueChange,
@@ -368,8 +356,10 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
     setActiveHorseId(target.horseId)
     setSelectedHorsePage(Math.floor(targetIndex / selectedHorsePageSize) + 1)
   }
+  const [policyAccepted, setPolicyAccepted] = useState(false)
   const isPending = createBooking.isPending || updateBooking.isPending
   const isSavingDisabled = isPending || saveRequest.isBlocked || refreshingBaseline || !baselineReady
+  const isSubmitDisabled = isSavingDisabled || (mode === "create" && !policyAccepted)
   const exitPath = booking ? `/bookings/${booking.bookingId}` : "/bookings"
 
   useEffect(() => {
@@ -547,7 +537,7 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
   }
 
   const submit = form.handleSubmit(async (formValues) => {
-    if (refreshingBaseline || !baselineReady) return
+    if (refreshingBaseline || !baselineReady || (mode === "create" && !policyAccepted)) return
     const values = formValues
     try {
       await saveRequest.run(async () => {
@@ -604,348 +594,383 @@ function BookingForm({ mode, booking, editSession, onSaveFailed, onRefreshBaseli
 
   return (
     <>
-    <Form {...form}>
-      <form onSubmit={submit} className="min-h-[70dvh] bg-[#f4f2ed] px-5 pt-5 pb-8 sm:px-6 lg:px-10">
-        <div className={cn("booking-page-enter mx-auto w-full", step === 2 ? "max-w-[1200px]" : "max-w-[1152px]")}>
-          {(needsRecovery || saveFailure) && <div role="alert" className="mb-4 border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950">
-            <p className="font-semibold">{needsRecovery ? "This booking has an incomplete or unconfirmed save." : "This booking could not be saved."}</p>
-            {needsRecovery && <p>Some changes may already be stored. Leaving will not submit or undo them. Unfinished changes remain in DRAFT unless the final submission already reached the server. Reopen the booking to check its status and finish saving. Unsaved form input is lost when you leave.</p>}
-            {saveFailure && <p className="mt-2">{saveFailure}</p>}
-            {onRefreshBaseline && <button type="button" disabled={isPending || refreshingBaseline} className="mt-2 font-semibold underline" onClick={async () => {
-              setRefreshingBaseline(true)
-              setBaselineReady(false)
-              try {
-                await onRefreshBaseline()
-                if (mounted.current && !editSession?.controller.signal.aborted) { setSaveFailure(null); setBaselineReady(true); saveRequest.reset() }
-              } catch {
-                if (mounted.current && !editSession?.controller.signal.aborted) setSaveFailure("Unable to refresh the server baseline. Your form input is kept; try refreshing again.")
-              } finally {
-                if (mounted.current) setRefreshingBaseline(false)
-              }
-            }}>{refreshingBaseline ? "Refreshing server baseline..." : "Refresh server baseline to retry (keep form input)"}</button>}
-          </div>}
-          {step === 2 ? (
-            <button type="button" onClick={() => setStep(1)} className="group mb-2 flex w-fit items-center gap-[6px] text-[12px] font-bold leading-4 tracking-[0.6px] text-primary uppercase transition-colors hover:text-primary-hover">
-              <span aria-hidden="true" className="text-[14px] transition-transform group-hover:-translate-x-0.5">←</span>
-              Return to transport details
-            </button>
-          ) : null}
-
-          <div className="mb-3">
-            <PageHeader
-              title={step === 2 ? "SELECT RACEHORSES" : mode === "create" ? "CREATE BOOKING" : "UPDATE BOOKING"}
-              backHref={exitPath}
-              backLabel={booking ? "RETURN TO BOOKING DETAILS" : "RETURN TO BOOKING LIST"}
-              showBack={step !== 2}
-            />
+      <Form {...form}>
+        <form onSubmit={submit} className="min-h-[70dvh] bg-[#f4f2ed] px-5 pt-5 pb-8 sm:px-6 lg:px-10">
+          <div className={cn("booking-page-enter mx-auto w-full", step === 2 ? "max-w-[1200px]" : "max-w-[1152px]")}>
+            {(needsRecovery || saveFailure) && <div role="alert" className="mb-4 border border-amber-400 bg-amber-50 p-3 text-sm text-amber-950">
+              <p className="font-semibold">{needsRecovery ? "This booking has an incomplete or unconfirmed save." : "This booking could not be saved."}</p>
+              {needsRecovery && <p>Some changes may already be stored. Leaving will not submit or undo them. Unfinished changes remain in DRAFT unless the final submission already reached the server. Reopen the booking to check its status and finish saving. Unsaved form input is lost when you leave.</p>}
+              {saveFailure && <p className="mt-2">{saveFailure}</p>}
+              {onRefreshBaseline && <button type="button" disabled={isPending || refreshingBaseline} className="mt-2 font-semibold underline" onClick={async () => {
+                setRefreshingBaseline(true)
+                setBaselineReady(false)
+                try {
+                  await onRefreshBaseline()
+                  if (mounted.current && !editSession?.controller.signal.aborted) { setSaveFailure(null); setBaselineReady(true); saveRequest.reset() }
+                } catch {
+                  if (mounted.current && !editSession?.controller.signal.aborted) setSaveFailure("Unable to refresh the server baseline. Your form input is kept; try refreshing again.")
+                } finally {
+                  if (mounted.current) setRefreshingBaseline(false)
+                }
+              }}>{refreshingBaseline ? "Refreshing server baseline..." : "Refresh server baseline to retry (keep form input)"}</button>}
+            </div>}
             {step === 2 ? (
-              <p className="mt-0.5! text-xs leading-4 text-gray-600">
-                Choose racehorses for this booking request and enter individual notes for each selected horse.
-              </p>
+              <BackButton onClick={() => setStep(1)} className="mb-2">
+                Return to transport details
+              </BackButton>
             ) : null}
-          </div>
 
-          <BookingSteps
-            step={step}
-            onStepChange={(nextStep) => {
-              if (nextStep === step) return
-              if (nextStep === 1) setStep(1)
-              else void continueToHorses()
-            }}
-          />
+            <div className="mb-3">
+              <PageHeader
+                title={step === 2 ? "SELECT RACEHORSES" : mode === "create" ? "CREATE BOOKING" : "UPDATE BOOKING"}
+                backHref={exitPath}
+                backLabel={booking ? "RETURN TO BOOKING DETAILS" : "RETURN TO BOOKING LIST"}
+                showBack={step !== 2}
+              />
+              {step === 2 ? (
+                <p className="mt-0.5! text-xs leading-4 text-gray-600">
+                  Choose racehorses for this booking request and enter individual notes for each selected horse.
+                </p>
+              ) : null}
+            </div>
 
-          {step === 1 ? (
-            <div className="booking-page-enter mt-2 grid gap-x-6 lg:grid-cols-2">
-              <FormSection stacked title="Route information" className="lg:col-start-1 lg:row-start-1">
-                <BookingPointCards
-                  origin={originPoint}
-                  destination={destinationPoint}
-                  side={pointSide}
-                  onSideChange={setPointSide}
-                  message={pointMessage}
-                  errors={{
-                    origin: originPoint ? pointErrors.originCountry?.message : pointErrors.originLatitude?.message ?? pointErrors.originAddress?.message ?? pointErrors.originCountry?.message,
-                    destination: destinationPoint ? pointErrors.destinationCountry?.message : pointErrors.destinationLatitude?.message ?? pointErrors.destinationAddress?.message ?? pointErrors.destinationCountry?.message,
-                  }}
-                />
-              </FormSection>
+            <BookingSteps
+              step={step}
+              onStepChange={(nextStep) => {
+                if (nextStep === step) return
+                if (nextStep === 1) setStep(1)
+                else void continueToHorses()
+              }}
+            />
 
-              <div className="border-b border-[#1f1e1d] py-3 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:border-b-0 lg:pt-3">
-                <Suspense fallback={<Skeleton className="h-[380px] rounded-[2px] bg-[#e9e6de] sm:h-[460px] lg:h-[560px]" />}>
-                  <BookingPointMap
+            {step === 1 ? (
+              <div className="booking-page-enter mt-2 grid gap-x-6 lg:grid-cols-2">
+                <FormSection stacked title="Route information" className="lg:col-start-1 lg:row-start-1">
+                  <BookingPointCards
                     origin={originPoint}
                     destination={destinationPoint}
                     side={pointSide}
-                    onPick={(side, point) => setPoint(form, side, point)}
-                    onMessage={setPointMessage}
-                    onPickupDone={() => setPointSide("destination")}
+                    onSideChange={setPointSide}
+                    message={pointMessage}
+                    errors={{
+                      origin: originPoint ? pointErrors.originCountry?.message : pointErrors.originLatitude?.message ?? pointErrors.originAddress?.message ?? pointErrors.originCountry?.message,
+                      destination: destinationPoint ? pointErrors.destinationCountry?.message : pointErrors.destinationLatitude?.message ?? pointErrors.destinationAddress?.message ?? pointErrors.destinationCountry?.message,
+                    }}
                   />
-                </Suspense>
-              </div>
+                </FormSection>
 
-              <FormSection stacked title="Schedule" className="lg:col-start-1 lg:row-start-2">
-                <DepartureDateGuide originCountry={originCountry} destinationCountry={destinationCountry} />
-                <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-                  <BookingField
-                    control={form.control}
-                    name="requestedDepartureDate"
-                    label="Expected departure date *"
-                    type="date"
-                    min={departureRule.minDate}
-                  />
-                  <BookingField control={form.control} name="requestedArrivalDate" label="Expected arrival date" type="date" min={form.watch("requestedDepartureDate") ? addDays(form.watch("requestedDepartureDate"), 1) : undefined} />
+                <div className="border-b border-[#1f1e1d] py-3 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:border-b-0 lg:pt-3">
+                  <Suspense fallback={<Skeleton className="h-[380px] rounded-[2px] bg-[#e9e6de] sm:h-[460px] lg:h-[560px]" />}>
+                    <BookingPointMap
+                      origin={originPoint}
+                      destination={destinationPoint}
+                      side={pointSide}
+                      onPick={(side, point) => setPoint(form, side, point)}
+                      onMessage={setPointMessage}
+                      onPickupDone={() => setPointSide("destination")}
+                    />
+                  </Suspense>
                 </div>
-              </FormSection>
 
-              <FormSection stacked title="Notes" className="lg:col-start-1 lg:row-start-3">
-                <FormField control={form.control} name="specialRequirements" render={({ field }) => (
-                  <FormItem className="gap-1">
-                    <FormLabel className={fieldLabelClass}>Notes</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        rows={1}
-                        className={cn(fieldControlClass, "field-sizing-content h-auto min-h-8 max-h-24 resize-none overflow-y-auto py-2 leading-4")}
-                        placeholder="Any initial boarding requirements, custom clearance notes, etc..."
-                      />
-                    </FormControl>
-                    <FormMessage className="text-xs" />
-                  </FormItem>
-                )} />
-              </FormSection>
+                <FormSection stacked title="Schedule" className="lg:col-start-1 lg:row-start-2">
+                  <DepartureDateGuide originCountry={originCountry} destinationCountry={destinationCountry} />
+                  <div className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                    <BookingField
+                      control={form.control}
+                      name="requestedDepartureDate"
+                      label="Expected departure date *"
+                      type="date"
+                      min={departureRule.minDate}
+                    />
+                    <BookingField control={form.control} name="requestedArrivalDate" label="Expected arrival date" type="date" min={form.watch("requestedDepartureDate") ? addDays(form.watch("requestedDepartureDate"), 1) : undefined} />
+                  </div>
+                </FormSection>
 
-              <div className="mt-3 flex justify-end gap-2 lg:col-span-2">
-                <button type="button" disabled={isPending || exitRequest.isBlocked} className={cn(largeButton, "border-[#4f4e4d] bg-transparent text-[#181818] hover:bg-black/5")} onClick={() => void cancel()}>
-                  {exitRequest.isBlocked ? "Please wait..." : needsRecovery ? "Leave without submitting" : "Cancel"}
-                </button>
-                <button type="button" className={cn(largeButton, "border-primary bg-primary text-[#181818] hover:border-primary-hover hover:bg-primary-hover")} onClick={() => void continueToHorses()}>
-                  Save &amp; continue
-                </button>
+                <FormSection stacked title="Notes" className="lg:col-start-1 lg:row-start-3">
+                  <FormField control={form.control} name="specialRequirements" render={({ field }) => (
+                    <FormItem className="gap-1">
+                      <FormLabel className={fieldLabelClass}>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={1}
+                          className={cn(fieldControlClass, "field-sizing-content h-auto min-h-8 max-h-24 resize-none overflow-y-auto py-2 leading-4")}
+                          placeholder="Any initial boarding requirements, custom clearance notes, etc..."
+                        />
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )} />
+                </FormSection>
+
+                <div className="mt-3 flex justify-end gap-2 lg:col-span-2">
+                  <button type="button" disabled={isPending || exitRequest.isBlocked} className={cn(largeButton, "border-[#4f4e4d] bg-transparent text-[#181818] hover:bg-black/5")} onClick={() => void cancel()}>
+                    {exitRequest.isBlocked ? "Please wait..." : needsRecovery ? "Leave without submitting" : "Cancel"}
+                  </button>
+                  <button type="button" className={cn(largeButton, "border-primary bg-primary text-[#181818] hover:border-primary-hover hover:bg-primary-hover")} onClick={() => void continueToHorses()}>
+                    Save &amp; continue
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="booking-page-enter mt-3 space-y-3">
-              <dl className={cn(panelClass, "grid grid-cols-2 gap-x-4 px-5 sm:px-7 lg:grid-cols-4 lg:gap-x-0 lg:pr-0")}>
-                <SummaryCell first label="Booking code">{booking?.bookingCode ?? "Generated after submit"}</SummaryCell>
-                <SummaryCell label="Route">
-                  {form.getValues("originCountry")}
-                  <ArrowRight className="mx-1.5 size-3.5 shrink-0 text-gray-500" aria-hidden="true" />
-                  {form.getValues("destinationCountry")}
-                </SummaryCell>
-                <SummaryCell label="Status">
-                  <BookingStatusBadge status="PENDING" />
-                </SummaryCell>
-                <SummaryCell label="Selected racehorses">{selectedHorses.length}</SummaryCell>
-              </dl>
+            ) : (
+              <div className="booking-page-enter mt-3 space-y-3">
+                <BookingSummaryBar
+                  bookingCode={booking?.bookingCode}
+                  originCountry={form.watch("originCountry")}
+                  destinationCountry={form.watch("destinationCountry")}
+                  selectedHorsesCount={selectedHorses.length}
+                />
 
-              <div className="grid grid-cols-[minmax(0,1fr)] items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
-                <section className={cn(panelClass, "px-3 py-4")}>
-                  <div className="flex items-center justify-between gap-3">
-                    <h2 className={cn(cardTitleClass, "text-lg! leading-6!")}>Available racehorses</h2>
-                    {/* Mobile only: on desktop the button sits at the end of the toolbar row below. */}
-                    <button
-                      type="button"
-                      onClick={() => setAddHorseOpen(true)}
-                      className="inline-flex h-8 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-[2px] bg-primary px-2.5 font-heading text-[10px] font-semibold uppercase tracking-[0.04em] text-slate-950 transition-colors hover:bg-primary-hover lg:hidden"
-                    >
-                      <Plus className="size-3" strokeWidth={3} aria-hidden="true" /> Add horse
-                    </button>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-3 gap-2 lg:grid-cols-[minmax(0,1fr)_112px_112px_auto_auto]">
-                    <div className="relative order-1 col-span-3 lg:order-none lg:col-span-1">
-                      <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-gray-400" />
-                      <Input
-                        value={horseSearch}
-                        onChange={(event) => { setHorseSearch(event.target.value); setHorsePage(1) }}
-                        className="h-8 rounded-[2px] border-slate-300 bg-white pr-8 pl-8 text-xs text-gray-900 shadow-none md:text-xs placeholder:text-slate-400 focus-visible:border-primary focus-visible:ring-primary/20"
-                        placeholder="Search by horse name or microchip number..."
-                      />
-                      {horseSearch ? (
-                        <button type="button" aria-label="Clear horse search" onClick={() => { setHorseSearch(""); setHorsePage(1) }} className="absolute top-1/2 right-2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
-                          <X className="size-3.5" />
-                        </button>
-                      ) : null}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setAddHorseOpen(true)}
-                      className="hidden h-8 items-center justify-center gap-1 whitespace-nowrap rounded-[2px] bg-primary px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-950 transition-colors hover:bg-primary-hover lg:order-last lg:inline-flex lg:justify-self-end"
-                    >
-                      <Plus className="size-3" strokeWidth={3} aria-hidden="true" /> Add new racehorse
-                    </button>
-                    <div className="order-3 col-span-2 grid grid-cols-2 gap-2 lg:order-none lg:contents">
-                      <FilterSelect value={breedFilter} onValueChange={(value) => { setBreedFilter(value); setHorsePage(1) }} allLabel="All breeds" options={breeds.map((breed) => ({ value: breed, label: breed }))} />
-                      <FilterSelect value={sexFilter} onValueChange={(value) => { setSexFilter(value); setHorsePage(1) }} allLabel="All sexes" options={[{ value: "MALE", label: "Male" }, { value: "FEMALE", label: "Female" }, { value: "GELDING", label: "Gelding" }]} />
-                    </div>
-                    <div className="order-4 col-span-1 lg:order-none lg:col-span-1 max-lg:[&_button]:w-full">
-                      <DataTableViewOptions table={horseTable} />
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    {horsesQuery.isLoading ? <Skeleton className="h-48 rounded-[2px]" /> : null}
-                    {horsesQuery.isError ? <ErrorState message="Unable to load your horses." onRetry={() => void horsesQuery.refetch()} /> : null}
-                    {horsesQuery.data ? (
-                      <DataTable
-                        table={horseTable}
-                        className="gap-4"
-                        tableClassName="min-w-[760px]"
-                        containerClassName="overflow-x-auto rounded-[2px] border-[#e5e2d9]"
-                        headerClassName="bg-[#e9e6de]"
-                        headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
-                        rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60"
-                        cellClassName="h-11 truncate px-2.5 py-1.5 text-xs text-slate-700"
-                        emptyMessage="No horses match these filters."
-                        footer={
-                          <TablePagination
-                            meta={horsesQuery.data.meta}
-                            onPageChange={setHorsePage}
-                            onPageSizeChange={(value) => { setHorsePageSize(value); setHorsePage(1); setSelectedHorsePage(1) }}
-                          />
-                        }
-                      />
-                    ) : null}
-                  </div>
-                </section>
-
-                <div ref={sideColumnRef} className="relative min-h-[480px]">
-                <div className="absolute inset-0 grid grid-rows-2 gap-3">
-                  <section className={cn(panelClass, "flex min-h-0 flex-col overflow-hidden p-3")}>
+                <div className="grid grid-cols-[minmax(0,1fr)] items-stretch gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
+                  <section className={cn(panelClass, "px-3 py-4")}>
                     <div className="flex items-center justify-between gap-3">
-                      <h2 className={cn(cardTitleClass, "text-[17px]! leading-6!")}>Selected racehorses ({selectedHorses.length})</h2>
-                      {selectedHorses.length ? (
-                        <button
-                          type="button"
-                          className="text-xs text-gray-500 underline underline-offset-2 transition-colors hover:text-primary"
-                          onClick={() => { form.setValue("horses", [], { shouldDirty: true, shouldValidate: true }); setSelectedHorseDetails([]); setActiveHorseId(null); setSelectedHorsePage(1) }}
-                        >
-                          Clear all
-                        </button>
+                      <h2 className={cn(cardTitleClass, "text-lg! leading-6!")}>Available racehorses</h2>
+                      {/* Mobile only: on desktop the button sits at the end of the toolbar row below. */}
+                      <button
+                        type="button"
+                        onClick={() => setAddHorseOpen(true)}
+                        className="inline-flex h-8 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-[2px] bg-primary px-2.5 font-heading text-[10px] font-semibold uppercase tracking-[0.04em] text-slate-950 transition-colors hover:bg-primary-hover lg:hidden"
+                      >
+                        <Plus className="size-3" strokeWidth={3} aria-hidden="true" /> Add horse
+                      </button>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2 lg:grid-cols-[minmax(0,1fr)_112px_112px_auto_auto]">
+                      <div className="relative order-1 col-span-3 lg:order-none lg:col-span-1">
+                        <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-gray-400" />
+                        <Input
+                          value={horseSearch}
+                          onChange={(event) => { setHorseSearch(event.target.value); setHorsePage(1) }}
+                          className="h-8 rounded-[2px] border-slate-300 bg-white pr-8 pl-8 text-xs text-gray-900 shadow-none md:text-xs placeholder:text-slate-400 focus-visible:border-primary focus-visible:ring-primary/20"
+                          placeholder="Search by horse name or microchip number..."
+                        />
+                        {horseSearch ? (
+                          <button type="button" aria-label="Clear horse search" onClick={() => { setHorseSearch(""); setHorsePage(1) }} className="absolute top-1/2 right-2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
+                            <X className="size-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAddHorseOpen(true)}
+                        className="hidden h-8 items-center justify-center gap-1 whitespace-nowrap rounded-[2px] bg-primary px-3 font-heading text-[11px] font-semibold uppercase tracking-[0.04em] text-slate-950 transition-colors hover:bg-primary-hover lg:order-last lg:inline-flex lg:justify-self-end"
+                      >
+                        <Plus className="size-3" strokeWidth={3} aria-hidden="true" /> Add new racehorse
+                      </button>
+                      <div className="order-3 col-span-2 grid grid-cols-2 gap-2 lg:order-none lg:contents">
+                        <FilterSelect value={breedFilter} onValueChange={(value) => { setBreedFilter(value); setHorsePage(1) }} allLabel="All breeds" options={breeds.map((breed) => ({ value: breed, label: breed }))} />
+                        <FilterSelect value={sexFilter} onValueChange={(value) => { setSexFilter(value); setHorsePage(1) }} allLabel="All sexes" options={[{ value: "MALE", label: "Male" }, { value: "FEMALE", label: "Female" }, { value: "GELDING", label: "Gelding" }]} />
+                      </div>
+                      <div className="order-4 col-span-1 lg:order-none lg:col-span-1 max-lg:[&_button]:w-full">
+                        <DataTableViewOptions table={horseTable} />
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      {horsesQuery.isLoading ? <Skeleton className="h-48 rounded-[2px]" /> : null}
+                      {horsesQuery.isError ? <ErrorState message="Unable to load your horses." onRetry={() => void horsesQuery.refetch()} /> : null}
+                      {horsesQuery.data ? (
+                        <DataTable
+                          table={horseTable}
+                          className="gap-4"
+                          tableClassName="min-w-[760px]"
+                          containerClassName="overflow-x-auto rounded-[2px] border-[#e5e2d9]"
+                          headerClassName="bg-[#e9e6de]"
+                          headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
+                          rowClassName="booking-table-row border-slate-200 hover:bg-amber-50/60"
+                          cellClassName="h-11 truncate px-2.5 py-1.5 text-xs text-slate-700"
+                          emptyMessage="No horses match these filters."
+                          footer={
+                            <TablePagination
+                              meta={horsesQuery.data.meta}
+                              onPageChange={setHorsePage}
+                              onPageSizeChange={(value) => { setHorsePageSize(value); setHorsePage(1); setSelectedHorsePage(1) }}
+                            />
+                          }
+                        />
                       ) : null}
                     </div>
-                    <div className="mt-2 min-h-0 flex-1 space-y-1.5 overflow-hidden">
-                      {selectedHorses.length === 0 ? <p className="py-3 text-center text-xs text-gray-500">No horses selected yet.</p> : null}
-                      {visibleSelectedHorses.map((selected) => {
-                        const horse = horseCatalog.get(selected.horseId)
-                        if (!horse) return null
-                        const active = activeHorseId === horse.horseId
-                        return (
-                          <div key={horse.horseId} className="relative flex items-center border border-[#eeece6] bg-white transition-colors hover:border-gray-300">
-                            {active ? <ActiveBar /> : null}
-                            <button type="button" onClick={() => setActiveHorseId(horse.horseId)} className="min-w-0 flex-1 px-3 py-1.5 text-left">
-                              <strong className="block truncate text-[13px] leading-[18px] font-semibold text-gray-900">{horse.horseName}</strong>
-                              <span className="block truncate text-xs leading-4 text-gray-500">{horse.microchipNumber}</span>
-                            </button>
+                  </section>
+
+                  <div ref={sideColumnRef} className="relative min-h-[480px]">
+                    <div className="absolute inset-0 grid grid-rows-2 gap-3">
+                      <section className={cn(panelClass, "flex min-h-0 flex-col overflow-hidden p-3")}>
+                        <div className="flex items-center justify-between gap-3">
+                          <h2 className={cn(cardTitleClass, "text-[17px]! leading-6!")}>Selected racehorses ({selectedHorses.length})</h2>
+                          {selectedHorses.length ? (
                             <button
                               type="button"
-                              className="mr-3 grid size-6 shrink-0 place-items-center text-gray-400 transition-colors hover:text-red-600"
-                              onClick={() => toggleHorse(horse, false)}
-                              aria-label={`Remove ${horse.horseName}`}
+                              className="text-xs text-gray-500 underline underline-offset-2 transition-colors hover:text-primary"
+                              onClick={() => { form.setValue("horses", [], { shouldDirty: true, shouldValidate: true }); setSelectedHorseDetails([]); setActiveHorseId(null); setSelectedHorsePage(1) }}
                             >
-                              <X className="size-3.5" />
+                              Clear all
+                            </button>
+                          ) : null}
+                        </div>
+                        <div className="mt-2 min-h-0 flex-1 space-y-1.5 overflow-hidden">
+                          {selectedHorses.length === 0 ? <p className="py-3 text-center text-xs text-gray-500">No horses selected yet.</p> : null}
+                          {visibleSelectedHorses.map((selected) => {
+                            const horse = horseCatalog.get(selected.horseId)
+                            if (!horse) return null
+                            const active = activeHorseId === horse.horseId
+                            return (
+                              <div key={horse.horseId} className="relative flex items-center border border-[#eeece6] bg-white transition-colors hover:border-gray-300">
+                                {active ? <ActiveBar /> : null}
+                                <button type="button" onClick={() => setActiveHorseId(horse.horseId)} className="min-w-0 flex-1 px-3 py-1.5 text-left">
+                                  <strong className="block truncate text-[13px] leading-[18px] font-semibold text-gray-900">{horse.horseName}</strong>
+                                  <span className="block truncate text-xs leading-4 text-gray-500">{horse.microchipNumber}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="mr-3 grid size-6 shrink-0 place-items-center text-gray-400 transition-colors hover:text-red-600"
+                                  onClick={() => toggleHorse(horse, false)}
+                                  aria-label={`Remove ${horse.horseName}`}
+                                >
+                                  <X className="size-3.5" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        {selectedHorses.length > 0 ? (
+                          <div className="mt-2 flex items-center justify-end gap-1.5 font-heading text-[11px] font-semibold text-gray-700">
+                            <button
+                              type="button"
+                              className="grid size-6 place-items-center rounded-[2px] transition-colors hover:bg-amber-50 hover:text-primary disabled:pointer-events-none disabled:opacity-35"
+                              onClick={() => setSelectedHorsePage(Math.max(1, currentSelectedHorsePage - 1))}
+                              disabled={currentSelectedHorsePage === 1}
+                              aria-label="Previous selected horses page"
+                            >
+                              <ChevronLeft className="size-3.5" />
+                            </button>
+                            {currentSelectedHorsePage} of {selectedHorsePageCount}
+                            <button
+                              type="button"
+                              className="grid size-6 place-items-center rounded-[2px] transition-colors hover:bg-amber-50 hover:text-primary disabled:pointer-events-none disabled:opacity-35"
+                              onClick={() => setSelectedHorsePage(Math.min(selectedHorsePageCount, currentSelectedHorsePage + 1))}
+                              disabled={currentSelectedHorsePage === selectedHorsePageCount}
+                              aria-label="Next selected horses page"
+                            >
+                              <ChevronRight className="size-3.5" />
                             </button>
                           </div>
-                        )
-                      })}
-                    </div>
-                    {selectedHorses.length > 0 ? (
-                      <div className="mt-2 flex items-center justify-end gap-1.5 font-heading text-[11px] font-semibold text-gray-700">
-                        <button
-                          type="button"
-                          className="grid size-6 place-items-center rounded-[2px] transition-colors hover:bg-amber-50 hover:text-primary disabled:pointer-events-none disabled:opacity-35"
-                          onClick={() => setSelectedHorsePage(Math.max(1, currentSelectedHorsePage - 1))}
-                          disabled={currentSelectedHorsePage === 1}
-                          aria-label="Previous selected horses page"
-                        >
-                          <ChevronLeft className="size-3.5" />
-                        </button>
-                        {currentSelectedHorsePage} of {selectedHorsePageCount}
-                        <button
-                          type="button"
-                          className="grid size-6 place-items-center rounded-[2px] transition-colors hover:bg-amber-50 hover:text-primary disabled:pointer-events-none disabled:opacity-35"
-                          onClick={() => setSelectedHorsePage(Math.min(selectedHorsePageCount, currentSelectedHorsePage + 1))}
-                          disabled={currentSelectedHorsePage === selectedHorsePageCount}
-                          aria-label="Next selected horses page"
-                        >
-                          <ChevronRight className="size-3.5" />
-                        </button>
-                      </div>
-                    ) : null}
-                    <p className="mt-2.5! flex items-center gap-2 text-[11px] leading-4 text-gray-500">
-                      <span className="grid size-3.5 shrink-0 place-items-center rounded-full bg-gray-400 text-[9px] font-bold text-white" aria-hidden="true">i</span>
-                      Select a horse to edit its individual transport note.
-                    </p>
-                  </section>
+                        ) : null}
+                        <p className="mt-2.5! flex items-center gap-2 text-[11px] leading-4 text-gray-500">
+                          <span className="grid size-3.5 shrink-0 place-items-center rounded-full bg-gray-400 text-[9px] font-bold text-white" aria-hidden="true">i</span>
+                          Select a horse to edit its individual transport note.
+                        </p>
+                      </section>
 
-                  <section className={cn(panelClass, "flex min-h-0 flex-col overflow-hidden p-3")}>
-                    <div className="flex items-center justify-between gap-3">
-                      <h2 className={cn(cardTitleClass, "text-[17px]! leading-6!")}>Edit horse note</h2>
-                      {selectedHorses.length > noteCapacity ? (
-                        <div className="flex items-center gap-1.5 font-heading text-[11px] font-semibold text-gray-900">
-                          <button type="button" className="grid size-4 place-items-center hover:text-primary disabled:opacity-40" onClick={() => goToNotePage(currentNotePage - 1)} disabled={currentNotePage === 1} aria-label="Previous notes page"><ChevronLeft className="size-3" /></button>
-                          {currentNotePage} of {notePageCount}
-                          <button type="button" className="grid size-4 place-items-center hover:text-primary disabled:opacity-40" onClick={() => goToNotePage(currentNotePage + 1)} disabled={currentNotePage === notePageCount} aria-label="Next notes page"><ChevronRight className="size-3" /></button>
+                      <section className={cn(panelClass, "flex min-h-0 flex-col overflow-hidden p-3")}>
+                        <div className="flex items-center justify-between gap-3">
+                          <h2 className={cn(cardTitleClass, "text-[17px]! leading-6!")}>Edit horse note</h2>
+                          {selectedHorses.length > noteCapacity ? (
+                            <div className="flex items-center gap-1.5 font-heading text-[11px] font-semibold text-gray-900">
+                              <button type="button" className="grid size-4 place-items-center hover:text-primary disabled:opacity-40" onClick={() => goToNotePage(currentNotePage - 1)} disabled={currentNotePage === 1} aria-label="Previous notes page"><ChevronLeft className="size-3" /></button>
+                              {currentNotePage} of {notePageCount}
+                              <button type="button" className="grid size-4 place-items-center hover:text-primary disabled:opacity-40" onClick={() => goToNotePage(currentNotePage + 1)} disabled={currentNotePage === notePageCount} aria-label="Next notes page"><ChevronRight className="size-3" /></button>
+                            </div>
+                          ) : null}
                         </div>
-                      ) : null}
+                        {visibleNoteHorses.length ? (
+                          <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto">
+                            {visibleNoteHorses.map((selected, offset) => {
+                              const index = noteStart + offset
+                              const horse = horseCatalog.get(selected.horseId)
+                              if (!horse) return null
+                              return (
+                                <FormField key={selected.horseId} control={form.control} name={`horses.${index}.specialHandlingNotes`} render={({ field }) => (
+                                  <FormItem className="relative gap-1 border border-[#eeece6] bg-white px-3 py-1.5">
+                                    {activeHorseId === selected.horseId ? <ActiveBar /> : null}
+                                    <div className="flex items-baseline justify-between gap-2">
+                                      <FormLabel className="min-w-0 truncate text-[13px] leading-[18px] font-semibold text-gray-900">
+                                        {horse.horseName}
+                                        <span className="ml-1.5 text-xs font-normal text-gray-500">{horse.microchipNumber}</span>
+                                      </FormLabel>
+                                      <span className="shrink-0 text-xs leading-4 text-gray-300">{(field.value ?? "").length}/{NOTE_LIMIT}</span>
+                                    </div>
+                                    <FormControl>
+                                      <Textarea
+                                        {...field}
+                                        maxLength={NOTE_LIMIT}
+                                        onFocus={() => setActiveHorseId(selected.horseId)}
+                                        className="field-sizing-fixed h-10 min-h-10 resize-none rounded-[2px] border-slate-300 bg-white px-3 py-1 text-xs leading-4 text-gray-900 shadow-none md:text-xs placeholder:text-gray-400 focus-visible:border-primary focus-visible:ring-primary/20"
+                                        placeholder="Diet, loading or welfare notes for this horse"
+                                      />
+                                    </FormControl>
+                                    <FormMessage className="text-xs" />
+                                  </FormItem>
+                                )} />
+                              )
+                            })}
+                          </div>
+                        ) : <p className="mt-3! text-sm text-gray-500">Select a horse to add an individual note.</p>}
+                      </section>
                     </div>
-                    {visibleNoteHorses.length ? (
-                      <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto">
-                        {visibleNoteHorses.map((selected, offset) => {
-                          const index = noteStart + offset
-                          const horse = horseCatalog.get(selected.horseId)
-                          if (!horse) return null
-                          return (
-                            <FormField key={selected.horseId} control={form.control} name={`horses.${index}.specialHandlingNotes`} render={({ field }) => (
-                              <FormItem className="relative gap-1 border border-[#eeece6] bg-white px-3 py-1.5">
-                                {activeHorseId === selected.horseId ? <ActiveBar /> : null}
-                                <div className="flex items-baseline justify-between gap-2">
-                                  <FormLabel className="min-w-0 truncate text-[13px] leading-[18px] font-semibold text-gray-900">
-                                    {horse.horseName}
-                                    <span className="ml-1.5 text-xs font-normal text-gray-500">{horse.microchipNumber}</span>
-                                  </FormLabel>
-                                  <span className="shrink-0 text-xs leading-4 text-gray-300">{(field.value ?? "").length}/{NOTE_LIMIT}</span>
-                                </div>
-                                <FormControl>
-                                  <Textarea
-                                    {...field}
-                                    maxLength={NOTE_LIMIT}
-                                    onFocus={() => setActiveHorseId(selected.horseId)}
-                                    className="field-sizing-fixed h-10 min-h-10 resize-none rounded-[2px] border-slate-300 bg-white px-3 py-1 text-xs leading-4 text-gray-900 shadow-none md:text-xs placeholder:text-gray-400 focus-visible:border-primary focus-visible:ring-primary/20"
-                                    placeholder="Diet, loading or welfare notes for this horse"
-                                  />
-                                </FormControl>
-                                <FormMessage className="text-xs" />
-                              </FormItem>
-                            )} />
-                          )
-                        })}
-                      </div>
-                    ) : <p className="mt-3! text-sm text-gray-500">Select a horse to add an individual note.</p>}
-                  </section>
+                  </div>
                 </div>
-                </div>
-              </div>
 
-              <div className="flex flex-col-reverse justify-end gap-3 pt-1 sm:flex-row">
-                <button type="button" disabled={isPending || exitRequest.isBlocked} className={cn(compactButton, "border-gray-300 bg-white text-gray-900 hover:bg-gray-50")} onClick={() => void cancel()}>
-                  {exitRequest.isBlocked ? "Please wait..." : needsRecovery ? "Leave without submitting" : "Cancel"}
-                </button>
-                <button type="submit" disabled={isSavingDisabled} className={cn(compactButton, "border-primary bg-primary text-white hover:border-primary-hover hover:bg-primary-hover")}>
-                  {isPending ? "Saving..." : saveRequest.isBlocked ? "Please wait..." : "Save & continue"}
-                </button>
+                <div className="flex flex-col items-end gap-2.5 pt-1">
+                  {mode === "create" ? (
+                    <div className="flex w-full items-center justify-end">
+                      <label
+                        htmlFor="booking-policy-checkbox"
+                        className="inline-flex max-w-full cursor-pointer items-start gap-2 text-xs leading-5 font-medium text-slate-900 select-none"
+                      >
+                        <Checkbox
+                          id="booking-policy-checkbox"
+                          checked={policyAccepted}
+                          onCheckedChange={(checked) => setPolicyAccepted(checked === true)}
+                          className="mt-0.5 size-4.5 shrink-0 rounded-[3px] border-1 border-slate-600 bg-white shadow-xs transition-colors hover:border-primary data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-[#181818]"
+                          aria-required="true"
+                        />
+                        <span className="min-w-0 break-words">
+                          I confirm that I have read and agree to the Pegaxus{" "}
+                          <Link
+                            to="/policy"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold text-[#f39200] underline underline-offset-2 transition-colors hover:text-primary-hover"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Policy
+                          </Link>
+                          .
+                        </span>
+                      </label>
+                    </div>
+                  ) : null}
+
+                  <div className="flex w-full flex-col-reverse justify-end gap-3 sm:w-auto sm:flex-row">
+                    <button
+                      type="button"
+                      disabled={isPending || exitRequest.isBlocked}
+                      className={cn(compactButton, "border-gray-300 bg-white text-gray-900 hover:bg-gray-50")}
+                      onClick={() => void cancel()}
+                    >
+                      {exitRequest.isBlocked ? "Please wait..." : needsRecovery ? "Leave without submitting" : "Cancel"}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitDisabled}
+                      className={cn(compactButton, "border-primary bg-primary text-[#181818] hover:border-primary-hover hover:bg-primary-hover")}
+                    >
+                      {isPending ? "Saving..." : saveRequest.isBlocked ? "Please wait..." : "Save & continue"}
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </form>
-    </Form>
-    <AddHorseDialog open={addHorseOpen} onOpenChange={setAddHorseOpen} onCreated={handleHorseCreated} />
+            )}
+          </div>
+        </form>
+      </Form>
+      <AddHorseDialog open={addHorseOpen} onOpenChange={setAddHorseOpen} onCreated={handleHorseCreated} />
     </>
   )
 }
 
 export default function BookingFormPage({ mode }: { mode: "create" | "edit" }) {
+  usePageTitle(mode === "create" ? "Create Booking" : "Edit Booking")
   const { bookingId } = useParams()
   // Edit: opening the page locks the booking (PENDING -> DRAFT); the form works on that locked snapshot.
   const lock = useBookingEditLock(mode === "edit" ? (bookingId ?? "") : undefined)

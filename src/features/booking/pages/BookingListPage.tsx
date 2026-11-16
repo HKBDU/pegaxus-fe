@@ -9,6 +9,7 @@ import type { BookingAudience, BookingListParams, BookingSort, BookingStatus } f
 import { ErrorState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Button } from "@/shared/components/ui/button"
+import { usePageTitle } from "@/shared/hooks"
 
 const initialParams: BookingListParams = {
   pageIndex: 1,
@@ -19,6 +20,7 @@ const initialParams: BookingListParams = {
 }
 
 export default function BookingListPage({ audience = "customer" }: { audience?: BookingAudience }) {
+  usePageTitle(audience === "manager" ? "Transport Requests" : "Bookings")
   const navigate = useNavigate()
   const [params, setParams] = useState(initialParams)
   const bookingsQuery = useBookings(params)

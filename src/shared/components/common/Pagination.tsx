@@ -62,7 +62,7 @@ export function Pagination({ meta, onPageChange, className }: PaginationProps) {
                   controlClass,
                   'min-w-7 px-1.5',
                   currentPage === page &&
-                    'border-amber-500 bg-primary shadow-[0_6px_16px_rgba(239,143,0,0.2)] hover:bg-primary',
+                    'border-amber-500 bg-primary text-[#181818] shadow-[0_6px_16px_rgba(239,143,0,0.2)] hover:bg-primary',
                 )}
               >
                 {page}

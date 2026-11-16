@@ -24,7 +24,11 @@ export function resolveProfilePhone(value: string, callingCountry: string): Prof
       : { value: trimmed, canonical: "", error: PHONE_MESSAGE }
   }
 
-  const country = callingCountries.find((option) => option.name === callingCountry)
+  const country = callingCountries.find(
+    (option) =>
+      option.name.toLowerCase() === callingCountry.trim().toLowerCase() ||
+      option.iso2.toUpperCase() === callingCountry.trim().toUpperCase()
+  )
   const policy = country && nationalNumberPolicies[country.iso2]
   // Country metadata alone cannot establish national trunk-prefix rules. In
   // particular, Vatican's listed +379 must not replace an existing +39 number.

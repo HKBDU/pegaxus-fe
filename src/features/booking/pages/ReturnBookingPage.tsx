@@ -9,7 +9,9 @@ import { bookingService } from "@/features/booking/services"
 import { getBookingErrorMessage } from "@/features/booking/utils"
 import { ErrorState, LoadingState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
+import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Textarea } from "@/shared/components/ui/textarea"
+import { usePageTitle } from "@/shared/hooks"
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -18,6 +20,7 @@ const today = () => new Date().toISOString().slice(0, 10)
  * horse come from the original trip and are fixed; the customer only picks the dates. The usual lead time does not apply.
  */
 export default function ReturnBookingPage() {
+  usePageTitle("Return Booking")
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -105,16 +108,26 @@ export default function ReturnBookingPage() {
             <p className="m-0 text-sm"><span className="text-slate-500">Horse:</span> <span className="font-semibold text-slate-900">{value.horseName}</span></p>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1 text-[11px] font-medium tracking-[0.04em] text-slate-700 uppercase">
-                Departure date
-                <input type="date" min={today()} value={departure} onChange={(event) => setDeparture(event.target.value)}
-                  className="h-9 rounded-[2px] border border-slate-300 px-2 text-sm font-normal tracking-normal text-slate-900 normal-case" />
-              </label>
-              <label className="grid gap-1 text-[11px] font-medium tracking-[0.04em] text-slate-700 uppercase">
-                Arrival date (optional)
-                <input type="date" min={departure || today()} value={arrival} onChange={(event) => setArrival(event.target.value)}
-                  className="h-9 rounded-[2px] border border-slate-300 px-2 text-sm font-normal tracking-normal text-slate-900 normal-case" />
-              </label>
+              <div className="grid gap-1 text-[11px] font-medium tracking-[0.04em] text-slate-700 uppercase">
+                <span>Departure date</span>
+                <DatePicker
+                  minDate={today()}
+                  value={departure}
+                  onChange={setDeparture}
+                  placeholder="DD / MM / YYYY"
+                  className="h-9 rounded-[2px]"
+                />
+              </div>
+              <div className="grid gap-1 text-[11px] font-medium tracking-[0.04em] text-slate-700 uppercase">
+                <span>Arrival date (optional)</span>
+                <DatePicker
+                  minDate={departure || today()}
+                  value={arrival}
+                  onChange={setArrival}
+                  placeholder="DD / MM / YYYY"
+                  className="h-9 rounded-[2px]"
+                />
+              </div>
             </div>
 
             <label className="grid gap-1 text-[11px] font-medium tracking-[0.04em] text-slate-700 uppercase">

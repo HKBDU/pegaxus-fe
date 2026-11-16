@@ -16,8 +16,10 @@ import { useLoginMutation } from "@/features/auth/hooks/useAuth";
 import { Button } from "@/shared/components/ui/button";
 import { Form } from "@/shared/components/ui/form";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
+import { usePageTitle } from "@/shared/hooks";
 
 export default function LoginPage() {
+  usePageTitle("Sign In");
   const mutation = useLoginMutation();
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const form = useForm<LoginFormValues>({
