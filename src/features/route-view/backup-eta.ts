@@ -2,6 +2,8 @@ import type { RoutePlanDetail, RouteSegment } from "./types";
 
 /** BR-036: a delay of at least this many minutes against the PRIMARY arrival needs the LM's approval on its own. */
 export const BACKUP_DELAY_THRESHOLD_MINUTES = 60;
+/** Past this gap between the real and the planned departure, the progress estimate says nothing about the planned delay. */
+export const OFF_PLAN_THRESHOLD_MINUTES = 24 * 60;
 
 export type BackupEtaSuggestion = {
   /** Planned arrival of the last PRIMARY segment; BE measures the delay against it. */
@@ -10,6 +12,10 @@ export type BackupEtaSuggestion = {
   /** AHEAD: the convoy drives on to the branch point. BEHIND: it turns back to a branch point already passed. */
   mode: "AHEAD" | "BEHIND";
   branchName: string;
+  /** Real minus planned departure of the latest departed segment: negative when the trip runs ahead of its plan. */
+  offPlanMinutes: number;
+  /** The earliest arrival whose delay against the planned PRIMARY arrival needs the LM on its own (BR-036). */
+  minimumDelayEta: Date;
 };
 
 const ms = (value: string | null | undefined) => {
@@ -58,6 +64,10 @@ export function suggestBackupArrival(
     journey.findIndex((segment) => Boolean(segment.actualDepartureAt) === departed && segment.fromLocation.locationId === locationId);
 
   const running = journey.find((segment) => segment.actualDepartureAt && !segment.actualArrivalAt);
+  const departed = running ?? journey.filter((segment) => segment.actualDepartureAt).at(-1);
+  const realStart = ms(departed?.actualDepartureAt);
+  const plannedStart = ms(departed?.plannedDepartureAt);
+  const offPlanMinutes = realStart !== null && plannedStart !== null ? Math.round((realStart - plannedStart) / 60_000) : 0;
   // How late the running segment left; the stops still ahead are assumed to slip by the same amount.
   const left = ms(running?.actualDepartureAt);
   const due = ms(running?.plannedDepartureAt);
@@ -92,11 +102,14 @@ export function suggestBackupArrival(
   const span = plannedSpan(route.slice(branch.index));
   if (span === null) return null;
   const step = 5 * 60_000;
+  const minute = 60_000;
   return {
     primaryEta: new Date(primaryEta),
     suggestedEta: new Date(Math.ceil((startAt + span) / step) * step),
     mode,
     branchName: branch.segment.fromLocation.locationName,
+    offPlanMinutes,
+    minimumDelayEta: new Date(Math.ceil((primaryEta + BACKUP_DELAY_THRESHOLD_MINUTES * minute) / minute) * minute),
   };
 }
 
@@ -110,6 +123,12 @@ export function toLocalInputValue(date: Date) {
 export function delayMinutes(localValue: string, primaryEta: Date) {
   const value = ms(localValue);
   return value === null ? null : Math.round((value - primaryEta.getTime()) / 60_000);
+}
+
+/** "59 days" from two days on, otherwise "30h". */
+export function formatOffPlan(minutes: number) {
+  const total = Math.abs(minutes);
+  return total >= 2 * 24 * 60 ? `${Math.round(total / (24 * 60))} days` : `${Math.round(total / 60)}h`;
 }
 
 export function formatDelay(minutes: number) {

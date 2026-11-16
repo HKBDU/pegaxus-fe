@@ -43,6 +43,8 @@ import {
   BACKUP_DELAY_THRESHOLD_MINUTES,
   delayMinutes,
   formatDelay,
+  formatOffPlan,
+  OFF_PLAN_THRESHOLD_MINUTES,
   suggestBackupArrival,
   toLocalInputValue,
   type BackupEtaSuggestion,
@@ -107,8 +109,12 @@ export function BackupActivationRequestDialog({
     () => (primaryPlan ? suggestBackupArrival(primaryPlan, plan) : null),
     [primaryPlan, plan],
   );
+  const offPlan =
+    suggestion !== null &&
+    Math.abs(suggestion.offPlanMinutes) > OFF_PLAN_THRESHOLD_MINUTES;
+  // Far off its plan, the progress estimate cannot meet the planned delay, so offer the earliest time that does.
   const suggestedValue = suggestion
-    ? toLocalInputValue(suggestion.suggestedEta)
+    ? toLocalInputValue(offPlan ? suggestion.minimumDelayEta : suggestion.suggestedEta)
     : "";
   // Prefill once, and only when the RC has not typed an arrival yet (a saved draft wins).
   const prefilled = useRef(false);
@@ -249,6 +255,7 @@ export function BackupActivationRequestDialog({
                           <ArrivalHint
                             loading={Boolean(context.primaryRoute) && primary.isPending}
                             suggestion={suggestion}
+                            offPlan={offPlan}
                             delay={delay}
                             onUseSuggestion={
                               suggestedValue && field.value !== suggestedValue
@@ -319,11 +326,13 @@ export function BackupActivationRequestDialog({
 function ArrivalHint({
   loading,
   suggestion,
+  offPlan,
   delay,
   onUseSuggestion,
 }: {
   loading: boolean;
   suggestion: BackupEtaSuggestion | null;
+  offPlan: boolean;
   delay: number | null;
   onUseSuggestion?: () => void;
 }) {
@@ -336,49 +345,87 @@ function ArrivalHint({
   if (!suggestion) return null;
   const overThreshold =
     delay !== null && delay >= BACKUP_DELAY_THRESHOLD_MINUTES;
+  const useButton = onUseSuggestion && (
+    <Button
+      type="button"
+      variant="link"
+      size="sm"
+      className="h-auto p-0 text-xs"
+      onClick={onUseSuggestion}
+    >
+      {offPlan ? "Use this time" : "Use suggestion"}
+    </Button>
+  );
+  const estimate = (
+    <span>
+      Estimated by progress:{" "}
+      <DateTimeUtc
+        value={suggestion.suggestedEta.toISOString()}
+        compact
+        className="font-semibold text-slate-800"
+      />{" "}
+      ({suggestion.mode === "AHEAD" ? "drive on to" : "turn back to"}{" "}
+      {suggestion.branchName}, then follow the backup)
+    </span>
+  );
   return (
     <div
       className="space-y-1 rounded-[2px] border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600"
       aria-live="polite"
     >
+      {offPlan && (
+        <p className="text-amber-700">
+          This trip is running {formatOffPlan(suggestion.offPlanMinutes)}{" "}
+          {suggestion.offPlanMinutes < 0 ? "ahead of" : "behind"} its plan. The
+          system measures the delay against the planned arrival, not the real
+          progress.
+        </p>
+      )}
       <p>
-        PRIMARY arrival:{" "}
+        PRIMARY arrival{offPlan ? " (planned)" : ""}:{" "}
         <DateTimeUtc
           value={suggestion.primaryEta.toISOString()}
           compact
           className="font-semibold text-slate-800"
         />
       </p>
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span>
-          Suggested:{" "}
-          <DateTimeUtc
-            value={suggestion.suggestedEta.toISOString()}
-            compact
-            className="font-semibold text-slate-800"
-          />{" "}
-          ({suggestion.mode === "AHEAD" ? "drive on to" : "turn back to"}{" "}
-          {suggestion.branchName}, then follow the backup)
-        </span>
-        {onUseSuggestion && (
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            className="h-auto p-0 text-xs"
-            onClick={onUseSuggestion}
-          >
-            Use suggestion
-          </Button>
-        )}
-      </p>
+      {offPlan ? (
+        <>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>
+              For a delay-based approval, enter{" "}
+              <DateTimeUtc
+                value={suggestion.minimumDelayEta.toISOString()}
+                compact
+                className="font-semibold text-slate-800"
+              />{" "}
+              or later.
+            </span>
+            {useButton}
+          </p>
+          <p>{estimate}</p>
+        </>
+      ) : (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {estimate}
+          {useButton}
+        </p>
+      )}
       {delay !== null && (
         <p className={overThreshold ? "text-amber-700" : "text-slate-600"}>
-          <span className="font-semibold">{formatDelay(delay)}</span> against
-          the PRIMARY arrival.{" "}
+          {offPlan && delay < 0 ? (
+            "Earlier than the planned PRIMARY arrival: "
+          ) : (
+            <>
+              <span className="font-semibold">{formatDelay(delay)}</span>{" "}
+              against the PRIMARY arrival.{" "}
+            </>
+          )}
           {overThreshold
             ? "Over 1h, so the Logistics Manager must approve it."
-            : "Under 1h: the request is accepted only if the backup changes a BCP, adds a 24h rest or detours by 50 km or more."}
+            : offPlan && delay < 0
+              ? "the request is accepted only if the backup changes a BCP, adds a 24h rest or detours by 50 km or more."
+              : "Under 1h: the request is accepted only if the backup changes a BCP, adds a 24h rest or detours by 50 km or more."}
         </p>
       )}
     </div>
