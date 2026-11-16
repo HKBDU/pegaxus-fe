@@ -1,4 +1,4 @@
-import { Check, ChevronDown, CircleDot, X } from "lucide-react";
+import { ChevronDown, CircleDot, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { routePlanDetail } from "@/app/route-config";
 import {
@@ -22,55 +22,25 @@ const checkLabels: Record<string, string> = {
 const checkLabel = (code: string) =>
   checkLabels[code] ?? code.replaceAll("_", " ");
 
+/** Shows only the checks that failed: passed checks need no action from the reader. */
 export function RerouteChecks({ checks }: { checks: ReroutePlan["checks"] }) {
   const failed = checks.filter((check) => !check.passed);
-  const passed = checks.filter((check) => check.passed);
-  const renderChecks = (items: ReroutePlan["checks"]) => (
-    <ul className="m-0 list-none space-y-2 p-0">
-      {items.map((check, index) => {
-        const Icon = check.passed ? Check : X;
-        return (
-          <li
-            key={check.code + "-" + index}
-            className={
-              "flex items-start gap-2 text-sm " +
-              (check.passed ? "text-slate-600" : "text-red-700")
-            }
-          >
-            <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-            <div className="min-w-0 [overflow-wrap:anywhere]">
-              <p className="m-0 font-medium">
-                {check.passed ? "Passed" : "Failed"} · {checkLabel(check.code)}
-              </p>
-              <p className="m-0 leading-5">{check.message}</p>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-  );
+  if (failed.length === 0) return null;
   return (
-    <div className="space-y-2">
-      {failed.length > 0 && renderChecks(failed)}
-      {passed.length > 0 && (
-        <details className="group">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-[2px] text-sm text-slate-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary sm:min-h-9 [&::-webkit-details-marker]:hidden">
-            <Check aria-hidden="true" className="size-4 text-emerald-700" />
-            {passed.length} passed {passed.length === 1 ? "check" : "checks"}
-            <ChevronDown
-              aria-hidden="true"
-              className="ml-auto size-4 shrink-0 group-open:rotate-180"
-            />
-          </summary>
-          <div className="pt-2">{renderChecks(passed)}</div>
-        </details>
-      )}
-      {checks.length === 0 && (
-        <p className="m-0 text-sm text-slate-500">
-          No feasibility checks provided.
-        </p>
-      )}
-    </div>
+    <ul className="m-0 list-none space-y-2 p-0">
+      {failed.map((check, index) => (
+        <li
+          key={check.code + "-" + index}
+          className="flex items-start gap-2 text-sm text-red-700"
+        >
+          <X aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <div className="min-w-0 [overflow-wrap:anywhere]">
+            <p className="m-0 font-medium">Failed · {checkLabel(check.code)}</p>
+            <p className="m-0 leading-5">{check.message}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -194,10 +164,12 @@ export function RerouteComparison({ context }: { context: RerouteContext }) {
             </dl>
             {(plan.branchLocation || plan.branchSequenceNo != null) && (
               <p className="m-0 text-sm text-slate-600">
-                Branch:{" "}
-                {plan.branchLocation?.locationName ?? "Location not provided"}
+                Leaves the current route at{" "}
+                <span className="font-medium text-slate-800">
+                  {plan.branchLocation?.locationName ?? "a location not provided"}
+                </span>
                 {plan.branchSequenceNo != null
-                  ? " · Segment " + plan.branchSequenceNo
+                  ? " (segment " + plan.branchSequenceNo + ")"
                   : ""}
               </p>
             )}
