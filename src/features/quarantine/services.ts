@@ -5,8 +5,6 @@ import type {
   FinalizeQuarantineProofRequest,
   FinalizeQuarantineProofResponse,
   QuarantineProof,
-  SubmitQuarantineProofRequest,
-  SubmitQuarantineProofResponse,
 } from './types'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -23,34 +21,6 @@ async function callApi<T>(request: Promise<T>): Promise<T> {
 
 function unwrap<T>(payload: ApiEnvelope<T>): T {
   return payload.value
-}
-
-// ─── Q1: Submit BCP Quarantine Proof (UC-28a) ─────────────────────────────────
-// POST /api/v1/compliance-dossiers/{dossierId}/quarantine-proofs
-// application/json   Role: ESC, DRV
-
-export async function submitQuarantineProof(
-  dossierId: string,
-  params: SubmitQuarantineProofRequest,
-): Promise<SubmitQuarantineProofResponse> {
-  const payload = {
-    bcpName: params.bcpName || undefined,
-    locationId: params.locationId != null ? String(params.locationId) : undefined,
-    officialVetName: params.officialVetName || undefined,
-    bcpReceiptNumber: params.bcpReceiptNumber || undefined,
-    inspectionAt: params.inspectionAt || new Date().toISOString(),
-    isHoldback: params.isHoldback ?? false,
-    quickNote: params.quickNote || undefined,
-    files: params.files,
-  }
-
-  const res = await callApi(
-    apiClient.post<unknown, ApiEnvelope<SubmitQuarantineProofResponse>>(
-      `/compliance-dossiers/${encodeURIComponent(dossierId)}/quarantine-proofs`,
-      payload,
-    ),
-  )
-  return unwrap(res)
 }
 
 // ─── Q2: Get Quarantine Proof Detail ──────────────────────────────────────────
