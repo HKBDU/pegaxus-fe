@@ -15,6 +15,8 @@ type MapSegments = {
     sequenceNo: number;
     fromLocation?: RouteLocation | null;
     toLocation?: RouteLocation | null;
+    /** Where the segment stopped early (the incident the convoy turned back at). */
+    endedAtLocation?: RouteLocation | null;
   }[];
 };
 
@@ -22,7 +24,7 @@ export function toRouteMapLocations(plan: MapSegments): MapLocation[] {
   const seen = new Set<string>();
   return [...plan.segments]
     .sort((a, b) => a.sequenceNo - b.sequenceNo)
-    .flatMap((segment) => [segment.fromLocation, segment.toLocation])
+    .flatMap((segment) => [segment.fromLocation, segment.endedAtLocation, segment.toLocation])
     .flatMap((location) => {
       if (!location) return [];
       const latitude = coordinate(location.latitude, 90),
