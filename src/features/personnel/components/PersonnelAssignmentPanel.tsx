@@ -143,6 +143,9 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
   const routeCancelled = routeStatus === "CANCELLED"
   const closed = planCancelled || routeCancelled
   const phase2Locked = planLocked || routeCancelled
+  // On the road the first assignment stays closed, but the crew of a segment still to leave can be replaced.
+  const inTransit = plan.status === "IN_PROGRESS"
+  const replaceLocked = closed || (planLocked && !inTransit)
   const takenOver = rows.find((row) => row.isSuperseded) ? rows.find((row) => !isEditableSegment(row) && !row.isSuperseded)?.routeType : undefined
   const pendingInternal = editableRows.filter((row) => !row.isOutsourced && !row.driver && !row.escort).length
   const phase1Ready = phase1.isAssigned
@@ -281,8 +284,9 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
                   </TableHeader>
                   <TableBody>
                     {rows.map((row, index) => {
-                      const locked = row.status === "IN_PROGRESS" || row.status === "COMPLETED"
-                      const canChange = isManager && isEditableSegment(row) && !row.isOutsourced && Boolean(row.driver || row.escort) && !phase2Locked
+                      const locked = row.hasDeparted || row.status === "IN_PROGRESS" || row.status === "COMPLETED"
+                      const canChange = isManager && !row.isSuperseded && (inTransit || isEditableSegment(row)) && !row.isOutsourced &&
+                        Boolean(row.driver || row.escort) && !replaceLocked
                       const replacedBy = row.isSuperseded ? (takenOver ?? "BACKUP") : null
                       return (
                         <TableRow
@@ -347,6 +351,12 @@ export function PersonnelAssignmentPanel({ transportPlanId, className }: Personn
             )}
             {isManager && !phase2Locked && pendingInternal === 0 && rows.length > 0 && phase2.isPersonnelComplete ? (
               <p className="m-0 text-xs leading-5 text-slate-500">Every internal segment is staffed. Use “Change” to replace a driver or an escort before departure.</p>
+            ) : null}
+            {isManager && inTransit && !closed ? (
+              <p className="m-0 text-xs leading-5 text-slate-500">
+                The transport is on the road. Use “Change” to replace the crew of a segment that has not left yet. If its handover is already open,
+                cancel that handover first.
+              </p>
             ) : null}
             {!isManager ? <p className="m-0 text-xs leading-5 text-slate-500">Only the Logistics Manager can assign or change personnel.</p> : null}
           </div>

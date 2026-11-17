@@ -195,6 +195,7 @@ export function CreateTransportPlanContent({
       <TransportPlanMetadataForm
         bookingId={booking.bookingId}
         bookingCreatedAt={booking.createdAt}
+        isReturnBooking={Boolean(booking.returnOf)}
         requestedArrivalDate={booking.requestedArrivalDate}
         originCountry={booking.originCountry}
         destinationCountry={booking.destinationCountry}

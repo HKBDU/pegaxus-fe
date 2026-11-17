@@ -337,6 +337,8 @@ export interface VehicleListParams extends MasterListParams {
   minCapacity?: number;
   availableFrom?: string;
   availableTo?: string;
+  /** Pickers only: hide vehicles in maintenance, out of service, inactive or suspended, even before the trip dates are set. */
+  assignableOnly?: boolean;
   transportPlanId?: string;
   country?: string;
 }

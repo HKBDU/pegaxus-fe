@@ -137,6 +137,11 @@ export interface Phase2Segment {
   fromLocationName?: string | null
   toLocationName?: string | null
   fromCountry?: string | null
+  /** The plan the segment belongs to and its version: a BACKUP / RETURN segment is changed through its own plan. */
+  routePlanId?: string
+  routePlanUpdatedAt?: string | null
+  /** A departed segment keeps its crew. */
+  hasDeparted?: boolean
 }
 
 export interface Phase2Assignment {

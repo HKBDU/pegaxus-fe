@@ -45,7 +45,6 @@ export type SegmentAssignmentState = "PROVIDER" | "ASSIGNED" | "INCOMPLETE" | "N
 export function isEditableSegment(segment: Pick<Phase2Segment, "routeType" | "isSuperseded">) {
   return !segment.isSuperseded && (segment.routeType ?? "PRIMARY") === "PRIMARY"
 }
-
 export function segmentAssignmentState(segment: Phase2Segment): SegmentAssignmentState {
   if (segment.isOutsourced) return "PROVIDER"
   if (segment.driver && segment.escort) return "ASSIGNED"
