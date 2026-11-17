@@ -81,6 +81,13 @@ export function blockedSegmentNumbers(plan: Pick<RoutePlanDetail, "legalReview" 
   return new Set(currentBlockedSegments(plan));
 }
 
+/** An active PRIMARY lists the itinerary the transport now follows, backup segments included. Its map shows its own route only. */
+export function ownSegments(plan: Pick<RoutePlanDetail, "routeType" | "segments">) {
+  return plan.routeType === "PRIMARY"
+    ? plan.segments.filter((segment) => segment.routeType === "PRIMARY")
+    : plan.segments;
+}
+
 export function toRouteMapData(
   plan: RoutePlanDetail,
   suppliedGeometry?: unknown,
@@ -93,11 +100,12 @@ export function toRouteMapData(
     suppliedGeometry == null ? "missing" : geometry ? "available" : "invalid";
   // The replaced primary segments stay on the map, dashed, so the change of route is visible.
   const replaced = plan.replacedSegments ?? [];
-  const locations = toRouteMapLocations({ segments: [...plan.segments, ...replaced] });
+  const segments = ownSegments(plan);
+  const locations = toRouteMapLocations({ segments: [...segments, ...replaced] });
   const locationById = new Map(locations.map((location) => [location.id, location]));
   const routes: MapRoute[] = [
     ...replaced.map((segment) => ({ segment, isReplaced: true })),
-    ...plan.segments
+    ...segments
       .slice()
       .sort((a, b) => a.sequenceNo - b.sequenceNo)
       .map((segment) => ({ segment, isReplaced: false })),
@@ -133,7 +141,7 @@ export function toRouteMapData(
     route,
     routes,
     geometryStatus,
-    omittedStops: plan.segments
+    omittedStops: segments
       .flatMap((segment) => [segment.fromLocation, segment.toLocation])
       .filter(
         (location) =>
