@@ -80,7 +80,7 @@ function AddHealthLogPhotos({ transportId, logId, existingPhotoCount }: { transp
         <Upload aria-hidden="true" />
         Add photo / field note
       </h3>
-      <PhotoCaptureSection files={files} maxFiles={maxFiles} maxFileSizeBytes={UPLOAD_MAX_BYTES} capturedAt={capturedAt} coordinates={coordinates} onCoordinatesChange={setCoordinates} captions={captions} onFilesChange={setFiles} onCapturedAtChange={setCapturedAt} onCaptionsChange={setCaptions} onUploadedPublicIdsChange={setUploadedPublicIds} error={error} onError={setError} presignedEntity="attachment" documentLabel="Additional field photo" />
+      <PhotoCaptureSection transportId={transportId} files={files} maxFiles={maxFiles} maxFileSizeBytes={UPLOAD_MAX_BYTES} capturedAt={capturedAt} coordinates={coordinates} onCoordinatesChange={setCoordinates} captions={captions} onFilesChange={setFiles} onCapturedAtChange={setCapturedAt} onCaptionsChange={setCaptions} onUploadedPublicIdsChange={setUploadedPublicIds} error={error} onError={setError} presignedEntity="attachment" documentLabel="Additional field photo" />
       <Button type="button" disabled={mutation.isPending || !files.length} onClick={() => void submit()} className="rounded-xs">
         <Upload aria-hidden="true" />
         {mutation.isPending ? "Uploading…" : "Upload additional photos"}

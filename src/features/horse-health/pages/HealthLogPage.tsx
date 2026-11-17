@@ -521,6 +521,7 @@ export default function HealthLogPage() {
           {/* Right column: photos and the sticky desktop action card */}
           <div className="space-y-4 lg:sticky lg:top-6 lg:col-span-5">
             <PhotoCaptureSection
+              transportId={transportId}
               files={files}
               capturedAt={capturedAt}
               coordinates={coordinates}
