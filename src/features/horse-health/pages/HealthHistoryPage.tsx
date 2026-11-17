@@ -33,6 +33,7 @@ import { HealthStatusBadge } from "../components/HealthStatusBadge"
 import { healthHeading, healthPanel, noticeError } from "../components/health-ui"
 import { HEALTH_STATUS_LABELS, HEALTH_STATUSES, HORSE_HEALTH_ROUTES, LOG_TYPES } from "../constants"
 import { healthErrorMessage } from "../errors"
+import { useTransportDriverPosition } from "@/features/location-sharing/hooks/useTransportDriverPosition"
 import { useAddHealthLogPhotos, useHealthLogDetail, useHealthLogHistory, useHorseHealthOverview } from "../hooks/useHorseHealth"
 import type { LogType } from "../types"
 
@@ -57,6 +58,7 @@ function AddHealthLogPhotos({ transportId, logId, existingPhotoCount }: { transp
   const [captions, setCaptions] = useState<string[]>([])
   const [uploadedPublicIds, setUploadedPublicIds] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
+  const { coordinates: driverGps } = useTransportDriverPosition(transportId)
   const maxFiles = Math.max(0, 5 - existingPhotoCount)
   const submit = async () => {
     if (!files.length) { setError("Select at least one image."); return }
@@ -80,7 +82,7 @@ function AddHealthLogPhotos({ transportId, logId, existingPhotoCount }: { transp
         <Upload aria-hidden="true" />
         Add photo / field note
       </h3>
-      <PhotoCaptureSection transportId={transportId} files={files} maxFiles={maxFiles} maxFileSizeBytes={UPLOAD_MAX_BYTES} capturedAt={capturedAt} coordinates={coordinates} onCoordinatesChange={setCoordinates} captions={captions} onFilesChange={setFiles} onCapturedAtChange={setCapturedAt} onCaptionsChange={setCaptions} onUploadedPublicIdsChange={setUploadedPublicIds} error={error} onError={setError} presignedEntity="attachment" documentLabel="Additional field photo" />
+      <PhotoCaptureSection transportId={transportId} gpsCoordinates={driverGps} files={files} maxFiles={maxFiles} maxFileSizeBytes={UPLOAD_MAX_BYTES} capturedAt={capturedAt} coordinates={coordinates} onCoordinatesChange={setCoordinates} captions={captions} onFilesChange={setFiles} onCapturedAtChange={setCapturedAt} onCaptionsChange={setCaptions} onUploadedPublicIdsChange={setUploadedPublicIds} error={error} onError={setError} presignedEntity="attachment" documentLabel="Additional field photo" />
       <Button type="button" disabled={mutation.isPending || !files.length} onClick={() => void submit()} className="rounded-xs">
         <Upload aria-hidden="true" />
         {mutation.isPending ? "Uploading…" : "Upload additional photos"}

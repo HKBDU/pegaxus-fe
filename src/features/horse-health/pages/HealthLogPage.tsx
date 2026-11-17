@@ -5,6 +5,7 @@ import { Activity, CheckCheck, ClipboardList, MapPin, NotebookPen, Pill, Save } 
 
 import { normalizeRole } from "@/features/auth/access-control"
 import { useAuthStore } from "@/features/auth/store"
+import { useTransportDriverPosition } from "@/features/location-sharing/hooks/useTransportDriverPosition"
 import { LoadingState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { PhotoCaptureSection } from "@/shared/components/PhotoCaptureSection"
@@ -76,6 +77,7 @@ function toNumber(value: string) {
 
 export default function HealthLogPage() {
   const { transportId = "" } = useParams<{ transportId: string }>()
+  const { coordinates: driverGps } = useTransportDriverPosition(transportId)
   const navigate = useNavigate()
   const principal = useAuthStore((state) => state.principal)
   const isEscort = principal?.roles.some((role) => normalizeRole(role) === "ESCORT") ?? false
@@ -522,6 +524,7 @@ export default function HealthLogPage() {
           <div className="space-y-4 lg:sticky lg:top-6 lg:col-span-5">
             <PhotoCaptureSection
               transportId={transportId}
+              gpsCoordinates={driverGps}
               files={files}
               capturedAt={capturedAt}
               coordinates={coordinates}
