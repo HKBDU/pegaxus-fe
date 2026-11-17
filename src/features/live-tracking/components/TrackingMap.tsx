@@ -13,6 +13,8 @@ interface TrackingMapProps {
   segments: TrackingSegment[]
   /** OT4 legs with their planned ends, to find a leg the convoy left early at an incident. */
   details?: SegmentDetail[]
+  /** Draw the planned stretch the convoy never drove after turning back. The crew follows the live route and does not need it. */
+  showNotDriven?: boolean
   nextStop: TrackingStop | null | undefined
   truck: TruckSample | null
   trail: Trail
@@ -24,9 +26,9 @@ interface TrackingMapProps {
  * vehicle. This is the only file that loads the map library for the tab: the page lazy-loads it, and crew has no route
  * to it.
  */
-export default function TrackingMap({ segments, details, nextStop, truck, trail, signal }: TrackingMapProps) {
-  const stops = useMemo(() => planStops(segments, details), [segments, details])
-  const routes = useMemo(() => planRoutes(segments, details), [segments, details])
+export default function TrackingMap({ segments, details, showNotDriven = true, nextStop, truck, trail, signal }: TrackingMapProps) {
+  const stops = useMemo(() => planStops(segments, details, showNotDriven), [segments, details, showNotDriven])
+  const routes = useMemo(() => planRoutes(segments, details, showNotDriven), [segments, details, showNotDriven])
   const gaps = useMemo(() => trailGaps(trail), [trail])
   const next =
     nextStop && typeof nextStop.latitude === "number" && typeof nextStop.longitude === "number"
@@ -42,7 +44,7 @@ export default function TrackingMap({ segments, details, nextStop, truck, trail,
         <GapLayer gaps={gaps} />
         {truck ? <TruckMarker truck={truck} signal={signal} /> : null}
       </MapViewer>
-      <MapLegend incident={stops.some((stop) => stop.isIncident)} />
+      <MapLegend incident={stops.some((stop) => stop.isIncident)} notDriven={routes.some((route) => route.notDriven)} />
     </div>
   )
 }

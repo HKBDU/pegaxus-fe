@@ -46,8 +46,11 @@ export function cutLegs(segments: TrackingSegment[], details: SegmentDetail[] = 
   return cut
 }
 
-/** The stops of the plan in travel order, each once (the end of one leg is the start of the next). */
-export function planStops(segments: TrackingSegment[], details: SegmentDetail[] = []): MapLocation[] {
+/**
+ * The stops of the plan in travel order, each once (the end of one leg is the start of the next). `notDriven` adds the
+ * planned end of a leg cut at an incident, for the stretch never driven.
+ */
+export function planStops(segments: TrackingSegment[], details: SegmentDetail[] = [], notDriven = true): MapLocation[] {
   const cut = cutLegs(segments, details)
   const stops: MapLocation[] = []
   const add = (location: SegmentLocation, isIncident = false) => {
@@ -59,13 +62,14 @@ export function planStops(segments: TrackingSegment[], details: SegmentDetail[] 
     add(segment.fromLocation)
     // A leg cut at an incident ends at the incident; its planned end follows, as the end of the stretch never driven.
     add(segment.toLocation, Boolean(plannedEnd))
-    if (plannedEnd) add(plannedEnd)
+    if (plannedEnd && notDriven) add(plannedEnd)
   }
   return stops
 }
 
 /** One read-only route per leg: the map draws the road line itself with Geoapify (like the route plan screens). */
-export function planRoutes(segments: TrackingSegment[], details: SegmentDetail[] = []): MapRoute[] {
+/** `notDriven` adds the planned rest of a leg cut at an incident, drawn as never driven. */
+export function planRoutes(segments: TrackingSegment[], details: SegmentDetail[] = [], notDriven = true): MapRoute[] {
   const cut = cutLegs(segments, details)
   return sortSegments(segments).flatMap((segment) => {
     const from = toMapLocation(segment.fromLocation)
@@ -74,7 +78,7 @@ export function planRoutes(segments: TrackingSegment[], details: SegmentDetail[]
     const mode = segment.transportMode
     const transportMode = mode === "SEA" || mode === "AIR" ? mode : "ROAD"
     const plannedEnd = cut.get(segment.routePlanRouteId)
-    const rest = plannedEnd ? toMapLocation(plannedEnd) : null
+    const rest = plannedEnd && notDriven ? toMapLocation(plannedEnd) : null
     return [
       {
         id: segment.routePlanRouteId,

@@ -2,7 +2,7 @@ import { TriangleAlert } from "lucide-react"
 import { ROUTE_LINE_COLORS } from "@/shared/components/map/route-colors"
 
 /** Key of the map symbols, bottom-left over the map. The incident entries show only when the convoy turned back at one. */
-export function MapLegend({ incident = false }: { incident?: boolean }) {
+export function MapLegend({ incident = false, notDriven = false }: { incident?: boolean; notDriven?: boolean }) {
   return (
     <ul
       aria-label="Map legend"
@@ -33,18 +33,18 @@ export function MapLegend({ incident = false }: { incident?: boolean }) {
         No signal (path unknown)
       </li>
       {incident ? (
-        <>
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="inline-flex size-4 items-center justify-center rounded-full border-2 border-white bg-red-600 shadow">
-              <TriangleAlert className="size-2.5 text-white" strokeWidth={2.5} />
-            </span>
-            Incident (turned back)
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden="true" className="h-0 w-5 border-t-[3px] border-dashed" style={{ borderColor: ROUTE_LINE_COLORS.notDriven }} />
-            Planned, not driven
-          </li>
-        </>
+        <li className="flex items-center gap-1.5">
+          <span aria-hidden="true" className="inline-flex size-4 items-center justify-center rounded-full border-2 border-white bg-red-600 shadow">
+            <TriangleAlert className="size-2.5 text-white" strokeWidth={2.5} />
+          </span>
+          Incident (turned back)
+        </li>
+      ) : null}
+      {notDriven ? (
+        <li className="flex items-center gap-1.5">
+          <span aria-hidden="true" className="h-0 w-5 border-t-[3px] border-dashed" style={{ borderColor: ROUTE_LINE_COLORS.notDriven }} />
+          Planned, not driven
+        </li>
       ) : null}
     </ul>
   )
