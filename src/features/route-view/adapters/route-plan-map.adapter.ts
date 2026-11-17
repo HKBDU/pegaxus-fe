@@ -81,7 +81,7 @@ export function blockedSegmentNumbers(plan: Pick<RoutePlanDetail, "legalReview" 
   return new Set(currentBlockedSegments(plan));
 }
 
-/** An active PRIMARY lists the itinerary the transport now follows, backup segments included. Its map shows its own route only. */
+/** An active PRIMARY lists the itinerary the transport now follows, backup segments included. Its map and segment list show its own segments only. */
 export function ownSegments(plan: Pick<RoutePlanDetail, "routeType" | "segments">) {
   return plan.routeType === "PRIMARY"
     ? plan.segments.filter((segment) => segment.routeType === "PRIMARY")

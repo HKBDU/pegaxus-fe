@@ -13,7 +13,7 @@ import { RoutePlanHeader } from "./RoutePlanHeader";
 import { RoutePlanOverview } from "./RoutePlanOverview";
 import { RoutePlanMapPanel } from "./RoutePlanMapPanel";
 import { RouteSegmentList } from "./RouteSegmentList";
-import { blockedSegmentNumbers } from "../adapters/route-plan-map.adapter";
+import { blockedSegmentNumbers, ownSegments } from "../adapters/route-plan-map.adapter";
 import { isLegalReviewOutdated } from "@/features/route-plan/legal-blocks";
 import { RouteContingencyTab } from "./RouteContingencyTab";
 import { RouteLegalReview } from "./RouteLegalReview";
@@ -86,7 +86,7 @@ export function RoutePlanDetails({
           className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"
         >
           <RouteSegmentList
-            segments={plan.segments}
+            segments={ownSegments(plan)}
             segmentActions={segmentActions}
             blockedSegments={blockedSegmentNumbers(plan)}
           />
