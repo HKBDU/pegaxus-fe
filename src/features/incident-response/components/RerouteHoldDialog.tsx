@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { z } from "zod";
@@ -27,15 +26,12 @@ import {
   type RerouteContext,
   type RerouteHoldRequest,
 } from "../reroute-schemas";
-import { RerouteHoldLocationSelect } from "./RerouteHoldLocationSelect";
 
 const controlClass =
   "min-h-11 rounded-[2px] border-input bg-background text-base shadow-none sm:min-h-9 sm:text-sm";
 
 export function RerouteHoldDialog({
   context,
-  scope,
-  source,
   initialRequest,
   busy,
   blocked,
@@ -50,8 +46,6 @@ export function RerouteHoldDialog({
   onSubmit,
 }: {
   context: RerouteContext;
-  scope: string;
-  source: "real" | "mock";
   initialRequest?: RerouteHoldRequest;
   busy: boolean;
   blocked: boolean;
@@ -75,11 +69,11 @@ export function RerouteHoldDialog({
         initialRequest?.monitorIntervalMinutes === undefined
           ? ""
           : String(initialRequest.monitorIntervalMinutes),
-      safeStopLocationId: initialRequest?.safeStopLocationId ?? "",
+      // The coordinator no longer picks a stop location: the crew stops where it is safe and reports it.
+      safeStopLocationId: "",
     },
   });
   const values = useWatch({ control: form.control });
-  const [optionsOpen, setOptionsOpen] = useState(false);
   const duration = /^\d+$/.test((values.holdMinutes ?? "").trim())
     ? Number(values.holdMinutes)
     : NaN;
@@ -217,13 +211,10 @@ export function RerouteHoldDialog({
                   </FormItem>
                 )}
               />
-              <details
-                className="group border-t border-border pt-3"
-                onToggle={(event) => setOptionsOpen(event.currentTarget.open)}
-              >
+              <details className="group border-t border-border pt-3">
                 <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-[2px] text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
                   <span>
-                    Monitoring &amp; stop location{" "}
+                    Monitoring{" "}
                     <span className="font-normal text-muted-foreground">
                       (optional)
                     </span>
@@ -267,34 +258,6 @@ export function RerouteHoldDialog({
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="safeStopLocationId"
-                    render={({ field }) => (
-                      <FormItem className="gap-1">
-                        <FormLabel>Stop location</FormLabel>
-                        <FormControl>
-                          <RerouteHoldLocationSelect
-                            ref={field.ref}
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            scope={scope}
-                            source={source}
-                            active={optionsOpen}
-                            disabled={sending || blocked}
-                          />
-                        </FormControl>
-                        <p className="m-0 text-[11px] text-muted-foreground">
-                          Choose a master location you have assessed as
-                          suitable. Location type alone does not confirm safety.
-                        </p>
-                        <div className="min-h-5">
-                          <FormMessage className="text-xs" />
-                        </div>
-                      </FormItem>
-                    )}
-                  />
                 </div>
               </details>
             </fieldset>
@@ -308,9 +271,6 @@ export function RerouteHoldDialog({
                     ? `${monitor} min`
                     : "—"
                   : "Default (30 min)"}
-              </p>
-              <p className="m-0 break-all">
-                Stop: {values.safeStopLocationId || "Not specified"}
               </p>
               <p className="m-0 text-muted-foreground">
                 Records waiting instructions only; no route activation or

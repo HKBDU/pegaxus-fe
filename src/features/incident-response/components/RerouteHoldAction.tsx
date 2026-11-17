@@ -14,13 +14,11 @@ import { RerouteHoldDialog } from "./RerouteHoldDialog";
 export function RerouteHoldAction({
   context,
   scope,
-  source,
   queryKey,
   refreshing,
 }: {
   context: RerouteContext;
   scope: string;
-  source: "real" | "mock";
   queryKey: QueryKey;
   refreshing: boolean;
 }) {
@@ -121,8 +119,6 @@ export function RerouteHoldAction({
       {open && (
         <RerouteHoldDialog
           context={context}
-          scope={scope}
-          source={source}
           initialRequest={draft}
           busy={mutation.isPending}
           blocked={!allowed || refreshing || Boolean(error?.blocked)}

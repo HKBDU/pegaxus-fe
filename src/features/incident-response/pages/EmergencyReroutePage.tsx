@@ -178,7 +178,6 @@ export default function EmergencyReroutePage() {
                   }
                   context={data}
                   scope={query.scope}
-                  source={query.source}
                   queryKey={query.queryKey}
                   refreshing={query.isFetching}
                 />
