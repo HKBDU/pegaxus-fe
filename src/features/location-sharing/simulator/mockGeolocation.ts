@@ -5,6 +5,11 @@
  */
 
 export interface MockPositionParams {
+  transportId: string;
+  routePlanRouteId: string;
+  boundaryNo?: number;
+  sessionId: string;
+  sequence: number;
   latitude: number;
   longitude: number;
   speedKmh: number;
@@ -24,6 +29,7 @@ class MockGeolocationController {
   private nextWatchId = 1000;
   private watchers = new Map<number, Watcher>();
   private lastPosition: GeolocationPosition | null = null;
+  private lastSample: (MockPositionParams & { source: "DRIVER_MOCK"; recordedAt: string }) | null = null;
   private isSignalLoss = false;
 
   private originalWatchPosition: typeof navigator.geolocation.watchPosition | null = null;
@@ -81,20 +87,18 @@ class MockGeolocationController {
       if (this.lastPosition && !this.isSignalLoss) {
         const pos = this.lastPosition;
         setTimeout(() => success(pos), 0);
-      } else if (error && this.isSignalLoss) {
+      } else if (error) {
         setTimeout(
           () =>
             error({
               code: 2, // POSITION_UNAVAILABLE
-              message: "Simulated signal loss.",
+              message: this.isSignalLoss ? "Simulated signal loss." : "No Mock GPS sample is available.",
               PERMISSION_DENIED: 1,
               POSITION_UNAVAILABLE: 2,
               TIMEOUT: 3,
             }),
           0,
         );
-      } else if (this.originalGetCurrentPosition) {
-        this.originalGetCurrentPosition(success, error);
       }
     };
 
@@ -141,6 +145,7 @@ class MockGeolocationController {
 
     this.watchers.clear();
     this.lastPosition = null;
+    this.lastSample = null;
     this.isSignalLoss = false;
     this.isEnabled = false;
   }
@@ -157,8 +162,15 @@ class MockGeolocationController {
     return this.isEnabled;
   }
 
+  public clearPosition() {
+    this.lastPosition = null;
+    this.lastSample = null;
+  }
+
   public dispatchPosition(params: MockPositionParams) {
     const { latitude, longitude, speedKmh, heading, accuracyMeters = 8 } = params;
+    if (!this.isEnabled || !Number.isFinite(latitude) || !Number.isFinite(longitude) ||
+      Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return;
 
     const speedMps = Math.max(0, speedKmh / 3.6);
 
@@ -197,6 +209,7 @@ class MockGeolocationController {
     };
 
     this.lastPosition = position;
+    this.lastSample = { ...params, source: "DRIVER_MOCK", recordedAt: new Date(position.timestamp).toISOString() };
 
     // Do not notify watchers if signal is currently lost
     if (this.isSignalLoss) {
@@ -215,6 +228,8 @@ class MockGeolocationController {
   public getLastPosition(): GeolocationPosition | null {
     return this.lastPosition;
   }
+
+  public getLastSample() { return this.lastSample; }
 }
 
 export const mockGeolocation = new MockGeolocationController();
