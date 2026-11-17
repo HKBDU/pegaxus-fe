@@ -7,6 +7,7 @@ import FileUploader, {
   type FileUploaderHandle,
   type FileUploaderSnapshot,
 } from "@/shared/components/FileUploader";
+import { UploadedProofPreview } from "@/shared/components/file-viewer/UploadedProofPreview";
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { Input } from "@/shared/components/ui/input";
@@ -161,6 +162,7 @@ export function EmergencyCostForm({
             request.emergencyCostRequestId,
             incident.incidentReportId,
           ),
+          { replace: true },
         );
     } catch (caught) {
       if (mounted.current && emergencyCostAuthScope() === scope) {
@@ -357,6 +359,16 @@ export function EmergencyCostForm({
                 of {snapshot?.items.length ?? 0} selected photos confirmed.
                 Pending or failed selections block submission.
               </p>
+              {(() => {
+                const previewFiles = snapshot?.items.filter((item) => item.status === "success").map((item) => item.file) ?? [];
+                return previewFiles.length > 0 ? (
+                  <UploadedProofPreview
+                    className="mt-3"
+                    files={previewFiles}
+                    label="Uploaded receipts preview"
+                  />
+                ) : null;
+              })()}
             </>
           )}
           {uploadError ? (

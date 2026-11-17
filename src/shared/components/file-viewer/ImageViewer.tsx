@@ -37,7 +37,7 @@ const PLUGINS_MULTI = [...PLUGINS_SINGLE, Thumbnails]
 const INLINE = { style: { width: '100%', height: '100%' } }
 const ZOOM = { scrollToZoom: false, pinchZoomV4: true, maxZoomPixelRatio: 4 }
 const TOOLBAR = { buttons: ['fullscreen', 'zoom', 'download'] as ['fullscreen', 'zoom', 'download'] }
-const LABELS = { Previous: 'Previous image', Next: 'Next image' }
+const LABELS = { Previous: 'Previous file', Next: 'Next file' }
 
 const ICONS = {
   iconEnterFullscreen: () => <Maximize size={20} aria-hidden="true" />,
@@ -113,9 +113,13 @@ function ImageViewerContent({
   )
   const controller = useMemo(() => ({ ref: lightboxRef, closeOnBackdropClick: false }), [])
   const carousel = useMemo(
-    () => ({ finite: !multiple, padding: 0, spacing: 0, preload: 1 }),
-    [multiple],
+    () => ({ finite: true, padding: 0, spacing: 0, preload: 1 }),
+    [],
   )
+
+  useEffect(() => {
+    setActiveIndex((current) => Math.max(0, Math.min(current, slides.length - 1)))
+  }, [slides.length])
 
   // Register one global listener and gate it with the hover ref.
   useEffect(() => {
@@ -198,6 +202,14 @@ function ImageViewerContent({
     >
       <div className="absolute inset-x-0 top-0 z-20 flex h-8 items-center bg-neutral-900 px-3 pr-36 text-sm text-white/90">
         <span className="truncate">{slides[activeIndex]?.title ?? slides[activeIndex]?.alt ?? ''}</span>
+        {multiple && (
+          <span
+            className="ml-2 shrink-0 font-mono text-xs font-semibold text-white/75"
+            aria-label={`File ${activeIndex + 1} of ${slides.length}`}
+          >
+            {activeIndex + 1} / {slides.length}
+          </span>
+        )}
       </div>
       {/* Keep the lightbox inside the caller-sized frame. */}
       <div className="absolute inset-0">

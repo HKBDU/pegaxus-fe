@@ -27,6 +27,7 @@ import FileUploader, {
   type FileUploaderHandle,
   type FileUploaderSnapshot,
 } from "@/shared/components/FileUploader";
+import { UploadedProofPreview } from "@/shared/components/file-viewer/UploadedProofPreview";
 import {
   canUploadInitialDocument,
   DOSSIER_UPLOAD_ACCEPT,
@@ -101,10 +102,10 @@ export function DocumentRevisionNotice({
     <div className="space-y-2">
       {request ? <DocumentRequestAlert request={request} /> : null}
       {latestReview?.reviewComment &&
-      !(
-        latestReview.result === "REJECTED" &&
-        latestReview.reviewComment.trim() === request?.message.trim()
-      ) ? (
+        !(
+          latestReview.result === "REJECTED" &&
+          latestReview.reviewComment.trim() === request?.message.trim()
+        ) ? (
         <section
           className="rounded-[2px] border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700"
           aria-label="Previous Review Comment"
@@ -280,13 +281,18 @@ export function DocumentSubmissionDialog({
     (mode === "initial"
       ? canUploadInitialDocument(role, dossier, requirement)
       : requirement.status !== "SATISFIED" &&
-        requirement.status !== "WAIVED" &&
-        detail &&
-        (mode === "edit"
-          ? detail.status === "PROVIDED" &&
-            detail.versions[0]?.review?.result !== "APPROVED"
-          : detail.status === "REJECTED")),
+      requirement.status !== "WAIVED" &&
+      detail &&
+      (mode === "edit"
+        ? detail.status === "PROVIDED" &&
+        detail.versions[0]?.review?.result !== "APPROVED"
+        : detail.status === "REJECTED")),
   );
+  const previewFiles = uploadState?.snapshot?.items
+    ? uploadState.snapshot.items
+      .filter((item) => item.status === "success")
+      .map((item) => item.file)
+    : [];
   const canSubmit = Boolean(
     eligible &&
     !pending &&
@@ -605,6 +611,13 @@ export function DocumentSubmissionDialog({
                           );
                         }}
                       />
+                      {previewFiles.length > 0 && (
+                        <UploadedProofPreview
+                          className="mt-3"
+                          files={previewFiles}
+                          label="Uploaded documents preview"
+                        />
+                      )}
                       <p className="mt-3 text-xs leading-relaxed text-slate-600">
                         Files upload automatically when selected. Submit is
                         available only after every remaining file is uploaded
@@ -653,25 +666,24 @@ export function DocumentSubmissionDialog({
                       ? "All files uploaded — File selection locked for this attempt."
                       : !snapshot?.items.length
                         ? "Select files to begin uploading."
-                        : `${snapshot.items.filter((item) => item.status === "success").length} of ${snapshot.items.length} files uploaded · ${
-                            snapshot.items.some(
-                              (item) => item.status === "error",
-                            )
-                              ? `${snapshot.items.filter((item) => item.status === "error").length} failed — Retry or Remove`
-                              : snapshot.items.some(
-                                    (item) =>
-                                      item.status === "queued" ||
-                                      item.status === "uploading",
-                                  )
-                                ? "Waiting for all uploads to finish"
-                                : !files
-                                  ? "Invalid upload result — Remove the affected file"
-                                  : !form.formState.isValid
-                                    ? "Complete valid document information to submit"
-                                    : canSubmit
-                                      ? "All files uploaded — Ready to submit"
-                                      : "All files uploaded — Submission unavailable"
-                          }`}
+                        : `${snapshot.items.filter((item) => item.status === "success").length} of ${snapshot.items.length} files uploaded · ${snapshot.items.some(
+                          (item) => item.status === "error",
+                        )
+                          ? `${snapshot.items.filter((item) => item.status === "error").length} failed — Retry or Remove`
+                          : snapshot.items.some(
+                            (item) =>
+                              item.status === "queued" ||
+                              item.status === "uploading",
+                          )
+                            ? "Waiting for all uploads to finish"
+                            : !files
+                              ? "Invalid upload result — Remove the affected file"
+                              : !form.formState.isValid
+                                ? "Complete valid document information to submit"
+                                : canSubmit
+                                  ? "All files uploaded — Ready to submit"
+                                  : "All files uploaded — Submission unavailable"
+                        }`}
                   </p>
                   {fileError ? (
                     <p role="alert" className="mt-2 text-xs text-red-700">
@@ -770,14 +782,14 @@ export function DocumentSubmissionDialog({
                                   minDate={
                                     name === "expiryDate"
                                       ? [
-                                          requirement?.validUntil,
-                                          plannedDepartureDate?.slice(0, 10),
-                                        ]
-                                          .filter((date): date is string =>
-                                            Boolean(date),
-                                          )
-                                          .sort()
-                                          .at(-1)
+                                        requirement?.validUntil,
+                                        plannedDepartureDate?.slice(0, 10),
+                                      ]
+                                        .filter((date): date is string =>
+                                          Boolean(date),
+                                        )
+                                        .sort()
+                                        .at(-1)
                                       : undefined
                                   }
                                   className={inputClass}

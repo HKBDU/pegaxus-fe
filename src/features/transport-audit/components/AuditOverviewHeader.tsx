@@ -1,19 +1,15 @@
-import { FileArchive, FileText, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Badge } from "@/shared/components/ui/badge";
-import { Button } from "@/shared/components/ui/button";
 import type { TransportAuditFull } from "../types";
 import { formatUtcDate } from "@/shared/utils/datetime";
 
 export function AuditOverviewHeader({
   audit,
-  onExport,
-  onPreviewEpod,
 }: {
   audit: TransportAuditFull;
-  onExport: () => void;
+  onExport?: () => void;
   onPreviewEpod?: () => void;
 }) {
-  const canExport = audit.status === "COMPLETED";
   const completedDate = audit.completedAt
     ? `${formatUtcDate(audit.completedAt)}${/^\d{4}-\d{2}-\d{2}$/.test(audit.completedAt) ? "" : " UTC"}`
     : undefined;
@@ -55,34 +51,6 @@ export function AuditOverviewHeader({
               ) : null}
             </div>
           ) : null}
-
-          <div className="flex flex-wrap items-center gap-2">
-            {onPreviewEpod || audit.epod?.downloadUrl ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onPreviewEpod}
-                className="h-10 rounded-[2px] border-[#355d8a] bg-[#173254] px-4 text-xs font-medium text-[#bfdbfe] hover:bg-[#204470] hover:text-white"
-              >
-                <FileText className="size-4 mr-1.5 text-[#93c5fd]" />
-                View e-POD
-              </Button>
-            ) : null}
-
-            <Button
-              disabled={!canExport}
-              title={
-                canExport
-                  ? "Export audit package"
-                  : "Export is available after transport completion"
-              }
-              onClick={onExport}
-              className="h-10 rounded-[2px] bg-[#f39200] px-5 font-semibold text-black shadow-[0_4px_12px_rgba(243,146,0,0.28)] hover:bg-[#ffad2f] hover:shadow-[0_5px_16px_rgba(243,146,0,0.38)]"
-            >
-              <FileArchive className="size-4 mr-1.5" /> Export package
-            </Button>
-          </div>
         </div>
       </div>
 

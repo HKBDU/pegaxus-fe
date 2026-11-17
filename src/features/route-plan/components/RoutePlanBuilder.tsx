@@ -27,7 +27,8 @@ import {
   type MapRoute,
 } from "@/shared/components/map";
 import { PageHeader } from "@/shared/components/PageHeader";
-import { ROLE_ROUTES } from "@/app/route-config";
+import { getPlanBackTarget } from "@/app/route-config";
+import { useAuthStore } from "@/features/auth/store";
 import {
   previewGeoapifyRoute,
   snapToFeasibleRoadPoint,
@@ -180,6 +181,8 @@ export function RoutePlanBuilder({
   edit,
 }: RoutePlanBuilderProps) {
   const navigate = useNavigate();
+  const principal = useAuthStore((state) => state.principal);
+  const backTarget = getPlanBackTarget(principal, transportPlanId);
   const [step, setStep] = useState<WizardStep>(0);
   const [mode, setMode] = useState<MapMode>("buildPlan");
   const [locations, setLocations] = useState<MapLocation[]>(initialLocations);
@@ -224,10 +227,10 @@ export function RoutePlanBuilder({
         currentLocations.map((item) =>
           String(item.id) === locId
             ? {
-                ...item,
-                latitude: snapped.latitude,
-                longitude: snapped.longitude,
-              }
+              ...item,
+              latitude: snapped.latitude,
+              longitude: snapped.longitude,
+            }
             : item,
         ),
       );
@@ -337,7 +340,7 @@ export function RoutePlanBuilder({
       const isDisconnected =
         index > 0 &&
         String(seg.route.fromLocation?.id) !==
-          String(timedSegments[index - 1]?.route.toLocation?.id);
+        String(timedSegments[index - 1]?.route.toLocation?.id);
       return {
         ...seg,
         sequenceNo: index + 1,
@@ -543,16 +546,16 @@ export function RoutePlanBuilder({
     }
     return isBackup
       ? buildEffectiveBackupRoute(
-          readonlyPrimaryRoutes,
-          segments.map((segment) => segment.route),
-          fromId,
-          toId,
-        )
+        readonlyPrimaryRoutes,
+        segments.map((segment) => segment.route),
+        fromId,
+        toId,
+      )
       : validateRoutePlanRoute(
-          segments.map((segment) => segment.route),
-          fromId,
-          toId,
-        );
+        segments.map((segment) => segment.route),
+        fromId,
+        toId,
+      );
   }, [isBackup, plan.from?.id, plan.to?.id, readonlyPrimaryRoutes, segments]);
 
   const isCrossBorder = useMemo(() => {
@@ -611,9 +614,9 @@ export function RoutePlanBuilder({
         ? continuity.effectiveRoutes
         : isBackup
           ? [
-              ...readonlyPrimaryRoutes,
-              ...segments.map((segment) => segment.route),
-            ]
+            ...readonlyPrimaryRoutes,
+            ...segments.map((segment) => segment.route),
+          ]
           : segments.map((segment) => segment.route);
     const required =
       isMandatoryBcpCrossing(plan.from?.country, plan.to?.country) ||
@@ -1327,10 +1330,12 @@ export function RoutePlanBuilder({
 
   function handleVehicleChange(index: number, vehicleIds: string[]) {
     setSegments((current) =>
-      current.map((seg, idx) => (idx === index ? { ...seg, vehicleIds: [...vehicleIds], assignmentOrigin: "manual", inheritanceSource: undefined, assignmentReason: undefined, vehicleDetails: vehicleIds.flatMap((id) => {
-        const vehicle = availableVehicles.find((v) => v.vehicleId === id) ?? seg.vehicleDetails?.find((v) => v.vehicleId === id);
-        return vehicle ? [vehicle] : [];
-      }) } : seg)),
+      current.map((seg, idx) => (idx === index ? {
+        ...seg, vehicleIds: [...vehicleIds], assignmentOrigin: "manual", inheritanceSource: undefined, assignmentReason: undefined, vehicleDetails: vehicleIds.flatMap((id) => {
+          const vehicle = availableVehicles.find((v) => v.vehicleId === id) ?? seg.vehicleDetails?.find((v) => v.vehicleId === id);
+          return vehicle ? [vehicle] : [];
+        })
+      } : seg)),
     );
   }
 
@@ -1717,7 +1722,7 @@ export function RoutePlanBuilder({
           : "Submitted for legal review.";
       toast.success(successMessage);
       setHasUnsavedChanges(false);
-      navigate(ROLE_ROUTES.routePlans);
+      navigate(backTarget.href);
     } catch (error) {
       const mapped = getRoutePlanError(error);
       setSaveError(
@@ -1752,8 +1757,8 @@ export function RoutePlanBuilder({
                   ? "EDIT ROUTE PLAN"
                   : "CREATE ROUTE PLAN"
           }
-          backHref={ROLE_ROUTES.routePlans}
-          backLabel="BACK TO ROUTE PLANS"
+          backHref={backTarget.href}
+          backLabel={backTarget.label.toUpperCase()}
           onBack={confirmLeaveBuilder}
           action={<RoutePlanStatusBadge status={plan.status} />}
         />
@@ -2392,17 +2397,17 @@ export function RoutePlanBuilder({
                           items.map((item) =>
                             item.id === segment.id
                               ? {
-                                  ...item,
-                                  arrangement: selection
-                                    ? "OUTSOURCED"
-                                    : "INTERNAL",
-                                  provider: selection?.provider,
-                                  note: selection ? selection.note : item.note,
-                                  assignmentOrigin: "manual",
-                                  assignmentReason: undefined,
-                                  inheritanceSource: undefined,
-                                  vehicleIds: selection ? undefined : item.vehicleIds,
-                                }
+                                ...item,
+                                arrangement: selection
+                                  ? "OUTSOURCED"
+                                  : "INTERNAL",
+                                provider: selection?.provider,
+                                note: selection ? selection.note : item.note,
+                                assignmentOrigin: "manual",
+                                assignmentReason: undefined,
+                                inheritanceSource: undefined,
+                                vehicleIds: selection ? undefined : item.vehicleIds,
+                              }
                               : item,
                           ),
                         )
@@ -2622,16 +2627,16 @@ export function RoutePlanBuilder({
                         ? `Submitted for legal review at ${formatUtcDateTime(edit.legalReviewRequestedAt)}`
                         : "This route plan has not been submitted for legal review."}
                     </p>
-                  <label className="grid gap-2 text-sm font-medium text-slate-900">
-                    Update reason
-                    <textarea
-                      aria-label="Update reason"
-                      className="min-h-20 rounded-[2px] border border-slate-200 p-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
-                      value={updateReason}
-                      onChange={(event) => setUpdateReason(event.target.value)}
-                      placeholder="Why is this route plan being updated?"
-                    />
-                  </label>
+                    <label className="grid gap-2 text-sm font-medium text-slate-900">
+                      Update reason
+                      <textarea
+                        aria-label="Update reason"
+                        className="min-h-20 rounded-[2px] border border-slate-200 p-2 text-xs font-normal text-slate-900 focus:border-amber-500 focus:outline-none"
+                        value={updateReason}
+                        onChange={(event) => setUpdateReason(event.target.value)}
+                        placeholder="Why is this route plan being updated?"
+                      />
+                    </label>
                   </>
                 )}
 
@@ -2730,8 +2735,8 @@ export function RoutePlanBuilder({
           bcpSplitProposal
             ? bcpSplitProposal.targetSegmentIndex !== undefined
               ? segments[bcpSplitProposal.targetSegmentIndex]?.stopType ===
-                  "DESTINATION" ||
-                bcpSplitProposal.routeToSplit.toLocation?.id === plan.to?.id
+              "DESTINATION" ||
+              bcpSplitProposal.routeToSplit.toLocation?.id === plan.to?.id
               : bcpSplitProposal.routeToSplit.toLocation?.id === plan.to?.id
             : false
         }

@@ -16,6 +16,7 @@ export const ROLE_ROUTES = {
   managerCreateUser: "/admin/users/new",
   customerHorses: "/my-horses",
   customerProfile: "/profile-settings",
+  profile: "/profile-settings",
   complianceRequirements: "/compliance-requirements",
   dossierTemplates: "/dossier-templates",
   complianceDossiers: "/compliance-dossiers",
@@ -64,6 +65,40 @@ export function dossierDetail(id: string | number, role?: string) {
   if (role && normalizeRole(role) === "LOGISTICS_MANAGER") return `${ROLE_ROUTES.managerDossiers}/${encodedId}`
   if (role && normalizeRole(role) === "TRANSPORT_SPECIALIST") return `${ROLE_ROUTES.complianceDossiers}/${encodedId}/details`
   return `${ROLE_ROUTES.complianceDossiers}/${encodedId}`
+}
+
+export function getPlanBackTarget(
+  roleOrPrincipal?: string | { roles?: string[] } | null,
+  transportPlanId?: string | number,
+): { href: string; label: string } {
+  const roles =
+    typeof roleOrPrincipal === "object" &&
+    roleOrPrincipal &&
+    "roles" in roleOrPrincipal &&
+    Array.isArray(roleOrPrincipal.roles)
+      ? roleOrPrincipal.roles.map(normalizeRole)
+      : roleOrPrincipal
+        ? [normalizeRole(String(roleOrPrincipal))]
+        : []
+
+  if (roles.includes("FLEET_ROUTE_COORDINATOR")) {
+    return {
+      href: ROLE_ROUTES.routePlans,
+      label: "Back to Route Plans",
+    }
+  }
+
+  if (transportPlanId) {
+    return {
+      href: transportPlanDetail(transportPlanId),
+      label: "Back to Transport Plan",
+    }
+  }
+
+  return {
+    href: ROLE_ROUTES.routePlans,
+    label: "Back to Route Plans",
+  }
 }
 
 export function getRoleLandingPath(role?: string): string {

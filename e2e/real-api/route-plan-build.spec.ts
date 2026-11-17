@@ -16,13 +16,6 @@
 import { test, type Page } from "@playwright/test"
 
 /**
- * Escapes characters for safe RegExp construction.
- */
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-/**
  * Extracts a concise search keyword from a full address/location name.
  * e.g. "43, 286 01 Žleby, Czechia" -> "43"
  *      "Ausbau 5, 19288 Alt Krenzlin, Germany" -> "Ausbau 5"
@@ -82,11 +75,11 @@ async function pickEndpointsOnMap(page: Page, originName: string, destName: stri
 
   // Primary: variant + exact aria-label (most precise)
   const originMarker = page.locator(`button[data-marker-variant="start"][aria-label="Show details for ${originName}"]`)
-  const destMarker   = page.locator(`button[data-marker-variant="end"][aria-label="Show details for ${destName}"]`)
+  const destMarker = page.locator(`button[data-marker-variant="end"][aria-label="Show details for ${destName}"]`)
 
   // Fallback: variant only (always unique — exactly one start, one end per map)
   const originFallback = page.locator(`button[data-marker-variant="start"]`)
-  const destFallback   = page.locator(`button[data-marker-variant="end"]`)
+  const destFallback = page.locator(`button[data-marker-variant="end"]`)
 
   // Wait for start marker to be attached (MapLibre may take a moment to render)
   await originMarker
@@ -135,7 +128,7 @@ async function pickEndpointsOnMap(page: Page, originName: string, destName: stri
   if (await bcpConfirmBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
     console.log("[route-plan-build] Cross-border BCP detected, confirming auto-split...")
     await bcpConfirmBtn.click()
-    await bcpConfirmBtn.waitFor({ state: "hidden", timeout: 10000 }).catch(() => {})
+    await bcpConfirmBtn.waitFor({ state: "hidden", timeout: 10000 }).catch(() => { })
   }
 }
 
@@ -222,13 +215,13 @@ test("route-plan-build flow", async ({ page }) => {
       await vehicleDialog.getByRole("checkbox").first().check()
     }
     await vehicleDialog.getByRole("button", { name: "Confirm vehicles" }).click()
-    await vehicleDialog.waitFor({ state: "hidden", timeout: 5000 }).catch(() => {})
+    await vehicleDialog.waitFor({ state: "hidden", timeout: 5000 }).catch(() => { })
 
     // Handle "Vehicle country differs from departure" confirmation if prompted
     const continueSelectingBtn = page.getByRole("button", { name: "Continue selecting" })
     if (await continueSelectingBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
       await continueSelectingBtn.click()
-      await continueSelectingBtn.waitFor({ state: "hidden", timeout: 3000 }).catch(() => {})
+      await continueSelectingBtn.waitFor({ state: "hidden", timeout: 3000 }).catch(() => { })
     }
   }
 
@@ -284,12 +277,12 @@ test("route-plan-build flow", async ({ page }) => {
       await vehicleDialog.getByRole("checkbox").first().check()
     }
     await vehicleDialog.getByRole("button", { name: "Confirm vehicles" }).click()
-    await vehicleDialog.waitFor({ state: "hidden", timeout: 5000 }).catch(() => {})
+    await vehicleDialog.waitFor({ state: "hidden", timeout: 5000 }).catch(() => { })
 
     const continueSelectingBtn = page.getByRole("button", { name: "Continue selecting" })
     if (await continueSelectingBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
       await continueSelectingBtn.click()
-      await continueSelectingBtn.waitFor({ state: "hidden", timeout: 3000 }).catch(() => {})
+      await continueSelectingBtn.waitFor({ state: "hidden", timeout: 3000 }).catch(() => { })
     }
   }
 

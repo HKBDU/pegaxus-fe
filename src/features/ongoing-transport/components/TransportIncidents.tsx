@@ -1,6 +1,6 @@
 import type { KeyboardEvent, MouseEvent } from "react";
 import { ArrowRight, HeartPulse, Route, TriangleAlert, Truck } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -46,10 +46,22 @@ function IncidentStatus({ status }: { status: Incident["status"] }) {
   );
 }
 
-function ViewIncident({ href, code }: { href: string; code: string }) {
+function ViewIncident({
+  href,
+  code,
+  from,
+}: {
+  href: string;
+  code: string;
+  from?: string;
+}) {
   return (
     <Button asChild variant="outline" size="xs" className="rounded-xs">
-      <Link to={href} aria-label={`View incident ${code}`}>
+      <Link
+        to={href}
+        state={from ? { from } : undefined}
+        aria-label={`View incident ${code}`}
+      >
         View details
         <ArrowRight aria-hidden="true" />
       </Link>
@@ -69,6 +81,8 @@ export function TransportIncidents({
   detailHref?: (incident: Incident) => string | null;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.pathname + location.search;
   const showSeverity = incidents.some(
     (incident) => incident.severity !== undefined,
   );
@@ -80,7 +94,7 @@ export function TransportIncidents({
   const rowProps = (incident: Incident) => {
     const href = detailHref?.(incident);
     if (!href) return {};
-    const open = () => navigate(href);
+    const open = () => navigate(href, { state: { from } });
     return {
       role: "link" as const,
       tabIndex: 0,
@@ -169,7 +183,11 @@ export function TransportIncidents({
                 {hasLinks ? (
                   <TableCell className="text-right">
                     {detailHref?.(incident) ? (
-                      <ViewIncident href={detailHref(incident)!} code={incident.incidentCode} />
+                      <ViewIncident
+                        href={detailHref(incident)!}
+                        code={incident.incidentCode}
+                        from={from}
+                      />
                     ) : null}
                   </TableCell>
                 ) : null}
@@ -210,7 +228,11 @@ export function TransportIncidents({
             </div>
             {detailHref?.(incident) ? (
               <div className="flex justify-end">
-                <ViewIncident href={detailHref(incident)!} code={incident.incidentCode} />
+                <ViewIncident
+                  href={detailHref(incident)!}
+                  code={incident.incidentCode}
+                  from={from}
+                />
               </div>
             ) : null}
           </li>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Coins, Loader2, Route, Truck } from "lucide-react";
 import { canAccess } from "@/features/auth/access-control";
 import { useAuthStore } from "@/features/auth/store";
@@ -268,6 +268,7 @@ export function IncidentResponseActions({
   audience,
 }: IncidentResponseActionsProps) {
   const { principal, signedIn, scope, source } = useEmergencyCostScope();
+  const location = useLocation();
   if (audience === "CUSTOMER" || !signedIn || !canReadEmergencyCosts(principal))
     return null;
   const parsed = emergencyCostIncidentSchema.safeParse(incident);
@@ -317,7 +318,10 @@ export function IncidentResponseActions({
           variant="outline"
           className="min-h-11 rounded-[2px] sm:min-h-9"
         >
-          <Link to={emergencyReroutePath(context.incidentReportId)}>
+          <Link
+            to={emergencyReroutePath(context.incidentReportId)}
+            state={{ from: location.pathname + location.search }}
+          >
             <Route aria-hidden="true" className="size-4" />
             {manager ? "Review Hold & Wait" : "Review emergency routes"}
           </Link>

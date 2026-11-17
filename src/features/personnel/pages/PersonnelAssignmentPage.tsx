@@ -1,5 +1,7 @@
 import { useParams } from "react-router-dom"
 
+import { getPlanBackTarget } from "@/app/route-config"
+import { useAuthStore } from "@/features/auth/store"
 import { PersonnelAssignmentPanel } from "@/features/personnel/components/PersonnelAssignmentPanel"
 import { PlanSummaryStrip } from "@/features/personnel/components/PersonnelUi"
 import { useTransportPlanSummary } from "@/features/personnel/hooks"
@@ -14,12 +16,14 @@ export default function PersonnelAssignmentPage() {
 }
 
 function PersonnelAssignmentContent({ transportPlanId }: { transportPlanId: string }) {
+  const principal = useAuthStore((state) => state.principal)
   const planQuery = useTransportPlanSummary(transportPlanId)
+  const backTarget = getPlanBackTarget(principal, transportPlanId)
 
   return (
     <div className="booking-page-shell min-h-[70dvh] px-5 py-8 font-sans sm:px-6 lg:px-10 lg:py-10">
       <div className="booking-page-enter mx-auto grid w-full max-w-[1280px] grid-cols-[minmax(0,1fr)] gap-5">
-        <PageHeader title="PERSONNEL ASSIGNMENT" backHref="/admin/transport-plans" backLabel="RETURN TO TRANSPORT PLANS" />
+        <PageHeader title="PERSONNEL ASSIGNMENT" backHref={backTarget.href} backLabel={backTarget.label.toUpperCase()} />
         <p className="m-0 -mt-2 text-sm text-slate-500">Manage the Phase 1 and Phase 2 personnel assignments of this transport plan.</p>
         {planQuery.data ? <PlanSummaryStrip plan={planQuery.data} /> : null}
         <PersonnelAssignmentPanel transportPlanId={transportPlanId} />

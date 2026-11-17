@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 
 import { dossierDetail } from "@/app/route-config";
@@ -13,6 +13,7 @@ import type { DossierOverview } from "../types";
  * so the Transport Specialist may waive every open requirement at once and point to the original dossier instead.
  */
 export function ReturnTripPanel({ dossier, role }: { dossier: DossierOverview; role: string | undefined }) {
+  const location = useLocation();
   const queryClient = useQueryClient();
   const source = dossier.returnOf;
   const canWaive = role === "TRANSPORT_SPECIALIST" && !dossier.writeLocked;
@@ -36,7 +37,13 @@ export function ReturnTripPanel({ dossier, role }: { dossier: DossierOverview; r
           {source.dossierId ? (
             <>
               {" "}(dossier{" "}
-              <Link to={dossierDetail(source.dossierId, role)} className="font-semibold underline">{source.dossierCode}</Link>)
+              <Link
+                to={dossierDetail(source.dossierId, role)}
+                state={{ from: location.pathname + location.search }}
+                className="font-semibold underline"
+              >
+                {source.dossierCode}
+              </Link>)
             </>
           ) : null}
           , so this checklist can be waived as a whole.

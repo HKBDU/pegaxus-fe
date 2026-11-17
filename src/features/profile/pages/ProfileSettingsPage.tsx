@@ -10,6 +10,7 @@ import { CountrySelect, formatCountryDisplayName, normalizeCountryToIso2 } from 
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Input } from "@/shared/components/ui/input"
 import { PageHeader } from "@/shared/components/PageHeader"
+import { getPostLoginPath } from "@/app/route-config"
 import { getAvatarFileError } from "../avatar"
 import { resolveProfilePhone } from "../phone"
 import { ProfilePhoneEditor } from "../components/ProfilePhoneEditor"
@@ -403,7 +404,7 @@ export function ProfileSettingsPage() {
   return (
     <section className="profile-page min-w-0 w-full overflow-x-clip bg-[#f4f4f4] px-5 py-6 pb-10 sm:px-6 lg:px-10">
       <div className="mx-auto flex w-full max-w-[1380px] flex-col">
-        <PageHeader backHref="/" backLabel="HOME" title={`VIEW ${profile.accountType} PROFILE`} />
+        <PageHeader backHref={getPostLoginPath(profile.role)} backLabel="HOME" title={`VIEW ${profile.accountType} PROFILE`} />
         <div className="mt-6 grid min-w-0 items-start gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
           <ProfileIdentityPanel
             disabled={isBusy}
@@ -435,6 +436,9 @@ export function ProfileSettingsPage() {
             accept="image/jpeg,image/png"
             aria-label="Change profile avatar"
             onChange={(event) => {
+              if (event.currentTarget.files && event.currentTarget.files.length > 1) {
+                toast.error("Only one file allowed. Remove the current avatar to upload another.")
+              }
               const file = event.currentTarget.files?.[0]
               event.currentTarget.value = ""
               if (!file) return

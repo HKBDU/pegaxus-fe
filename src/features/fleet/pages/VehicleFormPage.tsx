@@ -60,7 +60,7 @@ export default function VehicleFormPage({ mode }: { mode: "create" | "edit" }) {
       })
       if (!guarded.started) return
       toast.success(isEdit ? "Vehicle information updated successfully." : "Vehicle created successfully.")
-      navigate(isEdit && vehicleId ? vehicleDetailPath(vehicleId) : VEHICLE_LIST_PATH)
+      navigate(isEdit && vehicleId ? vehicleDetailPath(vehicleId) : VEHICLE_LIST_PATH, { replace: true })
     } catch (error) {
       attempt.reset()
       const code = getFleetErrorCode(error)

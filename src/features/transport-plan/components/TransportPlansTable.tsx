@@ -1,6 +1,6 @@
 import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo, useState, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, MoreHorizontal } from "lucide-react";
 import {
   createTable,
@@ -55,6 +55,7 @@ export function TransportPlansTable({
   onPageChange: (page: number) => void;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const principal = useAuthStore((state) => state.principal);
   const manager = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] });
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
@@ -140,7 +141,9 @@ export function TransportPlansTable({
                 {canCreateTransportPlanInvoice(principal, row.original) ? (
                   <DropdownMenuItem
                     onSelect={() =>
-                      navigate(invoiceCreate(row.original.bookingId))
+                      navigate(invoiceCreate(row.original.bookingId), {
+                        state: { from: location.pathname + location.search },
+                      })
                     }
                   >
                     Create Invoice

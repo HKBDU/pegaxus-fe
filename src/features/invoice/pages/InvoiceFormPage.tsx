@@ -7,6 +7,7 @@ import { getInvoiceErrorMessage } from "@/features/invoice/errors"
 import type { InvoicePrefill, InvoiceType } from "@/features/invoice/types"
 import { useInvoice, useInvoiceBookingContext } from "@/features/invoice/hooks/useInvoiceCompose"
 import { ErrorState, LoadingState } from "@/shared/components/common"
+import { useBackTarget } from "@/shared/hooks/useBackTarget"
 
 interface InvoiceFormPageProps {
   mode: "create" | "edit"
@@ -38,11 +39,16 @@ export default function InvoiceFormPage({ mode }: InvoiceFormPageProps) {
   const targetBookingId = mode === "edit" ? invoiceQuery.data?.booking.bookingId : bookingId
   const bookingQuery = useInvoiceBookingContext(targetBookingId)
 
+  const fallbackHref = mode === "edit" ? invoiceDetail(invoiceId) : ROLE_ROUTES.invoices
+  const backTarget = useBackTarget({
+    fallback: fallbackHref,
+    fallbackLabel: mode === "edit" ? "Back to Invoice" : "Back to Invoices",
+    allowedOrigins: [ROLE_ROUTES.invoices, "/admin/transport-plans", "/admin/transport-requests", "/admin/claims"],
+  })
+
   function close(saved?: { invoiceId: string }, options?: { edit?: boolean }) {
     if (saved) return navigate(options?.edit ? invoiceEdit(saved.invoiceId) : invoiceDetail(saved.invoiceId), { replace: true })
-    // Cancelled: go back to where the manager came from (Transport Plans, invoice detail), else to the invoice list.
-    if (location.key !== "default") navigate(-1)
-    else navigate(mode === "edit" ? invoiceDetail(invoiceId) : ROLE_ROUTES.invoices, { replace: true })
+    navigate(backTarget.href)
   }
 
   async function reload() {
@@ -62,7 +68,7 @@ export default function InvoiceFormPage({ mode }: InvoiceFormPageProps) {
             message={getInvoiceErrorMessage(failure.error, "Unable to load the data of this invoice.")}
             onRetry={() => void failure.refetch()}
           />
-          <Link to={ROLE_ROUTES.invoices} className="block text-center text-xs font-bold uppercase tracking-wider text-primary">← Back to invoices</Link>
+          <Link to={backTarget.href} className="block text-center text-xs font-bold uppercase tracking-wider text-primary">← {backTarget.label}</Link>
         </div>
       ) : null}
       {bookingQuery.data && (mode === "create" || invoiceQuery.data) ? (

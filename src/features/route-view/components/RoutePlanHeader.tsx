@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { PageHeader } from "@/shared/components/PageHeader";
-import { transportPlanDetail } from "@/app/route-config";
+import { getPlanBackTarget } from "@/app/route-config";
+import { useAuthStore } from "@/features/auth/store";
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge";
 import type { RoutePlanDetail } from "../types";
 import { Badge } from "@/shared/components/ui/badge";
@@ -13,12 +14,15 @@ export function RoutePlanHeader({
   plan: RoutePlanDetail;
   actions?: ReactNode;
 }) {
+  const principal = useAuthStore((state) => state.principal);
+  const backTarget = getPlanBackTarget(principal, plan.transportPlanId);
+
   return (
     <header className="space-y-3">
       <PageHeader
         title="Route Plan Details"
-        backHref={transportPlanDetail(plan.transportPlanId)}
-        backLabel="Back to Transport Plan"
+        backHref={backTarget.href}
+        backLabel={backTarget.label}
       />
       <div className="space-y-3 rounded-[2px] border border-slate-200 border-l-2 border-l-primary bg-white p-3 shadow-xs">
         <div className="space-y-2">

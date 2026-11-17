@@ -129,7 +129,7 @@ function TemplateForm({ mode, template }: { mode: "create" | "edit"; template?: 
       })
       if (!guarded.started) return
       toast.success("DossierTemplate saved successfully.")
-      navigate(LIST_PATH)
+      navigate(LIST_PATH, { replace: true })
     } catch (error) {
       if (error instanceof Error && error.message === "DUPLICATE_TEMPLATE_CODE") {
         form.setError("templateCode", { message: getTemplateErrorMessage(error, "This code is already used.") }, { shouldFocus: true })

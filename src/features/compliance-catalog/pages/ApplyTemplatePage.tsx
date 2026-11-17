@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight, Check, FileX2 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { ApplyStepper } from "@/features/compliance-catalog/components/ApplyStepper"
@@ -23,6 +23,7 @@ import { ErrorState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 import { useRequestAttemptGuard } from "@/shared/hooks/useRequestAttemptGuard"
+import { useUnsavedChanges } from "@/shared/hooks/useUnsavedChanges"
 import type { EntityId } from "@/shared/types"
 import { dossierDetail } from "@/app/route-config"
 
@@ -68,8 +69,10 @@ export default function ApplyTemplatePage() {
   const requirementsQuery = useActiveRequirementOptions()
   const createDossier = useCreateDossier()
   const attempt = useRequestAttemptGuard()
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const rawStep = searchParams.get("step")
+  const requestedStep: 1 | 2 | 3 = rawStep === "3" ? 3 : rawStep === "2" ? 2 : 1
   const [mode, setMode] = useState<"template" | "custom">("template")
   const [templateId, setTemplateId] = useState<EntityId | null>(null)
   const [initializedFor, setInitializedFor] = useState<EntityId | null>(null)
@@ -104,6 +107,38 @@ export default function ApplyTemplatePage() {
     [booking?.horses, categoryOf, customs, isMandatoryRoute, selectedItemIds, template],
   )
   const counts = useMemo(() => countRows(finalRows), [finalRows])
+
+  let step: 1 | 2 | 3 = requestedStep
+  if (step === 3 && counts.total === 0) {
+    step = 2
+  }
+  if (step === 2 && mode !== "custom" && templateId === null) {
+    step = 1
+  }
+
+  useEffect(() => {
+    if (requestedStep !== step) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.set("step", String(step))
+          return next
+        },
+        { replace: true },
+      )
+    }
+  }, [requestedStep, setSearchParams, step])
+
+  const setStepWithUrl = useCallback(
+    (nextStep: 1 | 2 | 3) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.set("step", String(nextStep))
+        return next
+      })
+    },
+    [setSearchParams],
+  )
 
   useEffect(() => {
     if (existingQuery.data) {
@@ -150,7 +185,7 @@ export default function ApplyTemplatePage() {
       setSelectedItemIds(new Set(pickedTemplate.items.map(templateItemKey)))
       setInitializedFor(pickedTemplate.dossierTemplateId)
     }
-    setStep(2)
+    setStepWithUrl(2)
   }
 
   const confirm = async () => {
@@ -199,7 +234,10 @@ export default function ApplyTemplatePage() {
           `${guarded.value.failedCustomCount} custom requirement(s) could not be confirmed. Review the dossier before adding them again.`,
         );
       }
-      navigate(AFTER_CREATE_PATH(guarded.value.complianceDossierId));
+      allowNextNavigation();
+      navigate(AFTER_CREATE_PATH(guarded.value.complianceDossierId), {
+        replace: true,
+      });
     } catch (error) {
       const code = error instanceof Error ? error.message : "";
       if (code === "DOSSIER_CREATE_OUTCOME_UNKNOWN") {
@@ -221,6 +259,26 @@ export default function ApplyTemplatePage() {
       );
     }
   }
+
+  const isDirty = useMemo(() => {
+    if (step <= 1) return false;
+    if (customs.length > 0) return true;
+    if (mode === "custom") return false;
+    if (mode === "template" && pickedTemplate) {
+      const templateKeys = pickedTemplate.items.map(templateItemKey);
+      if (selectedItemIds.size !== templateKeys.length) return true;
+      return templateKeys.some((key) => !selectedItemIds.has(key));
+    }
+    return false;
+  }, [customs.length, mode, pickedTemplate, selectedItemIds, step]);
+
+  const isSubmitting = createDossier.isPending || attempt.isBlocked;
+  const { dialogElement: unsavedChangesDialog, allowNextNavigation } = useUnsavedChanges({
+    isDirty,
+    isSubmitting,
+    title: "Discard template customization?",
+    description: "You have unsaved dossier requirement customizations. Leaving will discard these changes.",
+  });
 
   if (bookingQuery.isLoading || existingQuery.isLoading) {
     return (
@@ -279,6 +337,7 @@ export default function ApplyTemplatePage() {
 
   return (
     <PageShell>
+      {unsavedChangesDialog}
       <PageHeader
         title={text.title}
         showBack={false}
@@ -330,11 +389,11 @@ export default function ApplyTemplatePage() {
             showSummary={false}
           />
           <div className="mt-6 flex items-center justify-between gap-2 border-t border-slate-200 pt-4">
-            <button type="button" className={outlineButtonClass} onClick={() => setStep(1)}>
+            <button type="button" className={outlineButtonClass} onClick={() => setStepWithUrl(1)}>
               <ArrowLeft className="size-3.5" />
               Back to templates
             </button>
-            <button type="button" className={primaryButtonClass} disabled={noRequirements} onClick={() => setStep(3)}>
+            <button type="button" className={primaryButtonClass} disabled={noRequirements} onClick={() => setStepWithUrl(3)}>
               Continue to review
               <ArrowRight className="size-3.5" />
             </button>
@@ -351,7 +410,7 @@ export default function ApplyTemplatePage() {
             </p>
           )}
           <div className="mt-6 flex items-center justify-between gap-2 border-t border-slate-200 pt-4">
-            <button type="button" className={outlineButtonClass} disabled={isCreating} onClick={() => setStep(2)}>
+            <button type="button" className={outlineButtonClass} disabled={isCreating} onClick={() => setStepWithUrl(2)}>
               <ArrowLeft className="size-3.5" />
               Back to customize
             </button>
