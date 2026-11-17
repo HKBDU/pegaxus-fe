@@ -33,6 +33,7 @@ import {
 } from "@/shared/components/ui/dialog";
 import { Input } from "@/shared/components/ui/input";
 import { Textarea } from "@/shared/components/ui/textarea";
+import { UploadLimitNotice } from "@/shared/components/file-uploader/UploadLimitNotice";
 import {
   Tooltip,
   TooltipContent,
@@ -116,6 +117,7 @@ export function UpdateAuthorityReviewDialog({
   const [decisionNote, setDecisionNote] = useState("");
   const [notifyStakeholders, setNotifyStakeholders] = useState(true);
   const [decisionFile, setDecisionFile] = useState<File | undefined>(undefined);
+  const [singleLimitNotice, setSingleLimitNotice] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [errors, setErrors] = useState<Errors>({});
   const [serverError, setServerError] = useState("");
@@ -140,6 +142,7 @@ export function UpdateAuthorityReviewDialog({
     setDecisionNote("");
     setNotifyStakeholders(true);
     setDecisionFile(undefined);
+    setSingleLimitNotice(false);
     setErrors({});
     setServerError("");
     mutation.reset();
@@ -161,13 +164,28 @@ export function UpdateAuthorityReviewDialog({
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
+    if (e.dataTransfer.files.length > 1) {
+      setSingleLimitNotice(true);
+      return;
+    }
     const file = e.dataTransfer.files?.[0];
-    if (file) handleFile(file);
+    if (file) {
+      setSingleLimitNotice(false);
+      handleFile(file);
+    }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 1) {
+      setSingleLimitNotice(true);
+      if (e.target) e.target.value = "";
+      return;
+    }
     const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    if (file) {
+      setSingleLimitNotice(false);
+      handleFile(file);
+    }
     if (e.target) e.target.value = "";
   };
 
@@ -570,6 +588,13 @@ export function UpdateAuthorityReviewDialog({
                   3. Attach Official Document *
                 </span>
 
+                {singleLimitNotice && (
+                  <UploadLimitNotice
+                    className="mb-2"
+                    onDismiss={() => setSingleLimitNotice(false)}
+                  />
+                )}
+
                 {decisionFile ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between rounded-[2px] border border-slate-200 bg-slate-50/70 p-3.5">
@@ -588,6 +613,7 @@ export function UpdateAuthorityReviewDialog({
                         type="button"
                         onClick={() => {
                           setDecisionFile(undefined);
+                          setSingleLimitNotice(false);
                           clearError("decisionFile");
                         }}
                         className="rounded-[2px] p-1 text-slate-400 transition-colors hover:bg-slate-200 hover:text-red-500"

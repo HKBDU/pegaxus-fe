@@ -124,15 +124,13 @@ function ResetPasswordForm({ email, otp }: ResetPasswordRouteState) {
   return (
     <AuthFlowLayout
       title="Create new password"
-      backTo="/forgot-password"
       footer={
         <p>
-          Already registered with PEGAXUS?{" "}
           <Link
             to="/login"
             className="font-semibold text-[#d47d00] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F39200]"
           >
-            Sign in
+            Cancel, return to Sign in
           </Link>
         </p>
       }

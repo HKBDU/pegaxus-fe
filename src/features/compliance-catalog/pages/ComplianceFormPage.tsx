@@ -183,7 +183,7 @@ function ComplianceForm({ mode, requirement }: ComplianceFormProps) {
       })
       if (!guarded.started) return
       toast.success("ComplianceRequirement entry saved successfully.")
-      navigate(LIST_PATH)
+      navigate(LIST_PATH, { replace: true })
     } catch (error) {
       const code = error instanceof Error ? error.message : ""
       if (code === "DUPLICATE_REQUIREMENT_CODE") {

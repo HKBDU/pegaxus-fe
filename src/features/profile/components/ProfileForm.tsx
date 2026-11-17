@@ -70,6 +70,9 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
       <div className="relative min-w-0">
         <ProfileAvatarPreview className="h-full min-h-0" badge={<ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none shadow-sm" />} initials={getInitials(profile.fullName)} avatarUrl={avatarPreviewUrl ?? profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
         <Input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" id="profile-avatar" type="file" accept="image/jpeg,image/png" aria-label="Upload profile avatar" onChange={(event) => {
+          if (event.currentTarget.files && event.currentTarget.files.length > 1) {
+            toast.error("Only one file allowed. Remove the current avatar to upload another.")
+          }
           const file = event.currentTarget.files?.[0]
           event.currentTarget.value = ""
           if (!file) return

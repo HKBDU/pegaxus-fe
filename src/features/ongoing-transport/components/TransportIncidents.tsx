@@ -1,7 +1,7 @@
 import { useMemo, type KeyboardEvent, type MouseEvent } from "react";
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { ArrowRight, HeartPulse, Route, TriangleAlert, Truck } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
 import { DataTable } from "@/shared/components/ui/data-table";
@@ -52,12 +52,21 @@ function IncidentStatus({ status }: { status: Incident["status"] }) {
   );
 }
 
-function ViewIncident({ href, code }: { href: string; code: string }) {
+function ViewIncident({
+  href,
+  code,
+  from,
+}: {
+  href: string;
+  code: string;
+  from?: string;
+}) {
   return (
     <Button asChild variant="outline" size="xs" className="rounded-xs">
       {/* The row opens the incident too: stop here so it does not navigate twice. */}
       <Link
         to={href}
+        state={from ? { from } : undefined}
         aria-label={`View incident ${code}`}
         onClick={(event) => event.stopPropagation()}
       >
@@ -80,6 +89,8 @@ export function TransportIncidents({
   detailHref?: (incident: Incident) => string | null;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.pathname + location.search;
   const showSeverity = incidents.some(
     (incident) => incident.severity !== undefined,
   );
@@ -138,13 +149,13 @@ export function TransportIncidents({
           const href = detailHref?.(row.original);
           return href ? (
             <div className="flex justify-end">
-              <ViewIncident href={href} code={row.original.incidentCode} />
+              <ViewIncident href={href} code={row.original.incidentCode} from={from} />
             </div>
           ) : null;
         },
       },
     ],
-    [detailHref],
+    [detailHref, from],
   );
   const table = useReactTable({
     data: incidents,
@@ -160,7 +171,7 @@ export function TransportIncidents({
   const cardProps = (incident: Incident) => {
     const href = detailHref?.(incident);
     if (!href) return {};
-    const openIncident = () => navigate(href);
+    const openIncident = () => navigate(href, { state: { from } });
     return {
       role: "link" as const,
       tabIndex: 0,
@@ -212,7 +223,7 @@ export function TransportIncidents({
         emptyMessage="No incidents."
         onRowClick={(row) => {
           const href = detailHref?.(row.original);
-          if (href) navigate(href);
+          if (href) navigate(href, { state: { from } });
         }}
       />
       <ul className="m-0 list-none divide-y divide-slate-100 p-0 md:hidden">
@@ -247,7 +258,11 @@ export function TransportIncidents({
             </div>
             {detailHref?.(incident) ? (
               <div className="flex justify-end">
-                <ViewIncident href={detailHref(incident)!} code={incident.incidentCode} />
+                <ViewIncident
+                  href={detailHref(incident)!}
+                  code={incident.incidentCode}
+                  from={from}
+                />
               </div>
             ) : null}
           </li>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 
 import { ROLE_ROUTES } from "@/app/route-config"
 import { useMarkNotificationRead } from "@/features/notification/hooks"
@@ -22,6 +22,7 @@ import { useIncidentAlerts } from "./useIncidentAlerts"
  */
 export function IncidentAlertHost() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { principal, isManager, isCoordinator, isAdminStaff, isCrew } = useIncidentViewer()
   const alerts = useIncidentAlerts()
   const markRead = useMarkNotificationRead()
@@ -44,7 +45,9 @@ export function IncidentAlertHost() {
   const reroute = () => {
     if (!active?.referenceId) return
     markRead.mutate(active.id)
-    navigate(incidentRoutes.reroute(active.referenceId))
+    navigate(incidentRoutes.reroute(active.referenceId), {
+      state: { from: location.pathname + location.search },
+    })
   }
   if (!isAdminStaff && !isCrew) return null
   const showModal = Boolean(active && urgent && incident && active.referenceType === "IncidentReport" && !modalSeen.has(active.id))

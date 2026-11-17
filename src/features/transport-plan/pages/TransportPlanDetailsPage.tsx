@@ -7,6 +7,7 @@ import {
 } from "@/shared/components/ui/tabs";
 import {
   Link,
+  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
@@ -57,6 +58,7 @@ export function TransportPlanDetails({
   personnelPanel?: ComponentType<PersonnelPanelProps>;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
   const principal = useAuthStore((state) => state.principal);
   const manager = getWorkspaceRole(principal) === "manager";
@@ -100,7 +102,11 @@ export function TransportPlanDetails({
           {canCreateTransportPlanInvoice(principal, plan) ? (
             <Button
               className="rounded-[2px]"
-              onClick={() => navigate(invoiceCreate(plan.booking.bookingId))}
+              onClick={() =>
+                navigate(invoiceCreate(plan.booking.bookingId), {
+                  state: { from: location.pathname + location.search },
+                })
+              }
             >
               Create Invoice
             </Button>

@@ -5,7 +5,7 @@ import {
   History,
   ShieldCheck,
 } from "lucide-react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ErrorState, LoadingState } from "@/shared/components/common";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { BackButton } from "@/shared/components/BackButton";
@@ -20,6 +20,7 @@ import { useDossierOverview } from "../hooks/useDossier";
 import { useDossierRole } from "../hooks/useDossierRole";
 import { ReturnTripPanel } from "../components/ReturnTripPanel";
 import { getDossierLoadErrorKind } from "../source";
+import { useBackTarget } from "@/shared/hooks/useBackTarget";
 import { usePageTitle } from "@/shared/hooks";
 
 const sections = [
@@ -56,7 +57,6 @@ function QueryError({
 
 export default function DossierDetailsPage() {
   const { dossierId = "" } = useParams<{ dossierId: string }>();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // `?tab=audit` lets the old /audit-history link open straight on its tab of this single page.
   const requestedTab = sections.find(
@@ -81,29 +81,51 @@ export default function DossierDetailsPage() {
       ? `Dossier ${query.data.dossierCode}`
       : "Dossier Details";
   usePageTitle(dossierTitle, revisionCount);
+
+  const fallbackHref =
+    role === "TRANSPORT_SPECIALIST"
+      ? ROLE_ROUTES.complianceDossiers
+      : query.data?.bookingId
+        ? `${role === "LOGISTICS_MANAGER" ? "/admin/transport-requests" : "/bookings"}/${encodeURIComponent(String(query.data.bookingId))}`
+        : role === "LOGISTICS_MANAGER"
+          ? "/admin/transport-requests"
+          : "/bookings";
+
+  const fallbackLabel =
+    role === "TRANSPORT_SPECIALIST"
+      ? "Back to Dossier Tracking"
+      : query.data?.bookingId
+        ? "Back to Booking"
+        : "Back to Bookings";
+
+  const backTarget = useBackTarget({
+    fallback: fallbackHref,
+    fallbackLabel,
+    allowedOrigins: [
+      ROLE_ROUTES.complianceDossiers,
+      "/admin/compliance-dossiers",
+      "/bookings",
+      "/admin/transport-requests",
+      "/admin/transport-plans",
+      "/notifications",
+    ],
+    labels: {
+      [ROLE_ROUTES.complianceDossiers]: "Back to Dossier Tracking",
+      "/admin/compliance-dossiers": "Back to Dossier Tracking",
+      "/admin/transport-requests": "Back to Booking",
+      "/bookings": "Back to Booking",
+      "/admin/transport-plans": "Back to Transport Plan",
+      "/notifications": "Back to Notifications",
+    },
+  });
+
   return (
     <div className="booking-page-shell min-w-0 px-5 py-6 font-sans sm:px-6 lg:px-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1440px] space-y-5">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <BackButton
-              onClick={() =>
-                navigate(
-                  role === "TRANSPORT_SPECIALIST"
-                    ? ROLE_ROUTES.complianceDossiers
-                    : query.data?.bookingId
-                      ? `${role === "LOGISTICS_MANAGER" ? "/admin/transport-requests" : "/bookings"}/${encodeURIComponent(String(query.data.bookingId))}`
-                      : role === "LOGISTICS_MANAGER"
-                        ? "/admin/transport-requests"
-                        : "/bookings",
-                )
-              }
-            >
-              {role === "TRANSPORT_SPECIALIST"
-                ? "Back to Dossier Tracking"
-                : query.data?.bookingId
-                  ? "Back to Booking"
-                  : "Back to Bookings"}
+            <BackButton to={backTarget.href}>
+              {backTarget.label}
             </BackButton>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <PageHeader

@@ -6,6 +6,7 @@ import { UPLOAD_MAX_BYTES } from '@/shared/constants/upload'
 import { Button } from '@/shared/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/shared/components/ui/dialog'
 import { Progress } from '@/shared/components/ui/progress'
+import { UploadLimitNotice } from './file-uploader/UploadLimitNotice'
 import { UPLOAD_STAGE_LABELS } from './file-uploader/constants'
 import { useFileUploader } from './file-uploader/useFileUploader'
 import { formatFileSize } from './file-uploader/utils'
@@ -67,6 +68,8 @@ export default function FileUploader({
     onUploaded, onChange, onStateChange, onError, onReject, errorMessages,
   })
   useImperativeHandle(ref, () => ({ getSnapshot, lockCompletedSelection }), [getSnapshot, lockCompletedSelection])
+  const isSingle = !multiple || maxFiles === 1
+  const [singleLimitNotice, setSingleLimitNotice] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [hiddenProgressIds, setHiddenProgressIds] = useState<Set<string>>(new Set())
   const [collapsingIds, setCollapsingIds] = useState<Set<string>>(new Set())
@@ -115,15 +118,26 @@ export default function FileUploader({
     if (dragDepth.current === 0) setDragging(false)
   }
 
+  const handleIncomingFiles = (incoming: File[]) => {
+    if (isSingle) {
+      if (incoming.length > 1 || (items.length >= 1 && incoming.length > 0)) {
+        setSingleLimitNotice(true)
+      } else if (incoming.length === 1 && items.length === 0) {
+        setSingleLimitNotice(false)
+      }
+    }
+    addFiles(incoming)
+  }
+
   const onDrop = (event: DragEvent) => {
     event.preventDefault()
     dragDepth.current = 0
     setDragging(false)
-    addFiles(Array.from(event.dataTransfer.files))
+    handleIncomingFiles(Array.from(event.dataTransfer.files))
   }
 
   const onInputChange = (event: ChangeEvent<HTMLInputElement>) => {
-    addFiles(Array.from(event.target.files ?? []))
+    handleIncomingFiles(Array.from(event.target.files ?? []))
     event.target.value = ''
   }
 
@@ -164,11 +178,24 @@ export default function FileUploader({
         <input ref={inputRef} type="file" className="hidden" accept={accept} multiple={multiple} disabled={disabled} onChange={onInputChange} />
       </div>
 
-      {rejections.length > 0 && (
-        <ul className="mt-2 space-y-0.5 text-xs text-destructive" role="alert">
-          {rejections.map((message) => <li key={message}>{message}</li>)}
-        </ul>
-      )}
+      {(() => {
+        const visibleRejections = isSingle
+          ? rejections.filter((msg) => !msg.toLowerCase().includes('limit of') && !msg.toLowerCase().includes('files reached'))
+          : rejections
+        return (
+          <>
+            {isSingle && singleLimitNotice && (
+              <UploadLimitNotice onDismiss={() => setSingleLimitNotice(false)} />
+            )}
+
+            {visibleRejections.length > 0 && (
+              <ul className="mt-2 space-y-0.5 text-xs text-destructive" role="alert">
+                {visibleRejections.map((message) => <li key={message}>{message}</li>)}
+              </ul>
+            )}
+          </>
+        )
+      })()}
 
       {items.length > 0 && (
         <ul className="mt-4 min-w-0 max-w-full space-y-2 overflow-hidden">

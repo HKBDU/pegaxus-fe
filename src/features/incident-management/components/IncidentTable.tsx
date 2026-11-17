@@ -1,6 +1,6 @@
 import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { useMemo } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
 import { Eye, MoreVertical, ReceiptText, Route } from "lucide-react"
 
@@ -32,6 +32,8 @@ interface RowActionsProps {
 
 function RowActions({ item, canReroute, canReviewCost }: RowActionsProps) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = location.pathname + location.search
   const open = item.status === "REPORTED" || item.status === "PENDING"
   const itemClass = "gap-1.5 rounded-[2px] px-1.5 py-1 text-[0.7rem]"
   return (
@@ -42,18 +44,39 @@ function RowActions({ item, canReroute, canReviewCost }: RowActionsProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={2} className="w-44 min-w-0 rounded-[2px] border-slate-200 p-0.5 shadow-md">
-        <DropdownMenuItem className={itemClass} onSelect={() => navigate(incidentRoutes.adminDetail(item.incidentReportId))}>
+        <DropdownMenuItem
+          className={itemClass}
+          onSelect={() =>
+            navigate(incidentRoutes.adminDetail(item.incidentReportId), {
+              state: { from },
+            })
+          }
+        >
           <Eye className="size-3.5 text-slate-600" />
           View details
         </DropdownMenuItem>
         {canReroute && open ? (
-          <DropdownMenuItem className={itemClass} onSelect={() => navigate(incidentRoutes.reroute(item.incidentReportId))}>
+          <DropdownMenuItem
+            className={itemClass}
+            onSelect={() =>
+              navigate(incidentRoutes.reroute(item.incidentReportId), {
+                state: { from },
+              })
+            }
+          >
             <Route className="size-3.5 text-amber-600" />
             Route decision
           </DropdownMenuItem>
         ) : null}
         {canReviewCost && item.pendingCostCount > 0 ? (
-          <DropdownMenuItem className={itemClass} onSelect={() => navigate(`${incidentRoutes.adminDetail(item.incidentReportId)}#emergency-costs`)}>
+          <DropdownMenuItem
+            className={itemClass}
+            onSelect={() =>
+              navigate(`${incidentRoutes.adminDetail(item.incidentReportId)}#emergency-costs`, {
+                state: { from },
+              })
+            }
+          >
             <ReceiptText className="size-3.5 text-amber-600" />
             Review cost ({item.pendingCostCount})
           </DropdownMenuItem>
@@ -75,6 +98,8 @@ interface IncidentTableProps {
 
 export function IncidentTable({ items, params, meta, isLoading, onFilterChange, onPageChange, onPageSizeChange }: IncidentTableProps) {
   const { isManager, isCoordinator } = useIncidentViewer()
+  const location = useLocation()
+  const from = location.pathname + location.search
 
   const columns = useMemo<ColumnDef<IncidentListItem>[]>(
     () => [
@@ -84,7 +109,11 @@ export function IncidentTable({ items, params, meta, isLoading, onFilterChange, 
         enableSorting: false,
         header: "INCIDENT CODE",
         cell: ({ row }) => (
-          <Link to={incidentRoutes.adminDetail(row.original.incidentReportId)} className={codeLinkClassName}>
+          <Link
+            to={incidentRoutes.adminDetail(row.original.incidentReportId)}
+            state={{ from }}
+            className={codeLinkClassName}
+          >
             {row.original.incidentCode}
           </Link>
         ),
@@ -179,7 +208,7 @@ export function IncidentTable({ items, params, meta, isLoading, onFilterChange, 
         ),
       },
     ],
-    [isCoordinator, isManager],
+    [isCoordinator, isManager, from],
   )
 
   const table = useReactTable({
