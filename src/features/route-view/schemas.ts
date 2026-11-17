@@ -118,7 +118,9 @@ export const routePlanDetailSchema = z.object({
   status: routePlanStatusSchema,
   isCrossBorder: z.boolean(),
   totalDistanceKm: z.number().nonnegative(),
-  estimatedDurationMinutes: durationMinutes,
+  // An active PRIMARY reports first planned departure to last planned arrival of the itinerary it now follows. When a backup
+  // started earlier than the PRIMARY was planned, that span is negative: show no duration instead of failing the page.
+  estimatedDurationMinutes: z.number().int().transform((v) => (v < 0 ? null : v)),
   plannedDepartureAt: timestamp.nullish(),
   plannedArrivalAt: timestamp.nullish(),
   segments: z.array(routeSegmentSchema),
