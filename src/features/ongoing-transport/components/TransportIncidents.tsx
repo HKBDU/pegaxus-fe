@@ -14,7 +14,19 @@ import {
 import { formatTransportDate, formatTransportLabel } from "../format";
 import type { TransportOverview } from "../types";
 
-type Incident = TransportOverview["activeIncidents"][number];
+type IncidentStatusValue = "REPORTED" | "PENDING" | "RESOLVED" | "CANCELLED";
+/** An incident of the transport in any status: resolved and cancelled ones stay listed with their new status. */
+type Incident = Omit<TransportOverview["activeIncidents"][number], "status"> & {
+  status: IncidentStatusValue;
+};
+const statusTone: Record<IncidentStatusValue, string> = {
+  REPORTED: "border-rose-100 bg-rose-50 text-rose-700",
+  PENDING: "border-amber-100 bg-amber-50 text-amber-800",
+  RESOLVED: "border-emerald-100 bg-emerald-50 text-emerald-700",
+  CANCELLED: "border-slate-200 bg-slate-50 text-slate-600",
+};
+const isOpen = (incident: Incident) =>
+  incident.status === "REPORTED" || incident.status === "PENDING";
 const categories = {
   HORSE_HEALTH: { label: "Horse health", icon: HeartPulse },
   ROUTE_CHANGE: { label: "Route change", icon: Route },
@@ -38,7 +50,7 @@ function IncidentStatus({ status }: { status: Incident["status"] }) {
   return (
     <Badge
       variant="outline"
-      className={`rounded-xs text-[10px] ${status === "REPORTED" ? "border-rose-100 bg-rose-50 text-rose-700" : "border-amber-100 bg-amber-50 text-amber-800"}`}
+      className={`rounded-xs text-[10px] ${statusTone[status]}`}
     >
       <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       {formatTransportLabel(status)}
@@ -101,21 +113,27 @@ export function TransportIncidents({
     };
   };
   if (incidents.length === 0) return null;
+  const open = incidents.filter(isOpen).length;
   return (
     <section
-      aria-labelledby="active-incidents"
+      aria-labelledby="transport-incidents"
       className="overview-panel overflow-hidden"
     >
-      <div className="flex items-center justify-between gap-3 border-b border-rose-100 bg-rose-50/60 px-4 py-3">
-        <h2 id="active-incidents" className="overview-heading !text-rose-700">
+      <div
+        className={`flex items-center justify-between gap-3 border-b px-4 py-3 ${open ? "border-rose-100 bg-rose-50/60" : "border-slate-200 bg-slate-50/60"}`}
+      >
+        <h2
+          id="transport-incidents"
+          className={`overview-heading ${open ? "!text-rose-700" : "!text-slate-700"}`}
+        >
           <TriangleAlert aria-hidden="true" />
-          Active incidents
+          Incidents
         </h2>
         <Badge
           variant="outline"
-          className="rounded-xs border-rose-200 bg-white text-[11px] text-rose-700"
+          className={`rounded-xs bg-white text-[11px] ${open ? "border-rose-200 text-rose-700" : "border-slate-200 text-slate-600"}`}
         >
-          {incidents.length} active
+          {open ? `${open} active · ${incidents.length} total` : `${incidents.length} total`}
         </Badge>
       </div>
       <div className="hidden overflow-x-auto md:block">
