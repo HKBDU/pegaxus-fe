@@ -8,6 +8,7 @@ import {
 } from "./position";
 import type { DriverLocationRequest, LocationSharingState } from "./types";
 import { distanceMeters } from "@/features/handover/utils";
+import { mockGeolocation } from "./simulator/mockGeolocation";
 
 export const ARRIVAL_WARN_METERS = 400;
 
@@ -394,6 +395,12 @@ export class LocationSender {
   private onPosition(position: GeolocationPosition, generation: number) {
     if (!this.current(generation) || !this.state.active || !this.foreground())
       return;
+    if (mockGeolocation.getIsEnabled()) {
+      const sample = mockGeolocation.getLastSample();
+      if (!sample || sample.transportId !== this.context.transportId ||
+        sample.routePlanRouteId !== this.context.segmentId ||
+        Date.parse(sample.recordedAt) !== position.timestamp) return;
+    }
     this.publish({ permissionStatus: "granted" });
     const now = Date.now();
     const body = locationFromPosition(position, now);

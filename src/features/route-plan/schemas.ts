@@ -1,6 +1,4 @@
 import { z } from 'zod'
-import type { RouteSegmentInput } from './types'
-
 const entityId = z.string()
 const dateTime = z.string().datetime({ offset: true, message: 'Must be a valid ISO date-time.' })
 
@@ -201,7 +199,7 @@ export const outsourceSegmentResultSchema = z.object({
 }).passthrough()
 export type OutsourceSegmentResult = z.infer<typeof outsourceSegmentResultSchema>
 
-function validateSequence(segments: RouteSegmentInput[], context: z.RefinementCtx) {
+function validateSequence(segments: { sequenceNo: number }[], context: z.RefinementCtx) {
   segments.forEach((segment, index) => {
     if (segment.sequenceNo !== index + 1) {
       context.addIssue({ code: 'custom', path: ['segments', index, 'sequenceNo'], message: 'Sequence must be continuous from 1.' })

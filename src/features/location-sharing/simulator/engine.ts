@@ -204,7 +204,11 @@ export function parseGeoJsonToCoordinates(geoJsonInput: unknown): [number, numbe
     // FeatureCollection. Preserve feature order so a multipart route remains
     // one continuous path instead of falling back to a straight line.
     if ("type" in data && data.type === "FeatureCollection" && Array.isArray(data.features)) {
-      return data.features.flatMap((feat: unknown) => parseGeoJsonToCoordinates(feat));
+      const parts = data.features.map((feat: unknown) => parseGeoJsonToCoordinates(feat));
+      if (parts.some((part: [number, number][]) => part.length < 2)) return [];
+      for (let i = 1; i < parts.length; i++)
+        if (haversineDistance(parts[i - 1].at(-1)!, parts[i][0]) > 50) return [];
+      return parts.flat();
     }
 
     // Feature
@@ -217,9 +221,11 @@ export function parseGeoJsonToCoordinates(geoJsonInput: unknown): [number, numbe
       return data.coordinates as [number, number][];
     }
     if ("type" in data && data.type === "MultiLineString" && Array.isArray(data.coordinates)) {
-      return data.coordinates.flatMap((line: unknown) =>
-        Array.isArray(line) ? (line as [number, number][]) : [],
-      );
+      const parts = data.coordinates as [number, number][][];
+      if (parts.some((part) => !Array.isArray(part) || part.length < 2)) return [];
+      for (let i = 1; i < parts.length; i++)
+        if (haversineDistance(parts[i - 1].at(-1)!, parts[i][0]) > 50) return [];
+      return parts.flat();
     }
 
     // Direct array of coordinates

@@ -43,7 +43,25 @@ function buildSegments(
       overview.transport.status === "COMPLETED" ||
       (overview.transport.status === "IN_TRANSIT" && order < currentOrder);
     const outsourced =
-      order === count && overview.transport.status !== "COMPLETED";
+      overview.totalSegments >= 4
+        ? (order === count - 1 || order === count) && overview.transport.status !== "COMPLETED"
+        : order === count && overview.transport.status !== "COMPLETED";
+
+    const provider = outsourced
+      ? order === count - 1
+        ? {
+            transportProviderId: `${current.routePlanId}-ferry`,
+            providerName: "EuroHorse Channel Ferry",
+            serviceType: "Ferry crossing",
+            providerReference: "FLOW4-FERRY",
+          }
+        : {
+            transportProviderId: `${current.routePlanId}-road-provider`,
+            providerName: "Continental Horse Transit B.V.",
+            serviceType: "Partner road transit",
+            providerReference: "FLOW4-PARTNER",
+          }
+      : null;
     const history = order < currentOrder && current.routeType !== "PRIMARY";
     return {
       ...current,
@@ -60,7 +78,7 @@ function buildSegments(
       isCurrent: false,
       fromLocation: points[index],
       toLocation: points[index + 1],
-      transportMode: outsourced ? "SEA" : "ROAD",
+      transportMode: outsourced ? (order === count - 1 ? "SEA" : "ROAD") : "ROAD",
       distanceKm: outsourced ? null : 80 + index * 12.5,
       status: completed ? "COMPLETED" : "PLANNED",
       plannedDepartureAt: timestamp(order * 60),
@@ -70,14 +88,7 @@ function buildSegments(
       driver: outsourced ? null : current.driver,
       escort: outsourced ? null : current.escort,
       isOutsourced: outsourced,
-      provider: outsourced
-        ? {
-            transportProviderId: `${current.routePlanId}-ferry`,
-            providerName: "Journey Ferry Partner",
-            serviceType: "Ferry crossing",
-            providerReference: "FLOW4-PREVIEW",
-          }
-        : null,
+      provider,
       vehicles: outsourced ? [] : current.vehicles,
       note:
         audience === "customer"
@@ -121,8 +132,10 @@ function buildBoundaries(
         Boolean(from?.driver?.employeeId) &&
         from?.driver?.employeeId === to?.driver?.employeeId;
       const types =
-        outsourced || exempt
+        exempt
           ? []
+          : outsourced
+            ? ["CARRIER_HANDOVER"]
           : first
             ? ["PICKUP"]
             : last
@@ -137,7 +150,6 @@ function buildBoundaries(
         !exempt && executed && (audience !== "customer" || first || last);
       const canCreate =
         !exempt &&
-        !outsourced &&
         !executed &&
         audience !== "customer" &&
         operator &&

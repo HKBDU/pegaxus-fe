@@ -21,6 +21,7 @@ import {
   presignedUpload,
 } from "@/shared/utils/presigned"
 import { getCurrentGpsCoordinates } from "@/shared/utils/gps"
+import { mockGeolocation } from "@/features/location-sharing/simulator/mockGeolocation"
 import { stampPhoto } from "@/shared/utils/photo-stamp"
 import { formatUtcDateTime } from "@/shared/utils/datetime"
 
@@ -38,6 +39,7 @@ type PhotoUpload = {
 }
 
 export interface PhotoCaptureSectionProps {
+  transportId?: string
   files: File[]
   maxFiles?: number
   acceptedTypes?: string[]
@@ -117,7 +119,8 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
     capturedAt,
     coordinates,
     gpsCoordinates,
-    useDeviceGps = true,
+    transportId,
+    useDeviceGps = false,
     captions = [],
     documentLabel = "Photographic Proof",
     statusLabel = "Pending Verification",
@@ -287,7 +290,8 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
     try {
       if (!entry.processed) {
         // Pickers are opened synchronously; GPS is optional and never gates selection.
-        const gps = await (gpsPromise ?? getCurrentGpsCoordinates())
+        const gps = await (gpsPromise ?? (useDeviceGps ? getCurrentGpsCoordinates() : Promise.resolve(gpsCoordinates ?? null)))
+        if (!gps && !useDeviceGps) throw new Error("Driver Mock GPS is unavailable. Refresh the journey position and try again.")
         if (!isCurrent()) return
         const index = selection.current.files.indexOf(entry.file)
         if (index < 0) return
@@ -415,9 +419,13 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
     callbacks.current.onError?.([...new Set(errors)].join(" ") || null)
     if (!newEntries.length) return
     publishSelection(next)
+    const sample = mockGeolocation.getIsEnabled() ? mockGeolocation.getLastSample() : null
+    const localMockGps = transportId && sample?.transportId === transportId &&
+      Date.now() - Date.parse(sample.recordedAt) <= 120_000
+      ? { latitude: sample.latitude, longitude: sample.longitude } : null
     const gpsPromise = useDeviceGps
       ? getCurrentGpsCoordinates()
-      : Promise.resolve(gpsCoordinates ?? null)
+      : Promise.resolve(localMockGps ?? gpsCoordinates ?? null)
     for (const entry of newEntries) void processAndUpload(entry, gpsPromise)
   }
 
