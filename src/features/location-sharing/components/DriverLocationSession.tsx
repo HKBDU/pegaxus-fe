@@ -138,7 +138,7 @@ export function DriverLocationSession({ children }: { children: ReactNode }) {
       : assigned.data?.items.find((item) => item.transportId === transportId);
   const assignedSegmentId = assignment?.currentSegment?.routePlanRouteId;
   const observedSegmentId = query.data?.currentSegment?.routePlanRouteId;
-  const lastMismatch = useRef<string | null>(null);
+    const lastMismatch = useRef<string | null>(null);
   useEffect(() => {
     if (!transportId || !assignment || !query.data || assignedSegmentId === observedSegmentId) {
       lastMismatch.current = null;
@@ -149,6 +149,23 @@ export function DriverLocationSession({ children }: { children: ReactNode }) {
     lastMismatch.current = key;
     void refreshTransportProgress(client, transportId);
   }, [client, transportId, assignment, query.data, assignedSegmentId, observedSegmentId]);
+  const isOutsourcedSegment = query.data?.currentSegment?.isOutsourced === true;
+  useEffect(() => {
+    if (!transportId || !isOutsourcedSegment) return;
+
+    // Poll every 15s, up to 20 times (5 minutes) to detect segment changes after provider handover completes
+    let count = 0;
+    const interval = setInterval(() => {
+      count++;
+      if (count > 20) {
+        clearInterval(interval);
+        return;
+      }
+      void refreshTransportProgress(client, transportId);
+    }, 15_000);
+
+    return () => clearInterval(interval);
+  }, [client, transportId, isOutsourcedSegment]);
   const reload = useCallback(() => {
     if (driver && source === "real") void refetchAssignment();
     if (transportId) void refreshTransportProgress(client, transportId);
