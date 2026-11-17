@@ -42,8 +42,15 @@ const bookingErrorMessages: Record<string, string> = {
 }
 
 /** The booking service rethrows API failures as Error(errorCode); mock mode throws the same codes. */
+/** Codes whose BE message names the exact horse, booking and dates, so it is shown as it is. */
+const SPECIFIC_BACKEND_MESSAGES = new Set(["HORSE_SCHEDULE_CONFLICT"])
+
 export function getBookingErrorMessage(error: unknown, fallback: string) {
   const code = error instanceof Error ? error.message : ""
+  if (SPECIFIC_BACKEND_MESSAGES.has(code)) {
+    const message = ((error as Error).cause as { response?: { data?: { message?: unknown } } } | undefined)?.response?.data?.message
+    if (typeof message === "string" && message) return message
+  }
   return bookingErrorMessages[code] ?? getValidationMessage(error) ?? fallback
 }
 

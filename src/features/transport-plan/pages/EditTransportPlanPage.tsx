@@ -64,6 +64,7 @@ export default function EditTransportPlanPage() {
                 key={transportPlanId}
                 bookingId={plan.booking.bookingId}
                 bookingCreatedAt={plan.booking.createdAt}
+                isReturnBooking={Boolean(plan.booking.returnOfTransportId)}
                 originCountry={plan.booking.originCountry}
                 destinationCountry={plan.booking.destinationCountry}
                 originLatitude={plan.booking.originLatitude}

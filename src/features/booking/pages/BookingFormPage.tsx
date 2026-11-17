@@ -14,6 +14,7 @@ import { bookingKeys } from "@/features/booking/hooks/useBookings"
 import type { Horse } from "@/features/horse/types"
 import { useAvailableHorses, useBookingEditLock, useBookingRequestGuard, useCreateBooking, useUpdateBooking } from "@/features/booking/hooks"
 import { DepartureDateGuide } from "@/features/booking/components/DepartureDateGuide"
+import { ReturnBookingEditForm } from "@/features/booking/components/ReturnBookingEditForm"
 import { getDepartureRule } from "@/features/booking/lib/departure-rule"
 import { addDays, bookingFormSchema, type BookingFormSchemaValues } from "@/features/booking/schemas"
 import type { AvailableHorse, Booking, BookingFormValues } from "@/features/booking/types"
@@ -1040,6 +1041,17 @@ export default function BookingFormPage({ mode }: { mode: "create" | "edit" }) {
   if (lock.isLocking) return <div className={shell}><Skeleton className="mx-auto h-96 max-w-[1152px] rounded-[2px] bg-[#e9e6de]" /></div>
   if (lock.error || !lock.booking) {
     return <div className={shell}><div className="mx-auto max-w-[1152px]"><ErrorState message={getBookingErrorMessage(lock.error, "Unable to open this booking for editing.")} /></div></div>
+  }
+  // A return booking keeps its stop, destination and horse; only its dates and note are edited, with no lead time.
+  if (lock.booking.returnOf) {
+    return (
+      <ReturnBookingEditForm
+        key={`${lock.session.sessionVersion}:${lock.session.accountId}:${lock.booking.bookingId}`}
+        booking={lock.booking}
+        session={lock.session}
+        onSaveFailed={lock.refresh}
+      />
+    )
   }
 
   return (

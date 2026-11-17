@@ -428,6 +428,7 @@ export function RoutePlanBuilder({
     const availableTo = plan.arrivalAt?.slice(0, 10);
     void loadAllVehicles({
       ...(availableFrom && availableTo ? { availableFrom, availableTo } : {}),
+      assignableOnly: true,
       transportPlanId,
     })
       .then((items) => {

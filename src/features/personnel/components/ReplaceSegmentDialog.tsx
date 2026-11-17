@@ -82,16 +82,21 @@ export function ReplaceSegmentDialog({ row, onOpenChange, plan, routePlan }: Rep
   const newDriver = values.driverEmployeeId ? picked.current.get(values.driverEmployeeId) : undefined
   const newEscort = values.escortEmployeeId ? picked.current.get(values.escortEmployeeId) : undefined
 
+  // A BACKUP / RETURN segment that took over during the trip is changed through its own plan and version.
+  const target = row?.routePlanId && row.routePlanUpdatedAt
+    ? { routePlanId: row.routePlanId, updatedAt: row.routePlanUpdatedAt }
+    : routePlan ? { routePlanId: routePlan.routePlanId, updatedAt: routePlan.updatedAt } : null
+
   const submit = form.handleSubmit(async (formValues) => {
-    if (!row || !routePlan) return
+    if (!row || !target) return
     try {
       const guarded = await attempt.run(() =>
         change.mutateAsync({
-          routePlanId: routePlan.routePlanId,
+          routePlanId: target.routePlanId,
           routePlanRouteId: row.routePlanRouteId,
           // PS4: an omitted id keeps the current person.
           payload: {
-            lastUpdatedAt: routePlan.updatedAt,
+            lastUpdatedAt: target.updatedAt,
             ...(formValues.driverEmployeeId && formValues.driverEmployeeId !== row.driver?.employeeId ? { driverEmployeeId: formValues.driverEmployeeId } : {}),
             ...(formValues.escortEmployeeId && formValues.escortEmployeeId !== row.escort?.employeeId ? { escortEmployeeId: formValues.escortEmployeeId } : {}),
             reason: formValues.reason.trim(),
@@ -150,7 +155,7 @@ export function ReplaceSegmentDialog({ row, onOpenChange, plan, routePlan }: Rep
         footer={
           <>
             <CancelButton onClick={() => onOpenChange(false)} />
-            <PrimaryButton type="button" disabled={isSaving || !routePlan} onClick={() => void submit()}>
+            <PrimaryButton type="button" disabled={isSaving || !target} onClick={() => void submit()}>
               {isSaving ? "Saving..." : "Confirm reassignment"}
             </PrimaryButton>
           </>

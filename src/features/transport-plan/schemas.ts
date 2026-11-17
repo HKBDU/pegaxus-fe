@@ -225,6 +225,8 @@ export const approvedBookingDetailSchema = z
       .nullable(),
     customer: customerSchema.extend({ phone: optionalText }),
     customerNote: optionalText,
+    // Set on a return booking, which has no departure lead time.
+    returnOf: z.object({ transportId: entityIdSchema }).nullish(),
     horses: z.array(
       z.object({
         horseId: entityIdSchema,
@@ -334,6 +336,8 @@ export const transportPlanDetailSchema = z
       requestedArrivalDate: z.iso.date().nullish(),
       createdAt: optionalTimestamp,
       specialRequirements: optionalText,
+      // Set on a return booking, which has no departure lead time.
+      returnOfTransportId: entityIdSchema.nullish(),
     }),
     transport: z.object({
       transportId: entityIdSchema,

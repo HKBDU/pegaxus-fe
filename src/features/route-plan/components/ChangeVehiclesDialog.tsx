@@ -197,6 +197,7 @@ export function ChangeVehiclesDialog({
             availableFrom: dateOnly(segment.plannedDepartureAt),
             availableTo: dateOnly(segment.plannedArrivalAt),
             transportMode: segment.route.transportMode,
+            assignableOnly: true,
             transportPlanId: snapshot.routePlan.transportPlanId,
           });
           return [segment.routePlanRouteId, vehicles] as const;
