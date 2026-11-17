@@ -18,6 +18,21 @@ export interface SegmentEndpoint {
   locationName?: string;
 }
 
+/**
+ * Allowed coordinate tolerance for uploaded custom GeoJSON routes:
+ * 0.02 degrees corresponds to approximately ~2.2 km.
+ * Custom uploaded routes must have their start and end points within this threshold of the segment endpoints.
+ */
+export const CUSTOM_GEOJSON_ENDPOINT_TOLERANCE_DEG = 0.02;
+
+export const isNearEndpoint = (
+  a: [number, number],
+  b: { latitude: number; longitude: number },
+  tolerance = CUSTOM_GEOJSON_ENDPOINT_TOLERANCE_DEG,
+) =>
+  Math.abs(a[0] - b.longitude) < tolerance &&
+  Math.abs(a[1] - b.latitude) < tolerance;
+
 export function useGpsSimulator(initialSegment?: {
   transportId: string;
   routePlanRouteId: string;
@@ -226,8 +241,9 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
       const coords = parseGeoJsonToCoordinates(geoJsonInput);
       const from = initialSegment?.fromLocation;
       const to = initialSegment?.toLocation;
-      const near = (a: [number, number], b: {latitude: number; longitude: number}) =>
-        Math.abs(a[0] - b.longitude) < 0.02 && Math.abs(a[1] - b.latitude) < 0.02;
+      const near = (a: [number, number], b: { latitude: number; longitude: number }) =>
+        Math.abs(a[0] - b.longitude) < CUSTOM_GEOJSON_ENDPOINT_TOLERANCE_DEG &&
+        Math.abs(a[1] - b.latitude) < CUSTOM_GEOJSON_ENDPOINT_TOLERANCE_DEG;
       if (!from || !to) return false;
       let endpoints;
       try { endpoints = [resolveEndpoint(from), resolveEndpoint(to)] as const; }
