@@ -71,26 +71,28 @@ export function VehicleIncidentForm({
       <IncidentFieldError
         message={errors.vehicleId && `Vehicle: ${errors.vehicleId}`}
       />
-      <IncidentCommonForm
-        value={value}
-        photos={photos}
-        onChange={(next) => onChange({ ...value, ...next })}
-        onPhotosChange={onPhotosChange}
-        disabled={disabled}
-        photoError={errors.photoFiles}
-        errors={errors}
-        locationStatus={locationStatus}
-        locationError={locationError}
-        gpsCoordinates={gpsCoordinates}
-        onPhotoUploadStateChange={onPhotoUploadStateChange}
-        onPhotoError={onPhotoError}
-      />
-      <VehicleIncidentFields
-        value={value}
-        onChange={(next) => onChange({ ...value, ...next })}
-        disabled={disabled}
-        errors={errors}
-      />
+      <div className="grid min-w-0 items-start gap-5 xl:grid-cols-2">
+        <IncidentCommonForm
+          value={value}
+          photos={photos}
+          onChange={(next) => onChange({ ...value, ...next })}
+          onPhotosChange={onPhotosChange}
+          disabled={disabled}
+          photoError={errors.photoFiles}
+          errors={errors}
+          locationStatus={locationStatus}
+          locationError={locationError}
+          gpsCoordinates={gpsCoordinates}
+          onPhotoUploadStateChange={onPhotoUploadStateChange}
+          onPhotoError={onPhotoError}
+        />
+        <VehicleIncidentFields
+          value={value}
+          onChange={(next) => onChange({ ...value, ...next })}
+          disabled={disabled}
+          errors={errors}
+        />
+      </div>
       <IncidentSubmitBar
         isSubmitting={submitting}
         disabled={disabled || !areIncidentPhotosReady(photos)}

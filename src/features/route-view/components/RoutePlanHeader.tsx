@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "@/shared/components/PageHeader";
-import { transportPlanDetail } from "@/app/route-config";
+import { getPlanBackTarget } from "@/app/route-config";
+import { useAuthStore } from "@/features/auth/store";
 import { ApprovedBookingBadge } from "@/features/transport-plan/components/ApprovedBookingBadge";
 import type { RoutePlanDetail } from "../types";
 import { Badge } from "@/shared/components/ui/badge";
@@ -9,16 +11,30 @@ import { REJECTED_BY_MANAGER } from "@/shared/constants/route-plan-status";
 export function RoutePlanHeader({
   plan,
   actions,
+  fallbackBack,
 }: {
   plan: RoutePlanDetail;
   actions?: ReactNode;
+  /** Where Back goes when the page was opened without an earlier page in this tab. */
+  fallbackBack?: { href: string; label: string };
 }) {
+  const navigate = useNavigate();
+  const principal = useAuthStore((state) => state.principal);
+  // "default" marks the first entry of the tab: there is no earlier page to return to.
+  const hasHistory = useLocation().key !== "default";
+  // Without history, Back goes to the page this role can open (a Route Coordinator cannot open Transport Plans).
+  const fallback = fallbackBack ?? getPlanBackTarget(principal, plan.transportPlanId);
   return (
     <header className="space-y-3">
       <PageHeader
         title="Route Plan Details"
-        backHref={transportPlanDetail(plan.transportPlanId)}
-        backLabel="Back to Transport Plan"
+        backHref={fallback.href}
+        backLabel={hasHistory ? "Back" : fallback.label}
+        onBack={() => {
+          if (!hasHistory) return;
+          navigate(-1);
+          return false;
+        }}
       />
       <div className="space-y-3 rounded-[2px] border border-slate-200 border-l-2 border-l-primary bg-white p-3 shadow-xs">
         <div className="space-y-2">

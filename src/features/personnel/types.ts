@@ -130,6 +130,13 @@ export interface Phase2Segment {
   escort: EmployeeBrief | null
   provider: ProviderBrief | null
   isComplete: boolean
+  /** PRIMARY, or BACKUP / RETURN for a segment of the route that took over during the trip. */
+  routeType?: "PRIMARY" | "BACKUP" | "RETURN"
+  /** A PRIMARY segment replaced by an activated BACKUP or RETURN: kept for history, nobody runs it. */
+  isSuperseded?: boolean
+  fromLocationName?: string | null
+  toLocationName?: string | null
+  fromCountry?: string | null
 }
 
 export interface Phase2Assignment {

@@ -22,11 +22,12 @@ const retryOnlyNetwork = (failureCount: number, error: unknown) =>
   failureCount < 2 && (error as { errorCode?: string })?.errorCode === "NETWORK_ERROR"
 
 /** IN7. */
-export function useIncidentList(params: IncidentListParams) {
+export function useIncidentList(params: IncidentListParams, enabled = true) {
   const session = useSession()
   return useQuery({
     queryKey: incidentKeys.list(params, session),
     queryFn: ({ signal }) => incidentService.list(params, signal),
+    enabled,
     placeholderData: keepPreviousData,
     retry: retryOnlyNetwork,
   })

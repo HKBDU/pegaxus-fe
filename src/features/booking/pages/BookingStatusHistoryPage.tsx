@@ -2,6 +2,7 @@ import { useLocation, useParams } from "react-router-dom";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
 import { useAuthStore } from "@/features/auth/store";
+import { usePageTitle } from "@/shared/hooks";
 import {
   bookingHistoryDetailsPath,
   resolveBookingHistoryShell,
@@ -9,6 +10,7 @@ import {
 import { BookingHistoryView } from "../components/history/BookingHistoryView";
 
 export default function BookingStatusHistoryPage() {
+  usePageTitle("Booking History");
   const { bookingId } = useParams<{ bookingId: string }>();
   const location = useLocation();
   const roles = useAuthStore((state) => state.principal?.roles);

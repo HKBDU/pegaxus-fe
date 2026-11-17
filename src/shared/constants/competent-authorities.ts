@@ -1,5 +1,5 @@
 /**
- * Competent authorities a compliance dossier can be submitted to, one or more for every country with locations in the system.
+ * Competent authorities a compliance dossier can be submitted to, one or more for every country a booking can start or end in (the EU members and the United Kingdom).
  * The BE accepts only these names, and only for a country on the dossier's route
  * (Pegaxus.Service/Common/CompetentAuthorities.cs). Keep both lists identical.
  */
@@ -22,6 +22,20 @@ export const COMPETENT_AUTHORITIES = [
   { name: "DVFA - Danish Veterinary and Food Administration (Denmark)", countryCode: "DK" },
   { name: "SVS - State Veterinary Administration (Czech Republic)", countryCode: "CZ" },
   { name: "DGAV - Direção-Geral de Alimentação e Veterinária (Portugal)", countryCode: "PT" },
+  { name: "BFSA - Bulgarian Food Safety Agency (Bulgaria)", countryCode: "BG" },
+  { name: "Veterinary and Food Safety Directorate - Ministry of Agriculture, Forestry and Fisheries (Croatia)", countryCode: "HR" },
+  { name: "Veterinary Services - Ministry of Agriculture, Rural Development and Environment (Cyprus)", countryCode: "CY" },
+  { name: "PTA - Agriculture and Food Board (Estonia)", countryCode: "EE" },
+  { name: "Ruokavirasto - Finnish Food Authority (Finland)", countryCode: "FI" },
+  { name: "DG Veterinary Services - Ministry of Rural Development and Food (Greece)", countryCode: "GR" },
+  { name: "Nébih - National Food Chain Safety Office (Hungary)", countryCode: "HU" },
+  { name: "PVD - Food and Veterinary Service (Latvia)", countryCode: "LV" },
+  { name: "VMVT - State Food and Veterinary Service (Lithuania)", countryCode: "LT" },
+  { name: "ALVA - Luxembourg Veterinary and Food Administration (Luxembourg)", countryCode: "LU" },
+  { name: "VRD - Veterinary Regulation Directorate (Malta)", countryCode: "MT" },
+  { name: "ANSVSA - National Sanitary Veterinary and Food Safety Authority (Romania)", countryCode: "RO" },
+  { name: "ŠVPS SR - State Veterinary and Food Administration (Slovakia)", countryCode: "SK" },
+  { name: "UVHVVR - Administration for Food Safety, Veterinary Sector and Plant Protection (Slovenia)", countryCode: "SI" },
 ] as const;
 
 export type CompetentAuthority = { name: string; countryCode: string };

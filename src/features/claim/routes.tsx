@@ -1,6 +1,6 @@
 // oxlint-disable react/only-export-components -- route modules intentionally declare lazy pages and export configuration
 import { lazy, Suspense, type ReactNode } from "react"
-import type { RouteObject } from "react-router-dom"
+import { Navigate, type RouteObject } from "react-router-dom"
 
 import { LOGISTICS_MANAGER_READ } from "@/app/route-config"
 import { LoadingState } from "@/shared/components/common"
@@ -39,6 +39,7 @@ export const claimRoutes: RouteObject[] = [
       </ProtectedRoute>
     ),
     children: [
+      { index: true, element: <Navigate to=".." relative="path" replace /> },
       { path: "new", element: page(<CustomerClaimNewPage />) },
       { path: ":claimId", element: page(<CustomerClaimDetailPage />) },
     ],

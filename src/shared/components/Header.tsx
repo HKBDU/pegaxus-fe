@@ -1,4 +1,4 @@
-import { House, MapPin, Menu, Truck } from "lucide-react"
+import { Bell, House, MapPin, Menu, Truck } from "lucide-react"
 import { Link, NavLink, useLocation } from "react-router-dom"
 
 import logo from "@/assets/logo-dark.png"
@@ -101,6 +101,16 @@ export function Header({
 
   if (variant === "customer") {
     const account = rightContent ?? <ProfileDropdown isLoggedIn={isLoggedIn} user={user} />
+    const customerNotificationButton = notificationButton ?? (
+      <Link
+        to="/login"
+        state={{ from: location }}
+        aria-label="Sign in to view notifications"
+        className="inline-flex size-9 items-center justify-center text-[#d7d9dc] transition-colors hover:bg-white/10 hover:text-white"
+      >
+        <Bell className="size-[18px]" />
+      </Link>
+    )
     return (
       <header ref={navbarRef} className={cn("brand-navbar customer-navbar", className)}>
         <BrandLogo src={logoSrc} alt={logoAlt} />
@@ -117,9 +127,9 @@ export function Header({
           ))}
         </nav>
         <div className="brand-nav-actions">
-          <div className="brand-account-tools">{notificationButton}{account}</div>
+          <div className="brand-account-tools">{customerNotificationButton}{account}</div>
         </div>
-        <div className="brand-mobile-account">{notificationButton}{account}</div>
+        <div className="brand-mobile-account">{customerNotificationButton}{account}</div>
         <BrandMobileMenu title="Customer navigation">
           {(close) => (
             <>

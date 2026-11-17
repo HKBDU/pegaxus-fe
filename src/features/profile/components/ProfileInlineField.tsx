@@ -56,7 +56,7 @@ export function ProfileInlineField({
           }}
           className="profile-edit-field !h-9 !min-w-0 !flex-1 !px-2 !py-1 !text-[#181818] text-lg font-bold sm:text-xl"
         />
-        <Button type="button" disabled={disabled} size="icon" className="size-8 shrink-0 rounded-[5px] bg-[#f39200] hover:bg-[#d97f00]" aria-label={`Save ${label}`} onClick={onCommit}>
+        <Button type="button" disabled={disabled} size="icon" className="size-8 shrink-0 rounded-[5px] bg-[#f39200] text-[#181818] hover:bg-[#d97f00]" aria-label={`Save ${label}`} onClick={onCommit}>
           <Check className="size-4" />
         </Button>
         <Button type="button" disabled={disabled} variant="ghost" size="icon" className="size-8 shrink-0 rounded-[5px] text-white hover:bg-white/15 hover:text-white" aria-label={`Cancel ${label}`} onClick={onCancel}>

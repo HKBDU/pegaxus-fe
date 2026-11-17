@@ -14,6 +14,7 @@ import { Button } from "@/shared/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/shared/components/ui/dropdown-menu"
 import { Skeleton } from "@/shared/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/components/ui/table"
+import { codeLinkClassName } from "@/shared/components/ui/code-link"
 
 const CUSTOMER_LIST = { pageIndex: 1, pageSize: 20, sortBy: "submittedAt:desc" } as const
 const HEADERS = ["Claim code", "Type", "Status", "Requested", "Approved", "Submitted", ""] as const
@@ -104,8 +105,8 @@ export function BookingClaimsSection({ bookingId, highlightClaimId }: { bookingI
                       if (!(event.target as HTMLElement).closest("a,button,[role=menuitem]")) navigate(detail)
                     }}
                   >
-                    <TableCell className="whitespace-nowrap font-semibold">
-                      <Link to={detail} className="text-primary underline-offset-2 hover:underline">{claim.claimCode}</Link>
+                    <TableCell className="whitespace-nowrap">
+                      <Link to={detail} className={codeLinkClassName}>{claim.claimCode}</Link>
                     </TableCell>
                     <TableCell><ClaimTypeBadge type={claim.claimType} /></TableCell>
                     <TableCell><ClaimStatusBadge status={claim.status} /></TableCell>

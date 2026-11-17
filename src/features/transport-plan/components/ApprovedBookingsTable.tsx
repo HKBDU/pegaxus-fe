@@ -1,6 +1,5 @@
-import { codeLinkClassName } from "@/shared/components/ui/code-link";
+import { CodeLink } from "@/shared/components/ui/code-link";
 import { useMemo, type ReactNode } from "react";
-import { Link } from "react-router-dom";
 import {
   getCoreRowModel,
   useReactTable,
@@ -60,15 +59,15 @@ export function ApprovedBookingsTable({
         enableHiding: false,
         enableSorting: false,
         cell: ({ row }) => (
-          <Link
-            className={codeLinkClassName}
+          <CodeLink
+            variant="primary"
             to={approvedBookingDetail(row.original.bookingId)}
           >
             {row.original.transportPlan
               ? row.original.transportPlan.planCode?.trim() ||
                 "No Transport Plan Code"
               : "No Transport Plan"}
-          </Link>
+          </CodeLink>
         ),
       },
       {
@@ -76,12 +75,12 @@ export function ApprovedBookingsTable({
         header: "Booking Reference",
         enableHiding: false,
         cell: ({ row }) => (
-          <Link
-            className="text-slate-600 underline-offset-2 hover:underline"
+          <CodeLink
+            variant="reference"
             to={approvedBookingDetail(row.original.bookingId)}
           >
             {row.original.bookingCode}
-          </Link>
+          </CodeLink>
         ),
       },
       {

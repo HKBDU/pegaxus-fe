@@ -15,6 +15,8 @@ type MapSegments = {
     sequenceNo: number;
     fromLocation?: RouteLocation | null;
     toLocation?: RouteLocation | null;
+    /** Where the segment stopped early (the incident the convoy turned back at). */
+    endedAtLocation?: RouteLocation | null;
   }[];
 };
 
@@ -22,8 +24,12 @@ export function toRouteMapLocations(plan: MapSegments): MapLocation[] {
   const seen = new Set<string>();
   return [...plan.segments]
     .sort((a, b) => a.sequenceNo - b.sequenceNo)
-    .flatMap((segment) => [segment.fromLocation, segment.toLocation])
-    .flatMap((location) => {
+    .flatMap((segment) => [
+      { location: segment.fromLocation, isIncident: false },
+      { location: segment.endedAtLocation, isIncident: true },
+      { location: segment.toLocation, isIncident: false },
+    ])
+    .flatMap(({ location, isIncident }) => {
       if (!location) return [];
       const latitude = coordinate(location.latitude, 90),
         longitude = coordinate(location.longitude, 180);
@@ -43,6 +49,7 @@ export function toRouteMapLocations(plan: MapSegments): MapLocation[] {
           country: location.country,
           latitude,
           longitude,
+          ...(isIncident ? { isIncident } : {}),
         },
       ];
     });
@@ -81,6 +88,13 @@ export function blockedSegmentNumbers(plan: Pick<RoutePlanDetail, "legalReview" 
   return new Set(currentBlockedSegments(plan));
 }
 
+/** An active PRIMARY lists the itinerary the transport now follows, backup segments included. Its map and segment list show its own segments only. */
+export function ownSegments(plan: Pick<RoutePlanDetail, "routeType" | "segments">) {
+  return plan.routeType === "PRIMARY"
+    ? plan.segments.filter((segment) => segment.routeType === "PRIMARY")
+    : plan.segments;
+}
+
 export function toRouteMapData(
   plan: RoutePlanDetail,
   suppliedGeometry?: unknown,
@@ -91,15 +105,41 @@ export function toRouteMapData(
   const geometry = verifiedRouteGeometry(suppliedGeometry);
   const geometryStatus =
     suppliedGeometry == null ? "missing" : geometry ? "available" : "invalid";
-  const locations = toRouteMapLocations(plan);
+  // The replaced primary segments stay on the map, dashed, so the change of route is visible.
+  const replaced = plan.replacedSegments ?? [];
+  const segments = ownSegments(plan);
+  const locations = toRouteMapLocations({ segments: [...segments, ...replaced] });
   const locationById = new Map(locations.map((location) => [location.id, location]));
-  const routes: MapRoute[] = plan.segments
-    .slice()
-    .sort((a, b) => a.sequenceNo - b.sequenceNo)
-    .flatMap((segment) => {
+  const routes: MapRoute[] = [
+    ...replaced.map((segment) => ({ segment, isReplaced: true })),
+    ...segments
+      .slice()
+      .sort((a, b) => a.sequenceNo - b.sequenceNo)
+      .map((segment) => ({ segment, isReplaced: false })),
+  ]
+    .flatMap(({ segment, isReplaced }): MapRoute[] => {
       const fromLocation = locationById.get(segment.fromLocation.locationId);
       const toLocation = locationById.get(segment.toLocation.locationId);
       if (!fromLocation || !toLocation) return [];
+      // The convoy turned back at an incident on this segment: draw the stretch it drove, then the planned rest it never drove.
+      const incident = !isReplaced && segment.endedAtLocation
+        ? locationById.get(segment.endedAtLocation.locationId)
+        : undefined;
+      if (incident) {
+        const base = {
+          routePlanRouteId: segment.routePlanRouteId,
+          name: segment.route.routeName ?? segment.route.routeCode,
+          transportMode: segment.route.transportMode,
+          routePlanType: segment.routeType,
+          isOutsourced: segment.isOutsourced,
+          distanceKm: null,
+          durationMinutes: null,
+        };
+        return [
+          { ...base, id: segment.routePlanRouteId + ":driven", fromLocation, toLocation: incident },
+          { ...base, id: segment.routePlanRouteId + ":not-driven", fromLocation: incident, toLocation, notDriven: true },
+        ];
+      }
       return [
         {
           id: segment.routePlanRouteId,
@@ -113,7 +153,9 @@ export function toRouteMapData(
           routePlanType: segment.routeType,
           isOutsourced: segment.isOutsourced,
           // Drawn red on the map so the coordinator finds the segment the legal review blocked.
-          blocked: blocked.has(segment.sequenceNo),
+          blocked: !isReplaced && blocked.has(segment.sequenceNo),
+          replaced: isReplaced,
+          readonly: isReplaced || undefined,
         },
       ];
     });
@@ -124,8 +166,14 @@ export function toRouteMapData(
     locations,
     route,
     routes,
+    /** Incidents the convoy turned back at, whose planned rest of the segment was never driven. */
+    notDriven: segments.flatMap((segment) =>
+      segment.endedAtLocation && locationById.has(segment.endedAtLocation.locationId)
+        ? [{ incident: segment.endedAtLocation.locationName, to: segment.toLocation.locationName }]
+        : [],
+    ),
     geometryStatus,
-    omittedStops: plan.segments
+    omittedStops: segments
       .flatMap((segment) => [segment.fromLocation, segment.toLocation])
       .filter(
         (location) =>

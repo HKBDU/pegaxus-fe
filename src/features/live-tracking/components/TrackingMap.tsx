@@ -2,7 +2,7 @@ import { useMemo } from "react"
 import { MapViewer } from "@/shared/components/map"
 import { planRoutes, planStops } from "../lib/route-stops"
 import { trailGaps } from "../lib/trail"
-import type { GpsSignal, TrackingSegment, TrackingStop, Trail, TruckSample } from "../types"
+import type { GpsSignal, SegmentDetail, TrackingSegment, TrackingStop, Trail, TruckSample } from "../types"
 import { GapLayer } from "./GapLayer"
 import { MapLegend } from "./MapLegend"
 import { NextStopHighlight } from "./NextStopHighlight"
@@ -11,6 +11,10 @@ import { TruckMarker } from "./TruckMarker"
 
 interface TrackingMapProps {
   segments: TrackingSegment[]
+  /** OT4 legs with their planned ends, to find a leg the convoy left early at an incident. */
+  details?: SegmentDetail[]
+  /** Draw the planned stretch the convoy never drove after turning back. The crew follows the live route and does not need it. */
+  showNotDriven?: boolean
   nextStop: TrackingStop | null | undefined
   truck: TruckSample | null
   trail: Trail
@@ -22,9 +26,9 @@ interface TrackingMapProps {
  * vehicle. This is the only file that loads the map library for the tab: the page lazy-loads it, and crew has no route
  * to it.
  */
-export default function TrackingMap({ segments, nextStop, truck, trail, signal }: TrackingMapProps) {
-  const stops = useMemo(() => planStops(segments), [segments])
-  const routes = useMemo(() => planRoutes(segments), [segments])
+export default function TrackingMap({ segments, details, showNotDriven = true, nextStop, truck, trail, signal }: TrackingMapProps) {
+  const stops = useMemo(() => planStops(segments, details, showNotDriven), [segments, details, showNotDriven])
+  const routes = useMemo(() => planRoutes(segments, details, showNotDriven), [segments, details, showNotDriven])
   const gaps = useMemo(() => trailGaps(trail), [trail])
   const next =
     nextStop && typeof nextStop.latitude === "number" && typeof nextStop.longitude === "number"
@@ -40,7 +44,7 @@ export default function TrackingMap({ segments, nextStop, truck, trail, signal }
         <GapLayer gaps={gaps} />
         {truck ? <TruckMarker truck={truck} signal={signal} /> : null}
       </MapViewer>
-      <MapLegend />
+      <MapLegend incident={stops.some((stop) => stop.isIncident)} notDriven={routes.some((route) => route.notDriven)} />
     </div>
   )
 }

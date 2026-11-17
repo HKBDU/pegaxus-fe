@@ -1,7 +1,8 @@
-import { useRef, useMemo } from 'react'
+import { useRef, useState } from 'react'
 import { Camera, FolderOpen, RotateCcw, Trash2, Clock, ShieldCheck } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
-import ImageViewer from '@/shared/components/file-viewer/ImageViewer'
+import { UploadedProofPreview } from '@/shared/components/file-viewer/UploadedProofPreview'
+import { UploadLimitNotice } from '@/shared/components/file-uploader/UploadLimitNotice'
 import { QuarantineSectionHeader } from './QuarantineSectionHeader'
 import { UPLOAD_MAX_BYTES, UPLOAD_MAX_MB } from '@/shared/constants/upload'
 import { toast } from 'sonner'
@@ -30,30 +31,25 @@ export function PhotographicProofSection({
   onRemovePhoto,
   error,
 }: PhotographicProofSectionProps) {
+  const [singleLimitNotice, setSingleLimitNotice] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const pickFile = (input: HTMLInputElement) => {
+    if (input.files && input.files.length > 1) {
+      setSingleLimitNotice(true)
+      input.value = ''
+      return
+    }
     const file = input.files?.[0]
     input.value = ''
     if (!file) return
+    setSingleLimitNotice(false)
     if (file.size === 0 || file.size > UPLOAD_MAX_BYTES || !['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
       toast.error(`Use a non-empty JPEG or PNG image of at most ${UPLOAD_MAX_MB} MiB.`)
       return
     }
     onFilePicked(file)
   }
-
-  const imageViewerSlides = useMemo(() => {
-    if (!photoFile) return []
-    const url = URL.createObjectURL(photoFile)
-    return [
-      {
-        src: url,
-        title: photoFile.name,
-        alt: 'BCP Quarantine proof document',
-      },
-    ]
-  }, [photoFile])
 
   return (
     <section className="space-y-4 border border-[#e5e2d9] bg-white p-5">
@@ -72,7 +68,10 @@ export function PhotographicProofSection({
       <p className="font-heading text-[11px] font-bold uppercase tracking-wider text-[#181818]">
         {documentLabel}
       </p>
-      {error && (
+      {singleLimitNotice && (
+        <UploadLimitNotice onDismiss={() => setSingleLimitNotice(false)} />
+      )}
+      {error && !singleLimitNotice && (
         <p className="text-[10px] font-medium leading-[15px] text-red-600" role="alert">{error}</p>
       )}
 
@@ -81,7 +80,7 @@ export function PhotographicProofSection({
         <Button
           type="button"
           id="take-photo-btn"
-          className="flex items-center justify-center gap-2 bg-[#f39200] font-bold uppercase text-white hover:bg-[#e08600] active:bg-[#c97800]"
+          className="flex items-center justify-center gap-2 bg-[#f39200] font-bold uppercase text-[#181818] hover:bg-[#e08600] active:bg-[#c97800]"
           onClick={() => cameraInputRef.current?.click()}
         >
           <Camera className="size-4" aria-hidden />
@@ -121,22 +120,20 @@ export function PhotographicProofSection({
       {/* ── Photo preview (shown when photo is attached) ── */}
       {photoFile && (
         <div className="space-y-3">
-          <div className="relative overflow-hidden border border-[#e5e2d9]">
-            {/* Timestamp overlay */}
-            <div className="absolute left-2 top-2 z-30 flex items-center gap-1.5 bg-black/70 px-2 py-1 pointer-events-none">
-              <Clock className="size-3 text-white" aria-hidden />
-              <span className="font-mono text-[11px] text-white">
-                {photoTakenAt ? formatDateTimeStamp(photoTakenAt) : ''}
-              </span>
-            </div>
-
-            {/* Status badge */}
-            <div className="absolute bottom-2 right-2 z-30 flex items-center gap-1 bg-slate-700 px-2 py-0.5 pointer-events-none">
-              <ShieldCheck className="size-3 text-white" aria-hidden />
-              <span className="text-[11px] font-bold uppercase text-white">{statusLabel}</span>
-            </div>
-
-            <ImageViewer images={imageViewerSlides} height={300} width="100%" />
+          <UploadedProofPreview files={[photoFile]} height={280} />
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 text-xs text-slate-500">
+            {photoTakenAt && (
+              <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                <Clock className="size-3 text-orange-500" aria-hidden />
+                <span>{formatDateTimeStamp(photoTakenAt)}</span>
+              </div>
+            )}
+            {statusLabel && (
+              <div className="flex items-center gap-1 font-semibold uppercase text-slate-700">
+                <ShieldCheck className="size-3.5 text-orange-500" aria-hidden />
+                <span>{statusLabel}</span>
+              </div>
+            )}
           </div>
 
           {/* Retake / Remove actions */}

@@ -21,7 +21,7 @@ function EditProviderForm({ provider, onReload }: { provider: Provider; onReload
   const [reloading, setReloading] = useState(false)
   const [reloadFailed, setReloadFailed] = useState(false)
   const { form, submit, isSaving, reload } = useProviderForm(provider, {
-    onSaved: () => navigate(detailPath),
+    onSaved: () => navigate(detailPath, { replace: true }),
     onStale: () => setReloadOpen(true),
   })
 

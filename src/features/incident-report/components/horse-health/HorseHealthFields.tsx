@@ -82,10 +82,10 @@ export function HorseHealthFields({
     );
   return (
     <section
-      className="space-y-4 border-l-4 border-[#f39200] bg-white p-4 shadow-sm sm:p-5"
+      className="min-w-0 space-y-4 border border-l-4 border-slate-200 border-l-[#f39200] bg-white p-4 sm:p-5"
       aria-label="Horse health incident details"
     >
-      <header className="border-b border-slate-200 pb-3">
+      <header className="break-words border-b border-slate-200 pb-3 [overflow-wrap:anywhere]">
         <h2 className="font-heading text-base font-bold uppercase text-[#181818]">
           {horseName}
         </h2>
@@ -178,7 +178,7 @@ export function HorseHealthFields({
               checked={value[field]}
               disabled={disabled}
               onCheckedChange={(checked) => update(field, checked === true)}
-              className="size-5 rounded-[2px]"
+              className="size-5 shrink-0 rounded-[2px]"
             />
             {label}
           </label>
@@ -198,7 +198,7 @@ export function HorseHealthFields({
       </label>
       <div className="space-y-4">
         <div
-          className="grid min-w-0 content-start gap-2 text-sm font-bold"
+          className="@container grid min-w-0 content-start gap-2 text-sm font-bold"
           data-incident-field
         >
           <span>Veterinarian contacted at</span>
@@ -206,7 +206,7 @@ export function HorseHealthFields({
             Your local time. Sent as{" "}
             {contactedUtc ? formatUtcDateTime(contactedUtc) : "UTC"}.
           </span>
-          <div className="@container grid min-w-0 items-start gap-2 @min-[20rem]:grid-cols-[minmax(0,1fr)_9rem]">
+          <div className="grid min-w-0 items-start gap-2 @min-[20rem]:grid-cols-[minmax(0,1fr)_9rem]">
             <DatePicker
               value={contactedDate}
               onChange={updateContactedDate}

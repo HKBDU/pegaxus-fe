@@ -32,7 +32,7 @@ export function ProtectedRoute({
   }
 
   if (!canAccess(principal, { anyRole: allowedRoles, allPermissions: allowedPermissions })) {
-    return <Navigate to="/unauthorized" replace />
+    return <Navigate to="/forbidden" replace />
   }
 
   return children ?? <Outlet />

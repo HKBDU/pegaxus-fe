@@ -7,6 +7,10 @@ export type PendingRouteAction = { label: string; reason: string; href?: string 
 export const beforeDeparture = (status?: string | null) =>
   Boolean(status && ["CREATED", "PLANNING", "READY"].includes(status));
 
+/** A backup route can be added only while the transport is still being planned (before READY). */
+export const canAddBackupRoute = (status?: string | null) =>
+  Boolean(status && ["CREATED", "PLANNING"].includes(status));
+
 export const isDossierReady = (status?: string | null) =>
   status === "DRAFT";
 
@@ -64,5 +68,7 @@ export function getPendingRouteCreation(routes: RoutePlanSummary[], context: Rou
   if (getWorkspaceRole(context.principal) !== "coordinator" || context.planStatus !== "APPROVED" || !beforeDeparture(context.transportStatus)) return null;
   if (!hasPrimaryRoute(routes)) return { label: "Create Primary Route", reason: "Create the primary route.", ...(transportPlanId ? { href: routePlanCreate(transportPlanId) } : {}) };
   if (hasOpenBackup(routes)) return null;
+  // A transport turns READY only once its backups are confirmed, so no new backup is added from READY onwards.
+  if (!canAddBackupRoute(context.transportStatus)) return null;
   return { label: "Add Backup Route", reason: "Add a backup route.", ...(transportPlanId ? { href: contingencyRouteCreate(transportPlanId) } : {}) };
 }

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { EmptyState } from "@/shared/components/common"
 import { TablePagination } from "@/shared/components/common/TablePagination"
 import { DataTable } from "@/shared/components/ui/data-table"
+import { codeLinkClassName } from "@/shared/components/ui/code-link"
 import type { HandoverListItem } from "../types"
 import { formatDateTime, typeLabel } from "../utils"
 import { HandoverActionMenu } from "./HandoverActionMenu"
@@ -36,7 +37,15 @@ export function HandoverTable({ items, isLoading, hasFilters, hrefFor, filters }
         header: "Handover code",
         enableSorting: false,
         cell: ({ row }) => (
-          <Link to={hrefFor(row.original)} className={cn("font-semibold whitespace-nowrap underline-offset-2 hover:underline", dim(row.original) ? "text-gray-400" : "text-slate-900")}>
+          <Link
+            to={hrefFor(row.original)}
+            className={cn(
+              codeLinkClassName,
+              "whitespace-nowrap",
+              dim(row.original) &&
+                "text-gray-400 hover:text-gray-500 hover:decoration-gray-400",
+            )}
+          >
             {row.original.handoverCode}
           </Link>
         ),
@@ -126,7 +135,7 @@ export function HandoverTable({ items, isLoading, hasFilters, hrefFor, filters }
           headerClassName="bg-[#e9e6de]"
           tableClassName="min-w-250 [&_[data-column-id=sequenceNo]]:text-center"
           headerCellClassName="h-11 whitespace-nowrap px-2.5 font-heading text-[11px] font-medium uppercase tracking-[0.06em] text-gray-600"
-          rowClassName="border-slate-200 transition-colors duration-200 hover:bg-primary/5 motion-reduce:transition-none"
+          rowClassName="booking-table-row border-slate-200 transition-colors duration-200 hover:bg-primary/5 motion-reduce:transition-none"
           cellClassName="h-11 px-2.5 py-1.5 text-xs"
           emptyMessage={empty}
         />

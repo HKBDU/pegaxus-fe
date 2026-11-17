@@ -27,7 +27,7 @@ export function LocationMarkers({
     endLocation && toMapPoint(endLocation) && !sameId(endLocation, start)
       ? endLocation
       : null;
-  const marker = (location: MapLocation, variant: "default" | "start" | "end") => (
+  const marker = (location: MapLocation, variant: "default" | "start" | "end" | "incident") => (
     <LocationMarker
       key={`${variant}-${location.id}`}
       location={location}
@@ -45,7 +45,7 @@ export function LocationMarkers({
       {locations.map((location) =>
         !toMapPoint(location) || sameId(location, start) || sameId(location, end)
           ? null
-          : marker(location, "default"),
+          : marker(location, location.isIncident ? "incident" : "default"),
       )}
       {end ? marker(end, "end") : null}
       {start ? marker(start, "start") : null}

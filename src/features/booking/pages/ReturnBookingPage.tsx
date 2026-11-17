@@ -9,7 +9,10 @@ import { bookingService } from "@/features/booking/services"
 import { getBookingErrorMessage } from "@/features/booking/utils"
 import { ErrorState, LoadingState } from "@/shared/components/common"
 import { PageHeader } from "@/shared/components/PageHeader"
+import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Textarea } from "@/shared/components/ui/textarea"
+import { usePageTitle } from "@/shared/hooks"
+import { useBackTarget } from "@/shared/hooks/useBackTarget"
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -18,6 +21,7 @@ const today = () => new Date().toISOString().slice(0, 10)
  * horse come from the original trip and are fixed; the customer only picks the dates. The usual lead time does not apply.
  */
 export default function ReturnBookingPage() {
+  usePageTitle("Return Booking")
   const [params] = useSearchParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -26,6 +30,18 @@ export default function ReturnBookingPage() {
   const [departure, setDeparture] = useState(today())
   const [arrival, setArrival] = useState("")
   const [note, setNote] = useState("")
+
+  const backTarget = useBackTarget({
+    fallback: "/bookings",
+    fallbackLabel: "BACK TO BOOKINGS",
+    allowedOrigins: ["/bookings", "/notifications"],
+    labels: (from) => {
+      if (from.startsWith("/bookings/")) return "BACK TO BOOKING"
+      if (from === "/bookings") return "BACK TO BOOKINGS"
+      if (from.startsWith("/notifications")) return "BACK TO NOTIFICATIONS"
+      return "BACK TO BOOKINGS"
+    },
+  })
 
   const draft = useQuery({
     queryKey: ["bookings", "return-draft", returnOfTransportId, horseId],
@@ -56,7 +72,7 @@ export default function ReturnBookingPage() {
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: bookingKeys.lists() })
       toast.success(`Return booking ${result.bookingCode} created. Our team will review it.`)
-      navigate(`/bookings/${result.bookingId}`)
+      navigate(`/bookings/${result.bookingId}`, { replace: true })
     },
     onError: (error) => toast.error(getBookingErrorMessage(error, "Unable to create the return booking")),
   })
@@ -72,7 +88,7 @@ export default function ReturnBookingPage() {
   return (
     <div className="booking-page-shell min-h-[70dvh] bg-[#f4f2ed] px-4 pt-5 pb-8 font-sans sm:px-6 lg:px-10">
       <div className="mx-auto w-full max-w-[760px] space-y-3">
-        <PageHeader title="RETURN BOOKING" backHref="/bookings" backLabel="BACK TO BOOKINGS" />
+        <PageHeader title="RETURN BOOKING" backHref={backTarget.href} backLabel={backTarget.label} />
 
         <section className="border border-amber-300 bg-amber-50 p-3.5 text-sm text-amber-900">
           <p className="m-0 font-semibold">{value.horseName} could not continue transport {value.transportCode}.</p>
@@ -105,16 +121,26 @@ export default function ReturnBookingPage() {
             <p className="m-0 text-sm"><span className="text-slate-500">Horse:</span> <span className="font-semibold text-slate-900">{value.horseName}</span></p>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-1 text-[11px] font-medium tracking-[0.04em] text-slate-700 uppercase">
-                Departure date
-                <input type="date" min={today()} value={departure} onChange={(event) => setDeparture(event.target.value)}
-                  className="h-9 rounded-[2px] border border-slate-300 px-2 text-sm font-normal tracking-normal text-slate-900 normal-case" />
-              </label>
-              <label className="grid gap-1 text-[11px] font-medium tracking-[0.04em] text-slate-700 uppercase">
-                Arrival date (optional)
-                <input type="date" min={departure || today()} value={arrival} onChange={(event) => setArrival(event.target.value)}
-                  className="h-9 rounded-[2px] border border-slate-300 px-2 text-sm font-normal tracking-normal text-slate-900 normal-case" />
-              </label>
+              <div className="grid gap-1 text-[11px] font-medium tracking-[0.04em] text-slate-700 uppercase">
+                <span>Departure date</span>
+                <DatePicker
+                  minDate={today()}
+                  value={departure}
+                  onChange={setDeparture}
+                  placeholder="DD / MM / YYYY"
+                  className="h-9 rounded-[2px]"
+                />
+              </div>
+              <div className="grid gap-1 text-[11px] font-medium tracking-[0.04em] text-slate-700 uppercase">
+                <span>Arrival date (optional)</span>
+                <DatePicker
+                  minDate={departure || today()}
+                  value={arrival}
+                  onChange={setArrival}
+                  placeholder="DD / MM / YYYY"
+                  className="h-9 rounded-[2px]"
+                />
+              </div>
             </div>
 
             <label className="grid gap-1 text-[11px] font-medium tracking-[0.04em] text-slate-700 uppercase">

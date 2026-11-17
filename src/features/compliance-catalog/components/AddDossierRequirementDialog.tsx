@@ -85,11 +85,11 @@ function ChoiceCard({ selected, title, hint, onSelect }: { selected: boolean; ti
   )
 }
 
-function PreviewLine({ label, children }: { label: string; children: ReactNode }) {
+function PreviewLine({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
   return (
     <>
-      <dt className="text-slate-500">{label}</dt>
-      <dd className="m-0 min-w-0 break-words font-medium text-slate-900">{children}</dd>
+      <dt className={cn("text-slate-500", className)}>{label}</dt>
+      <dd className={cn("m-0 min-w-0 break-words font-medium text-slate-900", className)}>{children}</dd>
     </>
   )
 }
@@ -295,7 +295,7 @@ export function AddDossierRequirementDialog({ open, onOpenChange, dossierId, boo
               <PreviewLine label="Mandatory"><MandatoryBadge mandatory={values.isMandatory === "YES"} /></PreviewLine>
               <PreviewLine label="Due date">{values.dueDate || "—"}</PreviewLine>
               <PreviewLine label="Source"><span className="rounded-[2px] bg-amber-100 px-1.5 py-0.5 text-[0.65rem] font-semibold text-amber-800">Custom</span></PreviewLine>
-              <PreviewLine label="Instruction"><span className="font-normal text-slate-600">{instruction.trim() || "—"}</span></PreviewLine>
+              <PreviewLine label="Instruction" className="pb-3"><span className="font-normal text-slate-600">{instruction.trim() || "—"}</span></PreviewLine>
             </dl>
             <p className="m-0 mt-3 flex items-start gap-1.5 rounded-[2px] border border-sky-200 bg-sky-50 px-2.5 py-2 text-[0.7rem] leading-4 text-sky-900">
               <Info className="mt-0.5 size-3 shrink-0" aria-hidden="true" />

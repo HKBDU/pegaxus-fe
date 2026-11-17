@@ -17,15 +17,22 @@ import type {
   routeChangeDecisionResultSchema,
   returnActivationResultSchema,
   driverNoticeResultSchema,
+  crewPlanSchema,
+  crewOverrideSchema,
 } from "./schemas";
 
 export type RoutePlanDetail = z.infer<typeof routePlanDetailSchema>;
+export type CrewPlan = z.infer<typeof crewPlanSchema>;
+export type CrewSegment = CrewPlan["segments"][number];
+export type CrewOverride = z.infer<typeof crewOverrideSchema>;
 export type RoutePlanSummary = z.infer<typeof routePlanSummarySchema>;
 export type RouteWorkspaceContext = {
   principal: AuthPrincipal | null;
   planStatus: string;
   transportStatus?: string | null;
   dossierStatus?: string | null;
+  /** MAIN dossier status. The LM's RETURN decision and RETURN activation depend on it, whichever route is open. */
+  mainDossierStatus?: string | null;
   hasActivePrimary?: boolean;
   hasOpenReturn?: boolean;
   hasOpenBackup?: boolean;

@@ -181,6 +181,7 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
             : resolved.line.coordinates.flat();
           if (coordinates.length >= 2) {
             applyCoordinates(coordinates, "segment");
+            setIsLoadingRoute(false);
             return;
           }
         }

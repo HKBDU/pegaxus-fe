@@ -13,13 +13,15 @@ import { Input } from "@/shared/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
 import { Textarea } from "@/shared/components/ui/textarea"
 import FileUploader from "@/shared/components/FileUploader"
-import ImageViewer from "@/shared/components/file-viewer/ImageViewer"
+import { UploadedProofPreview } from "@/shared/components/file-viewer/UploadedProofPreview"
 import { HORSE_BREED_OPTIONS, HORSE_SEX_OPTIONS } from "../constants/horse.constants"
 import { horseApi } from "../services"
 import { getHorseApiErrorMessage } from "../utils/horse-api-error"
 import { toHorseDateInput } from "../utils/format-horse-date"
 import { todayUtc } from "@/shared/utils/datetime"
 import type { CreateHorseRequest, Horse, HorseFormValues, HorseSex } from "../types"
+import { usePageTitle } from "@/shared/hooks"
+import { useBackTarget } from "@/shared/hooks/useBackTarget"
 
 import {
   VALIDATION_LIMITS,
@@ -460,23 +462,17 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
                 }}
               />
               {(avatarPreviewUrl || initialHorse?.avatarUrl) && (
-                <div className="mt-3 border-t border-slate-200 pt-3">
-                  <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Preview</p>
-                  <div className="h-64 w-full overflow-hidden rounded-[2px] border border-slate-300 bg-slate-900">
-                    <ImageViewer
-                      images={[{
-                        src: avatarPreviewUrl ?? initialHorse?.avatarUrl ?? "",
-                        size: avatarPreviewSize,
-                        alt: "Horse avatar preview",
-                        title: "Horse avatar preview",
-                      }]}
-                      maxFileSizeBytes={UPLOAD_MAX_BYTES}
-                      width="100%"
-                      height="100%"
-                      ariaLabel="Horse avatar preview"
-                    />
-                  </div>
-                </div>
+                <UploadedProofPreview
+                  className="mt-3"
+                  files={[{
+                    name: "Horse avatar",
+                    url: avatarPreviewUrl ?? initialHorse?.avatarUrl ?? "",
+                    size: avatarPreviewSize,
+                    type: "image/jpeg",
+                  }]}
+                  label="Uploaded proof preview"
+                  height={256}
+                />
               )}
             </div>
 
@@ -496,12 +492,42 @@ export function HorseForm({ mode, initialHorse, onSaved, onCancel, compact = fal
 }
 
 export function HorseFormPage({ mode, initialHorse }: HorseFormPageProps) {
+  usePageTitle(mode === "edit" ? "Edit Horse" : "Add Horse")
   const navigate = useNavigate()
+  const isEdit = mode === "edit" && Boolean(initialHorse?.horseId)
+  const horseDetailPath = initialHorse?.horseId
+    ? `/my-horses/${encodeURIComponent(initialHorse.horseId)}`
+    : "/my-horses"
+  const fallbackHref = isEdit ? horseDetailPath : "/my-horses"
+  const fallbackLabel = isEdit ? "Back to Horse Details" : "Back to My Horses"
+
+  const backTarget = useBackTarget({
+    fallback: fallbackHref,
+    fallbackLabel,
+    allowedOrigins: ["/my-horses", "/bookings"],
+    labels: {
+      "/my-horses": "Back to My Horses",
+      "/bookings": "Back to Booking",
+      ...(initialHorse?.horseId
+        ? { [horseDetailPath]: "Back to Horse Details" }
+        : {}),
+    },
+  })
+
   return (
     <section className="profile-page w-full bg-[#f4f4f4] px-5 py-6 sm:px-6 lg:px-10">
       <div className="mx-auto flex w-full max-w-[1152px] flex-col">
-        <PageHeader title={mode === "edit" ? "EDIT HORSE" : "ADD HORSE"} backHref="/my-horses" backLabel="Back to My Horses" />
-        <HorseForm mode={mode} initialHorse={initialHorse} onSaved={() => navigate("/my-horses")} onCancel={() => navigate("/my-horses")} />
+        <PageHeader
+          title={mode === "edit" ? "EDIT HORSE" : "ADD HORSE"}
+          backHref={backTarget.href}
+          backLabel={backTarget.label}
+        />
+        <HorseForm
+          mode={mode}
+          initialHorse={initialHorse}
+          onSaved={() => navigate(fallbackHref, { replace: true })}
+          onCancel={() => navigate(backTarget.href)}
+        />
       </div>
     </section>
   )

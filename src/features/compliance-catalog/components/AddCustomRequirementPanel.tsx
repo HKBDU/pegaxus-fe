@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/shared/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/shared/components/ui/select"
-import { Switch } from "@/shared/components/ui/switch"
 import { Textarea } from "@/shared/components/ui/textarea"
 
 const NOTES_LIMIT = 500
@@ -246,21 +245,6 @@ export const AddCustomRequirementPanel = forwardRef<HTMLDivElement, AddCustomReq
           <div className="grid grid-cols-2 gap-3">
             <FormField
               control={form.control}
-              name="isMandatory"
-              render={({ field }) => (
-                <FormItem className="gap-1.5">
-                  <FormLabel className={labelClass}>Mandatory</FormLabel>
-                  <div className="flex h-9 items-center gap-2">
-                    <FormControl>
-                      <Switch size="sm" checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                    <span className="text-xs text-slate-700">{field.value ? "Yes" : "No"}</span>
-                  </div>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="dueDate"
               render={({ field }) => (
                 <FormItem className="gap-1.5">
@@ -312,7 +296,7 @@ export const AddCustomRequirementPanel = forwardRef<HTMLDivElement, AddCustomReq
           {scope === "HORSE" ? <><dt className="text-slate-400">HORSE</dt><dd className="m-0 font-medium text-slate-900">{selectedHorse?.horseName ?? "Not selected"}</dd></> : null}
           <dt className="text-slate-400">MANDATORY</dt><dd className="m-0 font-medium text-slate-900">{values.isMandatory ? "Mandatory" : "Optional"}</dd>
           <dt className="text-slate-400">LEAD TIME</dt><dd className="m-0 font-medium text-slate-900">{values.leadTimeDays} days</dd>
-          <dt className="text-slate-400">SOURCE</dt><dd className="m-0"><span className="rounded-[2px] bg-amber-100 px-1.5 py-0.5 text-[0.65rem] font-semibold text-amber-800">Custom</span></dd>
+          <dt className="text-slate-400 pb-3">SOURCE</dt><dd className="m-0 pb-3"><span className="rounded-[2px] bg-amber-100 px-1.5 py-0.5 text-[0.65rem] font-semibold text-amber-800">Custom</span></dd>
         </dl>
         <p className="m-0 mt-3 flex items-start gap-1.5 rounded-[2px] border border-sky-200 bg-sky-50 px-2.5 py-2 text-[0.7rem] leading-4 text-sky-900"><Info className="mt-0.5 size-3 shrink-0" aria-hidden="true" />This DossierRequirement is added to the active ComplianceDossier only.</p>
       </aside>

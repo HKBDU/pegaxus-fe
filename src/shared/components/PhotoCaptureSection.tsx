@@ -8,9 +8,10 @@ import {
   ShieldCheck,
   Trash2,
 } from "lucide-react"
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 
-import ImageViewer from "@/shared/components/file-viewer/ImageViewer"
+import { UploadedProofPreview } from "@/shared/components/file-viewer/UploadedProofPreview"
+import { UploadLimitNotice } from "@/shared/components/file-uploader/UploadLimitNotice"
 import { Button } from "@/shared/components/ui/button"
 import { Input } from "@/shared/components/ui/input"
 import { formatFileSize } from "@/shared/components/file-uploader/utils"
@@ -124,6 +125,8 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
     onCaptionsChange,
     presignedEntity,
   } = props
+  const isSingle = maxFiles === 1
+  const [singleLimitNotice, setSingleLimitNotice] = useState(false)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const retakeFileRef = useRef<File | null>(null)
@@ -177,14 +180,6 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
     }
   }, [files, capturedAt, activeCoordinates, captions])
 
-  const objectUrls = useMemo(
-    () => files.map((file) => URL.createObjectURL(file)),
-    [files],
-  )
-  useEffect(
-    () => () => objectUrls.forEach((url) => URL.revokeObjectURL(url)),
-    [objectUrls],
-  )
   useEffect(() => {
     mounted.current = true
     const entries = uploads.current
@@ -360,6 +355,15 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
     if (!picked.length) return
     const current = selection.current
     if (retakeFile && !current.files.includes(retakeFile)) return
+
+    if (isSingle) {
+      if (picked.length > 1 || (!retakeFile && current.files.length >= 1 && picked.length > 0)) {
+        setSingleLimitNotice(true)
+      } else if (picked.length === 1 && current.files.length === 0) {
+        setSingleLimitNotice(false)
+      }
+    }
+
     const next = {
       files: [...current.files],
       capturedAt: [...current.capturedAt],
@@ -375,9 +379,11 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
         continue
       }
       if (!retakeFile && next.files.length >= maxFiles) {
-        errors.push(
-          `You can attach up to ${maxFiles} image${maxFiles === 1 ? "" : "s"}.`,
-        )
+        if (!isSingle) {
+          errors.push(
+            `You can attach up to ${maxFiles} image${maxFiles === 1 ? "" : "s"}.`,
+          )
+        }
         break
       }
       const index = retakeFile
@@ -440,6 +446,9 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
   }
 
   const removeFile = (index: number) => {
+    if (isSingle) {
+      setSingleLimitNotice(false)
+    }
     const current = selection.current
     const file = current.files[index]
     const entry = uploads.current.get(file)
@@ -472,7 +481,10 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
           </span>
         )}
       </div>
-      {error && (
+      {isSingle && singleLimitNotice && (
+        <UploadLimitNotice onDismiss={() => setSingleLimitNotice(false)} />
+      )}
+      {error && (!isSingle || !singleLimitNotice) && (
         <p className="text-xs font-medium text-red-600" role="alert">
           {error}
         </p>
@@ -534,132 +546,135 @@ export function PhotoCaptureSection(props: PhotoCaptureSectionProps) {
           addFiles(picked)
         }}
       />
-      <div className="grid gap-4 sm:grid-cols-2">
-        {files.map((file, index) => {
-          const coord = activeCoordinates[index]
-          return (
-            <div
-              key={`${file.name}-${file.lastModified}-${index}`}
-              className="min-w-0 space-y-3"
-            >
-              <div className="relative overflow-hidden border border-slate-200">
-                <div className="absolute left-2 top-2 z-30 flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5 bg-black/75 px-2 py-1 text-[11px] font-mono text-white shadow-sm">
-                    <Clock className="size-3 text-orange-400" />
-                    {formatTimestamp(capturedAt[index])}
+      {files.length > 0 && (
+        <UploadedProofPreview
+          files={files}
+          label="Uploaded proof preview"
+          height={280}
+        />
+      )}
+      {files.length > 0 && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {files.map((file, index) => {
+            const coord = activeCoordinates[index]
+            return (
+              <div
+                key={`${file.name}-${file.lastModified}-${index}`}
+                className="min-w-0 space-y-3 rounded-[2px] border border-slate-200 bg-slate-50/50 p-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 bg-black/75 px-2 py-0.5 text-[11px] font-mono text-white">
+                      <Clock className="size-3 text-orange-400" />
+                      {formatTimestamp(capturedAt[index])}
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-black/75 px-2 py-0.5 text-[11px] font-mono text-white">
+                      <MapPin className="size-3 text-cyan-400" />
+                      {coord ? (
+                        <span>
+                          {coord.latitude.toFixed(4)},{" "}
+                          {coord.longitude.toFixed(4)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">GPS Unavailable</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 bg-black/75 px-2 py-1 text-[11px] font-mono text-white shadow-sm">
-                    <MapPin className="size-3 text-cyan-400" />
-                    {coord ? (
-                      <span>
-                        {coord.latitude.toFixed(4)},{" "}
-                        {coord.longitude.toFixed(4)}
-                      </span>
-                    ) : (
-                      <span className="text-slate-300">GPS Unavailable</span>
-                    )}
-                  </div>
-                </div>
-                {(!presignedEntity || uploadStatuses[index] === "ready") && (
-                  <div className="absolute bottom-2 right-2 z-30 flex items-center gap-1 bg-slate-800 px-2 py-0.5 text-[11px] font-bold uppercase text-white shadow-sm">
-                    <ShieldCheck className="size-3 text-orange-400" />
-                    {statusLabel}
-                  </div>
-                )}
-                <ImageViewer
-                  images={[
-                    {
-                      src: objectUrls[index],
-                      title: file.name,
-                      alt: documentLabel,
-                    },
-                  ]}
-                  height={200}
-                  width="100%"
-                />
-              </div>
-              {/* Labelled shared input, like the web's other fields (it was a bare 48px box with only a placeholder). */}
-              <label className="block text-xs font-medium text-slate-600">
-                Caption <span className="font-normal text-slate-400">(optional)</span>
-                <Input
-                  value={captions[index] ?? ""}
-                  onChange={(event) =>
-                    onCaptionsChange?.(
-                      files.map((_, current) =>
-                        current === index
-                          ? event.target.value
-                          : (captions[current] ?? ""),
-                      ),
-                    )
-                  }
-                  placeholder="What this photo shows"
-                  aria-label={`Caption for ${file.name}`}
-                  className="mt-1 h-10 bg-white sm:h-9"
-                />
-              </label>
-              {(presignedEntity ||
-                uploadStatuses[index] === "processing" ||
-                uploadStatuses[index] === "error") && (
-                <div className="space-y-1" aria-live="polite">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p
-                      className={`text-xs font-medium ${
-                        uploadStatuses[index] === "error"
-                          ? "text-red-600"
-                          : uploadStatuses[index] === "ready"
-                            ? "text-green-700"
-                            : "text-slate-500"
-                      }`}
-                    >
-                      {uploadStatuses[index] === "ready"
-                        ? "Image uploaded"
-                        : uploadStatuses[index] === "error"
-                          ? "Upload failed"
-                          : uploadStatuses[index] === "processing"
-                            ? "Preparing photo…"
-                            : "Uploading image…"}
-                    </p>
-                    {uploadStatuses[index] === "error" && (
-                      <button
-                        type="button"
-                        onClick={() => retryUpload(index)}
-                        className="inline-flex min-h-10 items-center gap-1 px-2 text-xs font-bold text-orange-700 hover:underline focus-visible:outline-2 focus-visible:outline-[#f39200]"
-                      >
-                        <RefreshCw className="size-3" />
-                        Retry
-                      </button>
-                    )}
-                  </div>
-                  {uploadStatuses[index] === "error" && (
-                    <p className="break-words text-xs text-red-600">
-                      {uploadSnapshot.get(file)?.error ??
-                        "This photo has not been uploaded. Please retry."}
-                    </p>
+                  {(!presignedEntity || uploadStatuses[index] === "ready") && (
+                    <div className="flex items-center gap-1 bg-slate-800 px-2 py-0.5 text-[11px] font-bold uppercase text-white shadow-sm">
+                      <ShieldCheck className="size-3 text-orange-400" />
+                      {statusLabel}
+                    </div>
                   )}
                 </div>
-              )}
-              <div className="flex gap-5">
-                <button
-                  type="button"
-                  onClick={() => handleRetake(index)}
-                  className="inline-flex min-h-12 items-center gap-1.5 text-sm font-bold text-slate-700 hover:text-orange-600"
-                >
-                  <RotateCcw className="size-4" />
-                  Retake
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeFile(index)}
-                  className="inline-flex min-h-12 items-center gap-1.5 text-sm font-bold text-slate-700 hover:text-red-600"
-                >
-                  <Trash2 className="size-4" />
-                  Remove
-                </button>
+                <p className="truncate text-xs font-semibold text-slate-800">
+                  {file.name}{" "}
+                  <span className="font-normal text-slate-500">
+                    ({formatFileSize(file.size)})
+                  </span>
+                </p>
+                <label className="block text-xs font-medium text-slate-600">
+                  Caption <span className="font-normal text-slate-400">(optional)</span>
+                  <Input
+                    value={captions[index] ?? ""}
+                    onChange={(event) =>
+                      onCaptionsChange?.(
+                        files.map((_, current) =>
+                          current === index
+                            ? event.target.value
+                            : (captions[current] ?? ""),
+                        ),
+                      )
+                    }
+                    placeholder="What this photo shows"
+                    aria-label={`Caption for ${file.name}`}
+                    className="mt-1 h-10 bg-white sm:h-9"
+                  />
+                </label>
+                {(presignedEntity ||
+                  uploadStatuses[index] === "processing" ||
+                  uploadStatuses[index] === "error") && (
+                  <div className="space-y-1" aria-live="polite">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p
+                        className={`text-xs font-medium ${
+                          uploadStatuses[index] === "error"
+                            ? "text-red-600"
+                            : uploadStatuses[index] === "ready"
+                              ? "text-green-700"
+                              : "text-slate-500"
+                        }`}
+                      >
+                        {uploadStatuses[index] === "ready"
+                          ? "Image uploaded"
+                          : uploadStatuses[index] === "error"
+                            ? "Upload failed"
+                            : uploadStatuses[index] === "processing"
+                              ? "Preparing photo…"
+                              : "Uploading image…"}
+                      </p>
+                      {uploadStatuses[index] === "error" && (
+                        <button
+                          type="button"
+                          onClick={() => retryUpload(index)}
+                          className="inline-flex min-h-10 items-center gap-1 px-2 text-xs font-bold text-orange-700 hover:underline focus-visible:outline-2 focus-visible:outline-[#f39200]"
+                        >
+                          <RefreshCw className="size-3" />
+                          Retry
+                        </button>
+                      )}
+                    </div>
+                    {uploadStatuses[index] === "error" && (
+                      <p className="break-words text-xs text-red-600">
+                        {uploadSnapshot.get(file)?.error ??
+                          "This photo has not been uploaded. Please retry."}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <div className="flex gap-5">
+                  <button
+                    type="button"
+                    onClick={() => handleRetake(index)}
+                    className="inline-flex min-h-12 items-center gap-1.5 text-sm font-bold text-slate-700 hover:text-orange-600"
+                  >
+                    <RotateCcw className="size-4" />
+                    Retake
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="inline-flex min-h-12 items-center gap-1.5 text-sm font-bold text-slate-700 hover:text-red-600"
+                  >
+                    <Trash2 className="size-4" />
+                    Remove
+                  </button>
+                </div>
               </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </section>
   )
 }

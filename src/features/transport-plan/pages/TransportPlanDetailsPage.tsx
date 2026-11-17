@@ -7,6 +7,7 @@ import {
 } from "@/shared/components/ui/tabs";
 import {
   Link,
+  useLocation,
   useNavigate,
   useParams,
   useSearchParams,
@@ -33,6 +34,7 @@ import {
 import EditTransportPlanPage from "./EditTransportPlanPage";
 import { TransportPlanStatusBadge } from "../components/TransportPlanStatusBadge";
 import { TransportPlanGeneral } from "../components/TransportPlanGeneral";
+import { usePageTitle } from "@/shared/hooks";
 import { TransportPlanQuotation } from "../components/TransportPlanQuotation";
 import {
   TransportPlanPersonnel,
@@ -56,6 +58,7 @@ export function TransportPlanDetails({
   personnelPanel?: ComponentType<PersonnelPanelProps>;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
   const principal = useAuthStore((state) => state.principal);
   const manager = getWorkspaceRole(principal) === "manager";
@@ -99,7 +102,11 @@ export function TransportPlanDetails({
           {canCreateTransportPlanInvoice(principal, plan) ? (
             <Button
               className="rounded-[2px]"
-              onClick={() => navigate(invoiceCreate(plan.booking.bookingId))}
+              onClick={() =>
+                navigate(invoiceCreate(plan.booking.bookingId), {
+                  state: { from: location.pathname + location.search },
+                })
+              }
             >
               Create Invoice
             </Button>
@@ -248,6 +255,7 @@ function TransportPlanReadPage() {
 
 export default function TransportPlanDetailsPage() {
   const [params] = useSearchParams();
+  usePageTitle(params.get("action") === "edit" ? "Edit Transport Plan" : "Transport Plan Details");
   return params.get("action") === "edit" ? (
     <EditTransportPlanPage />
   ) : (

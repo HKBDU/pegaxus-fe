@@ -2,6 +2,7 @@ import { useEffect, useRef, type ComponentType } from "react";
 import { useIsMutating } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ROLE_ROUTES } from "@/app/route-config";
+import { incidentPaths } from "@/shared/constants/incident";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
 import { Skeleton } from "@/shared/components/ui/skeleton";
@@ -51,6 +52,12 @@ export default function RoutePlanDetailPage({
     }
   };
   const principal = useAuthStore((state) => state.principal);
+  // The Transport Plans list answers 403 to a Route Coordinator, so the page goes back to the incident it was opened from
+  // (vehicle replacement), or else to the Route Plans list every route role can read.
+  const changeVehicleIncident = params.get("changeVehicle")?.trim();
+  const back = changeVehicleIncident
+    ? { href: incidentPaths.detail("RC", changeVehicleIncident), label: "Back to Incident" }
+    : { href: ROLE_ROUTES.routePlans, label: "Back to Route Plans" };
   const allowed =
     canViewRoute(principal) &&
     (!emergencyView || getWorkspaceRole(principal) === "manager");
@@ -87,17 +94,23 @@ export default function RoutePlanDetailPage({
   const activeMode =
     actions.find((action) => action === mode) ??
     (fullPageAction && panelRequestRunning ? fullPageAction : undefined);
+  // In-page state replaces the entry, so Back leaves the page instead of stepping through tabs and dialogs.
   const changeMode = (action?: EmergencyAction) =>
-    setParams((current) => {
-      const next = new URLSearchParams(current);
-      if (action) next.set("emergency", action);
-      else next.set("emergency", "overview");
-      return next;
-    });
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (action) next.set("emergency", action);
+        else next.set("emergency", "overview");
+        return next;
+      },
+      { replace: true },
+    );
   const plan = query.data;
   const hasPlan = Boolean(plan);
   const pageRef = useRef<HTMLDivElement>(null);
-  const fullPageMode = mode === "decision" || mode === "activation";
+  // A notification can reopen the decision screen after the change was decided: show the route plan with a note instead of an error.
+  const decisionClosed = mode === "decision" && Boolean(context.data && plan) && !activeMode;
+  const fullPageMode = (mode === "decision" || mode === "activation") && !decisionClosed;
   const staff = ["coordinator", "specialist"].includes(
     getWorkspaceRole(principal) ?? "",
   );
@@ -130,19 +143,10 @@ export default function RoutePlanDetailPage({
           onBack={navigateToBase}
         />
       );
-    if (mode && mode !== "overview" && !activeMode) {
-      const isAlreadyDecided =
-        mode === "decision" &&
-        ["ACTIVE", "REJECTED_BY_MANAGER", "CANCELLED", "COMPLETED"].includes(
-          plan.status,
-        );
-      const unavailableMessage = isAlreadyDecided || mode === "decision"
-        ? "This route change has already been decided."
-        : "This emergency action is unavailable for your role or the current route and transport state.";
-
+    if (mode && mode !== "overview" && !activeMode && !decisionClosed) {
       workspace = (
         <div className="space-y-3">
-          <ErrorState message={unavailableMessage} />
+          <ErrorState message="This emergency action is unavailable for your role or the current route and transport state." />
           <Button
             className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
             variant="outline"
@@ -186,6 +190,14 @@ export default function RoutePlanDetailPage({
             ) : !fullPageMode ? (
               <>
                 {readFailure && <ErrorState message={`Showing the last authorized route. ${readFailure.message}`} onRetry={() => void query.refetch()} />}
+                {decisionClosed && (
+                  <p
+                    role="status"
+                    className="m-0 rounded-[2px] border border-slate-200 border-l-2 border-l-primary bg-white px-3 py-2 text-sm leading-5 text-slate-700"
+                  >
+                    This route change has already been decided. The route plan below shows its current state.
+                  </p>
+                )}
                 {context.error && (
                   <ErrorState
                     message={getEmergencyError(context.error).message}
@@ -205,7 +217,7 @@ export default function RoutePlanDetailPage({
                       const next = new URLSearchParams(current);
                       next.delete("changeVehicle");
                       return next;
-                    })}
+                    }, { replace: true })}
                   />
                 )}
                 <RoutePlanDetails
@@ -213,6 +225,7 @@ export default function RoutePlanDetailPage({
                   plan={plan}
                   mapViewer={mapViewer}
                   routeDetailPath={routeDetailPath}
+                  fallbackBack={getWorkspaceRole(principal) === "coordinator" ? back : undefined}
                   actions={
                     context.data ? (
                       <RouteManagementActions
@@ -267,8 +280,8 @@ export default function RoutePlanDetailPage({
             <PageHeader
               className="[&_h1]:text-2xl [&_h1]:leading-tight sm:[&_h1]:text-3xl"
               title="Route Plan Details"
-              backHref={ROLE_ROUTES.transportPlans}
-              backLabel="Back to Transport Plans"
+              backHref={back.href}
+              backLabel={back.label}
             />
             {!allowed ? (
               <ErrorState message="You do not have permission to view route plans." />

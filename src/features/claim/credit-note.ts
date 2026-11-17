@@ -4,9 +4,10 @@ import type { Claim } from "@/features/claim/types"
 import type { InvoicePrefill } from "@/features/invoice/types"
 
 /** P2.1.4: opens the invoice form for the booking with the credit note line the BE suggested (R22). */
-export function openCreditNoteForm(claim: Claim, navigate: NavigateFunction) {
+export function openCreditNoteForm(claim: Claim, navigate: NavigateFunction, from?: string) {
   const suggested = claim.billing?.creditNote.suggestedItem
   if (!suggested) return
   const prefill: InvoicePrefill = { type: "CREDIT_NOTE", items: [{ itemType: suggested.itemType, description: suggested.description, quantity: suggested.quantity, price: suggested.price }] }
-  navigate(invoiceCreate(claim.booking.bookingId), { state: { prefill } })
+  const returnPath = from || (typeof window !== "undefined" ? window.location.pathname + window.location.search : "/admin/claims")
+  navigate(invoiceCreate(claim.booking.bookingId), { state: { prefill, from: returnPath } })
 }

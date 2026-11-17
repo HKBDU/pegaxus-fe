@@ -3,7 +3,7 @@ import { toast } from "sonner"
 
 import { Input } from "@/shared/components/ui/input"
 import { Label } from "@/shared/components/ui/label"
-import { CountrySelect } from "@/shared/components/ui/country-select"
+import { CountrySelect, normalizeCountryToIso2 } from "@/shared/components/ui/country-select"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 
 import type { ProfileFormErrors, ProfileFormProps } from "../types"
@@ -29,7 +29,7 @@ function isValidPhone(value: string) {
 export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEditEmail = true, canEditDateOfBirth = Boolean(profile.customer), onValidationChange }: ProfileFormProps) {
   const [fullName, setFullName] = useState(profile.fullName ?? "")
   const [address, setAddress] = useState(profile.address ?? "")
-  const [country, setCountry] = useState(profile.country ?? "")
+  const [country, setCountry] = useState(normalizeCountryToIso2(profile.country) ?? profile.country ?? "")
   const [dob, setDob] = useState(profile.dob ?? "")
   const [avatar, setAvatar] = useState<File>()
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string>()
@@ -70,6 +70,9 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
       <div className="relative min-w-0">
         <ProfileAvatarPreview className="h-full min-h-0" badge={<ProfileVerificationField status={emailVerificationStatus} className="pointer-events-none shadow-sm" />} initials={getInitials(profile.fullName)} avatarUrl={avatarPreviewUrl ?? profile.avatarUrl} alt={profile.fullName ?? "Profile avatar"} />
         <Input className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0" id="profile-avatar" type="file" accept="image/jpeg,image/png" aria-label="Upload profile avatar" onChange={(event) => {
+          if (event.currentTarget.files && event.currentTarget.files.length > 1) {
+            toast.error("Only one file allowed. Remove the current avatar to upload another.")
+          }
           const file = event.currentTarget.files?.[0]
           event.currentTarget.value = ""
           if (!file) return
@@ -99,6 +102,7 @@ export function ProfileForm({ profile, onSubmit, emailVerificationStatus, canEdi
           <CountrySelect
             id="profile-country"
             value={country}
+            valueFormat="iso2"
             onValueChange={setCountry}
             className="profile-edit-field !h-[39px] !px-3 !py-2 lg:!h-[31px] lg:!py-1"
           />

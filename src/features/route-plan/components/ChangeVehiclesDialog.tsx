@@ -45,6 +45,8 @@ export type ChangeableSegment = {
   fromLocation: { locationName: string };
   toLocation: { locationName: string };
   vehicles: Array<{ vehicleId: string }>;
+  /** The route plan the segment belongs to (code and type) when the list mixes several plans. */
+  sourceLabel?: string;
 };
 
 export type ChangeVehiclesSnapshot = {
@@ -423,9 +425,14 @@ export function ChangeVehiclesDialog({
                   <Card key={segment.routePlanRouteId} className="rounded-[2px] border-slate-300 bg-white shadow-sm">
                     <CardHeader className="border-b border-slate-200 px-4 py-3">
                       <div className="flex items-start justify-between gap-3">
-                        <CardTitle className="text-sm font-bold text-slate-950">
-                          Segment {segment.sequenceNo}: {segment.fromLocation.locationName} → {segment.toLocation.locationName}
-                        </CardTitle>
+                        <div className="min-w-0 space-y-1">
+                          {segment.sourceLabel ? (
+                            <p className="m-0 text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">{segment.sourceLabel}</p>
+                          ) : null}
+                          <CardTitle className="text-sm font-bold text-slate-950">
+                            Segment {segment.sequenceNo}: {segment.fromLocation.locationName} → {segment.toLocation.locationName}
+                          </CardTitle>
+                        </div>
                         <Badge variant="outline" className="shrink-0 rounded-[2px] border-slate-400 bg-slate-100 text-slate-800">
                           {selectedSegments[segment.routePlanRouteId] ? "Selected" : "Unchanged"}
                         </Badge>

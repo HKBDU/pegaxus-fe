@@ -6,10 +6,11 @@ import { toast } from "sonner"
 import { ChangePasswordDialog } from "@/features/auth/components/ChangePasswordDialog"
 import { useAuthStore } from "@/features/auth/store"
 import { Button } from "@/shared/components/ui/button"
-import { CountrySelect } from "@/shared/components/ui/country-select"
+import { CountrySelect, formatCountryDisplayName, normalizeCountryToIso2 } from "@/shared/components/ui/country-select"
 import { DatePicker } from "@/shared/components/ui/date-picker"
 import { Input } from "@/shared/components/ui/input"
 import { PageHeader } from "@/shared/components/PageHeader"
+import { getPostLoginPath } from "@/app/route-config"
 import { getAvatarFileError } from "../avatar"
 import { resolveProfilePhone } from "../phone"
 import { ProfilePhoneEditor } from "../components/ProfilePhoneEditor"
@@ -20,11 +21,11 @@ import {
 } from "@/shared/constants/validation-limits"
 
 import { ACCOUNT_TYPE_LABELS } from "../constants/profile.constants"
-import { presignedUpload } from "@/shared/utils/presigned"
 import { formatUtcDateTime, todayUtc } from "@/shared/utils/datetime"
 import { useProfile } from "../hooks/useProfile"
-import { ProfileIdentityPanel, ProfileInfoCard, ProfileInlineField, ProfileSaveBar } from "../components"
+import { ProfileIdentityPanel, ProfileInfoCard, ProfileInlineField } from "../components"
 import type { EmailVerificationStatus, Profile, ProfilePageStateProps, UpdateProfileRequest } from "../types"
+import { usePageTitle } from "@/shared/hooks"
 
 type ProfileDraft = {
   fullName: string
@@ -51,7 +52,7 @@ function profileToDraft(profile: Profile): ProfileDraft {
     email: profile.email,
     phone: profile.phone ?? "",
     address: profile.address ?? "",
-    country: profile.country ?? "",
+    country: normalizeCountryToIso2(profile.country) ?? profile.country ?? "",
     dob: profile.dob ?? "",
     role: profile.role,
     status: profile.status,
@@ -98,6 +99,7 @@ function ProfileInfoGroup({ title, description, children }: { title: string; des
 }
 
 export function ProfileSettingsPage() {
+  usePageTitle("Profile")
   const { customerId } = useParams()
   const location = useLocation()
   const principal = useAuthStore((state) => state.principal)
@@ -154,6 +156,18 @@ export function ProfileSettingsPage() {
   }, [profileScope])
   // oxlint-enable react-hooks/exhaustive-deps
 
+  // After a save the profile is reloaded: show the values the server stored, not the ones that were typed.
+  // oxlint-disable react-hooks/exhaustive-deps -- resync only when the stored profile changes
+  useEffect(() => {
+    if (!profile) return
+    const storedDraft = profileToDraft(profile)
+    // oxlint-disable-next-line react/set-state-in-effect
+    setDraft(storedDraft)
+    // oxlint-disable-next-line react/set-state-in-effect
+    setSavedDraft(storedDraft)
+  }, [profile?.updatedAt])
+  // oxlint-enable react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!draft?.avatar) {
       // oxlint-disable-next-line react/set-state-in-effect
@@ -183,28 +197,80 @@ export function ProfileSettingsPage() {
     error: undefined,
   }
 
-  const changedFieldCount = Object.keys(draft).filter((key) => {
-    if (key === "avatar") return Boolean(draft.avatar)
-    if (key === "phone") return draft.phone !== savedDraft.phone || (Boolean(callingCountry) && phoneResult.value !== savedDraft.phone)
-    return draft[key as EditableField] !== savedDraft[key as EditableField]
-  }).length
-  const hasUnsavedChanges = changedFieldCount > 0
-
   function updateDraft(field: EditableField, value: string) {
     if (saveAttemptRef.current || isSubmitting) return
     setDraft((current) => current ? { ...current, [field]: value } : current)
   }
 
-  function discardChanges() {
+  async function handleSaveField(field: EditableField, overrideValue?: string) {
     if (saveAttemptRef.current || isSubmitting) return
-    const resetDraft: ProfileDraft = { ...currentSavedDraft, avatar: null }
-    setDraft(resetDraft)
-    setEditingField(null)
-    setCallingCountry("")
-  }
 
-  async function saveChanges() {
-    if (saveAttemptRef.current || isSubmitting || !hasUnsavedChanges) return
+    const rawValue = overrideValue !== undefined ? overrideValue : currentDraft[field]
+    const currentSavedValue = currentSavedDraft[field]
+
+    if (field === "phone") {
+      const resolved = resolveProfilePhone(rawValue, callingCountry)
+      if (resolved.error || !isPhoneValid(resolved.value)) {
+        toast.error(resolved.error ?? PHONE_MESSAGE)
+        return
+      }
+      if (resolved.value === currentSavedValue && !callingCountry) {
+        setEditingField(null)
+        return
+      }
+    } else if (field === "country") {
+      const nextIso = normalizeCountryToIso2(rawValue)
+      const currentIso = normalizeCountryToIso2(currentSavedValue)
+      if (nextIso === currentIso) {
+        setEditingField(null)
+        return
+      }
+    } else {
+      if (rawValue.trim() === (currentSavedValue ?? "").trim()) {
+        setEditingField(null)
+        return
+      }
+    }
+
+    if (field === "fullName") {
+      if (!rawValue.trim()) {
+        toast.error("Full name is required.")
+        return
+      }
+    }
+
+    if (field === "email") {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawValue.trim())) {
+        toast.error("Enter a valid email address.")
+        return
+      }
+    }
+
+    if (field === "dob" && rawValue) {
+      const dobDate = new Date(rawValue)
+      if (Number.isNaN(dobDate.getTime())) {
+        toast.error("Enter a valid date of birth.")
+        return
+      }
+      const today = todayUtc()
+      const dob = rawValue.slice(0, 10)
+      const minAgeDate = `${Number(today.slice(0, 4)) - VALIDATION_LIMITS.accountMinAgeYears}${today.slice(4)}`
+      const maxAgeDate = `${Number(today.slice(0, 4)) - VALIDATION_LIMITS.accountMaxAgeYears}${today.slice(4)}`
+
+      if (dob > today) {
+        toast.error("Date of birth cannot be in the future.")
+        return
+      }
+      if (dob > minAgeDate) {
+        toast.error(`You must be at least ${VALIDATION_LIMITS.accountMinAgeYears} years old.`)
+        return
+      }
+      if (dob < maxAgeDate) {
+        toast.error(`Date of birth cannot be more than ${VALIDATION_LIMITS.accountMaxAgeYears} years ago.`)
+        return
+      }
+    }
+
     const attempt = {}
     saveAttemptRef.current = attempt
     setIsSaving(true)
@@ -215,96 +281,88 @@ export function ProfileSettingsPage() {
       useAuthStore.getState().principal?.id === ownerSession.principal?.id
 
     try {
-      if (!currentDraft.fullName.trim()) {
-        toast.error("Full name is required.")
-        setEditingField("fullName")
-        return
-      }
-
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentDraft.email.trim())) {
-        toast.error("Enter a valid email address.")
-        setEditingField("email")
-        return
-      }
-
-      if (phoneResult.error || !isPhoneValid(phoneResult.value)) {
-        toast.error(phoneResult.error ?? PHONE_MESSAGE)
-        setEditingField("phone")
-        return
-      }
-
-      if (currentDraft.dob) {
-        const dobDate = new Date(currentDraft.dob)
-        if (Number.isNaN(dobDate.getTime())) {
-          toast.error("Enter a valid date of birth.")
-          setEditingField("dob")
-          return
-        }
-        const today = todayUtc()
-        const dob = currentDraft.dob.slice(0, 10)
-        const minAgeDate = `${Number(today.slice(0, 4)) - VALIDATION_LIMITS.accountMinAgeYears}${today.slice(4)}`
-        const maxAgeDate = `${Number(today.slice(0, 4)) - VALIDATION_LIMITS.accountMaxAgeYears}${today.slice(4)}`
-
-        if (dob > today) {
-          toast.error("Date of birth cannot be in the future.")
-          setEditingField("dob")
-          return
-        }
-        if (dob > minAgeDate) {
-          toast.error(`You must be at least ${VALIDATION_LIMITS.accountMinAgeYears} years old.`)
-          setEditingField("dob")
-          return
-        }
-        if (dob < maxAgeDate) {
-          toast.error(`Date of birth cannot be more than ${VALIDATION_LIMITS.accountMaxAgeYears} years ago.`)
-          setEditingField("dob")
-          return
-        }
-      }
-
-      let avatar: UpdateProfileRequest["avatar"]
-      if (currentDraft.avatar) {
-        const avatarError = getAvatarFileError(currentDraft.avatar)
-        if (avatarError) {
-          toast.error(avatarError)
-          return
-        }
-        try {
-          avatar = {
-            publicId: await presignedUpload.upload({
-              file: currentDraft.avatar,
-              entity: "avatar",
-            }),
-          }
-        } catch {
-          if (isCurrentAttempt()) toast.error("Unable to upload avatar. Please try again.")
-          return
-        }
-      }
-
-      if (!isCurrentAttempt()) return
+      const nextPhoneValue = field === "phone"
+        ? resolveProfilePhone(rawValue, callingCountry).value
+        : currentSavedDraft.phone
 
       const input: UpdateProfileRequest = {
-        fullName: currentDraft.fullName.trim(),
-        email: currentDraft.email.trim(),
-        phone: phoneResult.value || undefined,
-        address: currentDraft.address.trim() || undefined,
-        country: currentDraft.country.trim() || undefined,
-        dob: currentDraft.dob || undefined,
-        avatar,
+        fullName: (field === "fullName" ? rawValue : currentSavedDraft.fullName).trim(),
+        email: (field === "email" ? rawValue : currentSavedDraft.email).trim(),
+        phone: nextPhoneValue || undefined,
+        address: (field === "address" ? rawValue : currentSavedDraft.address).trim() || undefined,
+        country: normalizeCountryToIso2(field === "country" ? rawValue : currentSavedDraft.country),
+        dob: (field === "dob" ? rawValue : currentSavedDraft.dob) || undefined,
       }
       if (canManageOtherProfile) {
-        input.role = currentDraft.role.trim() as UpdateProfileRequest["role"]
-        input.status = currentDraft.status.trim() as UpdateProfileRequest["status"]
-        input.workStatus = currentDraft.workStatus.trim() || undefined
+        input.role = (field === "role" ? rawValue : currentSavedDraft.role).trim() as UpdateProfileRequest["role"]
+        input.status = (field === "status" ? rawValue : currentSavedDraft.status).trim() as UpdateProfileRequest["status"]
+        input.workStatus = (field === "workStatus" ? rawValue : currentSavedDraft.workStatus).trim() || undefined
       }
+
       const saved = await updateProfile(input)
       if (saved && isCurrentAttempt()) {
-        const nextSavedDraft: ProfileDraft = { ...currentDraft, phone: phoneResult.value, avatar: null }
+        const nextValue = field === "phone"
+          ? nextPhoneValue
+          : field === "country"
+          ? (normalizeCountryToIso2(rawValue) ?? rawValue)
+          : rawValue
+        const nextSavedDraft: ProfileDraft = {
+          ...currentSavedDraft,
+          [field]: nextValue,
+          avatar: null,
+        }
         setDraft(nextSavedDraft)
         setSavedDraft(nextSavedDraft)
         setEditingField(null)
-        setCallingCountry("")
+        if (field === "phone") setCallingCountry("")
+      }
+    } finally {
+      if (saveAttemptRef.current === attempt) {
+        saveAttemptRef.current = null
+        if (mountedRef.current) setIsSaving(false)
+      }
+    }
+  }
+
+  async function handleSaveAvatar(file: File) {
+    if (saveAttemptRef.current || isSubmitting) return
+    const avatarError = getAvatarFileError(file)
+    if (avatarError) {
+      toast.error(avatarError)
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setAvatarPreviewUrl(previewUrl)
+
+    const attempt = {}
+    saveAttemptRef.current = attempt
+    setIsSaving(true)
+    const ownerSession = useAuthStore.getState()
+    const ownerScope = profileScope
+    const isCurrentAttempt = () => mountedRef.current && saveAttemptRef.current === attempt &&
+      scopeRef.current === ownerScope && useAuthStore.getState().sessionVersion === ownerSession.sessionVersion &&
+      useAuthStore.getState().principal?.id === ownerSession.principal?.id
+
+    try {
+      const input: UpdateProfileRequest = {
+        fullName: currentSavedDraft.fullName.trim(),
+        email: currentSavedDraft.email.trim(),
+        phone: currentSavedDraft.phone || undefined,
+        address: currentSavedDraft.address.trim() || undefined,
+        country: normalizeCountryToIso2(currentSavedDraft.country),
+        dob: currentSavedDraft.dob || undefined,
+        avatar: file,
+      }
+      if (canManageOtherProfile) {
+        input.role = currentSavedDraft.role.trim() as UpdateProfileRequest["role"]
+        input.status = currentSavedDraft.status.trim() as UpdateProfileRequest["status"]
+        input.workStatus = currentSavedDraft.workStatus.trim() || undefined
+      }
+
+      const saved = await updateProfile(input)
+      if (!saved && isCurrentAttempt()) {
+        setAvatarPreviewUrl(undefined)
       }
     } finally {
       if (saveAttemptRef.current === attempt) {
@@ -321,12 +379,20 @@ export function ProfileSettingsPage() {
       value={value}
       editing={editingField === field}
       disabled={isBusy}
-      onEdit={() => { if (!saveAttemptRef.current && !isSubmitting) setEditingField(field) }}
+      onEdit={() => {
+        if (!saveAttemptRef.current && !isSubmitting) {
+          if (editingField && editingField !== field) {
+            setDraft((current) => current ? { ...current, [editingField]: currentSavedDraft[editingField] } : current)
+            if (editingField === "phone") setCallingCountry("")
+          }
+          setEditingField(field)
+        }
+      }}
       onChange={(nextValue) => updateDraft(field, nextValue)}
-      onCommit={() => { if (!saveAttemptRef.current && !isSubmitting) setEditingField(null) }}
+      onCommit={() => void handleSaveField(field)}
       onCancel={() => {
         if (saveAttemptRef.current || isSubmitting) return
-        updateDraft(field, savedDraft[field])
+        updateDraft(field, currentSavedDraft[field])
         if (field === "phone") setCallingCountry("")
         setEditingField(null)
       }}
@@ -336,9 +402,9 @@ export function ProfileSettingsPage() {
   )
 
   return (
-    <section className="profile-page min-w-0 w-full overflow-x-clip bg-[#f4f4f4] px-5 py-6 pb-28 sm:px-6 lg:px-10">
+    <section className="profile-page min-w-0 w-full overflow-x-clip bg-[#f4f4f4] px-5 py-6 pb-10 sm:px-6 lg:px-10">
       <div className="mx-auto flex w-full max-w-[1380px] flex-col">
-        <PageHeader backHref="/" backLabel="HOME" title={`VIEW ${profile.accountType} PROFILE`} />
+        <PageHeader backHref={getPostLoginPath(profile.role)} backLabel="HOME" title={`VIEW ${profile.accountType} PROFILE`} />
         <div className="mt-6 grid min-w-0 items-start gap-6 lg:grid-cols-[360px_minmax(0,1fr)]">
           <ProfileIdentityPanel
             disabled={isBusy}
@@ -370,21 +436,20 @@ export function ProfileSettingsPage() {
             accept="image/jpeg,image/png"
             aria-label="Change profile avatar"
             onChange={(event) => {
+              if (event.currentTarget.files && event.currentTarget.files.length > 1) {
+                toast.error("Only one file allowed. Remove the current avatar to upload another.")
+              }
               const file = event.currentTarget.files?.[0]
               event.currentTarget.value = ""
-              if (!file || saveAttemptRef.current || isSubmitting) return
-              const avatarError = getAvatarFileError(file)
-              if (avatarError) {
-                toast.error(avatarError)
-                return
-              }
-              setDraft((current) => current ? { ...current, avatar: file } : current)
+              if (!file) return
+              void handleSaveAvatar(file)
             }}
           />
 
           <div className="flex min-w-0 flex-col gap-5">
             <ProfileInfoGroup title="CONTACT INFORMATION" description="How this account can be contacted">
-              {inlineField("email", "EMAIL ADDRESS", draft.email, Mail)}
+              {/* The e-mail is the sign-in identity: it is not changed from this page. */}
+              <ProfileInfoCard icon={Mail} label="EMAIL ADDRESS" value={profile.email} />
               <div className="min-w-0">
                 {inlineField("phone", "PHONE NUMBER", draft.phone, Phone,
                   <ProfilePhoneEditor value={draft.phone} callingCountry={callingCountry} disabled={isBusy} onChange={(value) => updateDraft("phone", value)} onCountryChange={(value) => { if (!saveAttemptRef.current && !isSubmitting) setCallingCountry(value) }} />)}
@@ -393,12 +458,12 @@ export function ProfileSettingsPage() {
                 </p>
               </div>
               {inlineField("address", "ADDRESS", draft.address, MapPin)}
-              {inlineField("country", "COUNTRY", draft.country, Globe, <fieldset disabled={isBusy}><CountrySelect id="inline-profile-country" value={draft.country} onValueChange={(value) => { if (saveAttemptRef.current || isSubmitting) return; updateDraft("country", value); setEditingField(null) }} className="profile-edit-field !h-9 !min-w-0 !px-3 !py-1" /></fieldset>)}
+              {inlineField("country", "COUNTRY", formatCountryDisplayName(draft.country), Globe, <fieldset disabled={isBusy}><CountrySelect id="inline-profile-country" value={draft.country} valueFormat="iso2" onValueChange={(value) => { if (saveAttemptRef.current || isSubmitting) return; updateDraft("country", value); void handleSaveField("country", value) }} className="profile-edit-field !h-9 !min-w-0 !px-3 !py-1" /></fieldset>)}
             </ProfileInfoGroup>
 
             <ProfileInfoGroup title="PERSONAL INFORMATION" description="Basic information about the profile owner">
               <ProfileInfoCard icon={UserRound} label="ACCOUNT TYPE" value={ACCOUNT_TYPE_LABELS[profile.accountType]} variant="accent" />
-              {profile.customer && inlineField("dob", "DATE OF BIRTH", draft.dob ? formatProfileDateOnly(draft.dob) ?? draft.dob : "", CalendarClock, <fieldset disabled={isBusy}><DatePicker id="inline-profile-dob" value={draft.dob} onChange={(value) => { if (saveAttemptRef.current || isSubmitting) return; updateDraft("dob", value); setEditingField(null) }} className="profile-edit-field !h-9 !min-w-0 !px-3 !py-1" /></fieldset>)}
+              {profile.customer && inlineField("dob", "DATE OF BIRTH", draft.dob ? formatProfileDateOnly(draft.dob) ?? draft.dob : "", CalendarClock, <fieldset disabled={isBusy}><DatePicker id="inline-profile-dob" value={draft.dob} onChange={(value) => { if (saveAttemptRef.current || isSubmitting) return; updateDraft("dob", value); void handleSaveField("dob", value) }} className="profile-edit-field !h-9 !min-w-0 !px-3 !py-1" /></fieldset>)}
               {profile.customer && <ProfileInfoCard icon={IdCard} label="CUSTOMER CODE" value={profile.customer.customerCode} variant="code" />}
               {profile.customer && canManageOtherProfile && inlineField("role", "ROLE", formatProfileLabel(draft.role), UserRound)}
             </ProfileInfoGroup>
@@ -419,7 +484,6 @@ export function ProfileSettingsPage() {
         </div>
       </div>
 
-      {hasUnsavedChanges && <ProfileSaveBar saving={isBusy} changeCount={changedFieldCount} onSave={() => void saveChanges()} onDiscard={discardChanges} />}
       <ChangePasswordDialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen} />
     </section>
   )

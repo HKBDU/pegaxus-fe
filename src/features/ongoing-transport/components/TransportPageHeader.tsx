@@ -56,18 +56,23 @@ export function TransportPageHeader({
       : audience === "customer" && bookingId
         ? `/bookings/${encodeURIComponent(bookingId)}`
         : audience === "crew"
-          ? "/crew/transports"
+          ? ((location.state as { from?: string } | null)?.from ?? "/crew")
           : ROLE_ROUTES.home;
   const backLabel =
     audience === "admin"
       ? "Ongoing Transports"
       : audience === "customer"
         ? "Booking"
-        : "Assigned Transports";
+        : audience === "crew"
+          ? ((location.state as { from?: string } | null)?.from === "/crew/transports"
+              ? "Assigned Transports"
+              : "Ongoing Transport")
+          : "Assigned Transports";
   const missingContext =
     transportId === undefined ||
     (audience === "customer" && bookingId === undefined);
-  const backToOverview = !isCrew && view !== "overview" && !missingContext;
+  const backToOverview =
+    audience !== "crew" && !isCrew && view !== "overview" && !missingContext;
   const title = transportCode ?? viewLabel[isCrew ? "overview" : view];
   return (
     <>

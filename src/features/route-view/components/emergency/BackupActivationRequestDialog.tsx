@@ -1,14 +1,14 @@
+import { useEffect, useMemo, useRef } from "react";
 import { DateTimeUtc } from "@/shared/components/DateTimeUtc";
 import { toUtcIso } from "@/shared/utils/datetime";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { LoaderCircle, Send } from "lucide-react";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { MoneyInput } from "@/shared/components/ui/money-input";
+import { DateTimePicker } from "@/shared/components/ui/date-time-picker";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
   Form,
@@ -36,6 +36,19 @@ import {
   useEmergencyMutation,
   type EmergencyContext,
 } from "../../hooks/useEmergencyRoute";
+import { useBackupRequestDraft } from "../../hooks/useBackupRequestDraft";
+import { useRoutePlanDetail } from "../../hooks/useRoutePlanDetail";
+import {
+  BACKUP_DELAY_THRESHOLD_MINUTES,
+  delayMinutes,
+  formatDelay,
+  formatOffPlan,
+  OFF_PLAN_THRESHOLD_MINUTES,
+  suggestBackupArrival,
+  toLocalInputValue,
+  type BackupEtaSuggestion,
+} from "../../backup-eta";
+import { isRelatedPrimary } from "../../route-comparison";
 import { getEmergencyError } from "../../services";
 import type { RoutePlanDetail } from "../../types";
 import { EmergencyChangeSummary } from "./EmergencyChangeSummary";
@@ -54,11 +67,6 @@ const controls = [
     required: true,
     type: "datetime-local",
   },
-  {
-    name: "estimatedExtraCost",
-    label: "Estimated Extra Cost (VND)",
-    type: "money",
-  },
   { name: "note", label: "Additional Note", type: "textarea" },
 ] as const;
 
@@ -71,11 +79,51 @@ export function BackupActivationRequestDialog({
   context: EmergencyContext;
   onClose: () => void;
 }) {
+  const draft = useBackupRequestDraft(plan.routePlanId);
   const form = useForm<BackupRequestValues>({
     resolver: zodResolver(backupRequestFormSchema),
     mode: "onTouched",
-    defaultValues: backupRequestDefaults,
+    defaultValues: draft.initial ?? backupRequestDefaults,
   });
+  const { save: saveDraft } = draft;
+  useEffect(() => {
+    const subscription = form.watch(() => saveDraft(form.getValues()));
+    return () => subscription.unsubscribe();
+  }, [form, saveDraft]);
+
+  const primary = useRoutePlanDetail(
+    context.primaryRoute?.routePlanId ?? "",
+    Boolean(context.primaryRoute),
+  );
+  const primaryPlan =
+    primary.data && isRelatedPrimary(primary.data, plan)
+      ? primary.data
+      : undefined;
+  const suggestion = useMemo(
+    () => (primaryPlan ? suggestBackupArrival(primaryPlan, plan) : null),
+    [primaryPlan, plan],
+  );
+  const offPlan =
+    suggestion !== null &&
+    Math.abs(suggestion.offPlanMinutes) > OFF_PLAN_THRESHOLD_MINUTES;
+  // Far off its plan, the progress estimate cannot meet the planned delay, so offer the earliest time that does.
+  const suggestedValue = suggestion
+    ? toLocalInputValue(offPlan ? suggestion.minimumDelayEta : suggestion.suggestedEta)
+    : "";
+  // Prefill once, and only when the RC has not typed an arrival yet (a saved draft wins).
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !suggestedValue) return;
+    prefilled.current = true;
+    if (!form.getValues("newEstimatedArrivalAt"))
+      form.setValue("newEstimatedArrivalAt", suggestedValue, {
+        shouldDirty: true,
+      });
+  }, [form, suggestedValue]);
+  const arrival = useWatch({ control: form.control, name: "newEstimatedArrivalAt" });
+  const delay =
+    suggestion && arrival ? delayMinutes(arrival, suggestion.primaryEta) : null;
+
   const attempt = useFormRequestAttemptGuard(form);
   const mutation = useEmergencyMutation("request", plan, context);
   const busy =
@@ -86,6 +134,7 @@ export function BackupActivationRequestDialog({
         mutation.mutateAsync(buildBackupRequest(values)),
       );
       if (!result.started) return;
+      draft.clear();
       toast.success(
         "Request sent to Logistics Manager. Backup remains CONFIRMED until approved.",
       );
@@ -174,18 +223,15 @@ export function BackupActivationRequestDialog({
                               {...field}
                               className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none min-h-20"
                             />
-                          ) : control.type === "money" ? (
-                            <MoneyInput
-                              {...field}
-                              placeholder="Whole amount, e.g. 1,500,000"
-                              className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
-                            />
                           ) : (
-                            <Input
-                              {...field}
-                              type={control.type}
-                              step="any"
-                              className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
+                            <DateTimePicker
+                              ref={field.ref}
+                              value={field.value}
+                              onChange={field.onChange}
+                              onBlur={field.onBlur}
+                              disabled={busy}
+                              aria-label={control.label}
+                              className="grid-cols-2 @min-[20rem]:grid-cols-2"
                             />
                           )}
                         </FormControl>
@@ -193,6 +239,24 @@ export function BackupActivationRequestDialog({
                           <p className="text-xs text-slate-500" aria-live="polite">
                             UTC preview: <DateTimeUtc value={toUtcIso(field.value)} compact />
                           </p>
+                        )}
+                        {control.name === "newEstimatedArrivalAt" && (
+                          <ArrivalHint
+                            loading={Boolean(context.primaryRoute) && primary.isPending}
+                            suggestion={suggestion}
+                            offPlan={offPlan}
+                            delay={delay}
+                            onUseSuggestion={
+                              suggestedValue && field.value !== suggestedValue
+                                ? () =>
+                                    form.setValue(
+                                      "newEstimatedArrivalAt",
+                                      suggestedValue,
+                                      { shouldDirty: true, shouldValidate: true },
+                                    )
+                                : undefined
+                            }
+                          />
                         )}
                         <div className="min-h-5">
                           <FormMessage
@@ -245,5 +309,114 @@ export function BackupActivationRequestDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ArrivalHint({
+  loading,
+  suggestion,
+  offPlan,
+  delay,
+  onUseSuggestion,
+}: {
+  loading: boolean;
+  suggestion: BackupEtaSuggestion | null;
+  offPlan: boolean;
+  delay: number | null;
+  onUseSuggestion?: () => void;
+}) {
+  if (loading)
+    return (
+      <p className="text-xs text-slate-500" aria-live="polite">
+        Checking the PRIMARY arrival…
+      </p>
+    );
+  if (!suggestion) return null;
+  const overThreshold =
+    delay !== null && delay >= BACKUP_DELAY_THRESHOLD_MINUTES;
+  const useButton = onUseSuggestion && (
+    <Button
+      type="button"
+      variant="link"
+      size="sm"
+      className="h-auto p-0 text-xs"
+      onClick={onUseSuggestion}
+    >
+      {offPlan ? "Use this time" : "Use suggestion"}
+    </Button>
+  );
+  const estimate = (
+    <span>
+      Estimated by progress:{" "}
+      <DateTimeUtc
+        value={suggestion.suggestedEta.toISOString()}
+        compact
+        className="font-semibold text-slate-800"
+      />{" "}
+      ({suggestion.mode === "AHEAD" ? "drive on to" : "turn back to"}{" "}
+      {suggestion.branchName}, then follow the backup)
+    </span>
+  );
+  return (
+    <div
+      className="space-y-1 rounded-[2px] border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600"
+      aria-live="polite"
+    >
+      {offPlan && (
+        <p className="text-amber-700">
+          This trip is running {formatOffPlan(suggestion.offPlanMinutes)}{" "}
+          {suggestion.offPlanMinutes < 0 ? "ahead of" : "behind"} its plan. The
+          system measures the delay against the planned arrival, not the real
+          progress.
+        </p>
+      )}
+      <p>
+        PRIMARY arrival{offPlan ? " (planned)" : ""}:{" "}
+        <DateTimeUtc
+          value={suggestion.primaryEta.toISOString()}
+          compact
+          className="font-semibold text-slate-800"
+        />
+      </p>
+      {offPlan ? (
+        <>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span>
+              For a delay-based approval, enter{" "}
+              <DateTimeUtc
+                value={suggestion.minimumDelayEta.toISOString()}
+                compact
+                className="font-semibold text-slate-800"
+              />{" "}
+              or later.
+            </span>
+            {useButton}
+          </p>
+          <p>{estimate}</p>
+        </>
+      ) : (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {estimate}
+          {useButton}
+        </p>
+      )}
+      {delay !== null && (
+        <p className={overThreshold ? "text-amber-700" : "text-slate-600"}>
+          {offPlan && delay < 0 ? (
+            "Earlier than the planned PRIMARY arrival: "
+          ) : (
+            <>
+              <span className="font-semibold">{formatDelay(delay)}</span>{" "}
+              against the PRIMARY arrival.{" "}
+            </>
+          )}
+          {overThreshold
+            ? "Over 1h, so the Logistics Manager must approve it."
+            : offPlan && delay < 0
+              ? "the request is accepted only if the backup changes a BCP, adds a 24h rest or detours by 50 km or more."
+              : "Under 1h: the request is accepted only if the backup changes a BCP, adds a 24h rest or detours by 50 km or more."}
+        </p>
+      )}
+    </div>
   );
 }

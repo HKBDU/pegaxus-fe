@@ -45,7 +45,8 @@ export function getEmergencyActions(
     if (
       route.routeType === "RETURN" &&
       route.status === "DRAFT" &&
-      context.dossierStatus === "APPROVED"
+      // The EXTRA dossier is created only by this approval, so the decision depends on MAIN, as in BE.
+      context.mainDossierStatus === "APPROVED"
     )
       return ["decision"];
     if (route.routeType === "RETURN" && route.status === "CONFIRMED")

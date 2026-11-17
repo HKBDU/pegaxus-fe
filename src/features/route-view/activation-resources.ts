@@ -30,9 +30,14 @@ async function everyPage<T>(
   return items;
 }
 
+const shiftDay = (iso: string, shiftMs: number) =>
+  new Date(new Date(iso).getTime() + shiftMs).toISOString().slice(0, 10);
+
+/** shiftMs: how far the LM moved the return start, so availability is read for the real dates. */
 export async function loadActivationResources(
   plan: RoutePlanDetail,
   primary?: RoutePlanDetail,
+  shiftMs = 0,
 ) {
   const result: Record<string, SegmentResourceOptions> = {};
   const providerReads = new Map<string, Promise<Provider[]>>();
@@ -87,8 +92,8 @@ export async function loadActivationResources(
             pageIndex,
             pageSize: 100,
             transportMode: mode,
-            availableFrom: segment.plannedDepartureAt!.slice(0, 10),
-            availableTo: segment.plannedArrivalAt!.slice(0, 10),
+            availableFrom: shiftDay(segment.plannedDepartureAt!, shiftMs),
+            availableTo: shiftDay(segment.plannedArrivalAt!, shiftMs),
           }),
         );
       } catch (error) {

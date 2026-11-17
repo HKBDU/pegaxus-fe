@@ -44,15 +44,34 @@ export function useLiveTruck(transportId: string, options: { pollSnapshot?: bool
   const [live, dispatch] = useReducer(reducer, initialState)
   const [streamState, setStreamState] = useState<RealtimeConnectionState>("idle")
   const [streamError, setStreamError] = useState<string | null>(null)
+  const [pollAfterDisconnect, setPollAfterDisconnect] = useState(false)
   const legRef = useRef<string | null>(null)
   const refreshedAtRef = useRef(0)
+  const fallbackStartedRef = useRef(false)
   const now = useNow(SIGNAL_TICK_MS)
 
-  const query = useTrackingSnapshot(transportId, !realtime || options.pollSnapshot === true, (snapshot) => {
+  useEffect(() => {
+    if (!realtime || streamState === "connected" || streamState === "idle") {
+      return
+    }
+    const timer = window.setTimeout(() => setPollAfterDisconnect(true), 10_000)
+    return () => window.clearTimeout(timer)
+  }, [realtime, streamState])
+
+  const query = useTrackingSnapshot(transportId, !realtime || options.pollSnapshot === true || pollAfterDisconnect, (snapshot) => {
     legRef.current = snapshot.truck?.routePlanRouteId ?? legRef.current
     dispatch({ type: "snapshot", snapshot, receivedAt: Date.now() })
   })
   const { refetch } = query
+  useEffect(() => {
+    if (!pollAfterDisconnect) {
+      fallbackStartedRef.current = false
+      return
+    }
+    if (fallbackStartedRef.current || document.hidden || !navigator.onLine) return
+    fallbackStartedRef.current = true
+    void refetch()
+  }, [pollAfterDisconnect, refetch])
   // The stream only needs to run once GP1 accepted the viewer; a refused request (403, wrong status) has nothing to stream.
   const streamEnabled = realtime && query.data !== undefined
 
@@ -72,7 +91,10 @@ export function useLiveTruck(transportId: string, options: { pollSnapshot?: bool
         }
         legRef.current = leg ?? legRef.current
       },
-      onState: setStreamState,
+      onState: (state) => {
+        setStreamState(state)
+        if (state === "connected") setPollAfterDisconnect(false)
+      },
       onJoined: () => {
         setStreamError(null)
         // Samples sent while disconnected are not replayed: reload the snapshot after every join.

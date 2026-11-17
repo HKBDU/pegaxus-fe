@@ -33,6 +33,7 @@ import { employeeRoles, formatAccountLabel } from "../constants";
 import { getAccountError } from "../services";
 import type { EmployeeDetail } from "../types";
 import { EmployeeSummaryCard } from "../components/EmployeeSummaryCard";
+import { usePageTitle } from "@/shared/hooks";
 import {
   updateEmploymentSchema,
   type UpdateEmploymentValues,
@@ -79,9 +80,9 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
       if (!result.started) return;
       toast.success("Employee account updated successfully.");
       if (changes.accountStatus === "SUSPENDED") {
-        navigate(ROLE_ROUTES.managerUsers);
+        navigate(ROLE_ROUTES.managerUsers, { replace: true });
       } else {
-        navigate(accountDetail(employee.employeeId));
+        navigate(accountDetail(employee.employeeId), { replace: true });
       }
     } catch (error) {
       toast.error(getAccountError(error));
@@ -247,6 +248,9 @@ function EmploymentForm({ employee }: { employee: EmployeeDetail }) {
 export default function EditUserAccountPage() {
   const { employeeId = "" } = useParams();
   const query = useEmployee(employeeId);
+  const employee = query.data;
+  const editTitle = employee?.fullName ? `Edit ${employee.fullName}` : "Edit User";
+  usePageTitle(editTitle);
   return (
     <div className="booking-page-shell min-h-[calc(100svh-3rem)] px-5 pt-5 pb-8 font-sans sm:px-6 lg:px-10">
       <div className="booking-page-enter mx-auto w-full max-w-[1152px]">

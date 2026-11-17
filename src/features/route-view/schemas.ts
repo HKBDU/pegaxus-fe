@@ -59,6 +59,8 @@ export const routeSegmentSchema = z.object({
     }),
   fromLocation: routeLocationSchema,
   toLocation: routeLocationSchema,
+  // Set when the segment stopped early at an incident (the convoy turned back for a BACKUP or RETURN).
+  endedAtLocation: routeLocationSchema.nullish().transform((v) => v ?? null),
   plannedDepartureAt: responseTimestamp.nullable(),
   plannedArrivalAt: responseTimestamp.nullable(),
   actualDepartureAt: timestamp.nullable().optional().transform((v) => v ?? null),
@@ -116,10 +118,15 @@ export const routePlanDetailSchema = z.object({
   status: routePlanStatusSchema,
   isCrossBorder: z.boolean(),
   totalDistanceKm: z.number().nonnegative(),
-  estimatedDurationMinutes: durationMinutes,
+  // An active PRIMARY reports first planned departure to last planned arrival of the itinerary it now follows. When a backup
+  // started earlier than the PRIMARY was planned, that span is negative: show no duration instead of failing the page.
+  estimatedDurationMinutes: z.number().int().transform((v) => (v < 0 ? null : v)),
   plannedDepartureAt: timestamp.nullish(),
   plannedArrivalAt: timestamp.nullish(),
   segments: z.array(routeSegmentSchema),
+  /** On an active PRIMARY: its segments a backup replaced before they were driven (not part of `segments`). */
+  replacedSegments: z.array(routeSegmentSchema).nullish().transform((v) => v ?? []),
+  replacedByRoutePlanCode: z.string().nullish().transform((v) => v ?? null),
   isPersonnelComplete: z.boolean(),
   branchSequenceNo: z.number().int().positive().nullish(),
   legalReview: routeLegalReviewSchema.nullable().optional().transform((v) => v ?? null),
@@ -174,14 +181,6 @@ const optionalNote = z
   .trim()
   .optional()
   .transform((value) => value || undefined);
-const extraCost = z
-  .number()
-  .finite()
-  .min(0)
-  .max(Number.MAX_SAFE_INTEGER)
-  .refine(Number.isSafeInteger, {
-    message: "Enter a whole amount in VND (no decimals).",
-  });
 export const backupChangeRequestSchema = z.object({
   reason: z
     .string()
@@ -189,15 +188,28 @@ export const backupChangeRequestSchema = z.object({
     .trim()
     .min(10, "Explain the change in at least 10 characters."),
   newEstimatedArrivalAt: timestamp,
-  // EC1 takes a whole VND amount; the BE has no currency field in the request.
-  estimatedExtraCost: extraCost.optional(),
   note: optionalNote,
+});
+export const crewOverrideSchema = z.object({
+  routePlanRouteId: z.string().min(1),
+  driverEmployeeId: z.string().min(1).optional(),
+  escortEmployeeId: z.string().min(1).optional(),
+  vehicleIds: z
+    .array(z.string().min(1))
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "Submit each vehicle only once.",
+    })
+    .optional(),
 });
 export const routeChangeDecisionSchema = z
   .object({
     lastUpdatedAt: timestamp,
     decision: z.enum(["APPROVE", "REJECT"]),
     note: optionalNote,
+    // BACKUP approval only: when the backup really starts, and the crew/vehicles picked by the LM.
+    startAt: timestamp.optional(),
+    segments: z.array(crewOverrideSchema).max(100).optional(),
   })
   .refine(
     (input) => input.decision !== "REJECT" || (input.note?.length ?? 0) >= 10,
@@ -222,6 +234,9 @@ export const returnSegmentOverrideSchema = z
         note: optionalNote,
       })
       .optional(),
+    // Replaces the suggested crew of an internal segment.
+    driverEmployeeId: z.string().min(1).optional(),
+    escortEmployeeId: z.string().min(1).optional(),
   })
   .refine(
     (input) =>
@@ -236,6 +251,8 @@ export const returnActivationSchema = z
     lastUpdatedAt: timestamp,
     segments: z.array(returnSegmentOverrideSchema).max(100).optional(),
     note: optionalNote,
+    // When the return really starts: every return segment moves by the same amount.
+    startAt: timestamp.optional(),
   })
   .refine(
     (input) =>
@@ -271,6 +288,61 @@ export const routeChangeDecisionResultSchema = z.object({
     .nullable(),
   branchSequenceNo: z.number().int().positive().nullish(),
   branchLocation: routeLocationSchema.nullish(),
+});
+// GET /route-plans/{id}/change-request: the Route Coordinator's latest backup request, or null when none was sent.
+export const changeRequestViewSchema = z
+  .object({
+    requestedAt: timestamp,
+    requestedBy: employeeBriefSchema.nullish(),
+    reason: z.string(),
+    newEstimatedArrivalAt: timestamp,
+    note: text,
+    incidentReportId: text,
+    incidentCode: text,
+    impacts: z.array(z.string()),
+    summary: z.string(),
+  })
+  .nullable();
+// GET /route-plans/{id}/change-crew: backup segments from the branch point with the suggested crew.
+export const crewPlanSchema = z.object({
+  routePlanId: z.union([entityIdSchema, z.number()]).transform(String),
+  lastUpdatedAt: timestamp,
+  suggestedStartAt: timestamp,
+  segments: z.array(
+    z.object({
+      segment: z.object({
+        routePlanRouteId: z.string().min(1),
+        sequenceNo: z.number().int().positive(),
+        route: z.object({ transportMode: transportModeSchema }),
+        fromLocation: routeLocationSchema,
+        toLocation: routeLocationSchema,
+        plannedDepartureAt: timestamp,
+        plannedArrivalAt: timestamp,
+        executionType: z.enum(["INTERNAL", "OUTSOURCED"]),
+        vehicles: z.array(
+          z.object({
+            vehicleId: z.union([entityIdSchema, z.number()]).transform(String),
+            vehicleCode: z.string(),
+            licensePlate: text,
+            capacityHorses: z.number().nullish(),
+          }),
+        ),
+        outsourcing: z
+          .object({ provider: z.object({ providerName: z.string() }) })
+          .nullish(),
+        driver: employeeBriefSchema.nullish(),
+        escort: employeeBriefSchema.nullish(),
+      }),
+      suggestedFromRoutePlanRouteId: z.string().nullish(),
+      needsCrew: z.boolean(),
+    }),
+  ),
+  // INCIDENT_LOCATION: the running segment stops at the incident; NEXT_STOP: the convoy goes on to startLocation;
+  // AT_STOP: the convoy waits at startLocation. turnsBack: the convoy drives back to startLocation.
+  anchorMode: z.enum(["INCIDENT_LOCATION", "NEXT_STOP", "AT_STOP"]).optional(),
+  startLocation: routeLocationSchema.optional(),
+  turnsBack: z.boolean().optional(),
+  endedAtLocation: routeLocationSchema.nullish(),
 });
 export const returnActivationResultSchema = z.object({
   routePlanId: z.union([entityIdSchema, z.number()]).transform(String),

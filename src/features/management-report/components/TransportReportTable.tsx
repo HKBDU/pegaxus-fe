@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { codeLinkClassName } from "@/shared/components/ui/code-link";
 import { REPORT_MOCK_MODE } from "@/lib/report-mode";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { TablePagination } from "@/shared/components/common/TablePagination";
@@ -27,7 +28,7 @@ import {
   causeLabels,
   reportMeta,
   reportTime,
-  signedNumber,
+  deviationText,
 } from "../presentation";
 import {
   bucketSchema,
@@ -104,7 +105,8 @@ export function TransportReportTable({
                 className="overflow-hidden"
                 viewportClassName="max-h-[min(20rem,calc(var(--radix-select-content-available-height)-3rem))]"
               >
-                <SelectItem value="DELAYED">Delayed (default)</SelectItem>
+                <SelectItem value="DELAYED">Not on time (default)</SelectItem>
+                <SelectItem value="EARLY">Early</SelectItem>
                 <SelectItem value="ON_TIME">On time</SelectItem>
                 <SelectItem value="MINOR_DELAY">Minor delay</SelectItem>
                 <SelectItem value="MAJOR_DELAY">Major delay</SelectItem>
@@ -223,7 +225,10 @@ export function TransportReportTable({
             </TableHeader>
             <TableBody>
               {report.items.map((item) => (
-                <TableRow key={item.transportId} className="even:bg-stone-50">
+                <TableRow
+                  key={item.transportId}
+                  className="booking-table-row transition-colors duration-200 hover:bg-primary/5 motion-reduce:transition-none even:bg-stone-50"
+                >
                   <TableCell className="px-3 py-3 font-medium">
                     {REPORT_MOCK_MODE ? (
                       <span>{item.transportCode}</span>
@@ -231,7 +236,7 @@ export function TransportReportTable({
                       <Link
                         to={`${ROLE_ROUTES.ongoingTransports}/${encodeURIComponent(item.transportId)}`}
                         state={{ from: returnUrl }}
-                        className="text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
+                        className={codeLinkClassName}
                       >
                         {item.transportCode}
                       </Link>
@@ -248,7 +253,7 @@ export function TransportReportTable({
                     {reportTime(item.actualArrivalAt).replace(" UTC", "")}
                   </TableCell>
                   <TableCell className="px-3 text-right tabular-nums">
-                    {signedNumber(item.delayMinutes)}
+                    {deviationText(item.delayMinutes)}
                   </TableCell>
                   <TableCell className="px-3">
                     <Badge
@@ -256,7 +261,9 @@ export function TransportReportTable({
                       className={
                         item.bucket === "ON_TIME"
                           ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                          : item.bucket === "MAJOR_DELAY"
+                          : item.bucket === "EARLY"
+                            ? "border-sky-200 bg-sky-50 text-sky-800"
+                            : item.bucket === "MAJOR_DELAY"
                             ? "border-red-200 bg-red-50 text-red-800"
                             : "border-amber-200 bg-amber-50 text-amber-900"
                       }

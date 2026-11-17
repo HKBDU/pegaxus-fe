@@ -101,11 +101,17 @@ describe("primary and backup route presence", () => {
 });
 
 describe("getPendingRouteCreation", () => {
-  const context = specialistContext({ principal: coordinator });
+  const context = specialistContext({ principal: coordinator, transportStatus: "PLANNING" });
   it("offers Add Backup Route only when there is an active primary and no open backup", () => {
     expect(getPendingRouteCreation([route("PRIMARY", { status: "ACTIVE" })], context, "transport-1")?.label).toBe("Add Backup Route");
     expect(getPendingRouteCreation([route("PRIMARY", { status: "CONFIRMED" })], context, "transport-1")?.label).toBe("Add Backup Route");
     expect(getPendingRouteCreation([route("PRIMARY", { status: "ACTIVE" }), route("BACKUP", { status: "DRAFT" })], context, "transport-1")).toBeNull();
+  });
+
+  it("hides Add Backup Route once the transport is READY or later", () => {
+    for (const transportStatus of ["READY", "IN_TRANSIT", "COMPLETED"]) {
+      expect(getPendingRouteCreation([route("PRIMARY", { status: "CONFIRMED" })], { ...context, transportStatus }, "transport-1")).toBeNull();
+    }
   });
 });
 

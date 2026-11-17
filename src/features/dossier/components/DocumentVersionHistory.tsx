@@ -21,9 +21,9 @@ import { DocumentFilesPreview } from "./DocumentFilesPreview";
 import { DocumentRequestComments } from "./DocumentRequestComments";
 import { RevokeDocumentReviewDialog } from "./RevokeDocumentReviewDialog";
 
-// INVALID FEATURE: Flow 2 has no revoke-review endpoint. Keep legacy code for
-// audit/reference, but this flag must remain false until the contract changes.
-const REVOKE_REVIEW_FEATURE_ENABLED = false;
+// Revoking an approval (POST .../reviews/{reviewId}/revoke) lets the specialist reopen a document, for example after an
+// authority rejected the dossier.
+const REVOKE_REVIEW_FEATURE_ENABLED = true;
 
 function VersionFiles({
   files,

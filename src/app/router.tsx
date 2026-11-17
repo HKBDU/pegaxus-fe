@@ -1,6 +1,6 @@
 // oxlint-disable react/only-export-components -- router modules intentionally export configuration
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate, Outlet } from "react-router-dom";
+import { createBrowserRouter, Navigate, Outlet, type RouteObject } from "react-router-dom";
 import { DriverLocationSession } from "@/features/location-sharing/components/DriverLocationSession";
 import {
   LoadingState,
@@ -15,16 +15,18 @@ import { AdminLayout } from "@/shared/layouts/AdminLayout";
 import { MainLayout } from "@/shared/layouts/MainLayout";
 import { BookingHistoryRoleLayout } from "@/features/booking/components/history/BookingHistoryRoleLayout";
 import { handoverTabRoutes } from "@/features/handover";
+import { authRoutes } from "@/features/auth/routes";
 import { claimRoutes } from "@/features/claim/routes";
 import { priceListRoutes } from "@/features/price-list/routes";
 import { incidentManagementRoutes } from "@/features/incident-management";
+import { useAuthStore } from "@/features/auth/store";
 import {
   APPROVED_BOOKINGS_ACCESS,
   TRANSPORT_PLANS_ACCESS,
   ROLE_ROUTES,
+  getPostLoginPath,
   routePlanDetail,
 } from "./route-config";
-import { AuthShell } from "@/features/auth/components/AuthShell";
 import { liveTrackingTabRoutes } from "@/features/live-tracking";
 import {
   horseHealthCrewFormRoutes,
@@ -33,6 +35,8 @@ import {
 } from "@/features/horse-health";
 import { incidentRoutes } from "@/features/incident-report";
 import { transportAuditRoutes } from "@/features/transport-audit";
+import { routePlanRoutes } from "@/features/route-plan/routes";
+import { RouteErrorBoundary } from "./RouteErrorBoundary";
 import { ongoingTransportRoutes } from "@/features/ongoing-transport";
 import { financialReportRoutes } from "@/features/financial-report";
 import { managementReportRoutes } from "@/features/management-report";
@@ -40,9 +44,9 @@ import {
   emergencyCostRoutes,
   emergencyRerouteRoutes,
 } from "@/features/incident-response";
-import TestPage from "../Test";
 
 const HomePage = lazy(() => import("@/features/home/pages/HomePage"));
+const TermsPage = lazy(() => import("@/features/policies/pages/TermsPage"));
 const BookingListPage = lazy(
   () => import("@/features/booking/pages/BookingListPage"),
 );
@@ -55,19 +59,6 @@ const BookingFormPage = lazy(
 const ReturnBookingPage = lazy(
   () => import("@/features/booking/pages/ReturnBookingPage"),
 );
-const BcpQuarantineProofPage = lazy(
-  () => import("@/features/quarantine/pages/BcpQuarantineProofPage"),
-);
-const QuarantineReviewPage = lazy(
-  () => import("@/features/quarantine/pages/QuarantineReviewPage"),
-);
-const CustomsClearanceProofPage = lazy(
-  () => import("@/features/clearance/pages/CustomsClearanceProofPage"),
-);
-const CustomsClearanceReviewPage = lazy(
-  () => import("@/features/clearance/pages/CustomsClearanceReviewPage"),
-);
-const LogoutPage = lazy(() => import("@/features/auth/pages/LogoutPage"));
 const ManageUserAccountsPage = lazy(
   () => import("@/features/accounts/pages/ManageUserAccountsPage"),
 );
@@ -79,26 +70,6 @@ const ViewUserAccountPage = lazy(
 );
 const EditUserAccountPage = lazy(
   () => import("@/features/accounts/pages/EditUserAccountPage"),
-);
-const RegisterPage = lazy(() => import("@/features/auth/pages/RegisterPage"));
-const LoginPage = lazy(() => import("@/features/auth/pages/LoginPage"));
-const GoogleCallbackPage = lazy(
-  () => import("@/features/auth/pages/GoogleCallbackPage"),
-);
-const ForgotPasswordPage = lazy(
-  () => import("@/features/auth/pages/ForgotPasswordPage"),
-);
-const ForgotPasswordOtpPage = lazy(
-  () => import("@/features/auth/pages/ForgotPasswordOtpPage"),
-);
-const ResetPasswordPage = lazy(
-  () => import("@/features/auth/pages/ResetPasswordPage"),
-);
-const VerifyEmailPage = lazy(
-  () => import("@/features/auth/pages/VerifyEmailPage"),
-);
-const ChangePasswordPage = lazy(
-  () => import("@/features/auth/pages/ChangePasswordPage"),
 );
 const NotificationsPage = lazy(
   () => import("@/features/notification/pages/NotificationsPage"),
@@ -156,18 +127,6 @@ const ProviderDetailPage = lazy(
 const ProviderEditPage = lazy(
   () => import("@/features/fleet/pages/ProviderEditPage"),
 );
-const CreateRoutePlanPage = lazy(
-  () => import("@/features/route-plan/pages/CreateRoutePlanPage"),
-);
-const CreateContingencyRoutePage = lazy(
-  () => import("@/features/route-plan/pages/CreateContingencyRoutePage"),
-);
-const CreateReturnRoutePage = lazy(
-  () => import("@/features/route-plan/pages/CreateReturnRoutePage"),
-);
-const EditRoutePlanPage = lazy(
-  () => import("@/features/route-plan/pages/EditRoutePlanPage"),
-);
 const MapAssetsPage = lazy(
   () => import("@/features/route-plan/pages/MapAssetsPage"),
 );
@@ -205,8 +164,18 @@ const bookingHistoryPage = (
   </Suspense>
 );
 
-export const router = createBrowserRouter([
+function AdminIndexRedirect() {
+  const principal = useAuthStore((state) => state.principal);
+  const user = useAuthStore((state) => state.user);
+  const role = user?.role || principal?.roles[0];
+  const target = role ? getPostLoginPath(role, "/admin") : "/login";
+  return <Navigate to={target} replace />;
+}
+
+const routes: RouteObject[] = [
   ...transportAuditRoutes,
+  ...authRoutes,
+  ...routePlanRoutes,
   ...emergencyCostRoutes,
   ...emergencyRerouteRoutes,
   ...financialReportRoutes,
@@ -214,11 +183,7 @@ export const router = createBrowserRouter([
   ...priceListRoutes,
   ...managementReportRoutes,
   {
-    element: (
-      <DriverLocationSession>
-        <Outlet />
-      </DriverLocationSession>
-    ),
+    element: <Outlet />,
     children: [
       ...horseHealthRoutes,
       ...incidentManagementRoutes,
@@ -302,6 +267,22 @@ export const router = createBrowserRouter([
     element: <MainLayout />,
     children: [
       {
+        path: "terms",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TermsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "policy",
+        element: (
+          <Suspense fallback={<LoadingState />}>
+            <TermsPage />
+          </Suspense>
+        ),
+      },
+      {
         index: true,
         element: (
           <Suspense fallback={<LoadingState />}>
@@ -315,7 +296,7 @@ export const router = createBrowserRouter([
           {
             path: "compliance-dossiers/:dossierId",
             element: (
-              <ProtectedRoute allowedRoles={["CUSTOMER"]}>
+              <ProtectedRoute allowedRoles={["CUSTOMER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}>
                 <Suspense fallback={<LoadingState />}>
                   <DossierDetailsPage />
                 </Suspense>
@@ -461,116 +442,127 @@ export const router = createBrowserRouter([
   {
     path: "/admin",
     element: (
-      <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
+      <ProtectedRoute
+        allowedRoles={[
+          "LOGISTICS_MANAGER",
+          "TRANSPORT_SPECIALIST",
+          "FLEET_ROUTE_COORDINATOR",
+        ]}
+      >
         <AdminLayout />
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <Navigate to="transport-requests" replace /> },
+      { index: true, element: <AdminIndexRedirect /> },
       {
-        path: "compliance-dossiers/:dossierId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <DossierDetailsPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "booking",
-        element: <Navigate to="/admin/transport-requests" replace />,
-      },
-      {
-        path: "bookings",
-        element: <Navigate to="/admin/transport-requests" replace />,
-      },
-      {
-        path: "profile",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <ProfileSettingsPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "transport-requests",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <BookingListPage audience="manager" />
-          </Suspense>
-        ),
-      },
-      {
-        path: ROLE_ROUTES.managerUsers,
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <ManageUserAccountsPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: ROLE_ROUTES.managerCreateUser,
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <CreateEmployeeAccountPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "users/:employeeId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <ViewUserAccountPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "users/:employeeId/edit",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <EditUserAccountPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "transport-requests/:bookingId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <BookingDetailsPage audience="manager" />
-          </Suspense>
-        ),
-      },
-      // Flow 6 invoices (Logistics Manager).
-      {
-        path: "invoices",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <InvoiceListPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "invoices/new/:bookingId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <InvoiceFormPage mode="create" />
-          </Suspense>
-        ),
-      },
-      {
-        path: "invoices/:invoiceId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <InvoiceDetailPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "invoices/:invoiceId/edit",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <InvoiceFormPage mode="edit" />
-          </Suspense>
-        ),
+        element: <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]} />,
+        children: [
+          {
+            path: "compliance-dossiers/:dossierId",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <DossierDetailsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "booking",
+            element: <Navigate to="/admin/transport-requests" replace />,
+          },
+          {
+            path: "bookings",
+            element: <Navigate to="/admin/transport-requests" replace />,
+          },
+          {
+            path: "profile",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <ProfileSettingsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "transport-requests",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <BookingListPage audience="manager" />
+              </Suspense>
+            ),
+          },
+          {
+            path: ROLE_ROUTES.managerUsers,
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <ManageUserAccountsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: ROLE_ROUTES.managerCreateUser,
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <CreateEmployeeAccountPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "users/:employeeId",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <ViewUserAccountPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "users/:employeeId/edit",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <EditUserAccountPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "transport-requests/:bookingId",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <BookingDetailsPage audience="manager" />
+              </Suspense>
+            ),
+          },
+          // Flow 6 invoices (Logistics Manager).
+          {
+            path: "invoices",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <InvoiceListPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "invoices/new/:bookingId",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <InvoiceFormPage mode="create" />
+              </Suspense>
+            ),
+          },
+          {
+            path: "invoices/:invoiceId",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <InvoiceDetailPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "invoices/:invoiceId/edit",
+            element: (
+              <Suspense fallback={<LoadingState />}>
+                <InvoiceFormPage mode="edit" />
+              </Suspense>
+            ),
+          },
+        ],
       },
       { path: "*", element: <NotFoundPage /> },
     ],
@@ -688,103 +680,6 @@ export const router = createBrowserRouter([
           <Suspense fallback={<LoadingState />}>
             <MapAssetsPage />
           </Suspense>
-        ),
-      },
-    ],
-  },
-  {
-    path: "/admin/route-plans",
-    element: (
-      <ProtectedRoute
-        allowedRoles={[
-          "LOGISTICS_MANAGER",
-          "FLEET_ROUTE_COORDINATOR",
-          "TRANSPORT_SPECIALIST",
-        ]}
-      >
-        <AdminLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      // There is no route plan list: plans are reached from a transport plan, so the menu entry opens the approved bookings.
-      {
-        index: true,
-        element: <Navigate to={ROLE_ROUTES.approvedBookings} replace />,
-      },
-      {
-        path: "new/:transportPlanId",
-        element: (
-          <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}>
-            <Suspense fallback={<LoadingState />}>
-              <CreateRoutePlanPage />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: ":routePlanId/edit",
-        element: (
-          <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}>
-            <Suspense fallback={<LoadingState />}>
-              <EditRoutePlanPage />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "new/:transportPlanId/contingency",
-        element: (
-          <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}>
-            <Suspense fallback={<LoadingState />}>
-              <CreateContingencyRoutePage />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "new/:transportPlanId/return",
-        element: (
-          <ProtectedRoute allowedRoles={["FLEET_ROUTE_COORDINATOR"]}>
-            <Suspense fallback={<LoadingState />}>
-              <CreateReturnRoutePage />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-      // UC-38 route plan detail (LM, RC, TS): the page itself checks the assignment through the BE.
-      {
-        path: ":routePlanId",
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <RoutePlanDetailPage routeDetailPath={routePlanDetail} />
-          </Suspense>
-        ),
-      },
-      // UC-48 deep links used by notifications (Logistics Manager only).
-      {
-        path: ":routePlanId/change-decision",
-        element: (
-          <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
-            <Suspense fallback={<LoadingState />}>
-              <RoutePlanDetailPage
-                emergencyView="decision"
-                routeDetailPath={routePlanDetail}
-              />
-            </Suspense>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: ":routePlanId/return-activation",
-        element: (
-          <ProtectedRoute allowedRoles={["LOGISTICS_MANAGER"]}>
-            <Suspense fallback={<LoadingState />}>
-              <RoutePlanDetailPage
-                emergencyView="activation"
-                routeDetailPath={routePlanDetail}
-              />
-            </Suspense>
-          </ProtectedRoute>
         ),
       },
     ],
@@ -929,59 +824,6 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    path: "/logout",
-    element: (
-      <ProtectedRoute>
-        <Suspense fallback={<LoadingState />}>
-          <LogoutPage />
-        </Suspense>
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: "/compliance-dossiers/:dossierId",
-    element: (
-      <ProtectedRoute
-        allowedRoles={["CUSTOMER", "TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}
-      >
-        <MainLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      {
-        index: true,
-        element: (
-          <Suspense fallback={<LoadingState />}>
-            <DossierDetailsPage />
-          </Suspense>
-        ),
-      },
-    ],
-  },
-  {
-    element: <AuthShell />,
-    children: [
-      { path: "/login", element: <LoginPage /> },
-      { path: "/auth/google/callback", element: <GoogleCallbackPage /> },
-      { path: "/register", element: <RegisterPage /> },
-      { path: "/forgot-password", element: <ForgotPasswordPage /> },
-      { path: "/verify-email", element: <VerifyEmailPage /> },
-      {
-        path: "/forgot-password/verify-otp",
-        element: <ForgotPasswordOtpPage />,
-      },
-      { path: "/reset-password", element: <ResetPasswordPage /> },
-      {
-        path: "/change-password",
-        element: (
-          <ProtectedRoute>
-            <ChangePasswordPage />
-          </ProtectedRoute>
-        ),
-      },
-    ],
-  },
-  {
     element: <ProtectedRoute />,
     children: [
       {
@@ -993,14 +835,18 @@ export const router = createBrowserRouter([
           },
         ],
       },
+    ],
+  },
+  ...(import.meta.env.DEV
+    ? [
       {
+        path: "/__dev/flow3/route-plans/:routePlanId",
         element: (
           <ProtectedRoute
             allowedRoles={[
-              "DRIVER",
-              "ESCORT",
-              "TRANSPORT_SPECIALIST",
               "LOGISTICS_MANAGER",
+              "FLEET_ROUTE_COORDINATOR",
+              "TRANSPORT_SPECIALIST",
             ]}
           >
             <AdminLayout />
@@ -1008,115 +854,27 @@ export const router = createBrowserRouter([
         ),
         children: [
           {
-            path: "/compliance-dossiers/:dossierId/bcp-quarantine-proof",
+            index: true,
             element: (
-              <ProtectedRoute
-                allowedRoles={["ESCORT"]}
-              >
-                <Suspense fallback={<LoadingState />}>
-                  <BcpQuarantineProofPage />
-                </Suspense>
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: "/compliance-dossiers/:dossierId/quarantine-proof",
-            element: (
-              <ProtectedRoute
-                allowedRoles={["ESCORT"]}
-              >
-                <Suspense fallback={<LoadingState />}>
-                  <BcpQuarantineProofPage />
-                </Suspense>
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: "/compliance-dossiers/:dossierId/customs-clearance-proof",
-            element: (
-              <ProtectedRoute
-                allowedRoles={["DRIVER"]}
-              >
-                <Suspense fallback={<LoadingState />}>
-                  <CustomsClearanceProofPage />
-                </Suspense>
-              </ProtectedRoute>
+              <Suspense fallback={<LoadingState />}>
+                <RoutePlanDetailPage routeDetailPath={routePlanDetail} />
+              </Suspense>
             ),
           },
         ],
+      },
+      // END TEMP UC-38 LOCAL PREVIEW
+      {
+        path: "/__dev/customer/bookings/:bookingId/history",
+        element: <MainLayout />,
+        children: [{ index: true, element: bookingHistoryPage }],
       },
       {
-        element: (
-          <ProtectedRoute
-            allowedRoles={["TRANSPORT_SPECIALIST", "LOGISTICS_MANAGER"]}
-          >
-            <AdminLayout />
-          </ProtectedRoute>
-        ),
-        children: [
-          {
-            path: "/quarantine-proofs/:proofId/verify",
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <QuarantineReviewPage />
-              </Suspense>
-            ),
-          },
-          {
-            path: "/customs-clearance-proofs/:proofId/verify",
-            element: (
-              <Suspense fallback={<LoadingState />}>
-                <CustomsClearanceReviewPage />
-              </Suspense>
-            ),
-          },
-        ],
+        path: "/__dev/admin/bookings/:bookingId/history",
+        element: <AdminLayout />,
+        children: [{ index: true, element: bookingHistoryPage }],
       },
-    ],
-  },
-  ...(import.meta.env.DEV
-    ? [
-        // BEGIN TEMP UC-38 LOCAL PREVIEW — remove only this route object after testing.
-        {
-          path: "/__dev/transport-audit",
-          element: <TestPage />,
-        },
-        {
-          path: "/__dev/flow3/route-plans/:routePlanId",
-          element: (
-            <ProtectedRoute
-              allowedRoles={[
-                "LOGISTICS_MANAGER",
-                "FLEET_ROUTE_COORDINATOR",
-                "TRANSPORT_SPECIALIST",
-              ]}
-            >
-              <AdminLayout />
-            </ProtectedRoute>
-          ),
-          children: [
-            {
-              index: true,
-              element: (
-                <Suspense fallback={<LoadingState />}>
-                  <RoutePlanDetailPage routeDetailPath={routePlanDetail} />
-                </Suspense>
-              ),
-            },
-          ],
-        },
-        // END TEMP UC-38 LOCAL PREVIEW
-        {
-          path: "/__dev/customer/bookings/:bookingId/history",
-          element: <MainLayout />,
-          children: [{ index: true, element: bookingHistoryPage }],
-        },
-        {
-          path: "/__dev/admin/bookings/:bookingId/history",
-          element: <AdminLayout />,
-          children: [{ index: true, element: bookingHistoryPage }],
-        },
-      ]
+    ]
     : []),
 
   {
@@ -1138,5 +896,17 @@ export const router = createBrowserRouter([
   {
     path: "*",
     element: <NotFoundPage />,
+  },
+];
+
+export const router = createBrowserRouter([
+  {
+    errorElement: <RouteErrorBoundary />,
+    element: (
+      <DriverLocationSession>
+        <Outlet />
+      </DriverLocationSession>
+    ),
+    children: routes,
   },
 ]);

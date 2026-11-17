@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, Check, FileText, ShieldCheck, X } from "lucide-react";
+import { Check, FileText, ShieldCheck, Users, X } from "lucide-react";
+import { BackButton } from "@/shared/components/BackButton";
 import { Button } from "@/shared/components/ui/button";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
@@ -39,10 +41,15 @@ import {
   type EmergencyContext,
 } from "../../hooks/useEmergencyRoute";
 import { useRoutePlanDetail } from "../../hooks/useRoutePlanDetail";
-import { getRouteViewError } from "../../services";
-import type { RoutePlanDetail } from "../../types";
+import { getRouteViewError, routeViewService } from "../../services";
+import type { CrewOverride, RoutePlanDetail } from "../../types";
+import { CrewSelection } from "./CrewSelection";
+import { AnchorNote } from "./AnchorNote";
+import { crewSelectionErrors } from "../../crew-selection";
 import { isRelatedPrimary } from "../../route-comparison";
+import { estimateDriveBack } from "../../backup-eta";
 import { RouteChangeComparison } from "./RouteChangeComparison";
+import { ChangeRequestDetails } from "./ChangeRequestDetails";
 import { EmergencyFeedback } from "./EmergencyFeedback";
 import { REJECTED_BY_MANAGER } from "@/shared/constants/route-plan-status";
 
@@ -85,6 +92,31 @@ export function RouteChangeDecisionPanel({
       : undefined;
   const primaryPlan = !comparisonError ? primary.data : undefined;
   const isReturn = plan.routeType === "RETURN";
+  // BACKUP: the LM confirms the crew, vehicles and start time while approving.
+  const crewPlan = useQuery({
+    queryKey: ["route-view", "backup-crew-plan", plan.routePlanId, plan.updatedAt],
+    queryFn: ({ signal }) => routeViewService.getCrewPlan(plan.routePlanId, signal),
+    enabled: !isReturn,
+    retry: false,
+  });
+  const [crew, setCrew] = useState<Record<string, CrewOverride>>({});
+  const [startAt, setStartAt] = useState<string>();
+  // A hint only: when the convoy turns back, the backup cannot start before it is back at the branch point.
+  const driveBack = useMemo(() => {
+    const anchor = crewPlan.data;
+    if (!anchor?.turnsBack || !anchor.startLocation || !primaryPlan) return undefined;
+    const estimate = estimateDriveBack(primaryPlan, anchor.startLocation.locationId);
+    return estimate
+      ? {
+          minutes: estimate.minutes,
+          backAt: estimate.backAt.toISOString(),
+          locationName: anchor.startLocation.locationName,
+        }
+      : undefined;
+  }, [crewPlan.data, primaryPlan]);
+  const crewErrors = crewPlan.data ? crewSelectionErrors(crewPlan.data, crew) : {};
+  const crewBlocked =
+    !isReturn && (!crewPlan.data || Object.keys(crewErrors).length > 0);
   const rejectLabel = isReturn
     ? "Keep holding"
     : "Reject Change";
@@ -96,18 +128,36 @@ export function RouteChangeDecisionPanel({
     versionChanged ||
     Boolean(mutation.data) ||
     !primaryPlan;
-  const canApprove =
-    !isReturn || context.workspace.dossierStatus === "APPROVED";
+  const canApprove = isReturn
+    ? context.workspace.mainDossierStatus === "APPROVED"
+    : !crewBlocked;
   const reviewLatest = () => {
     setBaseline(plan.updatedAt);
+    setCrew({});
+    setStartAt(undefined);
     mutation.reset();
     attempt.reset();
   };
+  // Untouched, the suggested start is the planned departure or "now" when that passed; never send a time already gone.
+  const backupStart = () => {
+    const chosen = startAt ?? crewPlan.data?.suggestedStartAt;
+    if (!chosen) return undefined;
+    return startAt || new Date(chosen).getTime() > Date.now()
+      ? chosen
+      : new Date().toISOString();
+  };
   async function submit(decision: "APPROVE" | "REJECT", note?: string) {
     if (locked || (decision === "APPROVE" && !canApprove)) return;
+    const backup =
+      decision === "APPROVE" && !isReturn
+        ? {
+            startAt: backupStart(),
+            ...(Object.keys(crew).length ? { segments: Object.values(crew) } : {}),
+          }
+        : {};
     try {
       const result = await attempt.run(() =>
-        mutation.mutateAsync({ lastUpdatedAt: baseline, decision, note }),
+        mutation.mutateAsync({ lastUpdatedAt: baseline, decision, note, ...backup }),
       );
       if (!result.started) return;
       setApproveOpen(false);
@@ -132,16 +182,9 @@ export function RouteChangeDecisionPanel({
   return (
     <section aria-label="Emergency route change decision" className="space-y-3">
       <div className="space-y-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={busy}
-          onClick={onBack}
-          className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none -ml-3 text-slate-600"
-        >
-          <ArrowLeft aria-hidden="true" className="size-4" />
+        <BackButton disabled={busy} onClick={onBack}>
           Back to Route Plan
-        </Button>
+        </BackButton>
         <div className="space-y-1.5">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-600">
             Emergency Operations · Logistics Manager
@@ -165,18 +208,20 @@ export function RouteChangeDecisionPanel({
         error={comparisonError}
       />
       <Section title="Change Details" icon={FileText}>
-        <p className="text-sm leading-6 text-slate-600">
-          {isReturn
-            ? plan.routeNote || "Return reason is not available."
-            : "Check the request notification for the reason, revised arrival time and estimated extra cost. These details are not included in the route summary."}
-        </p>
+        {isReturn ? (
+          <p className="text-sm leading-6 text-slate-600">
+            {plan.routeNote || "Return reason is not available."}
+          </p>
+        ) : (
+          <ChangeRequestDetails routePlanId={plan.routePlanId} />
+        )}
         <p className="text-xs text-slate-500">
           Transport: {context.transportCode} · Booking: {plan.bookingCode}
         </p>
         {isReturn && (
           <p className="text-xs text-slate-500">
-            Compliance dossier:{" "}
-            {context.workspace.dossierStatus?.replaceAll("_", " ") ??
+            MAIN dossier:{" "}
+            {context.workspace.mainDossierStatus?.replaceAll("_", " ") ??
               "Not available"}
             .
           </p>
@@ -187,6 +232,38 @@ export function RouteChangeDecisionPanel({
             : "Approval activates this backup for its replacement segments. The primary route remains active for the rest of the journey."}
         </p>
       </Section>
+      {!isReturn && (
+        <Section title="Crew, Vehicles & Start Time" icon={Users}>
+          <p className="text-sm leading-6 text-slate-600">
+            The crew with the horse (when the convoy turns back) or of the
+            replaced PRIMARY segments is suggested. Fill any gap, change people
+            or vehicles, and set when the backup really starts (for example
+            after a hold or once tickets are booked).
+          </p>
+          {crewPlan.isPending && (
+            <p className="text-xs text-slate-500">Loading the suggested crew…</p>
+          )}
+          {crewPlan.isError && (
+            <p role="alert" className="text-xs text-destructive">
+              {getRouteViewError(crewPlan.error).message}
+            </p>
+          )}
+          {crewPlan.data && <AnchorNote plan={crewPlan.data} routeLabel="backup" />}
+          {crewPlan.data && (
+            <CrewSelection
+              plan={crewPlan.data}
+              transportPlanId={plan.transportPlanId}
+              startAt={startAt ?? crewPlan.data.suggestedStartAt}
+              driveBack={driveBack}
+              overrides={crew}
+              errors={crewErrors}
+              disabled={locked}
+              onStartAtChange={setStartAt}
+              onChange={(id, value) => setCrew((current) => ({ ...current, [id]: value }))}
+            />
+          )}
+        </Section>
+      )}
       <Section
         title="Decision"
         icon={ShieldCheck}
@@ -199,7 +276,9 @@ export function RouteChangeDecisionPanel({
         </p>
         {!canApprove && (
           <p className="text-xs text-destructive">
-            RETURN approval requires an APPROVED dossier.
+            {isReturn
+              ? "RETURN approval requires an APPROVED MAIN dossier."
+              : "Complete the crew and vehicles of every internal backup segment first."}
           </p>
         )}
         <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
@@ -280,7 +359,7 @@ export function RouteChangeDecisionPanel({
             <AlertDialogDescription>
               {isReturn
                 ? "Create a new EXTRA dossier in DRAFT; MAIN stays APPROVED. RETURN remains DRAFT until RP7 legal review, then awaits approved EXTRA documents and a separate EC3 activation."
-                : "BACKUP becomes ACTIVE. Only the indicated PRIMARY segments are replaced; required notifications are sent automatically."}
+                : "BACKUP becomes ACTIVE with the crew, vehicles and start time above. Only the indicated PRIMARY segments are replaced; the new crew, the released crew and the customer are notified automatically."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

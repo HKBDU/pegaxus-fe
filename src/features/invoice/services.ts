@@ -161,8 +161,8 @@ async function call<T>(request: Promise<unknown>): Promise<T> {
   try {
     return unwrap<T>(await request)
   } catch (error) {
-    const data = (error as { response?: { data?: { errorCode?: string; message?: string; errors?: ApiFieldError[] } } }).response?.data
-    if (data?.errorCode) throw new InvoiceApiError(data.errorCode, { cause: error, backendMessage: data.message, errors: data.errors })
+    const data = (error as { response?: { data?: { errorCode?: string; message?: string; errors?: ApiFieldError[]; value?: Record<string, unknown> | null } } }).response?.data
+    if (data?.errorCode) throw new InvoiceApiError(data.errorCode, { cause: error, backendMessage: data.message, errors: data.errors, value: data.value })
     throw error
   }
 }

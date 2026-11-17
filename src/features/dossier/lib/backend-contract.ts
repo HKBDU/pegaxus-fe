@@ -104,6 +104,10 @@ export const overviewDtoSchema = z.object({
     )
     .nullish(),
   status: dossierStatusSchema.nullable(),
+  /** A required authority's rejection or request for information that the specialist has not acted on yet. */
+  pendingAuthorityRevision: z
+    .object({ authorityName: z.string(), decision: z.string(), sentBackAt: z.string() })
+    .nullish(),
   fulfilledCount: z.number(),
   requirementCount: z.number(),
   completionPercent: z.number(),
@@ -230,6 +234,7 @@ export function mapBackendDossierOverview(payload: unknown) {
       ["SATISFIED", "WAIVED"].includes(requirement.status),
     ).length,
     bookingSummary: value.bookingSummary,
+    pendingAuthorityRevision: value.pendingAuthorityRevision ?? null,
     requirementSummary: {
       total: requirements.length,
       pending: count("PENDING"),

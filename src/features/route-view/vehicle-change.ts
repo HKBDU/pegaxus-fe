@@ -26,6 +26,7 @@ export function canChangeVehiclesBeforeDeparture(
 export type VehicleChangeCandidate = {
   sourceRoutePlanId: string;
   sourceRoutePlanCode: string;
+  sourceRouteType: RoutePlanDetail["routeType"];
   segment: RouteSegment;
 };
 
@@ -82,6 +83,7 @@ export function collectVehicleChangeCandidates(
         candidates.push({
           sourceRoutePlanId: plan.routePlanId,
           sourceRoutePlanCode: plan.routePlanCode,
+          sourceRouteType: plan.routeType,
           segment,
         });
     }

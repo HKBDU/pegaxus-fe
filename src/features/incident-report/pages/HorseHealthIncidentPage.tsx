@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useUnsavedChanges } from "@/shared/hooks/useUnsavedChanges";
 
 import { useHorseHealthOverview } from "@/features/horse-health/hooks/useHorseHealth";
 import { useAssignedTransports } from "@/features/horse-health/hooks/useAssignedTransports";
@@ -11,6 +12,8 @@ import {
 import type { HorseHealthIncidentRequest } from "@/shared/types/incident";
 import { toUtcIso } from "@/shared/utils/datetime";
 
+import { PageHeader } from "@/shared/components/PageHeader";
+import { BackButton } from "@/shared/components/BackButton";
 import { IncidentReportHeader } from "../components/IncidentReportHeader";
 import type { IncidentPhotoFieldValue } from "../components/IncidentPhotoField";
 import { areIncidentPhotosReady } from "../validation";
@@ -88,10 +91,42 @@ export default function HorseHealthIncidentPage() {
     null;
   const overview = useHorseHealthOverview(transportId);
   const driverGps = useTransportIncidentGps(transportId ?? "");
-  const [step, setStep] = useState<"selection" | "form">("selection");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawStep = searchParams.get("step");
+  const requestedStep: "selection" | "form" = rawStep === "form" ? "form" : "selection";
   const [selectedHorseIds, setSelectedHorseIds] = useState<string[]>(
     routeState.horseIds ?? [],
   );
+
+  let step: "selection" | "form" = requestedStep;
+  if (step === "form" && selectedHorseIds.length === 0) {
+    step = "selection";
+  }
+
+  useEffect(() => {
+    if (requestedStep !== step) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("step", step);
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }, [requestedStep, setSearchParams, step]);
+
+  const setStepWithUrl = useCallback(
+    (nextStep: "selection" | "form") => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("step", nextStep);
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
+
   const [photos, setPhotos] = useState(initialPhotos);
   const [fieldErrors, setFieldErrors] = useState<IncidentFieldErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -143,6 +178,38 @@ export default function HorseHealthIncidentPage() {
   );
   const form = useIncidentReport<HorseHealthIncidentFormValue>(initialValue);
   const patchForm = form.patch;
+
+  const isDirty = useMemo(() => {
+    if (step !== "form") return false;
+    const hasText = Boolean(
+      form.values.title.trim() ||
+      form.values.description.trim() ||
+      form.values.immediateAction.trim()
+    );
+    const hasPhotos = photos.files.length > 0 || photos.uploadedPublicIds.length > 0;
+    const hasHorseEdits = Object.values(form.values.horses).some((h) =>
+      Boolean(
+        h.conditionDescription?.trim() ||
+        h.symptoms?.trim() ||
+        h.bodyTemperatureCelsius?.trim() ||
+        h.heartRateBpm?.trim() ||
+        h.respiratoryRateBpm?.trim() ||
+        h.firstAidProvided?.trim() ||
+        h.medicationGiven?.trim() ||
+        h.veterinarianRequired ||
+        h.isolationRequired
+      )
+    );
+    return hasText || hasPhotos || hasHorseEdits;
+  }, [form.values, photos, step]);
+
+  const isSubmitting = mutations.horseHealth.isPending || Boolean(createdIncidentId);
+  const { dialogElement: unsavedChangesDialog, allowNextNavigation } = useUnsavedChanges({
+    isDirty,
+    isSubmitting,
+    title: "Discard incident report?",
+    description: "You have unsaved incident report details. Leaving will discard this report.",
+  });
 
   useEffect(() => {
     if (!location.locationId || location.locationId === locationId) return;
@@ -278,26 +345,48 @@ export default function HorseHealthIncidentPage() {
 
   if (step === "selection") {
     return (
-      <main className="mx-auto max-w-3xl p-4 sm:p-6">
+      <main className="mx-auto w-full min-w-0 max-w-7xl p-4 sm:p-6 lg:p-8">
+        {unsavedChangesDialog}
         {!transportId ? (
-          <p className="border border-red-600 bg-red-50 p-4 text-sm text-red-700">
-            No active transport was provided. Open this report from the
-            transport home screen.
-          </p>
+          <div className="space-y-4">
+            <PageHeader
+              title="Report horse incident"
+              backHref="/crew"
+              backLabel="Back to Ongoing Transport"
+            />
+            <p className="border border-red-600 bg-red-50 p-4 text-sm text-red-700">
+              No active transport was provided. Open this report from the
+              transport home screen.
+            </p>
+          </div>
         ) : overview.isPending ? (
-          <p className="border border-slate-300 bg-white p-4 text-sm text-slate-600">
-            Loading horses in this transport…
-          </p>
+          <div className="space-y-4">
+            <PageHeader
+              title="Report horse incident"
+              backHref="/crew"
+              backLabel="Back to Ongoing Transport"
+            />
+            <p className="border border-slate-300 bg-white p-4 text-sm text-slate-600">
+              Loading horses in this transport…
+            </p>
+          </div>
         ) : overview.error ? (
-          <div className="border border-red-600 bg-red-50 p-4 text-sm text-red-700">
-            <p>Unable to load the horses in this transport.</p>
-            <button
-              type="button"
-              onClick={() => void overview.refetch()}
-              className="mt-3 min-h-12 border border-red-600 px-4 font-bold"
-            >
-              Retry
-            </button>
+          <div className="space-y-4">
+            <PageHeader
+              title="Report horse incident"
+              backHref="/crew"
+              backLabel="Back to Ongoing Transport"
+            />
+            <div className="border border-red-600 bg-red-50 p-4 text-sm text-red-700">
+              <p>Unable to load the horses in this transport.</p>
+              <button
+                type="button"
+                onClick={() => void overview.refetch()}
+                className="mt-3 min-h-12 border border-red-600 px-4 font-bold"
+              >
+                Retry
+              </button>
+            </div>
           </div>
         ) : (
           <HorseIncidentSelectionStep
@@ -318,7 +407,7 @@ export default function HorseHealthIncidentPage() {
                   ),
                 },
               });
-              setStep("form");
+              setStepWithUrl("form");
             }}
           />
         )}
@@ -327,20 +416,19 @@ export default function HorseHealthIncidentPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-5 p-4 pb-28 sm:p-6">
+    <main className="mx-auto w-full min-w-0 max-w-7xl space-y-6 p-4 pb-24 sm:p-6 lg:p-8">
+      {unsavedChangesDialog}
       <IncidentReportHeader
         longitude={incidentCoordinates?.longitude ?? "Unavailable"}
         latitude={incidentCoordinates?.latitude ?? "Unavailable"}
         locationDescription={driverGps.coordinates ? "Driver shared GPS" : location.locationDescription || "Resolving location…"}
       />
-      <button
-        type="button"
+      <BackButton
         disabled={mutations.horseHealth.isPending || Boolean(createdIncidentId)}
-        onClick={() => setStep("selection")}
-        className="text-left text-sm font-bold text-[#181818] underline disabled:no-underline disabled:opacity-50"
+        onClick={() => setStepWithUrl("selection")}
       >
-        ← Change selected horses ({selectedHorseIds.length})
-      </button>
+        Change selected horses ({selectedHorseIds.length})
+      </BackButton>
       <HorseHealthIncidentForm
         value={form.values}
         horses={selectedHorses}
@@ -362,9 +450,12 @@ export default function HorseHealthIncidentPage() {
       {createdIncidentId && (
         <button
           type="button"
-          onClick={() =>
-            navigate(incidentPaths.detail("CREW", createdIncidentId))
-          }
+          onClick={() => {
+            allowNextNavigation();
+            navigate(incidentPaths.detail("CREW", createdIncidentId), {
+              replace: true,
+            });
+          }}
           className="min-h-12 w-full rounded-[2px] bg-[#181818] px-4 py-3 font-bold text-white"
         >
           Open incident detail

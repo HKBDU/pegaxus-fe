@@ -20,9 +20,14 @@ import type { DocumentReviewError, DossierOverview } from "../types";
 export function DossierReadinessAction({
   dossier,
   onCompleted,
+  onAddRequirement,
+  onRequestReupload,
 }: {
   dossier: DossierOverview;
   onCompleted?: () => void;
+  /** Shortcuts shown while an authority's rejection or request for information waits for the specialist. */
+  onAddRequirement?: () => void;
+  onRequestReupload?: () => void;
 }) {
   const role = useDossierRole("TRANSPORT_SPECIALIST");
   const eligible = canMarkReadyForSubmission(role, dossier);
@@ -46,8 +51,60 @@ export function DossierReadinessAction({
       toast.error(mapped.message);
     }
   }
+  const revision = dossier.pendingAuthorityRevision;
   return (
     <>
+      {revision &&
+      role &&
+      ["IN_PREPARATION", "REJECTED"].includes(dossier.status) ? (
+        <div
+          role="status"
+          className="rounded-[2px] border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900"
+        >
+          <p className="m-0 font-semibold">
+            {revision.authorityName}{" "}
+            {revision.decision === "REJECTED"
+              ? "rejected this dossier."
+              : "asked for more information."}
+          </p>
+          <p className="m-0 mt-1">
+            Add the requirement the authority asked for, or ask the customer to
+            upload the documents it flagged again. The dossier can be marked
+            ready for submission again after that.
+          </p>
+          {onAddRequirement || onRequestReupload ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {onAddRequirement ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-[2px] border-amber-300 bg-white"
+                  onClick={onAddRequirement}
+                >
+                  Add requirement
+                </Button>
+              ) : null}
+              {onRequestReupload ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-[2px] border-amber-300 bg-white"
+                  onClick={onRequestReupload}
+                >
+                  Request re-upload
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+          {onRequestReupload ? (
+            <p className="m-0 mt-2 text-[11px] text-amber-800">
+              Request re-upload opens Documents / Reviews: choose Request
+              Re-upload in the actions menu of each document the authority
+              flagged.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {eligible ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[2px] border border-emerald-200 bg-emerald-50 px-4 py-3">
           <p className="text-xs text-emerald-800">

@@ -25,34 +25,32 @@ export function FooterColumn({ title, links, className, children }: FooterColumn
   )
 }
 
+// Every link points at a page or landing chapter that exists; there are no separate service or help pages yet.
 const columns: FooterColumnProps[] = [
   {
     title: "SERVICES",
     links: [
-      { label: "International Horse Transport", href: "/services/international-horse-transport" },
-      { label: "Ground Transport", href: "/services/ground-transport" },
-      { label: "Cross-Border Coordination", href: "/services/cross-border-coordination" },
-      { label: "Horse Care & Handling", href: "/services/horse-care" },
+      { label: "Cross-Border Horse Transport", href: "/#journey" },
+      { label: "Compliance & Documents", href: "/#compliance" },
+      { label: "Horse Care & Handling", href: "/#care" },
+      { label: "Routes in Motion", href: "/#movement" },
     ],
   },
   {
     title: "TRANSPORT",
     links: [
-      { label: "How Transport Works", href: "/transport/how-it-works" },
-      { label: "Service Coverage", href: "/transport/coverage" },
-      { label: "Transport Requirements", href: "/transport/requirements" },
-      { label: "Country Documentation", href: "/transport/documentation" },
+      { label: "Plan a Transport", href: "/bookings/new" },
+      { label: "My Bookings", href: "/bookings" },
+      { label: "The Connected Platform", href: "/#platform" },
+      { label: "Proof of Care", href: "/#reliability" },
     ],
   },
   {
     title: "SUPPORT",
     links: [
-      { label: "Help Center", href: "/support" },
-      { label: "FAQ", href: "/support/faq" },
-      { label: "Contact Us", href: "/contact" },
-      { label: "About PEGAXUS", href: "/about" },
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Service", href: "/terms" },
+      { label: "About PEGAXUS", href: "/#about" },
+      { label: "Privacy Policy", href: "/terms#section-13" },
+      { label: "View policies and terms", href: "/terms" },
     ],
   },
 ]

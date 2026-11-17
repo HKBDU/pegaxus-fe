@@ -16,6 +16,7 @@ export const ROLE_ROUTES = {
   managerCreateUser: "/admin/users/new",
   customerHorses: "/my-horses",
   customerProfile: "/profile-settings",
+  profile: "/profile-settings",
   complianceRequirements: "/compliance-requirements",
   dossierTemplates: "/dossier-templates",
   complianceDossiers: "/compliance-dossiers",
@@ -66,21 +67,76 @@ export function dossierDetail(id: string | number, role?: string) {
   return `${ROLE_ROUTES.complianceDossiers}/${encodedId}`
 }
 
-export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home as string) {
-  const safePath = requestedPath.startsWith("/") && !requestedPath.startsWith("//") && !/^\/logout\/?$/i.test(requestedPath) ? requestedPath : ROLE_ROUTES.home
-  if (normalizeRole(role) === "LOGISTICS_MANAGER") {
-    return /^\/admin(?:\/|$)/.test(safePath) ? safePath : ROLE_ROUTES.managerHome
+export function getPlanBackTarget(
+  roleOrPrincipal?: string | { roles?: string[] } | null,
+  transportPlanId?: string | number,
+): { href: string; label: string } {
+  const roles =
+    typeof roleOrPrincipal === "object" &&
+    roleOrPrincipal &&
+    "roles" in roleOrPrincipal &&
+    Array.isArray(roleOrPrincipal.roles)
+      ? roleOrPrincipal.roles.map(normalizeRole)
+      : roleOrPrincipal
+        ? [normalizeRole(String(roleOrPrincipal))]
+        : []
+
+  if (roles.includes("FLEET_ROUTE_COORDINATOR")) {
+    return {
+      href: ROLE_ROUTES.routePlans,
+      label: "Back to Route Plans",
+    }
   }
-  if (normalizeRole(role) === "TRANSPORT_SPECIALIST" && safePath === ROLE_ROUTES.home) {
-    return ROLE_ROUTES.complianceRequirements
+
+  if (transportPlanId) {
+    return {
+      href: transportPlanDetail(transportPlanId),
+      label: "Back to Transport Plan",
+    }
   }
-  if (normalizeRole(role) === "FLEET_ROUTE_COORDINATOR" && safePath === ROLE_ROUTES.home) {
-    return ROLE_ROUTES.vehicles
+
+  return {
+    href: ROLE_ROUTES.routePlans,
+    label: "Back to Route Plans",
   }
-  if (["DRIVER", "ESCORT"].includes(normalizeRole(role)) && safePath === ROLE_ROUTES.home) {
+}
+
+export function getRoleLandingPath(role?: string): string {
+  if (!role) return ROLE_ROUTES.home
+  const normalized = normalizeRole(role)
+  if (normalized === "LOGISTICS_MANAGER") {
+    return ROLE_ROUTES.dashboard
+  }
+  if (
+    normalized === "TRANSPORT_SPECIALIST" ||
+    normalized === "FLEET_ROUTE_COORDINATOR"
+  ) {
+    return ROLE_ROUTES.approvedBookings
+  }
+  if (normalized === "DRIVER" || normalized === "ESCORT") {
     return ROLE_ROUTES.crew
   }
-  return safePath
+  return ROLE_ROUTES.home
+}
+
+export function getPostLoginPath(role: string, requestedPath = ROLE_ROUTES.home as string) {
+  const safePath =
+    requestedPath.startsWith("/") &&
+    !requestedPath.startsWith("//") &&
+    !/^\/logout\/?$/i.test(requestedPath)
+      ? requestedPath
+      : ROLE_ROUTES.home
+
+  const isDefaultEntry =
+    safePath === ROLE_ROUTES.home ||
+    safePath === ROLE_ROUTES.managerHome ||
+    safePath === "/admin/"
+
+  if (!isDefaultEntry) {
+    return safePath
+  }
+
+  return getRoleLandingPath(role)
 }
 
 const adminHeaderRoutes = [
@@ -162,11 +218,12 @@ const crewHeaderRoutes = [
 export function getAdminHeaderContext(pathname: string, isCrew = false) {
   if (isCrew) {
     if (pathname === "/crew") return { label: "ONGOING TRANSPORT", href: "/crew", title: "" }
+    if (pathname === "/crew/transports") return { label: "ASSIGNED TRANSPORTS", href: "/crew/transports", title: "" }
     const crewRoute = crewHeaderRoutes.find(({ path }) => matchPath({ path, end: true }, pathname))
     const shared = adminHeaderRoutes.find(({ path }) => matchPath({ path, end: true }, pathname))
-    // Notifications and the profile keep their own label; every other crew page sits under Assigned Transports.
+    // Notifications and the profile keep their own label; every other crew page sits under Ongoing Transport.
     if (!crewRoute && shared && pathname === ROLE_ROUTES.notifications) return shared
-    return { label: "ASSIGNED TRANSPORTS", href: "/crew/transports", title: crewRoute?.title ?? "" }
+    return { label: "ONGOING TRANSPORT", href: "/crew", title: crewRoute?.title ?? "" }
   }
   return adminHeaderRoutes.find(({ path }) => matchPath({ path, end: true }, pathname)) ?? { label: "MANAGER", href: ROLE_ROUTES.managerHome, title: "" }
 }
@@ -179,3 +236,9 @@ export const INCIDENT_ADMIN_ACCESS: AccessPolicy = { anyRole: ["LOGISTICS_MANAGE
 export const LOGISTICS_MANAGER_READ: AccessPolicy = { anyRole: ["LOGISTICS_MANAGER"] }
 export const priceListDetail = (priceListId: string) => `${ROLE_ROUTES.priceLists}/${encodeURIComponent(priceListId)}`
 export const PROFILE_ROLES: AccessPolicy = { anyRole: ["CUSTOMER", "LOGISTICS_MANAGER", "TRANSPORT_SPECIALIST", "FLEET_ROUTE_COORDINATOR", "DRIVER", "ESCORT"] }
+
+/** The page a guarded route sent the visitor from (ProtectedRoute state.from), with its query and hash. */
+export function requestedPath(state: unknown) {
+  const from = (state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from
+  return from?.pathname ? `${from.pathname}${from.search ?? ""}${from.hash ?? ""}` : undefined
+}

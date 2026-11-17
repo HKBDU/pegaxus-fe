@@ -17,8 +17,13 @@ export function RouteSegmentList({
   review,
   segmentActions,
   blockedSegments,
+  title,
+  description,
 }: {
   segments: RouteSegment[];
+  /** Heading of a secondary list, such as the primary segments a backup replaced. */
+  title?: string;
+  description?: ReactNode;
   review?: { title: string; impact: (segment: RouteSegment) => SegmentImpact };
   segmentActions?: (segment: RouteSegment) => ReactNode;
   /** Sequence numbers the legal review blocked: those cards are outlined red so the coordinator finds them. */
@@ -33,13 +38,14 @@ export function RouteSegmentList({
   return (
     <section
       aria-label={
-        review ? `${review.title} segment timeline` : "Segment timeline"
+        review ? `${review.title} segment timeline` : (title ?? "Segment timeline")
       }
       className="min-w-0 space-y-3"
     >
       <Heading className="m-0! font-heading text-base! leading-5! uppercase text-slate-900">
-        {review?.title ?? "Segment Timeline"}
+        {review?.title ?? title ?? "Segment Timeline"}
       </Heading>
+      {description ? <p className="m-0 text-xs leading-5 text-slate-500">{description}</p> : null}
       <ol className="ml-2 space-y-3 border-l-2 border-slate-200 pl-5 sm:pl-7">
         {ordered.map((segment) => {
           const impact = review?.impact(segment);
@@ -178,6 +184,9 @@ export function RouteSegmentList({
                 <p className="break-words text-sm font-semibold">
                   {segment.fromLocation.locationName} →{" "}
                   {segment.toLocation.locationName}
+                  {segment.endedAtLocation ? (
+                    <span className="text-amber-700"> · stopped early at {segment.endedAtLocation.locationName}</span>
+                  ) : null}
                 </p>
                 {review ? (
                   <>

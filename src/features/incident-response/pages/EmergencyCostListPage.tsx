@@ -47,7 +47,7 @@ export default function EmergencyCostListPage({
         label: "Incident",
       }
     : audience === "crew"
-      ? { href: "/crew/transports", label: "Assigned transports" }
+      ? { href: "/crew", label: "Ongoing transport" }
       : { href: ROLE_ROUTES.incidents, label: "Incidents" };
   const canCreate = Boolean(incidentReportId) && canCreateEmergencyCosts(principal);
   return (

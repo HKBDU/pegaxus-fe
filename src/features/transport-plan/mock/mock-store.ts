@@ -462,12 +462,6 @@ export function createFlow3MockStore() {
           )
         )
           return invalidStatus();
-        if (id === emergencyMockIds.belowThresholdBackup)
-          return failure(
-            422,
-            "APPROVAL_NOT_REQUIRED",
-            "The change is below BR-036 approval threshold.",
-          );
         // EC1 only simulates notification; it does not persist a ChangeRequest or change route status.
         return success({
           routePlanId: id,

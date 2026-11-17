@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { ROLE_ROUTES } from "@/app/route-config";
 import { PageHeader } from "@/shared/components/PageHeader";
 import { ErrorState } from "@/shared/components/common";
-import { useDebounce } from "@/shared/hooks";
+import { useDebounce, usePageTitle } from "@/shared/hooks";
 import { ApprovedBookingFilters } from "../components/ApprovedBookingFilters";
 import { ApprovedBookingsTable } from "../components/ApprovedBookingsTable";
 import {
@@ -19,6 +19,7 @@ import { getWorkspaceRole } from "../workspace-role";
 import { workspaceLabels } from "../constants";
 
 export default function ApprovedBookingsPage() {
+  usePageTitle("Approved Bookings");
   const principal = useAuthStore((state) => state.principal);
   const role = getWorkspaceRole(principal);
   const subtitle = canAccess(principal, { anyRole: ["LOGISTICS_MANAGER"] })

@@ -159,7 +159,6 @@ export interface VehicleIncidentDetail {
   repairRequired: boolean;
   towingRequired: boolean;
   replacementVehicleRequired: boolean;
-  estimatedRepairCost: number | null;
   estimatedRepairHours: number | null;
   driverSafetyStatus: string | null;
   cargoConditionNote: string | null;
@@ -292,7 +291,6 @@ export interface VehicleIncidentRequest {
   repairRequired?: boolean;
   towingRequired?: boolean;
   replacementVehicleRequired?: boolean;
-  estimatedRepairCost?: number;
   estimatedRepairHours?: number;
   repairNote?: string;
   emergencySettlementRequired: boolean;
@@ -341,7 +339,6 @@ export interface SupplementVehicleRequest extends Partial<
   Pick<
     VehicleIncidentDetail,
     | "repairNote"
-    | "estimatedRepairCost"
     | "vehicleOperable"
     | "repairRequired"
     | "towingRequired"

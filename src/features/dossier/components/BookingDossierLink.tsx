@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 
 import { useDossierByBooking } from "@/features/dossier/hooks/useDossier"
 import { cn } from "@/lib/utils"
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
  * a customer gets none while the dossier is still DRAFT, so the button shows up together with the notification.
  */
 export function BookingDossierLink({ bookingId, className }: { bookingId: string; className?: string }) {
+  const location = useLocation()
   const query = useDossierByBooking(bookingId)
   if (query.isError)
     return (
@@ -21,7 +22,12 @@ export function BookingDossierLink({ bookingId, className }: { bookingId: string
   return (
     <>
       {dossiers.map((dossier) => (
-        <Link key={dossier.complianceDossierId} to={`/compliance-dossiers/${encodeURIComponent(dossier.complianceDossierId)}`} className={cn(className)}>
+        <Link
+          key={dossier.complianceDossierId}
+          to={`/compliance-dossiers/${encodeURIComponent(dossier.complianceDossierId)}`}
+          state={{ from: location.pathname + location.search }}
+          className={cn(className)}
+        >
           {dossier.dossierType === "EXTRA" ? `Extra dossier${dossier.dossierCode ? ` ${dossier.dossierCode}` : ""}` : "Compliance dossier"}
         </Link>
       ))}

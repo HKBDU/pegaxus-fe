@@ -85,6 +85,9 @@ export interface AuthoritySubmissionDetail {
     fileSize: number
   }
   notes?: string
+  /** First and last day of the trip (scheduled route, else the booking); an approved permit must stay valid until the last. */
+  tripStartDate?: string
+  tripEndDate?: string
   dossierSummary?: {
     cdosCode: string
     bookingNo: string

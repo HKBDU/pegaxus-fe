@@ -105,7 +105,6 @@ export default function VehicleIncidentPage() {
       repairRequired: false,
       towingRequired: false,
       replacementVehicleRequired: false,
-      estimatedRepairCost: "",
       estimatedRepairHours: "",
       repairNote: "",
     }),
@@ -201,9 +200,6 @@ export default function VehicleIncidentPage() {
       repairRequired: value.repairRequired,
       towingRequired: value.towingRequired,
       replacementVehicleRequired: value.replacementVehicleRequired,
-      estimatedRepairCost: value.estimatedRepairCost
-        ? Number(value.estimatedRepairCost)
-        : undefined,
       repairNote: value.repairNote || undefined,
       estimatedRepairHours: value.estimatedRepairHours
         ? Number(value.estimatedRepairHours)
@@ -227,7 +223,9 @@ export default function VehicleIncidentPage() {
     submitting.current = true;
     mutations.vehicle.mutate(parsed.data, {
       onSuccess: (result) =>
-        navigate(incidentPaths.detail("CREW", result.incidentReportId)),
+        navigate(incidentPaths.detail("CREW", result.incidentReportId), {
+          replace: true,
+        }),
       onError: focusFirstIncidentError,
       onSettled: () => {
         submitting.current = false;
@@ -242,7 +240,7 @@ export default function VehicleIncidentPage() {
   const error =
     submitError ?? incidentErrorMessage(mutations.vehicle.error, errors);
   return (
-    <main className="mx-auto max-w-3xl space-y-5 p-4 pb-28 sm:p-6">
+    <main className="mx-auto w-full min-w-0 max-w-7xl space-y-6 p-4 pb-24 sm:p-6 lg:p-8">
       <IncidentReportHeader
         longitude={incidentCoordinates?.longitude ?? "Unavailable"}
         latitude={incidentCoordinates?.latitude ?? "Unavailable"}
