@@ -118,10 +118,9 @@ export function ResolveIncidentDialog({ incident, open, onOpenChange, mode, onRe
         {isManager ? (
           <section aria-label="Settlement summary" className="grid gap-2">
             <p className={`${fieldLabelClass} m-0`}>Settlement summary</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <Tile label="Approved" tone="border-emerald-200 bg-emerald-50/50">{approved.length}</Tile>
               <Tile label="Rejected" tone="border-red-200 bg-red-50/50">{rejected.length}</Tile>
-              <Tile label="Pending" tone="border-amber-200 bg-amber-50/60">{pending}</Tile>
               <Tile label="Total approved" tone="border-slate-200 bg-white"><VndText amount={incident.costSummary.approvedTotal} className="text-sm" /></Tile>
             </div>
             {pending > 0 ? (
