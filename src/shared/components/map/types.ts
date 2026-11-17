@@ -14,6 +14,8 @@ export type MapLocation = {
   note?: string | null;
   /** Raw server concurrency token. Keep fractional-second precision intact. */
   updatedAt?: string | null;
+  /** Where an incident happened (the convoy stopped there): drawn as its own marker, not as a stop. */
+  isIncident?: boolean;
 };
 
 export type LocationAction = "EDIT" | "DELETE";

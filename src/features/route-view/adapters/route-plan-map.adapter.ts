@@ -24,8 +24,12 @@ export function toRouteMapLocations(plan: MapSegments): MapLocation[] {
   const seen = new Set<string>();
   return [...plan.segments]
     .sort((a, b) => a.sequenceNo - b.sequenceNo)
-    .flatMap((segment) => [segment.fromLocation, segment.endedAtLocation, segment.toLocation])
-    .flatMap((location) => {
+    .flatMap((segment) => [
+      { location: segment.fromLocation, isIncident: false },
+      { location: segment.endedAtLocation, isIncident: true },
+      { location: segment.toLocation, isIncident: false },
+    ])
+    .flatMap(({ location, isIncident }) => {
       if (!location) return [];
       const latitude = coordinate(location.latitude, 90),
         longitude = coordinate(location.longitude, 180);
@@ -45,6 +49,7 @@ export function toRouteMapLocations(plan: MapSegments): MapLocation[] {
           country: location.country,
           latitude,
           longitude,
+          ...(isIncident ? { isIncident } : {}),
         },
       ];
     });
