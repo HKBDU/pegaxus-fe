@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
-import { formatPlanDate, formatPlanMoney } from "@/features/transport-plan/format";
+import { formatPlanDate } from "@/features/transport-plan/format";
 import { incidentPaths } from "@/shared/constants/incident";
 import { getRouteViewError, routeViewService } from "../../services";
 
@@ -61,9 +61,6 @@ export function ChangeRequestDetails({ routePlanId }: { routePlanId: string }) {
           {data.requestedBy?.fullName ?? "Route coordinator"} · {formatPlanDate(data.requestedAt)}
         </Item>
         <Item label="New estimated arrival">{formatPlanDate(data.newEstimatedArrivalAt)}</Item>
-        <Item label="Estimated extra cost">
-          {data.estimatedExtraCost == null ? "Not provided" : formatPlanMoney(data.estimatedExtraCost)}
-        </Item>
         {data.incidentReportId && (
           <Item label="Incident">
             <Link className="underline" to={incidentPaths.detail("LM", data.incidentReportId)}>

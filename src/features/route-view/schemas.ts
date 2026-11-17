@@ -181,14 +181,6 @@ const optionalNote = z
   .trim()
   .optional()
   .transform((value) => value || undefined);
-const extraCost = z
-  .number()
-  .finite()
-  .min(0)
-  .max(Number.MAX_SAFE_INTEGER)
-  .refine(Number.isSafeInteger, {
-    message: "Enter a whole amount in VND (no decimals).",
-  });
 export const backupChangeRequestSchema = z.object({
   reason: z
     .string()
@@ -196,8 +188,6 @@ export const backupChangeRequestSchema = z.object({
     .trim()
     .min(10, "Explain the change in at least 10 characters."),
   newEstimatedArrivalAt: timestamp,
-  // EC1 takes a whole VND amount; the BE has no currency field in the request.
-  estimatedExtraCost: extraCost.optional(),
   note: optionalNote,
 });
 export const crewOverrideSchema = z.object({
@@ -306,7 +296,6 @@ export const changeRequestViewSchema = z
     requestedBy: employeeBriefSchema.nullish(),
     reason: z.string(),
     newEstimatedArrivalAt: timestamp,
-    estimatedExtraCost: z.number().nullish(),
     note: text,
     incidentReportId: text,
     incidentCode: text,

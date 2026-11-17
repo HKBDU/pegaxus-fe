@@ -9,7 +9,6 @@ import { LoaderCircle, Send } from "lucide-react";
 import { useFormRequestAttemptGuard } from "@/shared/hooks/useFormRequestAttemptGuard";
 import { Button } from "@/shared/components/ui/button";
 import { DateTimePicker } from "@/shared/components/ui/date-time-picker";
-import { MoneyInput } from "@/shared/components/ui/money-input";
 import { Textarea } from "@/shared/components/ui/textarea";
 import {
   Form,
@@ -67,11 +66,6 @@ const controls = [
     label: "New Estimated Arrival",
     required: true,
     type: "datetime-local",
-  },
-  {
-    name: "estimatedExtraCost",
-    label: "Estimated Extra Cost (VND)",
-    type: "money",
   },
   { name: "note", label: "Additional Note", type: "textarea" },
 ] as const;
@@ -228,12 +222,6 @@ export function BackupActivationRequestDialog({
                             <Textarea
                               {...field}
                               className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none min-h-20"
-                            />
-                          ) : control.type === "money" ? (
-                            <MoneyInput
-                              {...field}
-                              placeholder="Whole amount, e.g. 1,500,000"
-                              className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
                             />
                           ) : (
                             <DateTimePicker
