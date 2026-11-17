@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useMatch, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/features/auth/store";
 import { canAccess } from "@/features/auth/access-control";
 import { useTransportOverview } from "@/features/ongoing-transport/hooks/useTransportOverview";
+import { useTransportSegments } from "@/features/ongoing-transport/hooks/useTransportSegments";
 import { refreshTransportProgress } from "@/features/ongoing-transport/hooks/useTransportProgressRefresh";
 import { getOngoingTransportError } from "@/features/ongoing-transport/services";
 import { useLocationSharing } from "../hooks/useLocationSharing";
@@ -125,8 +126,9 @@ export function DriverLocationSession({ children }: { children: ReactNode }) {
     undefined,
     "crew",
     "data",
-    false,
+    true,
   );
+  const segmentsQuery = useTransportSegments(isDemo ? undefined : transportId, undefined, "crew", "data", Boolean(transportId));
   const client = useQueryClient();
   const refetchAssignment = assigned.refetch;
   const assignment = isDemo
@@ -136,15 +138,17 @@ export function DriverLocationSession({ children }: { children: ReactNode }) {
       : assigned.data?.items.find((item) => item.transportId === transportId);
   const assignedSegmentId = assignment?.currentSegment?.routePlanRouteId;
   const observedSegmentId = query.data?.currentSegment?.routePlanRouteId;
+  const lastMismatch = useRef<string | null>(null);
   useEffect(() => {
-    if (
-      transportId &&
-      assignedSegmentId &&
-      observedSegmentId &&
-      assignedSegmentId !== observedSegmentId
-    )
-      void refreshTransportProgress(client, transportId);
-  }, [client, transportId, assignedSegmentId, observedSegmentId]);
+    if (!transportId || !assignment || !query.data || assignedSegmentId === observedSegmentId) {
+      lastMismatch.current = null;
+      return;
+    }
+    const key = `${transportId}:${assignedSegmentId ?? "none"}:${observedSegmentId ?? "none"}`;
+    if (lastMismatch.current === key) return;
+    lastMismatch.current = key;
+    void refreshTransportProgress(client, transportId);
+  }, [client, transportId, assignment, query.data, assignedSegmentId, observedSegmentId]);
   const reload = useCallback(() => {
     if (driver && source === "real") void refetchAssignment();
     if (transportId) void refreshTransportProgress(client, transportId);
@@ -238,11 +242,18 @@ export function DriverLocationSession({ children }: { children: ReactNode }) {
       {children}
       {driver ? (
         <GpsSimulatorDrawer
+          transportId={transportId}
+          targetBoundaryNo={isDemo ? 2 : segmentsQuery.data?.handoverBoundaries.find(
+            (boundary) => boundary.fromRoutePlanRouteId === query.data?.currentSegment?.routePlanRouteId &&
+              boundary.handoverRequired !== false && boundary.existingHandover?.status !== "COMPLETED",
+          )?.boundaryNo}
+          canSkipCurrentSegment={isDemo || Boolean(assignment?.currentSegment?.isMine && query.data?.currentSegment &&
+            !query.data.currentSegment.isOutsourced)}
           currentSegment={
             isDemo ? DEMO_SEGMENT : query.data?.currentSegment ?? null
           }
           onMockGpsEnabled={sharing.restart}
-          onMockGpsDisabled={sharing.restart}
+          onMockGpsDisabled={sharing.stop}
           sharingActive={sharing.state.active}
           sharingAcceptance={sharing.state.acceptance}
           sharingMessage={sharing.state.message}

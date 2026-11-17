@@ -121,8 +121,10 @@ function buildBoundaries(
         Boolean(from?.driver?.employeeId) &&
         from?.driver?.employeeId === to?.driver?.employeeId;
       const types =
-        outsourced || exempt
+        exempt
           ? []
+          : outsourced
+            ? ["CARRIER_HANDOVER"]
           : first
             ? ["PICKUP"]
             : last
@@ -137,7 +139,6 @@ function buildBoundaries(
         !exempt && executed && (audience !== "customer" || first || last);
       const canCreate =
         !exempt &&
-        !outsourced &&
         !executed &&
         audience !== "customer" &&
         operator &&
