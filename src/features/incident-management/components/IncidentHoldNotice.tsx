@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { Hourglass } from "lucide-react"
 
 import type { IncidentHold } from "../types"
-import { formatDateTime, placeLine, roleLabel } from "../utils"
+import { formatDateTime, roleLabel } from "../utils"
 import { FieldGrid, InfoRow } from "./ui"
 
 function remaining(holdUntil: string, now: number) {
@@ -30,10 +30,9 @@ export function IncidentHoldNotice({ hold }: { hold: IncidentHold }) {
         </span>
       </div>
       <p className="m-0 mt-2 text-sm leading-6 text-gray-800">{hold.reason}</p>
-      <FieldGrid className="mt-3 lg:grid-cols-4">
+      <FieldGrid className="mt-3 lg:grid-cols-3">
         <InfoRow label="Decided by">{hold.decidedBy.fullName} ({roleLabel(hold.decidedBy.role)})</InfoRow>
         <InfoRow label="Hold until">{formatDateTime(hold.holdUntil)}</InfoRow>
-        <InfoRow label="Safe stop">{hold.safeStopLocation ? placeLine(hold.safeStopLocation) : null}</InfoRow>
         <InfoRow label="Check every">{`${hold.monitorIntervalMinutes} min`}</InfoRow>
       </FieldGrid>
     </section>

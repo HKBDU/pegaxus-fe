@@ -149,7 +149,6 @@ const baseDetail = (item: IncidentSummary): IncidentDetail => ({
           repairRequired: true,
           towingRequired: true,
           replacementVehicleRequired: false,
-          estimatedRepairCost: null,
           estimatedRepairHours: null,
           driverSafetyStatus: null,
           cargoConditionNote: null,

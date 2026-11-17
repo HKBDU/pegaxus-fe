@@ -19,6 +19,7 @@ import { formatTransportDate, formatTransportTime } from "../format";
 import { getOngoingTransportError } from "../services";
 import type { TransportAudience } from "../types";
 import { incidentRoutes } from "@/features/incident-management/constants";
+import { useIncidentList } from "@/features/incident-management/hooks/useIncidents";
 import { usePageTitle } from "@/shared/hooks";
 
 export default function TransportOverviewPage({
@@ -48,6 +49,25 @@ export default function TransportOverviewPage({
   const missingContext =
     transportId === undefined ||
     (audience === "customer" && bookingId === undefined);
+  // The overview lists open incidents only. Staff and crew read every incident of the transport, so a resolved or
+  // cancelled one stays here with its new status instead of disappearing.
+  const showIncidents =
+    audience !== "customer" && !canAccess(principal, { anyRole: ["CUSTOMER"] });
+  const history = useIncidentList(
+    {
+      status: "",
+      category: "",
+      severity: "",
+      transportId,
+      occurredFrom: "",
+      occurredTo: "",
+      search: "",
+      pageIndex: 1,
+      pageSize: 50,
+      sortBy: "occurredAt:desc",
+    },
+    showIncidents && transportId !== undefined,
+  );
 
   return (
     <>
@@ -136,10 +156,21 @@ export default function TransportOverviewPage({
             <TransportStaff segment={overview.currentSegment} />
           </section>
           <TransportDossiers dossiers={overview.complianceDossiers} />
-          {audience !== "customer" &&
-          !canAccess(principal, { anyRole: ["CUSTOMER"] }) ? (
+          {showIncidents ? (
             <TransportIncidents
-              incidents={overview.activeIncidents}
+              incidents={
+                history.data
+                  ? history.data.items.map((incident) => ({
+                      incidentReportId: incident.incidentReportId,
+                      incidentCode: incident.incidentCode,
+                      category: incident.category,
+                      status: incident.status,
+                      title: incident.title,
+                      occurredAt: incident.occurredAt,
+                      severity: incident.severity,
+                    }))
+                  : overview.activeIncidents
+              }
               detailHref={(incident) =>
                 audience === "crew"
                   ? incidentRoutes.crewDetail(incident.incidentReportId)

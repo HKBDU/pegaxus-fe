@@ -132,7 +132,6 @@ const vehicleDetail = (incidentType: string): NonNullable<Incident["vehicleDetai
   repairRequired: true,
   towingRequired: true,
   replacementVehicleRequired: false,
-  estimatedRepairCost: 8_500_000,
   estimatedRepairHours: 4,
   driverSafetyStatus: "SAFE",
   cargoConditionNote: "Horses calm, ventilation working.",

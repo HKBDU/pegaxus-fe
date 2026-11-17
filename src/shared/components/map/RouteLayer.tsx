@@ -38,6 +38,8 @@ export function RouteLayer({ route, routes = [], geoJson }: RouteLayerProps) {
                 // A blocked segment wins over every other state, so it stands out wherever it is drawn.
                 "line-color": item.blocked
                   ? ROUTE_LINE_COLORS.blocked
+                  : item.notDriven
+                    ? ROUTE_LINE_COLORS.notDriven
                   : item.replaced
                     ? ROUTE_LINE_COLORS.replaced
                     : item.sharedWithPrimary
@@ -48,8 +50,8 @@ export function RouteLayer({ route, routes = [], geoJson }: RouteLayerProps) {
                         ? ROUTE_LINE_COLORS.focused
                         : ROUTE_LINE_COLORS.default,
                 "line-width": item.blocked ? 3.5 : item.readonly ? 3 : index === 0 && route ? 4 : 3,
-                "line-opacity": item.blocked ? 0.9 : item.replaced ? 0.6 : item.readonly ? 0.35 : 0.85,
-                ...(item.replaced ? { "line-dasharray": [2, 2] } : {}),
+                "line-opacity": item.blocked ? 0.9 : item.notDriven ? 0.9 : item.replaced ? 0.6 : item.readonly ? 0.35 : 0.85,
+                ...(item.replaced || item.notDriven ? { "line-dasharray": [2, 2] } : {}),
               }}
             />
           </Source>

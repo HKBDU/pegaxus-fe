@@ -1,6 +1,7 @@
 import { Component, useMemo, type ComponentType, type ReactNode } from "react";
 import { MapPin } from "lucide-react";
 import { MapViewer } from "@/shared/components/map";
+import { ROUTE_LINE_COLORS } from "@/shared/components/map/route-colors";
 import { createGeoapifyMapStyleUrl } from "@/shared/utils/map/geoapify";
 import { isFlow3MockMode } from "@/features/transport-plan/source";
 import { toRouteMapData } from "../adapters/route-plan-map.adapter";
@@ -93,6 +94,24 @@ export function RoutePlanMap({
           </MapBoundary>
         )}
       </div>
+      {data.notDriven.length > 0 && (
+        <div className="space-y-1 rounded-[2px] border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+          <p className="m-0 flex items-center gap-2 font-semibold">
+            <span
+              aria-hidden="true"
+              className="inline-block w-6 border-t-2 border-dashed"
+              style={{ borderColor: ROUTE_LINE_COLORS.notDriven }}
+            />
+            {plan.routeType} route not driven
+          </p>
+          {data.notDriven.map((item) => (
+            <p key={item.incident + item.to} className="m-0">
+              Part of the {plan.routeType.toLowerCase()} route from {item.incident} to {item.to}. The convoy turned back at
+              this incident, so it never drove this stretch.
+            </p>
+          ))}
+        </div>
+      )}
       <p className="text-xs leading-5 text-slate-500">
         Lines are generated from the supplied segment endpoints. Road routing is
         used when available; otherwise a direct estimated line is shown.

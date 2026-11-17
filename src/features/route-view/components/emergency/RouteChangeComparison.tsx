@@ -63,7 +63,8 @@ export function RouteChangeComparison({
           </p>
         </Section>
       </section>
-      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-2">
+      {/* Stretch both summaries to the taller one so the two cards line up. */}
+      <div className="grid min-w-0 items-stretch gap-4 lg:grid-cols-2">
         {error ? (
           <ErrorState message={error} />
         ) : loading ? (

@@ -94,17 +94,23 @@ export default function RoutePlanDetailPage({
   const activeMode =
     actions.find((action) => action === mode) ??
     (fullPageAction && panelRequestRunning ? fullPageAction : undefined);
+  // In-page state replaces the entry, so Back leaves the page instead of stepping through tabs and dialogs.
   const changeMode = (action?: EmergencyAction) =>
-    setParams((current) => {
-      const next = new URLSearchParams(current);
-      if (action) next.set("emergency", action);
-      else next.set("emergency", "overview");
-      return next;
-    });
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        if (action) next.set("emergency", action);
+        else next.set("emergency", "overview");
+        return next;
+      },
+      { replace: true },
+    );
   const plan = query.data;
   const hasPlan = Boolean(plan);
   const pageRef = useRef<HTMLDivElement>(null);
-  const fullPageMode = mode === "decision" || mode === "activation";
+  // A notification can reopen the decision screen after the change was decided: show the route plan with a note instead of an error.
+  const decisionClosed = mode === "decision" && Boolean(context.data && plan) && !activeMode;
+  const fullPageMode = (mode === "decision" || mode === "activation") && !decisionClosed;
   const staff = ["coordinator", "specialist"].includes(
     getWorkspaceRole(principal) ?? "",
   );
@@ -137,19 +143,10 @@ export default function RoutePlanDetailPage({
           onBack={navigateToBase}
         />
       );
-    if (mode && mode !== "overview" && !activeMode) {
-      const isAlreadyDecided =
-        mode === "decision" &&
-        ["ACTIVE", "REJECTED_BY_MANAGER", "CANCELLED", "COMPLETED"].includes(
-          plan.status,
-        );
-      const unavailableMessage = isAlreadyDecided || mode === "decision"
-        ? "This route change has already been decided."
-        : "This emergency action is unavailable for your role or the current route and transport state.";
-
+    if (mode && mode !== "overview" && !activeMode && !decisionClosed) {
       workspace = (
         <div className="space-y-3">
-          <ErrorState message={unavailableMessage} />
+          <ErrorState message="This emergency action is unavailable for your role or the current route and transport state." />
           <Button
             className="rounded-[2px] transition-colors duration-200 motion-reduce:transition-none"
             variant="outline"
@@ -193,6 +190,14 @@ export default function RoutePlanDetailPage({
             ) : !fullPageMode ? (
               <>
                 {readFailure && <ErrorState message={`Showing the last authorized route. ${readFailure.message}`} onRetry={() => void query.refetch()} />}
+                {decisionClosed && (
+                  <p
+                    role="status"
+                    className="m-0 rounded-[2px] border border-slate-200 border-l-2 border-l-primary bg-white px-3 py-2 text-sm leading-5 text-slate-700"
+                  >
+                    This route change has already been decided. The route plan below shows its current state.
+                  </p>
+                )}
                 {context.error && (
                   <ErrorState
                     message={getEmergencyError(context.error).message}
@@ -212,7 +217,7 @@ export default function RoutePlanDetailPage({
                       const next = new URLSearchParams(current);
                       next.delete("changeVehicle");
                       return next;
-                    })}
+                    }, { replace: true })}
                   />
                 )}
                 <RoutePlanDetails
@@ -220,6 +225,7 @@ export default function RoutePlanDetailPage({
                   plan={plan}
                   mapViewer={mapViewer}
                   routeDetailPath={routeDetailPath}
+                  fallbackBack={getWorkspaceRole(principal) === "coordinator" ? back : undefined}
                   actions={
                     context.data ? (
                       <RouteManagementActions

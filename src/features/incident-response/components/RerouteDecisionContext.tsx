@@ -32,114 +32,139 @@ export function RerouteDecisionOptions({
   ).length;
   const returnPlan = context.returnPlan;
   const real = !isEmergencyCostMockMode();
+  const backupAction = has("APPROVE_BACKUP") || has("REQUEST_BACKUP");
   return (
     <Section title="Next decision" className="border-t-2 border-t-primary">
-      <p className="m-0 text-sm leading-5 text-slate-600">
-        {manager
-          ? "Review the alternatives before recording a wait or opening a route decision."
-          : "Review route feasibility before escalating unsuitable alternatives."}
-      </p>
-      <div
-        className={
-          !manager && has("ESCALATE_REROUTE")
-            ? "space-y-2 border-b border-slate-200 pb-3"
-            : ""
-        }
-      >
-        {!manager && has("ESCALATE_REROUTE") && (
+      <div className="space-y-4">
+        <div className="space-y-2">
           <p className="m-0 text-sm leading-5 text-slate-600">
-            Report why the current routing alternatives are unsuitable.
+            {manager
+              ? "Compare the alternatives, then hold the convoy or open a route decision."
+              : "Compare the alternatives. Escalate if none of them is suitable."}
           </p>
-        )}
-        {escalationAction}
-      </div>
-      <div className="divide-y divide-slate-200">
-        <div className="space-y-2 pb-3">
-          <h3 className="m-0! font-heading text-base! uppercase text-slate-900">
-            Hold &amp; Wait
-          </h3>
-          <p className="m-0 text-sm leading-5 text-slate-700">
-            {context.hold?.status === "ACTIVE"
-              ? "A hold is already active. Review the recorded decision below."
-              : manager && has("HOLD_ROUTE")
-                ? "Set a temporary wait and monitoring instructions. This does not activate another route."
-                : "A new hold can only be recorded by Logistics Management when authorized."}
-          </p>
-          {holdAction}
+          {escalationAction}
         </div>
-        <div className="space-y-1.5 py-3">
-          <h3 className="m-0! font-heading text-base! uppercase text-slate-900">
-            BACKUP
-          </h3>
-          <p className="m-0 text-sm text-slate-700">
-            {context.backupPlans.length
-              ? available +
-                " of " +
-                context.backupPlans.length +
-                " alternatives available for review."
-              : "No BACKUP alternatives provided."}
-          </p>
-          <p className="m-0 text-xs leading-5 text-slate-500">
-            {has("APPROVE_BACKUP") || has("REQUEST_BACKUP")
-              ? "Review the checks in Route assessment. Proposals and approvals stay in RoutePlan Details."
-              : "Route assessment is read-only here; no BACKUP decision is currently available."}
-          </p>
-        </div>
-        <div className="space-y-2 pt-3">
-          <h3 className="m-0! font-heading text-base! uppercase text-slate-900">
-            RETURN
-          </h3>
-          {returnPlan ? (
-            <>
-              <p className="m-0 text-sm font-medium text-slate-800 [overflow-wrap:anywhere]">
-                {returnPlan.routePlanCode}
-              </p>
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className="text-xs text-slate-500">Plan status</span>
+        <div className="divide-y divide-slate-200 border-t border-slate-200">
+          <OptionBlock title="Hold & Wait">
+            <p className="m-0 text-sm leading-5 text-slate-600">
+              {context.hold?.status === "ACTIVE"
+                ? "A hold is active. See Recorded hold."
+                : manager && has("HOLD_ROUTE")
+                  ? "Pause the convoy with monitoring instructions. The route does not change."
+                  : "Only the Logistics Manager can record a hold."}
+            </p>
+            {holdAction}
+          </OptionBlock>
+          <OptionBlock
+            title="Backup"
+            badge={
+              context.backupPlans.length ? (
                 <Badge
                   variant="outline"
-                  className="max-w-full whitespace-normal rounded-[2px] text-xs"
+                  className={
+                    "rounded-[2px] text-xs " +
+                    (available
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : "border-amber-200 bg-amber-50 text-amber-900")
+                  }
                 >
-                  {returnPlan.status.replaceAll("_", " ")}
+                  {available}/{context.backupPlans.length} available
                 </Badge>
-              </div>
-              <p
-                className={
-                  "m-0 text-sm " +
-                  (returnPlan.isAvailable ? "text-slate-700" : "text-amber-900")
-                }
-              >
-                {returnPlan.isAvailable ? "Available" : "Unavailable"}
-                {returnPlan.unavailableReason
-                  ? " · " + returnPlan.unavailableReason.replaceAll("_", " ")
-                  : ""}
-              </p>
-              {real &&
-                rerouteIncidentIdSchema.safeParse(returnPlan.routePlanId)
-                  .success && (
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="min-h-11 w-full whitespace-normal rounded-[2px] text-sm sm:min-h-9"
-                  >
-                    <Link to={routePlanDetail(returnPlan.routePlanId)}>
-                      View RETURN RoutePlan
-                    </Link>
-                  </Button>
-                )}
-              <p className="m-0 text-xs leading-5 text-slate-500">
-                Legal review and activation remain separate RoutePlan
-                operations.
-              </p>
-            </>
-          ) : (
-            <p className="m-0 text-sm text-slate-500">
-              No RETURN plan provided.
+              ) : undefined
+            }
+          >
+            <p className="m-0 text-sm leading-5 text-slate-600">
+              {!context.backupPlans.length
+                ? "No backup plans provided."
+                : backupAction
+                  ? "Request or approve it from the backup route plan."
+                  : "View only. No backup action is available now."}
             </p>
-          )}
+          </OptionBlock>
+          <OptionBlock
+            title="Return"
+            badge={
+              returnPlan ? (
+                <Badge
+                  variant="outline"
+                  className={
+                    "rounded-[2px] text-xs " +
+                    (returnPlan.isAvailable
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                      : "border-amber-200 bg-amber-50 text-amber-900")
+                  }
+                >
+                  {returnPlan.isAvailable ? "Available" : "Unavailable"}
+                </Badge>
+              ) : undefined
+            }
+          >
+            {returnPlan ? (
+              <>
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="text-sm font-semibold text-slate-900 [overflow-wrap:anywhere]">
+                    {returnPlan.routePlanCode}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="max-w-full whitespace-normal rounded-[2px] text-xs"
+                  >
+                    {returnPlan.status.replaceAll("_", " ")}
+                  </Badge>
+                </div>
+                {returnPlan.unavailableReason && (
+                  <p className="m-0 text-sm text-amber-900">
+                    {returnPlan.unavailableReason.replaceAll("_", " ")}
+                  </p>
+                )}
+                {real &&
+                  rerouteIncidentIdSchema.safeParse(returnPlan.routePlanId)
+                    .success && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="min-h-11 w-full whitespace-normal rounded-[2px] text-sm sm:min-h-9"
+                    >
+                      <Link to={routePlanDetail(returnPlan.routePlanId)}>
+                        Open return route plan
+                      </Link>
+                    </Button>
+                  )}
+                <p className="m-0 text-xs leading-5 text-slate-500">
+                  Legal review and activation happen on the route plan.
+                </p>
+              </>
+            ) : (
+              <p className="m-0 text-sm text-slate-500">
+                No return plan provided.
+              </p>
+            )}
+          </OptionBlock>
         </div>
       </div>
     </Section>
+  );
+}
+
+function OptionBlock({
+  title,
+  badge,
+  children,
+}: {
+  title: string;
+  badge?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-2 py-3 last:pb-0">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <h3 className="m-0! font-heading text-sm! uppercase tracking-wide text-slate-900">
+          {title}
+        </h3>
+        {badge}
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -194,14 +219,13 @@ export function RerouteDecisionContext({
         </dl>
         {context.returnPlan && !legalReady && (
           <p className="m-0 border-l-2 border-amber-400 pl-3 text-sm leading-5 text-amber-900">
-            RETURN activation requires approved MAIN and EXTRA dossiers. MAIN
-            must be preserved.
+            Activating the return needs both MAIN and EXTRA dossiers approved.
           </p>
         )}
-        {context.returnPlan && (
+        {context.returnPlan?.checks.some((check) => !check.passed) && (
           <div className="space-y-2 border-t border-slate-200 pt-3">
             <h3 className="m-0! font-heading text-sm! uppercase text-slate-700">
-              RETURN feasibility checks
+              Return feasibility checks
             </h3>
             <RerouteChecks checks={context.returnPlan.checks} />
           </div>
@@ -234,11 +258,6 @@ export function RerouteDecisionContext({
               <Field label="Monitoring interval">
                 {context.hold.monitorIntervalMinutes} min
               </Field>
-              {context.hold.safeStopLocation && (
-                <Field label="Safe stop">
-                  {context.hold.safeStopLocation.locationName}
-                </Field>
-              )}
               <Field label="Decided by">
                 {context.hold.decidedBy.fullName}
               </Field>

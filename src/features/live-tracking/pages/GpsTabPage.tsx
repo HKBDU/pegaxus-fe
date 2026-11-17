@@ -58,7 +58,7 @@ function GpsTabContent({ audience, transportId }: GpsTabContentProps) {
           <SignalNotices snapshot={snapshot} truck={truck} signal={signal} realtime={FEATURES.realtimeStream} streamState={streamState} streamError={streamError} />
           <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
             <Suspense fallback={<div className="h-[clamp(440px,calc(100vh-9rem),720px)] animate-pulse rounded-lg border bg-muted" role="status" aria-label="Loading map" />}>
-              <TrackingMap segments={snapshot.plannedRoute.segments} nextStop={snapshot.nextStop} truck={truck} trail={trail} signal={signal} />
+              <TrackingMap segments={snapshot.plannedRoute.segments} details={segmentsQuery.data?.segments} showNotDriven={audience !== "crew"} nextStop={snapshot.nextStop} truck={truck} trail={trail} signal={signal} />
             </Suspense>
             {/* Next to the map on wide screens (scrolls inside its own box), above it on narrow ones. */}
             <div className="order-first lg:order-none lg:h-[clamp(440px,calc(100vh-9rem),720px)] lg:overflow-y-auto">

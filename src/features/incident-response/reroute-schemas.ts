@@ -295,13 +295,6 @@ export const rerouteHoldLocationSchema = z.object({
   ...location.shape,
   locationId: rerouteIncidentIdSchema,
 });
-export const rerouteHoldLocationsSchema = z.object({
-  items: z.array(rerouteHoldLocationSchema),
-  pageIndex: z.number().int().positive(),
-  pageSize: z.number().int().positive(),
-  totalItems: z.number().int().nonnegative(),
-  totalPages: z.number().int().nonnegative(),
-});
 export const rerouteHoldResultSchema = z
   .object({
     incidentReportId: rerouteIncidentIdSchema,

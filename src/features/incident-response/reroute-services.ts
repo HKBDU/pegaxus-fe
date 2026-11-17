@@ -7,7 +7,6 @@ import type { AuthPrincipal } from "@/features/auth/types";
 import { emergencyCostEnvelopeSchema } from "./schemas";
 import { emergencyCostAuthScope } from "./services";
 import { isEmergencyCostMockMode } from "./source";
-import { getLocations } from "@/features/route-plan/services";
 import {
   rerouteContextSchema,
   rerouteIncidentIdSchema,
@@ -17,7 +16,6 @@ import {
   type RerouteEscalationRequest,
   rerouteHoldRequestSchema,
   rerouteHoldResultSchema,
-  rerouteHoldLocationsSchema,
   type RerouteHoldRequest,
 } from "./reroute-schemas";
 
@@ -340,30 +338,6 @@ export const canHoldReroute = (
   context.hold?.status !== "ACTIVE" &&
   ["REPORTED", "PENDING"].includes(context.incident.status) &&
   context.transport.status === "IN_TRANSIT";
-
-export async function getRerouteHoldLocations(
-  search: string,
-  page: number,
-  scope: string,
-  signal?: AbortSignal,
-) {
-  const actor = authorize(scope, signal);
-  if (!canAccess(actor.principal, { anyRole: ["LOGISTICS_MANAGER"] }))
-    throw new RerouteApiError(403, "FORBIDDEN");
-  let result: unknown;
-  if (isEmergencyCostMockMode()) {
-    const { emergencyCostMockRepository } = await import("./mocks/repository");
-    authorize(scope, signal);
-    result = emergencyCostMockRepository.holdLocations(search, page, actor);
-  } else
-    result = await getLocations({
-      search: search.trim() || undefined,
-      pageIndex: page,
-      pageSize: 20,
-    });
-  authorize(scope, signal);
-  return rerouteHoldLocationsSchema.parse(result);
-}
 
 class HoldOutcomeUnknown extends Error {}
 const holdFlights = new Set<string>();

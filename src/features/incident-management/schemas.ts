@@ -194,7 +194,7 @@ const incidentCore = {
 export const incidentSchema = z.object({
   ...incidentCore,
   reportedBy: employeeBriefSchema,
-  vehicleDetail: z.object({ ...vehicleDetailFields, estimatedRepairCost: z.number().nullable() }).nullable(),
+  vehicleDetail: z.object(vehicleDetailFields).nullable(),
   emergencySettlementRequired: z.boolean(),
   costRequests: z.array(costRequestSchema),
   costRequestCount: z.number(),

@@ -106,7 +106,6 @@ const MOCK_VEHICLE_DETAIL: VehicleIncidentDetail = {
   repairRequired: true,
   towingRequired: true,
   replacementVehicleRequired: false,
-  estimatedRepairCost: 3500000,
   estimatedRepairHours: 4,
   driverSafetyStatus: "Crew safe",
   cargoConditionNote: "Horses stable",

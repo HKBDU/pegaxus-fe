@@ -13,7 +13,7 @@ import { RoutePlanHeader } from "./RoutePlanHeader";
 import { RoutePlanOverview } from "./RoutePlanOverview";
 import { RoutePlanMapPanel } from "./RoutePlanMapPanel";
 import { RouteSegmentList } from "./RouteSegmentList";
-import { blockedSegmentNumbers } from "../adapters/route-plan-map.adapter";
+import { blockedSegmentNumbers, ownSegments } from "../adapters/route-plan-map.adapter";
 import { isLegalReviewOutdated } from "@/features/route-plan/legal-blocks";
 import { RouteContingencyTab } from "./RouteContingencyTab";
 import { RouteLegalReview } from "./RouteLegalReview";
@@ -25,6 +25,7 @@ export function RoutePlanDetails({
   emergencyArea,
   actions,
   segmentActions,
+  fallbackBack,
 }: {
   plan: RoutePlanDetail;
   mapViewer?: ComponentType<RouteMapViewerProps>;
@@ -32,23 +33,27 @@ export function RoutePlanDetails({
   emergencyArea?: ReactNode;
   actions?: ReactNode;
   segmentActions?: (segment: RouteSegment) => ReactNode;
+  fallbackBack?: { href: string; label: string };
 }) {
   const [params, setParams] = useSearchParams();
   const selected = routeViewTabSchema.safeParse(params.get("tab") ?? "map");
   const active = selected.success ? selected.data : "map";
   return (
     <div className="space-y-4">
-      <RoutePlanHeader plan={plan} actions={actions} />
+      <RoutePlanHeader plan={plan} actions={actions} fallbackBack={fallbackBack} />
       {emergencyArea}
       <RoutePlanOverview plan={plan} />
       <Tabs.Root
         value={active}
         onValueChange={(value) =>
-          setParams((current) => {
-            const next = new URLSearchParams(current);
-            next.set("tab", routeViewTabSchema.parse(value));
-            return next;
-          })
+          setParams(
+            (current) => {
+              const next = new URLSearchParams(current);
+              next.set("tab", routeViewTabSchema.parse(value));
+              return next;
+            },
+            { replace: true },
+          )
         }
       >
         <Tabs.List
@@ -81,7 +86,7 @@ export function RoutePlanDetails({
           className="outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30"
         >
           <RouteSegmentList
-            segments={plan.segments}
+            segments={ownSegments(plan)}
             segmentActions={segmentActions}
             blockedSegments={blockedSegmentNumbers(plan)}
           />

@@ -173,14 +173,23 @@ function VehicleReplacementAction({ incident }: { incident: VehicleIncident }) {
       );
       ensureCurrent();
       const active = routes.items.filter((plan) => plan.status === "ACTIVE");
-      if (active.length !== 1)
+      // A PRIMARY stays ACTIVE after a backup or return takes over, so several plans can be ACTIVE at once. Open the plan
+      // the convoy is driving now: the one holding the current segment, else the newest kind (RETURN, then BACKUP, then PRIMARY).
+      const running = context.currentSegment?.routePlanId;
+      const latestKind = (["RETURN", "BACKUP", "PRIMARY"] as const)
+        .map((type) => active.filter((plan) => plan.routeType === type))
+        .find((plans) => plans.length > 0);
+      const target =
+        (running && active.find((plan) => sameId(plan.routePlanId, running))) ||
+        (latestKind?.length === 1 ? latestKind[0] : undefined);
+      if (!target)
         throw new VehicleReplacementContextError(
           active.length === 0
             ? "No ACTIVE route plan is available for this transport plan."
-            : "Multiple ACTIVE route plans exist. Ask the route coordinator to resolve the active route before continuing.",
+            : "The route the convoy is driving could not be identified. Ask the route coordinator to check the active routes.",
         );
       const plan = await routeViewService.getRoute(
-        active[0].routePlanId,
+        target.routePlanId,
         flight.signal,
       );
       ensureCurrent();

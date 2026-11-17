@@ -6,12 +6,13 @@ import type { PaginationMeta } from "@/shared/types"
 
 import { IncidentKpiCards } from "../components/IncidentKpiCards"
 import { IncidentTable } from "../components/IncidentTable"
-import { DEFAULT_SORT, OPEN_STATUSES } from "../constants"
+import { DEFAULT_SORT } from "../constants"
 import { useIncidentList } from "../hooks/useIncidents"
 import type { IncidentListParams } from "../types"
 
+// Every status by default: a resolved or cancelled incident stays in the list with its new status, so it can be reopened later.
 const initialParams: IncidentListParams = {
-  status: OPEN_STATUSES,
+  status: "",
   category: "",
   severity: "",
   occurredFrom: "",
