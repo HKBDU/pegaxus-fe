@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/shared/components/ui/button"
 import { distanceMeters, formatDistance } from "../utils"
+import { mockGeolocation } from "@/features/location-sharing/simulator/mockGeolocation"
 
 /** The handover point and how close the device must be to complete (HO5 `geofence`). */
 export interface HandoverTarget {
@@ -24,27 +25,17 @@ export type PositionState =
   | { kind: "done"; position: DevicePosition; meters: number | null }
   | { kind: "error"; message: string }
 
-const ERROR_TEXT: Record<number, string> = {
-  1: "Location permission was denied. Allow location for this site to check your position.",
-  2: "Your position is unavailable right now. Move to open sky and try again.",
-  3: "Finding your position took too long. Try again.",
-}
-
-/** One-shot read of the device position (`getCurrentPosition`, never `watchPosition`). Rejects with a readable message. */
-export function readPosition(): Promise<DevicePosition> {
-  return new Promise((resolve, reject) => {
-    if (!("geolocation" in navigator)) return reject(new Error("This device cannot share its location."))
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) =>
-        resolve({
-          // The API accepts coordinates with a maximum scale of 4 decimal places.
-          latitude: Number(coords.latitude.toFixed(4)),
-          longitude: Number(coords.longitude.toFixed(4)),
-          accuracy: coords.accuracy,
-        }),
-      (error) => reject(new Error(ERROR_TEXT[error.code] ?? "Could not read your position.")),
-      { enableHighAccuracy: true, timeout: 12_000, maximumAge: 0 },
-    )
+/** Read only the active driver's Mock GPS sample on this browser. */
+export function readPosition(transportId: string, routePlanRouteId?: string): Promise<DevicePosition> {
+  const sample = mockGeolocation.getIsEnabled() ? mockGeolocation.getLastSample() : null
+  if (!sample || sample.transportId !== transportId ||
+    (routePlanRouteId && sample.routePlanRouteId !== routePlanRouteId) ||
+    Date.now() - Date.parse(sample.recordedAt) > 120_000)
+    return Promise.reject(new Error("A fresh Driver Mock GPS sample is unavailable. Ask the driver to enable Mock GPS, then try again."))
+  return Promise.resolve({
+    latitude: Number(sample.latitude.toFixed(4)),
+    longitude: Number(sample.longitude.toFixed(4)),
+    accuracy: sample.accuracyMeters ?? 8,
   })
 }
 
@@ -55,7 +46,7 @@ export const metersOutside = (meters: number, target: HandoverTarget) => Math.ma
  * Position of the person holding the phone against the handover point. It reads once when the form opens (so [Complete]
  * knows whether it may be enabled) and again on demand; the form reads it a last time when the button is pressed.
  */
-export function useHandoverPosition(target: HandoverTarget | null) {
+export function useHandoverPosition(target: HandoverTarget | null, transportId: string, routePlanRouteId?: string) {
   const [state, setState] = useState<PositionState>({ kind: "idle" })
   // Primitives, so a new `target` object with the same point does not read the position again.
   const latitude = target?.latitude
@@ -64,13 +55,13 @@ export function useHandoverPosition(target: HandoverTarget | null) {
   const check = useCallback(async () => {
     setState({ kind: "loading" })
     try {
-      const position = await readPosition()
+      const position = await readPosition(transportId, routePlanRouteId)
       const point = latitude !== undefined && longitude !== undefined ? { latitude, longitude } : null
       setState({ kind: "done", position, meters: point ? distanceMeters(position, point) : null })
     } catch (error) {
       setState({ kind: "error", message: error instanceof Error ? error.message : "Could not read your position." })
     }
-  }, [latitude, longitude])
+  }, [latitude, longitude, transportId, routePlanRouteId])
 
   useEffect(() => {
     void check()

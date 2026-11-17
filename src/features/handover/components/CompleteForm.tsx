@@ -52,7 +52,8 @@ export function CompleteForm({ record, mobile, pending, target, geofenced, onSub
   const [errors, setErrors] = useState<FieldErrors>({})
   const [padErrors, setPadErrors] = useState<{ sender?: string; receiver?: string }>({})
   const root = useRef<HTMLFormElement>(null)
-  const here = useHandoverPosition(target)
+  const routePlanRouteId = record.fromSegment?.routePlanRouteId ?? record.toSegment?.routePlanRouteId
+  const here = useHandoverPosition(target, record.transport.transportId, routePlanRouteId)
   const signed = hasSignature(sender) && hasSignature(receiver)
   // Both signatures and, when the BE enforces a geofence, a position inside it.
   const canComplete = signed && (!geofenced || here.inside)
@@ -99,7 +100,7 @@ export function CompleteForm({ record, mobile, pending, target, geofenced, onSub
       setPositionError(null)
       let position
       try {
-        position = await readPosition()
+        position = await readPosition(record.transport.transportId, routePlanRouteId)
       } catch (error) {
         setPositionError(error instanceof Error ? error.message : "Could not read your position.")
         return
