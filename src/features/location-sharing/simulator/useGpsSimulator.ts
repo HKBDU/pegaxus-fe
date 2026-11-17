@@ -10,7 +10,7 @@ import {
 import { mockGeolocation } from "./mockGeolocation";
 import { resolveRouteGeometry } from "@/shared/components/map/route-geometry-cache";
 
-export type SimulatorStatus = "idle" | "running" | "paused" | "completed";
+export type SimulatorStatus = "idle" | "running" | "paused" | "completed" | "error";
 
 export interface SegmentEndpoint {
   latitude?: number | null;
@@ -19,6 +19,10 @@ export interface SegmentEndpoint {
 }
 
 export function useGpsSimulator(initialSegment?: {
+  transportId: string;
+  routePlanRouteId: string;
+  transportMode: "ROAD" | "SEA" | "AIR";
+  isOutsourced: boolean;
   fromLocation: SegmentEndpoint | null;
   toLocation: SegmentEndpoint | null;
 }) {
@@ -28,7 +32,8 @@ export function useGpsSimulator(initialSegment?: {
   const [distanceTraveled, setDistanceTraveled] = useState(0);
   const [isSignalLoss, setIsSignalLoss] = useState(false);
   const [signalLossSec, setSignalLossSec] = useState(0);
-  const [loop, setLoop] = useState(true);
+  const [routeError, setRouteError] = useState<string | null>(null);
+  const [routeAttempts, setRouteAttempts] = useState(0);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [routeSource, setRouteSource] = useState<
     "segment" | "custom" | "geodesic" | "none"
@@ -43,12 +48,15 @@ export function useGpsSimulator(initialSegment?: {
     totalDistance: 0,
   });
   const routeLoadVersionRef = useRef(0);
+  const sessionIdRef = useRef(crypto.randomUUID());
+  const sequenceRef = useRef(0);
+  const skippedBoundaryRef = useRef<{ boundaryNo: number; latitude: number; longitude: number } | null>(null);
 
   const [totalDistance, setTotalDistance] = useState(0);
   const distanceRef = useRef(0);
   const speedRef = useRef(speedKmh);
   const statusRef = useRef(status);
-  const loopRef = useRef(loop);
+  const segmentKey = initialSegment ? `${initialSegment.transportId}:${initialSegment.routePlanRouteId}` : null;
   const isSignalLossRef = useRef(isSignalLoss);
 
   useEffect(() => {
@@ -60,10 +68,6 @@ export function useGpsSimulator(initialSegment?: {
   }, [status]);
 
   useEffect(() => {
-    loopRef.current = loop;
-  }, [loop]);
-
-  useEffect(() => {
     isSignalLossRef.current = isSignalLoss;
     mockGeolocation.setSignalLoss(isSignalLoss);
   }, [isSignalLoss]);
@@ -72,7 +76,7 @@ export function useGpsSimulator(initialSegment?: {
   const dispatchCurrentPosition = useCallback(
     (dist: number, speed: number) => {
       const route = routeDataRef.current;
-      if (route.coordinates.length === 0) return;
+      if (route.coordinates.length === 0 || !initialSegment?.transportId || !initialSegment.routePlanRouteId) return;
 
       const raw = positionAtDistance(route, dist);
       const jittered = addGpsJitter(raw.latitude, raw.longitude, 2);
@@ -84,6 +88,10 @@ export function useGpsSimulator(initialSegment?: {
       });
 
       mockGeolocation.dispatchPosition({
+        transportId: initialSegment.transportId,
+        routePlanRouteId: initialSegment.routePlanRouteId,
+        sessionId: sessionIdRef.current,
+        sequence: ++sequenceRef.current,
         latitude: jittered.latitude,
         longitude: jittered.longitude,
         speedKmh: speed,
@@ -91,7 +99,7 @@ export function useGpsSimulator(initialSegment?: {
         accuracyMeters: 8,
       });
     },
-    [],
+    [initialSegment?.transportId, initialSegment?.routePlanRouteId],
   );
 
   // Load route into simulator
@@ -104,58 +112,52 @@ export function useGpsSimulator(initialSegment?: {
       setDistanceTraveled(0);
       setRouteSource(source);
 
-      if (data.coordinates.length > 0) {
+      if (mockGeolocation.getIsEnabled() && data.coordinates.length > 0) {
         dispatchCurrentPosition(0, 0);
       }
     },
     [dispatchCurrentPosition],
   );
 
-const FALLBACK_COORDINATES: Record<
-  string,
-  { latitude: number; longitude: number }
-> = {
-  "Chantilly Stables": { latitude: 49.1944, longitude: 2.4858 },
-  "Lille Rest Stop": { latitude: 50.6292, longitude: 3.0573 },
-  "Calais BCP": { latitude: 50.9513, longitude: 1.8587 },
-  "Dover Port": { latitude: 51.1279, longitude: 1.3134 },
-  "Newmarket Stables": { latitude: 52.2435, longitude: 0.4057 },
-  "Paris Airport": { latitude: 49.0097, longitude: 2.5479 },
-  "London Airport": { latitude: 51.47, longitude: -0.4543 },
-  "Chantilly Equine Quarantine Facility": {
-    latitude: 49.1944,
-    longitude: 2.4858,
-  },
-  "Dover Equine Transit Terminal": { latitude: 51.1279, longitude: 1.3134 },
-};
-
 function resolveEndpoint(endpoint: SegmentEndpoint): {
   latitude: number;
   longitude: number;
 } {
-  if (endpoint.latitude != null && endpoint.longitude != null) {
+  if (endpoint.latitude != null && endpoint.longitude != null &&
+    Number.isFinite(endpoint.latitude) && Number.isFinite(endpoint.longitude) &&
+    Math.abs(endpoint.latitude) <= 90 && Math.abs(endpoint.longitude) <= 180) {
     return { latitude: endpoint.latitude, longitude: endpoint.longitude };
   }
-  if (endpoint.locationName && FALLBACK_COORDINATES[endpoint.locationName]) {
-    return FALLBACK_COORDINATES[endpoint.locationName];
-  }
-  return { latitude: 21.0285, longitude: 105.8544 };
+  throw new Error(`Missing valid coordinates for ${endpoint.locationName ?? "segment endpoint"}.`);
 }
 
   // Load from segment points
   const loadSegmentRoute = useCallback(
-    async (from: SegmentEndpoint, to: SegmentEndpoint) => {
+    async (from: SegmentEndpoint, to: SegmentEndpoint, mode: "ROAD" | "SEA" | "AIR", outsourced: boolean) => {
       const loadVersion = ++routeLoadVersionRef.current;
-      const fromCoord = resolveEndpoint(from);
-      const toCoord = resolveEndpoint(to);
-
       setIsLoadingRoute(true);
+      setRouteError(null);
+      setRouteAttempts(0);
       try {
+        const fromCoord = resolveEndpoint(from);
+        const toCoord = resolveEndpoint(to);
+        if (fromCoord.latitude === toCoord.latitude && fromCoord.longitude === toCoord.longitude)
+          throw new Error("Segment endpoints are identical.");
+        if (mode !== "ROAD" || outsourced) {
+          setRouteError("This segment has no road playback. Use Skip segment at the next handover point.");
+          setStatus("error");
+          return;
+        }
         // Use the same resolver/cache as the ongoing-transport map. If that map
         // already loaded Geoapify's road geometry, the simulator follows the
         // exact same polyline instead of creating a second route or a straight line.
+        let routeFailure = "Road geometry is unavailable";
+        for (let attempt = 1; attempt <= 4; attempt++) {
+        if (loadVersion !== routeLoadVersionRef.current) return;
+        setRouteAttempts(attempt);
+        try {
         const resolved = await resolveRouteGeometry({
-          id: "gps-simulator-segment",
+          id: initialSegment?.routePlanRouteId ?? "gps-simulator-segment",
           name: `${from.locationName ?? "Origin"} to ${to.locationName ?? "Destination"}`,
           transportMode: "ROAD",
           fromLocation: {
@@ -179,12 +181,21 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
           const coordinates = resolved.line.type === "LineString"
             ? resolved.line.coordinates
             : resolved.line.coordinates.flat();
-          if (coordinates.length >= 2) {
+          if (coordinates.length >= 2 && buildRouteData(coordinates).totalDistance > 0) {
             applyCoordinates(coordinates, "segment");
-            setIsLoadingRoute(false);
+            setStatus("idle");
             return;
           }
         }
+        routeFailure = resolved.error ?? routeFailure;
+        } catch (error) {
+          routeFailure = error instanceof Error ? error.message : "Road geometry request failed";
+        }
+        if (attempt < 4) await new Promise<void>((resolve) => setTimeout(resolve, 400 * (2 ** (attempt - 1))));
+        }
+        if (loadVersion !== routeLoadVersionRef.current) return;
+        setRouteError(`${routeFailure} after four attempts. Try again or skip this segment.`);
+        setStatus("error");
         // Never substitute the endpoint-to-endpoint line here. A missing road
         // geometry must leave the simulator stopped, otherwise fake GPS can
         // cut across terrain/water between two route endpoints.
@@ -194,26 +205,37 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
         setRouteSource("none");
       } catch (err) {
         if (loadVersion !== routeLoadVersionRef.current) return;
-        console.warn(
-          "[GpsSimulator] Road geometry failed; simulator will remain stopped:",
-          err,
-        );
+        setRouteError(err instanceof Error ? err.message : "Road geometry failed.");
+        setStatus("error");
         routeDataRef.current = { coordinates: [], cumDistances: [], totalDistance: 0 };
         setTotalDistance(0);
         setDistanceTraveled(0);
         setRouteSource("none");
       }
 
-      if (loadVersion === routeLoadVersionRef.current) setIsLoadingRoute(false);
+      finally {
+        if (loadVersion === routeLoadVersionRef.current) setIsLoadingRoute(false);
+      }
     },
-    [applyCoordinates],
+    [applyCoordinates, initialSegment?.routePlanRouteId],
   );
 
   // Load Custom GeoJSON
   const loadCustomGeoJson = useCallback(
     (geoJsonInput: unknown) => {
       const coords = parseGeoJsonToCoordinates(geoJsonInput);
-      if (coords.length >= 2) {
+      const from = initialSegment?.fromLocation;
+      const to = initialSegment?.toLocation;
+      const near = (a: [number, number], b: {latitude: number; longitude: number}) =>
+        Math.abs(a[0] - b.longitude) < 0.02 && Math.abs(a[1] - b.latitude) < 0.02;
+      if (!from || !to) return false;
+      let endpoints;
+      try { endpoints = [resolveEndpoint(from), resolveEndpoint(to)] as const; }
+      catch { return false; }
+      if (coords.length >= 2 &&
+        coords.every(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat) && Math.abs(lon) <= 180 && Math.abs(lat) <= 90) &&
+        buildRouteData(coords).totalDistance > 0 && near(coords[0], endpoints[0]) &&
+        near(coords[coords.length - 1], endpoints[1])) {
         // A late segment lookup must not replace a custom route chosen by the driver.
         routeLoadVersionRef.current += 1;
         setIsLoadingRoute(false);
@@ -222,18 +244,39 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
       }
       return false;
     },
-    [applyCoordinates],
+    [applyCoordinates, initialSegment?.fromLocation, initialSegment?.toLocation],
   );
 
   // Auto load initial segment if provided
   useEffect(() => {
+    routeLoadVersionRef.current += 1;
+    skippedBoundaryRef.current = null;
+    sessionIdRef.current = crypto.randomUUID();
+    sequenceRef.current = 0;
+    routeDataRef.current = { coordinates: [], cumDistances: [], totalDistance: 0 };
+    mockGeolocation.clearPosition();
+    distanceRef.current = 0;
+    setDistanceTraveled(0);
+    setTotalDistance(0);
+    setCurrentPoint(null);
+    setRouteSource("none");
+    setStatus("idle");
     if (initialSegment?.fromLocation && initialSegment?.toLocation) {
       void loadSegmentRoute(
         initialSegment.fromLocation,
         initialSegment.toLocation,
+        initialSegment.transportMode,
+        initialSegment.isOutsourced,
       );
+    } else {
+      setIsLoadingRoute(false);
+      setRouteError("No current segment is available.");
     }
+    return () => { routeLoadVersionRef.current += 1; mockGeolocation.clearPosition(); };
   }, [
+    segmentKey,
+    initialSegment?.transportMode,
+    initialSegment?.isOutsourced,
     initialSegment?.fromLocation?.latitude,
     initialSegment?.fromLocation?.longitude,
     initialSegment?.fromLocation?.locationName,
@@ -258,22 +301,34 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
       let nextDist = distanceRef.current + stepMeters;
 
       if (nextDist >= total) {
-        if (loopRef.current) {
-          nextDist = 0;
-        } else {
-          nextDist = total;
-          setStatus("completed");
-        }
+        nextDist = total;
+        setStatus("completed");
       }
 
       distanceRef.current = nextDist;
       setDistanceTraveled(Math.round(nextDist));
 
-      dispatchCurrentPosition(nextDist, speedRef.current);
+      dispatchCurrentPosition(nextDist, nextDist === total ? 0 : speedRef.current);
     }, 1000);
 
     return () => clearInterval(interval);
   }, [isEnabled, status, dispatchCurrentPosition]);
+
+  useEffect(() => {
+    if (!isEnabled || status !== "completed") return;
+    const timer = setInterval(() => {
+      const skipped = skippedBoundaryRef.current;
+      if (skipped && initialSegment) {
+        mockGeolocation.dispatchPosition({
+          transportId: initialSegment.transportId, routePlanRouteId: initialSegment.routePlanRouteId,
+          boundaryNo: skipped.boundaryNo, sessionId: sessionIdRef.current,
+          sequence: ++sequenceRef.current, latitude: skipped.latitude, longitude: skipped.longitude,
+          speedKmh: 0, heading: 0,
+        });
+      } else dispatchCurrentPosition(routeDataRef.current.totalDistance, 0);
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [isEnabled, status, dispatchCurrentPosition, initialSegment?.transportId, initialSegment?.routePlanRouteId]);
 
   // Signal loss timer loop
   useEffect(() => {
@@ -290,13 +345,9 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
   // can reacquire an existing geolocation watcher immediately afterwards.
   const enableMockGps = useCallback(() => {
     mockGeolocation.enable();
-    setIsEnabled((prev) => {
-      if (prev) return prev;
-      if (routeDataRef.current.coordinates.length > 0) {
-        dispatchCurrentPosition(distanceRef.current, speedRef.current);
-      }
-      return true;
-    });
+    if (routeDataRef.current.coordinates.length > 0)
+      dispatchCurrentPosition(distanceRef.current, speedRef.current);
+    setIsEnabled(true);
   }, [dispatchCurrentPosition]);
 
   const disableMockGps = useCallback(() => {
@@ -313,6 +364,7 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
   }, [disableMockGps, enableMockGps, isEnabled]);
 
   const start = useCallback(() => {
+    if (routeDataRef.current.totalDistance <= 0) return;
     if (!isEnabled) {
       setIsEnabled(true);
       mockGeolocation.enable();
@@ -330,7 +382,7 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
     setStatus("idle");
     setIsSignalLoss(false);
     setSignalLossSec(0);
-    dispatchCurrentPosition(0, 0);
+    if (mockGeolocation.getIsEnabled()) dispatchCurrentPosition(0, 0);
   }, [dispatchCurrentPosition]);
 
   const seek = useCallback(
@@ -365,6 +417,44 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
     });
   }, []);
 
+  const retryRoute = useCallback(() => {
+    if (initialSegment?.fromLocation && initialSegment.toLocation)
+      void loadSegmentRoute(initialSegment.fromLocation, initialSegment.toLocation,
+        initialSegment.transportMode, initialSegment.isOutsourced);
+  }, [initialSegment?.fromLocation, initialSegment?.toLocation, initialSegment?.transportMode,
+    initialSegment?.isOutsourced, loadSegmentRoute]);
+
+  const skipToBoundary = useCallback((boundaryNo: number) => {
+    if (!initialSegment?.transportId || !initialSegment.routePlanRouteId || !initialSegment.toLocation ||
+      !mockGeolocation.getIsEnabled() || !Number.isInteger(boundaryNo) || boundaryNo <= 0) return false;
+    let target;
+    try { target = resolveEndpoint(initialSegment.toLocation); }
+    catch (error) {
+      setRouteError(error instanceof Error ? error.message : "Handover point has no valid coordinates.");
+      return false;
+    }
+    ++routeLoadVersionRef.current;
+    skippedBoundaryRef.current = { boundaryNo, ...target };
+    routeDataRef.current = { coordinates: [], cumDistances: [], totalDistance: 0 };
+    setTotalDistance(0);
+    setRouteSource("none");
+    setIsLoadingRoute(false);
+    statusRef.current = "completed";
+    setStatus("completed");
+    setCurrentPoint({ ...target, heading: 0 });
+    mockGeolocation.dispatchPosition({
+      transportId: initialSegment.transportId,
+      routePlanRouteId: initialSegment.routePlanRouteId,
+      boundaryNo,
+      sessionId: sessionIdRef.current,
+      sequence: ++sequenceRef.current,
+      ...target,
+      speedKmh: 0,
+      heading: 0,
+    });
+    return true;
+  }, [initialSegment?.transportId, initialSegment?.routePlanRouteId, initialSegment?.toLocation]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -387,8 +477,8 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
     progressPercent,
     isSignalLoss,
     signalLossSec,
-    loop,
-    setLoop,
+    routeError,
+    routeAttempts,
     isLoadingRoute,
     routeSource,
     currentPoint,
@@ -402,6 +492,8 @@ function resolveEndpoint(endpoint: SegmentEndpoint): {
     jumpNearStation,
     toggleSignalLoss,
     loadSegmentRoute,
+    retryRoute,
+    skipToBoundary,
     loadCustomGeoJson,
   };
 }

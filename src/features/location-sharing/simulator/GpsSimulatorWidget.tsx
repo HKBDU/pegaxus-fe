@@ -14,7 +14,6 @@ import {
   FileCode,
   Sparkles,
   Target,
-  Repeat,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
@@ -26,10 +25,13 @@ import {
 } from "./useGpsSimulator";
 
 export interface GpsSimulatorWidgetProps {
+  transportId?: string;
   currentSegment?: {
     fromLocation: SegmentEndpoint | null;
     toLocation: SegmentEndpoint | null;
     routePlanRouteId?: string;
+    transportMode: "ROAD" | "SEA" | "AIR";
+    isOutsourced: boolean;
   } | null;
   sharingActive?: boolean;
   onStartSharing?: () => void;
@@ -46,6 +48,7 @@ const SPEED_PRESETS = [
 ];
 
 export function GpsSimulatorWidget({
+  transportId,
   currentSegment,
   sharingActive,
   onStartSharing,
@@ -59,8 +62,12 @@ export function GpsSimulatorWidget({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const simulator = useGpsSimulator(
-    currentSegment
+    currentSegment && transportId && currentSegment.routePlanRouteId
       ? {
+          transportId,
+          routePlanRouteId: currentSegment.routePlanRouteId,
+          transportMode: currentSegment.transportMode,
+          isOutsourced: currentSegment.isOutsourced,
           fromLocation: currentSegment.fromLocation,
           toLocation: currentSegment.toLocation,
         }
@@ -313,16 +320,6 @@ export function GpsSimulatorWidget({
               Reset to Start
             </Button>
 
-            <Button
-              type="button"
-              variant={simulator.loop ? "secondary" : "outline"}
-              size="sm"
-              onClick={() => simulator.setLoop(!simulator.loop)}
-              className="text-xs"
-            >
-              <Repeat className="mr-1.5 size-3.5" />
-              Loop Route: {simulator.loop ? "Enabled" : "Disabled"}
-            </Button>
           </div>
 
           {/* Speed Presets */}

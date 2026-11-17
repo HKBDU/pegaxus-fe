@@ -9,7 +9,6 @@ import {
   Navigation,
   Gauge,
   Target,
-  Repeat,
   SlidersHorizontal,
   FileCode,
   Sparkles,
@@ -30,10 +29,15 @@ import {
 } from "./useGpsSimulator";
 
 export interface GpsSimulatorDrawerProps {
+  transportId?: string;
+  targetBoundaryNo?: number;
+  canSkipCurrentSegment?: boolean;
   currentSegment?: {
     fromLocation: SegmentEndpoint | null;
     toLocation: SegmentEndpoint | null;
     routePlanRouteId?: string;
+    transportMode: "ROAD" | "SEA" | "AIR";
+    isOutsourced: boolean;
   } | null;
   sharingActive?: boolean;
   sharingAcceptance?: "unknown" | "legacy" | "accepted" | "rejected";
@@ -52,6 +56,9 @@ const SPEED_PRESETS = [
 ];
 
 export function GpsSimulatorDrawer({
+  transportId,
+  targetBoundaryNo,
+  canSkipCurrentSegment = false,
   currentSegment,
   sharingActive,
   sharingAcceptance,
@@ -81,8 +88,12 @@ export function GpsSimulatorDrawer({
   }, []);
 
   const simulator = useGpsSimulator(
-    simulatorActivated && currentSegment
+    simulatorActivated && currentSegment && transportId && currentSegment.routePlanRouteId
       ? {
+          transportId,
+          routePlanRouteId: currentSegment.routePlanRouteId,
+          transportMode: currentSegment.transportMode,
+          isOutsourced: currentSegment.isOutsourced,
           fromLocation: currentSegment.fromLocation,
           toLocation: currentSegment.toLocation,
         }
@@ -145,7 +156,7 @@ export function GpsSimulatorDrawer({
   const toName = currentSegment?.toLocation?.locationName ?? "Destination";
 
   const startTrip = () => {
-    if (!sharingActive && !canStartSharing) return;
+    if (!simulator.isEnabled || !simulator.currentPoint || (!sharingActive && !canStartSharing)) return;
     simulator.start();
     if (!sharingActive) onStartSharing?.();
   };
@@ -179,7 +190,7 @@ export function GpsSimulatorDrawer({
               {fromName} → {toName} (
               {simulator.totalDistance > 0
                 ? formatDistance(simulator.totalDistance)
-                : "Calculating route..."}
+                : simulator.isLoadingRoute ? "Calculating route..." : "No road route"}
               )
             </SheetDescription>
           </SheetHeader>
@@ -213,7 +224,7 @@ export function GpsSimulatorDrawer({
                   size="sm"
                   className="h-7 bg-emerald-600 px-2.5 text-xs text-white hover:bg-emerald-700"
                   onClick={onStartSharing}
-                  disabled={!canStartSharing}
+                  disabled={!canStartSharing || !simulator.isEnabled || !simulator.currentPoint}
                 >
                   Start Sharing
                 </Button>
@@ -232,9 +243,15 @@ export function GpsSimulatorDrawer({
             {simulator.isEnabled ? (
               <>
                 {simulator.totalDistance <= 0 && !simulator.isLoadingRoute ? (
-                  <p role="status" className="text-xs text-amber-700">
-                    Road route unavailable. Load a GeoJSON route before starting the trip.
-                  </p>
+                  <div role="alert" className="space-y-2 rounded-xs border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                    <p>{fromName} → {toName}: {simulator.routeError ?? "Road route unavailable."} {simulator.routeAttempts > 0 ? `Attempts: ${simulator.routeAttempts}.` : ""}</p>
+                    {currentSegment?.transportMode === "ROAD" && !currentSegment.isOutsourced ? (
+                      <Button type="button" variant="outline" size="sm" onClick={simulator.retryRoute}>Try again</Button>
+                    ) : null}
+                    {canSkipCurrentSegment && targetBoundaryNo && simulator.isEnabled ? (
+                      <Button type="button" variant="outline" size="sm" onClick={() => simulator.skipToBoundary(targetBoundaryNo)}>Skip to handover point</Button>
+                    ) : null}
+                  </div>
                 ) : null}
                 {/* Progress Scrubber */}
                 <div className="space-y-1.5 rounded-xs border border-border p-3 bg-card">
@@ -283,7 +300,7 @@ export function GpsSimulatorDrawer({
                       size="sm"
                       className="bg-indigo-600 text-white hover:bg-indigo-700"
                       onClick={startTrip}
-                      disabled={(!sharingActive && !canStartSharing) || simulator.isLoadingRoute || simulator.totalDistance <= 0}
+                      disabled={!simulator.isEnabled || !simulator.currentPoint || (!sharingActive && !canStartSharing) || simulator.isLoadingRoute || simulator.totalDistance <= 0}
                     >
                       <Play className="mr-1.5 size-3.5" />
                       {simulator.status === "paused"
@@ -302,15 +319,6 @@ export function GpsSimulatorDrawer({
                     Reset
                   </Button>
 
-                  <Button
-                    type="button"
-                    variant={simulator.loop ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => simulator.setLoop(!simulator.loop)}
-                  >
-                    <Repeat className="mr-1.5 size-3.5" />
-                    Loop: {simulator.loop ? "On" : "Off"}
-                  </Button>
                 </div>
 
                 {/* Speed Presets */}
