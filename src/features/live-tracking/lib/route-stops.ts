@@ -1,5 +1,5 @@
 import type { MapLocation, MapRoute } from "@/shared/components/map"
-import type { TrackingSegment, TrackingStop } from "../types"
+import type { SegmentDetail, TrackingSegment, TrackingStop } from "../types"
 
 export interface StopPoint {
   id: string
@@ -31,25 +31,50 @@ function toMapLocation(location: SegmentLocation): MapLocation | null {
   }
 }
 
+/**
+ * Legs the convoy left early at an incident to turn back. GP1 ends such a leg where it stopped (the incident), OT4 keeps
+ * the planned end, so the two answers differ there. Keyed by leg, with the planned end the convoy never reached.
+ */
+export function cutLegs(segments: TrackingSegment[], details: SegmentDetail[] = []) {
+  const planned = new Map(details.map((detail) => [detail.routePlanRouteId.toLowerCase(), detail.toLocation]))
+  const cut = new Map<string, SegmentLocation>()
+  for (const segment of segments) {
+    const end = planned.get(segment.routePlanRouteId.toLowerCase())
+    if (end && end.locationId.toLowerCase() !== segment.toLocation.locationId.toLowerCase())
+      cut.set(segment.routePlanRouteId, end)
+  }
+  return cut
+}
+
 /** The stops of the plan in travel order, each once (the end of one leg is the start of the next). */
-export function planStops(segments: TrackingSegment[]): MapLocation[] {
+export function planStops(segments: TrackingSegment[], details: SegmentDetail[] = []): MapLocation[] {
+  const cut = cutLegs(segments, details)
   const stops: MapLocation[] = []
+  const add = (location: SegmentLocation, isIncident = false) => {
+    const stop = toMapLocation(location)
+    if (stop && !stops.some((item) => item.id === stop.id)) stops.push(isIncident ? { ...stop, isIncident } : stop)
+  }
   for (const segment of sortSegments(segments)) {
-    for (const location of [segment.fromLocation, segment.toLocation]) {
-      const stop = toMapLocation(location)
-      if (stop && !stops.some((item) => item.id === stop.id)) stops.push(stop)
-    }
+    const plannedEnd = cut.get(segment.routePlanRouteId)
+    add(segment.fromLocation)
+    // A leg cut at an incident ends at the incident; its planned end follows, as the end of the stretch never driven.
+    add(segment.toLocation, Boolean(plannedEnd))
+    if (plannedEnd) add(plannedEnd)
   }
   return stops
 }
 
 /** One read-only route per leg: the map draws the road line itself with Geoapify (like the route plan screens). */
-export function planRoutes(segments: TrackingSegment[]): MapRoute[] {
+export function planRoutes(segments: TrackingSegment[], details: SegmentDetail[] = []): MapRoute[] {
+  const cut = cutLegs(segments, details)
   return sortSegments(segments).flatMap((segment) => {
     const from = toMapLocation(segment.fromLocation)
     const to = toMapLocation(segment.toLocation)
     if (!from || !to) return []
     const mode = segment.transportMode
+    const transportMode = mode === "SEA" || mode === "AIR" ? mode : "ROAD"
+    const plannedEnd = cut.get(segment.routePlanRouteId)
+    const rest = plannedEnd ? toMapLocation(plannedEnd) : null
     return [
       {
         id: segment.routePlanRouteId,
@@ -57,9 +82,22 @@ export function planRoutes(segments: TrackingSegment[]): MapRoute[] {
         name: `${from.name} to ${to.name}`,
         fromLocation: from,
         toLocation: to,
-        transportMode: mode === "SEA" || mode === "AIR" ? mode : "ROAD",
+        transportMode,
         readonly: segment.status === "COMPLETED",
       } satisfies MapRoute,
+      // The planned rest of a leg cut at an incident: never driven, because the convoy turned back.
+      ...(rest
+        ? [
+            {
+              id: segment.routePlanRouteId + ":not-driven",
+              name: `${to.name} to ${rest.name} (not driven)`,
+              fromLocation: to,
+              toLocation: rest,
+              transportMode,
+              notDriven: true,
+            } satisfies MapRoute,
+          ]
+        : []),
     ]
   })
 }
