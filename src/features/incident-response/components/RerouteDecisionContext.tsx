@@ -258,11 +258,6 @@ export function RerouteDecisionContext({
               <Field label="Monitoring interval">
                 {context.hold.monitorIntervalMinutes} min
               </Field>
-              {context.hold.safeStopLocation && (
-                <Field label="Safe stop">
-                  {context.hold.safeStopLocation.locationName}
-                </Field>
-              )}
               <Field label="Decided by">
                 {context.hold.decidedBy.fullName}
               </Field>
