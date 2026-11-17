@@ -105,7 +105,6 @@ export default function VehicleIncidentPage() {
       repairRequired: false,
       towingRequired: false,
       replacementVehicleRequired: false,
-      estimatedRepairCost: "",
       estimatedRepairHours: "",
       repairNote: "",
     }),
@@ -201,9 +200,6 @@ export default function VehicleIncidentPage() {
       repairRequired: value.repairRequired,
       towingRequired: value.towingRequired,
       replacementVehicleRequired: value.replacementVehicleRequired,
-      estimatedRepairCost: value.estimatedRepairCost
-        ? Number(value.estimatedRepairCost)
-        : undefined,
       repairNote: value.repairNote || undefined,
       estimatedRepairHours: value.estimatedRepairHours
         ? Number(value.estimatedRepairHours)

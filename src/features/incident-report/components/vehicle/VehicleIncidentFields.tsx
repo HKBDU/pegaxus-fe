@@ -30,7 +30,6 @@ export interface VehicleIncidentFieldsValue {
   repairRequired: boolean;
   towingRequired: boolean;
   replacementVehicleRequired: boolean;
-  estimatedRepairCost: string;
   estimatedRepairHours: string;
   repairNote: string;
 }
@@ -168,21 +167,6 @@ export function VehicleIncidentFields({
         Vehicle held until replacement cost is approved.
       </p>
       <div className="grid items-start gap-4 sm:grid-cols-2">
-        <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold text-slate-900">
-          Estimated cost
-          <Input
-            type="number"
-            min="0"
-            value={value.estimatedRepairCost}
-            aria-invalid={Boolean(errors.estimatedRepairCost)}
-            disabled={disabled}
-            onChange={(event) =>
-              update("estimatedRepairCost", event.target.value)
-            }
-            className="min-h-12 rounded-[2px] text-base"
-          />
-          <IncidentFieldError message={errors.estimatedRepairCost} />
-        </label>
         <label className="grid min-w-0 content-start self-start gap-2 text-sm font-bold text-slate-900">
           Repair hours
           <Input

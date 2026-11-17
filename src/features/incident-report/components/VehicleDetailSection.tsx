@@ -42,10 +42,6 @@ export function VehicleDetailSection({
     vehicleCondition: detail.vehicleCondition ?? "",
     damageDescription: detail.damageDescription ?? "",
     repairNote: detail.repairNote ?? "",
-    estimatedRepairCost:
-      detail.estimatedRepairCost == null
-        ? ""
-        : String(detail.estimatedRepairCost),
     estimatedRepairHours:
       detail.estimatedRepairHours == null
         ? ""
@@ -68,9 +64,6 @@ export function VehicleDetailSection({
       vehicleCondition: value.vehicleCondition || undefined,
       damageDescription: value.damageDescription || undefined,
       repairNote: value.repairNote || undefined,
-      estimatedRepairCost: value.estimatedRepairCost
-        ? Number(value.estimatedRepairCost)
-        : undefined,
       estimatedRepairHours: value.estimatedRepairHours
         ? Number(value.estimatedRepairHours)
         : undefined,
@@ -164,17 +157,6 @@ export function VehicleDetailSection({
               />
             </label>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="grid gap-2 text-sm font-semibold">
-                Estimated cost
-                <Input
-                  type="number"
-                  min="0"
-                  value={value.estimatedRepairCost}
-                  onChange={(event) =>
-                    update("estimatedRepairCost", event.target.value)
-                  }
-                />
-              </label>
               <label className="grid gap-2 text-sm font-semibold">
                 Repair hours
                 <Input

@@ -59,7 +59,6 @@ export const vehicleIncidentRequestSchema = z
     repairRequired: z.boolean().optional(),
     towingRequired: z.boolean().optional(),
     replacementVehicleRequired: z.boolean().optional(),
-    estimatedRepairCost: z.number().finite().nonnegative().optional(),
     repairNote: optionalText,
     estimatedRepairHours: z.number().finite().min(0).max(999.9).optional(),
     driverSafetyStatus: z.string().trim().max(500).optional(),
@@ -148,7 +147,6 @@ export const supplementVehicleRequestSchema = z
   .object({
     lastUpdatedAt: timestamp,
     repairNote: optionalText,
-    estimatedRepairCost: z.number().finite().nonnegative().optional(),
     vehicleOperable: z.boolean().optional(),
     repairRequired: z.boolean().optional(),
     towingRequired: z.boolean().optional(),
