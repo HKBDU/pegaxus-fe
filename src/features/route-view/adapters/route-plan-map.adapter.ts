@@ -116,6 +116,25 @@ export function toRouteMapData(
       const fromLocation = locationById.get(segment.fromLocation.locationId);
       const toLocation = locationById.get(segment.toLocation.locationId);
       if (!fromLocation || !toLocation) return [];
+      // The convoy turned back at an incident on this segment: draw the stretch it drove, then the planned rest it never drove.
+      const incident = !isReplaced && segment.endedAtLocation
+        ? locationById.get(segment.endedAtLocation.locationId)
+        : undefined;
+      if (incident) {
+        const base = {
+          routePlanRouteId: segment.routePlanRouteId,
+          name: segment.route.routeName ?? segment.route.routeCode,
+          transportMode: segment.route.transportMode,
+          routePlanType: segment.routeType,
+          isOutsourced: segment.isOutsourced,
+          distanceKm: null,
+          durationMinutes: null,
+        };
+        return [
+          { ...base, id: segment.routePlanRouteId + ":driven", fromLocation, toLocation: incident },
+          { ...base, id: segment.routePlanRouteId + ":not-driven", fromLocation: incident, toLocation, notDriven: true },
+        ];
+      }
       return [
         {
           id: segment.routePlanRouteId,
@@ -142,6 +161,12 @@ export function toRouteMapData(
     locations,
     route,
     routes,
+    /** Incidents the convoy turned back at, whose planned rest of the segment was never driven. */
+    notDriven: segments.flatMap((segment) =>
+      segment.endedAtLocation && locationById.has(segment.endedAtLocation.locationId)
+        ? [{ incident: segment.endedAtLocation.locationName, to: segment.toLocation.locationName }]
+        : [],
+    ),
     geometryStatus,
     omittedStops: segments
       .flatMap((segment) => [segment.fromLocation, segment.toLocation])

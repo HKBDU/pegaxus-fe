@@ -52,6 +52,8 @@ export type MapRoute = {
   blocked?: boolean;
   /** A primary segment a backup replaced before it was driven: drawn grey and dashed under the route now in use. */
   replaced?: boolean;
+  /** The part of a segment after the incident the convoy turned back at: drawn amber and dashed. */
+  notDriven?: boolean;
 };
 
 export type MapPoint = { latitude: number; longitude: number };
