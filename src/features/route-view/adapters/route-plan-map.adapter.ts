@@ -117,7 +117,7 @@ export function toRouteMapData(
       .sort((a, b) => a.sequenceNo - b.sequenceNo)
       .map((segment) => ({ segment, isReplaced: false })),
   ]
-    .flatMap(({ segment, isReplaced }) => {
+    .flatMap(({ segment, isReplaced }): MapRoute[] => {
       const fromLocation = locationById.get(segment.fromLocation.locationId);
       const toLocation = locationById.get(segment.toLocation.locationId);
       if (!fromLocation || !toLocation) return [];
