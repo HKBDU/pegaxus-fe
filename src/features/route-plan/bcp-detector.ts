@@ -1,4 +1,5 @@
 import type { MapLocation, MapRoute } from "@/shared/components/map";
+import { findEuCountryByCode, findEuCountryByName } from "@/features/booking/constants/eu-countries";
 import { getRouteCorridorMetrics } from "@/shared/utils/map/routing";
 
 export const UK_IE_COUNTRIES = new Set([
@@ -121,20 +122,32 @@ export function haversineDistanceKm(
   return R * c;
 }
 
+const UK_NATIONS = new Set(["england", "scotland", "wales", "northern ireland"]);
+
+/**
+ * One key per country, whatever the spelling: saved locations hold ISO codes ("GB") while map and booking
+ * places hold names ("United Kingdom"), and both must compare as the same country.
+ */
+export function countryKey(country?: string | null): string | undefined {
+  const value = country?.trim();
+  if (!value) return undefined;
+  if (UK_NATIONS.has(value.toLowerCase())) return "GB";
+  const known = value.length === 2 ? findEuCountryByCode(value) : findEuCountryByName(value);
+  return known?.isoCode ?? (value.toLowerCase() === "uk" ? "GB" : value.toLowerCase());
+}
+
 export function isCrossBorder(
   fromCountry?: string | null,
   toCountry?: string | null,
 ): boolean {
-  if (!fromCountry || !toCountry) return false;
-  const c1 = fromCountry.trim().toLowerCase();
-  const c2 = toCountry.trim().toLowerCase();
-  return c1 !== c2;
+  const c1 = countryKey(fromCountry);
+  const c2 = countryKey(toCountry);
+  return Boolean(c1 && c2 && c1 !== c2);
 }
 
 export function isUkOrIreland(country?: string | null): boolean {
-  if (!country) return false;
-  const c = country.trim().toLowerCase();
-  return UK_IE_COUNTRIES.has(c);
+  const key = countryKey(country);
+  return key === "GB" || key === "IE";
 }
 
 export function isMandatoryBcpCrossing(
