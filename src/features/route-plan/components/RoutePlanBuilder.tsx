@@ -72,6 +72,7 @@ import { formatUtcDateTime } from "@/shared/utils/datetime";
 import {
   findBestBcpAlongRoute,
   haversineDistanceKm,
+  isCrossBorder as isCrossBorderCountries,
   isMandatoryBcpCrossing,
   isBcpLocation,
 } from "../bcp-detector";
@@ -561,19 +562,15 @@ export function RoutePlanBuilder({
 
   const isCrossBorder = useMemo(() => {
     if (plan.scope === "International") return true;
-    const fromCountry = plan.from?.country?.trim().toLowerCase();
-    const toCountry = plan.to?.country?.trim().toLowerCase();
-    if (fromCountry && toCountry && fromCountry !== toCountry) return true;
+    if (isCrossBorderCountries(plan.from?.country, plan.to?.country)) return true;
     const routesToCheck = isBackup
       ? continuity.effectiveRoutes.length > 0
         ? continuity.effectiveRoutes
         : [...readonlyPrimaryRoutes, ...segments.map((s) => s.route)]
       : segments.map((s) => s.route);
-    return routesToCheck.some((s) => {
-      const fc = s.fromLocation?.country?.trim().toLowerCase();
-      const tc = s.toLocation?.country?.trim().toLowerCase();
-      return fc && tc && fc !== tc;
-    });
+    return routesToCheck.some((s) =>
+      isCrossBorderCountries(s.fromLocation?.country, s.toLocation?.country),
+    );
   }, [
     plan.scope,
     plan.from?.country,
