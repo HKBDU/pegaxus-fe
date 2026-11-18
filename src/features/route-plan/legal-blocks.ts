@@ -22,6 +22,11 @@ export function isLegalReviewOutdated(plan: ReviewedPlan): boolean {
  * The backend keeps only sequence numbers and recreates every segment on save, so once the coordinator saves the plan the
  * old numbers point at new segments. They are dropped until the specialist reviews the plan again.
  */
+/** True when the latest legal review sent the plan back and the plan has not been saved since, with or without blocked segments. */
+export function isCurrentlyRejected(plan: ReviewedPlan): boolean {
+  return plan.legalReview?.isFeasible === false && !isLegalReviewOutdated(plan);
+}
+
 export function currentBlockedSegments(plan: ReviewedPlan): number[] {
   const review = plan.legalReview;
   if (!review || review.isFeasible !== false || !review.blockedSegments?.length) return [];

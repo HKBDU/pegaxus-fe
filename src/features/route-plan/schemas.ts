@@ -116,14 +116,16 @@ export const legalReviewSchema = z.object({
   isFeasible: z.boolean(),
   note: z.string().trim().max(2000).optional(),
   blockedSegments: z.array(z.number().int().positive()).optional(),
+  // Segments of the backups submitted with the primary; without this key zod would strip them from the request.
+  blockedBackupSegments: z.array(z.object({ routePlanId: entityId, sequenceNo: z.number().int().positive() })).default([]),
 }).superRefine((value, context) => {
   if (!value.isFeasible && !value.note?.trim()) {
     context.addIssue({ code: 'custom', path: ['note'], message: 'A note is required when the route is not feasible.' })
   }
-  if (value.isFeasible && value.blockedSegments?.length) {
+  if (value.isFeasible && (value.blockedSegments?.length || value.blockedBackupSegments.length)) {
     context.addIssue({
       code: 'custom',
-      path: ['blockedSegments'],
+      path: [value.blockedSegments?.length ? 'blockedSegments' : 'blockedBackupSegments'],
       message: 'A feasible route cannot contain blocked segments.',
     })
   }
