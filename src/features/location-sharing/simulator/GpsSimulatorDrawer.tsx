@@ -161,6 +161,19 @@ export function GpsSimulatorDrawer({
     if (!sharingActive) onStartSharing?.();
   };
 
+  // The company cannot track a provider leg, so the driver skips it to the handover with the provider.
+  // The driver shares no GPS on that leg: only the handover point is needed.
+  const providerLeg = currentSegment?.isOutsourced === true;
+  const skipBlocked = !providerLeg && !sharingActive && !canStartSharing;
+
+  const skipToHandoverPoint = () => {
+    if (!targetBoundaryNo || skipBlocked) return;
+    // Sharing stops while the provider owns the previous leg. Reattach the
+    // location watcher before emitting the next driver's boundary sample.
+    if (!providerLeg && !sharingActive) onStartSharing?.();
+    simulator.skipToBoundary(targetBoundaryNo);
+  };
+
   return (
     <>
       {/* Hidden until the Driver presses Ctrl+Shift+G. */}
@@ -248,11 +261,18 @@ export function GpsSimulatorDrawer({
                     {currentSegment?.transportMode === "ROAD" && !currentSegment.isOutsourced ? (
                       <Button type="button" variant="outline" size="sm" onClick={simulator.retryRoute}>Try again</Button>
                     ) : null}
-                    {canSkipCurrentSegment && targetBoundaryNo && simulator.isEnabled ? (
-                      <Button type="button" variant="outline" size="sm" onClick={() => simulator.skipToBoundary(targetBoundaryNo)}>Skip to handover point</Button>
-                    ) : null}
                   </div>
                 ) : null}
+                {/* Always shown while Mock GPS is on; disabled when this segment has no handover point to skip to. */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={skipToHandoverPoint}
+                  disabled={!canSkipCurrentSegment || !targetBoundaryNo || skipBlocked}
+                >
+                  Skip to handover point
+                </Button>
                 {/* Progress Scrubber */}
                 <div className="space-y-1.5 rounded-xs border border-border p-3 bg-card">
                   <div className="flex justify-between text-[11px] font-medium text-muted-foreground">

@@ -264,8 +264,8 @@ export function DriverLocationSession({ children }: { children: ReactNode }) {
             (boundary) => boundary.fromRoutePlanRouteId === query.data?.currentSegment?.routePlanRouteId &&
               boundary.handoverRequired !== false && boundary.existingHandover?.status !== "COMPLETED",
           )?.boundaryNo}
-          canSkipCurrentSegment={isDemo || Boolean(assignment?.currentSegment?.isMine && query.data?.currentSegment &&
-            !query.data.currentSegment.isOutsourced)}
+          canSkipCurrentSegment={isDemo || Boolean(query.data?.currentSegment &&
+            (query.data.currentSegment.isOutsourced || assignment?.currentSegment?.isMine))}
           currentSegment={
             isDemo ? DEMO_SEGMENT : query.data?.currentSegment ?? null
           }
