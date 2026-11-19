@@ -25,28 +25,6 @@ export interface SubmittedByEmployee {
   fullName: string
 }
 
-export interface UploadedAssetReference {
-  publicId: string
-}
-
-// ─── Q1: Submit Quarantine Proof (UC-28a BCP Quarantine Proof) ────────────────
-
-export interface SubmitQuarantineProofRequest {
-  bcpName: string
-  locationId?: string | number | null
-  officialVetName?: string
-  bcpReceiptNumber?: string
-  inspectionAt?: string
-  // Submitters can flag a held horse/trip immediately; detailed notes may follow later.
-  isHoldback?: boolean
-  quickNote?: string
-  files: UploadedAssetReference[]
-}
-
-export interface SubmitQuarantineProofResponse {
-  quarantineProofId: string
-}
-
 // ─── Q2: Detail ───────────────────────────────────────────────────────────────
 
 export interface QuarantineProof {

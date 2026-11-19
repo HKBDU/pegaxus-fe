@@ -5,8 +5,6 @@ import type {
   CustomsClearanceProofDetail,
   FinalizeCustomsClearanceProofRequest,
   FinalizeCustomsClearanceProofResponse,
-  SubmitCustomsClearanceProofRequest,
-  SubmitCustomsClearanceProofResponse,
 } from './types'
 import type { ComplianceDossierContext } from '@/features/quarantine/types'
 
@@ -25,29 +23,6 @@ function unwrap<T>(payload: ApiEnvelope<T>): T {
 }
 
 export { getDossierContext }
-
-export async function submitCustomsClearanceProof(
-  dossierId: string,
-  params: SubmitCustomsClearanceProofRequest,
-): Promise<SubmitCustomsClearanceProofResponse> {
-  const payload = {
-    customsPortName: params.customsPortName || undefined,
-    locationId: params.locationId != null ? String(params.locationId) : undefined,
-    mrnNumber: params.mrnNumber || undefined,
-    customsLane: params.customsLane || undefined,
-    isHeld: params.isHeld ?? false,
-    quickNote: params.quickNote || undefined,
-    files: params.files,
-  }
-
-  const res = await callApi(
-    apiClient.post<unknown, ApiEnvelope<SubmitCustomsClearanceProofResponse>>(
-      `/compliance-dossiers/${encodeURIComponent(dossierId)}/customs-clearance-proofs`,
-      payload,
-    ),
-  )
-  return unwrap(res)
-}
 
 export async function getCustomsClearanceProof(proofId: string): Promise<CustomsClearanceProofDetail> {
   const res = await callApi(

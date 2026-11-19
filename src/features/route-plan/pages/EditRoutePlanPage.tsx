@@ -13,7 +13,7 @@ import {
 } from "../api-adapters";
 import type { RoutePlan, RouteSegment } from "../types";
 import { hydrateBuilderSegments } from "../builder-segments";
-import { currentBlockedSegments } from "../legal-blocks";
+import { currentBlockedSegments, isCurrentlyRejected } from "../legal-blocks";
 import type { DraftSegment } from "../components/RoutePlanBuilderParts";
 import type { MapLocation, MapRoute } from "@/shared/components/map";
 
@@ -158,7 +158,8 @@ export default function EditRoutePlanPage() {
   // Segments the Transport Specialist blocked in the legal review (by their saved id, so a replaced route drops the mark).
   // A plan saved after the review no longer carries the blocked segments, so nothing is marked until the next review.
   const blockedNumbers = currentBlockedSegments(plan);
-  const legalBlock = blockedNumbers.length
+  // A rejection without blocked segments still reaches the coordinator, with the specialist's note.
+  const legalBlock = isCurrentlyRejected(plan)
     ? {
         routePlanRouteIds: plan.segments
           .filter((segment) => blockedNumbers.includes(segment.sequenceNo))

@@ -74,7 +74,7 @@ sequenceDiagram
 | **Endpoint / Path** | `/api/v1/transports/{transportId}/locations` | `/hubs/transport-tracking` |
 | **Authentication** | `Authorization: Bearer <Driver_JWT>` | `Authorization: Bearer <Admin_JWT>` |
 | **Transmission Frequency**| Once every **2.5 seconds** (`SEND_INTERVAL_MS = 2_500`) | Immediate push upon server receipt of driver sample |
-| **Payload Structure** | ```json { "latitude": 21.0285, "longitude": 105.8544, "speedKmh": 60.0, "headingDegrees": 135.4, "accuracyMeters": 8.0, "recordedAt": "2026-10-26T06:00:00.000Z", "routePlanRouteId": "seg-01" } ``` | ```json { "transportId": "TR-DEMO-01", "latitude": 21.0285, "longitude": 105.8544, "speedKmh": 60.0, "headingDegrees": 135.4, "accuracyMeters": 8.0, "recordedAt": "2026-10-26T06:00:00.000Z", "routePlanRouteId": "seg-01" } ``` |
+| **Payload Structure** | Driver route samples use the current segment's coordinates and ID. | The tracking snapshot returns only server accepted Driver samples. |
 
 ---
 
@@ -112,8 +112,8 @@ simulator/
 - Speed presets: `30`, `60`, `120`, `300`, and `600 km/h`.
 - Automatically extracts `fromLocation` and `toLocation` from the transport's active segment.
 - Calls [previewGeoapifyRoute](../../../shared/utils/map/routing.ts) for real road-snapped geometries; seamlessly falls back to geodesic curves if offline.
-- Fallback coordinate resolver: Guarantees that even mock fixtures with missing coordinates resolve to valid geographic stations (e.g., Chantilly, Lille, Hanoi, Danang).
-- Supports interactive scrubbing (`seek(percent)`), loop playback, and geofence teleportation (`jumpNearStation(350)`).
+- Missing coordinates stop route playback; the simulator never substitutes a geographic default.
+- Supports interactive scrubbing (`seek(percent)`) and geofence positioning (`jumpNearStation(350)`). Playback stops at the final point.
 
 ### 4.4. `GpsSimulatorDrawer.tsx` - Zero-Clutter UI Layer
 - **Default State**: Completely hidden. Displays only a sleek, semi-transparent floating action pill `[⚡ GPS Simulator]` in the bottom-right corner. The primary driver screen remains 100% clean and authentic.

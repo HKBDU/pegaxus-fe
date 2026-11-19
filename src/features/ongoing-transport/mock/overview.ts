@@ -91,36 +91,10 @@ function buildOverview(
       city: "London",
       country: "United Kingdom",
     },
-    "Hanoi Equine Quarantine Facility": {
-      latitude: 21.0285,
-      longitude: 105.8544,
-      city: "Hanoi",
-      country: "Vietnam",
-    },
-    "Danang Transit Terminal": {
-      latitude: 16.0544,
-      longitude: 108.2022,
-      city: "Danang",
-      country: "Vietnam",
-    },
   };
 
-  const fromInfo = segment
-    ? FIXTURE_COORDINATES[segment.fromLocationName] ?? {
-        latitude: 49.1944,
-        longitude: 2.4858,
-        city: "Chantilly",
-        country: "France",
-      }
-    : null;
-  const toInfo = segment
-    ? FIXTURE_COORDINATES[segment.toLocationName] ?? {
-        latitude: 50.6292,
-        longitude: 3.0573,
-        city: "Lille",
-        country: "France",
-      }
-    : null;
+  const fromInfo = segment ? FIXTURE_COORDINATES[segment.fromLocationName] : null;
+  const toInfo = segment ? FIXTURE_COORDINATES[segment.toLocationName] : null;
 
   return {
     serverTime,
@@ -169,19 +143,19 @@ function buildOverview(
             locationId: id("00000065"),
             locationName: segment.fromLocationName,
             locationType: "STABLE",
-            city: fromInfo?.city ?? "Chantilly",
-            country: fromInfo?.country ?? "France",
-            latitude: fromInfo?.latitude ?? 49.1944,
-            longitude: fromInfo?.longitude ?? 2.4858,
+            city: fromInfo?.city ?? null,
+            country: fromInfo?.country ?? "Unknown",
+            latitude: fromInfo?.latitude ?? null,
+            longitude: fromInfo?.longitude ?? null,
           },
           toLocation: {
             locationId: id("00000066"),
             locationName: segment.toLocationName,
             locationType: "REST_STOP",
-            city: toInfo?.city ?? "Lille",
-            country: toInfo?.country ?? "France",
-            latitude: toInfo?.latitude ?? 50.6292,
-            longitude: toInfo?.longitude ?? 3.0573,
+            city: toInfo?.city ?? null,
+            country: toInfo?.country ?? "Unknown",
+            latitude: toInfo?.latitude ?? null,
+            longitude: toInfo?.longitude ?? null,
           },
           distanceKm: outsourced ? null : 110.5,
           status: segment.status,

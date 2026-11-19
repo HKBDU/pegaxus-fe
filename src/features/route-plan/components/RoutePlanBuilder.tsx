@@ -72,6 +72,7 @@ import { formatUtcDateTime } from "@/shared/utils/datetime";
 import {
   findBestBcpAlongRoute,
   haversineDistanceKm,
+  isCrossBorder as isCrossBorderCountries,
   isMandatoryBcpCrossing,
   isBcpLocation,
 } from "../bcp-detector";
@@ -428,6 +429,7 @@ export function RoutePlanBuilder({
     const availableTo = plan.arrivalAt?.slice(0, 10);
     void loadAllVehicles({
       ...(availableFrom && availableTo ? { availableFrom, availableTo } : {}),
+      assignableOnly: true,
       transportPlanId,
     })
       .then((items) => {
@@ -560,19 +562,15 @@ export function RoutePlanBuilder({
 
   const isCrossBorder = useMemo(() => {
     if (plan.scope === "International") return true;
-    const fromCountry = plan.from?.country?.trim().toLowerCase();
-    const toCountry = plan.to?.country?.trim().toLowerCase();
-    if (fromCountry && toCountry && fromCountry !== toCountry) return true;
+    if (isCrossBorderCountries(plan.from?.country, plan.to?.country)) return true;
     const routesToCheck = isBackup
       ? continuity.effectiveRoutes.length > 0
         ? continuity.effectiveRoutes
         : [...readonlyPrimaryRoutes, ...segments.map((s) => s.route)]
       : segments.map((s) => s.route);
-    return routesToCheck.some((s) => {
-      const fc = s.fromLocation?.country?.trim().toLowerCase();
-      const tc = s.toLocation?.country?.trim().toLowerCase();
-      return fc && tc && fc !== tc;
-    });
+    return routesToCheck.some((s) =>
+      isCrossBorderCountries(s.fromLocation?.country, s.toLocation?.country),
+    );
   }, [
     plan.scope,
     plan.from?.country,
@@ -1866,6 +1864,17 @@ export function RoutePlanBuilder({
                         </strong>{" "}
                         Change {blockedCount === 1 ? "it" : "them"} before submitting for legal review again.
                         {legalBlock?.note ? <span className="mt-1 block text-red-800">Review note: {legalBlock.note}</span> : null}
+                      </span>
+                    </div>
+                  )}
+                  {/* Sent back without naming a segment: the note is the only pointer, so it must still be shown. */}
+                  {legalBlock && legalBlock.routePlanRouteIds.length === 0 && (
+                    <div role="status" className="flex items-start gap-2 rounded-[2px] border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
+                      <ShieldAlert className="mt-0.5 size-4 shrink-0 text-red-500" aria-hidden="true" />
+                      <span>
+                        <strong className="font-semibold">The Transport Specialist found this route not feasible.</strong>{" "}
+                        No specific segment was blocked. Revise the route and submit it for legal review again.
+                        {legalBlock.note ? <span className="mt-1 block text-red-800">Review note: {legalBlock.note}</span> : null}
                       </span>
                     </div>
                   )}

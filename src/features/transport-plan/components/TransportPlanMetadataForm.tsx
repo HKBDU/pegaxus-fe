@@ -85,6 +85,7 @@ export function TransportPlanMetadataForm({
   destinationLatitude,
   destinationLongitude,
   bookingCreatedAt,
+  isReturnBooking = false,
   plan,
   cancelHref,
   reloadLatest,
@@ -101,6 +102,8 @@ export function TransportPlanMetadataForm({
   destinationLatitude?: number | null;
   destinationLongitude?: number | null;
   bookingCreatedAt?: string | null;
+  /** A return booking has no lead time: the horse is already waiting, so only a past start is refused. */
+  isReturnBooking?: boolean;
   plan?: TransportPlanDetail;
   cancelHref: string;
   reloadLatest?: () => Promise<TransportPlanDetail | undefined>;
@@ -111,11 +114,13 @@ export function TransportPlanMetadataForm({
   const navigate = useNavigate();
   const scheduleId = useId();
   const todayLocal = new Date().toLocaleDateString("sv-SE");
-  const leadTimeEarliest = plannedStartEarliestDate({
-    createdAt: bookingCreatedAt,
-    originCountry,
-    destinationCountry,
-  });
+  const leadTimeEarliest = isReturnBooking
+    ? undefined
+    : plannedStartEarliestDate({
+        createdAt: bookingCreatedAt,
+        originCountry,
+        destinationCountry,
+      });
   // Earliest pickable day: not in the past, and not before the booking lead time (when the BE returns the creation date).
   const startMinDate =
     leadTimeEarliest && leadTimeEarliest > todayLocal ? leadTimeEarliest : todayLocal;

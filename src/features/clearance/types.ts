@@ -1,23 +1,5 @@
 export type CustomsLane = 'GREEN_LANE' | 'ORANGE_LANE' | 'RED_LANE'
 
-export interface UploadedAssetReference {
-  publicId: string
-}
-
-export interface SubmitCustomsClearanceProofRequest {
-  customsPortName: string
-  locationId?: string | number | null
-  mrnNumber?: string
-  customsLane?: CustomsLane
-  isHeld?: boolean
-  quickNote?: string
-  files: UploadedAssetReference[]
-}
-
-export interface SubmitCustomsClearanceProofResponse {
-  customsClearanceProofId: string
-}
-
 export type CustomsClearanceProofStatus = 'PENDING_VERIFICATION' | 'CLEARED' | 'HELD' | 'REJECTED'
 export type CustomsFinalizeAction = 'FINALIZE' | 'REJECT_PROOF'
 

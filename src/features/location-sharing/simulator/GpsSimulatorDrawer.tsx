@@ -9,7 +9,6 @@ import {
   Navigation,
   Gauge,
   Target,
-  Repeat,
   SlidersHorizontal,
   FileCode,
   Sparkles,
@@ -30,10 +29,15 @@ import {
 } from "./useGpsSimulator";
 
 export interface GpsSimulatorDrawerProps {
+  transportId?: string;
+  targetBoundaryNo?: number;
+  canSkipCurrentSegment?: boolean;
   currentSegment?: {
     fromLocation: SegmentEndpoint | null;
     toLocation: SegmentEndpoint | null;
     routePlanRouteId?: string;
+    transportMode: "ROAD" | "SEA" | "AIR";
+    isOutsourced: boolean;
   } | null;
   sharingActive?: boolean;
   sharingAcceptance?: "unknown" | "legacy" | "accepted" | "rejected";
@@ -52,6 +56,9 @@ const SPEED_PRESETS = [
 ];
 
 export function GpsSimulatorDrawer({
+  transportId,
+  targetBoundaryNo,
+  canSkipCurrentSegment = false,
   currentSegment,
   sharingActive,
   sharingAcceptance,
@@ -81,8 +88,12 @@ export function GpsSimulatorDrawer({
   }, []);
 
   const simulator = useGpsSimulator(
-    simulatorActivated && currentSegment
+    simulatorActivated && currentSegment && transportId && currentSegment.routePlanRouteId
       ? {
+          transportId,
+          routePlanRouteId: currentSegment.routePlanRouteId,
+          transportMode: currentSegment.transportMode,
+          isOutsourced: currentSegment.isOutsourced,
           fromLocation: currentSegment.fromLocation,
           toLocation: currentSegment.toLocation,
         }
@@ -145,9 +156,26 @@ export function GpsSimulatorDrawer({
   const toName = currentSegment?.toLocation?.locationName ?? "Destination";
 
   const startTrip = () => {
-    if (!sharingActive && !canStartSharing) return;
+    if (!simulator.isEnabled || !simulator.currentPoint || (!sharingActive && !canStartSharing)) return;
     simulator.start();
     if (!sharingActive) onStartSharing?.();
+  };
+
+  // The company cannot track a provider leg, so the driver skips it to the handover with the provider.
+  // The driver shares no GPS on that leg: only the handover point is needed.
+  const providerLeg = currentSegment?.isOutsourced === true;
+  const skipBlocked = !providerLeg && !sharingActive && !canStartSharing;
+
+  // What the last skip did, kept for the segment it was pressed on only.
+  const [skipResult, setSkipResult] = useState<{ segmentId?: string; ok: boolean } | null>(null);
+  const skipNotice = skipResult && skipResult.segmentId === currentSegment?.routePlanRouteId ? skipResult : null;
+
+  const skipToHandoverPoint = () => {
+    if (!targetBoundaryNo || skipBlocked) return;
+    // Sharing stops while the provider owns the previous leg. Reattach the
+    // location watcher before emitting the next driver's boundary sample.
+    if (!providerLeg && !sharingActive) onStartSharing?.();
+    setSkipResult({ segmentId: currentSegment?.routePlanRouteId, ok: simulator.skipToBoundary(targetBoundaryNo) });
   };
 
   return (
@@ -179,7 +207,7 @@ export function GpsSimulatorDrawer({
               {fromName} → {toName} (
               {simulator.totalDistance > 0
                 ? formatDistance(simulator.totalDistance)
-                : "Calculating route..."}
+                : simulator.isLoadingRoute ? "Calculating route..." : "No road route"}
               )
             </SheetDescription>
           </SheetHeader>
@@ -213,7 +241,7 @@ export function GpsSimulatorDrawer({
                   size="sm"
                   className="h-7 bg-emerald-600 px-2.5 text-xs text-white hover:bg-emerald-700"
                   onClick={onStartSharing}
-                  disabled={!canStartSharing}
+                  disabled={!canStartSharing || !simulator.isEnabled || !simulator.currentPoint}
                 >
                   Start Sharing
                 </Button>
@@ -232,8 +260,28 @@ export function GpsSimulatorDrawer({
             {simulator.isEnabled ? (
               <>
                 {simulator.totalDistance <= 0 && !simulator.isLoadingRoute ? (
-                  <p role="status" className="text-xs text-amber-700">
-                    Road route unavailable. Load a GeoJSON route before starting the trip.
+                  <div role="alert" className="space-y-2 rounded-xs border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                    <p>{fromName} → {toName}: {simulator.routeError ?? "Road route unavailable."} {simulator.routeAttempts > 0 ? `Attempts: ${simulator.routeAttempts}.` : ""}</p>
+                    {currentSegment?.transportMode === "ROAD" && !currentSegment.isOutsourced ? (
+                      <Button type="button" variant="outline" size="sm" onClick={simulator.retryRoute}>Try again</Button>
+                    ) : null}
+                  </div>
+                ) : null}
+                {/* Always shown while Mock GPS is on; disabled when this segment has no handover point to skip to. */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={skipToHandoverPoint}
+                  disabled={!canSkipCurrentSegment || !targetBoundaryNo || skipBlocked}
+                >
+                  Skip to handover point
+                </Button>
+                {skipNotice ? (
+                  <p role="status" className={skipNotice.ok ? "text-xs text-emerald-700" : "text-xs text-red-600"}>
+                    {skipNotice.ok
+                      ? `Mock GPS is now at ${toName}. Open the handover there to finish this leg.`
+                      : simulator.routeError ?? "Could not skip: turn on Mock GPS, then try again."}
                   </p>
                 ) : null}
                 {/* Progress Scrubber */}
@@ -283,7 +331,7 @@ export function GpsSimulatorDrawer({
                       size="sm"
                       className="bg-indigo-600 text-white hover:bg-indigo-700"
                       onClick={startTrip}
-                      disabled={(!sharingActive && !canStartSharing) || simulator.isLoadingRoute || simulator.totalDistance <= 0}
+                      disabled={!simulator.isEnabled || !simulator.currentPoint || (!sharingActive && !canStartSharing) || simulator.isLoadingRoute || simulator.totalDistance <= 0}
                     >
                       <Play className="mr-1.5 size-3.5" />
                       {simulator.status === "paused"
@@ -302,15 +350,6 @@ export function GpsSimulatorDrawer({
                     Reset
                   </Button>
 
-                  <Button
-                    type="button"
-                    variant={simulator.loop ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => simulator.setLoop(!simulator.loop)}
-                  >
-                    <Repeat className="mr-1.5 size-3.5" />
-                    Loop: {simulator.loop ? "On" : "Off"}
-                  </Button>
                 </div>
 
                 {/* Speed Presets */}
