@@ -256,11 +256,18 @@ export function GpsSimulatorDrawer({
                     {currentSegment?.transportMode === "ROAD" && !currentSegment.isOutsourced ? (
                       <Button type="button" variant="outline" size="sm" onClick={simulator.retryRoute}>Try again</Button>
                     ) : null}
-                    {canSkipCurrentSegment && targetBoundaryNo && simulator.isEnabled ? (
-                      <Button type="button" variant="outline" size="sm" onClick={skipToHandoverPoint} disabled={!sharingActive && !canStartSharing}>Skip to handover point</Button>
-                    ) : null}
                   </div>
                 ) : null}
+                {/* Always shown while Mock GPS is on; disabled when this segment has no handover point to skip to. */}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={skipToHandoverPoint}
+                  disabled={!canSkipCurrentSegment || !targetBoundaryNo || (!sharingActive && !canStartSharing)}
+                >
+                  Skip to handover point
+                </Button>
                 {/* Progress Scrubber */}
                 <div className="space-y-1.5 rounded-xs border border-border p-3 bg-card">
                   <div className="flex justify-between text-[11px] font-medium text-muted-foreground">
