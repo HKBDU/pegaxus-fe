@@ -161,6 +161,14 @@ export function GpsSimulatorDrawer({
     if (!sharingActive) onStartSharing?.();
   };
 
+  const skipToHandoverPoint = () => {
+    if (!targetBoundaryNo || (!sharingActive && !canStartSharing)) return;
+    // Sharing stops while the provider owns the previous leg. Reattach the
+    // location watcher before emitting the next driver's boundary sample.
+    if (!sharingActive) onStartSharing?.();
+    simulator.skipToBoundary(targetBoundaryNo);
+  };
+
   return (
     <>
       {/* Hidden until the Driver presses Ctrl+Shift+G. */}
@@ -249,7 +257,7 @@ export function GpsSimulatorDrawer({
                       <Button type="button" variant="outline" size="sm" onClick={simulator.retryRoute}>Try again</Button>
                     ) : null}
                     {canSkipCurrentSegment && targetBoundaryNo && simulator.isEnabled ? (
-                      <Button type="button" variant="outline" size="sm" onClick={() => simulator.skipToBoundary(targetBoundaryNo)}>Skip to handover point</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={skipToHandoverPoint} disabled={!sharingActive && !canStartSharing}>Skip to handover point</Button>
                     ) : null}
                   </div>
                 ) : null}
