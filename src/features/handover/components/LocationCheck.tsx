@@ -67,6 +67,20 @@ export function useHandoverPosition(target: HandoverTarget | null, transportId: 
     void check()
   }, [check])
 
+  // Mock GPS can arrive after the form opened (the driver skips to the handover point): read it again quietly
+  // until a position is found, so [Complete] opens without a second try.
+  const found = state.kind === "done"
+  useEffect(() => {
+    if (found) return
+    const timer = setInterval(() => {
+      void readPosition(transportId, routePlanRouteId).then((position) => {
+        const point = latitude !== undefined && longitude !== undefined ? { latitude, longitude } : null
+        setState({ kind: "done", position, meters: point ? distanceMeters(position, point) : null })
+      }, () => undefined)
+    }, 3_000)
+    return () => clearInterval(timer)
+  }, [found, latitude, longitude, transportId, routePlanRouteId])
+
   const inside = state.kind === "done" && (!target || (state.meters ?? Infinity) <= target.radiusMeters)
   return { state, check, setState, inside }
 }

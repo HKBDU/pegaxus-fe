@@ -166,12 +166,16 @@ export function GpsSimulatorDrawer({
   const providerLeg = currentSegment?.isOutsourced === true;
   const skipBlocked = !providerLeg && !sharingActive && !canStartSharing;
 
+  // What the last skip did, kept for the segment it was pressed on only.
+  const [skipResult, setSkipResult] = useState<{ segmentId?: string; ok: boolean } | null>(null);
+  const skipNotice = skipResult && skipResult.segmentId === currentSegment?.routePlanRouteId ? skipResult : null;
+
   const skipToHandoverPoint = () => {
     if (!targetBoundaryNo || skipBlocked) return;
     // Sharing stops while the provider owns the previous leg. Reattach the
     // location watcher before emitting the next driver's boundary sample.
     if (!providerLeg && !sharingActive) onStartSharing?.();
-    simulator.skipToBoundary(targetBoundaryNo);
+    setSkipResult({ segmentId: currentSegment?.routePlanRouteId, ok: simulator.skipToBoundary(targetBoundaryNo) });
   };
 
   return (
@@ -273,6 +277,13 @@ export function GpsSimulatorDrawer({
                 >
                   Skip to handover point
                 </Button>
+                {skipNotice ? (
+                  <p role="status" className={skipNotice.ok ? "text-xs text-emerald-700" : "text-xs text-red-600"}>
+                    {skipNotice.ok
+                      ? `Mock GPS is now at ${toName}. Open the handover there to finish this leg.`
+                      : simulator.routeError ?? "Could not skip: turn on Mock GPS, then try again."}
+                  </p>
+                ) : null}
                 {/* Progress Scrubber */}
                 <div className="space-y-1.5 rounded-xs border border-border p-3 bg-card">
                   <div className="flex justify-between text-[11px] font-medium text-muted-foreground">
