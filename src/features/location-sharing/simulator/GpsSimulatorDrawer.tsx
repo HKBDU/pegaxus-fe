@@ -161,11 +161,16 @@ export function GpsSimulatorDrawer({
     if (!sharingActive) onStartSharing?.();
   };
 
+  // The company cannot track a provider leg, so the driver skips it to the handover with the provider.
+  // The driver shares no GPS on that leg: only the handover point is needed.
+  const providerLeg = currentSegment?.isOutsourced === true;
+  const skipBlocked = !providerLeg && !sharingActive && !canStartSharing;
+
   const skipToHandoverPoint = () => {
-    if (!targetBoundaryNo || (!sharingActive && !canStartSharing)) return;
+    if (!targetBoundaryNo || skipBlocked) return;
     // Sharing stops while the provider owns the previous leg. Reattach the
     // location watcher before emitting the next driver's boundary sample.
-    if (!sharingActive) onStartSharing?.();
+    if (!providerLeg && !sharingActive) onStartSharing?.();
     simulator.skipToBoundary(targetBoundaryNo);
   };
 
@@ -264,7 +269,7 @@ export function GpsSimulatorDrawer({
                   variant="outline"
                   size="sm"
                   onClick={skipToHandoverPoint}
-                  disabled={!canSkipCurrentSegment || !targetBoundaryNo || (!sharingActive && !canStartSharing)}
+                  disabled={!canSkipCurrentSegment || !targetBoundaryNo || skipBlocked}
                 >
                   Skip to handover point
                 </Button>
